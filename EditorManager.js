@@ -3860,7 +3860,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (!this.activeProject) return;
         const p = this.activeProject;
         const oldZ = p.zoomLevel || 1.0;
-        const newZ = Math.max(0.1, Math.min(10, oldZ + delta));
+        const maxZ =
+            typeof window.illuMaxZoomLevelForProject === 'function'
+                ? window.illuMaxZoomLevelForProject(p)
+                : 10;
+        const minZ =
+            typeof window.illuMinZoomLevelForProject === 'function'
+                ? window.illuMinZoomLevelForProject()
+                : 0.1;
+        const newZ = Math.max(minZ, Math.min(maxZ, oldZ + delta));
         
         if (optClientX != null && optClientY != null) {
             const ws = document.getElementById('workspace');

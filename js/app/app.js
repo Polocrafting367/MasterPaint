@@ -181,7 +181,7 @@ function initIlluBeforeUnloadGuard() {
 document.addEventListener('DOMContentLoaded', () => {
     initIlluBeforeUnloadGuard();
     window.illuSplashLog('Démarrage de l\'application...');
-    
+
     // Auto-fetch version from changelog
     fetch('changelog.txt')
         .then(r => r.text())
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const m = t.match(/(\d+\.\d+\.\d+)/);
             const vEl = document.getElementById('illu-version-text');
             if (m && vEl) vEl.textContent = 'v' + m[1] + ' - ';
-        }).catch(() => {});
+        }).catch(() => { });
 
     const ov = document.getElementById('illu-alert-overlay');
     const ok = document.getElementById('illu-alert-ok');
@@ -1000,7 +1000,7 @@ window.applySavedFloatingPalettePositions = function () {
         const el = document.getElementById(id);
         const pos = map[id];
         if (!el || !pos || typeof pos !== 'object') return;
-        
+
         // Reset all before applying saved ones to avoid conflicts (e.g. top + bottom)
         el.style.top = 'auto';
         el.style.bottom = 'auto';
@@ -1549,13 +1549,13 @@ window.loadExampleProject = async function () {
         if (window.IlluProgress) window.IlluProgress.splash(20, 'Récupération du projet exemple…');
         const res = await fetch('./start.illu');
         if (!res.ok) throw new Error('Fichier introuvable (' + res.status + ')');
-        
+
         if (window.IlluProgress) window.IlluProgress.splash(40, 'Lecture des données…');
         const text = await res.text();
-        
+
         if (window.IlluProgress) window.IlluProgress.splash(60, 'Analyse du projet…');
         const data = JSON.parse(text);
-        
+
         if (data && data.format === 'illu-workspace') {
             if (window.WorkspaceIO && typeof window.WorkspaceIO.applyWorkspaceFromJsonText === 'function') {
                 if (window.IlluProgress) window.IlluProgress.splash(80, 'Application du projet…');
@@ -1566,14 +1566,14 @@ window.loadExampleProject = async function () {
         } else {
             throw new Error('Format de fichier .illu invalide');
         }
-        
+
         if (window.IlluProgress) window.IlluProgress.splash(100, 'Chargement terminé !');
         setTimeout(() => { if (window.IlluProgress) window.IlluProgress.hide(); }, 500);
     } catch (err) {
         if (window.IlluProgress) window.IlluProgress.hide();
         console.warn('[LOAD-EXAMPLE]', err);
-        const msg = window.IlluI18n && typeof window.IlluI18n.t === 'function' 
-            ? window.IlluI18n.t('msg.loadExampleError') 
+        const msg = window.IlluI18n && typeof window.IlluI18n.t === 'function'
+            ? window.IlluI18n.t('msg.loadExampleError')
             : 'Échec du chargement du projet exemple.';
         if (window.showIlluAlert) {
             window.showIlluAlert(msg + '\n' + err.message);
@@ -2010,6 +2010,8 @@ window.initIlluPaletteGridResizeObserver = function () {
     _illuPaletteGridResizeObserver.observe(winColors);
     const picker = winColors.querySelector('.color-picker-main');
     if (picker) _illuPaletteGridResizeObserver.observe(picker);
+    const pickerBody = winColors.querySelector('.color-picker-body');
+    if (pickerBody) _illuPaletteGridResizeObserver.observe(pickerBody);
 };
 
 function stripPaletteInlinePosition(el) {
@@ -2021,7 +2023,7 @@ function stripPaletteInlinePosition(el) {
 
 /** Mode Paint.NET : palettes aux 4 coins de la zone workspace (toile), padding ~5px. */
 window.applyFloatingPaletteDefaults = function () {
-    const pad = 18;
+    const pad = 6;
     const ws = document.querySelector('.workspace-dock-center');
     const t = document.getElementById('win-tools');
     const c = document.getElementById('win-colors');
@@ -2136,11 +2138,15 @@ function mountPalettesFloating() {
     const right = document.getElementById('palette-dock-right');
 
     if (slidersPanel && colors && slidersHost && slidersPanel.parentNode === slidersHost) {
-        const leftEl = colors.querySelector('.color-picker-left');
-        if (leftEl) leftEl.after(slidersPanel);
+        const bodyEl = colors.querySelector('.color-picker-body');
+        if (bodyEl) bodyEl.appendChild(slidersPanel);
         else {
-            const mainPicker = colors.querySelector('.color-picker-main');
-            if (mainPicker) mainPicker.appendChild(slidersPanel);
+            const leftEl = colors.querySelector('.color-picker-left');
+            if (leftEl) leftEl.after(slidersPanel);
+            else {
+                const mainPicker = colors.querySelector('.color-picker-main');
+                if (mainPicker) mainPicker.appendChild(slidersPanel);
+            }
         }
     }
     if (hist && historyHost && hist.parentNode === historyHost) {
@@ -2216,11 +2222,15 @@ function mountPalettesPhonePdn() {
     const right = document.getElementById('palette-dock-right');
 
     if (slidersPanel && colors && slidersHost && slidersPanel.parentNode === slidersHost) {
-        const leftEl = colors.querySelector('.color-picker-left');
-        if (leftEl) leftEl.after(slidersPanel);
+        const bodyEl = colors.querySelector('.color-picker-body');
+        if (bodyEl) bodyEl.appendChild(slidersPanel);
         else {
-            const mainPicker = colors.querySelector('.color-picker-main');
-            if (mainPicker) mainPicker.appendChild(slidersPanel);
+            const leftEl = colors.querySelector('.color-picker-left');
+            if (leftEl) leftEl.after(slidersPanel);
+            else {
+                const mainPicker = colors.querySelector('.color-picker-main');
+                if (mainPicker) mainPicker.appendChild(slidersPanel);
+            }
         }
     }
     if (hist && historyHost && hist.parentNode === historyHost) {
@@ -2803,7 +2813,7 @@ window.showAboutIfNeeded = function () {
 };
 
 /** @param {boolean} [force] si true, affiche même si « ne plus afficher » a été coché. */
-window.showChangelog = function() {
+window.showChangelog = function () {
     fetch('changelog.txt')
         .then(response => {
             if (!response.ok) throw new Error('Changelog not found');
@@ -2859,6 +2869,20 @@ window.resetWorkspace = function () {
     } catch (e) {
         /* ignore */
     }
+
+    // Réinitialise l'état développé de la fenêtre de couleur (RVB/TSV/Alpha masqués par défaut)
+    window._illuColorSlidersExpanded = false;
+    const winColors = document.getElementById('win-colors');
+    if (winColors) {
+        winColors.style.removeProperty('height');
+        winColors.style.height = '';
+        winColors.classList.remove('color-window-expanded');
+    }
+    const sliders = document.getElementById('color-sliders-panel');
+    if (sliders) {
+        sliders.style.display = 'none';
+    }
+
     window.applyUILayoutFromPreference();
     if (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'floating') {
         if (!document.body.classList.contains('illu-pdn-dock-active')) {
@@ -2877,6 +2901,8 @@ window.resetWorkspace = function () {
         t = setTimeout(() => {
             if (typeof window.refreshPaletteGridLayout === 'function') window.refreshPaletteGridLayout();
             if (typeof window.illuClampAllFloatingPalettes === 'function') window.illuClampAllFloatingPalettes();
+            if (typeof window.illuUpdatePixelGrid === 'function') window.illuUpdatePixelGrid();
+            if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
         }, 120);
     });
 })();
@@ -3044,7 +3070,6 @@ window.illuCanvasLayoutTransform = function (z) {
     return `translate(${tx}, ${ty}) scale(${scale})`;
 };
 
-/** Position / zoom CSS du conteneur toile (#main-canvas-container). */
 window.illuApplyCanvasViewportStyles = function (container, p) {
     if (!container || !p) return;
     const panX = p.canvasPanX != null ? p.canvasPanX : 0;
@@ -3060,7 +3085,16 @@ window.illuApplyCanvasViewportStyles = function (container, p) {
     container.style.transform = window.illuCanvasLayoutTransform(z);
     container.style.transformOrigin = ax.transformOrigin || '50% 50%';
     container.style.setProperty('--canvas-zoom', String(z));
+
+    // Met à jour la grille de pixels et les règles à chaque changement de viewport
+    if (typeof window.illuUpdatePixelGrid === 'function') {
+        window.illuUpdatePixelGrid();
+    }
+    if (typeof window.illuUpdateRulers === 'function') {
+        window.illuUpdateRulers();
+    }
 };
+
 
 /** false pendant pinch / pan tactile : évite le « recentrage » qui annule le geste. */
 window.illuShouldClampCanvasPan = function () {
@@ -3110,7 +3144,25 @@ window.computeFitZoomForProject = function (p, em, opts) {
     const docH = Math.max(1, p.height || dh);
     let z = availW / docW;
     if (!opts.fitWidth && docH * z > availH) z = availH / docH;
-    return Math.max(0.05, Math.min(10, z));
+    return Math.max(0.05, z);
+};
+
+/** Zoom CSS max : toiles très petites (32×32) doivent pouvoir grossir bien au-delà du « fit ». */
+window.illuMaxZoomLevelForProject = function (p) {
+    if (!p) return 64;
+    const { availW, availH } = window.illuWorkspaceFitAvailableSize();
+    const docW = Math.max(1, p.width || 1);
+    const docH = Math.max(1, p.height || 1);
+    const fitZ = window.computeFitZoomForProject(p);
+    const minDoc = Math.min(docW, docH);
+    const maxScreen = Math.max(availW, availH);
+    const pixelArtCap = Math.ceil((maxScreen / minDoc) * 6);
+    const relativeCap = fitZ * 48;
+    return Math.max(10, Math.min(256, Math.max(relativeCap, pixelArtCap)));
+};
+
+window.illuMinZoomLevelForProject = function () {
+    return 0.05;
 };
 
 /** Affichage zoom : 100 % = niveau « adapter à la fenêtre », pas le 1:1 pixel. */
@@ -3125,9 +3177,13 @@ window.IlluZoomUi = {
     setFromDisplayPercent(p, pct) {
         if (!p) return;
         const fitZ = window.computeFitZoomForProject(p);
+        const maxZ = window.illuMaxZoomLevelForProject(p);
         const n = Number(pct);
         const pc = Number.isFinite(n) ? Math.max(1, Math.min(5000, n)) : 100;
-        p.zoomLevel = Math.max(0.05, Math.min(10, fitZ * (pc / 100)));
+        p.zoomLevel = Math.max(
+            window.illuMinZoomLevelForProject(),
+            Math.min(maxZ, fitZ * (pc / 100))
+        );
     }
 };
 
@@ -3263,7 +3319,12 @@ window.syncIlluMenubarZoomControls = function () {
                 : null;
         stZoom.textContent = t || `Zoom : ${pct} %`;
     }
+
+    // Met à jour la grille de pixels et les règles lors du zoom
+    if (typeof window.illuUpdatePixelGrid === 'function') window.illuUpdatePixelGrid();
+    if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
 };
+
 
 function illuInitMenubarToolbar() {
     const slider = document.getElementById('illu-zoom-slider');
@@ -3605,4 +3666,305 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.refreshPaletteGridLayout === 'function') window.refreshPaletteGridLayout();
     if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
     if (typeof window.initTabBarScrollBehavior === 'function') window.initTabBarScrollBehavior();
+
+    // Initialisation de la grille de pixels et des règles
+    if (typeof window.syncIlluPixelGridUI === 'function') window.syncIlluPixelGridUI();
+    if (typeof window.syncIlluRulersUI === 'function') window.syncIlluRulersUI();
 });
+
+// ==========================================
+// GRILLE DE PIXELS & RÈGLES (Style Paint.NET)
+// ==========================================
+
+const ILLU_SHOW_PIXEL_GRID_KEY = 'illu_show_pixel_grid';
+const ILLU_SHOW_RULERS_KEY = 'illu_show_rulers';
+
+try {
+    window._illuShowPixelGrid = localStorage.getItem(ILLU_SHOW_PIXEL_GRID_KEY) === 'true';
+    window._illuShowRulers = localStorage.getItem(ILLU_SHOW_RULERS_KEY) === 'true';
+} catch (e) {
+    window._illuShowPixelGrid = false;
+    window._illuShowRulers = false;
+}
+
+window.toggleIlluPixelGrid = function () {
+    window._illuShowPixelGrid = !window._illuShowPixelGrid;
+    try {
+        localStorage.setItem(ILLU_SHOW_PIXEL_GRID_KEY, String(window._illuShowPixelGrid));
+    } catch (e) {}
+    window.syncIlluPixelGridUI();
+};
+
+window.toggleIlluRulers = function () {
+    window._illuShowRulers = !window._illuShowRulers;
+    try {
+        localStorage.setItem(ILLU_SHOW_RULERS_KEY, String(window._illuShowRulers));
+    } catch (e) {}
+    window.syncIlluRulersUI();
+};
+
+window.syncIlluPixelGridUI = function () {
+    const checkEl = document.getElementById('menu-win-pixel-grid-check');
+    if (checkEl) {
+        checkEl.style.visibility = window._illuShowPixelGrid ? 'visible' : 'hidden';
+    }
+    const overlay = document.getElementById('pixel-grid-overlay');
+    if (overlay) {
+        overlay.style.display = window._illuShowPixelGrid ? 'block' : 'none';
+    }
+    if (typeof window.illuUpdatePixelGrid === 'function') {
+        window.illuUpdatePixelGrid();
+    }
+};
+
+window.syncIlluRulersUI = function () {
+    const checkEl = document.getElementById('menu-win-rulers-check');
+    if (checkEl) {
+        checkEl.style.visibility = window._illuShowRulers ? 'visible' : 'hidden';
+    }
+    const rTop = document.getElementById('ruler-top');
+    const rLeft = document.getElementById('ruler-left');
+    const rCorner = document.getElementById('ruler-corner');
+    if (rTop && rLeft && rCorner) {
+        const d = window._illuShowRulers ? 'block' : 'none';
+        rTop.style.display = d;
+        rLeft.style.display = d;
+        rCorner.style.display = d;
+    }
+    if (typeof window.illuUpdateRulers === 'function') {
+        window.illuUpdateRulers();
+    }
+};
+
+window.illuUpdatePixelGrid = function () {
+    const overlay = document.getElementById('pixel-grid-overlay');
+    const drawingCanvas = document.getElementById('drawing-canvas');
+    const workspace = document.getElementById('workspace');
+    if (!overlay || !drawingCanvas || !workspace) return;
+    
+    if (!window._illuShowPixelGrid) {
+        overlay.style.display = 'none';
+        return;
+    }
+    
+    const p = window.EditorManager && window.EditorManager.activeProject;
+    if (!p) {
+        overlay.style.display = 'none';
+        return;
+    }
+    
+    const z = p.zoomLevel || 1.0;
+    // La grille de pixels s'affiche uniquement au-delà d'un zoom de 400% (zoomLevel >= 4)
+    if (z < 4.0) {
+        overlay.style.display = 'none';
+        return;
+    }
+    
+    overlay.style.display = 'block';
+    
+    const wsRect = workspace.getBoundingClientRect();
+    const canvasRect = drawingCanvas.getBoundingClientRect();
+    
+    const left = canvasRect.left - wsRect.left;
+    const top = canvasRect.top - wsRect.top;
+    const width = canvasRect.width;
+    const height = canvasRect.height;
+    
+    overlay.style.left = `${left}px`;
+    overlay.style.top = `${top}px`;
+    overlay.style.width = `${width}px`;
+    overlay.style.height = `${height}px`;
+    
+    const wRound = Math.round(width);
+    const hRound = Math.round(height);
+    if (overlay.width !== wRound || overlay.height !== hRound) {
+        overlay.width = wRound;
+        overlay.height = hRound;
+    }
+    
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    
+    const isDark = document.body.classList.contains('theme-dark');
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(128, 128, 128, 0.4)';
+    ctx.lineWidth = 1;
+    
+    const w = p.width;
+    const h = p.height;
+    
+    ctx.beginPath();
+    // Lignes verticales
+    for (let x = 1; x < w; x++) {
+        const sx = Math.round(x * z);
+        ctx.moveTo(sx - 0.5, 0);
+        ctx.lineTo(sx - 0.5, overlay.height);
+    }
+    // Lignes horizontales
+    for (let y = 1; y < h; y++) {
+        const sy = Math.round(y * z);
+        ctx.moveTo(0, sy - 0.5);
+        ctx.lineTo(overlay.width, sy - 0.5);
+    }
+    ctx.stroke();
+};
+
+window.illuUpdateRulers = function () {
+    const rTop = document.getElementById('ruler-top');
+    const rLeft = document.getElementById('ruler-left');
+    const drawingCanvas = document.getElementById('drawing-canvas');
+    const workspace = document.getElementById('workspace');
+    
+    if (!rTop || !rLeft || !drawingCanvas || !workspace) return;
+    
+    if (!window._illuShowRulers) {
+        rTop.style.display = 'none';
+        rLeft.style.display = 'none';
+        const rCorner = document.getElementById('ruler-corner');
+        if (rCorner) rCorner.style.display = 'none';
+        return;
+    }
+    
+    const p = window.EditorManager && window.EditorManager.activeProject;
+    if (!p) return;
+    
+    const z = p.zoomLevel || 1.0;
+    const wsRect = workspace.getBoundingClientRect();
+    const canvasRect = drawingCanvas.getBoundingClientRect();
+    
+    const canvasStartX = canvasRect.left - wsRect.left;
+    const canvasStartY = canvasRect.top - wsRect.top;
+    
+    const w = p.width;
+    const h = p.height;
+    
+    const isDark = document.body.classList.contains('theme-dark');
+    const rulerBg = isDark ? '#2b2b2b' : '#f0f0f0';
+    const rulerBorder = isDark ? '#555555' : '#808080';
+    const tickColor = isDark ? '#888888' : '#808080';
+    const minorTickColor = isDark ? '#444444' : '#c0c0c0';
+    const textColor = isDark ? '#aaaaaa' : '#000000';
+    
+    const wsW = workspace.clientWidth;
+    const wsH = workspace.clientHeight;
+    
+    rTop.style.background = rulerBg;
+    rTop.style.borderBottom = `1px solid ${rulerBorder}`;
+    rTop.style.width = `${wsW - 18}px`;
+    rTop.width = wsW - 18;
+    rTop.height = 18;
+    
+    rLeft.style.background = rulerBg;
+    rLeft.style.borderRight = `1px solid ${rulerBorder}`;
+    rLeft.style.height = `${wsH - 18}px`;
+    rLeft.width = 18;
+    rLeft.height = wsH - 18;
+    
+    const rCorner = document.getElementById('ruler-corner');
+    if (rCorner) {
+        rCorner.style.display = 'block';
+        rCorner.style.background = isDark ? '#202020' : '#e0e0e0';
+        rCorner.style.borderRight = `1px solid ${rulerBorder}`;
+        rCorner.style.borderBottom = `1px solid ${rulerBorder}`;
+    }
+    
+    let step = 100;
+    if (z >= 20) step = 1;
+    else if (z >= 10) step = 5;
+    else if (z >= 5) step = 10;
+    else if (z >= 2) step = 20;
+    else if (z >= 1) step = 50;
+    else if (z >= 0.5) step = 100;
+    else if (z >= 0.2) step = 200;
+    else step = 500;
+    
+    // 1. Règle horizontale
+    {
+        const width = rTop.width;
+        const height = rTop.height;
+        
+        const ctx = rTop.getContext('2d');
+        ctx.clearRect(0, 0, width, height);
+        
+        ctx.strokeStyle = tickColor;
+        ctx.fillStyle = textColor;
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        
+        const startX = canvasStartX - 18;
+        const startCX = Math.max(0, Math.floor(-startX / z));
+        const endCX = Math.min(w, Math.ceil((width - startX) / z));
+        
+        for (let cx = Math.floor(startCX / step) * step; cx <= endCX; cx += step) {
+            const sx = startX + cx * z;
+            if (sx < 0 || sx > width) continue;
+            
+            ctx.strokeStyle = tickColor;
+            ctx.beginPath();
+            ctx.moveTo(Math.round(sx) - 0.5, height - 6);
+            ctx.lineTo(Math.round(sx) - 0.5, height);
+            ctx.stroke();
+            
+            ctx.fillText(String(cx), sx, 10);
+            
+            const minorStep = step / 5;
+            if (minorStep >= 1) {
+                ctx.strokeStyle = minorTickColor;
+                for (let m = 1; m < 5; m++) {
+                    const msx = sx + m * minorStep * z;
+                    if (msx >= 0 && msx <= width) {
+                        ctx.beginPath();
+                        ctx.moveTo(Math.round(msx) - 0.5, height - 3);
+                        ctx.lineTo(Math.round(msx) - 0.5, height);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+    
+    // 2. Règle verticale
+    {
+        const width = rLeft.width;
+        const height = rLeft.height;
+        
+        const ctx = rLeft.getContext('2d');
+        ctx.clearRect(0, 0, width, height);
+        
+        ctx.strokeStyle = tickColor;
+        ctx.fillStyle = textColor;
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        
+        const startY = canvasStartY - 18;
+        const startCY = Math.max(0, Math.floor(-startY / z));
+        const endCY = Math.min(h, Math.ceil((height - startY) / z));
+        
+        for (let cy = Math.floor(startCY / step) * step; cy <= endCY; cy += step) {
+            const sy = startY + cy * z;
+            if (sy < 0 || sy > height) continue;
+            
+            ctx.strokeStyle = tickColor;
+            ctx.beginPath();
+            ctx.moveTo(width - 6, Math.round(sy) - 0.5);
+            ctx.lineTo(width, Math.round(sy) - 0.5);
+            ctx.stroke();
+            
+            ctx.fillText(String(cy), width - 8, sy);
+            
+            const minorStep = step / 5;
+            if (minorStep >= 1) {
+                ctx.strokeStyle = minorTickColor;
+                for (let m = 1; m < 5; m++) {
+                    const msy = sy + m * minorStep * z;
+                    if (msy >= 0 && msy <= height) {
+                        ctx.beginPath();
+                        ctx.moveTo(width - 3, Math.round(msy) - 0.5);
+                        ctx.lineTo(width, Math.round(msy) - 0.5);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+};

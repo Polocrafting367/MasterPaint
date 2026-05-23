@@ -201,6 +201,7 @@
 
         const z = EditorManager.getCanvasZoomLevel() || 1;
         const strokeW = Math.max(1, 1.25 / z);
+        const outlineW = strokeW * 2;
         const d = spec.d;
 
         if (!shapeEditOutlineSvg || !shapeEditOutlineSolid) {
@@ -213,9 +214,11 @@
             const pathSolid = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             pathSolid.setAttribute('fill', 'none');
             pathSolid.setAttribute('stroke', '#000');
+            pathSolid.setAttribute('stroke-width', String(outlineW));
             const pathDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             pathDash.setAttribute('fill', 'none');
             pathDash.setAttribute('stroke', '#fff');
+            pathDash.setAttribute('stroke-width', String(strokeW));
             pathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
             svg.appendChild(pathSolid);
             svg.appendChild(pathDash);
@@ -226,7 +229,7 @@
         }
 
         shapeEditOutlineSolid.setAttribute('d', d);
-        shapeEditOutlineSolid.setAttribute('stroke-width', String(strokeW));
+        shapeEditOutlineSolid.setAttribute('stroke-width', String(outlineW));
         shapeEditOutlineDash.setAttribute('d', d);
         shapeEditOutlineDash.setAttribute('stroke-width', String(strokeW));
         shapeEditOutlineDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);

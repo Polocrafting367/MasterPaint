@@ -876,7 +876,7 @@ body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #color-sliders-pane
     display: none !important;
 }
 
-body.illu-mobile-shell-active #illu-mobile-sheet-colors-body .color-picker-columns {
+body.illu-mobile-shell-active #illu-mobile-sheet-colors-body .color-picker-body {
     flex-direction: column !important;
     align-items: stretch !important;
     width: 100%;

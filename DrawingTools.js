@@ -31,6 +31,13 @@ let isSprayStroke = false;
 let isStampBrushStroke = false;
 let lastStampX = 0;
 let lastStampY = 0;
+/** Crayon : remplissage pixel (pas de trait vectoriel lissé). */
+let isPencilPixelStroke = false;
+let lastPencilX = 0;
+let lastPencilY = 0;
+/** Pinceau / gomme en mode trait : un segment par pas (évite de re-stroker tout le tracé). */
+let lastBrushLineX = 0;
+let lastBrushLineY = 0;
 let startX, startY;
 
 /** Points du dernier coup de crayon (fermeture de polygone). */
@@ -361,9 +368,17 @@ const TOOL_OPTIONS_UI = {
     move: { label: 'Déplacer', actionGroups: [], paramGroups: [] },
     wand: { label: 'Baguette', actionGroups: [], paramGroups: ['opt-grp-wand-params'] },
     eyedropper: { label: 'Pipette', actionGroups: [], paramGroups: [] },
-    brush: { label: 'Pinceau', actionGroups: ['opt-grp-brush-actions'], paramGroups: ['opt-grp-size-params'] },
+    brush: {
+        label: 'Pinceau',
+        actionGroups: ['opt-grp-brush-actions'],
+        paramGroups: ['opt-grp-size-params', 'opt-grp-brush-hardness']
+    },
     pencil: { label: 'Crayon', actionGroups: [], paramGroups: ['opt-grp-size-params'] },
-    eraser: { label: 'Gomme', actionGroups: ['opt-grp-brush-actions'], paramGroups: ['opt-grp-size-params'] },
+    eraser: {
+        label: 'Gomme',
+        actionGroups: ['opt-grp-brush-actions'],
+        paramGroups: ['opt-grp-size-params', 'opt-grp-brush-hardness']
+    },
     gradient: { label: 'Dégradé', actionGroups: ['opt-grp-gradient-actions'], paramGroups: [] },
     rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
@@ -668,16 +683,20 @@ window.updateToolOptionsBar = function () {
     const pat = document.getElementById('tool-brush-pattern');
     if (pat) pat.value = EditorManager.toolProps.brushPattern || 'round';
     const brushPat = EditorManager.toolProps.brushPattern || 'round';
+    const hardnessGrp = document.getElementById('opt-grp-brush-hardness');
     const hardnessRow = document.getElementById('tool-brush-hardness-row');
-    if (hardnessRow) {
-        const showHard =
-            (t === 'brush' && brushPat !== 'soft' && brushPat !== 'spray') ||
-            (t === 'eraser' && brushPat !== 'spray');
-        hardnessRow.hidden = !showHard;
+    const showHard =
+        t !== 'pencil' &&
+        ((t === 'brush' && brushPat !== 'soft' && brushPat !== 'spray') ||
+            (t === 'eraser' && brushPat !== 'spray'));
+    if (hardnessGrp && cfg.paramGroups && cfg.paramGroups.includes('opt-grp-brush-hardness')) {
+        hardnessGrp.hidden = !showHard;
     }
+    if (hardnessRow) hardnessRow.hidden = !showHard;
     const bhSl = document.getElementById('tool-brush-hardness');
     const bhV = document.getElementById('tool-brush-hardness-val');
     if (bhSl) {
+        bhSl.disabled = !showHard;
         const hb = EditorManager.toolProps.brushHardness != null ? EditorManager.toolProps.brushHardness : 100;
         bhSl.value = String(Math.max(0, Math.min(100, hb)));
         if (bhV) bhV.textContent = bhSl.value;
@@ -1196,17 +1215,30 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
                     'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
                 svg.setAttribute('width', String(W));
                 svg.setAttribute('height', String(H));
-                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', String(x));
-                rect.setAttribute('y', String(y));
-                rect.setAttribute('width', String(Math.max(0, w)));
-                rect.setAttribute('height', String(Math.max(0, h)));
-                rect.setAttribute('fill', 'none');
-                rect.setAttribute('stroke', '#000');
-                rect.setAttribute('stroke-width', String(2 / z));
-                rect.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+                const strokeW = 1.25 / z;
+                const outlineW = strokeW * 2;
+                const pOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                pOutline.setAttribute('x', String(x));
+                pOutline.setAttribute('y', String(y));
+                pOutline.setAttribute('width', String(Math.max(0, w)));
+                pOutline.setAttribute('height', String(Math.max(0, h)));
+                pOutline.setAttribute('fill', 'none');
+                pOutline.setAttribute('stroke', '#000');
+                pOutline.setAttribute('stroke-width', String(outlineW));
+                
+                const pDash = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                pDash.setAttribute('x', String(x));
+                pDash.setAttribute('y', String(y));
+                pDash.setAttribute('width', String(Math.max(0, w)));
+                pDash.setAttribute('height', String(Math.max(0, h)));
+                pDash.setAttribute('fill', 'none');
+                pDash.setAttribute('stroke', '#fff');
+                pDash.setAttribute('stroke-width', String(strokeW));
+                pDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+                
+                svg.appendChild(pOutline);
+                svg.appendChild(pDash);
                 parent.appendChild(svg);
-                svg.appendChild(rect);
             };
             mkSvg(sb.x, sb.y, sb.w, sb.h);
         }
@@ -1220,10 +1252,12 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
         svg.setAttribute('width', String(W));
         svg.setAttribute('height', String(H));
         const z = EditorManager.getCanvasZoomLevel();
+        const strokeW = 1.25 / z;
+        const outlineW = strokeW * 2;
         const pOutline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pOutline.setAttribute('d', pathData);
         pOutline.setAttribute('stroke', isExp ? '#0000ff' : '#000000');
-        pOutline.setAttribute('stroke-width', String((isExp ? 1 : 3) / z));
+        pOutline.setAttribute('stroke-width', String(isExp ? 1 / z : outlineW));
         pOutline.setAttribute('fill', 'none');
         pOutline.setAttribute('stroke-linejoin', 'round');
         pOutline.setAttribute('stroke-linecap', 'round');
@@ -1231,7 +1265,7 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
         const pDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pDash.setAttribute('d', pathData);
         pDash.setAttribute('stroke', '#ffffff');
-        pDash.setAttribute('stroke-width', String((isExp ? 1 : 1.5) / z));
+        pDash.setAttribute('stroke-width', String(isExp ? 1 / z : strokeW));
         pDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
         if (isExp) pDash.setAttribute('stroke-dasharray', `${2 / z} ${2 / z}`);
         pDash.setAttribute('fill', 'none');
@@ -1811,16 +1845,42 @@ function illuRgbFromCssColor(color) {
 function illuBrushUsesStampMode(tool) {
     const pat = EditorManager.toolProps.brushPattern || 'round';
     if (pat === 'spray') return false;
+    if (pat === 'soft') return tool === 'brush' || tool === 'eraser';
     const h = EditorManager.toolProps.brushHardness != null ? EditorManager.toolProps.brushHardness : 100;
-    if (tool === 'brush') {
-        if (pat === 'soft') return false;
-        return h < 100;
-    }
-    if (tool === 'eraser') {
-        if (pat === 'soft') return true;
-        return h < 100;
-    }
+    if (tool === 'brush' || tool === 'eraser') return h < 100;
     return false;
+}
+
+/** Crayon : bloc carré aligné sur la grille pixel, sans anticrénelage ni dureté. */
+function illuPencilFillPixel(ctx, lx, ly, size, color) {
+    const s = Math.max(1, Math.round(size));
+    const half = Math.floor(s / 2);
+    const x0 = Math.floor(lx) - half;
+    const y0 = Math.floor(ly) - half;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = color;
+    ctx.fillRect(x0, y0, s, s);
+    ctx.restore();
+}
+
+function illuPencilSegment(ctx, x0, y0, x1, y1, size, color) {
+    const xi0 = Math.floor(x0);
+    const yi0 = Math.floor(y0);
+    const xi1 = Math.floor(x1);
+    const yi1 = Math.floor(y1);
+    const steps = Math.max(Math.abs(xi1 - xi0), Math.abs(yi1 - yi0), 1);
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        illuPencilFillPixel(
+            ctx,
+            Math.floor(x0 + (x1 - x0) * t),
+            Math.floor(y0 + (y1 - y0) * t),
+            size,
+            color
+        );
+    }
 }
 
 function illuBrushStampSpacing(lw) {
@@ -1924,8 +1984,8 @@ function stampBrushAt(ctx, tool, lx, ly) {
     }
 
     let h = EditorManager.toolProps.brushHardness != null ? EditorManager.toolProps.brushHardness : 100;
-    if (tool === 'eraser' && pat === 'soft') {
-        h = Math.min(h, 48);
+    if (pat === 'soft') {
+        h = Math.min(h, tool === 'eraser' ? 48 : 42);
     }
     const rgb = illuRgbFromCssColor(EditorManager.activeColor);
     const isEr = tool === 'eraser';
@@ -2322,6 +2382,8 @@ function appendPolygonOutlineSvg(parent, points, closed, isExp = false, expandPx
     const W = EditorManager.width;
     const H = EditorManager.height;
     const z = EditorManager.getCanvasZoomLevel();
+    const strokeW = 1.25 / z;
+    const outlineW = strokeW * 2;
     let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 1; i < points.length; i++) d += ` L ${points[i].x} ${points[i].y}`;
     if (closed) d += ' Z';
@@ -2335,7 +2397,7 @@ function appendPolygonOutlineSvg(parent, points, closed, isExp = false, expandPx
     const pOutline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     pOutline.setAttribute('d', d);
     pOutline.setAttribute('stroke', isExp ? '#0000ff' : '#000000');
-    pOutline.setAttribute('stroke-width', String(isExp ? (expandPx * 2) : (3 / z)));
+    pOutline.setAttribute('stroke-width', String(isExp ? (expandPx * 2) : outlineW));
     pOutline.setAttribute('fill', 'none');
     pOutline.setAttribute('stroke-linejoin', 'round');
     pOutline.setAttribute('stroke-linecap', 'round');
@@ -2343,7 +2405,7 @@ function appendPolygonOutlineSvg(parent, points, closed, isExp = false, expandPx
     const pDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     pDash.setAttribute('d', d);
     pDash.setAttribute('stroke', '#ffffff');
-    pDash.setAttribute('stroke-width', String(isExp ? (expandPx * 2) : (1.5 / z)));
+    pDash.setAttribute('stroke-width', String(isExp ? (expandPx * 2) : strokeW));
     pDash.setAttribute('stroke-dasharray', isExp ? `${2 / z} ${2 / z}` : `${5 / z} ${4 / z}`);
     pDash.setAttribute('fill', 'none');
     pDash.setAttribute('stroke-linejoin', 'round');
@@ -2541,7 +2603,12 @@ window.refreshSelectionVisual = function (opts) {
             // Expanded preview line
             if (window.selectionExpansionPreviewPx && window.selectionExpansionPreviewPx > 0) {
                 const ep = window.selectionExpansionPreviewPx;
-                selectionOverlay.appendChild(mkBox(sb.x - ep, sb.y - ep, sb.w + ep * 2, sb.h + ep * 2, true));
+                appendPolygonOutlineSvg(selectionOverlay, [
+                    { x: sb.x - ep, y: sb.y - ep },
+                    { x: sb.x + sb.w + ep, y: sb.y - ep },
+                    { x: sb.x + sb.w + ep, y: sb.y + sb.h + ep },
+                    { x: sb.x - ep, y: sb.y + sb.h + ep }
+                ], true, true, ep);
             }
 
             if (window.illuCropSessionActive && Math.abs(ang) < 1e-6) {
@@ -2572,22 +2639,53 @@ window.refreshSelectionVisual = function (opts) {
                 mkShade(0, y0 + hh, W, Math.max(0, H - y0 - hh));
             }
 
-            if (Math.abs(ang) < 1e-6) {
-                selectionOverlay.appendChild(mkBox(sb.x, sb.y, sb.w, sb.h));
+            if (window.illuCropSessionActive) {
+                if (Math.abs(ang) < 1e-6) {
+                    selectionOverlay.appendChild(mkBox(sb.x, sb.y, sb.w, sb.h));
+                } else {
+                    const wrap = document.createElement('div');
+                    wrap.style.cssText = [
+                        'position:absolute',
+                        `left:${sb.x}px`,
+                        `top:${sb.y}px`,
+                        `width:${Math.max(0, sb.w)}px`,
+                        `height:${Math.max(0, sb.h)}px`,
+                        'pointer-events:none',
+                        'transform-origin:center center',
+                        `transform:rotate(${ang}rad)`
+                    ].join(';');
+                    wrap.appendChild(mkBox(0, 0, sb.w, sb.h));
+                    selectionOverlay.appendChild(wrap);
+                }
             } else {
-                const wrap = document.createElement('div');
-                wrap.style.cssText = [
-                    'position:absolute',
-                    `left:${sb.x}px`,
-                    `top:${sb.y}px`,
-                    `width:${Math.max(0, sb.w)}px`,
-                    `height:${Math.max(0, sb.h)}px`,
-                    'pointer-events:none',
-                    'transform-origin:center center',
-                    `transform:rotate(${ang}rad)`
-                ].join(';');
-                wrap.appendChild(mkBox(0, 0, sb.w, sb.h));
-                selectionOverlay.appendChild(wrap);
+                if (Math.abs(ang) < 1e-6) {
+                    appendPolygonOutlineSvg(selectionOverlay, [
+                        { x: sb.x, y: sb.y },
+                        { x: sb.x + sb.w, y: sb.y },
+                        { x: sb.x + sb.w, y: sb.y + sb.h },
+                        { x: sb.x, y: sb.y + sb.h }
+                    ], true);
+                } else {
+                    const cx = sb.x + sb.w / 2;
+                    const cy = sb.y + sb.h / 2;
+                    const cos = Math.cos(ang);
+                    const sin = Math.sin(ang);
+                    const rotatePoint = (px, py) => {
+                        const dx = px - cx;
+                        const dy = py - cy;
+                        return {
+                            x: cx + dx * cos - dy * sin,
+                            y: cy + dx * sin + dy * cos
+                        };
+                    };
+                    const pts = [
+                        rotatePoint(sb.x, sb.y),
+                        rotatePoint(sb.x + sb.w, sb.y),
+                        rotatePoint(sb.x + sb.w, sb.y + sb.h),
+                        rotatePoint(sb.x, sb.y + sb.h)
+                    ];
+                    appendPolygonOutlineSvg(selectionOverlay, pts, true);
+                }
             }
         } else {
             appendInvertedRectMarqueeDoc(selectionOverlay, sb, W, H);
@@ -3264,19 +3362,52 @@ function getPos(e) {
     return EditorManager.logicalPointerFromClientXY(e.clientX, e.clientY);
 }
 
+const ILLU_MIN_SELECTION_SPAN = 1;
+
+function illuMinSelectionSpan() {
+    return ILLU_MIN_SELECTION_SPAN;
+}
+
+function illuSelectionBigEnough(sb) {
+    if (!sb) return false;
+    return sb.w >= illuMinSelectionSpan() && sb.h >= illuMinSelectionSpan();
+}
+
+/** Aligne une sélection rectangulaire sur la grille pixel (toiles pixel / très petites). */
+function illuSnapSelectionBounds(sb) {
+    if (!sb) return sb;
+    const w = Math.max(illuMinSelectionSpan(), Math.round(sb.w));
+    const h = Math.max(illuMinSelectionSpan(), Math.round(sb.h));
+    return { x: Math.floor(sb.x), y: Math.floor(sb.y), w, h };
+}
+
+/** Clic sans glisser ou micro-glisser → sélection 1×1 au pixel visé. */
+function illuFinalizeRectSelectionBounds(sb, startXp, startYp) {
+    if (illuSelectionBigEnough(sb)) return illuSnapSelectionBounds(sb);
+    const W = EditorManager.width;
+    const H = EditorManager.height;
+    const x = Math.max(0, Math.min(W - 1, Math.floor(startXp)));
+    const y = Math.max(0, Math.min(H - 1, Math.floor(startYp)));
+    return { x, y, w: 1, h: 1 };
+}
+
 /** Maj : sélection rectangulaire = carré depuis le point de départ. */
 function constrainRectSelectionDraw(startXp, startYp, posX, posY, shift) {
+    let b;
     if (!shift) {
         const w = Math.abs(posX - startXp);
         const h = Math.abs(posY - startYp);
-        return { x: Math.min(posX, startXp), y: Math.min(posY, startYp), w, h };
+        b = { x: Math.min(posX, startXp), y: Math.min(posY, startYp), w, h };
+    } else {
+        const dx = posX - startXp;
+        const dy = posY - startYp;
+        const s = Math.max(Math.abs(dx), Math.abs(dy));
+        const x = dx >= 0 ? startXp : startXp - s;
+        const y = dy >= 0 ? startYp : startYp - s;
+        b = { x, y, w: s, h: s };
     }
-    const dx = posX - startXp;
-    const dy = posY - startYp;
-    const s = Math.max(Math.abs(dx), Math.abs(dy));
-    const x = dx >= 0 ? startXp : startXp - s;
-    const y = dy >= 0 ? startYp : startYp - s;
-    return { x, y, w: s, h: s };
+    if (EditorManager.isPixelMode) return illuSnapSelectionBounds(b);
+    return b;
 }
 
 /** Maj : ligne / dégradé linéaire à angles 0°, 45°, 90°, … depuis le point de départ. */
@@ -3301,20 +3432,21 @@ window.constrainLineEndpoint = constrainLineEndpoint;
  * `handle` : n, s, e, w, nw, ne, sw, se (comme les poignées).
  */
 function constrainSelectionResizeBounds(s, handle, dx, dy, shift) {
+    const minS = illuMinSelectionSpan();
     let x = s.x;
     let y = s.y;
     let w = s.w;
     let h = s.h;
     const hstr = handle || '';
-    if (hstr.includes('e')) w = Math.max(4, s.w + dx);
-    if (hstr.includes('s')) h = Math.max(4, s.h + dy);
+    if (hstr.includes('e')) w = Math.max(minS, s.w + dx);
+    if (hstr.includes('s')) h = Math.max(minS, s.h + dy);
     if (hstr.includes('w')) {
         x = s.x + dx;
-        w = Math.max(4, s.w - dx);
+        w = Math.max(minS, s.w - dx);
     }
     if (hstr.includes('n')) {
         y = s.y + dy;
-        h = Math.max(4, s.h - dy);
+        h = Math.max(minS, s.h - dy);
     }
     if (!shift) return { x, y, w, h };
 
@@ -3323,8 +3455,8 @@ function constrainSelectionResizeBounds(s, handle, dx, dy, shift) {
 
     if (corner) {
         const k = Math.max(w / Math.max(1e-6, s.w), h / Math.max(1e-6, s.h));
-        w = Math.max(4, s.w * k);
-        h = Math.max(4, s.h * k);
+        w = Math.max(minS, s.w * k);
+        h = Math.max(minS, s.h * k);
         if (hstr === 'se') {
             x = s.x;
             y = s.y;
@@ -3341,29 +3473,29 @@ function constrainSelectionResizeBounds(s, handle, dx, dy, shift) {
         return { x, y, w, h };
     }
     if (hstr === 'e') {
-        w = Math.max(4, s.w + dx);
-        h = Math.max(4, w / ratio);
+        w = Math.max(minS, s.w + dx);
+        h = Math.max(minS, w / ratio);
         x = s.x;
         y = s.y + (s.h - h) / 2;
         return { x, y, w, h };
     }
     if (hstr === 'w') {
-        w = Math.max(4, s.w - dx);
-        h = Math.max(4, w / ratio);
+        w = Math.max(minS, s.w - dx);
+        h = Math.max(minS, w / ratio);
         x = s.x + s.w - w;
         y = s.y + (s.h - h) / 2;
         return { x, y, w, h };
     }
     if (hstr === 's') {
-        h = Math.max(4, s.h + dy);
-        w = Math.max(4, h * ratio);
+        h = Math.max(minS, s.h + dy);
+        w = Math.max(minS, h * ratio);
         x = s.x + (s.w - w) / 2;
         y = s.y;
         return { x, y, w, h };
     }
     if (hstr === 'n') {
-        h = Math.max(4, s.h - dy);
-        w = Math.max(4, h * ratio);
+        h = Math.max(minS, s.h - dy);
+        w = Math.max(minS, h * ratio);
         x = s.x + (s.w - w) / 2;
         y = s.y + s.h - h;
         return { x, y, w, h };
@@ -3416,15 +3548,16 @@ function clampSelectionBoundsToDocument(sb) {
     if (!sb || !EditorManager.activeProject) return sb;
     const W = EditorManager.width;
     const H = EditorManager.height;
+    const minS = illuMinSelectionSpan();
     let x = sb.x;
     let y = sb.y;
-    let w = Math.max(4, sb.w | 0);
-    let h = Math.max(4, sb.h | 0);
-    x = Math.max(0, Math.min(x, W - 4));
-    y = Math.max(0, Math.min(y, H - 4));
-    w = Math.max(4, Math.min(w, W - x));
-    h = Math.max(4, Math.min(h, H - y));
-    return { x, y, w, h };
+    let w = Math.max(minS, sb.w | 0);
+    let h = Math.max(minS, sb.h | 0);
+    x = Math.max(0, Math.min(x, W - minS));
+    y = Math.max(0, Math.min(y, H - minS));
+    w = Math.max(minS, Math.min(w, W - x));
+    h = Math.max(minS, Math.min(h, H - y));
+    return illuSnapSelectionBounds({ x, y, w, h });
 }
 
 /** Hors recadrage : Déplacer / Déformation / warp-4 autorisent un cadre (et calque) hors toile. */
@@ -5037,6 +5170,7 @@ function handleMouseDown(e) {
         isDrawing = false;
         isSprayStroke = false;
         isStampBrushStroke = false;
+        isPencilPixelStroke = false;
         return;
     }
 
@@ -5052,6 +5186,7 @@ function handleMouseDown(e) {
         isDrawing = true;
         isSprayStroke = false;
         isStampBrushStroke = false;
+        isPencilPixelStroke = false;
         return;
     }
 
@@ -9095,6 +9230,7 @@ function startPixel(pos, e) {
         if (pat === 'spray') {
             isSprayStroke = true;
             isStampBrushStroke = false;
+            isPencilPixelStroke = false;
             pencilStrokePoints = null;
             const sprayCol = (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') ? '#000' : EditorManager.activeColor;
             sprayDots(ctx, lx, ly, lw, sprayCol);
@@ -9102,6 +9238,7 @@ function startPixel(pos, e) {
         } else if (illuBrushUsesStampMode('brush')) {
             isSprayStroke = false;
             isStampBrushStroke = true;
+            isPencilPixelStroke = false;
             lastStampX = lx;
             lastStampY = ly;
             stampBrushAt(ctx, 'brush', lx, ly);
@@ -9111,9 +9248,10 @@ function startPixel(pos, e) {
         } else {
             isSprayStroke = false;
             isStampBrushStroke = false;
+            isPencilPixelStroke = false;
             applyBrushPatternStyle(ctx, pat);
-            ctx.beginPath();
-            ctx.moveTo(lx, ly);
+            lastBrushLineX = lx;
+            lastBrushLineY = ly;
             pencilStrokePoints =
                 EditorManager.toolProps.pencilAutoClose ? [{ x: lx, y: ly }] : null;
         }
@@ -9121,15 +9259,18 @@ function startPixel(pos, e) {
         if (typeof EditorManager.setStrokeLightPixelRender === 'function') {
             EditorManager.setStrokeLightPixelRender(true);
         }
-        ctx.lineWidth = window.EditorManager.toolProps.size || 1;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
+        isSprayStroke = false;
+        isStampBrushStroke = false;
+        isPencilPixelStroke = true;
         const plx = pos.x - EditorManager.activeLayer.x;
         const ply = pos.y - EditorManager.activeLayer.y;
-        ctx.moveTo(plx, ply);
+        lastPencilX = plx;
+        lastPencilY = ply;
+        ctx.imageSmoothingEnabled = false;
+        illuPencilFillPixel(ctx, plx, ply, EditorManager.toolProps.size || 1, EditorManager.activeColor);
         pencilStrokePoints =
             EditorManager.toolProps.pencilAutoClose ? [{ x: plx, y: ply }] : null;
+        EditorManager.render();
     } else if (window.activeTool === 'eraser') {
         if (typeof EditorManager.setStrokeLightPixelRender === 'function') {
             EditorManager.setStrokeLightPixelRender(true);
@@ -9142,12 +9283,14 @@ function startPixel(pos, e) {
         if (pat === 'spray') {
             isSprayStroke = true;
             isStampBrushStroke = false;
+            isPencilPixelStroke = false;
             pencilStrokePoints = null;
             sprayDotsErase(ctx, lx, ly, lw);
             EditorManager.render();
         } else if (illuBrushUsesStampMode('eraser')) {
             isSprayStroke = false;
             isStampBrushStroke = true;
+            isPencilPixelStroke = false;
             lastStampX = lx;
             lastStampY = ly;
             stampBrushAt(ctx, 'eraser', lx, ly);
@@ -9156,14 +9299,15 @@ function startPixel(pos, e) {
         } else {
             isSprayStroke = false;
             isStampBrushStroke = false;
+            isPencilPixelStroke = false;
             ctx.globalCompositeOperation = 'destination-out';
             ctx.strokeStyle = 'rgba(0,0,0,1)';
             ctx.fillStyle = 'rgba(0,0,0,1)';
             applyEraserPatternStyle(ctx, pat);
             ctx.shadowBlur = 0;
             ctx.shadowColor = 'transparent';
-            ctx.beginPath();
-            ctx.moveTo(lx, ly);
+            lastBrushLineX = lx;
+            lastBrushLineY = ly;
             pencilStrokePoints = null;
         }
     }
@@ -9391,7 +9535,12 @@ function updatePixel(pos, pointerEv) {
         if (illuClampSelectionBoundsToDocumentForActiveTool()) {
             nb = clampSelectionBoundsToDocument(nb);
         } else {
-            nb = { x: nb.x, y: nb.y, w: Math.max(4, Math.round(nb.w)), h: Math.max(4, Math.round(nb.h)) };
+            nb = {
+                x: nb.x,
+                y: nb.y,
+                w: Math.max(illuMinSelectionSpan(), Math.round(nb.w)),
+                h: Math.max(illuMinSelectionSpan(), Math.round(nb.h))
+            };
         }
         window.selectionBounds = nb;
         if (originalSelectionLassoPoints && window.selectionKind === 'lasso') {
@@ -9565,6 +9714,20 @@ function updatePixel(pos, pointerEv) {
         const lx = pos.x - EditorManager.activeLayer.x;
         const ly = pos.y - EditorManager.activeLayer.y;
         const lw = window.EditorManager.toolProps.size || 5;
+        if (window.activeTool === 'pencil' && isPencilPixelStroke) {
+            const psz = EditorManager.toolProps.size || 1;
+            illuPencilSegment(ctx, lastPencilX, lastPencilY, lx, ly, psz, EditorManager.activeColor);
+            lastPencilX = lx;
+            lastPencilY = ly;
+            if (pencilStrokePoints && EditorManager.toolProps.pencilAutoClose) {
+                const last = pencilStrokePoints[pencilStrokePoints.length - 1];
+                if (!last || Math.hypot(lx - last.x, ly - last.y) >= 0.5) {
+                    pencilStrokePoints.push({ x: lx, y: ly });
+                }
+            }
+            illuScheduleInteractiveVisualRefresh({ render: true });
+            return;
+        }
         if (window.activeTool === 'brush' && isSprayStroke) {
             const sprayCol = (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') ? '#000' : EditorManager.activeColor;
             sprayDots(ctx, lx, ly, lw, sprayCol);
@@ -9605,24 +9768,18 @@ function updatePixel(pos, pointerEv) {
             applyEraserPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
         } else {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.save();
             EditorManager.applyActiveStyle(ctx);
-            ctx.lineWidth = window.activeTool === 'pencil'
-                ? (window.EditorManager.toolProps.size || 1)
-                : lw;
-            if (window.activeTool === 'brush') {
-                applyBrushPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
-            } else {
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.shadowBlur = 0;
-                ctx.shadowColor = 'transparent';
-            }
+            ctx.lineWidth = lw;
+            applyBrushPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
         }
+        ctx.beginPath();
+        ctx.moveTo(lastBrushLineX, lastBrushLineY);
         ctx.lineTo(lx, ly);
         ctx.stroke();
+        lastBrushLineX = lx;
+        lastBrushLineY = ly;
         if (
-            (window.activeTool === 'pencil' || window.activeTool === 'brush') &&
+            window.activeTool === 'brush' &&
             pencilStrokePoints &&
             !isSprayStroke
         ) {
@@ -10060,12 +10217,14 @@ function handleMouseUp(e) {
             if (isRectSelectionTool()) {
                 ctx.restore();
             }
-            const sbr = window.selectionBounds;
+            let sbr = window.selectionBounds;
             const opOnUp =
                 typeof window.illuConsumeSelectionCombineOp === 'function'
                     ? window.illuConsumeSelectionCombineOp()
                     : 'new';
-            if (!sbr || sbr.w < 2 || sbr.h < 2) {
+            sbr = illuFinalizeRectSelectionBounds(sbr, startX, startY);
+            window.selectionBounds = sbr;
+            if (!illuSelectionBigEnough(sbr)) {
                 window.selectionBounds = null;
                 window.selectionLassoPoints = null;
                 window.selectionKind = 'rect';
@@ -10107,7 +10266,7 @@ function handleMouseUp(e) {
             window.selectionCombineGhost = null;
             
             // Quad 4 coins : mode armé (sélection rect.) ou nouveau cadre avec l’outil warp-4
-            if (opOnUp === 'new' && sbr && sbr.w >= 2 && sbr.h >= 2) {
+            if (opOnUp === 'new' && illuSelectionBigEnough(sbr)) {
                 const toQuadFromArm =
                     EditorManager.toolProps.selectionRectFreeCornersArm && window.selectionKind === 'rect';
                 const toQuadFromWarp4 =
@@ -10148,20 +10307,41 @@ function handleMouseUp(e) {
                 const lp = pencilStrokePoints[pencilStrokePoints.length - 1];
                 stampBrushSegment(ctx, 'brush', lp.x, lp.y, fp.x, fp.y);
             } else if (
-                (window.activeTool === 'pencil' || window.activeTool === 'brush') &&
+                window.activeTool === 'pencil' &&
+                isPencilPixelStroke &&
+                EditorManager.toolProps.pencilAutoClose &&
+                pencilStrokePoints &&
+                pencilStrokePoints.length >= 2
+            ) {
+                const fp = pencilStrokePoints[0];
+                const lp = pencilStrokePoints[pencilStrokePoints.length - 1];
+                illuPencilSegment(
+                    ctx,
+                    lp.x,
+                    lp.y,
+                    fp.x,
+                    fp.y,
+                    EditorManager.toolProps.size || 1,
+                    EditorManager.activeColor
+                );
+            } else if (
+                window.activeTool === 'brush' &&
                 !isStampBrushStroke &&
                 EditorManager.toolProps.pencilAutoClose &&
                 pencilStrokePoints &&
                 pencilStrokePoints.length >= 2 &&
-                !(window.activeTool === 'brush' && isSprayStroke)
+                !isSprayStroke
             ) {
                 const fp = pencilStrokePoints[0];
+                ctx.beginPath();
+                ctx.moveTo(pencilStrokePoints[pencilStrokePoints.length - 1].x, pencilStrokePoints[pencilStrokePoints.length - 1].y);
                 ctx.lineTo(fp.x, fp.y);
                 ctx.stroke();
             }
             pencilStrokePoints = null;
             isSprayStroke = false;
             isStampBrushStroke = false;
+            isPencilPixelStroke = false;
             ctx.restore();
             if (typeof EditorManager.commitStrokeIntermediate === 'function') {
                 EditorManager.commitStrokeIntermediate();
@@ -10296,31 +10476,13 @@ window.deleteActiveVectorOrPixelSelection = function () {
     }
     if (!EditorManager.isPixelMode) return false;
 
-    const tool = window.activeTool || '';
-    const selectionTools = new Set(['select', 'wand', 'direct-select']);
     const hasOutline =
         typeof window.illuPixelSelectionPresent === 'function' && window.illuPixelSelectionPresent();
-    const canErase =
-        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
 
-    if (!hasOutline && !canErase) return false;
+    if (!hasOutline) return false;
 
-    /* Sélection / baguette : Suppr retire la sélection (sans effacer les pixels). */
-    if (selectionTools.has(tool)) {
-        if (typeof EditorManager.deselectAll === 'function') {
-            EditorManager.deselectAll();
-        }
-        return true;
-    }
-
-    if (canErase) {
-        return !!window.clearSelectionContent();
-    }
-    if (hasOutline && typeof EditorManager.deselectAll === 'function') {
-        EditorManager.deselectAll();
-        return true;
-    }
-    return false;
+    // S'il y a un contour de sélection en mode pixel, la touche Suppr/Retour arrière efface toujours son contenu !
+    return !!window.clearSelectionContent();
 };
 
 /**
@@ -10882,8 +11044,10 @@ window.finalizePendingPixelLiveEdits = function () {
 
         if (isDrawing) {
             if (isRectSelectionTool()) {
-                const sbr = window.selectionBounds;
-                if (!sbr || sbr.w < 2 || sbr.h < 2) {
+                let sbr = window.selectionBounds;
+                sbr = illuFinalizeRectSelectionBounds(sbr, startX, startY);
+                window.selectionBounds = sbr;
+                if (!illuSelectionBigEnough(sbr)) {
                     window.selectionBounds = null;
                     window.selectionLassoPoints = null;
                     window.selectionKind = 'rect';

@@ -81,52 +81,62 @@
             const overlay = this.ensureOverlayRoot(EditorManager.width, EditorManager.height);
             if (!overlay) return false;
 
-            const z = EditorManager.getCanvasZoomLevel();
-            const borderW = Math.max(1, 1.25 / z);
+            const z = EditorManager.getCanvasZoomLevel() || 1;
+            const strokeW = 1.25 / z;
+            const outlineW = strokeW * 2;
             const isCrop = window.illuCropSessionActive;
             const mainCol = isCrop ? '#ff0000' : '#000000';
             const dashCol = '#ffffff';
 
-            if (!this._fastRectReady) {
+            const x = sb.x;
+            const y = sb.y;
+            const w = sb.w;
+            const h = sb.h;
+            const d = `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`;
+
+            if (!this._fastRectReady || !this._fastRectPathSolid || !document.getElementById('selection-overlay-fast-svg')) {
                 overlay.innerHTML = '';
-                const wrap = document.createElement('div');
-                wrap.id = 'selection-overlay-fast-wrap';
-                wrap.style.cssText = 'position:absolute;pointer-events:none;transform-origin:center center;';
-                const box = document.createElement('div');
-                box.id = 'selection-overlay-fast-box';
-                box.style.cssText = [
-                    'position:absolute',
-                    'box-sizing:border-box',
-                    'pointer-events:none',
-                    'background:transparent',
-                    `outline:${Math.max(1, borderW)}px solid ${mainCol}`,
-                    'outline-offset:0',
-                    `border:${borderW}px dashed ${dashCol}`,
-                    'box-shadow:0 0 0 1px rgba(0,0,0,0.85)'
-                ].join(';');
-                wrap.appendChild(box);
-                overlay.appendChild(wrap);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.id = 'selection-overlay-fast-svg';
+                svg.setAttribute('width', String(EditorManager.width));
+                svg.setAttribute('height', String(EditorManager.height));
+                svg.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;overflow:visible;';
+                
+                const pathSolid = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pathSolid.id = 'selection-overlay-fast-solid';
+                pathSolid.setAttribute('fill', 'none');
+                pathSolid.setAttribute('stroke', mainCol);
+                pathSolid.setAttribute('stroke-width', String(outlineW));
+                pathSolid.setAttribute('stroke-linejoin', 'round');
+                
+                const pathDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pathDash.id = 'selection-overlay-fast-dash';
+                pathDash.setAttribute('fill', 'none');
+                pathDash.setAttribute('stroke', dashCol);
+                pathDash.setAttribute('stroke-width', String(strokeW));
+                pathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+                pathDash.setAttribute('stroke-linejoin', 'round');
+                
+                svg.appendChild(pathSolid);
+                svg.appendChild(pathDash);
+                overlay.appendChild(svg);
+                
                 this._fastRectReady = true;
+                this._fastRectPathSolid = pathSolid;
+                this._fastRectPathDash = pathDash;
                 window._selectionOverlayFastReady = true;
                 this._lassoDraftSvg = null;
                 this._lassoDraftPath = null;
             }
 
-            const wrap = document.getElementById('selection-overlay-fast-wrap');
-            const box = document.getElementById('selection-overlay-fast-box');
-            if (!wrap || !box) return false;
-
-            box.style.outline = `${Math.max(1, borderW)}px solid ${mainCol}`;
-            box.style.border = `${borderW}px dashed ${dashCol}`;
-            wrap.style.left = sb.x + 'px';
-            wrap.style.top = sb.y + 'px';
-            wrap.style.width = Math.max(0, sb.w) + 'px';
-            wrap.style.height = Math.max(0, sb.h) + 'px';
-            wrap.style.transform = '';
-            box.style.left = '0';
-            box.style.top = '0';
-            box.style.width = Math.max(0, sb.w) + 'px';
-            box.style.height = Math.max(0, sb.h) + 'px';
+            this._fastRectPathSolid.setAttribute('d', d);
+            this._fastRectPathSolid.setAttribute('stroke-width', String(outlineW));
+            this._fastRectPathSolid.setAttribute('stroke', mainCol);
+            if (this._fastRectPathDash) {
+                this._fastRectPathDash.setAttribute('d', d);
+                this._fastRectPathDash.setAttribute('stroke-width', String(strokeW));
+                this._fastRectPathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+            }
             return true;
         },
 
@@ -154,7 +164,8 @@
             if (!overlay) return false;
 
             const z = EditorManager.getCanvasZoomLevel() || 1;
-            const strokeW = Math.max(1, 1.25 / z);
+            const strokeW = 1.25 / z;
+            const outlineW = strokeW * 2;
             const pts = [quad.tl, quad.tr, quad.br, quad.bl];
             const d =
                 `M ${pts[0].x} ${pts[0].y}` +
@@ -162,7 +173,7 @@
                 ` L ${pts[2].x} ${pts[2].y}` +
                 ` L ${pts[3].x} ${pts[3].y} Z`;
 
-            if (!this._warpQuadSvg || !this._warpQuadPathSolid) {
+            if (!this._warpQuadSvg || !this._warpQuadPathSolid || !document.getElementById('selection-warp-quad-svg')) {
                 overlay.innerHTML = '';
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.id = 'selection-warp-quad-svg';
@@ -173,14 +184,14 @@
                 pathSolid.id = 'selection-warp-quad-solid';
                 pathSolid.setAttribute('fill', 'none');
                 pathSolid.setAttribute('stroke', '#000');
-                pathSolid.setAttribute('stroke-width', String(strokeW));
+                pathSolid.setAttribute('stroke-width', String(outlineW));
                 pathSolid.setAttribute('stroke-linejoin', 'round');
                 const pathDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 pathDash.id = 'selection-warp-quad-dash';
                 pathDash.setAttribute('fill', 'none');
                 pathDash.setAttribute('stroke', '#fff');
                 pathDash.setAttribute('stroke-width', String(strokeW));
-                pathDash.setAttribute('stroke-dasharray', `${3 / z} ${2 / z}`);
+                pathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
                 pathDash.setAttribute('stroke-linejoin', 'round');
                 svg.appendChild(pathSolid);
                 svg.appendChild(pathDash);
@@ -195,11 +206,11 @@
             }
 
             this._warpQuadPathSolid.setAttribute('d', d);
-            this._warpQuadPathSolid.setAttribute('stroke-width', String(strokeW));
+            this._warpQuadPathSolid.setAttribute('stroke-width', String(outlineW));
             if (this._warpQuadPathDash) {
                 this._warpQuadPathDash.setAttribute('d', d);
                 this._warpQuadPathDash.setAttribute('stroke-width', String(strokeW));
-                this._warpQuadPathDash.setAttribute('stroke-dasharray', `${3 / z} ${2 / z}`);
+                this._warpQuadPathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
             }
             return true;
         },
@@ -212,9 +223,10 @@
             if (!overlay) return false;
 
             const z = EditorManager.getCanvasZoomLevel() || 1;
-            const strokeW = Math.max(1, 1.25 / z);
+            const strokeW = 1.25 / z;
+            const outlineW = strokeW * 2;
 
-            if (!this._lassoDraftSvg || !this._lassoDraftPath) {
+            if (!this._lassoDraftSvg || !this._lassoDraftPath || !document.getElementById('selection-lasso-draft-svg')) {
                 overlay.innerHTML = '';
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.id = 'selection-lasso-draft-svg';
@@ -225,7 +237,7 @@
                 pathSolid.id = 'selection-lasso-draft-solid';
                 pathSolid.setAttribute('fill', 'none');
                 pathSolid.setAttribute('stroke', '#000');
-                pathSolid.setAttribute('stroke-width', String(strokeW));
+                pathSolid.setAttribute('stroke-width', String(outlineW));
                 pathSolid.setAttribute('stroke-linejoin', 'round');
                 pathSolid.setAttribute('stroke-linecap', 'round');
                 const pathDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -233,7 +245,7 @@
                 pathDash.setAttribute('fill', 'none');
                 pathDash.setAttribute('stroke', '#fff');
                 pathDash.setAttribute('stroke-width', String(strokeW));
-                pathDash.setAttribute('stroke-dasharray', `${3 / z} ${2 / z}`);
+                pathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
                 pathDash.setAttribute('stroke-linejoin', 'round');
                 pathDash.setAttribute('stroke-linecap', 'round');
                 svg.appendChild(pathSolid);
@@ -248,7 +260,12 @@
 
             const d = this._pointsToPathD(points, false);
             this._lassoDraftPath.setAttribute('d', d);
-            if (this._lassoDraftPathDash) this._lassoDraftPathDash.setAttribute('d', d);
+            this._lassoDraftPath.setAttribute('stroke-width', String(outlineW));
+            if (this._lassoDraftPathDash) {
+                this._lassoDraftPathDash.setAttribute('d', d);
+                this._lassoDraftPathDash.setAttribute('stroke-width', String(strokeW));
+                this._lassoDraftPathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+            }
             return true;
         },
 

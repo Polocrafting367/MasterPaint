@@ -541,10 +541,14 @@
             const tb = toolsPanel.querySelector('.title-bar');
             if (tb) tb.style.display = '';
         }
-        const expandBtn = document.getElementById('btn-col-expand');
-        if (expandBtn) expandBtn.style.display = '';
-        const sliders = document.getElementById('color-sliders-panel');
-        if (sliders) sliders.style.display = '';
+        if (typeof window.syncColorPanelToUILayout === 'function') {
+            window.syncColorPanelToUILayout();
+        } else {
+            const expandBtn = document.getElementById('btn-col-expand');
+            if (expandBtn) expandBtn.style.display = '';
+            const sliders = document.getElementById('color-sliders-panel');
+            if (sliders) sliders.style.display = '';
+        }
     }
 
     function mountOptStrip() {

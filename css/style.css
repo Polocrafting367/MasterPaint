@@ -633,6 +633,7 @@ ul[role="menu"] li[role="menuitem"] .menu-icon .illu-menu-sprite-icon {
 
 /* Panneau RVB / TSV / Alpha développé : plus compact (curseurs + colonnes en mode flottant) */
 #color-sliders-panel {
+    display: none;
     font-size: 11px;
     line-height: 1.2;
     gap: 0;
@@ -713,13 +714,24 @@ body:not(.ui-layout-floating) #color-sliders-panel .color-sliders-columns {
     padding: 1px 2px;
 }
 
-#color-sliders-panel .color-hex-row {
-    margin: 3px 0 0;
+.color-hex-row {
     gap: 4px;
     flex-wrap: nowrap;
 }
 
-#color-sliders-panel .color-hex-label {
+.color-picker-left .color-hex-row {
+    padding-left: 50px;
+}
+
+#color-sliders-panel .color-hex-input {
+    width: 55px;
+    min-width: 55px;
+    max-width: 60px;
+    font-size: 10px;
+    padding: 1px 2px;
+}
+
+.color-hex-label {
     flex: 0 0 auto;
     width: auto;
     min-width: 0;
@@ -727,14 +739,14 @@ body:not(.ui-layout-floating) #color-sliders-panel .color-sliders-columns {
     margin: 0;
 }
 
-#color-sliders-panel .color-hex-input {
+.color-hex-input {
     width: 100%;
-    max-width: 72px;
+    max-width: 88px;
     min-width: 0;
     flex: 1 1 auto;
     box-sizing: border-box;
     font-size: 10px;
-    padding: 1px 4px;
+    padding: 1px 2px;
     text-transform: uppercase;
 }
 

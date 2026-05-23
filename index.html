@@ -517,6 +517,15 @@
                                 class="menu-icon" aria-hidden="true"><i
                                     class="fa-solid fa-up-right-from-square"></i></span><span
                                 data-i18n="menu.winLivePreview">Aperçu toile 1:1 (fenêtre)…</span></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluPixelGrid()"><span
+                                class="menu-icon" aria-hidden="true"><i
+                                    class="fa-solid fa-check" id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><span
+                                data-i18n="menu.winPixelGrid">Grille de pixels</span></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluRulers()"><span
+                                class="menu-icon" aria-hidden="true"><i
+                                    class="fa-solid fa-check" id="menu-win-rulers-check" style="visibility: hidden;"></i></span><span
+                                data-i18n="menu.winRulers">Règles</span></li>
+                        <li role="menuitem" class="divider"></li>
                         <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
                                 aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
                                 data-i18n="menu.winReset">Réinitialiser le bureau</span></li>
@@ -633,18 +642,18 @@
                             <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
 
                             <!-- Zoom -->
-                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
-                                data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
-                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
-                                    class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
+                                data-i18n-title="menubar.tbZoomOut" title="Zoom arrière"
+                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
+                                    class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
                             <div class="illu-menubar-zoom-wrap" style="width: auto; min-width: 60px;">
                                 <span class="illu-menubar-zoom-val" id="illu-zoom-value"
                                     style="position: static; font-size: 12px; margin: 0 4px;">100%</span>
                             </div>
-                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
-                                data-i18n-title="menubar.tbZoomOut" title="Zoom arri\u00e8re"
-                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
-                                    class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
+                                data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
+                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
+                                    class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
                             <button type="button" class="illu-menubar-icon-btn" id="illu-tb-zoom-fit-row1"
                                 title="Adapter au workspace"
                                 onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
@@ -1139,6 +1148,15 @@
                                 <input type="range" id="tool-size" class="illu-gauge-input" min="1" max="600" value="5">
                             </span>
                         </span>
+                        <span id="pencil-close-row" class="field-row" style="margin-left: 4px;">
+                            <label class="opt-bar-check">
+                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close">
+                                <span data-i18n="tools.optClosePath">Fermer</span>
+                            </label>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-brush-hardness" class="opt-grp" hidden>
                         <span id="tool-brush-hardness-row" class="field-row illu-gauge-field">
                             <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
                                 data-i18n-title="tools.brushHardness">Dureté</label>
@@ -1148,12 +1166,6 @@
                                 <input type="range" id="tool-brush-hardness" class="illu-gauge-input" min="0" max="100"
                                     value="100">
                             </span>
-                        </span>
-                        <span id="pencil-close-row" class="field-row" style="margin-left: 4px;">
-                            <label class="opt-bar-check">
-                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close">
-                                <span data-i18n="tools.optClosePath">Fermer</span>
-                            </label>
                         </span>
                     </div>
 
@@ -1442,20 +1454,22 @@
                             </div>
                         </div>
                         <div class="window-body color-window-body">
-                            <div class="color-top-row">
-                                <select id="color-target-sel" style="width: 88px; font-size: 12px;">
-                                    <option value="primary" data-i18n="color.primary">Primaire</option>
-                                    <option value="secondary" data-i18n="color.secondary">Secondaire</option>
-                                </select>
-
-                                <button type="button" id="btn-toggle-8bit"
-                                    style="margin-left: 5px; font-size: 10px; padding: 2px 4px; cursor: pointer;">8-Bit</button>
-
-                                <button type="button" id="btn-col-expand" data-i18n-title="title.colorExpand">Plus
-                                    >></button>
-                            </div>
                             <div class="color-picker-main">
-                                <div class="color-picker-columns">
+                                <div class="color-picker-body">
+                                <div class="color-top-row">
+                                    <div class="color-top-row__start">
+                                        <select id="color-target-sel" style="width: 88px; font-size: 12px;">
+                                            <option value="primary" data-i18n="color.primary">Primaire</option>
+                                            <option value="secondary" data-i18n="color.secondary">Secondaire</option>
+                                        </select>
+
+                                        <button type="button" id="btn-toggle-8bit"
+                                            style="margin-left: 5px; font-size: 10px; padding: 2px 4px; cursor: pointer;">8-Bit</button>
+
+                                        <button type="button" id="btn-col-expand" data-i18n-title="title.colorExpand">Plus
+                                            >></button>
+                                    </div>
+                                </div>
                                 <div class="color-picker-left">
                                     <div class="color-wheel-row">
 
@@ -1533,11 +1547,6 @@
                                                 <input type="number" class="illu-num-input" id="col-b-val" value="0"
                                                     min="0" max="255" step="1">
                                             </div>
-                                            <div class="field-row color-hex-row">
-                                                <label class="color-hex-label" data-i18n="color.hex">Hexa</label>
-                                                <input type="text" id="color-hex" class="color-hex-input"
-                                                    value="000000">
-                                            </div>
                                         </div>
                                         <div class="color-sliders-col color-sliders-col--hsv">
                                             <div class="color-section-title color-section-title--sliders"
@@ -1565,6 +1574,10 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="field-row color-hex-row">
+                                        <label class="color-hex-label" data-i18n="color.hex">Hexa</label>
+                                        <input type="text" id="color-hex" class="color-hex-input" value="000000">
+                                    </div>
                                     <div class="color-section-title color-section-title--sliders color-section-title--alpha"
                                         data-i18n="color.alpha">Alpha</div>
                                     <div class="field-row color-slider-row color-slider-row--alpha">
@@ -1583,6 +1596,12 @@
                 </aside>
 
                 <div id="workspace" class="workspace-dock-center">
+                    <!-- Règles et Grille de pixels -->
+                    <canvas id="ruler-top" style="position: absolute; left: 18px; top: 0; right: 0; height: 18px; z-index: 99; background: #f0f0f0; border-bottom: 1px solid #808080; display: none; pointer-events: none;"></canvas>
+                    <canvas id="ruler-left" style="position: absolute; left: 0; top: 18px; bottom: 0; width: 18px; z-index: 99; background: #f0f0f0; border-right: 1px solid #808080; display: none; pointer-events: none;"></canvas>
+                    <div id="ruler-corner" style="position: absolute; left: 0; top: 0; width: 18px; height: 18px; z-index: 100; background: #e0e0e0; border-right: 1px solid #808080; border-bottom: 1px solid #808080; display: none;"></div>
+                    <canvas id="pixel-grid-overlay" style="position: absolute; pointer-events: none; z-index: 4; display: none;"></canvas>
+
                     <div id="main-canvas-container"
                         style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 10px rgba(0,0,0,0.5); width: 1280px; height: 720px;">
                         <div id="canvas-checker-underlay" aria-hidden="true"

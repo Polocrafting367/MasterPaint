@@ -304,7 +304,15 @@
                 const d = touchDistance(t0, t1);
                 const scale = d / pinchState.d0;
                 let nz = pinchState.z0 * scale;
-                nz = Math.max(0.05, Math.min(10, nz));
+                const maxZ =
+                    typeof window.illuMaxZoomLevelForProject === 'function'
+                        ? window.illuMaxZoomLevelForProject(p)
+                        : 10;
+                const minZ =
+                    typeof window.illuMinZoomLevelForProject === 'function'
+                        ? window.illuMinZoomLevelForProject()
+                        : 0.05;
+                nz = Math.max(minZ, Math.min(maxZ, nz));
                 p.zoomLevel = nz;
                 const { cx, cy } = touchCentroid(t0, t1);
                 p.canvasPanX = pinchState.panX0 + (cx - pinchState.cx0);
