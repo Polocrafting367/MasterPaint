@@ -3427,6 +3427,14 @@ function constrainLineEndpoint(startXp, startYp, posX, posY, shift) {
 }
 window.constrainLineEndpoint = constrainLineEndpoint;
 
+/** Maj : rotation par pas de 45° (0°, 45°, 90°, …), comme les traits / lignes. */
+function constrainRotationAngleRad(angleRad, shift) {
+    if (!shift) return angleRad;
+    const snap = Math.PI / 4;
+    return Math.round(angleRad / snap) * snap;
+}
+window.constrainRotationAngleRad = constrainRotationAngleRad;
+
 /**
  * Maj : redimensionnement de sélection en conservant le rapport largeur/hauteur d’origine.
  * `handle` : n, s, e, w, nw, ne, sw, se (comme les poignées).
@@ -5850,7 +5858,9 @@ function updateVector(pos) {
             const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
             const a = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
             const da = a - vectorRotationStartPointerAngle;
-            illuWriteVectorShapeRotation(activeVectorShape, vectorRotationStartAngle + da);
+            let ang = vectorRotationStartAngle + da;
+            ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
+            illuWriteVectorShapeRotation(activeVectorShape, ang);
             if (typeof syncAnchors === 'function') syncAnchors();
             illuScheduleInteractiveVisualRefresh({ render: true });
         }
@@ -9622,7 +9632,8 @@ function updatePixel(pos, pointerEv) {
         const pivot = getShapePreviewRotationPivotDoc(window._shapeRotDragMode);
         if (pivot) {
             const a = Math.atan2(pos.y - pivot.cy, pos.x - pivot.cx);
-            const ang = shapeLiveRotateStartPreview + (a - shapeLiveRotateStartPointerAngle);
+            let ang = shapeLiveRotateStartPreview + (a - shapeLiveRotateStartPointerAngle);
+            ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
             if (window._shapeRotDragMode === 'edit' && window.pixelShapeEdit) {
                 window.pixelShapeEdit.angleRad = ang;
                 if (typeof window.redrawShapeFromEditLive === 'function') {
@@ -9649,8 +9660,11 @@ function updatePixel(pos, pointerEv) {
             return;
         }
         const a = Math.atan2(pos.y - cy, pos.x - cx);
-        const da = a - selectionRotateStartPointerAngle;
-        window.selectionPreviewAngleRad = selectionRotateStartPreview + da;
+        let da = a - selectionRotateStartPointerAngle;
+        let ang = selectionRotateStartPreview + da;
+        ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
+        da = ang - selectionRotateStartPreview;
+        window.selectionPreviewAngleRad = ang;
 
         if (window.selectionPixelWarpActive && window.selectionWarpQuad && window.selectionWarpQuadAtStart) {
             const q0 = window.selectionWarpQuadAtStart;
