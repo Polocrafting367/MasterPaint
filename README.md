@@ -2,7 +2,7 @@
 
 # 🎨 MasterPaint
 
-**L'alternative a paintdotnet sur linux, MaxOS, et meme android et IOS.**
+**L'alternative a paintdotnet sur linux, MacOS, et meme android et IOS.**
 
 [![Licence](https://img.shields.io/badge/Licence-Open%20Source-green.svg)]()
 [![Privacy](https://img.shields.io/badge/Sécurité-100%25%20Local-orange.svg)]()
