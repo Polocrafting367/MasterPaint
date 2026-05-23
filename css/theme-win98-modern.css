@@ -1761,7 +1761,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-icon-toggle-group,
 #opt-grp-shapes-actions .illu-icon-toggle-group,
 #opt-grp-brush-actions .illu-icon-toggle-group,
+#opt-grp-text-actions .illu-icon-toggle-group,
 #opt-grp-gradient-actions .illu-icon-toggle-group,
+#opt-grp-vector-context-actions .illu-icon-toggle-group,
 .tool-options-bar .opt-grp .illu-icon-toggle-group {
     position: relative;
     display: inline-flex;
@@ -1773,7 +1775,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-icon-toggle,
 #opt-grp-shapes-actions .illu-icon-toggle,
 #opt-grp-brush-actions .illu-icon-toggle,
+#opt-grp-text-actions .illu-icon-toggle,
 #opt-grp-gradient-actions .illu-icon-toggle,
+#opt-grp-vector-context-actions .illu-icon-toggle,
 .tool-options-bar .opt-grp .illu-icon-toggle {
     display: inline-flex;
     align-items: center;
@@ -1793,7 +1797,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-icon-toggle:hover,
 #opt-grp-shapes-actions .illu-icon-toggle:hover,
 #opt-grp-brush-actions .illu-icon-toggle:hover,
+#opt-grp-text-actions .illu-icon-toggle:hover,
 #opt-grp-gradient-actions .illu-icon-toggle:hover,
+#opt-grp-vector-context-actions .illu-icon-toggle:hover,
 .tool-options-bar .opt-grp .illu-icon-toggle:hover {
     background: linear-gradient(180deg, #f0f0f0 0%, #e0dcd8 100%);
 }
@@ -1801,7 +1807,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-icon-toggle:active,
 #opt-grp-shapes-actions .illu-icon-toggle:active,
 #opt-grp-brush-actions .illu-icon-toggle:active,
+#opt-grp-text-actions .illu-icon-toggle:active,
 #opt-grp-gradient-actions .illu-icon-toggle:active,
+#opt-grp-vector-context-actions .illu-icon-toggle:active,
 .tool-options-bar .opt-grp .illu-icon-toggle:active {
     border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot);
 }
@@ -1809,7 +1817,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-icon-toggle--on,
 #opt-grp-shapes-actions .illu-icon-toggle--on,
 #opt-grp-brush-actions .illu-icon-toggle--on,
+#opt-grp-text-actions .illu-icon-toggle--on,
 #opt-grp-gradient-actions .illu-icon-toggle--on,
+#opt-grp-vector-context-actions .illu-icon-toggle--on,
 .tool-options-bar .opt-grp .illu-icon-toggle--on,
 .tool-options-bar .opt-grp .illu-icon-toggle.active {
     background: linear-gradient(180deg, #e8eefc 0%, #c8d4f0 100%);
@@ -2919,7 +2929,9 @@ body.theme-dark #opt-grp-shapes .illu-shape-opt-row .illu-opt-lbl {
 body.theme-dark .tool-options-bar .opt-grp .illu-icon-toggle,
 body.theme-dark #opt-grp-shapes-actions .illu-icon-toggle,
 body.theme-dark #opt-grp-brush-actions .illu-icon-toggle,
-body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle {
+body.theme-dark #opt-grp-text-actions .illu-icon-toggle,
+body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle,
+body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle {
     background: #2e3440 !important;
     border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
     transform: none !important;
@@ -2928,7 +2940,9 @@ body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle {
 body.theme-dark .tool-options-bar .opt-grp .illu-icon-toggle:hover,
 body.theme-dark #opt-grp-shapes-actions .illu-icon-toggle:hover,
 body.theme-dark #opt-grp-brush-actions .illu-icon-toggle:hover,
-body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle:hover {
+body.theme-dark #opt-grp-text-actions .illu-icon-toggle:hover,
+body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle:hover,
+body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle:hover {
     background: linear-gradient(180deg, #3d4450 0%, #2e3440 100%) !important;
     transform: none !important;
 }
@@ -2937,7 +2951,9 @@ body.theme-dark .tool-options-bar .opt-grp .illu-icon-toggle--on,
 body.theme-dark .tool-options-bar .opt-grp .illu-icon-toggle.active,
 body.theme-dark #opt-grp-shapes-actions .illu-icon-toggle--on,
 body.theme-dark #opt-grp-brush-actions .illu-icon-toggle--on,
-body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle--on {
+body.theme-dark #opt-grp-text-actions .illu-icon-toggle--on,
+body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle--on,
+body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle--on {
     background: linear-gradient(180deg, #3d4a62 0%, #2d3a52 100%) !important;
     border-color: var(--mp-accent) #4a5058 #4a5058 var(--mp-accent) !important;
     transform: none !important;

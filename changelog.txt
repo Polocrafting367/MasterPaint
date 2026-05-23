@@ -1,6 +1,6 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.21 (23/05/26)
+2.7.23 (23/05/26)
 - Gestion performance sur grande images
 - Ajout d'outil / fonction pour simplifié fonctionnement sur téléphone
 - Ligne, courbe (3 pts) et plume : couleur primaire pour le trait (plus la secondaire)
@@ -10,6 +10,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Corrections divers dans l'interface, perf...
 - Ajouter obtion de centrage de la selection/Obejet
 - Correctif sur la gestion des selections
+- Ajout pour les 4pts d'une obtion de redraissement rectangulaire
 
 2.7.13 (22/05/26)
 - Revu gestion de la selection, des déplacements...

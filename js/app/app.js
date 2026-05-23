@@ -3189,23 +3189,13 @@ window.scheduleFitActiveProjectZoomToPageWidth = function (em) {
     });
 };
 
-/** Ouverture image / nouveau projet : fit workspace (mobile = force, comme le bouton Ajuster). */
+/** Ouverture image / nouveau projet : adapter au workspace (comme le bouton « Ajuster »). */
 window.scheduleFitActiveProjectZoomOnDocumentOpen = function (em) {
     const target = em || window.EditorManager;
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            const mobile =
-                typeof window.illuIsMobileShellLayout === 'function' && window.illuIsMobileShellLayout();
-            if (mobile) {
-                if (typeof window.fitActiveProjectZoomToWorkspaceMobile === 'function') {
-                    window.fitActiveProjectZoomToWorkspaceMobile(target);
-                } else if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
-                    window.fitActiveProjectZoomToWorkspace(target, { force: true });
-                }
-            } else if (typeof window.scheduleFitActiveProjectZoomToPageWidth === 'function') {
-                window.scheduleFitActiveProjectZoomToPageWidth(target);
-            } else if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
-                window.fitActiveProjectZoomToWorkspace(target);
+            if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
+                window.fitActiveProjectZoomToWorkspace(target, { force: true, onDocumentOpen: true });
             }
         });
     });

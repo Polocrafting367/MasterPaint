@@ -825,27 +825,39 @@
                         </span>
 
                     <div id="opt-grp-brush-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.brushPatternGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
-                                data-illu-value="round" data-i18n-title="brush.round"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-brush-round" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
-                                data-illu-value="soft" data-i18n-title="brush.soft"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-brush-soft" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
-                                data-illu-value="spray" data-i18n-title="brush.spray"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-brush-spray" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
-                                data-illu-value="square" data-i18n-title="brush.square"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-brush-square" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.brushPatternGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
+                                    data-illu-value="round" data-i18n-title="brush.round"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-brush-round" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="brush.roundShort">Rond</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
+                                    data-illu-value="soft" data-i18n-title="brush.soft"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-brush-soft" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="brush.softShort">Doux</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
+                                    data-illu-value="spray" data-i18n-title="brush.spray"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-brush-spray" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="brush.sprayShort">Spray</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-brush-sync="tool-brush-pattern"
+                                    data-illu-value="square" data-i18n-title="brush.square"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-brush-square" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="brush.squareShort">Carré</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
                     </div>
@@ -918,86 +930,125 @@
                     </div>
 
                     <div id="opt-grp-text-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.textStyleGroup">
-                            <button type="button" id="btn-text-bold" class="illu-icon-toggle"
-                                data-illu-toggle-check="tool-text-bold" data-i18n-title="tools.textBold"><i
-                                    class="fa-solid fa-bold"></i></button>
-                            <button type="button" id="btn-text-italic" class="illu-icon-toggle"
-                                data-illu-toggle-check="tool-text-italic" data-i18n-title="tools.textItalic"><i
-                                    class="fa-solid fa-italic"></i></button>
-                            <button type="button" id="btn-text-stroke" class="illu-icon-toggle"
-                                data-illu-toggle-check="tool-text-stroke" data-i18n-title="tools.textStroke"><i
-                                    class="fa-solid fa-border-all"></i></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.textStyleGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="btn-text-bold" class="illu-icon-toggle"
+                                    data-illu-toggle-check="tool-text-bold" data-i18n-title="tools.textBold"><i
+                                        class="fa-solid fa-bold"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textBoldShort">Gras</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="btn-text-italic" class="illu-icon-toggle"
+                                    data-illu-toggle-check="tool-text-italic" data-i18n-title="tools.textItalic"><i
+                                        class="fa-solid fa-italic"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textItalicShort">Ital.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="btn-text-stroke" class="illu-icon-toggle"
+                                    data-illu-toggle-check="tool-text-stroke" data-i18n-title="tools.textStroke"><i
+                                        class="fa-solid fa-border-all"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textStrokeShort">Trait</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.textFillGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-fill-solid" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-fill-gradient" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                data-illu-value="none" data-i18n-title="tools.textFillNone"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-shape-stroke" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.textFillGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                    data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-fill-solid" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.solidShort">Uni</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                    data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-fill-gradient" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                    data-illu-value="none" data-i18n-title="tools.textFillNone"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-shape-stroke" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="text.fill.noneShort">Vide</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
                     </div>
 
                     <div id="opt-grp-gradient-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.gradientTypeGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-type"
-                                data-illu-value="linear" data-i18n-title="gradient.typeLinear"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-linear" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-type"
-                                data-illu-value="radial" data-i18n-title="gradient.typeRadial"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-radial" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.gradientTypeGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-type"
+                                    data-illu-value="linear" data-i18n-title="gradient.typeLinear"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-linear" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="grad.linearShort">Lin.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-type"
+                                    data-illu-value="radial" data-i18n-title="gradient.typeRadial"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-radial" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="grad.radialShort">Rad.</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.gradientMethodGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-method"
-                                data-illu-value="simple" data-i18n-title="gradient.methodSimple"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-method-simple" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-method"
-                                data-illu-value="smart" data-i18n-title="gradient.methodSmart"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-method-smart" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.gradientMethodGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-method"
+                                    data-illu-value="simple" data-i18n-title="gradient.methodSimple"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-method-simple" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="gradient.methodSimpleShort">Simple</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-method"
+                                    data-illu-value="smart" data-i18n-title="gradient.methodSmart"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-method-smart" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="gradient.methodSmartShort">Intel.</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
                     </div>
 
                     <div id="opt-grp-vector-context-actions" class="opt-grp" hidden>
                         <span class="illu-chip" id="vector-selection-count">1 sélection</span>
-                        <span class="illu-icon-group" id="opt-grp-vector-fill-buttons"
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" id="opt-grp-vector-fill-buttons"
                             data-illu-generic-icon-toggles="1">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                data-illu-value="solid" data-i18n-title="tools.fillSolid"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-shape-fill"></use>
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                data-illu-value="pattern" data-i18n-title="tools.fillPattern"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-shape-both"></use>
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                data-illu-value="none" data-i18n-title="tools.fillNone"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-fill-none"></use>
-                                </svg></button>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
+                                    data-illu-value="solid" data-i18n-title="tools.fillSolid"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-shape-fill"></use>
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillSolidShort">Uni</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
+                                    data-illu-value="pattern" data-i18n-title="tools.fillPattern"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-shape-both"></use>
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillPatternShort">Motif</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
+                                    data-illu-value="none" data-i18n-title="tools.fillNone"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-fill-none"></use>
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillNoneShort">Aucun</span>
+                            </span>
                         </span>
                         <button type="button" class="illu-btn-mini" onclick="EditorManager.moveSelectedVectorElement(1)"
                             data-i18n-title="props.moveForward"><i class="fa-solid fa-angle-up"></i></button>

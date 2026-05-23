@@ -2932,6 +2932,9 @@ function initTools() {
             if (btn.disabled) return;
             if (btn.id === 'btn-deselect' || btn.id === 'illu-tb-zoom-fit') {
                 if (btn.id === 'btn-deselect') {
+                    if (typeof window.finalizePendingPixelLiveEdits === 'function') {
+                        window.finalizePendingPixelLiveEdits();
+                    }
                     EditorManager.deselectAll();
                 }
                 if (btn.id === 'illu-tb-zoom-fit' && typeof window.fitActiveProjectZoomToWorkspace === 'function') {
@@ -3020,6 +3023,9 @@ function initTools() {
     const optDeselect = document.getElementById('opt-deselect-selection');
     if (optDeselect) {
         optDeselect.onclick = () => {
+            if (typeof window.finalizePendingPixelLiveEdits === 'function') {
+                window.finalizePendingPixelLiveEdits();
+            }
             if (typeof EditorManager.deselectAll === 'function') EditorManager.deselectAll();
         };
     }
@@ -7293,6 +7299,59 @@ function illuSyncWarpDeformRectFromQuad(q) {
     return r;
 }
 
+function illuCloneWarpQuadObject(q) {
+    return {
+        tl: { x: q.tl.x, y: q.tl.y },
+        tr: { x: q.tr.x, y: q.tr.y },
+        br: { x: q.br.x, y: q.br.y },
+        bl: { x: q.bl.x, y: q.bl.y }
+    };
+}
+
+/** Applique sur le calque un warp srcQuad → dstQuad axis-aligné (hors session ou après snap). */
+function illuBakeWarpQuadToAxisRect(qSrc, qDst) {
+    if (!qSrc || !qDst || typeof EditorManager === 'undefined') return false;
+    const l = EditorManager.activeLayer;
+    if (!EditorManager.isPixelMode || !l || !l.buffer || window.selectionInverted || window._illuFinishingWarp) {
+        return false;
+    }
+    window.startSelectionPixelWarp(null, 'rot');
+    if (!window.selectionPixelWarpActive || !selectionWarpBackupCanvas) return false;
+    const lx = l.x;
+    const ly = l.y;
+    selectionWarpSrcQuad = [
+        [qSrc.tl.x - lx - selectionWarpOx, qSrc.tl.y - ly - selectionWarpOy],
+        [qSrc.tr.x - lx - selectionWarpOx, qSrc.tr.y - ly - selectionWarpOy],
+        [qSrc.br.x - lx - selectionWarpOx, qSrc.br.y - ly - selectionWarpOy],
+        [qSrc.bl.x - lx - selectionWarpOx, qSrc.bl.y - ly - selectionWarpOy]
+    ];
+    window.selectionWarpQuad = illuCloneWarpQuadObject(qDst);
+    selectionWarpQuadAtStart = illuCloneWarpQuadObject(qDst);
+    if (
+        window.activeTool === 'deform' ||
+        (window.activeTool === 'warp-4' &&
+            typeof window.illuIsWarpQuadRectLockActive === 'function' &&
+            window.illuIsWarpQuadRectLockActive())
+    ) {
+        illuSyncWarpDeformRectFromQuad(window.selectionWarpQuad);
+    }
+    if (typeof window.finishSelectionPixelWarp === 'function') {
+        window.finishSelectionPixelWarp();
+    }
+    return true;
+}
+
+function illuCanBakeWarpQuadToLayer() {
+    return !!(
+        typeof EditorManager !== 'undefined' &&
+        EditorManager.isPixelMode &&
+        EditorManager.activeLayer &&
+        EditorManager.activeLayer.buffer &&
+        window.selectionBounds &&
+        !window.selectionInverted
+    );
+}
+
 /**
  * Quad de destination de la déformation → rectangle : met à jour les pixels déformés
  * (selectionWarpQuad), pas seulement le contour de sélection.
@@ -7301,20 +7360,39 @@ window.illuApplyWarpDestQuadRectangular = function () {
     const qIn = illuGetWarpDestQuadFromSelection();
     if (!qIn) return false;
     const r = illuAxisRectFromQuadObject(qIn);
-    window.selectionWarpQuad = {
+    const qDst = {
         tl: { x: r.tl.x, y: r.tl.y },
         tr: { x: r.tr.x, y: r.tr.y },
         br: { x: r.br.x, y: r.br.y },
         bl: { x: r.bl.x, y: r.bl.y }
     };
+    const needsPixelBake = !illuQuadObjectIsAxisRect(qIn) && illuCanBakeWarpQuadToLayer();
+
+    if (needsPixelBake) {
+        if (window.selectionPixelWarpActive) {
+            const l = EditorManager.activeLayer;
+            const lx = l.x;
+            const ly = l.y;
+            selectionWarpSrcQuad = [
+                [qIn.tl.x - lx - selectionWarpOx, qIn.tl.y - ly - selectionWarpOy],
+                [qIn.tr.x - lx - selectionWarpOx, qIn.tr.y - ly - selectionWarpOy],
+                [qIn.br.x - lx - selectionWarpOx, qIn.br.y - ly - selectionWarpOy],
+                [qIn.bl.x - lx - selectionWarpOx, qIn.bl.y - ly - selectionWarpOy]
+            ];
+            window.selectionWarpQuad = illuCloneWarpQuadObject(qDst);
+            illuSyncWarpDeformRectFromQuad(window.selectionWarpQuad);
+            if (typeof window.finishSelectionPixelWarp === 'function') {
+                window.finishSelectionPixelWarp();
+            }
+            return true;
+        }
+        if (illuBakeWarpQuadToAxisRect(qIn, qDst)) return true;
+    }
+
+    window.selectionWarpQuad = illuCloneWarpQuadObject(qDst);
     window.selectionBounds = { ...r.bounds };
     window.illuSyncWarpQuadPointsFromBounds(r.bounds);
-    selectionWarpQuadAtStart = {
-        tl: { x: r.tl.x, y: r.tl.y },
-        tr: { x: r.tr.x, y: r.tr.y },
-        br: { x: r.br.x, y: r.br.y },
-        bl: { x: r.bl.x, y: r.bl.y }
-    };
+    selectionWarpQuadAtStart = illuCloneWarpQuadObject(qDst);
     if (window.selectionPixelWarpActive) {
         illuSyncWarpDeformRectFromQuad(window.selectionWarpQuad);
         if (typeof window.illuScheduleSelectionWarpPreview === 'function') {
@@ -7473,15 +7551,13 @@ window.illuWireWarpBarButtons = function () {
         lockBtn.dataset.illuWired = '1';
         lockBtn.addEventListener('click', () => {
             if (typeof EditorManager === 'undefined') return;
-            EditorManager.toolProps.warpQuadRectLock = !EditorManager.toolProps.warpQuadRectLock;
-            if (
-                EditorManager.toolProps.warpQuadRectLock &&
-                window.selectionPixelWarpActive &&
-                typeof window.illuApplyWarpDestQuadRectangular === 'function'
-            ) {
+            const turningOn = !EditorManager.toolProps.warpQuadRectLock;
+            EditorManager.toolProps.warpQuadRectLock = turningOn;
+            if (turningOn && typeof window.illuApplyWarpDestQuadRectangular === 'function') {
                 window.illuApplyWarpDestQuadRectangular();
             }
             if (typeof window.syncWarpQuadRectLockUI === 'function') window.syncWarpQuadRectLockUI();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
         });
     }
     const toWarpBtn = document.getElementById('opt-select-quad-to-warp-btn');
@@ -10114,11 +10190,15 @@ function handleMouseUp(e) {
 window.illuHandleMouseUp = handleMouseUp;
 
 window.clearSelectionContent = function () {
-    if (typeof window.hasActivePixelSelection === 'function' && !window.hasActivePixelSelection()) return;
-    if (!window.selectionBounds) return;
-    if (EditorManager.isPixelMode) {
+    const canErase =
+        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
+    const hasOutline =
+        typeof window.illuPixelSelectionPresent === 'function' && window.illuPixelSelectionPresent();
+    if (!canErase && !hasOutline) return false;
+
+    if (canErase && EditorManager.isPixelMode) {
         const actx = EditorManager.activeCtx;
-        if (actx) {
+        if (actx && (window.selectionBounds || window.selectionColorMask || window.selectionLassoPoints)) {
             const lx = EditorManager.activeLayer.x;
             const ly = EditorManager.activeLayer.y;
             const cw = EditorManager.activeLayer.buffer.width;
@@ -10185,21 +10265,20 @@ window.clearSelectionContent = function () {
             EditorManager.saveHistory('Effacer sélection', { patchActiveLayer: true });
             EditorManager.render();
         }
-        if (typeof window.ctxDeselect === 'function') {
-            window.ctxDeselect();
-        } else if (typeof EditorManager.deselectAll === 'function') {
-            EditorManager.deselectAll();
-        } else {
-            if (selectionOverlay) selectionOverlay.style.display = 'none';
-            window.selectionBounds = null;
-            window.selectionInverted = false;
-            window.selectionKind = 'rect';
-            window.selectionColorMask = null;
-            window.selectionLassoPoints = null;
-            window.selectionIsWarpQuad = false;
-            window.selectionPreviewAngleRad = 0;
-        }
     }
+    if (typeof EditorManager.deselectAll === 'function') {
+        EditorManager.deselectAll();
+    } else if (selectionOverlay) {
+        selectionOverlay.style.display = 'none';
+        window.selectionBounds = null;
+        window.selectionInverted = false;
+        window.selectionKind = 'rect';
+        window.selectionColorMask = null;
+        window.selectionLassoPoints = null;
+        window.selectionIsWarpQuad = false;
+        window.selectionPreviewAngleRad = 0;
+    }
+    return true;
 };
 
 /** Suppr / Retour arrière : objet vecteur sélectionné ou contenu de la sélection pixel. */
@@ -10215,12 +10294,30 @@ window.deleteActiveVectorOrPixelSelection = function () {
         EditorManager.render();
         return true;
     }
-    if (
-        EditorManager.isPixelMode &&
-        typeof window.hasActivePixelSelection === 'function' &&
-        window.hasActivePixelSelection()
-    ) {
-        window.clearSelectionContent();
+    if (!EditorManager.isPixelMode) return false;
+
+    const tool = window.activeTool || '';
+    const selectionTools = new Set(['select', 'wand', 'direct-select']);
+    const hasOutline =
+        typeof window.illuPixelSelectionPresent === 'function' && window.illuPixelSelectionPresent();
+    const canErase =
+        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
+
+    if (!hasOutline && !canErase) return false;
+
+    /* Sélection / baguette : Suppr retire la sélection (sans effacer les pixels). */
+    if (selectionTools.has(tool)) {
+        if (typeof EditorManager.deselectAll === 'function') {
+            EditorManager.deselectAll();
+        }
+        return true;
+    }
+
+    if (canErase) {
+        return !!window.clearSelectionContent();
+    }
+    if (hasOutline && typeof EditorManager.deselectAll === 'function') {
+        EditorManager.deselectAll();
         return true;
     }
     return false;

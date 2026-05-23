@@ -43,13 +43,12 @@
             this.pendingCombineOp = null;
         },
 
-        /** Sélection pixel active (logique, sans dépendre de l'overlay DOM). */
-        hasActivePixelSelection() {
+        /** Contour de sélection affiché (rect, lasso, masque couleur, y compris inversée). */
+        pixelSelectionPresent() {
             if (window.illuCropSessionActive && window.selectionBounds) {
                 const sb = window.selectionBounds;
                 return sb.w >= 1 && sb.h >= 1;
             }
-            if (window.selectionInverted) return false;
             const sb = window.selectionBounds;
             if (sb && sb.w >= 1 && sb.h >= 1) return true;
             if (
@@ -66,12 +65,22 @@
                 }
             }
             return false;
+        },
+
+        /** Sélection pixel exploitable (effacement, déplacement pixels) — exclut l’inversion seule. */
+        hasActivePixelSelection() {
+            if (window.selectionInverted) return false;
+            return SelectionModel.pixelSelectionPresent();
         }
     };
 
     window.SelectionModel = SelectionModel;
     window.hasActivePixelSelection = function () {
         return SelectionModel.hasActivePixelSelection();
+    };
+
+    window.illuPixelSelectionPresent = function () {
+        return SelectionModel.pixelSelectionPresent();
     };
 
     window.illuResolveSelectionCombineOp = function (ev) {
