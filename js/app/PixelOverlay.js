@@ -25,8 +25,100 @@
         if (ed.lx != null && ed.w != null && ed.h != null) {
             return { cx: ed.lx + ed.w / 2 + lx, cy: ed.ly + ed.h / 2 + ly };
         }
+        if (ed.kind === 'line') {
+            return { cx: (ed.x1 + ed.x2) / 2 + lx, cy: (ed.y1 + ed.y2) / 2 + ly };
+        }
+        if (ed.kind === 'quadcurve') {
+            return {
+                cx: (ed.x0 + ed.qx + ed.x1) / 3 + lx,
+                cy: (ed.y0 + ed.qy + ed.y1) / 3 + ly
+            };
+        }
         return null;
     }
+
+    function illuSyncShapeOutlineRotationTransform(ed) {
+        if (!shapeEditOutlineSolid || !shapeEditOutlineDash) return;
+        const ang = ed && ed.angleRad ? ed.angleRad : 0;
+        if (Math.abs(ang) > 1e-8) {
+            const pivot = shapeEditRotationPivotDoc(ed);
+            if (pivot) {
+                const deg = (ang * 180) / Math.PI;
+                const tr = `rotate(${deg} ${pivot.cx} ${pivot.cy})`;
+                shapeEditOutlineSolid.setAttribute('transform', tr);
+                shapeEditOutlineDash.setAttribute('transform', tr);
+                return;
+            }
+        }
+        shapeEditOutlineSolid.removeAttribute('transform');
+        shapeEditOutlineDash.removeAttribute('transform');
+    }
+
+    window.illuSnapshotShapeEditGeom = function illuSnapshotShapeEditGeom(ed) {
+        if (!ed) return null;
+        if (ed.kind === 'ellipse') {
+            return { kind: ed.kind, cx: ed.cx, cy: ed.cy };
+        }
+        if (ed.kind === 'line') {
+            return { kind: ed.kind, x1: ed.x1, y1: ed.y1, x2: ed.x2, y2: ed.y2 };
+        }
+        if (ed.kind === 'quadcurve') {
+            return {
+                kind: ed.kind,
+                x0: ed.x0,
+                y0: ed.y0,
+                qx: ed.qx,
+                qy: ed.qy,
+                x1: ed.x1,
+                y1: ed.y1
+            };
+        }
+        return { kind: ed.kind, lx: ed.lx, ly: ed.ly };
+    };
+
+    window.illuApplyShapeEditGeomFromSnapshot = function (ed, snap, dx, dy) {
+        if (!ed || !snap) return;
+        if (ed.kind === 'ellipse') {
+            ed.cx = snap.cx + dx;
+            ed.cy = snap.cy + dy;
+        } else if (ed.kind === 'line') {
+            ed.x1 = snap.x1 + dx;
+            ed.y1 = snap.y1 + dy;
+            ed.x2 = snap.x2 + dx;
+            ed.y2 = snap.y2 + dy;
+        } else if (ed.kind === 'quadcurve') {
+            ed.x0 = snap.x0 + dx;
+            ed.y0 = snap.y0 + dy;
+            ed.qx = snap.qx + dx;
+            ed.qy = snap.qy + dy;
+            ed.x1 = snap.x1 + dx;
+            ed.y1 = snap.y1 + dy;
+        } else if (snap.lx != null) {
+            ed.lx = snap.lx + dx;
+            ed.ly = snap.ly + dy;
+        }
+    };
+
+    window._illuShapeEditMoveActive = false;
+    window._illuShapeEditMoveStartDoc = null;
+    window._illuShapeEditMoveSnapshot = null;
+    window._illuShapeEditMoveFromButtonEl = null;
+    window._illuShapeEditMoveFromButtonPointerId = null;
+
+    function illuReleaseShapeEditMoveButtonPointerCapture() {
+        const el = window._illuShapeEditMoveFromButtonEl;
+        const pid = window._illuShapeEditMoveFromButtonPointerId;
+        if (el && pid != null) {
+            try {
+                el.releasePointerCapture(pid);
+            } catch (err) {
+                /* ignore */
+            }
+        }
+        window._illuShapeEditMoveFromButtonEl = null;
+        window._illuShapeEditMoveFromButtonPointerId = null;
+    }
+    window.illuReleaseShapeEditMoveButtonPointerCapture = illuReleaseShapeEditMoveButtonPointerCapture;
 
     function shapeEditBoundsDoc(ed) {
         if (!ed || !EditorManager.activeLayer) return null;
@@ -233,6 +325,7 @@
         shapeEditOutlineDash.setAttribute('d', d);
         shapeEditOutlineDash.setAttribute('stroke-width', String(strokeW));
         shapeEditOutlineDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+        illuSyncShapeOutlineRotationTransform(ed);
         return true;
     };
 
@@ -279,6 +372,12 @@
         window._gradientBackup = null;
         window.pixelShapeEdit = null;
         window.shapeHandleDrag = null;
+        window._illuShapeEditMoveActive = false;
+        window._illuShapeEditMoveStartDoc = null;
+        window._illuShapeEditMoveSnapshot = null;
+        if (typeof window.illuReleaseShapeEditMoveButtonPointerCapture === 'function') {
+            window.illuReleaseShapeEditMoveButtonPointerCapture();
+        }
         window._shapeBackupCanvas = null;
         if (typeof window.hidePixelShapeEditOverlay === 'function') window.hidePixelShapeEditOverlay();
         if (typeof window.cancelSelectionInteractionState === 'function') window.cancelSelectionInteractionState();
@@ -1217,6 +1316,68 @@
                     const rhp = EditorManager.selectionRotationHandleDocXY(sb, ed.angleRad || 0, null);
                     mkShapeRotHandle(rhp.x, rhp.y);
                 }
+            }
+            const movePivot = shapeEditRotationPivotDoc(ed);
+            if (movePivot) {
+                const hsz = EditorManager.svgUiHandleSizeDoc();
+                const size = Math.max(hsz, 18 / z);
+                const half = size / 2;
+                const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                fo.setAttribute('x', String(movePivot.cx - half));
+                fo.setAttribute('y', String(movePivot.cy - half));
+                fo.setAttribute('width', String(size));
+                fo.setAttribute('height', String(size));
+                fo.setAttribute('class', 'illu-deform-move-fo');
+                fo.setAttribute('style', 'overflow: visible; pointer-events: all;');
+                const wrap = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+                wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+                wrap.style.cssText =
+                    'display:flex;align-items:center;justify-content:center;width:100%;height:100%;margin:0;padding:0;box-sizing:border-box;';
+                const btn = document.createElementNS('http://www.w3.org/1999/xhtml', 'button');
+                btn.setAttribute('type', 'button');
+                btn.setAttribute('class', 'illu-pixel-text-move-btn illu-deform-selection-move-btn');
+                btn.innerHTML =
+                    '<i class="fa-solid fa-lg fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
+                const moveTitle =
+                    window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                        ? window.IlluI18n.t('tools.shapeMoveHandle')
+                        : 'Déplacer (forme)';
+                btn.setAttribute('title', moveTitle);
+                btn.setAttribute('aria-label', moveTitle);
+                const runShapeMove = (ev) => {
+                    if (ev.button != null && ev.button !== 0) return;
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    if (typeof window.illuShapeEditMoveButtonMouseDown === 'function') {
+                        window.illuShapeEditMoveButtonMouseDown(ev);
+                    }
+                    if (ev.pointerId != null) {
+                        try {
+                            window._illuShapeEditMoveFromButtonEl = btn;
+                            window._illuShapeEditMoveFromButtonPointerId = ev.pointerId;
+                            btn.setPointerCapture(ev.pointerId);
+                        } catch (err) {
+                            /* ignore */
+                        }
+                    }
+                };
+                const releaseShapeMoveCapture = (ev) => {
+                    if (ev.button != null && ev.button !== 0) return;
+                    if (typeof window.illuHandleMouseUp === 'function') {
+                        window.illuHandleMouseUp(ev);
+                    }
+                    if (typeof window.illuReleaseShapeEditMoveButtonPointerCapture === 'function') {
+                        window.illuReleaseShapeEditMoveButtonPointerCapture();
+                    }
+                };
+                btn.addEventListener('pointerup', releaseShapeMoveCapture, { capture: true });
+                btn.addEventListener('mouseup', releaseShapeMoveCapture, { capture: true });
+                btn.addEventListener('pointercancel', releaseShapeMoveCapture, { capture: true });
+                btn.addEventListener('lostpointercapture', releaseShapeMoveCapture, { capture: true });
+                btn.addEventListener('pointerdown', runShapeMove, { passive: false });
+                wrap.appendChild(btn);
+                fo.appendChild(wrap);
+                svgUI.appendChild(fo);
             }
         }
 

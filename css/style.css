@@ -382,6 +382,14 @@ body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header {
     display: none !important;
 }
 
+/* Ne pas laisser un séparateur orphelin avant/après un bloc masqué */
+#tool-options-bar .opt-sep:has(+ [hidden]),
+#tool-options-bar [hidden] + .opt-sep,
+#tool-options-bar-2 .opt-sep:has(+ [hidden]),
+#tool-options-bar-2 [hidden] + .opt-sep {
+    display: none !important;
+}
+
 .opt-bar-btn {
     padding: 2px 8px !important;
     min-width: 0 !important;

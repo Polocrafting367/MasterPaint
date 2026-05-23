@@ -9082,6 +9082,21 @@ window.illuDeformSelectionMoveButtonMouseDown = function (e) {
     illuPixelMoveToolStartDrag(pos, e);
 };
 
+window.illuShapeEditMoveButtonMouseDown = function (e) {
+    if (!EditorManager.isPixelMode || !window.pixelShapeEdit || !EditorManager.activeLayer) return;
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pos = getPos(e);
+    window._illuShapeEditMoveActive = true;
+    window._illuShapeEditMoveStartDoc = { x: pos.x, y: pos.y };
+    window._illuShapeEditMoveSnapshot =
+        typeof window.illuSnapshotShapeEditGeom === 'function'
+            ? window.illuSnapshotShapeEditGeom(window.pixelShapeEdit)
+            : null;
+    isDrawing = true;
+};
+
 function startPixel(pos, e) {
     let ctx = EditorManager.activeCtx;
     if (!ctx) return;
@@ -9586,6 +9601,23 @@ function updatePixel(pos, pointerEv) {
         return;
     }
 
+    if (window._illuShapeEditMoveActive && window.pixelShapeEdit && window._illuShapeEditMoveStartDoc && window._illuShapeEditMoveSnapshot) {
+        const ed = window.pixelShapeEdit;
+        const snap = window._illuShapeEditMoveSnapshot;
+        const start = window._illuShapeEditMoveStartDoc;
+        const dx = pos.x - start.x;
+        const dy = pos.y - start.y;
+        if (typeof window.illuApplyShapeEditGeomFromSnapshot === 'function') {
+            window.illuApplyShapeEditGeomFromSnapshot(ed, snap, dx, dy);
+        }
+        if (typeof window.redrawShapeFromEditLive === 'function') {
+            window.redrawShapeFromEditLive();
+        } else if (typeof EditorManager.drawUI === 'function') {
+            EditorManager.drawUI(true);
+        }
+        return;
+    }
+
     if (window._shapeRotDragActive) {
         const pivot = getShapePreviewRotationPivotDoc(window._shapeRotDragMode);
         if (pivot) {
@@ -9870,10 +9902,20 @@ function handleMouseUp(e) {
                 (EditorManager.activeLayer && moveLayerStartPos != null))
         ) {
             isDrawing = true;
+        } else if (window._illuShapeEditMoveActive) {
+            isDrawing = true;
         } else {
             if (window._illuDeformMoveFromButtonActive) {
                 window._illuDeformMoveFromButtonActive = false;
                 illuReleaseDeformMoveButtonPointerCapture();
+            }
+            if (window._illuShapeEditMoveActive) {
+                window._illuShapeEditMoveActive = false;
+                window._illuShapeEditMoveStartDoc = null;
+                window._illuShapeEditMoveSnapshot = null;
+                if (typeof window.illuReleaseShapeEditMoveButtonPointerCapture === 'function') {
+                    window.illuReleaseShapeEditMoveButtonPointerCapture();
+                }
             }
             return;
         }
@@ -10096,6 +10138,24 @@ function handleMouseUp(e) {
                 currentElement = null;
                 return;
             }
+        }
+
+        if (window._illuShapeEditMoveActive) {
+            window._illuShapeEditMoveActive = false;
+            window._illuShapeEditMoveStartDoc = null;
+            window._illuShapeEditMoveSnapshot = null;
+            if (typeof window.illuReleaseShapeEditMoveButtonPointerCapture === 'function') {
+                window.illuReleaseShapeEditMoveButtonPointerCapture();
+            }
+            if (typeof window.flushShapeEditPreview === 'function') window.flushShapeEditPreview();
+            if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+                window.refreshPixelShapeEditOverlay({ forceFull: true });
+            }
+            EditorManager.saveHistory('Déplacement forme', { patchActiveLayer: true });
+            EditorManager.render({ flushUiThumbnails: true });
+            isDrawing = false;
+            currentElement = null;
+            return;
         }
 
         if (EditorManager.isPixelMode && window.shapeHandleDrag !== null) {

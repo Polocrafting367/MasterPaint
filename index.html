@@ -808,6 +808,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="mobile.zoomFitShort">Ajuster</span>
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
 
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" id="selection-mode-group"
                             data-i18n-title="title.selectionModeGroup" hidden>
@@ -832,6 +833,7 @@
                                     data-i18n="tools.selectionModeSubtractShort">Retrait</span>
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
 
                     <div id="opt-grp-brush-actions" class="opt-grp" hidden>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.brushPatternGroup">
@@ -898,6 +900,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="shape.mode.strokeShort">Trait</span>
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.shapeFillGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
@@ -916,6 +919,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <span id="tool-shape-grad-type-actions" class="illu-icon-toggle-group illu-mode-toggle-group" hidden
                             data-i18n-title="title.shapeGradTypeGroup">
                             <span class="illu-mode-toggle-item">
@@ -1032,6 +1036,7 @@
 
                     <div id="opt-grp-vector-context-actions" class="opt-grp" hidden>
                         <span class="illu-chip" id="vector-selection-count">1 sélection</span>
+                        <div class="opt-sep"></div>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" id="opt-grp-vector-fill-buttons"
                             data-illu-generic-icon-toggles="1">
                             <span class="illu-mode-toggle-item">
@@ -1059,6 +1064,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.fillNoneShort">Aucun</span>
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <button type="button" class="illu-btn-mini" onclick="EditorManager.moveSelectedVectorElement(1)"
                             data-i18n-title="props.moveForward"><i class="fa-solid fa-angle-up"></i></button>
                         <button type="button" class="illu-btn-mini"
@@ -1067,6 +1073,7 @@
                         <button type="button" class="illu-btn-mini"
                             onclick="EditorManager.duplicateActiveVectorSelection()"
                             data-i18n-title="tools.duplicate"><i class="fa-solid fa-clone"></i></button>
+                        <div class="opt-sep"></div>
                         <span id="vector-group-actions" style="display:flex;gap:2px;">
                             <button type="button" class="illu-btn-mini"
                                 onclick="EditorManager.groupActiveVectorSelection()" data-i18n-title="tools.group"><i
@@ -1075,6 +1082,7 @@
                                 onclick="EditorManager.ungroupActiveVectorSelection()"
                                 data-i18n-title="tools.ungroup"><i class="fa-solid fa-object-ungroup"></i></button>
                         </span>
+                        <div class="opt-sep"></div>
                         <span id="vector-bool-actions" style="display:flex;gap:2px;">
                             <button type="button" class="illu-btn-mini"
                                 onclick="EditorManager.applyVectorBoolean('union')"
@@ -1083,6 +1091,7 @@
                                 onclick="EditorManager.applyVectorBoolean('subtract')"
                                 data-i18n-title="props.subtract">-</button>
                         </span>
+                        <div class="opt-sep"></div>
                         <button type="button" class="illu-btn-mini illu-btn-mini--danger"
                             onclick="EditorManager.deleteActiveVectorSelection()" data-i18n-title="tools.delete"><i
                                 class="fa-solid fa-trash"></i></button>
@@ -1148,6 +1157,7 @@
                                 <input type="range" id="tool-size" class="illu-gauge-input" min="1" max="600" value="5">
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <span id="pencil-close-row" class="field-row" style="margin-left: 4px;">
                             <label class="opt-bar-check">
                                 <input type="checkbox" data-illu-toggle-check="tool-pencil-close">
@@ -1157,6 +1167,7 @@
                     </div>
 
                     <div id="opt-grp-brush-hardness" class="opt-grp" hidden>
+                        <div class="opt-sep"></div>
                         <span id="tool-brush-hardness-row" class="field-row illu-gauge-field">
                             <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
                                 data-i18n-title="tools.brushHardness">Dureté</label>
@@ -1237,6 +1248,7 @@
                         <span id="tool-shape-mode-row" class="field-row">
                             <label data-i18n="tools.shapeFillStyle">Style rempl.</label>
                         </span>
+                        <div class="opt-sep"></div>
                         <span id="tool-shape-corner-row" class="field-row illu-gauge-field">
                             <label for="tool-shape-corner-radius" class="illu-opt-lbl"
                                 data-i18n="tools.shapeCornerRadius">Arrondi</label>
@@ -1247,6 +1259,7 @@
                                     max="64" value="12">
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <span id="tool-shape-grad-angle-row" class="field-row illu-gauge-field">
                             <label for="tool-shape-grad-angle" class="illu-opt-lbl"
                                 data-i18n="tools.shapeGradAngle">Angle lin. °</label>
@@ -1269,6 +1282,7 @@
                             <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
                             <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
                         </select>
+                        <div class="opt-sep"></div>
                         <span class="field-row illu-gauge-field">
                             <label for="tool-text-size" class="illu-opt-lbl" data-i18n="tools.textSize">Taille</label>
                             <span class="illu-gauge-wrap">
@@ -1278,6 +1292,7 @@
                                     value="18">
                             </span>
                         </span>
+                        <div class="opt-sep"></div>
                         <span class="field-row illu-gauge-field">
                             <label for="tool-text-stroke-w" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Ép. contour</label>
                             <span class="illu-gauge-wrap">
