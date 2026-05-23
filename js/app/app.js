@@ -3471,6 +3471,85 @@ window.openCanvasLivePreviewWindow = function () {
     _illuLivePreviewRaf = window.requestAnimationFrame(loop);
 };
 
+/** Prise d'instantané 1:1 et impression propre. */
+window.printCanvasLive = function () {
+    const em = window.EditorManager;
+    if (!em || !em.activeProject) return;
+    const p = em.activeProject;
+    const pw = p.width;
+    const ph = p.height;
+    
+    // Créer un canvas temporaire
+    const pc = document.createElement('canvas');
+    pc.width = pw;
+    pc.height = ph;
+    const ctx = pc.getContext('2d');
+    if (!ctx) return;
+    
+    if (em.pixelDomLayerViewsActive && em.pixelDomLayerViewsActive()) {
+        const stack = document.getElementById('pixel-layer-stack');
+        ctx.clearRect(0, 0, pw, ph);
+        const layers = p.layers || [];
+        layers.forEach((l) => {
+            if (!l.visible || !l.buffer) return;
+            const el = stack && stack.querySelector(`canvas.illu-pixel-layer-view[data-layer-id="${l.id}"]`);
+            if (!el) return;
+            ctx.save();
+            ctx.globalAlpha = l.opacity != null ? l.opacity : 1;
+            ctx.globalCompositeOperation = em.getLayerBlendMode ? em.getLayerBlendMode(l) : 'source-over';
+            ctx.drawImage(el, l.x, l.y);
+            ctx.restore();
+        });
+    } else {
+        const canvas = document.getElementById('drawing-canvas');
+        if (canvas) {
+            ctx.drawImage(canvas, 0, 0);
+        }
+    }
+    
+    // Conversion en Data URL (PNG)
+    const dataUrl = pc.toDataURL('image/png');
+    
+    // Ouvrir une fenêtre d'impression
+    const w = window.open('', '_blank');
+    if (!w) {
+        const msg =
+            window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                ? window.IlluI18n.t('msg.popupBlocked')
+                : 'Autorisez les pop-ups pour imprimer la toile.';
+        window.showIlluAlert(msg);
+        return;
+    }
+    
+    const title =
+        window.IlluI18n && typeof window.IlluI18n.t === 'function'
+            ? window.IlluI18n.t('livePreview.title') || 'Impression MasterPaint'
+            : 'Impression MasterPaint';
+            
+    const doc = w.document;
+    doc.open();
+    doc.write(
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
+        title +
+        '</title><style>' +
+        '@page { size: auto; margin: 10mm; }' +
+        'html,body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#ffffff;}' +
+        'img{max-width:100%;max-height:100%;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;}' +
+        '</style></head><body>' +
+        '<img id="prt-img" src="' + dataUrl + '">' +
+        '<script>' +
+        'window.onload = function() {' +
+        '  setTimeout(function() {' +
+        '    window.print();' +
+        '    setTimeout(function() { window.close(); }, 500);' +
+        '  }, 300);' +
+        '};' +
+        '</script>' +
+        '</body></html>'
+    );
+    doc.close();
+};
+
 /** Thème : accent (barre de titre, menus) + sombre */
 window.IlluTheme = {
     ACCENT_PRESETS: [
