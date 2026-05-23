@@ -2,21 +2,16 @@
 
 # 🎨 MasterPaint
 
-**L'alternative graphique web moderne, hybride, locale et respectueuse de votre vie privée.**
+**L'alternative a paintdotnet sur linux, MaxOS, et meme android et IOS.**
 
-[![Version](https://img.shields.io/badge/Version-1.0.0-purple.svg)]()
-[![Stack](https://img.shields.io/badge/Stack-Vanilla%20JS%20%2F%20HTML5%20%2F%20CSS3-blue.svg)]()
 [![Licence](https://img.shields.io/badge/Licence-Open%20Source-green.svg)]()
 [![Privacy](https://img.shields.io/badge/Sécurité-100%25%20Local-orange.svg)]()
 
-### 🚀 [Accéder à l'application en direct : polocrafting.fr/Illu](http://polocrafting.fr/Illu)
+### 🚀 [Faire un test ? : polocrafting.fr/Illu](http://polocrafting.fr/Illu)
 
 </div>
 
 ---
-
-## 📌 À propos de MasterPaint
-
 **MasterPaint** est une application web d'édition graphique puissante et accessible directement depuis n'importe quel navigateur moderne. Conçu comme un pont idéal entre la retouche matricielle traditionnelle (inspirée de **Paint.NET** et **Photoshop**) et le dessin vectoriel (inspiré d'**Illustrator**), MasterPaint vous permet de créer, modifier et fusionner des images bitmap et des éléments vectoriels au même endroit, sans compromis.
 
 L'application se distingue par une philosophie stricte : **aucune publicité, aucun système de traçage, et aucun transfert de données vers un serveur tiers.**
