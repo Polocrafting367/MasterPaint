@@ -54,105 +54,24 @@ function illuFlushInteractiveVisualRefresh() {
     }
 }
 
-/** Poignées / cadre : overlay léger + drawUI sans recomposite calques. */
+/** Poignées / cadre : délégué à SelectionChrome (overlay ≠ composite calques). */
 function scheduleSelectionChromeRefresh(extra) {
-    const o = extra || {};
-    if (typeof window.updateSelectionOverlayFast === 'function') {
-        window.updateSelectionOverlayFast(window.selectionBounds);
+    if (window.SelectionChrome && typeof window.SelectionChrome.scheduleInteractive === 'function') {
+        const o = extra || {};
+        window.SelectionChrome.scheduleInteractive({
+            forceFullOverlay: !!o.forceFullSelectionOverlay,
+            forceDrawUI: !!o.forceDrawUI,
+            loupeEvent: o.loupeEvent,
+            loupeAnchorDoc: o.loupeAnchorDoc,
+            lassoPoints: o.lassoPoints
+        });
     }
-    if (
-        o.loupeEvent &&
-        window.illuSelectionLoupeActive &&
-        typeof window.illuSelectionLoupeMove === 'function'
-    ) {
-        window.illuSelectionLoupeMove(o.loupeEvent, o.loupeAnchorDoc);
-    }
-    illuScheduleInteractiveVisualRefresh({
-        render: true,
-        selection: !o.forceFullSelectionOverlay,
-        renderOpts: { skipLayerComposite: true, skipUiThumbnails: true }
-    });
 }
 
 function canUseSelectionOverlayFast() {
-    if (!window.selectionBounds) return false;
-    if (window.selectionInverted) return false;
-    if (window.illuCropSessionActive) return false;
-    if (window.selectionKind === 'color' && window.selectionColorMask) return false;
-    if (window.selectionCombineGhost) return false;
-    if (window.selectionExpansionPreviewPx && window.selectionExpansionPreviewPx > 0) return false;
-    if (window.selectionPixelWarpActive && window.selectionWarpQuad) return false;
-    if (lassoDrawingPoints && lassoDrawingPoints.length > 0) return false;
-    if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
-        return false;
-    }
-    return window.selectionKind === 'rect' && Math.abs(window.selectionPreviewAngleRad || 0) < 1e-6;
+    return window.SelectionChrome ? window.SelectionChrome.canUseRectFast() : false;
 }
 
-window.invalidateSelectionOverlayFast = function () {
-    window._selectionOverlayFastReady = false;
-};
-
-window.updateSelectionOverlayFast = function (sb) {
-    sb = sb || window.selectionBounds;
-    if (!sb || !selectionOverlay || !canUseSelectionOverlayFast()) {
-        window.invalidateSelectionOverlayFast();
-        return false;
-    }
-    const W = EditorManager.width;
-    const H = EditorManager.height;
-    const z = EditorManager.getCanvasZoomLevel();
-    const borderW = Math.max(1, 1.25 / z);
-    const isCrop = window.illuCropSessionActive;
-    const mainCol = isCrop ? '#ff0000' : '#000000';
-    const dashCol = isCrop ? '#ffffff' : '#ffffff';
-
-    selectionOverlay.style.display = 'block';
-    selectionOverlay.style.left = '0';
-    selectionOverlay.style.top = '0';
-    selectionOverlay.style.width = W + 'px';
-    selectionOverlay.style.height = H + 'px';
-    selectionOverlay.style.overflow = 'visible';
-
-    if (!window._selectionOverlayFastReady) {
-        selectionOverlay.innerHTML = '';
-        const wrap = document.createElement('div');
-        wrap.id = 'selection-overlay-fast-wrap';
-        wrap.style.cssText = 'position:absolute;pointer-events:none;transform-origin:center center;';
-        const box = document.createElement('div');
-        box.id = 'selection-overlay-fast-box';
-        box.style.cssText = [
-            'position:absolute',
-            'box-sizing:border-box',
-            'pointer-events:none',
-            'background:transparent',
-            `outline:${Math.max(1, borderW)}px solid ${mainCol}`,
-            'outline-offset:0',
-            `border:${borderW}px dashed ${dashCol}`,
-            'box-shadow:0 0 0 1px rgba(0,0,0,0.85)'
-        ].join(';');
-        wrap.appendChild(box);
-        selectionOverlay.appendChild(wrap);
-        window._selectionOverlayFastReady = true;
-    }
-
-    const wrap = document.getElementById('selection-overlay-fast-wrap');
-    const box = document.getElementById('selection-overlay-fast-box');
-    if (!wrap || !box) return false;
-
-    box.style.outline = `${Math.max(1, borderW)}px solid ${mainCol}`;
-    box.style.border = `${borderW}px dashed ${dashCol}`;
-    wrap.style.left = sb.x + 'px';
-    wrap.style.top = sb.y + 'px';
-    wrap.style.width = Math.max(0, sb.w) + 'px';
-    wrap.style.height = Math.max(0, sb.h) + 'px';
-    wrap.style.transform = '';
-    box.style.left = '0';
-    box.style.top = '0';
-    box.style.width = Math.max(0, sb.w) + 'px';
-    box.style.height = Math.max(0, sb.h) + 'px';
-    return true;
-};
 
 let illuInteractiveVisualLastTime = 0;
 function illuScheduleInteractiveVisualRefresh(opts) {
@@ -180,11 +99,227 @@ function illuScheduleInteractiveVisualRefresh(opts) {
         illuFlushInteractiveVisualRefresh();
     });
 }
+window.illuScheduleInteractiveVisualRefresh = illuScheduleInteractiveVisualRefresh;
 
 function clampRoundRectCornerRadius(userPx, w, h) {
     const u = userPx != null && Number.isFinite(Number(userPx)) ? Number(userPx) : 12;
     const r = Math.max(0, Math.min(64, u));
     return Math.min(r, w / 2, h / 2);
+}
+
+function illuClamp01(v) {
+    return Math.max(0, Math.min(1, v));
+}
+
+/** Triangle isocèle (style PowerPoint) : sommet réglable via data-illu-triangle-adj (0–1). */
+function illuTriangleReadState(shape) {
+    let x = parseFloat(shape.getAttribute('data-illu-bbox-x'));
+    let y = parseFloat(shape.getAttribute('data-illu-bbox-y'));
+    let w = parseFloat(shape.getAttribute('data-illu-bbox-w'));
+    let h = parseFloat(shape.getAttribute('data-illu-bbox-h'));
+    let adj = parseFloat(shape.getAttribute('data-illu-triangle-adj'));
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
+        const pp = parseIlluPolygonPoints(shape.getAttribute('points') || '');
+        if (pp.length >= 3) {
+            const xs = pp.map((p) => p[0]);
+            const ys = pp.map((p) => p[1]);
+            x = Math.min(...xs);
+            y = Math.min(...ys);
+            w = Math.max(...xs) - x;
+            h = Math.max(...ys) - y;
+            const apex = pp.reduce((best, p) => (p[1] < best[1] ? p : best), pp[0]);
+            adj = w > 0 ? (apex[0] - x) / w : 0.5;
+        } else {
+            x = 0;
+            y = 0;
+            w = 10;
+            h = 10;
+            adj = 0.5;
+        }
+    }
+    if (!Number.isFinite(adj)) adj = 0.5;
+    return { x, y, w: Math.max(2, w), h: Math.max(2, h), adj: illuClamp01(adj) };
+}
+
+function illuTriangleWritePoints(shape, x, y, w, h, adj) {
+    w = Math.max(2, w);
+    h = Math.max(2, h);
+    adj = illuClamp01(adj);
+    const ax = x + w * adj;
+    shape.setAttribute(
+        'points',
+        `${ax},${y} ${x},${y + h} ${x + w},${y + h}`
+    );
+    shape.setAttribute('data-illu-triangle', '1');
+    shape.setAttribute('data-illu-bbox-x', String(x));
+    shape.setAttribute('data-illu-bbox-y', String(y));
+    shape.setAttribute('data-illu-bbox-w', String(w));
+    shape.setAttribute('data-illu-bbox-h', String(h));
+    shape.setAttribute('data-illu-triangle-adj', String(adj));
+}
+
+function illuTriangleAdjustHandleLocal(st) {
+    const ax = st.x + st.w * st.adj;
+    const apex = { x: ax, y: st.y };
+    const baseMid = { x: st.x + st.w / 2, y: st.y + st.h };
+    const t = 0.42;
+    return {
+        x: apex.x + (baseMid.x - apex.x) * t,
+        y: apex.y + (baseMid.y - apex.y) * t
+    };
+}
+
+function illuRoundRectAdjustHandleLocal(x, y, w, h, rx) {
+    let r = rx != null && Number.isFinite(rx) ? rx : 0;
+    if (r < 0.5) r = Math.min(12, w / 4, h / 4);
+    return { x: x + r, y: y + r * 0.35 };
+}
+
+function illuRoundRectRadiusFromLocalDrag(x, y, w, h, lx, ly) {
+    return Math.max(0, Math.round(Math.min(Math.max(0, lx - x), Math.max(0, ly - y), w / 2, h / 2)));
+}
+
+function illuUpdateVectorAdjustFromPointer(shape, adjustType, docPos) {
+    if (!shape) return;
+    const lp = vectorDocToShapeAttrPoint(shape, docPos.x, docPos.y);
+    if (adjustType === 'triangle-adj') {
+        const st = illuTriangleReadState(shape);
+        const adj = st.w > 0 ? illuClamp01((lp.x - st.x) / st.w) : 0.5;
+        illuTriangleWritePoints(shape, st.x, st.y, st.w, st.h, adj);
+        if (shape.getAttribute('data-vgrad')) {
+            syncVectorGradientOnShape(shape, 'rect', st.x, st.y, st.x + st.w, st.y + st.h);
+        }
+        return;
+    }
+    if (adjustType === 'round-adj') {
+        const x = parseFloat(shape.getAttribute('x')) || 0;
+        const y = parseFloat(shape.getAttribute('y')) || 0;
+        const w = parseFloat(shape.getAttribute('width')) || 0;
+        const h = parseFloat(shape.getAttribute('height')) || 0;
+        const r = illuRoundRectRadiusFromLocalDrag(x, y, w, h, lp.x, lp.y);
+        if (r > 0.5) {
+            shape.setAttribute('rx', String(r));
+            shape.setAttribute('ry', String(r));
+        } else {
+            shape.removeAttribute('rx');
+            shape.removeAttribute('ry');
+        }
+        EditorManager.toolProps.shapeCornerRadius = r;
+        const sc = document.getElementById('tool-shape-corner-radius');
+        const scv = document.getElementById('tool-shape-corner-radius-val');
+        if (sc) sc.value = String(Math.max(0, Math.min(64, r)));
+        if (scv) scv.textContent = String(Math.max(0, Math.min(64, r)));
+        if (shape.getAttribute('data-vgrad')) {
+            syncVectorGradientOnShape(shape, 'rect', x, y, x + w, y + h);
+        }
+    }
+}
+
+window.illuTriangleWritePoints = illuTriangleWritePoints;
+window.illuTriangleReadState = illuTriangleReadState;
+window.illuTriangleAdjustHandleLocal = illuTriangleAdjustHandleLocal;
+window.illuRoundRectAdjustHandleLocal = illuRoundRectAdjustHandleLocal;
+window.illuRoundRectRadiusFromLocalDrag = illuRoundRectRadiusFromLocalDrag;
+window.clampRoundRectCornerRadius = clampRoundRectCornerRadius;
+
+function illuVectorShapeSupportsRotation(shape) {
+    if (!shape) return false;
+    const tag = (shape.tagName || '').toLowerCase();
+    if (tag === 'rect') return true;
+    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') return true;
+    return false;
+}
+
+function illuVectorToolsAllowShapeRotation() {
+    const t = window.activeTool || '';
+    return t === 'select' || t === 'move' || t === 'direct-select';
+}
+
+function illuVectorShapeLocalBbox(shape) {
+    const tag = (shape.tagName || '').toLowerCase();
+    if (tag === 'rect') {
+        return {
+            x: parseFloat(shape.getAttribute('x')) || 0,
+            y: parseFloat(shape.getAttribute('y')) || 0,
+            w: parseFloat(shape.getAttribute('width')) || 0,
+            h: parseFloat(shape.getAttribute('height')) || 0
+        };
+    }
+    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
+        const st = illuTriangleReadState(shape);
+        return { x: st.x, y: st.y, w: st.w, h: st.h };
+    }
+    return null;
+}
+
+function illuVectorShapePivotLocal(shape) {
+    const b = illuVectorShapeLocalBbox(shape);
+    if (!b) return null;
+    return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: b.w, h: b.h };
+}
+
+function illuVectorRotationHandleLocal(shape) {
+    const sb = illuVectorShapeLocalBbox(shape);
+    if (!sb) return null;
+    const ang = parseFloat(shape.getAttribute('data-illu-rotation-rad')) || 0;
+    const z = EditorManager.getCanvasZoomLevel() || 1;
+    const pad = 22 / z;
+    const cx = sb.x + sb.w / 2;
+    const cy = sb.y + sb.h / 2;
+    const topMidRot = {
+        x: cx + (sb.h / 2) * Math.sin(ang),
+        y: cy - (sb.h / 2) * Math.cos(ang)
+    };
+    return {
+        x: topMidRot.x + pad * Math.sin(ang),
+        y: topMidRot.y - pad * Math.cos(ang)
+    };
+}
+
+function illuWriteVectorShapeRotation(shape, angleRad) {
+    const pivot = illuVectorShapePivotLocal(shape);
+    if (!pivot) return;
+    const deg = (angleRad * 180) / Math.PI;
+    shape.setAttribute('data-illu-rotation-rad', String(angleRad));
+    shape.setAttribute('transform', `rotate(${deg} ${pivot.cx} ${pivot.cy})`);
+}
+
+function createSvgRotationHandle(rootX, rootY) {
+    const z = EditorManager.getCanvasZoomLevel() || 1;
+    const rotR = EditorManager.svgUiRotationHandleRadiusDoc();
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', String(rootX));
+    c.setAttribute('cy', String(rootY));
+    c.setAttribute('r', String(rotR));
+    c.setAttribute('fill', '#aecbfa');
+    c.setAttribute('stroke', '#000000');
+    c.setAttribute('stroke-width', String(1 / z));
+    c.setAttribute('class', 'svg-rotation-handle');
+    c.setAttribute('pointer-events', 'all');
+    c.style.cursor = 'grab';
+    c.dataset.vectorRotHandle = '1';
+    return c;
+}
+
+function appendVectorRotationHandle(svgUI, shape) {
+    if (!illuVectorShapeSupportsRotation(shape) || !illuVectorToolsAllowShapeRotation()) return;
+    const local = illuVectorRotationHandleLocal(shape);
+    if (!local) return;
+    const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+    svgUI.appendChild(createSvgRotationHandle(r.x, r.y));
+}
+
+function syncVectorRotationHandlePosition(anchorsG, shape) {
+    if (!anchorsG || !shape) return;
+    const el = anchorsG.querySelector('.svg-rotation-handle');
+    if (!el) return;
+    const local = illuVectorRotationHandleLocal(shape);
+    if (!local) return;
+    const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+    const rotR = EditorManager.svgUiRotationHandleRadiusDoc();
+    el.setAttribute('cx', String(r.x));
+    el.setAttribute('cy', String(r.y));
+    el.setAttribute('r', String(rotR));
 }
 
 /** Brouillon vecteur : applique le rayon des coins de la barre d’options au <rect data-illu-round> en cours. */
@@ -243,6 +378,7 @@ const TOOL_OPTIONS_UI = {
     'pen': { label: 'Plume', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'polygon': { label: 'Polygone', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    triangle: { label: 'Triangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     shadow: { label: 'Ombre portée', actionGroups: [], paramGroups: [] }
 };
 
@@ -276,13 +412,14 @@ function isLassoSelectionTool() {
 }
 
 function readPixelHandleAttr(e) {
-    const t = e.target;
-    if (t && typeof t.getAttribute === 'function') {
-        const a = t.getAttribute('data-pixel-handle');
-        if (a) return a;
+    let el = e && e.target;
+    while (el && el !== document) {
+        if (typeof el.getAttribute === 'function') {
+            const a = el.getAttribute('data-pixel-handle');
+            if (a) return a;
+        }
+        el = el.parentElement;
     }
-    const p = e.target && e.target.parentElement;
-    if (p && typeof p.getAttribute === 'function') return p.getAttribute('data-pixel-handle');
     return null;
 }
 
@@ -304,7 +441,7 @@ window.updateMainCanvasCursor = function () {
         else if (vt === 'shadow') el.style.cursor = 'copy';
         else if (vt === 'cubic-3' || vt === 'pen' || vt === 'polygon') el.style.cursor = 'crosshair';
         else if (vt === 'direct-select') el.style.cursor = 'default';
-        else if (['brush', 'pencil', 'rect', 'circle', 'line', 'round-3'].includes(vt)) el.style.cursor = 'crosshair';
+        else if (['brush', 'pencil', 'rect', 'circle', 'line', 'round-3', 'triangle'].includes(vt)) el.style.cursor = 'crosshair';
         else el.style.cursor = 'default';
         return;
     }
@@ -330,7 +467,8 @@ window.updateMainCanvasCursor = function () {
         'cubic-3': 'crosshair',
         'pen': 'crosshair',
         'polygon': 'crosshair',
-        'round-3': 'crosshair'
+        'round-3': 'crosshair',
+        triangle: 'crosshair'
     };
     el.style.cursor = map[t] || 'default';
 };
@@ -383,6 +521,29 @@ window.updateToolOptionsBar = function () {
     const SELECT_ACTION_TOOLS = new Set(['select', 'move', 'wand', 'direct-select', 'deform', 'warp-4']);
     const selActsPin = document.getElementById('tool-pinned-select-actions');
     if (selActsPin) selActsPin.hidden = !SELECT_ACTION_TOOLS.has(t);
+
+    const hasSel =
+        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
+    const canCenter =
+        typeof EditorManager.canCenterSelectionLayout === 'function' &&
+        EditorManager.canCenterSelectionLayout();
+    document.querySelectorAll('.illu-sel-center-item').forEach((el) => {
+        el.hidden = !canCenter;
+        el.setAttribute('aria-hidden', canCenter ? 'false' : 'true');
+    });
+    document.querySelectorAll('.illu-sel-layout-item:not(.illu-sel-center-item) .illu-icon-toggle').forEach((btn) => {
+        btn.disabled = !hasSel;
+        btn.setAttribute('aria-disabled', btn.disabled ? 'true' : 'false');
+    });
+    document.querySelectorAll('.illu-sel-nudge-item').forEach((el) => {
+        el.hidden = true;
+        el.setAttribute('aria-hidden', 'true');
+    });
+    document.querySelectorAll('.illu-sel-nudge-item .illu-icon-toggle').forEach((btn) => {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.tabIndex = -1;
+    });
 
     // Show param groups (Bar 2)
     let hasParams = false;
@@ -575,7 +736,7 @@ window.updateToolOptionsBar = function () {
     const shapeGradTypeActions = document.getElementById('tool-shape-grad-type-actions');
     const quadBulgeRow = document.getElementById('tool-quad-curve-bulge-row');
     const isLineLike = t === 'line' || t === 'cubic-3' || t === 'pen';
-    const isShapeRectLike = t === 'rect' || t === 'circle' || t === 'round-3' || t === 'polygon';
+    const isShapeRectLike = t === 'rect' || t === 'circle' || t === 'round-3' || t === 'triangle' || t === 'polygon';
 
     const shapeModeSel = document.getElementById('tool-shape-mode');
     if (shapeModeSel) {
@@ -643,13 +804,11 @@ window.updateToolOptionsBar = function () {
     const resampleWrap = document.getElementById('opt-warp-resample-wrap');
     const resampleSep = document.getElementById('opt-warp-resample-sep');
     const warpToggles = document.querySelector('#opt-grp-warp-params .illu-warp-bar-toggles');
-    const freeCornersBar2 = document.getElementById('opt-warp-bar-free-corners-wrap');
     const rectLockWrap = document.getElementById('opt-warp-quad-rect-lock-wrap');
     const snapWrap = document.getElementById('opt-warp-quad-snap-wrap');
     const toWarpWrap = document.getElementById('opt-select-quad-to-warp-wrap');
     if (resampleWrap) resampleWrap.hidden = !showWarpDeformOpts;
     if (resampleSep) resampleSep.hidden = !showWarpDeformOpts;
-    if (freeCornersBar2) freeCornersBar2.hidden = t !== 'select';
     if (rectLockWrap) rectLockWrap.hidden = !(showWarpDeformOpts && hasFreeWarpQuad);
     if (snapWrap) {
         snapWrap.hidden = !(showWarpDeformOpts && hasFreeWarpQuad && !quadIsAxisRect);
@@ -690,7 +849,7 @@ window.updateToolOptionsBar = function () {
                     if (row) window.illuSettingsScopeSetActive(row, v);
                 }
                 if (window.selectionPixelWarpActive && typeof window.runSelectionWarpPreview === 'function') {
-                    window.runSelectionWarpPreview({ preview: true });
+                    illuScheduleSelectionWarpPreview({ preview: true });
                 }
             });
         }
@@ -1174,6 +1333,322 @@ function translateSelectionColorMask(src, w, h, dx, dy) {
     return out;
 }
 
+/** Met à jour cadre / lasso / masque / quad après un déplacement en coords document. */
+function illuTranslateSelectionGeometry(dx, dy) {
+    if (dx === 0 && dy === 0) return;
+    const sb = window.selectionBounds;
+    if (sb) {
+        window.selectionBounds = { x: sb.x + dx, y: sb.y + dy, w: sb.w, h: sb.h };
+    }
+    if (
+        window.selectionKind === 'color' &&
+        window.selectionColorMask &&
+        EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+    ) {
+        const m = window.selectionColorMask;
+        m.data = translateSelectionColorMask(m.data, m.w, m.h, dx, dy);
+        if (typeof window.illuInvalidateSelectionMaskCache === 'function') {
+            window.illuInvalidateSelectionMaskCache(m);
+        }
+    } else if (window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+        window.selectionLassoPoints = window.selectionLassoPoints.map((p) => ({
+            x: p.x + dx,
+            y: p.y + dy
+        }));
+    }
+    if (window.selectionWarpQuad && !window.selectionPixelWarpActive) {
+        const q = window.selectionWarpQuad;
+        (['tl', 'tr', 'br', 'bl']).forEach((key) => {
+            q[key].x += dx;
+            q[key].y += dy;
+        });
+    }
+    if (selectionWarpDeformRect && !window.selectionPixelWarpActive) {
+        selectionWarpDeformRect.rx += dx;
+        selectionWarpDeformRect.ry += dy;
+    }
+}
+
+/**
+ * Déplace les pixels sélectionnés (ou le calque entier) — outils Déplacer / Déformation / warp-4.
+ * @returns {boolean}
+ */
+window.illuNudgeSelectionPixelsDelta = function (dx, dy) {
+    if (dx === 0 && dy === 0) return false;
+    if (!EditorManager.activeProject || !EditorManager.isPixelMode) return false;
+    const al = EditorManager.activeLayer;
+    if (!al || !al.buffer) return false;
+
+    const hasSel =
+        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
+    const sb = window.selectionBounds;
+    const layerMatched =
+        hasSel &&
+        typeof window.selectionMatchesActiveLayer === 'function' &&
+        window.selectionMatchesActiveLayer();
+
+    if (!hasSel || !sb || layerMatched) {
+        al.x = (al.x || 0) + dx;
+        al.y = (al.y || 0) + dy;
+        if (hasSel && sb) {
+            illuTranslateSelectionGeometry(dx, dy);
+        }
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        return true;
+    }
+
+    if (sb.w < 1 || sb.h < 1) return false;
+
+    const ctx = al.buffer.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false;
+    const lx = al.x;
+    const ly = al.y;
+    const ox = Math.floor(sb.x - lx);
+    const oy = Math.floor(sb.y - ly);
+    const sw = Math.max(1, Math.ceil(sb.x - lx + sb.w) - ox);
+    const sh = Math.max(1, Math.ceil(sb.y - ly + sb.h) - oy);
+    const nx = ox + Math.round(dx);
+    const ny = oy + Math.round(dy);
+    if (nx < 0 || ny < 0 || nx + sw > al.buffer.width || ny + sh > al.buffer.height) {
+        return false;
+    }
+
+    const chunk = ctx.getImageData(ox, oy, sw, sh);
+    if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+        const d = chunk.data;
+        for (let yy = 0; yy < sh; yy++) {
+            for (let xx = 0; xx < sw; xx++) {
+                if (!pointInPolygon(xx + ox + lx + 0.5, yy + oy + ly + 0.5, window.selectionLassoPoints)) {
+                    const idx = (yy * sw + xx) * 4;
+                    d[idx + 3] = 0;
+                }
+            }
+        }
+    } else if (
+        window.selectionKind === 'color' &&
+        window.selectionColorMask &&
+        EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+    ) {
+        const m = window.selectionColorMask;
+        const d = chunk.data;
+        for (let yy = 0; yy < sh; yy++) {
+            for (let xx = 0; xx < sw; xx++) {
+                const lpx = ox + xx;
+                const lpy = oy + yy;
+                if (lpx < 0 || lpx >= m.w || lpy < 0 || lpy >= m.h || !m.data[lpy * m.w + lpx]) {
+                    const idx = (yy * sw + xx) * 4;
+                    d[idx + 3] = 0;
+                }
+            }
+        }
+    }
+
+    const tmp = document.createElement('canvas');
+    tmp.width = sw;
+    tmp.height = sh;
+    tmp.getContext('2d', { willReadFrequently: true }).putImageData(chunk, 0, 0);
+
+    const prevBuf = moveBufferCanvas;
+    const prevStart = moveDragBoundsStart;
+    const prevLasso = moveDragLassoBaseline;
+    moveBufferCanvas = tmp;
+    moveDragBoundsStart = { x: sb.x, y: sb.y, w: sw, h: sh };
+    moveDragLassoBaseline =
+        window.selectionKind === 'lasso' && window.selectionLassoPoints
+            ? window.selectionLassoPoints.map((p) => ({ x: p.x, y: p.y }))
+            : null;
+    illuClearMoveSelectionSourceRegion(ctx, lx, ly);
+    moveBufferCanvas = prevBuf;
+    moveDragBoundsStart = prevStart;
+    moveDragLassoBaseline = prevLasso;
+
+    ctx.save();
+    ctx.beginPath();
+    if (
+        window.selectionKind === 'color' &&
+        window.selectionColorMask &&
+        EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+    ) {
+        EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+    } else if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+        window.selectionLassoPoints.forEach((p, i) => {
+            const px = p.x - lx;
+            const py = p.y - ly;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+    } else {
+        ctx.rect(ox, oy, sw, sh);
+    }
+    ctx.clip();
+    const useSmooth = document.getElementById('tool-warp-resampling')?.value !== 'nearest';
+    ctx.imageSmoothingEnabled = useSmooth;
+    ctx.drawImage(tmp, nx, ny);
+    ctx.restore();
+
+    illuTranslateSelectionGeometry(dx, dy);
+    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+    return true;
+};
+
+/** Déplace le cadre / masque de sélection sans déplacer les pixels (outils Sélection, Baguette…). */
+window.illuNudgeSelectionMarquee = function (dx, dy) {
+    if (dx === 0 && dy === 0) return false;
+    if (!EditorManager.activeProject || !EditorManager.isPixelMode) return false;
+    const sb = window.selectionBounds;
+    const ov = document.getElementById('selection-overlay');
+    if (!sb || !ov || ov.style.display === 'none' || window.selectionInverted) return false;
+
+    if (
+        window.selectionKind === 'color' &&
+        window.selectionColorMask &&
+        EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+    ) {
+        const m = window.selectionColorMask;
+        m.data = translateSelectionColorMask(m.data, m.w, m.h, dx, dy);
+        if (typeof window.illuInvalidateSelectionMaskCache === 'function') {
+            window.illuInvalidateSelectionMaskCache(m);
+        }
+        if (typeof window.tightenColorSelectionBoundsFromMask === 'function') {
+            window.tightenColorSelectionBoundsFromMask();
+        }
+    } else if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+        window.selectionLassoPoints = window.selectionLassoPoints.map((p) => ({
+            x: p.x + dx,
+            y: p.y + dy
+        }));
+        const xs = window.selectionLassoPoints.map((p) => p.x);
+        const ys = window.selectionLassoPoints.map((p) => p.y);
+        window.selectionBounds = {
+            x: Math.min(...xs),
+            y: Math.min(...ys),
+            w: Math.max(...xs) - Math.min(...xs),
+            h: Math.max(...ys) - Math.min(...ys)
+        };
+    } else {
+        window.selectionBounds = { ...sb, x: sb.x + dx, y: sb.y + dy };
+    }
+    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+    EditorManager.render();
+    return true;
+};
+
+function illuSyncSelectionBoundsFromWarpQuad(q) {
+    if (!q) return;
+    const xs = [q.tl.x, q.tr.x, q.br.x, q.bl.x];
+    const ys = [q.tl.y, q.tr.y, q.br.y, q.bl.y];
+    window.selectionBounds = {
+        x: Math.min(...xs),
+        y: Math.min(...ys),
+        w: Math.max(...xs) - Math.min(...xs),
+        h: Math.max(...ys) - Math.min(...ys)
+    };
+    if (window.selectionLassoPoints && window.selectionLassoPoints.length === 4) {
+        window.selectionLassoPoints = [
+            { x: q.tl.x, y: q.tl.y },
+            { x: q.tr.x, y: q.tr.y },
+            { x: q.br.x, y: q.br.y },
+            { x: q.bl.x, y: q.bl.y }
+        ];
+    }
+}
+
+/**
+ * Flèches / boutons (Déformation, warp-4 + session warp) : déplacement type poignée centre.
+ * @returns {boolean}
+ */
+window.nudgeSelectionWarpSessionDelta = function (dx, dy) {
+    if (dx === 0 && dy === 0) return false;
+    if (!window.selectionPixelWarpActive || !window.selectionWarpQuad) return false;
+    const tool = window.activeTool;
+    if (tool !== 'deform' && tool !== 'warp-4') return false;
+
+    if (tool === 'deform' && selectionWarpDeformRect) {
+        const R = selectionWarpDeformRect;
+        const q = window.selectionWarpQuad;
+        const Wd = EditorManager.width;
+        const Hd = EditorManager.height;
+        R.rx += dx;
+        R.ry += dy;
+        const maxX = Math.max(0, Wd - R.rw);
+        const maxY = Math.max(0, Hd - R.rh);
+        R.rx = Math.max(0, Math.min(R.rx, maxX));
+        R.ry = Math.max(0, Math.min(R.ry, maxY));
+        q.tl.x = R.rx;
+        q.tl.y = R.ry;
+        q.tr.x = R.rx + R.rw;
+        q.tr.y = R.ry;
+        q.br.x = R.rx + R.rw;
+        q.br.y = R.ry + R.rh;
+        q.bl.x = R.rx;
+        q.bl.y = R.ry + R.rh;
+        window.selectionBounds = { x: R.rx, y: R.ry, w: R.rw, h: R.rh };
+        if (window.selectionLassoPoints && window.selectionLassoPoints.length === 4) {
+            window.selectionLassoPoints = [
+                { x: R.rx, y: R.ry },
+                { x: R.rx + R.rw, y: R.ry },
+                { x: R.rx + R.rw, y: R.ry + R.rh },
+                { x: R.rx, y: R.ry + R.rh }
+            ];
+        }
+    } else {
+        const q = window.selectionWarpQuad;
+        (['tl', 'tr', 'br', 'bl']).forEach((key) => {
+            q[key].x += dx;
+            q[key].y += dy;
+        });
+        if (selectionWarpDeformRect) {
+            selectionWarpDeformRect.rx += dx;
+            selectionWarpDeformRect.ry += dy;
+        }
+        illuSyncSelectionBoundsFromWarpQuad(q);
+    }
+
+    const prevH = selectionWarpHandleId;
+    selectionWarpHandleId = 'c';
+    try {
+        window.runSelectionWarpPreview({ forceCommit: true });
+    } finally {
+        selectionWarpHandleId = prevH;
+    }
+    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+    EditorManager.saveHistory('Déplacement', { patchActiveLayer: true });
+    EditorManager.render();
+    return true;
+};
+
+/** @deprecated alias */
+window.nudgeDeformWarpDelta = window.nudgeSelectionWarpSessionDelta;
+
+window.illuWireSelectionLayoutToolbarButtons = function () {
+    const root = document.getElementById('tool-pinned-select-actions');
+    if (!root || root.dataset.illuSelLayoutWired === '1') return;
+    root.dataset.illuSelLayoutWired = '1';
+
+    const centerH = document.getElementById('opt-sel-center-h');
+    if (centerH) {
+        centerH.onclick = () => EditorManager.centerSelection('h');
+    }
+    const centerV = document.getElementById('opt-sel-center-v');
+    if (centerV) {
+        centerV.onclick = () => EditorManager.centerSelection('v');
+    }
+    const centerBoth = document.getElementById('opt-sel-center-both');
+    if (centerBoth) {
+        centerBoth.onclick = () => EditorManager.centerSelection('both');
+    }
+
+    root.querySelectorAll('button[data-illu-nudge-dx]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            const dx = parseInt(btn.getAttribute('data-illu-nudge-dx'), 10) || 0;
+            const dy = parseInt(btn.getAttribute('data-illu-nudge-dy'), 10) || 0;
+            const step = e.shiftKey ? 10 : 1;
+            EditorManager.nudgeSelectionZone(dx, dy, { step });
+        });
+    });
+};
+
 function magicWandAt(pos, ev) {
     const ctx = EditorManager.activeCtx;
     if (!ctx || !EditorManager.isPixelMode) return;
@@ -1248,8 +1723,8 @@ function magicWandAt(pos, ev) {
             }
         }
 
-        window.refreshSelectionVisual();
-        EditorManager.render();
+        window.refreshSelectionVisual({ forceFull: true });
+        EditorManager.render({ skipLayerComposite: true, skipUiThumbnails: true });
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') {
             window.disarmSelectionRectFreeCornersArm();
         }
@@ -1712,6 +2187,11 @@ let selectionWarpSourceClearLocalPoints = null;
 let selectionWarpHandlePointerDown = false;
 let selectionWarpDragLayerSnapshot = null;
 let selectionWarpPreviewOverlayEl = null;
+let selectionWarpBasePreviewOverlayEl = null;
+let selectionWarpPatchScratchCanvas = null;
+let selectionWarpChromeRaf = 0;
+let selectionWarpPreviewRaf = 0;
+let selectionWarpPreviewPendingOpts = null;
 let selectionWarpWorkersPool = [];
 let warpJobState = null;
 let selectionWarpWorkerBroken = false;
@@ -1912,14 +2392,44 @@ function appendInvertedRectMarqueeDoc(parent, sb, Wdoc, Hdoc, skipOuter = false)
     }
 }
 
-window.refreshSelectionVisual = function () {
+window.refreshSelectionVisual = function (opts) {
+    opts = opts || {};
+    const hasDraw = lassoDrawingPoints && lassoDrawingPoints.length > 0;
+
+    if (!opts.forceFull) {
+        if (
+            window.pixelShapeEdit &&
+            typeof window.updatePixelShapeEditOverlayFast === 'function' &&
+            window.updatePixelShapeEditOverlayFast()
+        ) {
+            return;
+        }
+        if (hasDraw && typeof window.updateLassoDrawingOverlayFast === 'function') {
+            if (window.updateLassoDrawingOverlayFast(lassoDrawingPoints)) return;
+        }
+        if (
+            window.selectionPixelWarpActive &&
+            window.selectionWarpQuad &&
+            !window.selectionInverted &&
+            typeof window.updateWarpSelectionOverlayFast === 'function' &&
+            window.updateWarpSelectionOverlayFast(window.selectionWarpQuad)
+        ) {
+            return;
+        }
+        if (
+            typeof window.updateSelectionOverlayFast === 'function' &&
+            window.updateSelectionOverlayFast(window.selectionBounds)
+        ) {
+            return;
+        }
+    }
+
     if (typeof window.invalidateSelectionOverlayFast === 'function') {
         window.invalidateSelectionOverlayFast();
     }
     let sb = window.selectionBounds;
     const W = EditorManager.width;
     const H = EditorManager.height;
-    const hasDraw = lassoDrawingPoints && lassoDrawingPoints.length > 0;
     let hasMask =
         window.selectionColorMask &&
         window.selectionKind === 'color' &&
@@ -1929,8 +2439,12 @@ window.refreshSelectionVisual = function () {
         sb = window.selectionBounds;
     }
     if (!sb && !hasDraw && !hasMask) {
-        selectionOverlay.style.display = 'none';
-        selectionOverlay.innerHTML = '';
+        if (window.SelectionChrome && typeof window.SelectionChrome.hideOverlay === 'function') {
+            window.SelectionChrome.hideOverlay();
+        } else {
+            selectionOverlay.style.display = 'none';
+            selectionOverlay.innerHTML = '';
+        }
         return;
     }
     selectionOverlay.style.display = 'block';
@@ -2515,6 +3029,9 @@ function initTools() {
     if (typeof window.illuWireSelectRectFreeCornersButtons === 'function') {
         window.illuWireSelectRectFreeCornersButtons();
     }
+    if (typeof window.illuWireSelectionLayoutToolbarButtons === 'function') {
+        window.illuWireSelectionLayoutToolbarButtons();
+    }
     if (typeof window.illuWireWarpBarButtons === 'function') window.illuWireWarpBarButtons();
 
     window.updateToolOptionsBar();
@@ -2559,28 +3076,32 @@ function initTools() {
 
     const onPointerMoveWin = (e) => {
         /* Souris : pointermove nécessaire pour le bouton Déplacer (capture) et pour la session warp (même souci). */
-        // Mouse is now handled here to benefit from getCoalescedEvents()
         if (e.isPrimary === false) return;
+        window._illuLastPointerEvent = e;
         const list = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
-        if (list.length > 0) {
-            // We process ALL coalesced events to ensure smooth paths
-            // but we throttle the actual global handler (which triggers renders)
-            if (!window._illuPointerMoveThrottled) {
-                window._illuPointerMoveThrottled = true;
-                requestAnimationFrame(() => {
-                    for (const ce of list) {
-                        trackClient(ce);
-                        onGlobalMouseMove(ce);
-                    }
-                    window._illuPointerMoveThrottled = false;
-                });
-            } else {
-                // If throttled, we still track the client position to avoid skipping final destination
-                const ce = list[list.length - 1];
-                trackClient(ce);
-            }
+        if (list.length === 0) return;
+        const latest = list[list.length - 1];
+        window._shiftConstraintProportions = latest.shiftKey;
+        trackClient(latest);
+        if (!window._illuPointerMoveThrottled) {
+            window._illuPointerMoveThrottled = true;
+            requestAnimationFrame(() => {
+                window._illuPointerMoveThrottled = false;
+                const evt = window._illuLastPointerEvent;
+                if (!evt) return;
+                const batch =
+                    typeof evt.getCoalescedEvents === 'function' ? evt.getCoalescedEvents() : [evt];
+                for (const ce of batch) {
+                    onGlobalMouseMove(ce);
+                }
+            });
         }
     };
+    const syncShiftConstraintFromKey = (e) => {
+        if (e && 'shiftKey' in e) window._shiftConstraintProportions = e.shiftKey;
+    };
+    window.addEventListener('keydown', syncShiftConstraintFromKey);
+    window.addEventListener('keyup', syncShiftConstraintFromKey);
     const onPointerUpWin = (e) => {
         if (e.isPrimary === false) return;
         try {
@@ -2751,6 +3272,23 @@ function constrainRectSelectionDraw(startXp, startYp, posX, posY, shift) {
     const y = dy >= 0 ? startYp : startYp - s;
     return { x, y, w: s, h: s };
 }
+
+/** Maj : ligne / dégradé linéaire à angles 0°, 45°, 90°, … depuis le point de départ. */
+function constrainLineEndpoint(startXp, startYp, posX, posY, shift) {
+    if (!shift) return { x: posX, y: posY };
+    const dx = posX - startXp;
+    const dy = posY - startYp;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-6) return { x: posX, y: posY };
+    const snap = Math.PI / 4;
+    const angle = Math.atan2(dy, dx);
+    const snapped = Math.round(angle / snap) * snap;
+    return {
+        x: startXp + Math.cos(snapped) * dist,
+        y: startYp + Math.sin(snapped) * dist
+    };
+}
+window.constrainLineEndpoint = constrainLineEndpoint;
 
 /**
  * Maj : redimensionnement de sélection en conservant le rapport largeur/hauteur d’origine.
@@ -2993,12 +3531,14 @@ function removeVectorElementGradientIfAny(el) {
 /** Coordonnées attribut (repère parent de la forme) → repère racine du <svg> (aligné sur logicalPointer / viewBox). */
 function vectorShapeAttrPointToRoot(shape, lx, ly) {
     const svg = shape.ownerSVGElement;
-    if (!svg || !shape.parentElement) return { x: lx, y: ly };
+    if (!svg) return { x: lx, y: ly };
     try {
         const pt = svg.createSVGPoint();
         pt.x = lx;
         pt.y = ly;
-        const m = shape.parentElement.getCTM();
+        const tag = (shape.tagName || '').toLowerCase();
+        const useOwn = tag === 'polygon' || tag === 'polyline' || tag === 'path';
+        const m = useOwn ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
         if (!m) return { x: lx, y: ly };
         const o = pt.matrixTransform(m);
         return { x: o.x, y: o.y };
@@ -3010,12 +3550,14 @@ function vectorShapeAttrPointToRoot(shape, lx, ly) {
 /** Coordonnées document / pointeur → repère parent pour écrire x, y, d, etc. */
 function vectorDocToShapeAttrPoint(shape, rx, ry) {
     const svg = shape.ownerSVGElement;
-    if (!svg || !shape.parentElement) return { x: rx, y: ry };
+    if (!svg) return { x: rx, y: ry };
     try {
         const pt = svg.createSVGPoint();
         pt.x = rx;
         pt.y = ry;
-        const m = shape.parentElement.getCTM();
+        const tag = (shape.tagName || '').toLowerCase();
+        const useOwn = tag === 'polygon' || tag === 'polyline' || tag === 'path';
+        const m = useOwn ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
         if (!m) return { x: rx, y: ry };
         const o = pt.matrixTransform(m.inverse());
         return { x: o.x, y: o.y };
@@ -3080,9 +3622,78 @@ function createSvgAnchor(x, y, index, cursor) {
     r.setAttribute('stroke-width', '1');
     r.setAttribute('vector-effect', 'non-scaling-stroke');
     r.setAttribute('class', 'svg-anchor');
+    r.setAttribute('pointer-events', 'all');
     r.dataset.index = String(index);
     r.style.cursor = cursor || 'pointer';
     return r;
+}
+
+function illuSetSvgAdjustAnchorPoints(adjEl, rootX, rootY) {
+    if (!adjEl) return;
+    const s = Math.max(4, EditorManager.svgUiHandleSizeDoc() * 0.55);
+    adjEl.setAttribute(
+        'points',
+        [
+            [rootX, rootY - s],
+            [rootX + s, rootY],
+            [rootX, rootY + s],
+            [rootX - s, rootY]
+        ]
+            .map(([a, b]) => `${a},${b}`)
+            .join(' ')
+    );
+}
+
+function syncShapeAdjustAnchorPosition(anchorsG, shape) {
+    if (!anchorsG || !shape) return;
+    const adjEl = anchorsG.querySelector('.svg-adjust-anchor');
+    if (!adjEl) return;
+    const tag = (shape.tagName || '').toLowerCase();
+    let local = null;
+    if (tag === 'rect' && shape.getAttribute('data-illu-round') === '1') {
+        const x = parseFloat(shape.getAttribute('x')) || 0;
+        const y = parseFloat(shape.getAttribute('y')) || 0;
+        const w = parseFloat(shape.getAttribute('width')) || 0;
+        const h = parseFloat(shape.getAttribute('height')) || 0;
+        const rx = parseFloat(shape.getAttribute('rx')) || 0;
+        local = illuRoundRectAdjustHandleLocal(x, y, w, h, rx);
+    } else if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
+        local = illuTriangleAdjustHandleLocal(illuTriangleReadState(shape));
+    }
+    if (!local) return;
+    const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+    illuSetSvgAdjustAnchorPoints(adjEl, r.x, r.y);
+}
+
+function createSvgAdjustAnchor(rootX, rootY, adjustType) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    illuSetSvgAdjustAnchorPoints(p, rootX, rootY);
+    p.setAttribute('class', 'svg-adjust-anchor');
+    p.setAttribute('pointer-events', 'all');
+    p.dataset.adjustType = adjustType;
+    p.style.cursor = 'move';
+    return p;
+}
+
+function appendShapeAdjustAnchors(svgUI, shape) {
+    const tag = (shape.tagName || '').toLowerCase();
+    if (tag === 'rect' && shape.getAttribute('data-illu-round') === '1') {
+        const x = parseFloat(shape.getAttribute('x')) || 0;
+        const y = parseFloat(shape.getAttribute('y')) || 0;
+        const w = parseFloat(shape.getAttribute('width')) || 0;
+        const h = parseFloat(shape.getAttribute('height')) || 0;
+        const rx = parseFloat(shape.getAttribute('rx')) || 0;
+        const local = illuRoundRectAdjustHandleLocal(x, y, w, h, rx);
+        const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+        svgUI.appendChild(createSvgAdjustAnchor(r.x, r.y, 'round-adj'));
+        return;
+    }
+    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
+        const st = illuTriangleReadState(shape);
+        const local = illuTriangleAdjustHandleLocal(st);
+        const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+        svgUI.appendChild(createSvgAdjustAnchor(r.x, r.y, 'triangle-adj'));
+    }
 }
 
 function appendAnchorsForShape(svgUI, shape) {
@@ -3120,6 +3731,7 @@ function appendAnchorsForShape(svgUI, shape) {
             [x + w, y + h, 7]
         ];
         pts.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i, cursors[i] || 'pointer'));
+        appendShapeAdjustAnchors(svgUI, shape);
     } else if (tag === 'line') {
         const x1 = parseFloat(shape.getAttribute('x1')) || 0;
         const y1 = parseFloat(shape.getAttribute('y1')) || 0;
@@ -3148,6 +3760,22 @@ function appendAnchorsForShape(svgUI, shape) {
             [x + w, y + h, 7]
         ];
         pts.forEach(([px, py, i]) => rootAnchor(px, py, i, cursors[i] || 'pointer'));
+    } else if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
+        const st = illuTriangleReadState(shape);
+        const { x, y, w, h } = st;
+        const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'w-resize', 'e-resize', 'sw-resize', 's-resize', 'se-resize'];
+        const pts = [
+            [x, y, 0],
+            [x + w / 2, y, 1],
+            [x + w, y, 2],
+            [x, y + h / 2, 3],
+            [x + w, y + h / 2, 4],
+            [x, y + h, 5],
+            [x + w / 2, y + h, 6],
+            [x + w, y + h, 7]
+        ];
+        pts.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i, cursors[i] || 'pointer'));
+        appendShapeAdjustAnchors(svgUI, shape);
     } else if (tag === 'polygon' || tag === 'polyline') {
         const pp = parseIlluPolygonPoints(shape.getAttribute('points') || '').slice(0, VECTOR_POLY_ANCHOR_CAP);
         pp.forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
@@ -3182,6 +3810,7 @@ function appendAnchorsForShape(svgUI, shape) {
         const y = parseFloat(shape.getAttribute('y')) || 0;
         rootAnchor(x, y, 0);
     }
+    appendVectorRotationHandle(svgUI, shape);
 }
 
 function generateAnchors(shape) {
@@ -3300,6 +3929,7 @@ function syncAnchors() {
         pts.forEach((pt, i) => {
             if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
         });
+        if (tag === 'rect') syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'line') {
         const x1 = parseFloat(activeVectorShape.getAttribute('x1')) || 0;
         const y1 = parseFloat(activeVectorShape.getAttribute('y1')) || 0;
@@ -3329,8 +3959,26 @@ function syncAnchors() {
         pts.forEach((pt, i) => {
             if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
         });
+        syncShapeAdjustAnchorPosition(anchorsG, sh);
+    } else if (tag === 'polygon' && sh.getAttribute('data-illu-triangle') === '1') {
+        const st = illuTriangleReadState(sh);
+        const { x, y, w, h } = st;
+        const pts = [
+            [x, y],
+            [x + w / 2, y],
+            [x + w, y],
+            [x, y + h / 2],
+            [x + w, y + h / 2],
+            [x, y + h],
+            [x + w / 2, y + h],
+            [x + w, y + h]
+        ];
+        pts.forEach((pt, i) => {
+            if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+        });
+        syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'polygon' || tag === 'polyline') {
-        const pp = parseIlluPolygonPoints(activeVectorShape.getAttribute('points') || '').slice(0, VECTOR_POLY_ANCHOR_CAP);
+        const pp = parseIlluPolygonPoints(sh.getAttribute('points') || '').slice(0, VECTOR_POLY_ANCHOR_CAP);
         pp.forEach((pt, i) => {
             if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
         });
@@ -3367,10 +4015,11 @@ function syncAnchors() {
             });
         }
     } else if (tag === 'text') {
-        const x = parseFloat(activeVectorShape.getAttribute('x')) || 0;
-        const y = parseFloat(activeVectorShape.getAttribute('y')) || 0;
+        const x = parseFloat(sh.getAttribute('x')) || 0;
+        const y = parseFloat(sh.getAttribute('y')) || 0;
         if (anchors[0]) vectorPlaceAnchorRoot(sh, anchors[0], x, y, hz);
     }
+    syncVectorRotationHandlePosition(anchorsG, sh);
 }
 
 window.clearAnchors = clearAnchors;
@@ -4274,6 +4923,25 @@ function applyVectorDragFromSnapshot(el, base, tdx, tdy) {
     }
 }
 
+window.illuMoveVectorSelectionByDelta = function (dx, dy) {
+    if (!EditorManager.activeProject || EditorManager.mode !== 'vector') return false;
+    const sel = EditorManager.activeVectorSelection;
+    if (!sel || !sel.length || (dx === 0 && dy === 0)) return false;
+    for (const el of sel) {
+        if (!el || !el.isConnected) continue;
+        const base = snapshotVectorElementGeometry(el);
+        applyVectorDragFromSnapshot(el, base, dx, dy);
+    }
+    if (typeof syncAnchors === 'function' && window._activeVectorShapeEl) {
+        syncAnchors();
+    }
+    EditorManager.syncActiveVectorSvg();
+    EditorManager.saveHistory('Centrage forme (vecteur)', { patchActiveLayer: true });
+    EditorManager.render({ flushUiThumbnails: true });
+    if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+    return true;
+};
+
 function handleMouseDown(e) {
     console.log("Global handleMouseDown", { button: e.button, target: e.target.id || e.target.tagName, mode: EditorManager.mode, tool: window.activeTool });
     /* Touch : e.button peut être undefined selon l’UA ; ne pas bloquer le tracé. */
@@ -4287,6 +4955,51 @@ function handleMouseDown(e) {
     }
     window._shiftConstraintProportions = e.shiftKey;
     const pos = getPos(e);
+
+    if (EditorManager.mode === 'vector') {
+        try {
+            const clientX = e.clientX != null ? e.clientX : 0;
+            const clientY = e.clientY != null ? e.clientY : 0;
+            const t = document.elementFromPoint(clientX, clientY);
+            if (t && t.classList && t.classList.contains('svg-adjust-anchor')) {
+                activeAdjustDrag = t.dataset.adjustType || null;
+                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
+                if (activeVectorShape) {
+                    isDrawing = true;
+                    e.preventDefault();
+                    return;
+                }
+            }
+            if (t && t.classList && t.classList.contains('svg-rotation-handle')) {
+                activeVectorRotationDrag = true;
+                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
+                if (activeVectorShape) {
+                    const pivot = illuVectorShapePivotLocal(activeVectorShape);
+                    if (pivot) {
+                        const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
+                        vectorRotationStartPointerAngle = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
+                        vectorRotationStartAngle =
+                            parseFloat(activeVectorShape.getAttribute('data-illu-rotation-rad')) || 0;
+                    }
+                    isDrawing = true;
+                    e.preventDefault();
+                    return;
+                }
+            }
+            if (t && t.classList && t.classList.contains('svg-anchor')) {
+                activeAnchor = t;
+                activeAnchorIndex = parseInt(t.dataset.index, 10);
+                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
+                if (activeVectorShape) {
+                    isDrawing = true;
+                    e.preventDefault();
+                    return;
+                }
+            }
+        } catch (err) {
+            /* ignore */
+        }
+    }
 
     if (EditorManager.isPixelMode && typeof window.preparePixelTextForMouseDown === 'function') {
         window.preparePixelTextForMouseDown(e);
@@ -4597,15 +5310,21 @@ function handleMouseDown(e) {
         return;
     }
 
-    if (
-        EditorManager.isPixelMode &&
-        ['rect', 'circle', 'line', 'round-3', 'cubic-3', 'pen', 'polygon'].includes(window.activeTool)
-    ) {
+    if (EditorManager.isPixelMode && window.pixelShapeEdit) {
+        if (tryStartShapePreviewRotationFromPointer(e, pos)) return;
         const ph = readPixelHandleAttr(e);
-        if (ph && ph.startsWith('s')) {
-            window.shapeHandleDrag = parseInt(ph.slice(1), 10);
+        if (ph && (ph.startsWith('s') || ph.startsWith('adj-'))) {
+            window.shapeHandleDrag = ph.startsWith('adj-') ? ph : parseInt(ph.slice(1), 10);
             isDrawing = true;
             return;
+        }
+        if (typeof window.hitShapeAdjustHandle === 'function') {
+            const adj = window.hitShapeAdjustHandle(pos.x, pos.y);
+            if (adj) {
+                window.shapeHandleDrag = adj;
+                isDrawing = true;
+                return;
+            }
         }
         if (typeof window.hitShapeEditHandle === 'function') {
             const hi = window.hitShapeEditHandle(pos.x, pos.y);
@@ -4615,12 +5334,31 @@ function handleMouseDown(e) {
                 return;
             }
         }
+    }
+
+    if (
+        EditorManager.isPixelMode &&
+        window._shapeBackupCanvas &&
+        SHAPE_LIVE_DRAW_TOOLS.includes(window.activeTool || '')
+    ) {
+        if (tryStartShapePreviewRotationFromPointer(e, pos)) return;
+    }
+
+    if (
+        EditorManager.isPixelMode &&
+        ['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3', 'pen', 'polygon'].includes(window.activeTool)
+    ) {
+        if (typeof window.hidePixelShapeEditOverlay === 'function') window.hidePixelShapeEditOverlay();
         window.pixelShapeEdit = null;
     }
 
     isDrawing = true;
     startX = pos.x;
     startY = pos.y;
+    if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool || '')) {
+        window._shapeLiveStartX = startX;
+        window._shapeLiveStartY = startY;
+    }
 
     if (EditorManager.mode === 'vector') {
         startVector(pos, e);
@@ -4634,6 +5372,7 @@ function handleMouseDown(e) {
 
 function handleMouseMove(e) {
     if (!isDrawing) return;
+    if (e && 'shiftKey' in e) window._shiftConstraintProportions = e.shiftKey;
     window._illuLastPointerEvent = e;
     const pos = getPos(e);
     if (EditorManager.isPixelMode) {
@@ -4643,6 +5382,18 @@ function handleMouseMove(e) {
     if (EditorManager.mode === 'vector') {
         const VE = window.VectorEngine;
         const tool = window.activeTool;
+
+        // ► PRIORITÉ : Poignée d’ajustement (triangle / coins arrondis)
+        if (activeAdjustDrag) {
+            updateVector(pos);
+            return;
+        }
+
+        // ► PRIORITÉ : Rotation forme vecteur (rect / triangle)
+        if (activeVectorRotationDrag) {
+            updateVector(pos);
+            return;
+        }
 
         // ► PRIORITÉ : Déplacement d'un point (ancre)
         if (activeAnchor) {
@@ -4670,6 +5421,10 @@ function handleMouseMove(e) {
 
 let activeVectorShape = null;
 let activeAnchor = null;
+let activeAdjustDrag = null;
+let activeVectorRotationDrag = false;
+let vectorRotationStartPointerAngle = 0;
+let vectorRotationStartAngle = 0;
 let anchorOffset = { x: 0, y: 0 };
 let activeAnchorIndex = -1;
 
@@ -4692,7 +5447,28 @@ function startVector(pos, e) {
         const clientX = e && e.clientX != null ? e.clientX : 0;
         const clientY = e && e.clientY != null ? e.clientY : 0;
         const t = document.elementFromPoint(clientX, clientY);
-        if (t && t.classList && (t.classList.contains('svg-anchor') || t.classList.contains('svg-resize-handle'))) {
+        if (t && t.classList && (t.classList.contains('svg-anchor') || t.classList.contains('svg-resize-handle') || t.classList.contains('svg-adjust-anchor') || t.classList.contains('svg-rotation-handle'))) {
+            if (t.classList.contains('svg-adjust-anchor')) {
+                activeAdjustDrag = t.dataset.adjustType || null;
+                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
+                isDrawing = !!activeVectorShape;
+                return;
+            }
+            if (t.classList.contains('svg-rotation-handle')) {
+                activeVectorRotationDrag = true;
+                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
+                if (activeVectorShape) {
+                    const pivot = illuVectorShapePivotLocal(activeVectorShape);
+                    if (pivot) {
+                        const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
+                        vectorRotationStartPointerAngle = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
+                        vectorRotationStartAngle =
+                            parseFloat(activeVectorShape.getAttribute('data-illu-rotation-rad')) || 0;
+                    }
+                    isDrawing = true;
+                }
+                return;
+            }
             if (t.classList.contains('svg-anchor')) {
                 activeAnchor = t;
                 activeAnchorIndex = parseInt(t.dataset.index, 10);
@@ -4868,6 +5644,16 @@ function startVector(pos, e) {
             layer.appendChild(currentElement);
             applyVectorShapePaint(currentElement, 'rect');
             break;
+        case 'triangle':
+            currentElement = createSVG('polygon', {
+                points: `${pos.x},${pos.y} ${pos.x},${pos.y} ${pos.x},${pos.y}`,
+                fill: color,
+                'data-illu-triangle': '1',
+                'data-illu-triangle-adj': '0.5'
+            });
+            layer.appendChild(currentElement);
+            applyVectorShapePaint(currentElement, 'polygon');
+            break;
         case 'text': {
             const ns = 'http://www.w3.org/2000/svg';
             const fo = document.createElementNS(ns, 'foreignObject');
@@ -4909,6 +5695,24 @@ function updateVector(pos) {
         sampleVectorCompositeAtPos(pos, (rgb) => {
             if (rgb) EditorManager.setColorFromRGB(rgb.r, rgb.g, rgb.b, rgb.a);
         });
+        return;
+    }
+    if (activeAdjustDrag && activeVectorShape) {
+        illuUpdateVectorAdjustFromPointer(activeVectorShape, activeAdjustDrag, pos);
+        if (typeof syncAnchors === 'function') syncAnchors();
+        illuScheduleInteractiveVisualRefresh({ render: true });
+        return;
+    }
+    if (activeVectorRotationDrag && activeVectorShape) {
+        const pivot = illuVectorShapePivotLocal(activeVectorShape);
+        if (pivot) {
+            const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
+            const a = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
+            const da = a - vectorRotationStartPointerAngle;
+            illuWriteVectorShapeRotation(activeVectorShape, vectorRotationStartAngle + da);
+            if (typeof syncAnchors === 'function') syncAnchors();
+            illuScheduleInteractiveVisualRefresh({ render: true });
+        }
         return;
     }
     if (activeAnchor && activeVectorShape) {
@@ -5014,6 +5818,86 @@ function updateVector(pos) {
                 activeVectorShape.setAttribute('rx', String(rInt));
                 activeVectorShape.setAttribute('ry', String(rInt));
             }
+            if (activeVectorShape.getAttribute('data-vgrad')) {
+                syncVectorGradientOnShape(activeVectorShape, 'rect', x, y, x + w, y + h);
+            }
+        } else if (type === 'polygon' && activeVectorShape.getAttribute('data-illu-triangle') === '1') {
+            const st0 = illuTriangleReadState(activeVectorShape);
+            let x = st0.x;
+            let y = st0.y;
+            let w = st0.w;
+            let h = st0.h;
+            const adj = st0.adj;
+            const wx = lp.x;
+            const wy = lp.y;
+            const hi = activeAnchorIndex;
+            switch (hi) {
+                case 0:
+                    w += x - wx;
+                    h += y - wy;
+                    x = wx;
+                    y = wy;
+                    break;
+                case 1:
+                    h += y - wy;
+                    y = wy;
+                    break;
+                case 2:
+                    w = wx - x;
+                    h += y - wy;
+                    y = wy;
+                    break;
+                case 3:
+                    w += x - wx;
+                    x = wx;
+                    break;
+                case 4:
+                    w = wx - x;
+                    break;
+                case 5:
+                    w += x - wx;
+                    x = wx;
+                    h = wy - y;
+                    break;
+                case 6:
+                    h = wy - y;
+                    break;
+                case 7:
+                    w = wx - x;
+                    h = wy - y;
+                    break;
+                default:
+                    break;
+            }
+            if (w < 2) w = 2;
+            if (h < 2) h = 2;
+            if (window._shiftConstraintProportions && [0, 2, 5, 7].includes(hi)) {
+                const uw = w;
+                const uh = h;
+                const m = Math.max(Math.max(2, uw), Math.max(2, uh));
+                if (hi === 0) {
+                    const fx = x + uw;
+                    const fy = y + uh;
+                    w = h = m;
+                    x = fx - m;
+                    y = fy - m;
+                } else if (hi === 2) {
+                    const fx = x;
+                    const fy = y + uh;
+                    w = h = m;
+                    x = fx;
+                    y = fy - m;
+                } else if (hi === 5) {
+                    const fx = x + uw;
+                    const fy = y;
+                    w = h = m;
+                    x = fx - m;
+                    y = fy;
+                } else {
+                    w = h = m;
+                }
+            }
+            illuTriangleWritePoints(activeVectorShape, x, y, w, h, adj);
             if (activeVectorShape.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(activeVectorShape, 'rect', x, y, x + w, y + h);
             }
@@ -5186,7 +6070,8 @@ function updateVector(pos) {
 
     if (vectorGradientDrag) {
         const { el, sx, sy, kind } = vectorGradientDrag;
-        syncVectorGradientOnShape(el, kind === 'line' ? 'line' : 'rect', sx, sy, pos.x, pos.y);
+        const ep = constrainLineEndpoint(sx, sy, pos.x, pos.y, window._shiftConstraintProportions);
+        syncVectorGradientOnShape(el, kind === 'line' ? 'line' : 'rect', sx, sy, ep.x, ep.y);
         return;
     }
 
@@ -5283,6 +6168,30 @@ function updateVector(pos) {
             }
             break;
         }
+        case 'triangle': {
+            let x;
+            let y;
+            let w;
+            let h;
+            if (sh) {
+                const b = constrainRectSelectionDraw(startX, startY, pos.x, pos.y, true);
+                x = b.x;
+                y = b.y;
+                w = b.w;
+                h = b.h;
+            } else {
+                x = Math.min(pos.x, startX);
+                y = Math.min(pos.y, startY);
+                w = Math.abs(pos.x - startX);
+                h = Math.abs(pos.y - startY);
+            }
+            const adj = parseFloat(currentElement.getAttribute('data-illu-triangle-adj')) || 0.5;
+            illuTriangleWritePoints(currentElement, x, y, w, h, adj);
+            if (currentElement.getAttribute('data-vgrad')) {
+                syncVectorGradientOnShape(currentElement, 'rect', x, y, x + w, y + h);
+            }
+            break;
+        }
         case 'circle': {
             let x0 = Math.min(startX, pos.x);
             let y0 = Math.min(startY, pos.y);
@@ -5309,10 +6218,11 @@ function updateVector(pos) {
             break;
         }
         case 'line': {
-            const cd = cubicLineDefaults(startX, startY, pos.x, pos.y);
+            const ep = constrainLineEndpoint(startX, startY, pos.x, pos.y, sh);
+            const cd = cubicLineDefaults(startX, startY, ep.x, ep.y);
             currentElement.setAttribute('d', formatIlluLinePath(cd));
             if (currentElement.getAttribute('data-vgrad')) {
-                syncVectorGradientOnShape(currentElement, 'line', startX, startY, pos.x, pos.y);
+                syncVectorGradientOnShape(currentElement, 'line', startX, startY, ep.x, ep.y);
             }
             window.vectorApplyLineEndpointMarkers(currentElement);
             break;
@@ -5340,7 +6250,7 @@ function updateVector(pos) {
             break;
         }
     }
-    if (['rect', 'circle', 'line', 'round-3', 'pen', 'polygon'].includes(window.activeTool)) {
+    if (['rect', 'circle', 'line', 'round-3', 'triangle', 'pen', 'polygon'].includes(window.activeTool)) {
         EditorManager.render();
     }
 }
@@ -5357,6 +6267,13 @@ let moveLayerStartPos = null;
 var moveLayerStartLassoPoints = null;
 var selectionRotateStartPointerAngle = 0;
 var selectionRotateStartPreview = 0;
+var shapeLiveRotateStartPointerAngle = 0;
+var shapeLiveRotateStartPreview = 0;
+window._shapeLivePreviewAngleRad = 0;
+window._shapeRotDragActive = false;
+window._shapeRotDragMode = null;
+
+const SHAPE_LIVE_DRAW_TOOLS = ['rect', 'circle', 'round-3', 'triangle'];
 var moveDragBoundsStart = null;
 var moveDragLassoBaseline = null;
 
@@ -5377,6 +6294,10 @@ function illuMountPreviewCanvasBeforeSelectionOverlay(el) {
         typeof em.mountMoveGhostInPixelStackIfNeeded === 'function' &&
         em.mountMoveGhostInPixelStackIfNeeded(el)
     ) {
+        const stack = document.getElementById('pixel-layer-stack');
+        if (stack && typeof em._restackStackPreviewOverlays === 'function') {
+            em._restackStackPreviewOverlays(stack);
+        }
         return;
     }
     const mc = document.getElementById('main-canvas-container');
@@ -5567,21 +6488,189 @@ function cloneCanvasForWarp(c) {
     return n;
 }
 
-function illuRemoveWarpPreviewOverlay() {
-    const list = document.querySelectorAll('.illu-warp-preview-overlay');
-    list.forEach((el) => {
+function illuRemoveWarpPatchPreviewOverlay() {
+    if (selectionWarpPreviewOverlayEl) {
+        try {
+            selectionWarpPreviewOverlayEl.remove();
+        } catch (e) {
+            /* ignore */
+        }
+        selectionWarpPreviewOverlayEl = null;
+    }
+    document.querySelectorAll('.illu-warp-preview-overlay').forEach((el) => {
+        if (el !== selectionWarpPreviewOverlayEl) {
+            try {
+                el.remove();
+            } catch (e) {
+                /* ignore */
+            }
+        }
+    });
+}
+
+function illuEnsureWarpPatchScratchCanvas(w, h) {
+    if (!selectionWarpPatchScratchCanvas) {
+        selectionWarpPatchScratchCanvas = document.createElement('canvas');
+    }
+    if (selectionWarpPatchScratchCanvas.width !== w) selectionWarpPatchScratchCanvas.width = w;
+    if (selectionWarpPatchScratchCanvas.height !== h) selectionWarpPatchScratchCanvas.height = h;
+    return selectionWarpPatchScratchCanvas;
+}
+
+/** Masque la vue DOM du calque actif sans recompositer toute la pile. */
+function illuHideActiveLayerForWarpPreview() {
+    const l = EditorManager.activeLayer;
+    if (!l) return;
+    l._ghostDragHide = true;
+    const map = EditorManager._pixelLayerViewEls;
+    const cv = map && map.get(l.id);
+    if (cv) {
+        cv.style.display = 'none';
+    } else {
+        EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
+    }
+}
+
+function illuComputeWarpSelectionHandles() {
+    const q = window.selectionWarpQuad;
+    if (!q) return [];
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    if (window.activeTool === 'deform') {
+        const n = mid(q.tl, q.tr);
+        const em = mid(q.tr, q.br);
+        const sm = mid(q.br, q.bl);
+        const wm = mid(q.bl, q.tl);
+        const cx = (q.tl.x + q.tr.x + q.br.x + q.bl.x) / 4;
+        const cy = (q.tl.y + q.tr.y + q.br.y + q.bl.y) / 4;
+        return [
+            { x: q.tl.x, y: q.tl.y, id: 'nw' },
+            { x: n.x, y: n.y, id: 'n' },
+            { x: q.tr.x, y: q.tr.y, id: 'ne' },
+            { x: wm.x, y: wm.y, id: 'w' },
+            { x: em.x, y: em.y, id: 'e' },
+            { x: q.bl.x, y: q.bl.y, id: 'sw' },
+            { x: sm.x, y: sm.y, id: 's' },
+            { x: q.br.x, y: q.br.y, id: 'se' },
+            { x: cx, y: cy, id: 'c' }
+        ];
+    }
+    return [
+        { x: q.tl.x, y: q.tl.y, id: 'nw' },
+        { x: q.tr.x, y: q.tr.y, id: 'ne' },
+        { x: q.br.x, y: q.br.y, id: 'se' },
+        { x: q.bl.x, y: q.bl.y, id: 'sw' }
+    ];
+}
+
+/** Déplace les poignées SVG existantes sans vider #svg-ui (évite scintillement). */
+function illuUpdateWarpHandlePositionsOnly() {
+    if (!window.selectionPixelWarpActive || !window.selectionWarpQuad) return false;
+    const svgUI = document.getElementById('svg-ui');
+    if (!svgUI || typeof EditorManager === 'undefined') return false;
+    const handles = illuComputeWarpSelectionHandles();
+    if (!handles.length) return false;
+    const z = EditorManager.getCanvasZoomLevel() || 1;
+    const hsz = EditorManager.svgUiHandleSizeDoc();
+    const hHalf = hsz / 2;
+    let matched = 0;
+    for (let i = 0; i < handles.length; i++) {
+        const hnd = handles[i];
+        const el = svgUI.querySelector('[data-selection-handle="' + hnd.id + '"]');
+        if (!el) return false;
+        if (el.tagName === 'rect') {
+            el.setAttribute('x', String(hnd.x - hHalf));
+            el.setAttribute('y', String(hnd.y - hHalf));
+            matched++;
+        } else if (el.tagName === 'foreignObject' && hnd.id === 'c') {
+            const size = Math.max(hsz, 18 / z);
+            const half = size / 2;
+            el.setAttribute('x', String(hnd.x - half));
+            el.setAttribute('y', String(hnd.y - half));
+            matched++;
+        } else {
+            return false;
+        }
+    }
+    return matched === handles.length;
+}
+
+function illuRefreshWarpInteractiveChrome() {
+    if (!window.selectionPixelWarpActive || !window.selectionWarpQuad) return;
+    if (typeof window.updateWarpSelectionOverlayFast === 'function') {
+        window.updateWarpSelectionOverlayFast(window.selectionWarpQuad);
+    } else if (typeof window.refreshSelectionVisual === 'function') {
+        window.refreshSelectionVisual();
+    }
+    if (!illuUpdateWarpHandlePositionsOnly()) {
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(false);
+    }
+}
+
+function illuScheduleWarpChromeRefresh() {
+    if (selectionWarpChromeRaf) return;
+    selectionWarpChromeRaf = requestAnimationFrame(() => {
+        selectionWarpChromeRaf = 0;
+        illuRefreshWarpInteractiveChrome();
+    });
+}
+
+function illuRemoveWarpBasePreviewOverlay() {
+    document.querySelectorAll('.illu-warp-base-preview-overlay').forEach((el) => {
         try {
             el.remove();
         } catch (e) {
             /* ignore */
         }
     });
-    selectionWarpPreviewOverlayEl = null;
+    selectionWarpBasePreviewOverlayEl = null;
+}
+
+/** Calque statique (reste du calque avec trou source) — créé une fois au début du warp. */
+function illuEnsureWarpBasePreviewOverlay(layerX, layerY) {
+    if (selectionWarpBasePreviewOverlayEl || !selectionWarpFullLayerCanvas) {
+        return selectionWarpBasePreviewOverlayEl;
+    }
+    const canvas = cloneCanvasForWarp(selectionWarpFullLayerCanvas);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (ctx) illuClearSelectionWarpSourceRegion(ctx);
+    canvas.className = 'illu-warp-base-preview-overlay';
+    canvas.style.position = 'absolute';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.left = `${Math.round(layerX)}px`;
+    canvas.style.top = `${Math.round(layerY)}px`;
+    illuMountPreviewCanvasBeforeSelectionOverlay(canvas);
+    selectionWarpBasePreviewOverlayEl = canvas;
+    return canvas;
+}
+
+function illuScheduleSelectionWarpPreview(opts) {
+    selectionWarpPreviewPendingOpts = opts || { preview: true };
+    if (selectionWarpPreviewRaf) return;
+    selectionWarpPreviewRaf = requestAnimationFrame(() => {
+        selectionWarpPreviewRaf = 0;
+        const pending = selectionWarpPreviewPendingOpts;
+        selectionWarpPreviewPendingOpts = null;
+        if (
+            window.selectionPixelWarpActive &&
+            typeof window.runSelectionWarpPreview === 'function'
+        ) {
+            window.runSelectionWarpPreview(pending);
+        }
+    });
+}
+window.illuScheduleSelectionWarpPreview = illuScheduleSelectionWarpPreview;
+
+function illuRemoveWarpPreviewOverlay() {
+    if (selectionWarpChromeRaf) {
+        cancelAnimationFrame(selectionWarpChromeRaf);
+        selectionWarpChromeRaf = 0;
+    }
+    illuRemoveWarpPatchPreviewOverlay();
+    illuRemoveWarpBasePreviewOverlay();
 
     const l = EditorManager.activeLayer;
     if (l) {
         if (l._ghostDragHide) delete l._ghostDragHide;
-        // Si on a fait un trou, on doit le restaurer si on annule ou termine
         if (l._warpSrcHoleCleared && selectionWarpFullLayerCanvas) {
             const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
             ctx.drawImage(selectionWarpFullLayerCanvas, 0, 0);
@@ -5590,19 +6679,31 @@ function illuRemoveWarpPreviewOverlay() {
     }
 }
 
-function illuSetWarpPreviewOverlay(canvas, docX, docY, skipHideLayer, upscaleW, upscaleH) {
-    illuRemoveWarpPreviewOverlay();
+function illuSetWarpPreviewOverlay(sourceCanvas, docX, docY, skipHideLayer, upscaleW, upscaleH) {
     const l = EditorManager.activeLayer;
     if (l && !skipHideLayer) l._ghostDragHide = true;
-    selectionWarpPreviewOverlayEl = canvas;
-    canvas.className = (canvas.className ? canvas.className + ' ' : '') + 'illu-warp-preview-overlay';
-    canvas.style.position = 'absolute';
-    canvas.style.pointerEvents = 'none';
+
+    let canvas = selectionWarpPreviewOverlayEl;
+    const sw = sourceCanvas.width | 0;
+    const sh = sourceCanvas.height | 0;
+    if (!canvas || !canvas.isConnected) {
+        canvas = document.createElement('canvas');
+        canvas.className = 'illu-warp-preview-overlay';
+        canvas.style.position = 'absolute';
+        canvas.style.pointerEvents = 'none';
+        illuMountPreviewCanvasBeforeSelectionOverlay(canvas);
+        selectionWarpPreviewOverlayEl = canvas;
+    } else if (!canvas.classList.contains('illu-warp-preview-overlay')) {
+        canvas.classList.add('illu-warp-preview-overlay');
+    }
+
+    if (canvas.width !== sw) canvas.width = sw;
+    if (canvas.height !== sh) canvas.height = sh;
+    canvas.getContext('2d', { willReadFrequently: true }).drawImage(sourceCanvas, 0, 0);
+
     canvas.style.left = `${Math.round(docX)}px`;
     canvas.style.top = `${Math.round(docY)}px`;
-    canvas.style.zIndex = '1000000';
 
-    // Efficient Upscaling via CSS
     if (upscaleW && upscaleH) {
         canvas.style.width = `${Math.round(upscaleW)}px`;
         canvas.style.height = `${Math.round(upscaleH)}px`;
@@ -5611,14 +6712,16 @@ function illuSetWarpPreviewOverlay(canvas, docX, docY, skipHideLayer, upscaleW, 
         canvas.style.height = '';
     }
 
-    const isNearest = typeof window.illuWarpUseSmoothResample === 'function' ? !window.illuWarpUseSmoothResample() : window.illuInterpolationMode === 'nearest';
+    const isNearest =
+        typeof window.illuWarpUseSmoothResample === 'function'
+            ? !window.illuWarpUseSmoothResample()
+            : window.illuInterpolationMode === 'nearest';
     canvas.style.imageRendering = isNearest ? 'pixelated' : 'auto';
     if (isNearest) {
         canvas.style.setProperty('image-rendering', 'crisp-edges');
     } else {
         canvas.style.removeProperty('image-rendering');
     }
-    illuMountPreviewCanvasBeforeSelectionOverlay(canvas);
 }
 
 function sampleBilinearRGBA(data, w, h, x, y) {
@@ -5710,7 +6813,7 @@ function illuHandleWarpWorkerResult(ev) {
                 }
                 illuClearSelectionWarpSourceRegion(pctx);
                 illuSetWarpPreviewOverlay(previewCanvas, finishedJob.previewLayerX, finishedJob.previewLayerY, true);
-                illuScheduleInteractiveVisualRefresh({ render: true, selection: true });
+                illuScheduleWarpChromeRefresh();
             }
         }
 
@@ -5997,6 +7100,15 @@ window.cancelSelectionInteractionState = function () {
     selectionWarpDragLayerSnapshot = null;
     illuSelectionInteractionOwner = null;
     selectionWarpHandlePointerDown = false;
+    if (selectionWarpPreviewRaf) {
+        cancelAnimationFrame(selectionWarpPreviewRaf);
+        selectionWarpPreviewRaf = 0;
+    }
+    selectionWarpPreviewPendingOpts = null;
+    if (selectionWarpThrottleTimeout) {
+        clearTimeout(selectionWarpThrottleTimeout);
+        selectionWarpThrottleTimeout = null;
+    }
     illuCloseWarpWorkerSession();
     selectionCombineBackup = null;
     lassoDrawingPoints = null;
@@ -6015,6 +7127,9 @@ window.cancelSelectionInteractionState = function () {
     window.selectionRotationDragActive = false;
     window.selectionPreviewAngleRad = 0;
     window._selectionWarpInitialPolyLocal = null;
+    if (typeof EditorManager !== 'undefined' && typeof EditorManager.render === 'function') {
+        EditorManager.render({ skipUiThumbnails: true });
+    }
 };
 
 /**
@@ -6082,10 +7197,8 @@ window.illuPurgeSelectionOverlayAndGhostDom = function () {
 };
 
 function illuForEachFreeCornersBtn(fn) {
-    ['select-rect-free-corners', 'select-rect-free-corners-bar2'].forEach((id) => {
-        const btn = document.getElementById(id);
-        if (btn) fn(btn);
-    });
+    const btn = document.getElementById('select-rect-free-corners');
+    if (btn) fn(btn);
 }
 
 window.syncSelectionRectFreeCornersArmUI = function () {
@@ -6204,12 +7317,18 @@ window.illuApplyWarpDestQuadRectangular = function () {
     };
     if (window.selectionPixelWarpActive) {
         illuSyncWarpDeformRectFromQuad(window.selectionWarpQuad);
-        if (typeof window.runSelectionWarpPreview === 'function') {
-            window.runSelectionWarpPreview({ preview: true });
+        if (typeof window.illuScheduleSelectionWarpPreview === 'function') {
+            window.illuScheduleSelectionWarpPreview({ preview: true, immediate: true });
+        } else if (typeof window.runSelectionWarpPreview === 'function') {
+            window.runSelectionWarpPreview({ preview: true, immediate: true });
         }
     }
     if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-    if (typeof EditorManager !== 'undefined' && typeof EditorManager.render === 'function') {
+    if (
+        !window.selectionPixelWarpActive &&
+        typeof EditorManager !== 'undefined' &&
+        typeof EditorManager.render === 'function'
+    ) {
         EditorManager.render();
     }
     return true;
@@ -6332,12 +7451,10 @@ window.illuHandleSelectRectFreeCornersClick = function () {
 
 window.illuWireSelectRectFreeCornersButtons = function () {
     const handler = () => window.illuHandleSelectRectFreeCornersClick();
-    ['select-rect-free-corners', 'select-rect-free-corners-bar2'].forEach((id) => {
-        const btn = document.getElementById(id);
-        if (!btn || btn.dataset.illuFreeCornersWired === '1') return;
-        btn.dataset.illuFreeCornersWired = '1';
-        btn.addEventListener('click', handler);
-    });
+    const btn = document.getElementById('select-rect-free-corners');
+    if (!btn || btn.dataset.illuFreeCornersWired === '1') return;
+    btn.dataset.illuFreeCornersWired = '1';
+    btn.addEventListener('click', handler);
 };
 
 window.illuWireWarpBarButtons = function () {
@@ -6513,23 +7630,33 @@ selectionWarpSourceClearLocalPoints =
             rw = sb.w;
             rh = sb.h;
         }
-        selectionWarpDeformRect = { rx, ry, rw, rh };
-        selectionWarpDeformRectAtStart = { rx, ry, rw, rh };
-        window.selectionWarpQuad = {
-            tl: { x: rx, y: ry },
-            tr: { x: rx + rw, y: ry },
-            br: { x: rx + rw, y: ry + rh },
-            bl: { x: rx, y: ry + rh }
-        };
-        if (pts) {
-            window.selectionLassoPoints = [
-                { x: rx, y: ry },
-                { x: rx + rw, y: ry },
-                { x: rx + rw, y: ry + rh },
-                { x: rx, y: ry + rh }
-            ];
-            window.selectionIsWarpQuad = true;
-            window.selectionBounds = { x: rx, y: ry, w: rw, h: rh };
+        if (pts && handleId === 'rot') {
+            window.selectionWarpQuad = {
+                tl: { x: pts[0].x, y: pts[0].y },
+                tr: { x: pts[1].x, y: pts[1].y },
+                br: { x: pts[2].x, y: pts[2].y },
+                bl: { x: pts[3].x, y: pts[3].y }
+            };
+            illuSyncWarpDeformRectFromQuad(window.selectionWarpQuad);
+        } else {
+            selectionWarpDeformRect = { rx, ry, rw, rh };
+            selectionWarpDeformRectAtStart = { rx, ry, rw, rh };
+            window.selectionWarpQuad = {
+                tl: { x: rx, y: ry },
+                tr: { x: rx + rw, y: ry },
+                br: { x: rx + rw, y: ry + rh },
+                bl: { x: rx, y: ry + rh }
+            };
+            if (pts) {
+                window.selectionLassoPoints = [
+                    { x: rx, y: ry },
+                    { x: rx + rw, y: ry },
+                    { x: rx + rw, y: ry + rh },
+                    { x: rx, y: ry + rh }
+                ];
+                window.selectionIsWarpQuad = true;
+                window.selectionBounds = { x: rx, y: ry, w: rw, h: rh };
+            }
         }
     } else if (pts) {
         window.selectionWarpQuad = {
@@ -6575,7 +7702,12 @@ selectionWarpSourceClearLocalPoints =
     }
     window._selectionWarpInitialPolyLocal = selectionLassoLocalFromDoc();
 
-    window.runSelectionWarpPreview({ preview: true });
+    if (l) l._ghostDragHide = true;
+    illuHideActiveLayerForWarpPreview();
+    illuEnsureWarpBasePreviewOverlay(lx, ly);
+    if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(false);
+
+    window.runSelectionWarpPreview({ preview: true, immediate: true });
     if (typeof window.illuSelectionLoupeTryShow === 'function') {
         window.illuSelectionLoupeTryShow(e, handleId);
     }
@@ -6882,11 +8014,8 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     if (isFinal) {
         illuExpandActiveLayerBufferForWarpDestQuad(l, window.selectionWarpQuad, { allowExpand: true });
     }
-    if (defer && selectionWarpDragLayerSnapshot) {
-        illuRestoreWarpDragSnapshotLayer();
-    }
-    const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return null;
+    const ctx = isFinal ? l.buffer.getContext('2d', { willReadFrequently: true }) : null;
+    if (isFinal && !ctx) return null;
 
     const sw = selectionWarpSw;
     const sh = selectionWarpSh;
@@ -6941,13 +8070,11 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     // The worker renders a transparent patch that we composite over the punched hole.
     const layerData = null;
 
-    const stride = defer ? 4 : 1;
     return {
         defer: defer,
         invalid: false,
         ctx: ctx,
         l: l,
-        stride: stride,
         previewLayerX: l.x,
         previewLayerY: l.y,
         srcQuad: srcQuad,
@@ -6991,15 +8118,11 @@ function illuRunSelectionWarpPreviewSync(state) {
     const core = illuGetWarpCore();
     if (!state || !core) return;
 
-    if (state.defer && selectionWarpDragLayerSnapshot) {
-        illuRestoreWarpDragSnapshotLayer();
-    }
     if (state.defer) {
-        illuApplyWarpSourceHoleToActiveLayer();
-    }
-
-    if (state.defer) {
-        // Performance: render to a low-res project-only scratch canvas
+        if (state.invalid) {
+            illuScheduleWarpChromeRefresh();
+            return;
+        }
         const result = core.renderWarpPatch({
             sourceData: state.sourceData,
             sourceWidth: state.sourceWidth,
@@ -7018,19 +8141,32 @@ function illuRunSelectionWarpPreviewSync(state) {
         if (result && result.data) {
             const rw = result.width;
             const rh = result.height;
-            // Creation of a small scratch canvas (very fast)
-            const scratch = document.createElement('canvas');
-            scratch.width = rw;
-            scratch.height = rh;
-            const sctx = scratch.getContext('2d', { willReadFrequently: true });
-            sctx.putImageData(new ImageData(new Uint8ClampedArray(result.data), rw, rh), 0, 0);
-
-            // We pass the desired display dimensions to illuSetWarpPreviewOverlay
-            // which will handle the hardware-accelerated upscale via CSS.
-            illuSetWarpPreviewOverlay(scratch, state.l.x + state.patchX, state.l.y + state.patchY, true, state.patchWidth, state.patchHeight);
+            const scratch = illuEnsureWarpPatchScratchCanvas(rw, rh);
+            scratch.getContext('2d', { willReadFrequently: true }).putImageData(
+                new ImageData(new Uint8ClampedArray(result.data), rw, rh),
+                0,
+                0
+            );
+            illuEnsureWarpBasePreviewOverlay(state.l.x, state.l.y);
+            illuSetWarpPreviewOverlay(
+                scratch,
+                state.l.x + state.patchX,
+                state.l.y + state.patchY,
+                true,
+                state.patchWidth,
+                state.patchHeight
+            );
         }
-        EditorManager.render();
-    } else if (!state.invalid) {
+        illuScheduleWarpChromeRefresh();
+        return;
+    }
+
+    if (selectionWarpDragLayerSnapshot) {
+        illuRestoreWarpDragSnapshotLayer();
+    }
+    if (!state.ctx) return;
+
+    if (!state.invalid) {
         const result = core.renderWarpPatch({
             baseData: state.baseData,
             sourceData: state.sourceData,
@@ -7062,17 +8198,18 @@ window.runSelectionWarpPreview = function (opts) {
     const isFinal = !!(opts.isFinal || opts.forceCommit);
     const isPreview = !!opts.preview;
 
-    if (!isFinal && !isPreview) {
+    if (!isFinal && !opts.immediate) {
         if (selectionWarpThrottleTimeout) {
             clearTimeout(selectionWarpThrottleTimeout);
             selectionWarpThrottleTimeout = null;
         }
         const now = performance.now();
+        const throttleMs = isPreview ? 50 : 85;
         const diff = now - selectionWarpLastThrottledTime;
-        if (diff < 75) {
+        if (diff < throttleMs) {
             selectionWarpThrottleTimeout = setTimeout(() => {
                 window.runSelectionWarpPreview(opts);
-            }, 85);
+            }, throttleMs - diff + 5);
             return Promise.resolve();
         }
         selectionWarpLastThrottledTime = now;
@@ -7081,16 +8218,18 @@ window.runSelectionWarpPreview = function (opts) {
     const state = illuPrepareSelectionWarpPreviewState(opts || {});
     if (!state) return Promise.resolve();
 
-    // Low resolution preview during interaction for large images
-    let stride = 1;
     if (!isFinal) {
         const area = state.patchWidth * state.patchHeight;
-        if (area > 8000000) stride = 8;
-        else if (area > 2000000) stride = 4;
-        else if (area > 500000) stride = 2;
-        else stride = 2; // Always at least stride 2 for real-time smoothness
+        const maxDim = Math.max(state.patchWidth, state.patchHeight, state.sourceWidth, state.sourceHeight);
+        let stride = 2;
+        if (area > 8000000 || maxDim > 2000) stride = 8;
+        else if (area > 2000000 || maxDim > 1200) stride = 6;
+        else if (area > 800000 || maxDim > 800) stride = 4;
+        else if (area > 200000 || maxDim > 500) stride = 3;
+        state.stride = stride;
+    } else {
+        state.stride = 1;
     }
-    state.stride = stride;
     const canUseWorkerPreview =
         isFinal && !state.invalid && selectionWarpWorkerSessionId && illuWarpWorkerSupported() && !!illuEnsureWarpWorker();
 
@@ -7141,54 +8280,6 @@ window.runSelectionWarpPreview = function (opts) {
             resolve();
         }
     });
-};
-
-/**
- * Flèches (Déformation + session warp avec cadre rect) : même déplacement que la poignée centre.
- * @returns {boolean} true si le nudge a été appliqué
- */
-window.nudgeDeformWarpDelta = function (dx, dy) {
-    if (dx === 0 && dy === 0) return false;
-    if (!window.selectionPixelWarpActive || !selectionWarpDeformRect || !window.selectionWarpQuad) return false;
-    if (window.activeTool !== 'deform') return false;
-    const R = selectionWarpDeformRect;
-    const q = window.selectionWarpQuad;
-    const Wd = EditorManager.width;
-    const Hd = EditorManager.height;
-    R.rx += dx;
-    R.ry += dy;
-    const maxX = Math.max(0, Wd - R.rw);
-    const maxY = Math.max(0, Hd - R.rh);
-    R.rx = Math.max(0, Math.min(R.rx, maxX));
-    R.ry = Math.max(0, Math.min(R.ry, maxY));
-    q.tl.x = R.rx;
-    q.tl.y = R.ry;
-    q.tr.x = R.rx + R.rw;
-    q.tr.y = R.ry;
-    q.br.x = R.rx + R.rw;
-    q.br.y = R.ry + R.rh;
-    q.bl.x = R.rx;
-    q.bl.y = R.ry + R.rh;
-    window.selectionBounds = { x: R.rx, y: R.ry, w: R.rw, h: R.rh };
-    if (window.selectionLassoPoints && window.selectionLassoPoints.length === 4) {
-        window.selectionLassoPoints = [
-            { x: R.rx, y: R.ry },
-            { x: R.rx + R.rw, y: R.ry },
-            { x: R.rx + R.rw, y: R.ry + R.rh },
-            { x: R.rx, y: R.ry + R.rh }
-        ];
-    }
-    const prevH = selectionWarpHandleId;
-    selectionWarpHandleId = 'c';
-    try {
-        window.runSelectionWarpPreview({ forceCommit: true });
-    } finally {
-        selectionWarpHandleId = prevH;
-    }
-    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-    EditorManager.saveHistory('Déplacement', { patchActiveLayer: true });
-    EditorManager.render();
-    return true;
 };
 
 window.finishSelectionPixelWarp = async function () {
@@ -7521,10 +8612,14 @@ window.bakeSelectionRotation = function (angleRad) {
 window.startSelectionRotationDrag = function (e) {
     const sb = window.selectionBounds;
     const isWarp4 = window.selectionIsWarpQuad && window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length === 4;
-    if (!sb || (window.selectionKind !== 'rect' && !isWarp4)) return;
+    if (!sb || (window.selectionKind !== 'rect' && !isWarp4) || window._illuFinishingWarp) return;
 
-    // Hack/Fix: For deform/warp tools, rotation should also trigger a warp session for real-time rendering
-    if (isPixelWarpOrDeformTool() && !window.selectionPixelWarpActive) {
+    /* warp-4 : aperçu warp temps réel ; déform → aperçu angle + bake (comme Déplacer). */
+    if (
+        window.activeTool === 'warp-4' &&
+        !window.selectionPixelWarpActive &&
+        !window._illuFinishingWarp
+    ) {
         window.startSelectionPixelWarp(e, 'rot');
     }
 
@@ -7670,6 +8765,7 @@ function illuPixelMoveToolStartDrag(pos, e) {
         moveOffset = { x: pos.x - sb.x, y: pos.y - sb.y };
 
         moveGhostLayer = document.createElement('canvas');
+        moveGhostLayer.className = 'illu-stack-preview-overlay';
         moveGhostLayer.width = sw;
         moveGhostLayer.height = sh;
         moveGhostLayer.style.position = 'absolute';
@@ -7819,8 +8915,11 @@ function startPixel(pos, e) {
         return;
     }
 
-    if (['rect', 'circle', 'line', 'round-3'].includes(window.activeTool) && typeof window.cloneLayerBuffer === 'function') {
+    if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) && typeof window.cloneLayerBuffer === 'function') {
         window._shapeBackupCanvas = window.cloneLayerBuffer(EditorManager.activeLayer.buffer);
+        window._shapeLivePreviewAngleRad = 0;
+        window._shapeRotDragActive = false;
+        window._shapeRotDragMode = null;
     }
 
     if (isLassoSelectionTool()) {
@@ -7848,7 +8947,11 @@ function startPixel(pos, e) {
         }
         if (!combineDown) window.selectionKind = 'lasso';
         lassoDrawingPoints = [{ x: startX, y: startY }];
-        window.refreshSelectionVisual();
+        if (typeof window.scheduleSelectionOverlayOnly === 'function') {
+            window.scheduleSelectionOverlayOnly({ lassoPoints: lassoDrawingPoints });
+        } else {
+            window.refreshSelectionVisual();
+        }
         return;
     }
 
@@ -7899,7 +9002,11 @@ function startPixel(pos, e) {
         window.selectionIsWarpQuad = false;
         window.selectionPreviewAngleRad = 0;
         window.selectionBounds = { x: startX, y: startY, w: 0, h: 0 };
-        window.refreshSelectionVisual();
+        if (typeof window.scheduleSelectionOverlayOnly === 'function') {
+            window.scheduleSelectionOverlayOnly();
+        } else {
+            window.refreshSelectionVisual();
+        }
     } else if (window.activeTool === 'brush') {
         if (typeof EditorManager.setStrokeLightPixelRender === 'function') {
             EditorManager.setStrokeLightPixelRender(true);
@@ -8003,15 +9110,32 @@ function updatePixel(pos, pointerEv) {
 
     if (EditorManager.isPixelMode && (window._gradientHandleDrag !== null || window._gradientNewDrag) && window._pixelGradientState) {
         const st = window._pixelGradientState;
+        let gx = pos.x;
+        let gy = pos.y;
+        if (window._shiftConstraintProportions) {
+            if (window._gradientNewDrag) {
+                const ep = constrainLineEndpoint(startX, startY, pos.x, pos.y, true);
+                gx = ep.x;
+                gy = ep.y;
+            } else if (window._gradientHandleDrag === 0) {
+                const ep = constrainLineEndpoint(st.x1, st.y1, pos.x, pos.y, true);
+                gx = ep.x;
+                gy = ep.y;
+            } else if (window._gradientHandleDrag === 1) {
+                const ep = constrainLineEndpoint(st.x0, st.y0, pos.x, pos.y, true);
+                gx = ep.x;
+                gy = ep.y;
+            }
+        }
         if (window._gradientNewDrag) {
-            st.x1 = pos.x;
-            st.y1 = pos.y;
+            st.x1 = gx;
+            st.y1 = gy;
         } else if (window._gradientHandleDrag === 0) {
-            st.x0 = pos.x;
-            st.y0 = pos.y;
+            st.x0 = gx;
+            st.y0 = gy;
         } else {
-            st.x1 = pos.x;
-            st.y1 = pos.y;
+            st.x1 = gx;
+            st.y1 = gy;
         }
         const gt = document.getElementById('tool-grad-type');
         if (gt) st.gradType = gt.value;
@@ -8030,7 +9154,13 @@ function updatePixel(pos, pointerEv) {
     }
 
     if (EditorManager.isPixelMode && window.shapeHandleDrag !== null && window.pixelShapeEdit) {
-        window.updateShapeEditFromHandle(window.shapeHandleDrag, pos.x, pos.y);
+        if (typeof window.shapeHandleDrag === 'string' && window.shapeHandleDrag.indexOf('adj-') === 0) {
+            if (typeof window.updateShapeAdjustFromPointer === 'function') {
+                window.updateShapeAdjustFromPointer(window.shapeHandleDrag, pos.x, pos.y);
+            }
+        } else {
+            window.updateShapeEditFromHandle(window.shapeHandleDrag, pos.x, pos.y);
+        }
         return;
     }
 
@@ -8095,10 +9225,12 @@ function updatePixel(pos, pointerEv) {
             }
         }
         if (window.activeTool === 'deform' && selectionWarpHandleId === 'c') {
-            illuScheduleInteractiveVisualRefresh({ render: true, selection: true });
+            illuScheduleWarpChromeRefresh();
+            illuScheduleSelectionWarpPreview({ preview: true });
             return;
         }
-        window.runSelectionWarpPreview({ preview: true });
+        illuScheduleWarpChromeRefresh();
+        illuScheduleSelectionWarpPreview({ preview: true });
         return;
     }
 
@@ -8111,8 +9243,10 @@ function updatePixel(pos, pointerEv) {
                 const now = performance.now();
                 if (now - selectionCombineVisualLast >= 48) {
                     selectionCombineVisualLast = now;
-                    window.refreshSelectionVisual();
+                    window.refreshSelectionVisual({ forceFull: true });
                 }
+            } else if (typeof window.scheduleSelectionOverlayOnly === 'function') {
+                window.scheduleSelectionOverlayOnly({ lassoPoints: lassoDrawingPoints });
             } else {
                 window.refreshSelectionVisual();
             }
@@ -8197,6 +9331,7 @@ function updatePixel(pos, pointerEv) {
                 : null;
         scheduleSelectionChromeRefresh({
             forceFullSelectionOverlay: window.selectionKind === 'lasso',
+            forceDrawUI: true,
             loupeEvent: e,
             loupeAnchorDoc: anchor
         });
@@ -8224,6 +9359,23 @@ function updatePixel(pos, pointerEv) {
         scheduleSelectionChromeRefresh({ forceFullSelectionOverlay: true });
         if (typeof window.illuCropPanelSync === 'function') window.illuCropPanelSync();
         return;
+    }
+
+    if (window._shapeRotDragActive) {
+        const pivot = getShapePreviewRotationPivotDoc(window._shapeRotDragMode);
+        if (pivot) {
+            const a = Math.atan2(pos.y - pivot.cy, pos.x - pivot.cx);
+            const ang = shapeLiveRotateStartPreview + (a - shapeLiveRotateStartPointerAngle);
+            if (window._shapeRotDragMode === 'edit' && window.pixelShapeEdit) {
+                window.pixelShapeEdit.angleRad = ang;
+                if (typeof window.redrawShapeFromEditLive === 'function') {
+                    window.redrawShapeFromEditLive();
+                }
+                if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+                return;
+            }
+            window._shapeLivePreviewAngleRad = ang;
+        }
     }
 
     if (window.selectionRotationDragActive) {
@@ -8261,17 +9413,17 @@ function updatePixel(pos, pointerEv) {
                 br: rotatePoint(q0.br),
                 bl: rotatePoint(q0.bl)
             };
-            window.runSelectionWarpPreview({ preview: true });
+            illuScheduleSelectionWarpPreview({ preview: true });
         }
 
-        scheduleSelectionChromeRefresh({ forceFullSelectionOverlay: true });
+        scheduleSelectionChromeRefresh({ forceFullSelectionOverlay: true, forceDrawUI: true });
         return;
     }
 
     if (
         EditorManager.isPixelMode &&
         isDrawing &&
-        ['rect', 'circle', 'line', 'round-3'].includes(window.activeTool) &&
+        ['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) &&
         window._shapeBackupCanvas &&
         EditorManager.activeLayer &&
         EditorManager.activeLayer.buffer
@@ -8298,15 +9450,16 @@ function updatePixel(pos, pointerEv) {
                 ) {
                     applySelectionClip(pctx, EditorManager.activeLayer.x, EditorManager.activeLayer.y);
                 }
-                paintPixelShapeAt(pctx, pos, startX, startY, window._shiftConstraintProportions);
+                paintPixelShapeAt(pctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
                 pctx.restore();
             }
         } else {
             ctx.clearRect(0, 0, buf.width, buf.height);
             ctx.drawImage(window._shapeBackupCanvas, 0, 0);
-            paintPixelShapeAt(ctx, pos, startX, startY, window._shiftConstraintProportions);
+            paintPixelShapeAt(ctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
         }
         illuScheduleInteractiveVisualRefresh({ render: true });
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
         return;
     }
 
@@ -8322,8 +9475,10 @@ function updatePixel(pos, pointerEv) {
             const now = performance.now();
             if (now - selectionCombineVisualLast >= 48) {
                 selectionCombineVisualLast = now;
-                window.refreshSelectionVisual();
+                window.refreshSelectionVisual({ forceFull: true });
             }
+        } else if (typeof window.scheduleSelectionOverlayOnly === 'function') {
+            window.scheduleSelectionOverlayOnly();
         } else {
             window.refreshSelectionVisual();
         }
@@ -8418,6 +9573,29 @@ function handleMouseUp(e) {
         EditorManager.render();
         return;
     }
+    if (activeVectorRotationDrag) {
+        activeVectorRotationDrag = false;
+        if (activeVectorShape) {
+            EditorManager.syncActiveVectorSvg();
+            EditorManager.saveHistory('Rotation forme (vecteur)', { patchActiveLayer: true });
+            EditorManager.render({ flushUiThumbnails: true });
+        }
+        activeVectorShape = null;
+        isDrawing = false;
+        return;
+    }
+    if (window._shapeRotDragActive) {
+        const wasEdit = window._shapeRotDragMode === 'edit';
+        window._shapeRotDragActive = false;
+        window._shapeRotDragMode = null;
+        isDrawing = true;
+        if (wasEdit) {
+            EditorManager.saveHistory('Rotation forme', { patchActiveLayer: true });
+        }
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+        illuScheduleInteractiveVisualRefresh({ render: true });
+        return;
+    }
     if (window.selectionRotationDragActive) {
         window.selectionRotationDragActive = false;
         const ang = window.selectionPreviewAngleRad || 0;
@@ -8472,9 +9650,10 @@ function handleMouseUp(e) {
         (vectorMoveTarget !== null && vectorMoveStartPointer !== null);
     if (shouldIgnoreMouseUpOnChrome(e) && !vectorChromeMustEnd) return;
     isDrawing = false;
-    const hadVectorAnchorDrag = activeAnchor !== null;
+    const hadVectorAnchorDrag = activeAnchor !== null || activeAdjustDrag !== null;
     activeAnchor = null;
     activeAnchorIndex = -1;
+    activeAdjustDrag = null;
     const pos = getPos(e);
     const ctx = EditorManager.activeCtx;
 
@@ -8524,7 +9703,7 @@ function handleMouseUp(e) {
         }
 
         const hadNewShape = currentElement !== null;
-        if (hadNewShape && currentElement && ['rect', 'circle', 'line', 'round-3'].includes(tool)) {
+        if (hadNewShape && currentElement && ['rect', 'circle', 'line', 'round-3', 'triangle'].includes(tool)) {
             activeVectorShape = currentElement;
             EditorManager.activeVectorSelection = [currentElement];
             window._activeVectorShapeEl = currentElement;
@@ -8670,7 +9849,8 @@ function handleMouseUp(e) {
 
         if (EditorManager.isPixelMode && window.activeTool === 'gradient') {
             if (window._gradientNewDrag && typeof window.finishNewGradientDrag === 'function') {
-                window.finishNewGradientDrag(startX, startY, pos.x, pos.y);
+                const ep = constrainLineEndpoint(startX, startY, pos.x, pos.y, window._shiftConstraintProportions);
+                window.finishNewGradientDrag(startX, startY, ep.x, ep.y);
                 window._gradientNewDrag = false;
                 window._gradientHandleDrag = null;
                 currentElement = null;
@@ -8687,6 +9867,10 @@ function handleMouseUp(e) {
 
         if (EditorManager.isPixelMode && window.shapeHandleDrag !== null) {
             window.shapeHandleDrag = null;
+            if (typeof window.flushShapeEditPreview === 'function') window.flushShapeEditPreview();
+            if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+                window.refreshPixelShapeEditOverlay({ forceFull: true });
+            }
             EditorManager.saveHistory('Forme ajustée', { patchActiveLayer: true });
             EditorManager.render({ flushUiThumbnails: true });
             currentElement = null;
@@ -8698,15 +9882,14 @@ function handleMouseUp(e) {
             const p0 = moveLayerStartPos;
             moveLayerStartPos = null;
             moveLayerStartLassoPoints = null;
-            if (moveLayerWholeGhostEl) {
-                const nx = parseFloat(moveLayerWholeGhostEl.style.left) || l.x;
-                const ny = parseFloat(moveLayerWholeGhostEl.style.top) || l.y;
+            let ghostEl = moveLayerWholeGhostEl;
+            if (ghostEl) {
+                const nx = parseFloat(ghostEl.style.left) || l.x;
+                const ny = parseFloat(ghostEl.style.top) || l.y;
                 l.x = Math.round(nx);
                 l.y = Math.round(ny);
-                if (moveLayerWholeGhostEl.parentNode) moveLayerWholeGhostEl.remove();
-                moveLayerWholeGhostEl = null;
-                if (l._ghostDragHide) delete l._ghostDragHide;
             }
+            if (l._ghostDragHide) delete l._ghostDragHide;
             /* Invalide le cache du filtre dynamique asynchrone pour que le render final
                recalcule le filtre à la position définitive du calque. */
             if (l._dynAsyncKey != null) l._dynAsyncKey = null;
@@ -8720,6 +9903,8 @@ function handleMouseUp(e) {
             window._illuDeformMoveFromButtonActive = false;
             illuSelectionInteractionOwner = null;
             EditorManager.render({ flushUiThumbnails: true });
+            if (ghostEl && ghostEl.parentNode) ghostEl.remove();
+            moveLayerWholeGhostEl = null;
             return;
         }
 
@@ -8737,11 +9922,6 @@ function handleMouseUp(e) {
         }
 
         if (illuPixelMoveOrDeformTool() && isMovingSelection) {
-            moveSelectionLayerSnapshot = null;
-            if (EditorManager.activeLayer && EditorManager.activeLayer._movePixelsHoleCleared) {
-                delete EditorManager.activeLayer._movePixelsHoleCleared;
-            }
-            illuSelectionInteractionOwner = null;
             const sb = window.selectionBounds;
             const lx = EditorManager.activeLayer.x;
             const ly = EditorManager.activeLayer.y;
@@ -8785,8 +9965,11 @@ function handleMouseUp(e) {
             if (window.selectionPixelWarpActive && typeof window.runSelectionWarpPreview === 'function') {
                 window.runSelectionWarpPreview({ forceCommit: true });
             }
-            if (moveGhostLayer) moveGhostLayer.remove();
-            moveGhostLayer = null;
+            moveSelectionLayerSnapshot = null;
+            if (EditorManager.activeLayer && EditorManager.activeLayer._movePixelsHoleCleared) {
+                delete EditorManager.activeLayer._movePixelsHoleCleared;
+            }
+            illuSelectionInteractionOwner = null;
             isMovingSelection = false;
             moveDragBoundsStart = null;
             moveDragLassoBaseline = null;
@@ -8794,6 +9977,8 @@ function handleMouseUp(e) {
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
             EditorManager.saveHistory('Déplacement pixel', { patchActiveLayer: true });
             EditorManager.render({ flushUiThumbnails: true });
+            if (moveGhostLayer) moveGhostLayer.remove();
+            moveGhostLayer = null;
         } else if (deformWarpNewRectDrag || isRectSelectionTool()) {
             const wasDeformWarpNewRectDrag = deformWarpNewRectDrag;
             if (isRectSelectionTool()) {
@@ -8865,7 +10050,7 @@ function handleMouseUp(e) {
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
             if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             EditorManager.render();
-        } else if (['rect', 'circle', 'line', 'round-3'].includes(window.activeTool)) {
+        } else if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool)) {
             drawFinalShapeOnCanvas(pos, e.shiftKey);
             ctx.restore();
             EditorManager.saveHistory('Dessin pixel', { patchActiveLayer: true });
@@ -9158,11 +10343,102 @@ function createShapeFillGradient(ctx, kind, lx, ly, w, h, lsx, lsy, rx, ry, lpx,
     return g;
 }
 
+function computeLiveShapeDocBounds(pos, startXp, startYp, shiftKey) {
+    const tool = window.activeTool;
+    let x0 = Math.min(pos.x, startXp);
+    let y0 = Math.min(pos.y, startYp);
+    let w = Math.abs(pos.x - startXp);
+    let h = Math.abs(pos.y - startYp);
+    if ((tool === 'rect' || tool === 'round-3' || tool === 'triangle' || tool === 'circle') && shiftKey) {
+        const b = constrainRectSelectionDraw(startXp, startYp, pos.x, pos.y, true);
+        x0 = b.x;
+        y0 = b.y;
+        w = b.w;
+        h = b.h;
+    }
+    return { x: x0, y: y0, w, h };
+}
+
+window.getLiveShapeDocBounds = computeLiveShapeDocBounds;
+
+window.illuIsShapeLiveDrawSession = function () {
+    return !!(
+        isDrawing &&
+        window._shapeBackupCanvas &&
+        SHAPE_LIVE_DRAW_TOOLS.includes(window.activeTool || '')
+    );
+};
+
+function getShapePreviewRotationPivotDoc(mode) {
+    if (!EditorManager.activeLayer) return null;
+    const lx = EditorManager.activeLayer.x;
+    const ly = EditorManager.activeLayer.y;
+    if (mode === 'edit' && window.pixelShapeEdit) {
+        const ed = window.pixelShapeEdit;
+        if (ed.kind === 'ellipse') {
+            return { cx: ed.cx + lx, cy: ed.cy + ly };
+        }
+        if (ed.lx != null && ed.w != null && ed.h != null) {
+            return { cx: ed.lx + ed.w / 2 + lx, cy: ed.ly + ed.h / 2 + ly };
+        }
+        return null;
+    }
+    if (mode === 'live' && window._shapeBackupCanvas) {
+        const pos = window._illuLastPointerDoc || { x: startX, y: startY };
+        const b = computeLiveShapeDocBounds(pos, startX, startY, !!window._shiftConstraintProportions);
+        if (b.w < 2 || b.h < 2) return null;
+        return { cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+    }
+    return null;
+}
+
+function startShapePreviewRotationDrag(pos, mode) {
+    const pivot = getShapePreviewRotationPivotDoc(mode);
+    if (!pivot) return false;
+    window._shapeRotDragMode = mode;
+    window._shapeRotDragActive = true;
+    shapeLiveRotateStartPointerAngle = Math.atan2(pos.y - pivot.cy, pos.x - pivot.cx);
+    shapeLiveRotateStartPreview =
+        mode === 'edit'
+            ? window.pixelShapeEdit.angleRad || 0
+            : window._shapeLivePreviewAngleRad || 0;
+    isDrawing = true;
+    return true;
+}
+
+function tryStartShapePreviewRotationFromPointer(e, pos) {
+    const ph = readPixelHandleAttr(e);
+    if (ph === 'shape-rot') {
+        if (window.pixelShapeEdit && ['rect', 'roundrect', 'triangle', 'ellipse'].includes(window.pixelShapeEdit.kind)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return startShapePreviewRotationDrag(pos, 'edit');
+        }
+        if (window._shapeBackupCanvas && SHAPE_LIVE_DRAW_TOOLS.includes(window.activeTool || '')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return startShapePreviewRotationDrag(pos, 'live');
+        }
+    }
+    if (
+        typeof window.hitShapeLiveRotationHandle === 'function' &&
+        window.hitShapeLiveRotationHandle(pos.x, pos.y)
+    ) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.pixelShapeEdit) {
+            return startShapePreviewRotationDrag(pos, 'edit');
+        }
+        return startShapePreviewRotationDrag(pos, 'live');
+    }
+    return false;
+}
+
 /**
  * Dessine la forme pixel courante (rect / cercle / ligne / coins arrondis) sur le contexte calque.
  * @returns {{ kind: string, params: object, opts: object } | null} métadonnées pour captureShapeEditAfterDraw
  */
-function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey) {
+function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
     if (!ctx || !EditorManager.activeLayer) return null;
     const shift = !!shiftKey;
     const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
@@ -9173,6 +10449,16 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey) {
         window.activeTool === 'line' ? shapeLineStrokeCss() : shapeSecondaryStrokeCss();
     ctx.lineWidth = strokeW;
     ctx.save();
+
+    const ang = angleRad || 0;
+    if (Math.abs(ang) > 1e-8) {
+        const b = computeLiveShapeDocBounds(pos, startXp, startYp, shift);
+        const cx = b.x + b.w / 2 - EditorManager.activeLayer.x;
+        const cy = b.y + b.h / 2 - EditorManager.activeLayer.y;
+        ctx.translate(cx, cy);
+        ctx.rotate(ang);
+        ctx.translate(-cx, -cy);
+    }
 
     const applyShapeFillStyle = () => {
         if (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') {
@@ -9193,7 +10479,7 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey) {
     let h = Math.abs(pos.y - startYp);
     let lx = Math.min(pos.x, startXp) - EditorManager.activeLayer.x;
     let ly = Math.min(pos.y, startYp) - EditorManager.activeLayer.y;
-    if ((window.activeTool === 'rect' || window.activeTool === 'round-3') && shift) {
+    if ((window.activeTool === 'rect' || window.activeTool === 'round-3' || window.activeTool === 'triangle') && shift) {
         const b = constrainRectSelectionDraw(startXp, startYp, pos.x, pos.y, true);
         w = b.w;
         h = b.h;
@@ -9202,8 +10488,15 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey) {
     }
     const lsx = startXp - EditorManager.activeLayer.x;
     const lsy = startYp - EditorManager.activeLayer.y;
-    const lpx = pos.x - EditorManager.activeLayer.x;
-    const lpy = pos.y - EditorManager.activeLayer.y;
+    let endDocX = pos.x;
+    let endDocY = pos.y;
+    if (window.activeTool === 'line' && shift) {
+        const ep = constrainLineEndpoint(startXp, startYp, pos.x, pos.y, true);
+        endDocX = ep.x;
+        endDocY = ep.y;
+    }
+    const lpx = endDocX - EditorManager.activeLayer.x;
+    const lpy = endDocY - EditorManager.activeLayer.y;
 
     const doFill = mode !== 'stroke' && fillType !== 'none';
     const doStroke = mode !== 'fill';
@@ -9307,6 +10600,28 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey) {
         }
         return { kind: 'roundrect', params: { lx, ly, w, h, r: rInt }, opts };
     }
+    if (window.activeTool === 'triangle') {
+        const adj = 0.5;
+        const ax = lx + w * adj;
+        ctx.beginPath();
+        ctx.moveTo(ax, ly);
+        ctx.lineTo(lx, ly + h);
+        ctx.lineTo(lx + w, ly + h);
+        ctx.closePath();
+        if (doFill) {
+            if (fillType === 'gradient') {
+                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+            } else {
+                applyShapeFillStyle();
+            }
+            ctx.fill();
+        }
+        if (doStroke) {
+            applyShapeStrokeStyle();
+            ctx.stroke();
+        }
+        return { kind: 'triangle', params: { lx, ly, w, h, adj }, opts };
+    }
     return null;
 }
 
@@ -9318,10 +10633,13 @@ function drawFinalShapeOnCanvas(pos, shiftKey) {
         ctx.clearRect(0, 0, buf.width, buf.height);
         ctx.drawImage(window._shapeBackupCanvas, 0, 0);
     }
-    const meta = paintPixelShapeAt(ctx, pos, startX, startY, shiftKey);
+    const meta = paintPixelShapeAt(ctx, pos, startX, startY, shiftKey, window._shapeLivePreviewAngleRad || 0);
     if (meta && typeof window.captureShapeEditAfterDraw === 'function') {
-        window.captureShapeEditAfterDraw(meta.kind, meta.params, meta.opts);
+        window.captureShapeEditAfterDraw(meta.kind, meta.params, meta.opts, window._shapeLivePreviewAngleRad || 0);
     }
+    window._shapeLivePreviewAngleRad = 0;
+    window._shapeRotDragActive = false;
+    window._shapeRotDragMode = null;
     if (typeof EditorManager.clearShapePreviewOverlay === 'function') {
         EditorManager.clearShapePreviewOverlay();
     }
@@ -9360,6 +10678,15 @@ window.finalizePendingPixelLiveEdits = function () {
     if (vectorQuadBezierClickState) {
         setVectorQuadBezierClickState(null);
         if (typeof window._quadBezierPreviewDoc !== 'undefined') window._quadBezierPreviewDoc = null;
+        done = true;
+    }
+
+    if (window._shapeRotDragActive) {
+        window._shapeRotDragActive = false;
+        window._shapeRotDragMode = null;
+        window._shapeLivePreviewAngleRad = 0;
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        isDrawing = false;
         done = true;
     }
 
@@ -9406,14 +10733,25 @@ window.finalizePendingPixelLiveEdits = function () {
                 EditorManager.saveHistory('Dégradé ajusté', { patchActiveLayer: true });
                 done = true;
             } else if (window._gradientNewDrag && typeof window.finishNewGradientDrag === 'function') {
+                const st = window._pixelGradientState;
                 const lx = startX;
                 const ly = startY;
-                const fallback = {
-                    x: lx + Math.min(120, Math.max(32, EditorManager.width * 0.2)),
-                    y: ly + Math.min(120, Math.max(32, EditorManager.height * 0.2))
-                };
-                const end = window._illuLastPointerDoc || fallback;
-                window.finishNewGradientDrag(lx, ly, end.x, end.y);
+                let ex;
+                let ey;
+                if (st) {
+                    ex = st.x1;
+                    ey = st.y1;
+                } else {
+                    const fallback = {
+                        x: lx + Math.min(120, Math.max(32, EditorManager.width * 0.2)),
+                        y: ly + Math.min(120, Math.max(32, EditorManager.height * 0.2))
+                    };
+                    const end = window._illuLastPointerDoc || fallback;
+                    const ep = constrainLineEndpoint(lx, ly, end.x, end.y, window._shiftConstraintProportions);
+                    ex = ep.x;
+                    ey = ep.y;
+                }
+                window.finishNewGradientDrag(lx, ly, ex, ey);
                 window._gradientNewDrag = false;
                 window._gradientHandleDrag = null;
                 isDrawing = false;
@@ -9434,8 +10772,9 @@ window.finalizePendingPixelLiveEdits = function () {
 
         if (
             window.pixelShapeEdit &&
-            ['rect', 'circle', 'line', 'round-3', 'cubic-3', 'pen', 'polygon'].includes(window.activeTool)
+            ['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3', 'pen', 'polygon'].includes(window.activeTool)
         ) {
+            if (typeof window.hidePixelShapeEditOverlay === 'function') window.hidePixelShapeEditOverlay();
             window.pixelShapeEdit = null;
             window._shapeBackupCanvas = null;
             if (typeof EditorManager.clearShapePreviewOverlay === 'function') {
@@ -9473,7 +10812,7 @@ window.finalizePendingPixelLiveEdits = function () {
                 isDrawing = false;
                 done = true;
             } else if (
-                ['rect', 'circle', 'line', 'round-3'].includes(window.activeTool) &&
+                ['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) &&
                 window._shapeBackupCanvas &&
                 EditorManager.activeCtx
             ) {

@@ -1,11 +1,15 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.18 (23/05/26)
+2.7.21 (23/05/26)
 - Gestion performance sur grande images
 - Ajout d'outil / fonction pour simplifié fonctionnement sur téléphone
 - Ligne, courbe (3 pts) et plume : couleur primaire pour le trait (plus la secondaire)
+- Ajout du triangle dans les formes
+- Ajout pour triangle et carré arrondie d'une point jaune a la microsoft
 - correction bug ou les filtre s'apliquais les un derrière les autre plustot que d'avoir une prévisualisation
 - Corrections divers dans l'interface, perf...
+- Ajouter obtion de centrage de la selection/Obejet
+- Correctif sur la gestion des selections
 
 2.7.13 (22/05/26)
 - Revu gestion de la selection, des déplacements...

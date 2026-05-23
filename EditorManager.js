@@ -455,7 +455,7 @@ setup8BitMode() {
             }
             if (
                 !window.pixelShapeEdit ||
-                !['rect', 'circle', 'line', 'round-3', 'cubic-3'].includes(window.activeTool)
+                !['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3'].includes(window.activeTool)
             ) {
                 return;
             }
@@ -473,7 +473,8 @@ setup8BitMode() {
                 const want = this.toolProps.shapeCornerRadius ?? 12;
                 ed.r = Math.max(0, Math.min(want, cap));
             }
-            if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
+            if (typeof window.redrawShapeFromEditLive === 'function') window.redrawShapeFromEditLive();
+            else if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
         };
         bind('tool-size', (e) => {
             this.toolProps.size = parseInt(e.target.value, 10);
@@ -570,8 +571,10 @@ setup8BitMode() {
                 if (
                     window.pixelShapeEdit &&
                     window.pixelShapeEdit.kind === 'line' &&
-                    typeof window.redrawShapeFromEdit === 'function'
+                    typeof window.redrawShapeFromEditLive === 'function'
                 ) {
+                    window.redrawShapeFromEditLive();
+                } else if (typeof window.redrawShapeFromEdit === 'function') {
                     window.redrawShapeFromEdit();
                 }
             });
@@ -584,8 +587,10 @@ setup8BitMode() {
                 if (
                     window.pixelShapeEdit &&
                     window.pixelShapeEdit.kind === 'line' &&
-                    typeof window.redrawShapeFromEdit === 'function'
+                    typeof window.redrawShapeFromEditLive === 'function'
                 ) {
+                    window.redrawShapeFromEditLive();
+                } else if (typeof window.redrawShapeFromEdit === 'function') {
                     window.redrawShapeFromEdit();
                 }
             });
@@ -1474,6 +1479,57 @@ setup8BitMode() {
                 map.delete(id);
             }
         }
+        this._restackStackPreviewOverlays(stackEl);
+    },
+
+    /** Met à jour une seule vue calque DOM (perf : édition forme, etc.). */
+    _syncSinglePixelDomLayerView(stackEl, layer) {
+        if (!stackEl || !layer || !layer.buffer) return;
+        if (!this._pixelLayerViewEls) this._pixelLayerViewEls = new Map();
+        const map = this._pixelLayerViewEls;
+        const layerIndex = this.layers.indexOf(layer);
+        const i = layerIndex >= 0 ? layerIndex : this.activeLayerIndex | 0;
+        let cv = map.get(layer.id);
+        if (!cv) {
+            cv = document.createElement('canvas');
+            cv.className = 'illu-pixel-layer-view';
+            cv.dataset.layerId = String(layer.id);
+            map.set(layer.id, cv);
+        }
+        if (layer._ghostDragHide) {
+            cv.style.display = 'none';
+            return;
+        }
+        const bw = layer.buffer.width | 0;
+        const bh = layer.buffer.height | 0;
+        if (bw < 1 || bh < 1) {
+            cv.style.display = 'none';
+            return;
+        }
+        if (cv.width !== bw) cv.width = bw;
+        if (cv.height !== bh) cv.height = bh;
+        cv.style.display = layer.visible ? 'block' : 'none';
+        cv.style.left = `${layer.x}px`;
+        cv.style.top = `${layer.y}px`;
+        cv.style.opacity = String(layer.opacity != null ? layer.opacity : 1);
+        cv.style.mixBlendMode = this._blendModeToCssMix(layer);
+        cv.style.zIndex = String(i + 1);
+        const vctx = cv.getContext('2d', { willReadFrequently: true });
+        vctx.clearRect(0, 0, bw, bh);
+        const hasStrokeIntermediate =
+            this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id;
+        if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
+            vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
+        } else {
+            vctx.drawImage(layer.buffer, 0, 0);
+            if (hasStrokeIntermediate) {
+                vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
+            }
+        }
+        if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
+            vctx.drawImage(this._shapePreviewCanvas, 0, 0);
+        }
+        stackEl.appendChild(cv);
         this._restackStackPreviewOverlays(stackEl);
     },
 
@@ -3583,50 +3639,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
 
         if (!al.buffer) return;
-        const sb = window.selectionBounds;
-        const ov = document.getElementById('selection-overlay');
-        const hasSel = sb && ov && ov.style.display !== 'none' && !window.selectionInverted;
 
-        if (
-            !hasSel ||
-            (typeof window.selectionMatchesActiveLayer === 'function' && window.selectionMatchesActiveLayer())
-        ) {
-            al.x += dx;
-            al.y += dy;
-            if (hasSel && sb) {
-                window.selectionBounds = { ...sb, x: sb.x + dx, y: sb.y + dy };
+        if (typeof window.illuNudgeSelectionPixelsDelta === 'function') {
+            if (window.illuNudgeSelectionPixelsDelta(dx, dy)) {
+                this.saveHistory('Déplacement', { patchActiveLayer: true });
+                this.render();
             }
-            if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-            this.saveHistory('Déplacement', { patchActiveLayer: true });
-            this.render();
-            return;
         }
-
-        if (window.selectionKind !== 'rect') return;
-
-        const ctx = al.buffer.getContext('2d', { willReadFrequently: true });
-        const ox = Math.round(sb.x - al.x);
-        const oy = Math.round(sb.y - al.y);
-        const w = Math.round(sb.w);
-        const h = Math.round(sb.h);
-        if (ox < 0 || oy < 0 || w < 1 || h < 1 || ox + w > al.buffer.width || oy + h > al.buffer.height) {
-            return;
-        }
-        const nx = ox + Math.round(dx);
-        const ny = oy + Math.round(dy);
-        if (nx < 0 || ny < 0 || nx + w > al.buffer.width || ny + h > al.buffer.height) {
-            return;
-        }
-        const tmp = document.createElement('canvas');
-        tmp.width = w;
-        tmp.height = h;
-        tmp.getContext('2d', { willReadFrequently: true }).drawImage(al.buffer, ox, oy, w, h, 0, 0, w, h);
-        ctx.clearRect(ox, oy, w, h);
-        ctx.drawImage(tmp, nx, ny);
-        window.selectionBounds = { ...sb, x: sb.x + dx, y: sb.y + dy };
-        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-        this.saveHistory('Déplacement', { patchActiveLayer: true });
-        this.render();
     },
 
     /**
@@ -4060,7 +4079,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         // États d'édition temporaires (formes pixel, courbes en cours, dégradés)
         if (window.pixelShapeEdit) {
-            parts.push('psedit' + window.pixelShapeEdit.kind + window.pixelShapeEdit.lx + ',' + window.pixelShapeEdit.ly);
+            const ed = window.pixelShapeEdit;
+            parts.push('psedit' + (ed.kind || ''));
+            if (ed.lx != null) parts.push('r' + ed.lx + ',' + ed.ly + ',' + (ed.w || 0) + ',' + (ed.h || 0));
+            if (ed.cx != null) parts.push('e' + ed.cx + ',' + ed.cy + ',' + (ed.rx || 0) + ',' + (ed.ry || 0));
+            if (ed.x1 != null) parts.push('l' + ed.x1 + ',' + ed.y1 + ',' + ed.x2 + ',' + ed.y2);
+            if (ed.r != null) parts.push('cr' + ed.r);
+            if (ed.adj != null) parts.push('adj' + ed.adj);
         }
         if (window.vectorQuadBezierClickState) {
             const st = window.vectorQuadBezierClickState;
@@ -4128,37 +4153,226 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     /** Centre la sélection horizontalement sur la largeur du document (toile). */
     centerSelectionHorizontally() {
-        if (!this.activeProject || !this.isPixelMode) {
-            window.showIlluAlert('Disponible en mode Pixel.');
-            return;
+        this.centerSelection('h');
+    },
+
+    /** État sélection / forme utilisable pour centrage (pixel, vecteur, forme en édition). */
+    _illuSelectionLayoutState() {
+        const edit = this._illuPixelShapeEditLayoutState();
+        if (edit) return { ...edit, mode: 'pixelEdit' };
+        const pixel = this._illuRectSelectionLayoutState();
+        if (pixel) return { ...pixel, mode: 'pixel' };
+        const vector = this._illuVectorSelectionLayoutState();
+        if (vector) return { ...vector, mode: 'vector' };
+        return null;
+    },
+
+    canCenterSelectionLayout() {
+        return !!this._illuSelectionLayoutState();
+    },
+
+    _illuVectorSelectionLayoutState() {
+        if (!this.activeProject || this.mode !== 'vector') return null;
+        const sel = this.activeVectorSelection;
+        if (!sel || !sel.length) return null;
+        const svg = document.getElementById('drawing-svg');
+        if (!svg) return null;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const el of sel) {
+            if (!el || !el.isConnected) continue;
+            try {
+                const bb = el.getBBox();
+                const corners = [
+                    [bb.x, bb.y],
+                    [bb.x + bb.width, bb.y],
+                    [bb.x + bb.width, bb.y + bb.height],
+                    [bb.x, bb.y + bb.height]
+                ];
+                for (const [lx, ly] of corners) {
+                    const pt = svg.createSVGPoint();
+                    pt.x = lx;
+                    pt.y = ly;
+                    const m = el.getCTM();
+                    const o = m ? pt.matrixTransform(m) : pt;
+                    minX = Math.min(minX, o.x);
+                    minY = Math.min(minY, o.y);
+                    maxX = Math.max(maxX, o.x);
+                    maxY = Math.max(maxY, o.y);
+                }
+            } catch (err) {
+                /* ignore */
+            }
         }
-        const sb = window.selectionBounds;
-        const ov = document.getElementById('selection-overlay');
+        if (!Number.isFinite(minX)) return null;
+        const sb = {
+            x: minX,
+            y: minY,
+            w: Math.max(1, maxX - minX),
+            h: Math.max(1, maxY - minY)
+        };
+        return { sb, W: this.width, H: this.height };
+    },
+
+    _illuPixelShapeEditLayoutState() {
+        const ed = window.pixelShapeEdit;
+        const layer = this.activeLayer;
+        if (!ed || !layer || ed.layerId !== layer.id || !this.isPixelMode) return null;
+        const lx = layer.x;
+        const ly = layer.y;
+        let x0;
+        let y0;
+        let x1;
+        let y1;
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+            x0 = ed.lx + lx;
+            y0 = ed.ly + ly;
+            x1 = x0 + ed.w;
+            y1 = y0 + ed.h;
+        } else if (ed.kind === 'line') {
+            x0 = Math.min(ed.x1, ed.x2) + lx;
+            y0 = Math.min(ed.y1, ed.y2) + ly;
+            x1 = Math.max(ed.x1, ed.x2) + lx;
+            y1 = Math.max(ed.y1, ed.y2) + ly;
+        } else if (ed.kind === 'ellipse') {
+            x0 = ed.cx - ed.rx + lx;
+            y0 = ed.cy - ed.ry + ly;
+            x1 = ed.cx + ed.rx + lx;
+            y1 = ed.cy + ed.ry + ly;
+        } else {
+            return null;
+        }
+        const sb = {
+            x: x0,
+            y: y0,
+            w: Math.max(1, x1 - x0),
+            h: Math.max(1, y1 - y0)
+        };
+        return { sb, W: this.width, H: this.height };
+    },
+
+    _illuCenterDeltaForLayout(st, axis) {
+        const { sb, W, H } = st;
+        let dx = 0;
+        let dy = 0;
+        if (axis === 'h' || axis === 'both') {
+            const nx = Math.max(0, Math.min(Math.round((W - sb.w) / 2), Math.max(0, W - sb.w)));
+            dx = nx - sb.x;
+        }
+        if (axis === 'v' || axis === 'both') {
+            const ny = Math.max(0, Math.min(Math.round((H - sb.h) / 2), Math.max(0, H - sb.h)));
+            dy = ny - sb.y;
+        }
+        return { dx, dy };
+    },
+
+    /** État sélection utilisable pour centrage (non inversée, bounds valides). */
+    _illuRectSelectionLayoutState() {
+        if (!this.activeProject || !this.isPixelMode) return null;
+        if (window.selectionInverted) return null;
         if (
-            !sb ||
-            !ov ||
-            ov.style.display === 'none' ||
-            window.selectionInverted ||
-            window.selectionKind === 'lasso' ||
-            window.selectionKind === 'color'
+            typeof window.hasActivePixelSelection === 'function' &&
+            !window.hasActivePixelSelection()
         ) {
-            window.showIlluAlert('Utilisez une sélection rectangulaire active (pas inversée).');
-            return;
+            return null;
         }
-        const W = this.width;
-        const nx = Math.round((W - sb.w) / 2);
-        const clamped = Math.max(0, Math.min(nx, Math.max(0, W - sb.w)));
-        const dx = clamped - sb.x;
-        sb.x = clamped;
+        let sb = window.selectionBounds;
         if (
-            typeof window.selectionMatchesActiveLayer === 'function' &&
-            window.selectionMatchesActiveLayer() &&
-            this.activeLayer
+            (!sb || sb.w < 1 || sb.h < 1) &&
+            window.selectionKind === 'color' &&
+            typeof window.tightenColorSelectionBoundsFromMask === 'function'
         ) {
-            this.activeLayer.x += dx;
+            window.tightenColorSelectionBoundsFromMask();
+            sb = window.selectionBounds;
         }
-        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-        this.render();
+        if (
+            (!sb || sb.w < 1 || sb.h < 1) &&
+            window.selectionKind === 'lasso' &&
+            window.selectionLassoPoints &&
+            window.selectionLassoPoints.length >= 3
+        ) {
+            const xs = window.selectionLassoPoints.map((p) => p.x);
+            const ys = window.selectionLassoPoints.map((p) => p.y);
+            const minX = Math.min(...xs);
+            const minY = Math.min(...ys);
+            sb = {
+                x: minX,
+                y: minY,
+                w: Math.max(...xs) - minX,
+                h: Math.max(...ys) - minY
+            };
+        }
+        if (!sb || sb.w < 1 || sb.h < 1) return null;
+        return { sb, W: this.width, H: this.height };
+    },
+
+    /**
+     * Centre la sélection sur la toile (axe h, v ou les deux).
+     * @param {'h'|'v'|'both'} axis
+     */
+    centerSelection(axis) {
+        const st = this._illuSelectionLayoutState();
+        if (!st) {
+            window.showIlluAlert('Aucune sélection active utilisable pour le centrage.');
+            return false;
+        }
+        const { dx, dy } = this._illuCenterDeltaForLayout(st, axis);
+        if (dx === 0 && dy === 0) return true;
+        if (st.mode === 'pixel') {
+            return this.nudgeSelectionZone(dx, dy);
+        }
+        if (st.mode === 'vector') {
+            if (typeof window.illuMoveVectorSelectionByDelta === 'function') {
+                return window.illuMoveVectorSelectionByDelta(dx, dy);
+            }
+            return false;
+        }
+        if (st.mode === 'pixelEdit') {
+            if (typeof window.illuMovePixelShapeEditByDelta === 'function') {
+                return window.illuMovePixelShapeEditByDelta(dx, dy);
+            }
+            return false;
+        }
+        return false;
+    },
+
+    /**
+     * Déplace la zone sélectionnée selon l’outil actif (marquee, pixels, warp…).
+     * @param {number} dx
+     * @param {number} dy
+     * @param {{ step?: number }} [opts] — step : multiplicateur (Maj = 10 px)
+     */
+    nudgeSelectionZone(dx, dy, opts) {
+        opts = opts || {};
+        if (!this.activeProject || (dx === 0 && dy === 0)) return false;
+        const step = opts.step != null && Number.isFinite(opts.step) ? opts.step : 1;
+        dx = Math.round(dx * step);
+        dy = Math.round(dy * step);
+        if (dx === 0 && dy === 0) return false;
+
+        const tool = window.activeTool;
+
+        if (
+            (tool === 'deform' || tool === 'warp-4') &&
+            window.selectionPixelWarpActive &&
+            typeof window.nudgeSelectionWarpSessionDelta === 'function' &&
+            window.nudgeSelectionWarpSessionDelta(dx, dy)
+        ) {
+            return true;
+        }
+        if (tool === 'move' || tool === 'deform' || tool === 'warp-4') {
+            this.applyMoveToolNudge(dx, dy);
+            return true;
+        }
+        if (
+            ['select', 'wand', 'direct-select'].includes(tool) &&
+            typeof window.illuNudgeSelectionMarquee === 'function'
+        ) {
+            return window.illuNudgeSelectionMarquee(dx, dy);
+        }
+        return false;
     },
 
     deselectAll() {
@@ -4313,7 +4527,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const hideChromeMove =
             window.activeTool === 'move' &&
             !window.illuCropSessionActive &&
-            !layerSmallerThanCanvas;
+            !layerSmallerThanCanvas &&
+            typeof window.selectionMatchesActiveLayer === 'function' &&
+            window.selectionMatchesActiveLayer();
         const showSelChrome =
             sb &&
             ov &&
@@ -5709,6 +5925,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         let skipDrawUI = false;
         let skipUiThumbnails = false;
         let skipLayerComposite = false;
+        let activeLayerViewOnly = false;
         if (opts === true) flushUiThumbnails = true;
         else if (opts && typeof opts === 'object') {
             if (opts.flushUiThumbnails) flushUiThumbnails = true;
@@ -5717,6 +5934,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (opts.skipDrawUI) skipDrawUI = true;
             if (opts.skipUiThumbnails) skipUiThumbnails = true;
             if (opts.skipLayerComposite) skipLayerComposite = true;
+            if (opts.activeLayerViewOnly) activeLayerViewOnly = true;
         }
 
         this._renderEpoch = (this._renderEpoch | 0) + 1;
@@ -5734,7 +5952,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const ctx = mainCanvas.getContext('2d', { willReadFrequently: true });
                 if (useDomStack) {
                     stack.style.display = 'block';
-                    this._syncPixelDomLayerViews(stack);
+                    if (activeLayerViewOnly && this.activeLayer && this.activeLayer.buffer) {
+                        this._syncSinglePixelDomLayerView(stack, this.activeLayer);
+                    } else {
+                        this._syncPixelDomLayerViews(stack);
+                    }
                     mainCanvas.style.opacity = '0';
                     mainCanvas.style.pointerEvents = 'auto';
                     ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);

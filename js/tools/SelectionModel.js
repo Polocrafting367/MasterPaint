@@ -1,6 +1,7 @@
 /**
  * Modèle de sélection inspiré Paint.NET (base + continuation + combine verrouillé).
  * Coordonnées sélection = espace document ; indépendantes de layer.x/y sauf masque couleur.
+ * Affichage (marquee, lasso, baguette) : js/tools/SelectionChrome.js — séparé du composite calques.
  */
 (function () {
     'use strict';

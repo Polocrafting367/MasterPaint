@@ -4,6 +4,7 @@
  */
 
 var currentAppTitle = "MasterPaint";
+const ILLU_GITHUB_PROJECT_URL = 'https://github.com/Polocrafting367/MasterPaint';
 
 /**
  * Opens the contact modal, creating it if it doesn't exist.
@@ -56,9 +57,17 @@ function openContactModal(titre) {
                         <input type="text" id="contact-info" style="width:100%;" data-i18n-placeholder="contact.infoPlaceholder" placeholder="NOM / Email">
                     </div>
 
-                    <div style="display:flex; gap:10px; margin-top: 10px; justify-content: flex-end;">
+                    <div style="display:flex; gap:10px; margin-top: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                        <a href="${ILLU_GITHUB_PROJECT_URL}" target="_blank" rel="noopener noreferrer"
+                            class="settings-github-link settings-github-link--compact"
+                            data-i18n-title="common.githubProject">
+                            <i class="fa-brands fa-github" aria-hidden="true"></i>
+                            <span data-i18n="common.githubProject">Projet sur GitHub</span>
+                        </a>
+                        <div style="display:flex; gap:10px; margin-left: auto;">
                         <button type="button" onclick="closeContactModal()" data-i18n="contact.cancel">Annuler</button>
                         <button type="button" id="contact-send-btn" onclick="sendContactData()" class="btn-primary" style="min-width: 80px;" data-i18n="contact.send">Envoyer</button>
+                        </div>
                     </div>
                 </div>
             </div>

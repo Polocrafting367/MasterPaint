@@ -38,8 +38,8 @@ body.illu-flat-colored-icons #tool-select i { color: #2563eb !important; }
 body.illu-flat-colored-icons #tool-direct-select i { color: #10b981 !important; }
 body.illu-flat-colored-icons #tool-wand i { color: #f59e0b !important; }
 body.illu-flat-colored-icons #btn-deselect i { color: #ef4444 !important; }
-body.illu-flat-colored-icons #tool-warp-4 i { color: #8b5cf6 !important; }
-body.illu-flat-colored-icons #tool-deform i { color: #6366f1 !important; }
+body.illu-flat-colored-icons #tool-warp-4 svg { color: #8b5cf6 !important; }
+body.illu-flat-colored-icons #tool-deform svg { color: #6366f1 !important; }
 body.illu-flat-colored-icons #tool-eyedropper i { color: #ec4899 !important; }
 body.illu-flat-colored-icons #tool-move i { color: #14b8a6 !important; }
 body.illu-flat-colored-icons #tool-zoom i { color: #06b6d4 !important; }
@@ -160,7 +160,8 @@ body.illu-flat-colored-icons #win-layers .layer-palette-toolbar .fa-object-group
     color: #64748b !important;
 }
 
-body.illu-flat-colored-icons #tool-gradient svg {
+body.illu-flat-colored-icons #tool-gradient svg,
+body.illu-flat-colored-icons #tool-deform svg {
     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12)) !important;
 }
 

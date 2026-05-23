@@ -7,10 +7,264 @@
         return 14 / (EditorManager.getCanvasZoomLevel() || 1);
     }
 
+    function rotateDocPointAround(px, py, cx, cy, ang) {
+        const dx = px - cx;
+        const dy = py - cy;
+        const c = Math.cos(ang);
+        const s = Math.sin(ang);
+        return { x: cx + dx * c - dy * s, y: cy + dx * s + dy * c };
+    }
+
+    function shapeEditRotationPivotDoc(ed) {
+        if (!ed || !EditorManager.activeLayer) return null;
+        const lx = EditorManager.activeLayer.x;
+        const ly = EditorManager.activeLayer.y;
+        if (ed.kind === 'ellipse') {
+            return { cx: ed.cx + lx, cy: ed.cy + ly };
+        }
+        if (ed.lx != null && ed.w != null && ed.h != null) {
+            return { cx: ed.lx + ed.w / 2 + lx, cy: ed.ly + ed.h / 2 + ly };
+        }
+        return null;
+    }
+
+    function shapeEditBoundsDoc(ed) {
+        if (!ed || !EditorManager.activeLayer) return null;
+        const lx = EditorManager.activeLayer.x;
+        const ly = EditorManager.activeLayer.y;
+        if (ed.kind === 'ellipse') {
+            return {
+                x: ed.cx - ed.rx + lx,
+                y: ed.cy - ed.ry + ly,
+                w: ed.rx * 2,
+                h: ed.ry * 2
+            };
+        }
+        if (ed.lx != null && ed.w != null && ed.h != null) {
+            return { x: ed.lx + lx, y: ed.ly + ly, w: ed.w, h: ed.h };
+        }
+        return null;
+    }
+
+    const SHAPE_ROTATABLE_KINDS = new Set(['rect', 'roundrect', 'triangle', 'ellipse']);
+
     window._pixelGradientState = null;
     window._gradientHandleDrag = null;
     window._gradientNewDrag = false;
     window._gradientBackup = null;
+
+    let shapeEditRenderRaf = 0;
+    let shapeEditPreviewLastMs = 0;
+    let shapeEditPreviewTimer = 0;
+    const SHAPE_EDIT_PREVIEW_MS = 200;
+
+    function scheduleShapeEditLayerRefresh() {
+        if (shapeEditRenderRaf) return;
+        shapeEditRenderRaf = requestAnimationFrame(() => {
+            shapeEditRenderRaf = 0;
+            if (typeof EditorManager.render === 'function') {
+                EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true, activeLayerViewOnly: true });
+            }
+        });
+    }
+
+    /** Aperçu pixels forme en édition (~5 fps) — poignées / contour restent fluides. */
+    function scheduleShapeEditPreviewRefresh() {
+        const now = performance.now();
+        const diff = now - shapeEditPreviewLastMs;
+        if (diff < SHAPE_EDIT_PREVIEW_MS) {
+            if (!shapeEditPreviewTimer) {
+                shapeEditPreviewTimer = window.setTimeout(() => {
+                    shapeEditPreviewTimer = 0;
+                    scheduleShapeEditPreviewRefresh();
+                }, SHAPE_EDIT_PREVIEW_MS - diff + 5);
+            }
+            return;
+        }
+        shapeEditPreviewLastMs = now;
+        if (shapeEditPreviewTimer) {
+            clearTimeout(shapeEditPreviewTimer);
+            shapeEditPreviewTimer = 0;
+        }
+        scheduleShapeEditLayerRefresh();
+    }
+
+    let shapeEditOutlineSvg = null;
+    let shapeEditOutlineSolid = null;
+    let shapeEditOutlineDash = null;
+
+    function illuRoundRectOutlinePathD(x, y, w, h, r) {
+        r = Math.max(0, Math.min(r, w / 2, h / 2));
+        if (r < 0.5) {
+            return `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`;
+        }
+        return (
+            `M ${x + r} ${y} H ${x + w - r} A ${r} ${r} 0 0 1 ${x + w} ${y + r} ` +
+            `V ${y + h - r} A ${r} ${r} 0 0 1 ${x + w - r} ${y + h} H ${x + r} ` +
+            `A ${r} ${r} 0 0 1 ${x} ${y + h - r} V ${y + r} A ${r} ${r} 0 0 1 ${x + r} ${y} Z`
+        );
+    }
+
+    function illuEllipseOutlinePathD(cx, cy, rx, ry) {
+        rx = Math.max(0.5, rx);
+        ry = Math.max(0.5, ry);
+        const k = 0.5522847498;
+        const ox = rx * k;
+        const oy = ry * k;
+        return (
+            `M ${cx} ${cy - ry} ` +
+            `C ${cx + ox} ${cy - ry} ${cx + rx} ${cy - oy} ${cx + rx} ${cy} ` +
+            `C ${cx + rx} ${cy + oy} ${cx + ox} ${cy + ry} ${cx} ${cy + ry} ` +
+            `C ${cx - ox} ${cy + ry} ${cx - rx} ${cy + oy} ${cx - rx} ${cy} ` +
+            `C ${cx - rx} ${cy - oy} ${cx - ox} ${cy - ry} ${cx} ${cy - ry} Z`
+        );
+    }
+
+    window.getShapeEditOutlineSpec = function (ed) {
+        ed = ed || window.pixelShapeEdit;
+        const layer = EditorManager.activeLayer;
+        if (!ed || !layer) return null;
+        const lx = layer.x;
+        const ly = layer.y;
+        if (ed.kind === 'rect') {
+            const x = ed.lx + lx;
+            const y = ed.ly + ly;
+            const w = ed.w;
+            const h = ed.h;
+            return {
+                d: `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`,
+                closed: true
+            };
+        }
+        if (ed.kind === 'roundrect') {
+            const r = ed.r != null ? ed.r : EditorManager.toolProps.shapeCornerRadius ?? 12;
+            return {
+                d: illuRoundRectOutlinePathD(ed.lx + lx, ed.ly + ly, ed.w, ed.h, r),
+                closed: true
+            };
+        }
+        if (ed.kind === 'triangle') {
+            const adj = ed.adj != null ? ed.adj : 0.5;
+            const x = ed.lx + lx;
+            const y = ed.ly + ly;
+            const w = ed.w;
+            const h = ed.h;
+            return {
+                d: `M ${x + w * adj} ${y} L ${x} ${y + h} L ${x + w} ${y + h} Z`,
+                closed: true
+            };
+        }
+        if (ed.kind === 'line') {
+            return {
+                d: `M ${ed.x1 + lx} ${ed.y1 + ly} L ${ed.x2 + lx} ${ed.y2 + ly}`,
+                closed: false
+            };
+        }
+        if (ed.kind === 'ellipse') {
+            return {
+                d: illuEllipseOutlinePathD(ed.cx + lx, ed.cy + ly, ed.rx, ed.ry),
+                closed: true
+            };
+        }
+        if (ed.kind === 'quadcurve') {
+            return {
+                d: `M ${ed.x0 + lx} ${ed.y0 + ly} Q ${ed.qx + lx} ${ed.qy + ly} ${ed.x1 + lx} ${ed.y1 + ly}`,
+                closed: false
+            };
+        }
+        return null;
+    };
+
+    window.hidePixelShapeEditOverlay = function () {
+        const overlay = document.getElementById('selection-overlay');
+        if (overlay) {
+            overlay.querySelectorAll('.illu-shape-edit-outline').forEach((el) => el.remove());
+        }
+        shapeEditOutlineSvg = null;
+        shapeEditOutlineSolid = null;
+        shapeEditOutlineDash = null;
+    };
+
+    window.updatePixelShapeEditOverlayFast = function (ed) {
+        ed = ed || window.pixelShapeEdit;
+        const spec = window.getShapeEditOutlineSpec(ed);
+        if (!spec || !spec.d || typeof EditorManager === 'undefined') return false;
+
+        const overlay = document.getElementById('selection-overlay');
+        if (!overlay) return false;
+        overlay.style.display = 'block';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = EditorManager.width + 'px';
+        overlay.style.height = EditorManager.height + 'px';
+        overlay.style.overflow = 'visible';
+
+        const z = EditorManager.getCanvasZoomLevel() || 1;
+        const strokeW = Math.max(1, 1.25 / z);
+        const d = spec.d;
+
+        if (!shapeEditOutlineSvg || !shapeEditOutlineSolid) {
+            overlay.querySelectorAll('.illu-shape-edit-outline').forEach((el) => el.remove());
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.classList.add('illu-shape-edit-outline');
+            svg.setAttribute('width', String(EditorManager.width));
+            svg.setAttribute('height', String(EditorManager.height));
+            svg.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;overflow:visible;';
+            const pathSolid = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathSolid.setAttribute('fill', 'none');
+            pathSolid.setAttribute('stroke', '#000');
+            const pathDash = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathDash.setAttribute('fill', 'none');
+            pathDash.setAttribute('stroke', '#fff');
+            pathDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+            svg.appendChild(pathSolid);
+            svg.appendChild(pathDash);
+            overlay.appendChild(svg);
+            shapeEditOutlineSvg = svg;
+            shapeEditOutlineSolid = pathSolid;
+            shapeEditOutlineDash = pathDash;
+        }
+
+        shapeEditOutlineSolid.setAttribute('d', d);
+        shapeEditOutlineSolid.setAttribute('stroke-width', String(strokeW));
+        shapeEditOutlineDash.setAttribute('d', d);
+        shapeEditOutlineDash.setAttribute('stroke-width', String(strokeW));
+        shapeEditOutlineDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
+        return true;
+    };
+
+    window.refreshPixelShapeEditOverlay = function (opts) {
+        opts = opts || {};
+        if (!window.pixelShapeEdit || !EditorManager.activeLayer) {
+            window.hidePixelShapeEditOverlay();
+            return false;
+        }
+        if (!opts.forceFull && window.updatePixelShapeEditOverlayFast()) {
+            return true;
+        }
+        window.hidePixelShapeEditOverlay();
+        return window.updatePixelShapeEditOverlayFast();
+    };
+
+    window.schedulePixelShapeEditChromeRefresh = function () {
+        window.refreshPixelShapeEditOverlay();
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(false);
+    };
+
+    window.flushShapeEditPreview = function () {
+        if (shapeEditPreviewTimer) {
+            clearTimeout(shapeEditPreviewTimer);
+            shapeEditPreviewTimer = 0;
+        }
+        shapeEditPreviewLastMs = 0;
+        if (shapeEditRenderRaf) {
+            cancelAnimationFrame(shapeEditRenderRaf);
+            shapeEditRenderRaf = 0;
+        }
+        if (typeof EditorManager.render === 'function') {
+            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true, activeLayerViewOnly: true });
+        }
+    };
 
     window.pixelShapeEdit = null;
     window.shapeHandleDrag = null;
@@ -23,6 +277,7 @@
         window.pixelShapeEdit = null;
         window.shapeHandleDrag = null;
         window._shapeBackupCanvas = null;
+        if (typeof window.hidePixelShapeEditOverlay === 'function') window.hidePixelShapeEditOverlay();
         if (typeof window.cancelSelectionInteractionState === 'function') window.cancelSelectionInteractionState();
     };
 
@@ -30,6 +285,44 @@
         const dx = ax - bx, dy = ay - by;
         return Math.sqrt(dx * dx + dy * dy);
     }
+
+    window.hitShapeLiveRotationHandle = function (worldX, worldY) {
+        const hr = hitRadiusDoc();
+        const ed = window.pixelShapeEdit;
+        if (ed && SHAPE_ROTATABLE_KINDS.has(ed.kind)) {
+            const sb = shapeEditBoundsDoc(ed);
+            if (sb) {
+                const rhp = EditorManager.selectionRotationHandleDocXY(sb, ed.angleRad || 0, null);
+                if (dist(worldX, worldY, rhp.x, rhp.y) <= hr) return true;
+            }
+        }
+        if (
+            typeof window.illuIsShapeLiveDrawSession === 'function' &&
+            window.illuIsShapeLiveDrawSession() &&
+            typeof window.getLiveShapeDocBounds === 'function' &&
+            window._shapeLiveStartX != null
+        ) {
+            const pos = window._illuLastPointerDoc || {
+                x: window._shapeLiveStartX,
+                y: window._shapeLiveStartY
+            };
+            const b = window.getLiveShapeDocBounds(
+                pos,
+                window._shapeLiveStartX,
+                window._shapeLiveStartY,
+                !!window._shiftConstraintProportions
+            );
+            if (b.w >= 2 && b.h >= 2) {
+                const rhp = EditorManager.selectionRotationHandleDocXY(
+                    b,
+                    window._shapeLivePreviewAngleRad || 0,
+                    null
+                );
+                if (dist(worldX, worldY, rhp.x, rhp.y) <= hr) return true;
+            }
+        }
+        return false;
+    };
 
     window.cloneLayerBuffer = function (buf) {
         const c = document.createElement('canvas');
@@ -239,28 +532,26 @@
     window.getShapeEditHandlePointsWorld = function (ed) {
         const lx = EditorManager.activeLayer.x;
         const ly = EditorManager.activeLayer.y;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect') {
+        let pts = null;
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
             const x = ed.lx + lx, y = ed.ly + ly, w = ed.w, h = ed.h;
-            return [
+            pts = [
                 { x, y }, { x: x + w / 2, y }, { x: x + w, y },
                 { x, y: y + h / 2 }, { x: x + w, y: y + h / 2 },
                 { x, y: y + h }, { x: x + w / 2, y: y + h }, { x: x + w, y: y + h }
             ];
-        }
-        if (ed.kind === 'line') {
-            return [
+        } else if (ed.kind === 'line') {
+            pts = [
                 { x: ed.x1 + lx, y: ed.y1 + ly },
                 { x: ed.x2 + lx, y: ed.y2 + ly }
             ];
-        }
-        if (ed.kind === 'quadcurve') {
-            return [
+        } else if (ed.kind === 'quadcurve') {
+            pts = [
                 { x: ed.x0 + lx, y: ed.y0 + ly },
                 { x: ed.qx + lx, y: ed.qy + ly },
                 { x: ed.x1 + lx, y: ed.y1 + ly }
             ];
-        }
-        if (ed.kind === 'ellipse') {
+        } else if (ed.kind === 'ellipse') {
             const cx = ed.cx;
             const cy = ed.cy;
             const rx = ed.rx;
@@ -269,7 +560,7 @@
             const by = cy - ry + ly;
             const w = rx * 2;
             const h = ry * 2;
-            return [
+            pts = [
                 { x: bx, y: by },
                 { x: bx + w / 2, y: by },
                 { x: bx + w, y: by },
@@ -280,7 +571,14 @@
                 { x: bx + w, y: by + h }
             ];
         }
-        return null;
+        const ang = ed.angleRad || 0;
+        if (pts && Math.abs(ang) > 1e-8) {
+            const pivot = shapeEditRotationPivotDoc(ed);
+            if (pivot) {
+                pts = pts.map((p) => rotateDocPointAround(p.x, p.y, pivot.cx, pivot.cy, ang));
+            }
+        }
+        return pts;
     };
 
     function shapeFillCss() {
@@ -329,6 +627,17 @@
         const angleDeg = o.gradAngle != null ? o.gradAngle : 0;
         const fillCss = shapeFillCss();
         const strokeCss = shapeStrokeCss();
+
+        ctx.save();
+        const shapeAng = ed.angleRad || 0;
+        if (Math.abs(shapeAng) > 1e-8) {
+            const pivot = shapeEditRotationPivotLocal(ed);
+            if (pivot) {
+                ctx.translate(pivot.cx, pivot.cy);
+                ctx.rotate(shapeAng);
+                ctx.translate(-pivot.cx, -pivot.cy);
+            }
+        }
 
         const mkGradientFill = (x0, y0, x1, y1, cx, cy, rx, ry) => {
             let grad;
@@ -393,6 +702,36 @@
                 },
                 () => {
                     drawRR();
+                    ctx.stroke();
+                },
+                strokeW,
+                mode,
+                fillType
+            );
+        } else if (ed.kind === 'triangle') {
+            const { lx, ly, w, h } = ed;
+            const adj = ed.adj != null ? Math.max(0, Math.min(1, ed.adj)) : 0.5;
+            const ax = lx + w * adj;
+            const fillGrad = fillType === 'gradient'
+                ? mkGradientFill(lx, ly, lx + w, ly + h, lx + w / 2, ly + h / 2, w / 2, h / 2)
+                : null;
+            const drawTri = () => {
+                ctx.beginPath();
+                ctx.moveTo(ax, ly);
+                ctx.lineTo(lx, ly + h);
+                ctx.lineTo(lx + w, ly + h);
+                ctx.closePath();
+            };
+            applyShapeStrokeFill(
+                ctx,
+                () => {
+                    if (fillType === 'none') return;
+                    drawTri();
+                    ctx.fillStyle = fillType === 'gradient' ? fillGrad : fillCss;
+                    ctx.fill();
+                },
+                () => {
+                    drawTri();
                     ctx.stroke();
                 },
                 strokeW,
@@ -480,7 +819,24 @@
                 fillType
             );
         }
-        EditorManager.render();
+        ctx.restore();
+        scheduleShapeEditPreviewRefresh();
+    };
+
+    function shapeEditRotationPivotLocal(ed) {
+        if (!ed) return null;
+        if (ed.kind === 'ellipse') {
+            return { cx: ed.cx, cy: ed.cy };
+        }
+        if (ed.lx != null && ed.w != null && ed.h != null) {
+            return { cx: ed.lx + ed.w / 2, cy: ed.ly + ed.h / 2 };
+        }
+        return null;
+    }
+
+    window.redrawShapeFromEditLive = function () {
+        window.redrawShapeFromEdit();
+        window.schedulePixelShapeEditChromeRefresh();
     };
 
     window.updateShapeEditFromHandle = function (handleIndex, worldX, worldY) {
@@ -490,7 +846,7 @@
         const ly = EditorManager.activeLayer.y;
         const wx = worldX - lx;
         const wy = worldY - ly;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect') {
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
             let { lx: rx, ly: ry, w, h } = ed;
             switch (handleIndex) {
                 case 0: w += rx - wx; h += ry - wy; rx = wx; ry = wy; break;
@@ -632,19 +988,117 @@
             ed.rx = w / 2;
             ed.ry = h / 2;
         }
-        window.redrawShapeFromEdit();
+        window.redrawShapeFromEditLive();
     };
 
-    window.captureShapeEditAfterDraw = function (kind, params, opts) {
+    window.getShapeAdjustHandleWorld = function (ed) {
+        if (!ed || !EditorManager.activeLayer) return null;
+        const lx = EditorManager.activeLayer.x;
+        const ly = EditorManager.activeLayer.y;
+        if (ed.kind === 'roundrect') {
+            const x = ed.lx + lx;
+            const y = ed.ly + ly;
+            const w = ed.w;
+            const h = ed.h;
+            const r = ed.r != null ? ed.r : EditorManager.toolProps.shapeCornerRadius ?? 12;
+            const local =
+                typeof window.illuRoundRectAdjustHandleLocal === 'function'
+                    ? window.illuRoundRectAdjustHandleLocal(ed.lx, ed.ly, w, h, r)
+                    : { x: ed.lx + r, y: ed.ly + r * 0.35 };
+            return { x: local.x + lx, y: local.y + ly, type: 'adj-round' };
+        }
+        if (ed.kind === 'triangle') {
+            const st = {
+                x: ed.lx,
+                y: ed.ly,
+                w: ed.w,
+                h: ed.h,
+                adj: ed.adj != null ? ed.adj : 0.5
+            };
+            const local =
+                typeof window.illuTriangleAdjustHandleLocal === 'function'
+                    ? window.illuTriangleAdjustHandleLocal(st)
+                    : { x: ed.lx + ed.w * 0.25, y: ed.ly + ed.h * 0.5 };
+            return { x: local.x + lx, y: local.y + ly, type: 'adj-tri' };
+        }
+        return null;
+    };
+
+    window.hitShapeAdjustHandle = function (worldX, worldY) {
+        const ed = window.pixelShapeEdit;
+        if (!ed || !EditorManager.activeLayer || ed.layerId !== EditorManager.activeLayer.id) return null;
+        const h = window.getShapeAdjustHandleWorld(ed);
+        if (!h) return null;
+        if (dist(worldX, worldY, h.x, h.y) <= hitRadiusDoc()) return h.type;
+        return null;
+    };
+
+    window.updateShapeAdjustFromPointer = function (adjustType, worldX, worldY) {
+        const ed = window.pixelShapeEdit;
+        if (!ed || !EditorManager.activeLayer) return;
+        const wx = worldX - EditorManager.activeLayer.x;
+        const wy = worldY - EditorManager.activeLayer.y;
+        if (adjustType === 'adj-round' && ed.kind === 'roundrect') {
+            const r =
+                typeof window.illuRoundRectRadiusFromLocalDrag === 'function'
+                    ? window.illuRoundRectRadiusFromLocalDrag(ed.lx, ed.ly, ed.w, ed.h, wx, wy)
+                    : Math.max(0, Math.min(wx - ed.lx, wy - ed.ly, ed.w / 2, ed.h / 2));
+            ed.r = r;
+            EditorManager.toolProps.shapeCornerRadius = r;
+            const sc = document.getElementById('tool-shape-corner-radius');
+            const scv = document.getElementById('tool-shape-corner-radius-val');
+            if (sc) sc.value = String(Math.max(0, Math.min(64, r)));
+            if (scv) scv.textContent = String(Math.max(0, Math.min(64, r)));
+        } else if (adjustType === 'adj-tri' && ed.kind === 'triangle') {
+            ed.adj = ed.w > 0 ? Math.max(0, Math.min(1, (wx - ed.lx) / ed.w)) : 0.5;
+        }
+        window.redrawShapeFromEditLive();
+    };
+
+    window.illuMovePixelShapeEditByDelta = function (dx, dy) {
+        const ed = window.pixelShapeEdit;
+        const layer = EditorManager.activeLayer;
+        if (!ed || !layer || ed.layerId !== layer.id || (dx === 0 && dy === 0)) return false;
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+            ed.lx += dx;
+            ed.ly += dy;
+        } else if (ed.kind === 'line') {
+            ed.x1 += dx;
+            ed.y1 += dy;
+            ed.x2 += dx;
+            ed.y2 += dy;
+        } else if (ed.kind === 'ellipse') {
+            ed.cx += dx;
+            ed.cy += dy;
+        } else {
+            return false;
+        }
+        window.redrawShapeFromEdit();
+        if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+            window.refreshPixelShapeEditOverlay({ forceFull: true });
+        }
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+        EditorManager.saveHistory('Centrage forme', { patchActiveLayer: true });
+        EditorManager.render({ flushUiThumbnails: true });
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        return true;
+    };
+
+    window.captureShapeEditAfterDraw = function (kind, params, opts, angleRad) {
         if (!EditorManager.activeLayer || !window._shapeBackupCanvas) return;
         window.pixelShapeEdit = {
             kind,
             ...params,
+            angleRad: angleRad || 0,
             backup: window._shapeBackupCanvas,
             layerId: EditorManager.activeLayer.id,
             opts: { ...opts }
         };
         window._shapeBackupCanvas = null;
+        if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+            window.refreshPixelShapeEditOverlay({ forceFull: true });
+        }
+        if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
     };
 
     window.drawPixelOverlayHandles = function (svgUI) {
@@ -684,6 +1138,20 @@
             svgUI.appendChild(r);
         };
 
+        const mkShapeRotHandle = (wx, wy) => {
+            const rotR = EditorManager.svgUiRotationHandleRadiusDoc();
+            const rh = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            rh.setAttribute('cx', wx);
+            rh.setAttribute('cy', wy);
+            rh.setAttribute('r', String(rotR));
+            rh.setAttribute('fill', '#aecbfa');
+            rh.setAttribute('stroke', '#000000');
+            rh.setAttribute('stroke-width', String(inv));
+            rh.setAttribute('style', 'cursor:grab;pointer-events:all;touch-action:none;');
+            rh.setAttribute('data-pixel-handle', 'shape-rot');
+            svgUI.appendChild(rh);
+        };
+
         const st = window._pixelGradientState;
         if (st && EditorManager.activeLayer && st.layerId === EditorManager.activeLayer.id && window.activeTool === 'gradient') {
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -701,20 +1169,77 @@
             mkCircle(st.x1, st.y1, 'g1');
         }
 
+        const mkAdjustHandle = (wx, wy, label) => {
+            const s = Math.max(5, EditorManager.svgUiHandleSizeDoc() * 0.55);
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            p.setAttribute(
+                'points',
+                [
+                    [wx, wy - s],
+                    [wx + s, wy],
+                    [wx, wy + s],
+                    [wx - s, wy]
+                ]
+                    .map(([a, b]) => `${a},${b}`)
+                    .join(' ')
+            );
+            p.setAttribute('class', 'svg-adjust-anchor');
+            p.setAttribute('fill', '#ffd966');
+            p.setAttribute('stroke', '#b8860b');
+            p.setAttribute('stroke-width', String(inv));
+            p.setAttribute('style', 'cursor:move;pointer-events:all;');
+            p.setAttribute('data-pixel-handle', label);
+            svgUI.appendChild(p);
+        };
+
         const ed = window.pixelShapeEdit;
         if (ed && EditorManager.activeLayer && ed.layerId === EditorManager.activeLayer.id) {
-            const tools = ['rect', 'circle', 'line', 'round-3', 'cubic-3'];
-            if (tools.includes(window.activeTool)) {
-                const pts = window.getShapeEditHandlePointsWorld(ed);
-                if (pts) {
-                    pts.forEach((p, i) => {
-                        const cur =
-                            ed.kind === 'line' || ed.kind === 'quadcurve'
-                                ? 'move'
-                                : shapeHandleCursors[i] || 'move';
-                        mkShapeHandle(p.x, p.y, 's' + i, cur);
-                    });
+            const pts = window.getShapeEditHandlePointsWorld(ed);
+            if (pts) {
+                pts.forEach((p, i) => {
+                    const cur =
+                        ed.kind === 'line' || ed.kind === 'quadcurve'
+                            ? 'move'
+                            : shapeHandleCursors[i] || 'move';
+                    mkShapeHandle(p.x, p.y, 's' + i, cur);
+                });
+            }
+            const adj = typeof window.getShapeAdjustHandleWorld === 'function'
+                ? window.getShapeAdjustHandleWorld(ed)
+                : null;
+            if (adj) mkAdjustHandle(adj.x, adj.y, adj.type);
+            if (SHAPE_ROTATABLE_KINDS.has(ed.kind)) {
+                const sb = shapeEditBoundsDoc(ed);
+                if (sb) {
+                    const rhp = EditorManager.selectionRotationHandleDocXY(sb, ed.angleRad || 0, null);
+                    mkShapeRotHandle(rhp.x, rhp.y);
                 }
+            }
+        }
+
+        if (
+            typeof window.illuIsShapeLiveDrawSession === 'function' &&
+            window.illuIsShapeLiveDrawSession() &&
+            typeof window.getLiveShapeDocBounds === 'function' &&
+            window._shapeLiveStartX != null
+        ) {
+            const pos = window._illuLastPointerDoc || {
+                x: window._shapeLiveStartX,
+                y: window._shapeLiveStartY
+            };
+            const b = window.getLiveShapeDocBounds(
+                pos,
+                window._shapeLiveStartX,
+                window._shapeLiveStartY,
+                !!window._shiftConstraintProportions
+            );
+            if (b.w >= 2 && b.h >= 2) {
+                const rhp = EditorManager.selectionRotationHandleDocXY(
+                    b,
+                    window._shapeLivePreviewAngleRad || 0,
+                    null
+                );
+                mkShapeRotHandle(rhp.x, rhp.y);
             }
         }
     };
@@ -725,9 +1250,9 @@
         }
         if (
             window.pixelShapeEdit &&
-            ['rect', 'circle', 'line', 'round-3', 'cubic-3'].includes(window.activeTool)
+            ['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3'].includes(window.activeTool)
         ) {
-            window.redrawShapeFromEdit();
+            window.redrawShapeFromEditLive();
         }
         if (window.VectorEngine && typeof window.VectorEngine.refreshLiveDrawPreview === 'function') {
             window.VectorEngine.refreshLiveDrawPreview();

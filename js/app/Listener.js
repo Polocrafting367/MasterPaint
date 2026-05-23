@@ -438,6 +438,14 @@ window.addEventListener('keydown', (e) => {
 
     const k = e.key.toLowerCase();
 
+    if (e.shiftKey && (k === 'h' || k === 'v' || k === 'c')) {
+        e.preventDefault();
+        if (k === 'h') EditorManager.centerSelection('h');
+        else if (k === 'v') EditorManager.centerSelection('v');
+        else EditorManager.centerSelection('both');
+        return;
+    }
+
     if (k === 'z' && e.shiftKey) {
         e.preventDefault();
         EditorManager.doHistory(1);

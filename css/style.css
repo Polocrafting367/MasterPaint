@@ -84,6 +84,13 @@ body.theme-dark {
     box-sizing: border-box;
 }
 
+.illu-icon-toggle:disabled,
+.illu-icon-toggle[aria-disabled='true'] {
+    opacity: 0.38;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 /* Boutons réservés au shell mobile : jamais visibles hors mode téléphone */
 body:not(.illu-mobile-shell-active) #illu-mobile-zoom-fit-wrap,
 body:not(.illu-mobile-shell-active) #illu-mobile-deselect-wrap,
@@ -92,6 +99,52 @@ body:not(.illu-mobile-shell-active) .illu-mobile-zoom-fit-item {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* Déplacement sélection 1 px (conservé en code, masqué dans l’UI) */
+.illu-sel-nudge-item,
+.illu-sel-nudge-item[hidden],
+body.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-item.illu-sel-nudge-item,
+body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-item.illu-sel-nudge-item,
+body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item.illu-sel-nudge-item {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.svg-adjust-anchor {
+    fill: #ffd966;
+    stroke: #b8860b;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    pointer-events: all;
+}
+
+.svg-anchor {
+    pointer-events: all;
+}
+
+.svg-rotation-handle {
+    pointer-events: all;
+    touch-action: none;
+}
+
+.illu-sel-center-item .illu-center-ico {
+    width: 22px;
+    height: 22px;
+    color: #111827;
+}
+
+.illu-sel-center-item .illu-center-ico,
+.illu-sel-center-item .illu-center-ico use {
+    fill: #111827;
+    stroke: none;
+}
+
+#tool-deform .illu-deform-tool-ico,
+#tool-deform .illu-deform-tool-ico use {
+    color: #111827;
+    fill: #111827;
 }
 
 .illu-mode-toggle-item {
@@ -533,6 +586,13 @@ body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header {
 
 .tool-btn svg {
     pointer-events: none;
+}
+
+ul[role="menu"] li[role="menuitem"] .menu-icon .illu-menu-sprite-icon {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
 }
 
 .tool-btn.active {
@@ -1124,8 +1184,8 @@ body.illu-colored-icons #tool-select i { color: #2563eb !important; } /* Royal B
 body.illu-colored-icons #tool-direct-select i { color: #10b981 !important; } /* Emerald Green */
 body.illu-colored-icons #tool-wand i { color: #f59e0b !important; } /* Amber Gold */
 body.illu-colored-icons #btn-deselect i { color: #ef4444 !important; } /* Red */
-body.illu-colored-icons #tool-warp-4 i { color: #8b5cf6 !important; } /* Purple */
-body.illu-colored-icons #tool-deform i { color: #6366f1 !important; } /* Indigo */
+body.illu-colored-icons #tool-warp-4 svg { color: #8b5cf6 !important; } /* Purple */
+body.illu-colored-icons #tool-deform svg { color: #6366f1 !important; } /* Indigo */
 body.illu-colored-icons #tool-eyedropper i { color: #ec4899 !important; } /* Pink */
 body.illu-colored-icons #tool-move i { color: #14b8a6 !important; } /* Teal */
 body.illu-colored-icons #tool-zoom i { color: #06b6d4 !important; } /* Cyan */

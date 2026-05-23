@@ -296,6 +296,22 @@
                                     class="fa-solid fa-table-columns"></i></span><span
                                 data-i18n="menu.layerRgbSplit">Séparer canaux RVB (3 calques)</span>
                         </li>
+                        <li role="menuitem" class="divider"></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('h')">
+                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon"
+                                    width="16" height="16" aria-hidden="true"><use href="#illu-icon-sel-center-h" /></svg></span><span
+                                data-i18n="menu.layerCenterSelH">Centrer la sélection horizontalement</span>
+                        </li>
+                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('v')">
+                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon"
+                                    width="16" height="16" aria-hidden="true"><use href="#illu-icon-sel-center-v" /></svg></span><span
+                                data-i18n="menu.layerCenterSelV">Centrer la sélection verticalement</span>
+                        </li>
+                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('both')">
+                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon"
+                                    width="16" height="16" aria-hidden="true"><use href="#illu-icon-sel-center-both" /></svg></span><span
+                                data-i18n="menu.layerCenterSelBoth">Centrer la sélection (H + V)</span>
+                        </li>
                     </ul>
                 </li>
                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.adjust">Ajustements</span>
@@ -660,6 +676,7 @@
                                     <option value="eraser" data-i18n="title.toolEraser">Gomme</option>
                                     <option value="rect" data-i18n="title.toolRect">Rectangle</option>
                                     <option value="circle" data-i18n="title.toolCircle">Ellipse</option>
+                                    <option value="triangle" data-i18n="title.toolTriangle">Triangle</option>
                                     <option value="line" data-i18n="title.toolLine">Ligne</option>
                                     <option value="round-3" data-i18n="title.toolRound">Rect. arrondi</option>
                                     <option value="cubic-3" data-i18n="title.toolCubic">Courbe de Bézier</option>
@@ -708,6 +725,70 @@
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl"
                                     data-i18n="tools.selectFreeCornersShort">4 coins</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                                <button type="button" id="opt-sel-center-h" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selCenterH"><svg class="illu-shape-ico illu-center-ico" width="22"
+                                        height="22">
+                                        <use href="#illu-icon-sel-center-h" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterHShort">Ctr H</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                                <button type="button" id="opt-sel-center-v" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selCenterV"><svg class="illu-shape-ico illu-center-ico" width="22"
+                                        height="22">
+                                        <use href="#illu-icon-sel-center-v" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterVShort">Ctr V</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                                <button type="button" id="opt-sel-center-both" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selCenterBoth"><svg class="illu-shape-ico illu-center-ico" width="22"
+                                        height="22">
+                                        <use href="#illu-icon-sel-center-both" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterBothShort">Centrer</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
+                                <button type="button" id="opt-sel-nudge-up" class="illu-icon-toggle" disabled
+                                    tabindex="-1" aria-disabled="true"
+                                    data-illu-nudge-dx="0" data-illu-nudge-dy="-1"
+                                    data-i18n-title="tools.selNudgeUp"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-nudge-up" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeUpShort">Haut</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
+                                <button type="button" id="opt-sel-nudge-down" class="illu-icon-toggle" disabled
+                                    tabindex="-1" aria-disabled="true"
+                                    data-illu-nudge-dx="0" data-illu-nudge-dy="1"
+                                    data-i18n-title="tools.selNudgeDown"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-nudge-down" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeDownShort">Bas</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
+                                <button type="button" id="opt-sel-nudge-left" class="illu-icon-toggle" disabled
+                                    tabindex="-1" aria-disabled="true"
+                                    data-illu-nudge-dx="-1" data-illu-nudge-dy="0"
+                                    data-i18n-title="tools.selNudgeLeft"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-nudge-left" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeLeftShort">G.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
+                                <button type="button" id="opt-sel-nudge-right" class="illu-icon-toggle" disabled
+                                    tabindex="-1" aria-disabled="true"
+                                    data-illu-nudge-dx="1" data-illu-nudge-dy="0"
+                                    data-i18n-title="tools.selNudgeRight"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-nudge-right" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeRightShort">D.</span>
                             </span>
                             <span class="illu-mode-toggle-item illu-mobile-zoom-fit-item" id="illu-mobile-zoom-fit-wrap"
                                 hidden>
@@ -770,47 +851,68 @@
                     </div>
 
                     <div id="opt-grp-shapes-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.shapeModeGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
-                                data-illu-value="both" data-i18n-title="shape.mode.both"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-shape-both" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
-                                data-illu-value="fill" data-i18n-title="shape.mode.fill"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-shape-fill" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
-                                data-illu-value="stroke" data-i18n-title="shape.mode.stroke"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-shape-stroke" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.shapeModeGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
+                                    data-illu-value="both" data-i18n-title="shape.mode.both"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-shape-both" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.mode.bothShort">Mixte</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
+                                    data-illu-value="fill" data-i18n-title="shape.mode.fill"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-shape-fill" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.mode.fillShort">Rempl.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
+                                    data-illu-value="stroke" data-i18n-title="shape.mode.stroke"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-shape-stroke" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.mode.strokeShort">Trait</span>
+                            </span>
                         </span>
-                        <span class="illu-icon-toggle-group" data-i18n-title="title.shapeFillGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
-                                data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
-                                    width="16" height="16">
-                                    <use href="#illu-icon-fill-solid" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
-                                data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-fill-gradient" />
-                                </svg></button>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.shapeFillGroup">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
+                                    data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-fill-solid" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.solidShort">Uni</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
+                                    data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-fill-gradient" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
+                            </span>
                         </span>
-                        <span id="tool-shape-grad-type-actions" class="illu-icon-toggle-group" hidden
+                        <span id="tool-shape-grad-type-actions" class="illu-icon-toggle-group illu-mode-toggle-group" hidden
                             data-i18n-title="title.shapeGradTypeGroup">
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-grad-type"
-                                data-illu-value="linear" data-i18n-title="gradient.typeLinear"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-linear" />
-                                </svg></button>
-                            <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-grad-type"
-                                data-illu-value="radial" data-i18n-title="gradient.typeRadial"><svg
-                                    class="illu-shape-ico" width="16" height="16">
-                                    <use href="#illu-icon-grad-radial" />
-                                </svg></button>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-grad-type"
+                                    data-illu-value="linear" data-i18n-title="gradient.typeLinear"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-linear" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="grad.linearShort">Lin.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-grad-type"
+                                    data-illu-value="radial" data-i18n-title="gradient.typeRadial"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-radial" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="grad.radialShort">Rad.</span>
+                            </span>
                         </span>
                         <div class="opt-sep"></div>
                     </div>
@@ -1135,20 +1237,11 @@
                         </span>
                         <div id="opt-warp-resample-sep" class="opt-sep"></div>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-warp-bar-toggles">
-                            <span class="illu-mode-toggle-item" id="opt-warp-bar-free-corners-wrap" hidden>
-                                <button type="button" id="select-rect-free-corners-bar2" class="illu-icon-toggle"
-                                    data-i18n-title="tools.selectFreeCorners" aria-pressed="false"><svg
-                                        class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-sel-free-corners" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl"
-                                    data-i18n="tools.selectFreeCornersShort">4 coins</span>
-                            </span>
                             <span class="illu-mode-toggle-item" id="opt-warp-quad-rect-lock-wrap" hidden>
                                 <button type="button" id="warp-quad-rect-lock" class="illu-icon-toggle"
                                     data-i18n-title="tools.warpRectLock" aria-pressed="false"><svg
                                         class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-sel-free-corners" />
+                                        <use href="#illu-icon-warp-rect-lock" />
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.warpRectLockShort">Rect.</span>
                             </span>
@@ -1212,11 +1305,17 @@
 
                                 </div>
                                 <div class="tool-group">
-                                    <button class="tool-btn" id="tool-warp-4" data-i18n-title="title.toolWarp"><i
-                                            class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                                    <button class="tool-btn" id="tool-warp-4" data-i18n-title="title.toolWarp"><svg
+                                            class="tool-icon illu-warp4-tool-ico" style="width: 20px; height: 20px;" viewBox="0 0 16 16"
+                                            aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-sel-free-corners" />
+                                        </svg></button>
 
-                                    <button class="tool-btn" id="tool-deform" data-i18n-title="title.toolDeform"><i
-                                            class="fa-solid fa-border-all"></i></button>
+                                    <button class="tool-btn" id="tool-deform" data-i18n-title="title.toolDeform"><svg
+                                            class="tool-icon illu-deform-tool-ico" style="width: 20px; height: 20px;" viewBox="0 0 16 16"
+                                            aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-deform" />
+                                        </svg></button>
 
                                     <button class="tool-btn" id="tool-eyedropper"
                                         data-i18n-title="title.toolEyedropper"><i
@@ -1252,6 +1351,12 @@
                                             class="fa-regular fa-square"></i></button>
                                     <button class="tool-btn" id="tool-circle" data-i18n-title="title.toolCircle"><i
                                             class="fa-regular fa-circle"></i></button>
+                                    <button class="tool-btn" type="button" id="tool-triangle"
+                                        data-i18n-title="title.toolTriangle"><svg class="tool-icon" viewBox="0 0 16 16"
+                                            width="14" height="14" aria-hidden="true" focusable="false">
+                                            <path d="M8 2.5 L14.5 13.5 H1.5 Z" fill="none" stroke="currentColor"
+                                                stroke-width="1.35" stroke-linejoin="round" />
+                                        </svg></button>
                                     <button class="tool-btn" id="tool-line" data-i18n-title="title.toolLine"><i
                                             class="fa-solid fa-minus"></i></button>
                                     <button class="tool-btn" type="button" id="tool-round-3"
@@ -2235,6 +2340,14 @@
                                     rel="noopener noreferrer">polocrafting 367</a></p>
                             <p class="settings-ai-note" data-i18n="settings.aiNote">Interface et logique créées par IA.
                             </p>
+                            <p class="settings-github-row">
+                                <a href="https://github.com/Polocrafting367/MasterPaint" target="_blank"
+                                    rel="noopener noreferrer" class="settings-github-link"
+                                    data-i18n-title="common.githubProject">
+                                    <i class="fa-brands fa-github" aria-hidden="true"></i>
+                                    <span data-i18n="common.githubProject">Projet sur GitHub</span>
+                                </a>
+                            </p>
                         </div>
                         <fieldset class="settings-fieldset-compact settings-aside-lang">
                             <legend data-i18n="settings.langLabel">Langue de l’interface</legend>
@@ -2321,7 +2434,7 @@
                                 </li>
                                 <li data-i18n="settings.shortcutWheelZoom">Ctrl + molette : zoom (100 % = toile entière
                                     dans la zone) · molette : déplacer la toile</li>
-                                <li><kbd>Maj</kbd> + tracé : proportions · <kbd>Maj</kbd>+<kbd>B</kbd> pinceau</li>
+                                <li><kbd>Maj</kbd> + tracé : proportions / angles · <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>H</kbd> <kbd>V</kbd> <kbd>C</kbd> centrer · <kbd>Maj</kbd>+<kbd>B</kbd> pinceau</li>
                                 <li><kbd>[</kbd> <kbd>]</kbd> taille pinceau / crayon / gomme</li>
                                 <li data-i18n="settings.shortcutMove">Déplacer : flèches 1 px · Ctrl + flèche 10 px</li>
                             </ul>
@@ -2843,6 +2956,7 @@
     <script src="EditorManager.js"></script>
     <script src="js/VectorEngine.js"></script>
     <script src="js/tools/SelectionModel.js"></script>
+    <script src="js/tools/SelectionChrome.js"></script>
     <script src="js/tools/SelectionTouchLoupe.js"></script>
     <script src="js/app/IlluGaugeSteppers.js"></script>
     <script src="DrawingTools.js"></script>
