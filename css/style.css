@@ -1,0 +1,1151 @@
+/* Style général (complété par theme-win98-modern.css) */
+:root {
+    /* Variables adaptatives pour le sprite d'icônes SVG */
+    --illu-icon-stroke: #1a1a1a;
+    --illu-icon-bg: #ffffff;
+    --illu-icon-accent: #6b9bd9;
+    --illu-icon-accent-subtle: #c5d8f0;
+    --illu-icon-subtle: #e2e8f0;
+}
+
+.title-bar-text {
+    margin-left: 10px;
+}
+
+body.theme-dark {
+    /* Ajustements en mode sombre pour les icônes SVG */
+    --illu-icon-stroke: #f8fafc;
+    --illu-icon-bg: #2d2d2d;
+    --illu-icon-accent: #6b9bd9;
+    --illu-icon-accent-subtle: #4a6fa5;
+    --illu-icon-subtle: #475569;
+}
+
+/* Toggles barre d’options : bouton + mot descriptif à droite */
+.illu-mode-toggle-group,
+.tool-pinned-toggles {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    flex: 0 1 auto;
+    max-width: 100%;
+}
+
+.tool-pinned-toggles > .illu-menubar-toolbar {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 4px;
+}
+
+.tool-pinned-toggles > .illu-tool-pinned-toolbar-sep {
+    flex: 0 0 auto;
+    align-self: center;
+}
+
+.tool-pinned-toggles > #tool-main-header {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.tool-pinned-toggles > .opt-grp {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.tool-pinned-toggles > .opt-grp[hidden] {
+    display: none !important;
+}
+
+.tool-pinned-toggles .illu-icon-toggle-group,
+.tool-pinned-toggles .illu-mode-toggle-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+}
+
+.illu-icon-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+/* Boutons réservés au shell mobile : jamais visibles hors mode téléphone */
+body:not(.illu-mobile-shell-active) #illu-mobile-zoom-fit-wrap,
+body:not(.illu-mobile-shell-active) #illu-mobile-deselect-wrap,
+body:not(.illu-mobile-shell-active) .illu-mobile-only-opt,
+body:not(.illu-mobile-shell-active) .illu-mobile-zoom-fit-item {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.illu-mode-toggle-item {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.illu-mode-toggle-lbl {
+    font-size: 10px;
+    line-height: 1.2;
+    color: var(--mp-opt-bar-text, #333);
+    text-align: left;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+
+.illu-mode-toggle-item:has(.illu-icon-toggle--on) .illu-mode-toggle-lbl,
+.illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-toggle-lbl {
+    font-weight: 600;
+    color: var(--mp-accent, #000080);
+}
+
+body.theme-dark .illu-mode-toggle-lbl {
+    color: var(--mp-opt-bar-text, #e8e8e8);
+}
+
+body.theme-dark .illu-mode-toggle-item:has(.illu-icon-toggle--on) .illu-mode-toggle-lbl,
+body.theme-dark .illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-toggle-lbl {
+    color: var(--mp-accent, #7eb8ff);
+}
+
+/* Icônes Font Awesome dans les toggles mode sélection */
+.illu-mode-toggle-item .illu-icon-toggle i {
+    font-size: 13px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.illu-mode-toggle-item .illu-icon-toggle .illu-shape-ico {
+    display: block;
+}
+
+body {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+input,
+textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+/* Mise en page principale */
+#main-layout {
+    width: 98vw;
+    height: 98vh;
+    box-shadow: 10px 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Menus — structure survol (styles visuels : theme-win98-modern.css) */
+menu[role="menubar"] {
+    display: flex;
+    flex-direction: row;
+    margin: 0 !important;
+    padding: 0;
+    list-style: none;
+    cursor: default;
+}
+
+li[role="menuitem"] {
+    position: relative;
+    list-style: none;
+}
+
+li[role="menuitem"]>ul[role="menu"] {
+    display: block;
+    position: absolute;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: none;
+}
+
+/* Hitbox expansion (Mouse Bridge) : élargit la zone de survol pour éviter la fermeture accidentelle */
+li[role="menuitem"]>ul[role="menu"]::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    right: -20px;
+    bottom: -8px;
+    left: 0;
+    z-index: -1;
+    pointer-events: auto;
+    /* Empêche le clic à travers le pont invisible s'il y a un bouton dessous */
+}
+
+menu[role="menubar"]>li[role="menuitem"]>ul[role="menu"] {
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+}
+
+li[role="menuitem"]:hover>ul[role="menu"] {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: none;
+}
+
+li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
+    top: 0;
+    left: 100%;
+    margin-left: -2px;
+}
+
+.tool-options-container {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    background: #c0c0c0;
+    border-top: 1px solid #dfdfdf;
+    position: relative;
+    z-index: 630;
+}
+
+.tool-options-bar,
+#tool-options-bar,
+#tool-options-bar-row1,
+#tool-options-bar-2 {
+    background: #c0c0c0;
+    box-shadow: inset 0 1px #fff;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px 8px;
+    font-size: 11px;
+    min-height: 28px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Téléphone : retour à la ligne, pas de barre de défilement horizontale */
+body.illu-mobile-ui #tool-options-container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+body.illu-mobile-ui #tool-options-bar-row1,
+body.illu-mobile-ui #tool-options-bar-2 {
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: visible;
+    max-height: none;
+    row-gap: 4px;
+    column-gap: 6px;
+}
+
+body.illu-mobile-ui #tool-pinned-toggles > .illu-menubar-toolbar,
+body.illu-mobile-ui #tool-options-bar-row1 .illu-menubar-toolbar,
+body.illu-mobile-ui #tool-pinned-toggles > #tool-main-header,
+body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header,
+body.illu-mobile-ui #tool-pinned-toggles .opt-grp,
+body.illu-mobile-ui #tool-options-bar-2 .opt-grp {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-row1 .illu-icon-toggle-group,
+body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-row1 .illu-mode-toggle-group,
+body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-2 .illu-icon-toggle-group,
+body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-2 .illu-mode-toggle-group {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    height: auto !important;
+    max-width: 100%;
+    flex: 0 1 auto;
+}
+
+body.illu-mobile-ui #tool-options-bar-row1 .illu-menubar-toolbar__sep,
+body.illu-mobile-ui #tool-options-bar-row1 .opt-sep {
+    display: none;
+}
+
+body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header {
+    border-right: none;
+    margin-right: 0;
+    padding-right: 0;
+}
+
+.tool-context-bar {
+    border-top: 1px solid #888;
+    background: #d8d8d8 !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.opt-tool-name {
+    border-right: 1px solid #888;
+    padding-right: 8px;
+    font-weight: bold;
+    min-width: 0;
+    max-width: 11em;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.opt-grp {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px 8px;
+    flex-shrink: 0;
+}
+
+.opt-grp[hidden] {
+    display: none !important;
+}
+
+/* [hidden] doit primer sur .field-row { display:flex } sinon la case « Fermer » reste visible */
+#tool-options-bar [hidden],
+#tool-options-bar .field-row[hidden] {
+    display: none !important;
+}
+
+.opt-bar-btn {
+    padding: 2px 8px !important;
+    min-width: 0 !important;
+    min-height: 20px !important;
+    color: #222 !important;
+    text-shadow: none !important;
+}
+
+.wand-slider {
+    width: 100px;
+    vertical-align: middle;
+}
+
+.opt-num {
+    min-width: 22px;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+}
+
+#tool-options-bar label {
+    margin-right: 4px;
+}
+
+/* Barre d’options : cases compactes */
+#tool-options-bar .opt-bar-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    white-space: nowrap;
+}
+
+#tool-options-bar .opt-bar-check input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+.illu-opt-lbl {
+    flex-shrink: 0;
+    margin-right: 2px !important;
+}
+
+/* Jauge type « barre bleue » (tolérance baguette / pot) */
+.illu-gauge-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.illu-gauge-wrap {
+    --illu-gauge-pct: 0%;
+    position: relative;
+    display: inline-block;
+    width: 104px;
+    height: 20px;
+    box-sizing: border-box;
+    border: 1px solid #000;
+    background: #fff;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.illu-gauge-wrap.illu-gauge-wrap--has-steps {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: auto;
+    height: auto;
+    border: none;
+    background: transparent;
+}
+
+.illu-gauge-wrap--has-steps .illu-gauge-track {
+    position: relative;
+    display: inline-block;
+    width: 104px;
+    height: 20px;
+    box-sizing: border-box;
+    border: 1px solid #000;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.illu-gauge-step {
+    flex-shrink: 0;
+    width: 18px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #000;
+    background: #ececec;
+    color: #111;
+    box-sizing: border-box;
+}
+
+.illu-gauge-step:hover {
+    background: #d4e8ff;
+}
+
+.illu-gauge-step:active {
+    background: #a8c8f0;
+}
+
+.illu-gauge-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--illu-gauge-pct);
+    max-width: 100%;
+    background: linear-gradient(180deg, #3a86e8 0%, #1e5bb8 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.illu-gauge-val {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    pointer-events: none;
+    z-index: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.illu-gauge-wrap--low .illu-gauge-val {
+    color: #1a1a1a;
+    text-shadow: none;
+    justify-content: flex-end;
+    padding-right: 4px;
+    padding-left: 0;
+}
+
+.illu-gauge-input.wand-slider,
+.illu-gauge-input {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0.02;
+    cursor: pointer;
+    z-index: 2;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    min-height: 0 !important;
+}
+
+.illu-gauge-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 18px;
+    background: rgba(40, 40, 40, 0.45);
+    border: 1px solid #333;
+    border-radius: 1px;
+}
+
+.illu-gauge-input::-moz-range-thumb {
+    width: 12px;
+    height: 18px;
+    background: rgba(40, 40, 40, 0.45);
+    border: 1px solid #333;
+    border-radius: 1px;
+}
+
+.illu-gauge-input::-moz-range-track {
+    background: transparent;
+}
+
+/* Floating Tools — 2 colonnes */
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 28px);
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 4px 6px;
+    box-sizing: border-box;
+}
+
+.tool-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-btn svg {
+    pointer-events: none;
+}
+
+.tool-btn.active {
+    background: #dfdfdf;
+    box-shadow: inset 1px 1px #000, inset -1px -1px #fff;
+}
+
+.tool-btn:disabled,
+.tool-btn.tool-btn--mode-lock:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.85);
+    box-shadow: none;
+}
+
+.tool-btn.tool-btn--planned:disabled {
+    opacity: 0.4;
+    cursor: help;
+}
+
+/* --- New Color Picker UI --- */
+.color-picker-layout {
+    font-family: 'MS Sans Serif', sans-serif;
+}
+
+.col-primary,
+.col-secondary {
+    cursor: pointer;
+}
+
+.col-swap:hover {
+    background: #fff;
+}
+
+.color-section-title {
+    font-weight: bold;
+}
+
+/* Panneau RVB / TSV / Alpha développé : plus compact (curseurs + colonnes en mode flottant) */
+#color-sliders-panel {
+    font-size: 11px;
+    line-height: 1.2;
+    gap: 0;
+}
+
+#color-sliders-panel .color-sliders-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    align-items: start;
+}
+
+body:not(.ui-layout-floating) #color-sliders-panel .color-sliders-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+#color-sliders-panel .color-sliders-col {
+    min-width: 0;
+}
+
+#color-sliders-panel .color-section-title--sliders {
+    font-size: 10px;
+    line-height: 1.15;
+    border-bottom: 1px solid #888;
+    margin: 0 0 2px;
+    padding: 0 0 1px;
+}
+
+#color-sliders-panel .color-section-title--alpha {
+    margin-top: 4px;
+}
+
+#color-sliders-panel .color-slider-row {
+    margin-bottom: 2px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    align-items: center;
+    height: 30px;
+}
+
+#color-sliders-panel .color-slider-row--alpha {
+    margin-bottom: 0;
+}
+
+#color-sliders-panel .color-slider-label {
+    flex: 0 0 11px;
+    width: 11px;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+    text-align: center;
+    color: inherit;
+}
+
+#color-sliders-panel .trk-wrapper {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 10px;
+    margin-right: 0;
+}
+
+#color-sliders-panel .c-slider::-webkit-slider-thumb {
+    width: 7px;
+    height: 11px;
+}
+
+#color-sliders-panel .c-slider::-moz-range-thumb {
+    width: 7px;
+    height: 11px;
+}
+
+#color-sliders-panel input.illu-num-input {
+    min-width: 40px;
+    width: 40px;
+    max-width: 44px;
+    font-size: 10px;
+    padding: 1px 2px;
+}
+
+#color-sliders-panel .color-hex-row {
+    margin: 3px 0 0;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+#color-sliders-panel .color-hex-label {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    font-size: 10px;
+    margin: 0;
+}
+
+#color-sliders-panel .color-hex-input {
+    width: 100%;
+    max-width: 72px;
+    min-width: 0;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    font-size: 10px;
+    padding: 1px 4px;
+    text-transform: uppercase;
+}
+
+.window illu-new-project-window {
+    width: 250px !important;
+
+}
+
+/* Custom Sliders for color tracking */
+.trk-wrapper {
+    display: flex;
+    width: 80px;
+    height: 12px;
+    margin-right: 4px;
+    position: relative;
+    border: 1px inset #fff;
+}
+
+.trk-wrapper.alpha-trk {
+    background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 25% 50%) 50% / 8px 8px;
+}
+
+.trk-wrapper.alpha-trk::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, transparent, var(--alpha-col, #000));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.c-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    outline: none;
+    cursor: crosshair;
+}
+
+.c-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 8px;
+    height: 14px;
+    background: transparent;
+    border: none;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background-color: #000;
+    cursor: pointer;
+    transform: translateY(0);
+}
+
+.c-slider::-moz-range-thumb {
+    width: 8px;
+    height: 14px;
+    background: transparent;
+    border: none;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background-color: #000;
+    cursor: pointer;
+}
+
+/* Small palette grid items */
+.palette-swatch {
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    min-height: 13px;
+    max-width: 13px;
+    max-height: 13px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #c0c0c0;
+    cursor: pointer;
+    box-sizing: border-box;
+    display: block;
+}
+
+.palette-swatch--translucent {
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    min-height: 13px;
+    max-width: 13px;
+    max-height: 13px;
+}
+
+.palette-swatch:hover {
+    border-color: #000;
+}
+
+
+
+
+/* Tabs MDI — inactif : enfoncé (inset) ; actif : surélevé (relief), relié à la zone client */
+.tab {
+    padding: 4px 12px 3px 12px;
+    background: #b8b8b8;
+    border: 2px solid;
+    border-color: #808080 #ffffff #dfdfdf #808080;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    margin-right: 2px;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 80px;
+    text-align: center;
+    position: relative;
+    top: 2px;
+    z-index: 1;
+    font-weight: 600;
+    box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.tab.active {
+    padding: 5px 12px 4px 12px;
+    top: 0;
+    z-index: 3;
+    font-weight: bold;
+    background: #c0c0c0;
+    border-color: #ffffff #808080 #808080 #ffffff;
+    border-bottom-color: transparent;
+    box-shadow: none;
+}
+
+.tab:hover:not(.active) {
+    background: #bcbcbc;
+}
+
+#tab-bar-outer,
+#tab-bar {
+    z-index: 10;
+}
+
+/* Portée des effets : styles principaux dans theme-win98-modern.css (même look que les onglets MDI) */
+
+/* Petits écrans : grille d’outils et barre d’options plus compactes */
+
+
+
+
+
+/* Barre de statut : document ouvert / édition masque */
+.status-bar-field.status-doc-open {
+    font-weight: 600;
+    padding-left: 8px;
+    margin-left: 4px;
+    border-left: 3px solid var(--mp-accent, #1e4a8c);
+}
+
+.status-bar-field.status-editing-mask {
+    font-style: italic;
+    border-left-color: #6b4fd6;
+    opacity: 0.95;
+}
+
+body.theme-dark .status-bar-field.status-doc-open {
+    border-left-color: var(--mp-accent);
+}
+
+.tab-thumb {
+    display: block;
+    object-fit: contain;
+    border: 1px solid #808080;
+    background: repeating-conic-gradient(#e0e0e0 0% 25%, #ffffff 0% 50%);
+    background-size: 6px 6px;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+#layers-list .layer-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    touch-action: none;
+}
+
+#layers-list .layer-row.layer-row--dragging {
+    position: relative;
+    z-index: 3;
+    opacity: 0.95;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+    outline: 1px dotted #4a6cb4;
+    outline-offset: 1px;
+}
+
+/* Champs RVB / TSV : assez larges, sans flèches spinner (navigateurs WebKit / Firefox). */
+input.illu-num-input {
+    min-width: 56px;
+    width: 56px;
+    max-width: 72px;
+    box-sizing: border-box;
+    text-align: right;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input.illu-num-input::-webkit-outer-spin-button,
+input.illu-num-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#layers-list .layer-eye {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+#layers-list .layer-thumb {
+    display: block;
+    object-fit: contain;
+    border: 1px solid #a0a0a0;
+    background: repeating-conic-gradient(#e8e8e8 0% 25%, #ffffff 0% 50%);
+    background-size: 5px 5px;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+#layers-list .layer-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#layers-list .layer-alpha-btn {
+    flex-shrink: 0;
+    font-size: var(--mp-ui-font-size, 13px);
+    font-weight: bold;
+    padding: 0 6px;
+    min-width: var(--mp-control-min-height, 24px);
+    min-height: var(--mp-control-min-height, 24px);
+    line-height: 1.2;
+    box-sizing: border-box;
+    cursor: pointer;
+    border: 1px solid #808080;
+    background: #c0c0c0;
+}
+
+#layers-list .layer-dynfx-btn {
+    flex-shrink: 0;
+    font-size: var(--mp-ui-font-size, 13px);
+    font-weight: 700;
+    font-style: italic;
+    padding: 0 6px;
+    min-width: var(--mp-control-min-height, 24px);
+    min-height: var(--mp-control-min-height, 24px);
+    line-height: 1.2;
+    box-sizing: border-box;
+    cursor: pointer;
+    border: 1px solid #808080;
+    background: #c0c0c0;
+    color: #333;
+}
+
+#layers-list .layer-dynfx-btn.layer-dynfx-btn--on {
+    background: #dfe8ff;
+    border-color: #4a6cb4;
+    color: #1a3d7a;
+}
+
+#layers-list .layer-dynfx-btn.layer-dynfx-btn--disabled,
+#layers-list .layer-dynfx-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+#layers-list .layer-dynfilter-alpha-preview-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    padding: 0 4px;
+    min-width: 24px;
+    min-height: 22px;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid #808080;
+    background: #c0c0c0;
+    color: #333;
+}
+
+#layers-list .layer-dynfilter-alpha-preview-btn i {
+    pointer-events: none;
+}
+
+#layers-list .layer-dynfilter-alpha-preview-btn.layer-dynfilter-alpha-preview-btn--on {
+    background: #fff3cd;
+    border-color: #c9a227;
+    color: #6b4e00;
+}
+
+#layers-list .layer-alpha-clear-btn {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 0 4px;
+    min-width: 22px;
+    line-height: 1.3;
+    cursor: pointer;
+    border: 1px solid #808080;
+    background: #c0c0c0;
+    color: #555;
+}
+
+#layers-list .layer-alpha-clear-btn:hover {
+    background: #ffe0e0;
+    border-color: #c44;
+    color: #900;
+}
+
+/* Calque avec masque α lié : fond ambré (distinct du filtre dynamique violet). */
+#layers-list .layer-row.layer-row--alpha-mask {
+    background: linear-gradient(180deg, #fff8e6 0%, #ffecc4 100%);
+    border-left: 3px solid #d4a017;
+    box-sizing: border-box;
+}
+
+#layers-list .layer-row.layer-row--alpha-mask.active {
+    background: linear-gradient(180deg, #b8860b 0%, #8a6508 100%);
+    border-left-color: #ffdf7e;
+    color: #fff;
+}
+
+#layers-list .layer-row.layer-row--alpha-mask.active .layer-name {
+    color: #fff;
+}
+
+#layers-list .layer-row.layer-row--alpha-mask.active .layer-alpha-btn {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* Panneau fusion / opacité : tailles alignées sur theme-win98-modern (#win-layers). */
+#layer-bounds-panel.layer-bounds-panel-compact {
+    padding: 6px 6px;
+    font-size: var(--mp-ui-font-size, 13px);
+    max-height: 92px;
+    overflow: auto;
+    flex-shrink: 0;
+}
+
+#layer-bounds-panel .layer-bounds-panel__row {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+#layer-bounds-panel .layer-bounds-panel__label {
+    min-width: 44px;
+    flex-shrink: 0;
+    font-size: inherit;
+}
+
+#layer-bounds-panel .layer-bounds-panel__blend {
+    flex: 1;
+    min-width: 0;
+    font-size: inherit;
+    line-height: 1.35;
+    min-height: var(--mp-control-min-height, 24px);
+    padding: 2px 6px;
+    box-sizing: border-box;
+}
+
+#layer-bounds-panel .layer-bounds-panel__opacity-range {
+    flex: 1;
+    min-width: 48px;
+}
+
+#layer-bounds-panel .layer-bounds-panel__opacity-val {
+    width: 28px;
+    flex-shrink: 0;
+    text-align: right;
+    font-size: inherit;
+}
+
+/* Calque filtre dynamique (ƒ) : ligne distincte, masque = tampon seul (pas de masque α séparé). */
+#layers-list .layer-row.layer-row--dyn-filter {
+    background: linear-gradient(180deg, #ebe6f7 0%, #ddd4f2 100%);
+    border-left: 3px solid #6b4fc9;
+    box-sizing: border-box;
+}
+
+#layers-list .layer-row.layer-row--dyn-filter.active {
+    background: linear-gradient(180deg, #5c4a9e 0%, #4a3a82 100%);
+    border-left-color: #b9a6ff;
+    color: #fff;
+}
+
+#layers-list .layer-row.layer-row--dyn-filter.active .layer-name {
+    color: #fff;
+}
+
+#layers-list .layer-row.layer-row--dyn-filter.active .layer-dynfx-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #fff;
+}
+
+#layers-list .layer-row.layer-row--dyn-filter.active .layer-dynfx-btn.layer-dynfx-btn--on {
+    background: rgba(200, 210, 255, 0.35);
+    border-color: #d0c4ff;
+    color: #fff;
+}
+
+/* Gabarit Win98 (23×75 min) uniquement sur les vraies boîtes de dialogue — pas sur .tool-btn, onglets, etc. */
+#dialog-overlay button,
+#import-choice-overlay button,
+#close-tab-overlay button,
+#effect-dialog button:not(.illu-scope-btn) {
+    min-height: 23px;
+    min-width: 75px;
+}
+
+/* Jamais d’option « ombre » sous l’outil courbe 3 pts (si un fragment HTML existe encore). */
+#tool-cubic-shadow-row {
+    display: none !important;
+}
+
+
+.illu-mobile-drawer__sub-list {
+
+    display: flex;
+    flex-direction: column;
+    /* align-content: flex-start; */
+    /* flex-wrap: nowrap; */
+    gap: 5px;
+    margin: 5px;
+}
+
+/* =========================================================================
+   COLORED ICONS THEME (FONTAWESOME VIBRANT COLORS)
+   ========================================================================= */
+
+/* Main Toolbar Tools */
+body.illu-colored-icons #tool-select i { color: #2563eb !important; } /* Royal Blue */
+body.illu-colored-icons #tool-direct-select i { color: #10b981 !important; } /* Emerald Green */
+body.illu-colored-icons #tool-wand i { color: #f59e0b !important; } /* Amber Gold */
+body.illu-colored-icons #btn-deselect i { color: #ef4444 !important; } /* Red */
+body.illu-colored-icons #tool-warp-4 i { color: #8b5cf6 !important; } /* Purple */
+body.illu-colored-icons #tool-deform i { color: #6366f1 !important; } /* Indigo */
+body.illu-colored-icons #tool-eyedropper i { color: #ec4899 !important; } /* Pink */
+body.illu-colored-icons #tool-move i { color: #14b8a6 !important; } /* Teal */
+body.illu-colored-icons #tool-zoom i { color: #06b6d4 !important; } /* Cyan */
+body.illu-colored-icons #illu-tb-zoom-fit i { color: #f97316 !important; } /* Orange */
+body.illu-colored-icons #tool-brush i { color: #3b82f6 !important; } /* Brush Sky Blue */
+body.illu-colored-icons #tool-pencil i { color: #b45309 !important; } /* Pencil Brownish Orange */
+body.illu-colored-icons #tool-fill i { color: #a855f7 !important; } /* Paint Bucket Purple */
+body.illu-colored-icons #tool-eraser i { color: #f43f5e !important; } /* Eraser Vibrant Pink */
+body.illu-colored-icons #tool-rect i { color: #4b5563 !important; } /* Rect Slate Gray */
+body.illu-colored-icons #tool-circle i { color: #4b5563 !important; } /* Circle Slate Gray */
+body.illu-colored-icons #tool-line i { color: #4b5563 !important; } /* Line Slate Gray */
+body.illu-colored-icons #tool-round-3 svg { stroke: #4b5563 !important; }
+body.illu-colored-icons #tool-cubic-3 i { color: #10b981 !important; } /* Curves Green */
+body.illu-colored-icons #tool-pen i { color: #d97706 !important; } /* Pen nib Orange */
+body.illu-colored-icons #tool-polygon i { color: #8b5cf6 !important; } /* Draw polygon Purple */
+body.illu-colored-icons #tool-text i { color: #ec4899 !important; } /* Text tool Pink */
+
+/* Quick Actions in Menu/Header Bar */
+body.illu-colored-icons .fa-file { color: #2563eb !important; } /* File blue */
+body.illu-colored-icons .fa-folder-open { color: #d97706 !important; } /* Folder orange */
+body.illu-colored-icons .fa-floppy-disk { color: #16a34a !important; } /* Save green */
+body.illu-colored-icons .fa-rotate-left { color: #ea580c !important; } /* Undo red-orange */
+body.illu-colored-icons .fa-rotate-right { color: #0284c7 !important; } /* Redo light-blue */

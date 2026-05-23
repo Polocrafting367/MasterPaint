@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Gradients matching the premium MasterPaint palette -->
+    <linearGradient id="BgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b0134" />
+      <stop offset="100%" stop-color="#0c0018" />
+    </linearGradient>
+    <linearGradient id="EarL" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#227fdc" />
+      <stop offset="100%" stop-color="#00f4e1" />
+    </linearGradient>
+    <linearGradient id="EarR" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#2d51e9" />
+      <stop offset="100%" stop-color="#00f4e1" />
+    </linearGradient>
+    <linearGradient id="FaceL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0489cf" />
+      <stop offset="100%" stop-color="#11adeb" />
+    </linearGradient>
+    <linearGradient id="FaceR" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#227fdc" />
+      <stop offset="100%" stop-color="#2d51e9" />
+    </linearGradient>
+    <linearGradient id="OrangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fe8511" />
+      <stop offset="100%" stop-color="#ffb03a" />
+    </linearGradient>
+  </defs>
+
+  <!-- High-contrast background rounded card for clear separation on light/dark tabs -->
+  <rect x="12" y="12" width="488" height="488" rx="130" fill="url(#BgGrad)" stroke="#2f0458" stroke-width="8" />
+
+  <!-- Bold Simplified Lynx Ears -->
+  <!-- Left Ear -->
+  <polygon points="120,220 220,200 80,60" fill="url(#EarL)" />
+  <polygon points="140,205 205,193 100,90" fill="#ffffff" opacity="0.3" />
+  <!-- Left Ear Plumet (Tuft) - Extends out to top-left -->
+  <polygon points="80,60 70,68 40,15 55,10" fill="#00f4e1" />
+
+  <!-- Right Ear -->
+  <polygon points="392,220 292,200 432,60" fill="url(#EarR)" />
+  <polygon points="372,205 307,193 412,90" fill="#ffffff" opacity="0.3" />
+  <!-- Right Ear Plumet (Tuft) - Extends out to top-right -->
+  <polygon points="432,60 442,68 472,15 457,10" fill="#00f4e1" />
+
+  <!-- Cheek Polygons (Vibrant Light Blue / Teal) -->
+  <polygon points="120,220 220,200 256,310 100,320" fill="url(#FaceL)" />
+  <polygon points="392,220 292,200 256,310 412,320" fill="url(#FaceR)" />
+
+  <!-- Central Forehead -->
+  <polygon points="220,200 292,200 256,310" fill="#17adeb" />
+  <polygon points="220,200 256,310 180,300" fill="#0489cf" opacity="0.5" />
+  <polygon points="292,200 256,310 332,300" fill="#2d51e9" opacity="0.5" />
+
+  <!-- Muzzle/Cheeks Outer Trim (Vibrant Neon Orange for high pop at small sizes) -->
+  <polygon points="100,320 210,320 180,390" fill="url(#OrangeGrad)" />
+  <polygon points="412,320 302,320 332,390" fill="url(#OrangeGrad)" />
+
+  <!-- Snout / Nose bridge -->
+  <polygon points="210,320 302,320 256,375" fill="#ffffff" />
+  <polygon points="240,375 272,375 256,400" fill="#1b0134" />
+
+  <!-- Lower Jaw/Chin (Orange) -->
+  <polygon points="180,390 332,390 256,460" fill="url(#OrangeGrad)" />
+
+  <!-- High-Contrast Glowing Neon Eyes -->
+  <!-- Left Eye -->
+  <polygon points="150,265 220,265 190,290" fill="#00ffff" stroke="#12246c" stroke-width="4" />
+  <!-- Right Eye -->
+  <polygon points="362,265 292,265 322,290" fill="#00ffff" stroke="#12246c" stroke-width="4" />
+
+  <!-- Brow highlights for sharpness -->
+  <polygon points="145,255 225,255 190,242" fill="#ffffff" />
+  <polygon points="367,255 287,255 322,242" fill="#ffffff" />
+</svg>

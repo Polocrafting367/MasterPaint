@@ -1,0 +1,662 @@
+/* =========================================================================
+   LUNA (Windows XP) — XP.css (https://botoxparty.github.io/XP.css/)
+   Surcharges MasterPaint (équivalent theme-aero / adaptations 7.css → XP)
+   ========================================================================= */
+
+@import url("xp.css");
+
+/* Jetons XP / MasterPaint */
+body.theme-luna {
+    --xp-font: 11px "Trebuchet MS", "Segoe UI", Tahoma, Arial, sans-serif;
+    --xp-surface: #ece9d8;
+    --xp-w-space: 4px;
+    --xp-el-bg: #ece9d8;
+    --xp-el-bd: #003c74;
+    --xp-el-bd-h: #0054e3;
+    --xp-el-c: #000;
+    --xp-li-bg-hl: #316ac5;
+    --xp-li-fg-hl: #fff;
+
+    --mp-surface: var(--xp-surface);
+    --mp-surface-deep: #d8d4c8;
+    --mp-dock-bg: #ece9d8;
+    --mp-dock-border: #0054e3;
+    --mp-text: #000;
+    --mp-tab-bar-bg: #ece9d8;
+    --mp-menu-hover-bg: var(--mp-accent);
+    --mp-menu-hover-fg: var(--mp-menu-hover-fg, #fff);
+    --mp-body-chrome: #245edb;
+    --mp-font: var(--xp-font);
+    --mp-ui-font-size: 11px;
+    --mp-radius: 3px;
+}
+
+/* Bureau Bliss (Luna) */
+body.theme-luna {
+    background-color: #245edb;
+    background-image:
+        linear-gradient(180deg, #2d6fd6 0%, #3a7fe8 35%, #5b9cff 70%, #7ec8ff 100%);
+    background-attachment: fixed;
+}
+
+/* Coquille app : pas de cadre fenêtre XP sur #app-window */
+body.theme-luna #app-window.window {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    font: var(--xp-font);
+}
+
+body.theme-luna #app-window > .window-body.illu-app-window-body {
+    margin: 0;
+    background: var(--xp-surface) !important;
+}
+
+body.theme-luna .window-body {
+    background: var(--xp-surface) !important;
+    color: var(--xp-el-c);
+    font: var(--xp-font);
+}
+
+/* Corps fenêtre : marge (pas padding) — palettes plus serrées */
+body.theme-luna .window:not(#app-window) > .window-body {
+    margin: var(--xp-w-space) !important;
+    margin-top: 0 !important;
+}
+
+body.theme-luna .palette-panel.window > .window-body {
+    margin: 3px !important;
+    margin-top: 0 !important;
+}
+
+body.theme-luna.ui-layout-docked {
+    --palette-dock-left-width: 58px;
+}
+
+/* Barre de titre Luna — bleu XP fixe (pas l’accent utilisateur) */
+body.theme-luna .window:not(#app-window) > .title-bar {
+    font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+    min-height: 30px;
+    height: 30px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(180deg, #0997ff 0%, #0053ee 45%, #0050ee 100%) !important;
+    border-top: 1px solid #0831d9 !important;
+    border-left: 1px solid #0831d9 !important;
+    border-right: 1px solid #001ea0 !important;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding: 0 5px 0 3px;
+}
+
+body.theme-luna .title-bar-text {
+    color: #fff;
+    font-weight: 700;
+    padding-left: 3px;
+    text-shadow: 1px 1px #0f1e5c;
+}
+
+/* Contrôles titre : laisser XP.css (SVG) — pas de relief bouton palette */
+body.theme-luna .title-bar-controls button,
+body.theme-luna .palette-panel .title-bar-controls button,
+body.theme-luna .floating-window .title-bar-controls button {
+    min-width: 21px;
+    min-height: 21px;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    border-radius: 0 !important;
+    color: inherit !important;
+}
+
+/* Palettes flottantes : bouton fermer = largeur Réduire, visuel Close XP */
+body.theme-luna.ui-layout-floating .palette-panel .title-bar-controls .title-bar-close-btn,
+body.theme-luna.ui-layout-floating .floating-window .title-bar-controls .title-bar-close-btn,
+body.theme-luna .illu-lvl-window .title-bar-controls .title-bar-close-btn {
+    min-width: 21px !important;
+    max-width: 21px !important;
+    width: 21px !important;
+    flex: 0 0 21px;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* ——— Menus ——— */
+body.theme-luna menu[role="menubar"],
+body.theme-luna #app-window .window-body > menu.illu-menubar-root {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    width: 100%;
+    max-height: 32px;
+    align-items: center;
+    background: linear-gradient(180deg, #fff 0%, #ece9d8 28%, #d6d2c4 100%);
+    border-bottom: 1px solid #8e8f8f !important;
+    box-shadow: none;
+}
+
+body.theme-luna menu[role="menubar"] > li[role="menuitem"]:not(.menubar-contact-btn),
+body.theme-luna #app-window .window-body > menu.illu-menubar-root > li[role="menuitem"]:not(.menubar-contact-btn) {
+    align-self: center;
+    padding: 4px 10px;
+    font: var(--xp-font);
+    line-height: 1.2;
+}
+
+body.theme-luna menu[role="menubar"] > li[role="menuitem"]:not(.menubar-contact-btn):hover,
+body.theme-luna #app-window .window-body > menu.illu-menubar-root > li[role="menuitem"]:not(.menubar-contact-btn):hover {
+    background: var(--mp-accent);
+    color: var(--mp-menu-hover-fg);
+    outline: none;
+}
+
+body.theme-luna menu[role="menubar"] > li[role="menuitem"]:not(.menubar-contact-btn):hover > span,
+body.theme-luna #app-window .window-body > menu.illu-menubar-root > li[role="menuitem"]:not(.menubar-contact-btn):hover > span {
+    color: var(--mp-menu-hover-fg) !important;
+}
+
+body.theme-luna li.menubar-contact-btn[role="menuitem"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px !important;
+    margin-left: auto;
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #fff !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+    text-shadow: none !important;
+    color: var(--xp-el-c) !important;
+    font: var(--xp-font);
+    min-height: 23px;
+}
+
+body.theme-luna li.menubar-contact-btn[role="menuitem"] .menu-icon,
+body.theme-luna li.menubar-contact-btn[role="menuitem"] span[data-i18n="menu.contact"] {
+    color: inherit !important;
+    font-weight: 400 !important;
+}
+
+body.theme-luna ul[role="menu"] {
+    background: var(--xp-surface) !important;
+    border: 1px solid #0006 !important;
+    box-shadow: 4px 4px 3px -2px #00000080 !important;
+    padding: 2px !important;
+    min-width: 150px;
+    z-index: 2000000 !important;
+}
+
+body.theme-luna ul[role="menu"]::before {
+    display: none !important;
+}
+
+body.theme-luna menu[role="menubar"] > li[role="menuitem"] > ul[role="menu"],
+body.theme-luna #app-window .window-body > menu.illu-menubar-root > li[role="menuitem"] > ul[role="menu"] {
+    top: 100% !important;
+    margin-top: 0 !important;
+}
+
+body.theme-luna ul[role="menu"] > li[role="menuitem"] > ul[role="menu"] {
+    top: -2px !important;
+}
+
+body.theme-luna ul[role="menu"] > li[role="menuitem"] {
+    padding: 4px 10px 4px 28px !important;
+    position: relative;
+    min-height: 22px;
+    font: var(--xp-font);
+}
+
+body.theme-luna ul[role="menu"] [role="menuitem"] > span {
+    margin-left: 0 !important;
+}
+
+body.theme-luna ul[role="menu"] > li[role="menuitem"] .menu-icon {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    text-align: center;
+}
+
+body.theme-luna ul[role="menu"] > li[role="menuitem"]:hover,
+body.theme-luna ul[role="menu"] > li[role="menuitem"]:focus {
+    background: var(--xp-li-bg-hl) !important;
+    color: var(--xp-li-fg-hl) !important;
+}
+
+body.theme-luna ul[role="menu"] > li.divider {
+    margin-left: 28px !important;
+}
+
+body.theme-luna.ui-layout-floating .palette-panel .title-bar,
+body.theme-luna.ui-layout-floating .floating-window .title-bar {
+    cursor: move;
+}
+
+/* Toolbar calques : pas status-bar XP */
+body.theme-luna .layer-palette-toolbar.status-bar,
+body.theme-luna #win-layers .status-bar.layer-palette-toolbar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+}
+
+/* Onglets MDI */
+body.theme-luna #tab-bar-outer {
+    background: linear-gradient(180deg, #fff 0%, #ece9d8 100%);
+    border-bottom: 1px solid #8e8f8f;
+}
+
+body.theme-luna .tab {
+    font: var(--xp-font);
+    background: var(--xp-el-bg);
+    border: 1px solid #8e8f8f;
+    border-bottom: none;
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #808080;
+    color: #222;
+    margin: 2px 1px 0;
+    padding: 3px 10px;
+    min-height: 22px;
+    border-radius: 3px 3px 0 0;
+}
+
+body.theme-luna .tab.active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+    box-shadow: none;
+}
+
+/* Boutons relief XP — outils, palettes flottantes, barres d’options */
+body.theme-luna .tool-btn,
+body.theme-luna .opt-bar-btn,
+body.theme-luna .illu-scope-btn,
+body.theme-luna .illu-menubar-icon-btn,
+body.theme-luna .illu-icon-toggle,
+body.theme-luna .palette-panel .tool-btn,
+body.theme-luna .floating-window .tool-btn,
+body.theme-luna .palette-panel .opt-bar-btn,
+body.theme-luna .floating-window .opt-bar-btn,
+body.theme-luna .palette-panel .illu-icon-toggle,
+body.theme-luna .floating-window .illu-icon-toggle,
+body.theme-luna .palette-panel button:not(.title-bar-close-btn):not(.title-bar-controls > button):not(.layer-row):not(.tab):not(.layer-palette-toolbar__text-btn),
+body.theme-luna .floating-window button:not(.title-bar-close-btn):not(.title-bar-controls > button):not(.layer-row):not(.tab):not(.layer-palette-toolbar__text-btn),
+body.theme-luna #win-colors button,
+body.theme-luna .color-picker-main button,
+body.theme-luna .color-swatch-box button,
+body.theme-luna #win-layers .layer-palette-toolbar button:not(.layer-palette-toolbar__text-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--xp-el-bg);
+    border: 1px solid #fff;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+    border-radius: 3px;
+    color: #222;
+    cursor: pointer;
+    font: var(--xp-font);
+}
+
+body.theme-luna .tool-btn {
+    width: 26px;
+    height: 26px;
+}
+
+body.theme-luna .illu-menubar-icon-btn {
+    width: 28px;
+    height: 26px;
+}
+
+body.theme-luna .tool-btn:hover,
+body.theme-luna .opt-bar-btn:hover,
+body.theme-luna .illu-scope-btn:hover,
+body.theme-luna .illu-menubar-icon-btn:hover,
+body.theme-luna .illu-icon-toggle:hover,
+body.theme-luna .palette-panel .tool-btn:hover,
+body.theme-luna .floating-window .tool-btn:hover,
+body.theme-luna .palette-panel button:not(.title-bar-close-btn):not(.title-bar-controls > button):hover,
+body.theme-luna .floating-window button:not(.title-bar-close-btn):not(.title-bar-controls > button):hover,
+body.theme-luna #win-colors button:hover {
+    filter: brightness(1.04);
+}
+
+body.theme-luna .tool-btn.active,
+body.theme-luna .tool-btn:active,
+body.theme-luna .opt-bar-btn.opt-bar-btn--on,
+body.theme-luna .illu-scope-btn--active,
+body.theme-luna .illu-icon-toggle.active,
+body.theme-luna .illu-icon-toggle--on,
+body.theme-luna .palette-panel .tool-btn.active,
+body.theme-luna .floating-window .tool-btn.active,
+body.theme-luna .palette-panel .opt-bar-btn.opt-bar-btn--on,
+body.theme-luna .floating-window .opt-bar-btn.opt-bar-btn--on {
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
+}
+
+body.theme-luna #ui-col-swap {
+    min-width: 14px !important;
+    min-height: 14px !important;
+    width: 14px !important;
+    height: 14px !important;
+    font-size: 8px !important;
+    padding: 0 !important;
+}
+
+/* Calques & paramètres */
+body.theme-luna #layers-list .layer-alpha-btn,
+body.theme-luna #layers-list .layer-dynfx-btn,
+body.theme-luna #layers-list .layer-alpha-clear-btn,
+body.theme-luna #layers-list .layer-dynfilter-alpha-preview-btn {
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #fff !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0;
+}
+
+body.theme-luna #win-layers .layer-palette-toolbar__text-btn {
+    min-height: 23px;
+    min-width: 75px;
+    padding: 0 12px;
+    font: var(--xp-font);
+}
+
+body.theme-luna .settings-action-btn {
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #fff !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+    font: var(--xp-font) !important;
+    font-weight: 400 !important;
+    text-shadow: none !important;
+    min-height: 23px !important;
+    color: #222 !important;
+}
+
+body.theme-luna .settings-action-btn:hover {
+    filter: brightness(1.04);
+}
+
+body.theme-luna #settings-overlay .illu-settings-example-btn,
+body.theme-luna #btn-open-example {
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #fff !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+    color: #222 !important;
+    text-shadow: none !important;
+}
+
+/* Dialogues : gabarit XP 75×23 */
+body.theme-luna #dialog-overlay button:not(.tool-btn):not(.illu-scope-btn):not(.opt-bar-btn),
+body.theme-luna #import-choice-overlay button:not(.tool-btn):not(.illu-scope-btn),
+body.theme-luna #close-tab-overlay button:not(.tool-btn):not(.illu-scope-btn),
+body.theme-luna #import-oversize-overlay button:not(.tool-btn):not(.illu-scope-btn),
+body.theme-luna #export-dialog-overlay button:not(.tool-btn):not(.illu-scope-btn),
+body.theme-luna #image-bounds-overlay button:not(.tool-btn):not(.illu-scope-btn),
+body.theme-luna #settings-overlay .settings-dialog-actions button:not(.tool-btn):not(.illu-scope-btn):not(.opt-bar-btn),
+body.theme-luna .illu-new-project-window button:not(.tool-btn),
+body.theme-luna .illu-autosave-window button:not(.tool-btn),
+body.theme-luna .illu-alert-window button:not(.tool-btn) {
+    min-width: 75px;
+    min-height: 23px;
+    padding: 0 12px;
+}
+
+body.theme-luna #tool-options-container,
+body.theme-luna .tool-options-bar {
+    background: var(--xp-surface);
+    border-bottom: 1px solid #8e8f8f;
+}
+
+body.theme-luna footer.status-bar,
+body.theme-luna #app-status-bar.status-bar {
+    font: var(--xp-font);
+}
+
+/* Mode sombre (Luna assombri — chrome XP conservé) */
+body.theme-luna.theme-dark {
+    --mp-surface: #2a3038;
+    --mp-surface-deep: #1e2126;
+    --mp-text: #e8eaed;
+    --mp-dock-bg: #252830;
+    --mp-dock-border: #4a5058;
+    --mp-tab-bar-bg: #252830;
+    --mp-menu-submenu-bg: #2c3038;
+    --xp-surface: #2a3038;
+    --xp-el-bg: #3a4048;
+    --xp-el-c: #e8eaed;
+    --xp-li-bg-hl: #316ac5;
+    --xp-li-fg-hl: #fff;
+    background-color: #1a2230;
+    background-image: linear-gradient(165deg, #1e2840 0%, #121820 50%, #0a0e14 100%);
+}
+
+body.theme-luna.theme-dark .window-body,
+body.theme-luna.theme-dark #app-window > .window-body.illu-app-window-body {
+    background: var(--xp-surface) !important;
+    color: var(--mp-text);
+}
+
+body.theme-luna.theme-dark .window:not(#app-window) {
+    border-color: #1a1d22 !important;
+    background: var(--xp-surface);
+}
+
+body.theme-luna.theme-dark .window:not(#app-window) > .title-bar {
+    background: linear-gradient(180deg, #3a7bc8 0%, #1a4a9e 50%, #0f3580 100%) !important;
+    border-top-color: #0a2a6e !important;
+    border-left-color: #0a2a6e !important;
+    border-right-color: #061e50 !important;
+}
+
+body.theme-luna.theme-dark .title-bar-text {
+    color: #fff;
+    text-shadow: 1px 1px #0a1638;
+}
+
+body.theme-luna.theme-dark menu[role="menubar"],
+body.theme-luna.theme-dark #app-window .window-body > menu.illu-menubar-root {
+    background: linear-gradient(180deg, #4a5260 0%, #2a3038 100%);
+    border-bottom-color: #5a6270 !important;
+    color: var(--mp-text);
+}
+
+body.theme-luna.theme-dark ul[role="menu"] {
+    background: var(--xp-surface) !important;
+    color: var(--mp-text);
+    border-color: #4a5058 !important;
+}
+
+body.theme-luna.theme-dark ul[role="menu"] > li[role="menuitem"]:hover {
+    color: #fff !important;
+}
+
+body.theme-luna.theme-dark #tab-bar-outer {
+    background: linear-gradient(180deg, #353b44 0%, #252830 100%);
+    border-bottom-color: #5a6270;
+}
+
+body.theme-luna.theme-dark .tab {
+    background: var(--xp-el-bg);
+    color: #b8bcc4;
+    border-color: #5a6270;
+}
+
+body.theme-luna.theme-dark .tab.active {
+    background: #3d4552;
+    color: #fff;
+    border-bottom-color: #3d4552;
+}
+
+body.theme-luna.theme-dark .tool-btn,
+body.theme-luna.theme-dark .opt-bar-btn,
+body.theme-luna.theme-dark .illu-scope-btn,
+body.theme-luna.theme-dark .illu-menubar-icon-btn,
+body.theme-luna.theme-dark .illu-icon-toggle,
+body.theme-luna.theme-dark .palette-panel .tool-btn,
+body.theme-luna.theme-dark .floating-window .tool-btn,
+body.theme-luna.theme-dark .palette-panel button:not(.title-bar-close-btn):not(.title-bar-controls > button),
+body.theme-luna.theme-dark .floating-window button:not(.title-bar-close-btn):not(.title-bar-controls > button),
+body.theme-luna.theme-dark #win-colors button,
+body.theme-luna.theme-dark #win-layers .layer-palette-toolbar button,
+body.theme-luna.theme-dark .settings-action-btn,
+body.theme-luna.theme-dark #layers-list .layer-alpha-btn,
+body.theme-luna.theme-dark #layers-list .layer-dynfx-btn {
+    background: var(--xp-el-bg) !important;
+    color: var(--mp-text) !important;
+    border: 1px solid #6a7280 !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #5a6270, inset -2px -2px #2a3038, inset 2px 2px #4a5260 !important;
+}
+
+body.theme-luna.theme-dark .tool-btn:hover,
+body.theme-luna.theme-dark .opt-bar-btn:hover,
+body.theme-luna.theme-dark .palette-panel .tool-btn:hover,
+body.theme-luna.theme-dark .floating-window .tool-btn:hover {
+    filter: brightness(1.08);
+}
+
+body.theme-luna.theme-dark .tool-btn.active,
+body.theme-luna.theme-dark .opt-bar-btn.opt-bar-btn--on,
+body.theme-luna.theme-dark .illu-scope-btn--active,
+body.theme-luna.theme-dark .illu-icon-toggle.active,
+body.theme-luna.theme-dark #win-tools .tool-btn.active,
+body.theme-luna.theme-dark .palette-panel .tool-btn.active,
+body.theme-luna.theme-dark .floating-window .tool-btn.active {
+    box-shadow: inset -1px -1px #5a6270, inset 1px 1px #0a0a0a, inset -2px -2px #4a5260, inset 2px 2px #2a3038 !important;
+}
+
+body.theme-luna.theme-dark #win-tools .tool-btn {
+    background: var(--xp-el-bg) !important;
+    color: var(--mp-text) !important;
+}
+
+body.theme-luna.theme-dark li.menubar-contact-btn[role="menuitem"] {
+    color: var(--mp-text) !important;
+}
+
+body.theme-luna.theme-dark #tool-options-container,
+body.theme-luna.theme-dark .tool-options-bar {
+    background: var(--xp-surface);
+    border-bottom-color: #5a6270;
+}
+
+body.theme-luna.theme-dark input[type="text"],
+body.theme-luna.theme-dark input[type="number"],
+body.theme-luna.theme-dark input[type="email"],
+body.theme-luna.theme-dark select,
+body.theme-luna.theme-dark textarea {
+    background-color: #1e2228;
+    color: var(--mp-text);
+    border-color: #4a5058 #2a2f38 #2a2f38 #4a5058;
+}
+
+/* ——— Listes, contact, boutons globaux, fieldsets ——— */
+body.theme-luna .list-box {
+    background: #fff !important;
+    border: 2px solid !important;
+    border-color: #fff #0a0a0a #0a0a0a #fff !important;
+    font: var(--xp-font);
+}
+
+body.theme-luna .list-item.active {
+    background: var(--xp-li-bg-hl) !important;
+    color: var(--xp-li-fg-hl) !important;
+}
+
+body.theme-luna .list-item.active,
+body.theme-luna .list-item.active * {
+    color: var(--xp-li-fg-hl) !important;
+}
+
+body.theme-luna li.menubar-contact-btn[role="menuitem"]:hover,
+body.theme-luna li.menubar-contact-btn[role="menuitem"]:focus {
+    background: var(--xp-el-bg) !important;
+    color: var(--xp-el-c) !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+}
+
+body.theme-luna li.menubar-contact-btn[role="menuitem"]:hover > span,
+body.theme-luna li.menubar-contact-btn[role="menuitem"]:hover .menu-icon {
+    color: inherit !important;
+}
+
+/* Boutons XP partout (hors barre titre, cases, poignées niveaux) */
+body.theme-luna button:not(.tool-btn):not(.opt-bar-btn):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.title-bar-close-btn):not(.title-bar-controls > button):not(.layer-row):not(.tab):not(.illu-lvl-handle):not([type="checkbox"]):not([type="radio"]):not(.layer-palette-toolbar__text-btn) {
+    min-height: 23px;
+    min-width: 23px;
+    padding: 2px 10px;
+    box-sizing: border-box;
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #fff !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+    color: var(--xp-el-c) !important;
+    font: var(--xp-font) !important;
+    text-shadow: none !important;
+}
+
+body.theme-luna fieldset {
+    border: 1px groove #fff;
+    padding: 8px 10px 10px;
+    margin: 6px 0;
+    color: var(--xp-el-c);
+}
+
+body.theme-luna fieldset legend {
+    padding: 0 4px;
+    color: var(--xp-el-c);
+}
+
+body.theme-luna.theme-dark .list-box {
+    background: #1e2228 !important;
+    border-color: #6a7280 #0a0a0a #0a0a0a #6a7280 !important;
+    color: var(--mp-text);
+}
+
+body.theme-luna.theme-dark .list-item {
+    color: var(--mp-text);
+    border-bottom-color: #3a4048;
+}
+
+body.theme-luna.theme-dark .list-item.active,
+body.theme-luna.theme-dark .list-item.active * {
+    background: var(--xp-li-bg-hl) !important;
+    color: var(--xp-li-fg-hl) !important;
+}
+
+body.theme-luna.theme-dark fieldset {
+    border-color: #6a7280;
+    color: var(--mp-text);
+}
+
+body.theme-luna.theme-dark fieldset legend {
+    color: var(--mp-text);
+}
+
+body.theme-luna.theme-dark li.menubar-contact-btn[role="menuitem"],
+body.theme-luna.theme-dark li.menubar-contact-btn[role="menuitem"]:hover {
+    color: var(--mp-text) !important;
+    background: var(--xp-el-bg) !important;
+    border: 1px solid #6a7280 !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #5a6270, inset -2px -2px #2a3038, inset 2px 2px #4a5260 !important;
+}
+
+body.theme-luna.theme-dark .palette-panel button:not(.title-bar-close-btn):not(.title-bar-controls > button),
+body.theme-luna.theme-dark .floating-window button:not(.title-bar-close-btn):not(.title-bar-controls > button),
+body.theme-luna.theme-dark button:not(.title-bar-close-btn):not(.title-bar-controls > button):not(.illu-lvl-handle):not([type="checkbox"]):not([type="radio"]) {
+    background: var(--xp-el-bg) !important;
+    color: var(--mp-text) !important;
+    border: 1px solid #6a7280 !important;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #5a6270, inset -2px -2px #2a3038, inset 2px 2px #4a5260 !important;
+}
+
+body.theme-luna.theme-dark .title-bar-controls button {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MasterPaint — Sprite SVG icônes internes (Adaptatif Mode Sombre/Clair) -->
+<!-- Usage : <use href="icons/illu-sprite.svg#illu-icon-NOM"/> ou inline via fetch/inject -->
+ <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+       aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;">
+
+    <!-- ── Modes forme ───────────────────────────────────────── -->
+    <symbol id="illu-icon-shape-both" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <rect x="5" y="5" width="6" height="6" rx="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-shape-fill" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/>
+    </symbol>
+
+    <symbol id="illu-icon-shape-stroke" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- ── Types de remplissage ──────────────────────────────── -->
+    <symbol id="illu-icon-fill-solid" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-fill-gradient" viewBox="0 0 16 16">
+      <defs>
+        <linearGradient id="illu-sg-fill-g-new" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#f97316"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-fill-g-new)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-fill-none" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <line x1="3.5" y1="12.5" x2="12.5" y2="3.5" stroke="#ef4444" stroke-width="1.25" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- ── Dégradés ──────────────────────────────────────────── -->
+    <symbol id="illu-icon-grad-linear" viewBox="0 0 16 16">
+      <defs>
+        <linearGradient id="illu-sg-lin-g-new" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#f97316"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-lin-g-new)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <path d="M4.5 11.5 L11.5 4.5 M8.5 4.5 H11.5 V7.5" fill="none" stroke="#ffffff" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-grad-radial" viewBox="0 0 16 16">
+      <defs>
+        <radialGradient id="illu-sg-rad-g-new" cx="40%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#ffedd5"/>
+          <stop offset="40%" stop-color="#f97316"/>
+          <stop offset="100%" stop-color="#1e3a8a"/>
+        </radialGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-rad-g-new)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <circle cx="8" cy="8" r="3" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="2 1.5" opacity="0.8"/>
+    </symbol>
+
+    <!-- ── Motifs pinceau ────────────────────────────────────── -->
+    <symbol id="illu-icon-brush-round" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
+    </symbol>
+
+    <symbol id="illu-icon-brush-soft" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="6.25" fill="none" stroke="var(--illu-icon-accent-subtle, #bfdbfe)" stroke-width="1.25" stroke-dasharray="2 1.5"/>
+      <circle cx="8" cy="8" r="3.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
+    </symbol>
+
+    <symbol id="illu-icon-brush-spray" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-dasharray="1.5 1.5" opacity="0.5"/>
+      <circle cx="6" cy="6" r="1.5" fill="var(--illu-icon-accent, #3b82f6)"/>
+      <circle cx="10.5" cy="5" r="1.2" fill="var(--illu-icon-accent, #3b82f6)"/>
+      <circle cx="5" cy="10.5" r="1" fill="var(--illu-icon-accent, #3b82f6)"/>
+      <circle cx="9" cy="9.5" r="1.8" fill="var(--illu-icon-accent, #3b82f6)"/>
+      <circle cx="11.5" cy="11" r="0.8" fill="var(--illu-icon-accent, #3b82f6)"/>
+      <circle cx="12" cy="7.5" r="0.6" fill="var(--illu-icon-accent, #3b82f6)"/>
+    </symbol>
+
+    <symbol id="illu-icon-tool-gradient" viewBox="0 0 16 16">
+      <defs>
+        <linearGradient id="illu-sg-tool-g-new" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="var(--illu-icon-stroke, #1e293b)"/>
+          <stop offset="100%" stop-color="var(--illu-icon-bg, #ffffff)"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-tool-g-new)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-brush-square" viewBox="0 0 16 16">
+      <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round" />
+    </symbol>
+
+    <symbol id="illu-icon-grad-method-simple" viewBox="0 0 16 16">
+      <defs>
+        <linearGradient id="illu-sg-meth-simp-new" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="var(--illu-icon-accent, #3b82f6)"/>
+          <stop offset="100%" stop-color="var(--illu-icon-accent, #3b82f6)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <path d="M2 2 h6 v6 h-6 z M8 8 h6 v6 h-6 z" fill="var(--illu-icon-accent-subtle, #bfdbfe)" opacity="0.4"/>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-meth-simp-new)"/>
+      <path d="M 4 8 H 11.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linecap="round"/>
+      <path d="M 9.5 5.5 L 12 8 L 9.5 10.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- ── Actions sélection (barre d’options) ───────────────── -->
+    <symbol id="illu-icon-sel-invert" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="1.25" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-dasharray="2 1.5"/>
+      <rect x="5" y="5" width="6" height="6" rx="0.75" fill="var(--illu-icon-accent, #3b82f6)" opacity="0.55"/>
+      <path d="M6 10 L10 6 M9.5 5.5 L10.5 5.5 L10.5 6.5 M6 10 L6 9 L7 10" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-sel-all" viewBox="0 0 16 16">
+      <rect x="3" y="3" width="10" height="10" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
+      <path d="M2 6 V2 H6 M10 2 H14 V6 M14 10 V14 H10 M6 14 H2 V10" fill="none" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-sel-deselect" viewBox="0 0 16 16">
+      <rect x="3" y="3" width="10" height="10" rx="1" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-dasharray="2 1.5"/>
+      <path d="M5.5 5.5 L10.5 10.5 M10.5 5.5 L5.5 10.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.35" stroke-linecap="round"/>
+    </symbol>
+
+    <symbol id="illu-icon-sel-free-corners" viewBox="0 0 16 16">
+      <polygon points="4,4.5 12,3.5 11.5,11.5 3.5,12" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.35" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <rect x="3" y="3.5" width="2.25" height="2.25" fill="#ffffff" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+      <rect x="11.25" y="2.75" width="2.25" height="2.25" fill="#ffffff" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+      <rect x="10.75" y="10.75" width="2.25" height="2.25" fill="#ffffff" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+      <rect x="2.75" y="11.25" width="2.25" height="2.25" fill="#ffffff" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+    </symbol>
+
+    <symbol id="illu-icon-mode-contiguous" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="1.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      
+      <line x1="8" y1="2" x2="8" y2="14" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1" stroke-dasharray="1 1" opacity="0.4"/>
+      <line x1="2" y1="8" x2="14" y2="8" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1" stroke-dasharray="1 1" opacity="0.4"/>
+      
+      <rect x="3.25" y="3.25" width="3.5" height="3.5" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+    </symbol>
+
+    <symbol id="illu-icon-mode-layer" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="1.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      
+      <line x1="8" y1="2" x2="8" y2="14" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1" stroke-dasharray="1 1" opacity="0.4"/>
+      <line x1="2" y1="8" x2="14" y2="8" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1" stroke-dasharray="1 1" opacity="0.4"/>
+      
+      <rect x="3.25" y="3.25" width="3.5" height="3.5" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+      <rect x="9.25" y="9.25" width="3.5" height="3.5" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1"/>
+    </symbol>
+    
+    <symbol id="illu-icon-grad-method-smart" viewBox="0 0 16 16">
+      <defs>
+        <radialGradient id="illu-sg-meth-smrt-new" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ec4899"/>
+          <stop offset="100%" stop-color="var(--illu-icon-accent, #3b82f6)" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+      <path d="M2 2 h6 v6 h-6 z M8 8 h6 v6 h-6 z" fill="var(--illu-icon-accent-subtle, #bfdbfe)" opacity="0.4"/>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#illu-sg-meth-smrt-new)"/>
+      <path d="M8 3.5 L9.4 6.2 L12.5 6.7 L10.2 8.9 L10.8 12 L8 10.5 L5.2 12 L5.8 8.9 L3.5 6.7 L6.6 6.2 Z" fill="#eab308" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
+    </symbol>
+  </svg>

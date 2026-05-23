@@ -1,0 +1,1641 @@
+body.theme-modern {
+    --mp-surface: #f7f7f7;
+    --mp-glass-bg: #dbdbdb;
+    /* Opaque Mica */
+    --mp-glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    --mp-glass-noise-opacity: 0.15;
+
+    --mp-surface-deep: rgba(248, 250, 252, 0.6);
+    --mp-raised-top: #cbd5e1;
+    --mp-raised-bot: #cbd5e1;
+    --mp-inset-top: #e2e8f0;
+    --mp-inset-bot: #e2e8f0;
+    --mp-text: #1e293b;
+    /* Accent et Titres hérités du :root via script */
+
+    /* Bleu moderne pro */
+    --mp-workspace: #f1f5f9;
+    --mp-workspace-deep: #e2e8f0;
+    --mp-accent-muted: rgba(var(--mp-accent-rgb), 0.1);
+    --mp-radius: 6px;
+    --mp-radius-lg: 12px;
+    --mp-font: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    --mp-dock-bg: #f8fafc;
+    --mp-dock-border: #e2e8f0;
+    --mp-center-strip: #f1f5f9;
+    --mp-checker-a: #ffffff;
+    --mp-checker-b: #f1f5f9;
+
+    --mp-tab-bar-bg: #f8fafc;
+    --mp-opt-bar-text: #334155;
+    --mp-menu-submenu-bg: #ffffff;
+    --mp-menu-icon: #64748b;
+    --mp-effect-label: #475569;
+
+    /* Nouvelles variables modernes */
+    --modern-border: 1px solid var(--mp-dock-border);
+    --glass-border: 1px solid rgba(0, 0, 0, 0.1);
+    /* Bordure subtile pour détacher les éléments flous */
+    --modern-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --modern-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --modern-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.1);
+    --modern-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --modern-transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.theme-modern.theme-dark {
+    color-scheme: dark;
+    --mp-surface: #1a1a1a;
+    --mp-glass-bg: #2d2d2d;
+    --mp-surface-deep: rgba(18, 18, 18, 0.6);
+    --mp-raised-top: #333333;
+    --mp-raised-bot: #333333;
+    --mp-inset-top: #333333;
+    --mp-inset-bot: #333333;
+    --mp-text: #e2e8f0;
+
+    --mp-workspace: #0a0a0a;
+    --mp-workspace-deep: #000000;
+    --mp-body-chrome: #121212;
+    --mp-dock-bg: #1a1a1a;
+    --mp-dock-border: #333333;
+    --mp-center-strip: #1a1a1a;
+    --mp-checker-a: #1a1a1a;
+    --mp-checker-b: #262626;
+    --mp-tab-bar-bg: #1a1a1a;
+    --mp-opt-bar-text: #f8fafc;
+    --mp-menu-submenu-bg: #2d2d2d;
+    --mp-menu-icon: #94a3b8;
+    --mp-effect-label: #cbd5e1;
+    --mp-accent-muted: rgba(var(--mp-accent-rgb), 0.2);
+    --mp-radius: 6px;
+
+    --mp-glass-noise-opacity: 0.02;
+
+    --modern-border: 1px solid var(--mp-dock-border);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* =========================================================================
+   1. Bases et Typographie
+   ========================================================================= */
+body,
+html {
+    font-family: var(--mp-font) !important;
+    background: var(--mp-body-chrome) !important;
+}
+
+#workspace {
+    background: linear-gradient(165deg, var(--mp-workspace) 0%, var(--mp-workspace-deep) 100%) !important;
+}
+
+/* Sélection de texte globale (Modèle Win98) */
+::selection {
+    background-color: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+::-moz-selection {
+    background-color: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+/* =========================================================================
+   2. Fenêtres et Boîtes
+   ========================================================================= */
+.window,
+.palette-panel,
+.floating-window {
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: var(--mp-radius-lg) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    background-color: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    background-image: var(--mp-glass-noise) !important;
+    background-blend-mode: overlay !important;
+    position: relative;
+    overflow: hidden;
+    transition: var(--modern-transition) !important;
+}
+
+body.theme-dark .window,
+body.theme-dark .palette-panel,
+body.theme-dark .floating-window {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background-color: rgba(20, 20, 20, 0.72) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+.floating-window.dragging {
+    transition: none !important;
+}
+
+/* Overlay de grain pour le réalisme du flou */
+.window::before,
+.palette-panel::before,
+.floating-window::before,
+ul[role="menu"]::before,
+menu[role="menubar"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: var(--mp-glass-noise-opacity);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Glint (bordure lumineuse haute et effets 3D) */
+.window::after,
+.palette-panel::after,
+.floating-window::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Bordures 3D renforcées (Très visibles en mode clair) */
+    box-shadow:
+        inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.8),
+        inset -1.5px -1.5px 0 rgba(0, 0, 0, 0.25) !important;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: inherit;
+}
+
+body.theme-dark .window::after,
+body.theme-dark .palette-panel::after,
+body.theme-dark .floating-window::after {
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.2),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.title-bar {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%) !important;
+    color: var(--mp-title) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    text-shadow: none !important;
+    font-weight: 600 !important;
+    border-radius: calc(var(--mp-radius-lg) - 1px) calc(var(--mp-radius-lg) - 1px) 0 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+/* Mica Overdrive pour le haut des fenêtres */
+.title-bar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0.35 !important;
+    /* Très visible */
+    pointer-events: none;
+    z-index: -1;
+}
+
+body.theme-dark .title-bar::before {
+    opacity: 0.35 !important;
+}
+
+/* list-box a besoin de son propre background opaque ou translucide mais différent */
+.list-box {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-dock-border) !important;
+    border-radius: var(--mp-radius) !important;
+}
+
+body.theme-dark .list-box {
+    background: var(--mp-surface-deep) !important;
+}
+
+.palette-panel .list-box,
+.floating-window .list-box {
+    background: rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-dark .palette-panel .list-box,
+body.theme-dark .floating-window .list-box {
+    background: rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+#app-window.window {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: var(--mp-surface) !important;
+    /* Le main app window reste opaque */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.floating-window.window {
+    box-shadow: var(--modern-shadow-lg) !important;
+}
+
+/* Corps de fenêtre : fond opaque pour masquer le flou du parent, sauf pour les palettes flottantes */
+.window-body {
+    border-radius: 0 0 calc(var(--mp-radius-lg) - 1px) calc(var(--mp-radius-lg) - 1px) !important;
+    background: var(--mp-surface) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.palette-panel .window-body,
+.floating-window .window-body {
+    background: transparent !important;
+}
+
+.list-item.selected,
+.list-item.active,
+.list-item--active,
+.layer-row.active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+    border-radius: var(--mp-radius) !important;
+}
+
+.list-item.active span,
+.list-item.selected span {
+    color: #ffffff !important;
+}
+
+/* Title bars modernes avec effet Flou (Glassmorphism) */
+.title-bar {
+    background: transparent !important;
+    color: var(--mp-title) !important;
+    border-bottom: var(--modern-border) !important;
+    text-shadow: none !important;
+    font-weight: 600 !important;
+    border-radius: calc(var(--mp-radius-lg) - 1px) calc(var(--mp-radius-lg) - 1px) 0 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+body.theme-dark .title-bar {
+    color: #ffffff !important;
+}
+
+/* Texte général dans les fenêtres en mode sombre (forcer visibilité) */
+body.theme-dark .window label,
+body.theme-dark .window-body label,
+body.theme-dark .window span:not(.menu-icon):not(.ctx-icon),
+body.theme-dark .window p,
+body.theme-dark .window .item-label,
+body.theme-dark .window .illu-effect-panel-header {
+    color: var(--mp-text) !important;
+}
+
+
+
+/* Contrôles de fenêtre */
+.title-bar-controls button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 50% !important;
+    width: 24px !important;
+    height: 24px !important;
+    transition: var(--modern-transition) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.title-bar-controls button:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    /* Couleur de survol plus subtile */
+}
+
+body.theme-dark .title-bar-controls button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.title-bar-controls button {
+    position: relative !important;
+}
+
+.title-bar-controls button::before,
+.title-bar-controls button::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 11px !important;
+    left: 5px !important;
+    width: 14px !important;
+    height: 2px !important;
+    background: var(--mp-text) !important;
+    transition: background-color 0.2s !important;
+}
+
+.title-bar-controls button::before {
+    transform: rotate(45deg) !important;
+}
+
+.title-bar-controls button::after {
+    transform: rotate(-45deg) !important;
+}
+
+/* --- Photo Mode Pro Filmstrip Refinements --- */
+.illu-pm-thumb-wrap {
+    background: var(--mp-glass-bg) !important;
+    border: 2px solid transparent !important;
+    border-radius: var(--mp-radius) !important;
+    transition: var(--modern-transition) !important;
+}
+
+.illu-pm-thumb-wrap:hover {
+    background: var(--mp-accent-muted) !important;
+}
+
+.illu-pm-thumb-wrap.is-active,
+.illu-pm-thumb-wrap.is-selected {
+    background: var(--mp-surface) !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: 0 0 0 1px var(--mp-accent) !important;
+}
+
+/* =========================================================================
+   3. Scrollbars Invisibles / Modernes
+   ========================================================================= */
+::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--mp-surface-deep) !important;
+    background-image: var(--mp-glass-noise) !important;
+    background-blend-mode: overlay !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1 !important;
+    border: 2px solid var(--mp-surface-deep) !important;
+    background-clip: padding-box !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8 !important;
+}
+
+body.theme-dark ::-webkit-scrollbar-thumb {
+    background: #475569 !important;
+    border-color: var(--mp-surface-deep) !important;
+}
+
+body.theme-dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b !important;
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner {
+    display: none !important;
+    background: transparent !important;
+}
+
+/* =========================================================================
+   4. Boutons, Inputs & Ranges
+   ========================================================================= */
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn),
+.window .tool-btn:not(.title-bar-controls button) {
+    background: var(--mp-btn-bg, #ffffff) !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: var(--mp-radius) !important;
+    color: var(--mp-text) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    transition: var(--modern-transition) !important;
+    font-weight: 500 !important;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn)::before,
+.window .tool-btn:not(.title-bar-controls button)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: -1;
+    pointer-events: none;
+}
+
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover::before,
+.window .tool-btn:not(.title-bar-controls button):hover::before {
+    opacity: 0.1 !important;
+}
+
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover,
+.window .tool-btn:not(.title-bar-controls button):hover {
+    background: var(--mp-btn-bg-hover, #fdfdfd) !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    color: var(--mp-accent) !important;
+}
+
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):focus,
+.window .tool-btn:not(.title-bar-controls button):focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px var(--mp-focus) !important;
+}
+
+body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn),
+body.theme-dark .window .tool-btn:not(.title-bar-controls button) {
+    background: var(--mp-btn-bg, #334155) !important;
+    border-color: #1e293b !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn):hover,
+body.theme-dark .window .tool-btn:not(.title-bar-controls button):hover {
+    background: var(--mp-btn-bg-hover, #3f4e63) !important;
+    border-color: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active {
+    transform: scale(0.97) !important;
+    background: #f1f5f9 !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: var(--mp-radius) !important;
+    color: var(--mp-text) !important;
+    padding: 6px 10px !important;
+    transition: var(--modern-transition) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-dark input[type="text"],
+body.theme-dark input[type="number"],
+body.theme-dark input[type="search"],
+body.theme-dark textarea,
+body.theme-dark select {
+    background: #1a1a1a !important;
+    border-color: #333333 !important;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+    outline: none !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: 0 0 0 2px var(--mp-focus), inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    border-radius: var(--mp-radius) !important;
+}
+
+body.theme-dark input[type="text"]:focus,
+body.theme-dark input[type="number"]:focus,
+body.theme-dark textarea:focus,
+body.theme-dark select:focus {
+    background: var(--mp-surface) !important;
+    box-shadow: 0 0 12px var(--mp-accent) !important;
+}
+
+/* --- Range Sliders (Complètement repensés) --- */
+input[type="range"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    /* Retire le fond moche forcé par le W98 css */
+    height: 20px !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Piste (Track) */
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100% !important;
+    height: 6px !important;
+    border: 1px solid var(--mp-dock-border) !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+}
+
+input[type="range"]::-moz-range-track {
+    width: 100% !important;
+    height: 6px !important;
+    background: rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid var(--mp-dock-border) !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+}
+
+body.theme-dark input[type="range"]::-webkit-slider-runnable-track,
+body.theme-dark input[type="range"]::-moz-range-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* Curseur (Thumb) */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 18px !important;
+    width: 18px !important;
+    background: var(--mp-accent) !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50% !important;
+    margin-top: -6px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    cursor: pointer !important;
+}
+
+/* On force la couleur d'accentuation sur les remplissages specifiques (ex: wand-slider) */
+.illu-range-fill,
+.wand-slider-fill,
+#wand-slider-fill,
+.illu-gauge-fill {
+    background: var(--mp-accent) !important;
+}
+
+
+input[type="range"]::-moz-range-thumb {
+    height: 16px !important;
+    width: 16px !important;
+    background: var(--mp-accent) !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50% !important;
+    box-shadow: var(--modern-shadow) !important;
+    cursor: pointer !important;
+    transition: transform 0.1s ease !important;
+}
+
+/* Interaction Curseur */
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15) !important;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.15) !important;
+}
+
+body.theme-dark input[type="range"]::-webkit-slider-thumb {
+    border-color: var(--mp-surface) !important;
+}
+
+body.theme-dark input[type="range"]::-moz-range-thumb {
+    border-color: var(--mp-surface) !important;
+}
+
+/* Checkboxes & Radios */
+input[type="checkbox"],
+input[type="radio"] {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: var(--modern-border) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    transition: var(--modern-transition) !important;
+}
+
+body.theme-dark input[type="checkbox"],
+body.theme-dark input[type="radio"] {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+input[type="radio"] {
+    border-radius: 50% !important;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    background: var(--mp-accent) !important;
+    border-color: var(--mp-accent) !important;
+}
+
+input[type="checkbox"]:checked::after {
+    border-color: #ffffff !important;
+}
+
+/* =========================================================================
+   5. Barres de menu, Sous-menus et Effets Flous
+   ========================================================================= */
+/* Barre de menu principale avec effet Glass */
+menu[role="menubar"],
+#app-window .window-body>menu.illu-menubar-root {
+    background: var(--mp-surface) !important;
+    border-bottom: var(--modern-border) !important;
+    box-shadow: var(--modern-shadow-sm) !important;
+}
+
+menu[role="menubar"]>li[role="menuitem"] {
+    border-radius: var(--mp-radius) !important;
+    transition: var(--modern-transition) !important;
+    position: relative;
+    z-index: 1;
+    /* IMPORTANT: retrait de overflow:hidden pour permettre l'affichage des sous-menus */
+}
+
+menu[role="menubar"]>li[role="menuitem"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: -1;
+    pointer-events: none;
+}
+
+menu[role="menubar"]>li[role="menuitem"]:hover::before {
+    opacity: calc(var(--mp-glass-noise-opacity) * 1.2) !important;
+}
+
+menu[role="menubar"]>li[role="menuitem"]:hover {
+    background: var(--mp-menu-hover-bg) !important;
+    color: var(--mp-menu-hover-fg) !important;
+}
+
+/* Suppression de l'ancien gradient gris moche du conteneur d'outils haut */
+#app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Sous-menus (Dropdowns) et Menu Contextuel avec effet Glass affirmé */
+/* On s'assure que le flou s'applique bien au conteneur ul */
+ul[role="menu"],
+#context-menu.ctx-menu-panel {
+    background-color: var(--mp-menu-submenu-bg) !important;
+    background-image: var(--mp-glass-noise) !important;
+    background-blend-mode: overlay !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-radius: var(--mp-radius-lg) !important;
+    /* On combine l'ombre extérieure et l'effet 3D intérieur ici 
+       pour éviter que les sous-menus passent sous un pseudo-élément ::after */
+    box-shadow:
+        var(--modern-shadow-lg),
+        inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.8),
+        inset -1.5px -1.5px 0 rgba(0, 0, 0, 0.25) !important;
+    padding: 6px !important;
+    z-index: 10000;
+    position: relative;
+}
+
+body.theme-dark ul[role="menu"],
+body.theme-dark #context-menu.ctx-menu-panel {
+    background-color: var(--mp-menu-submenu-bg) !important;
+    color: var(--mp-text) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow:
+        var(--modern-shadow-lg),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Thème moderne + sombre : barre de menu (évite fond clair hérité du thème classique) */
+body.theme-modern.theme-dark menu[role="menubar"],
+body.theme-modern.theme-dark #app-window .window-body>menu.illu-menubar-root {
+    background: var(--mp-surface) !important;
+    border-bottom-color: var(--mp-dock-border) !important;
+    color: var(--mp-text) !important;
+}
+
+body.theme-modern.theme-dark menu[role="menubar"]>li[role="menuitem"],
+body.theme-modern.theme-dark menu[role="menubar"]>li[role="menuitem"]>span {
+    color: var(--mp-text) !important;
+}
+
+body.theme-modern.theme-dark ul[role="menu"] li[role="menuitem"]>span:not(.menu-icon),
+body.theme-modern.theme-dark #context-menu .ctx-item>span {
+    color: inherit !important;
+}
+
+
+/* Effet hover des éléments de menu avec Mica */
+ul[role="menu"] li[role="menuitem"],
+#context-menu .ctx-item {
+    border-radius: var(--mp-radius) !important;
+    margin: 2px 0 !important;
+    transition: background-color 0.1s !important;
+    background: transparent !important;
+    color: var(--mp-text) !important;
+    /* Couleur par défaut explicite */
+    position: relative;
+    z-index: 1;
+}
+
+ul[role="menu"] li[role="menuitem"] span,
+#context-menu .ctx-item span {
+    color: inherit !important;
+}
+
+ul[role="menu"] li[role="menuitem"]::before,
+#context-menu .ctx-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: -1;
+    pointer-events: none;
+}
+
+ul[role="menu"] li[role="menuitem"]:hover::before,
+#context-menu .ctx-item:hover::before {
+    opacity: calc(var(--mp-glass-noise-opacity) * 1.5) !important;
+}
+
+ul[role="menu"] li[role="menuitem"]:hover,
+#context-menu .ctx-item:hover {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border-radius: var(--mp-radius) !important;
+}
+
+ul[role="menu"] li[role="menuitem"]:hover>span,
+#context-menu .ctx-item:hover>span {
+    color: #ffffff !important;
+}
+
+/* Icônes dans les menus par défaut (Noir/Gris) */
+ul[role="menu"] li[role="menuitem"] .menu-icon,
+#context-menu .ctx-item .ctx-icon {
+    filter: none !important;
+    color: var(--mp-menu-icon) !important;
+    opacity: 0.8 !important;
+}
+
+/* Icônes dans les menus au survol (Blanc) */
+ul[role="menu"] li[role="menuitem"]:hover>.menu-icon,
+#context-menu .ctx-item:hover>.ctx-icon {
+    filter: brightness(0) invert(1) !important;
+    opacity: 1 !important;
+}
+
+body.theme-dark ul[role="menu"] li[role="menuitem"]:hover,
+body.theme-dark #context-menu .ctx-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+ul[role="menu"] li.divider,
+#context-menu .ctx-sep {
+    background: rgba(0, 0, 0, 0.1) !important;
+    /* Diviseur translucide */
+    border: none !important;
+    margin: 6px 4px !important;
+    height: 1px !important;
+}
+
+body.theme-dark ul[role="menu"] li.divider,
+body.theme-dark #context-menu .ctx-sep {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* =========================================================================
+   6. Éléments Spécifiques et Outils Modernisés
+   ========================================================================= */
+
+/* Sections (ex: Camera Raw, Réglages VHS) */
+.illu-cr-sec {
+    background: rgba(255, 255, 255, 0.4) !important;
+    /* Fond translucide */
+    border: var(--modern-border) !important;
+    border-radius: var(--mp-radius) !important;
+    margin-bottom: 8px !important;
+    overflow: hidden !important;
+}
+
+body.theme-dark .illu-cr-sec {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+.illu-cr-sec-h {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border-bottom: var(--modern-border) !important;
+    padding: 8px 12px !important;
+    color: var(--mp-text) !important;
+    font-weight: 600 !important;
+}
+
+body.theme-dark .illu-cr-sec-h {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Illu Menubar Toolbar (Pilule) */
+.illu-menubar-toolbar {
+    background: rgba(255, 255, 255, 0.5) !important;
+    /* Translucide pour voir le flou derrière */
+    border: var(--glass-border) !important;
+    border-radius: 0 20px 20px 0 !important;
+    box-shadow: var(--modern-shadow-sm) !important;
+    padding: 4px 10px !important;
+}
+
+body.theme-dark .illu-menubar-toolbar {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+#color-wheel {
+    margin: 2.5px;
+}
+
+/* Palette Grid (Fond et espacement moderne) */
+#palette-grid,
+.illu-mobile-drawer__palette-grid {
+    background: rgba(0, 0, 0, 0.05) !important;
+    /* Fond subtilement différencié */
+    border: var(--modern-border) !important;
+    border-radius: var(--mp-radius) !important;
+    padding: 6px !important;
+}
+
+body.theme-dark #palette-grid,
+body.theme-dark .illu-mobile-drawer__palette-grid {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.color-section-title {
+    border-bottom: 1px solid var(--mp-dock-border) !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 6px !important;
+}
+
+/* Illu Scope Buttons (Onglets intérieurs avec effet Mica sélectif) */
+.illu-scope-btn {
+    background: var(--mp-surface-deep) !important;
+    background-image: var(--mp-glass-noise) !important;
+    background-blend-mode: overlay !important;
+    opacity: 1 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-bottom: 2px solid transparent !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+    transition: var(--modern-transition) !important;
+    margin: 0 2px !important;
+    font-weight: 500 !important;
+    position: relative;
+    top: 2px;
+}
+
+body.theme-dark .illu-scope-btn {
+    background: #262626 !important;
+    border-color: #404040 !important;
+    color: #a3a3a3 !important;
+}
+
+.illu-scope-btn:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+.illu-scope-btn--active {
+    background: transparent !important;
+    background-image: none !important;
+    border-bottom: 2px solid var(--mp-accent) !important;
+    color: var(--mp-accent) !important;
+    box-shadow: none !important;
+    font-weight: 600 !important;
+    border-radius: 0 !important;
+}
+
+body.theme-dark .illu-scope-btn--active {
+    background: transparent !important;
+    border-color: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+/* Barre d'options d'outils Modernisée */
+body.theme-modern #tool-options-container {
+    position: relative !important;
+    z-index: 625 !important;
+    border-bottom: var(--modern-border) !important;
+}
+
+.tool-options-bar,
+#tool-options-bar {
+    background: #f1f5f9 !important;
+    /* Un poil différent de #f8fafc */
+    border-top: none !important;
+    border-bottom: var(--modern-border) !important;
+    box-shadow: none !important;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    color: var(--mp-opt-bar-text) !important;
+}
+
+body.theme-dark #tool-options-bar {
+    background: #121212 !important;
+    /* Un poil plus sombre que #1a1a1a */
+}
+
+/* Onglets MDI (Tab Bar) — Redesign Moderne Premium */
+.tab {
+    background: transparent;
+    border: none !important;
+    border-radius: var(--mp-radius) !important;
+    color: var(--mp-menu-icon) !important;
+    padding: 6px 14px !important;
+    margin: 2px 4px !important;
+    transition: var(--modern-transition) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    position: relative;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px var(--mp-accent-muted) !important;
+}
+
+body.theme-dark .tab.active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.tab:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: var(--mp-text) !important;
+}
+
+body.theme-dark .tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+#tab-bar-scroll,
+.tab-bar-scroll {
+    color: var(--mp-text) !important;
+}
+
+body.theme-dark #tab-bar-scroll,
+body.theme-dark .tab-bar-scroll {
+    color: #f8fafc !important;
+}
+
+/* Tab Group : détachement visuel pour l'organisation */
+.tab-group {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: var(--mp-radius) var(--mp-radius) 0 0 !important;
+    border: none !important;
+    padding: 2px 2px 0 2px;
+    margin: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+}
+
+body.theme-dark .tab-group {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-bar-inner {
+    padding: 6px 12px !important;
+    display: flex;
+    align-items: center;
+    background: var(--mp-tab-bar-bg) !important;
+    gap: 4px;
+}
+
+#tab-bar-outer,
+.tab-bar-outer {
+    background: var(--mp-tab-bar-bg) !important;
+    border-bottom: var(--modern-border) !important;
+    max-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
+/* =========================================================================
+   7. Docks & Listes
+   ========================================================================= */
+.palette-dock,
+#palette-dock-rail.palette-dock-rail {
+    background: var(--mp-dock-bg) !important;
+    border-color: var(--mp-dock-border) !important;
+}
+
+/* Boutons de la barre d'outils avec Mica Hover */
+#win-tools .tool-btn,
+.opt-bar-btn,
+.illu-menubar-icon-btn,
+.illu-icon-toggle {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: none !important;
+    transition: var(--modern-transition) !important;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+#win-tools .tool-btn::before,
+.opt-bar-btn::before,
+.illu-menubar-icon-btn::before,
+.illu-icon-toggle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: -1;
+    pointer-events: none;
+}
+
+#win-tools .tool-btn:hover::before,
+.opt-bar-btn:hover::before,
+.illu-menubar-icon-btn:hover::before,
+.illu-icon-toggle:hover::before {
+    opacity: calc(var(--mp-glass-noise-opacity) * 1.2) !important;
+}
+
+#win-tools .tool-btn:hover,
+.opt-bar-btn:hover,
+.illu-menubar-icon-btn:hover,
+.illu-icon-toggle:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-dark #win-tools .tool-btn:hover,
+body.theme-dark .opt-bar-btn:hover,
+body.theme-dark .illu-menubar-icon-btn:hover,
+body.theme-dark .illu-icon-toggle:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Boutons Actifs (Modèle Win98 : intensité maximale) */
+#win-tools .tool-btn.active,
+.opt-bar-btn.opt-bar-btn--on,
+.illu-icon-toggle--on,
+.illu-icon-toggle.active {
+    background: var(--mp-accent) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+#win-tools .tool-btn.active .tool-icon:not(svg),
+.opt-bar-btn.opt-bar-btn--on i,
+.illu-icon-toggle--on i,
+.illu-icon-toggle.active i {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* Lignes de calques (Layers) */
+#layers-list.list-box .list-item.layer-row {
+    border-radius: var(--mp-radius) !important;
+    border: 1px solid transparent !important;
+    margin: 2px !important;
+    background: var(--mp-glass-bg) !important;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: var(--modern-transition) !important;
+}
+
+/* Alpha Mask Rows : Grey/Blue tint */
+#layers-list.list-box .list-item.layer-row.layer-row--alpha-mask {
+    background: rgba(var(--mp-accent-rgb), 0.08) !important;
+    border-left: 3px solid rgba(var(--mp-accent-rgb), 0.3) !important;
+}
+
+/* Dynamic Filter Rows : Indigo/Purple tint */
+#layers-list.list-box .list-item.layer-row.layer-row--dyn-filter {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%) !important;
+    border-left: 3px solid #6366f1 !important;
+}
+
+body.theme-dark #layers-list.list-box .list-item.layer-row.layer-row--dyn-filter {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%) !important;
+}
+
+body.theme-dark #layers-list.list-box .list-item.layer-row:not(.active) {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+#layers-list.list-box .list-item.layer-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--mp-glass-noise);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: -1;
+    pointer-events: none;
+}
+
+#layers-list.list-box .list-item.layer-row:hover::before {
+    opacity: calc(var(--mp-glass-noise-opacity) * 1.5) !important;
+}
+
+#layers-list.list-box .list-item.layer-row.active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+body.theme-dark #layers-list.list-box .list-item.layer-row.active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+/* =========================================================================
+   8. Barres de progression, jauges & divers
+   ========================================================================= */
+.illu-mp-progress-indicator {
+    background: rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 0 !important;
+}
+
+body.theme-dark .illu-mp-progress-indicator {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.illu-mp-progress-indicator--segmented>.illu-mp-progress-indicator__bar,
+.illu-status-progress-fill {
+    background-image: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            rgba(255, 255, 255, 0) 100%) !important;
+    background-size: 200% 100% !important;
+    background-color: var(--mp-accent) !important;
+    border-radius: 10px !important;
+    animation: mp-pulse-glow 2s infinite linear !important;
+}
+
+@keyframes mp-pulse-glow {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.illu-range-wrap,
+.illu-gauge-wrap {
+    background: rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-dark .illu-range-wrap,
+body.theme-dark .illu-gauge-wrap {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+
+.illu-range-fill,
+.illu-gauge-fill,
+.wand-slider-fill,
+#wand-slider-fill {
+    background: var(--mp-accent) !important;
+}
+
+/* Status Bar */
+.status-bar {
+    background: var(--mp-glass-bg) !important;
+    border-top: var(--modern-border) !important;
+    box-shadow: none !important;
+}
+
+.status-bar-cell {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Splash Screen */
+body.illu-splash-active {
+    background: var(--mp-surface-deep) !important;
+}
+
+.illu-splash__img {
+    border: none !important;
+    box-shadow: var(--modern-shadow-lg) !important;
+}
+
+/* Roue des couleurs */
+#color-wheel-container {
+    background: rgba(255, 255, 255, 0.5) !important;
+    /* Laisse passer le flou */
+    border: var(--modern-border) !important;
+    border-radius: 50% !important;
+    box-shadow: var(--modern-shadow-sm) !important;
+}
+
+body.theme-dark #color-wheel-container {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+#main-toolbox.tool-grid--pdn .tool-group {
+    background: transparent !important;
+    border-bottom: var(--modern-border) !important;
+    box-shadow: none !important;
+}
+
+
+/* =========================================================================
+   1. VARIABLES DE PROFONDEUR (À ajouter dans body.theme-modern)
+   ========================================================================= */
+body.theme-modern {
+    /* Ombres portées plus franches pour détacher les calques */
+    --modern-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --modern-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -3px rgba(0, 0, 0, 0.1);
+    --modern-shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.2), 0 8px 12px -6px rgba(0, 0, 0, 0.1);
+
+    /* Biseaux (Bevels) pour simuler la lumière 3D sans transparence coûteuse */
+    --bevel-raised: inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 2px rgba(0, 0, 0, 0.05);
+    --bevel-sunken: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.8);
+    --bevel-accent: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+body.theme-modern.theme-dark {
+    /* Ajustement des biseaux pour le mode sombre */
+    --bevel-raised: inset 0 1px 1px rgba(255, 255, 255, 0.15), inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+    --bevel-sunken: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05);
+    --bevel-accent: inset 0 1px 1px rgba(255, 255, 255, 0.2), inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+    --modern-shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* =========================================================================
+   2. FENÊTRES ET PANNEAUX (Relief Global)
+   ========================================================================= */
+.window,
+.palette-panel,
+.floating-window {
+    /* On renforce l'effet "bloc" 3D */
+    box-shadow: var(--modern-shadow), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-dark .window,
+body.theme-dark .palette-panel,
+body.theme-dark .floating-window {
+    box-shadow: var(--modern-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Amélioration du "Glint" (bordure lumineuse) pour un effet biseauté très net */
+.window::after,
+.palette-panel::after,
+.floating-window::after {
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.15),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.3) !important;
+}
+
+body.theme-dark .window::after,
+body.theme-dark .palette-panel::after,
+body.theme-dark .floating-window::after {
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.15),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* =========================================================================
+   3. BOUTONS CLASSIQUES (Normal, Hover, Active)
+   ========================================================================= */
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn),
+.window .tool-btn:not(.title-bar-controls button) {
+    /* Un léger dégradé remplace le fond plat pour donner un effet bombé */
+    background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%) !important;
+    border: 1px solid #cbd5e1 !important;
+    /* Combinaison d'ombre portée (extérieur) et de biseau (intérieur) */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), var(--bevel-raised) !important;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.1s !important;
+}
+
+body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn),
+body.theme-dark .window .tool-btn:not(.title-bar-controls button) {
+    background: linear-gradient(180deg, #3f4e63 0%, #2f3e50 100%) !important;
+    border: 1px solid #1e293b !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), var(--bevel-raised) !important;
+}
+
+/* Survol (Hover) : Élévation de la touche */
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn):hover,
+.window .tool-btn:not(.title-bar-controls button):hover {
+    background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12), var(--bevel-raised) !important;
+    transform: translateY(-1px) !important;
+    /* La touche se soulève légèrement */
+}
+
+body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):not(.opt-bar-btn):hover,
+body.theme-dark .window .tool-btn:not(.title-bar-controls button):hover {
+    background: linear-gradient(180deg, #475569 0%, #334155 100%) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), var(--bevel-raised) !important;
+}
+
+/* Barre d'outils / toggles : pas de transform 3D (évite espacements cassés en sombre) */
+body.theme-modern .illu-menubar-icon-btn:hover,
+body.theme-modern .illu-icon-toggle:hover,
+body.theme-modern .opt-bar-btn:hover,
+body.theme-modern .illu-menubar-icon-btn:active,
+body.theme-modern .illu-icon-toggle.active,
+body.theme-modern .illu-icon-toggle--on,
+body.theme-modern .opt-bar-btn.opt-bar-btn--on {
+    transform: none !important;
+}
+
+body.theme-modern ul[role="menu"] li[role="menuitem"]:hover,
+body.theme-modern #context-menu .ctx-item:hover {
+    transform: none !important;
+}
+
+/* État actif (Enfoncé) : On inverse les ombres pour simuler l'appui */
+button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active,
+.window .tool-btn.active {
+    background: #e2e8f0 !important;
+    box-shadow: var(--bevel-sunken) !important;
+    /* L'ombre passe à l'intérieur haut */
+    transform: translateY(1px) !important;
+    /* Décalage physique très efficace vers le bas */
+}
+
+body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active,
+body.theme-dark .window .tool-btn.active {
+    background: #1e293b !important;
+}
+
+/* =========================================================================
+   4. INPUTS ET LISTES (Effet creusé "Sunken")
+   ========================================================================= */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+textarea,
+select,
+.list-box {
+    /* L'ombre interne crée la profondeur, le liseré blanc en bas crée la lumière accrochée */
+    box-shadow: var(--bevel-sunken) !important;
+    border-top: 1px solid #94a3b8 !important;
+    /* Bord supérieur plus sombre pour accentuer le creux */
+}
+
+body.theme-dark input[type="text"],
+body.theme-dark input[type="number"],
+body.theme-dark input[type="search"],
+body.theme-dark textarea,
+body.theme-dark select,
+body.theme-dark .list-box {
+    border-top: 1px solid #111 !important;
+}
+
+/* =========================================================================
+   5. BARRES ET EN-TÊTES (Gradients cylindriques)
+   ========================================================================= */
+.title-bar {
+    /* Dégradé plus marqué pour donner un effet cylindrique/bombé à la barre de titre */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(0, 0, 0, 0.02) 100%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-dark .title-bar {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.2) 100%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Conteneurs d'outils type "Pilule" (ex: Illu Menubar Toolbar) */
+.illu-menubar-toolbar {
+    box-shadow:
+        var(--modern-shadow-sm),
+        inset 0 1px 1px rgba(255, 255, 255, 0.8),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* =========================================================================
+   6. CURSEURS RANGE (Thumb 3D)
+   ========================================================================= */
+input[type="range"]::-webkit-slider-thumb {
+    background: linear-gradient(180deg, var(--mp-accent) 0%, color-mix(in srgb, var(--mp-accent) 80%, black) 100%) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+    box-shadow: var(--bevel-sunken) !important;
+    /* Rail creusé */
+}
+
+/* =========================================================================
+   7. OUTILS, MENUS ET ONGLETS (Barres de travail)
+   ========================================================================= */
+
+/* Boutons d'outils au Survol (Hover 3D transparent) */
+#win-tools .tool-btn:hover,
+.opt-bar-btn:hover,
+.illu-menubar-icon-btn:hover,
+.illu-icon-toggle:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%) !important;
+    box-shadow: var(--bevel-raised), 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    transform: translateY(-1px) !important;
+}
+
+body.theme-dark #win-tools .tool-btn:hover,
+body.theme-dark .opt-bar-btn:hover,
+body.theme-dark .illu-menubar-icon-btn:hover,
+body.theme-dark .illu-icon-toggle:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+    box-shadow: var(--bevel-raised), 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Boutons d'outils Actifs/Enclenchés (Creusés et Colorés) */
+#win-tools .tool-btn.active,
+.opt-bar-btn.opt-bar-btn--on,
+.illu-icon-toggle--on,
+.illu-icon-toggle.active {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--mp-accent) 85%, black) 0%, var(--mp-accent) 100%) !important;
+    box-shadow: var(--bevel-sunken) !important;
+    transform: translateY(1px) !important;
+}
+
+/* Éléments de Menu Contextuel et Listes (Hover & Active 3D) */
+ul[role="menu"] li[role="menuitem"]:hover,
+#context-menu .ctx-item:hover,
+.list-item.selected,
+.list-item.active,
+.list-item--active,
+.layer-row.active {
+    background: linear-gradient(180deg, var(--mp-accent) 0%, color-mix(in srgb, var(--mp-accent) 85%, black) 100%) !important;
+    box-shadow: var(--bevel-accent), 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    transform: scale(0.98) !important;
+    /* Léger effet d'appui global */
+}
+
+/* Onglets (Tabs) et Boutons Scope — Corrigé pour le mode moderne */
+.illu-scope-btn--active {
+    background: var(--mp-surface) !important;
+}
+
+
+
+/* =========================================================================
+   8. SCROLLBARS (Effet Pilule 3D)
+   ========================================================================= */
+::-webkit-scrollbar-thumb {
+    /* Donne un aspect bombé et cylindrique à l'ascenseur */
+    background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%) !important;
+    box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.9), inset -1px -1px 1px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #f1f5f9 0%, #cbd5e1 50%, #94a3b8 100%) !important;
+}
+
+/* =========================================================================
+   9. MODERN ERGONOMICS & DEEP SHADOWS (Agrandissement et profondeur)
+   ========================================================================= */
+body.theme-modern .tool-options-bar {
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+body.theme-modern .tool-options-bar button,
+body.theme-modern .tool-options-bar select,
+body.theme-modern .tool-options-bar .illu-btn-mini,
+body.theme-modern .tool-options-bar .illu-range-wrap,
+body.theme-modern .tool-options-bar .illu-select-mini,
+body.theme-modern .tool-options-bar .opt-bar-btn,
+body.theme-modern .illu-menubar-icon-btn {
+    height: 30px !important;
+    line-height: 30px !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+}
+
+body.theme-modern .tool-options-bar .illu-icon-toggle-group,
+body.theme-modern .tool-options-bar .illu-mode-toggle-group,
+body.theme-modern #tool-pinned-toggles .illu-icon-toggle-group,
+body.theme-modern #tool-pinned-toggles .illu-mode-toggle-group,
+body.theme-modern #tool-global-modes .illu-icon-toggle-group,
+body.theme-modern #tool-global-modes .illu-mode-toggle-group {
+    height: auto !important;
+    min-height: 0;
+    line-height: normal !important;
+    padding: 0 !important;
+    justify-content: flex-start !important;
+    flex: 0 0 auto;
+    max-width: none;
+    flex-wrap: nowrap !important;
+    gap: 4px 6px;
+    white-space: nowrap;
+}
+
+body.theme-modern.illu-mobile-shell-active .tool-options-bar .illu-icon-toggle-group,
+body.theme-modern.illu-mobile-shell-active .tool-options-bar .illu-mode-toggle-group,
+body.theme-modern.illu-mobile-shell-active #tool-pinned-toggles .illu-icon-toggle-group,
+body.theme-modern.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-group,
+body.theme-modern.illu-mobile-shell-active #tool-global-modes .illu-icon-toggle-group,
+body.theme-modern.illu-mobile-shell-active #tool-global-modes .illu-mode-toggle-group {
+    flex-wrap: wrap !important;
+    max-width: 100% !important;
+    flex: 0 1 auto !important;
+    white-space: normal !important;
+}
+
+body.theme-modern .tool-options-bar .illu-mode-toggle-item {
+    height: auto !important;
+    line-height: normal !important;
+    padding: 0 !important;
+}
+
+/* Specific icon-toggles within options bar */
+body.theme-modern .tool-options-bar .illu-icon-toggle {
+    width: 32px !important;
+    height: 30px !important;
+    padding: 0 !important;
+}
+
+body.theme-modern .illu-icon-toggle i,
+body.theme-modern .illu-icon-toggle svg {
+    font-size: 14px !important;
+}
+
+/* Toolbox Grid tool buttons enlargement */
+body.theme-modern #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}
+
+body.theme-modern #win-tools #main-toolbox.tool-grid--pdn .tool-btn .tool-icon {
+    width: 18px !important;
+    height: 18px !important;
+    background-size: contain !important;
+}
+
+/* Canvas Underlay and deep atmospheric shadows */
+body.theme-modern #main-canvas-container {
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.2),
+        0 10px 40px rgba(0, 0, 0, 0.35),
+        0 20px 80px rgba(0, 0, 0, 0.25) !important;
+    border-radius: 4px !important;
+}
+
+body.theme-modern.theme-dark #main-canvas-container {
+    box-shadow:
+        0 1px 5px rgba(0, 0, 0, 0.4),
+        0 15px 50px rgba(0, 0, 0, 0.7),
+        0 30px 100px rgba(0, 0, 0, 0.5) !important;
+}

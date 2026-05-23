@@ -1,0 +1,196 @@
+MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
+
+2.7.18 (23/05/26)
+- Gestion performance sur grande images
+- Ajout d'outil / fonction pour simplifié fonctionnement sur téléphone
+- Ligne, courbe (3 pts) et plume : couleur primaire pour le trait (plus la secondaire)
+- correction bug ou les filtre s'apliquais les un derrière les autre plustot que d'avoir une prévisualisation
+- Corrections divers dans l'interface, perf...
+
+2.7.13 (22/05/26)
+- Revu gestion de la selection, des déplacements...
+- Obtimisation divers
+- Mode téléphone type app : barre du bas (menu fixe + scroll), sheets outils/couleurs/calques/effets...
+- Partage / import image via PWA (share_target, service worker...)
+- Recadrage mobile : ratios visuels, bouton annuler en texte, poignée centrale pour déplacer la zone
+- Toile mobile : pinch zoom / pan libre (plus de recentrage auto qui cassait les doigts)
+       > Ajustement auto en haut du workspace seulement a l'ouverture d'un effet
+       > Bouton « ajuster » dans les options sélection
+- Scrollbars plus fines en mode téléphone
+- Ouverture image / nouveau projet : zoom auto à la largeur
+- Dock mobile : bouton Exporter (disquette) à côté d’Ouvrir
+- Fenêtre d’export : PNG et .illu en un clic
+- i18n : Ajout des text manquant
+- Changement téléphone ↔ Paint.NET/Photoshop : rechargement page + avertissement si non exporté
+- Fermeture d’onglet navigateur : alerte native si modifications non exportées
+- Sélection : resize poignées sans recomposite calques (overlay rapide + throttle)
+- Loupe tactile : sélection + déformation/warp-4, croix au centre (canvas + calque CSS)
+- Mobile : fit workspace à l’ouverture image/projet ; barre toggle sélection fixe après l’outil
+- Correctif sélection : ReferenceError « e is not defined » au resize poignées
+
+
+2.6.27 (17/05/26)
+- Consolidation de l'ergonomie 
+- Correction des boutons Zoom avant/arrière
+- Revu mise en page des barres d'actions
+- Complétion du sélecteur d'outil (illu-tool-list-select)
+- Résolution définitive du bug de pan au clic molette 
+- Visionneuse d'icones 
+- Correction des outils non fonctionnel( flou zoom, peinture huile...)
+- Ajout theme WinXP et Win7
+- Ajout de prise en compte des icones colloré/dégradé
+- Correction bug multiples 
+       > photo row
+       > effets
+       > Bug interface
+       ...
+- Contninuer intégration du webassembleur dans code
+- Ajout d'icone personaliser pour des fonction basic dans les barre d'outils
+       > Ajout d'icones dans les menu pour les effets/ajustements...
+
+2.6.15 (11/05/26)
+- Continue la modification avec la seconde barre d'outil
+- Réparration des réglage illogique en fonction des outils utilisé
+- Obtimisation des performance 
+- Continuer transfert vers webassembly
+
+2.6.11 (10/05/26)
+- Revu code selectionner
+- MIse a jours du bonne partie du code en mode SVG
+- Continuer l'implémentation du webassembly 
+- Ajouter seconde bar d'outil quand beaucoup d'obtion disponible
+- Correction et ajout(non volontaire) de bug divers 
+
+2.6.6 (23/04/26)
+- Passage au webAssembly (wasm) pour le calcul des effets, prévisualisation...
+- Mise a jours switch pixel n&b et couleur
+- ajout outil de fusion de forme SVG
+- Ajout obtion de groupage de forme SVG
+- Mofif a la volé d'une forme SVG revu (encore incomplete)
+- Revue gestion des forme SVG, (nb pts...)
+
+2.5.12 (22/04/26)
+- Ajout fenetre de contact dit "signaler un problème"
+- Revue disposition des paramètres, plus claire pour l'user final
+
+
+2.5.10 (20/04/26)
+- Ajout d'effet TSL, courbe pour photo pro et raw.
+- ajouter en tant que effet classic aussi courbe et tsl.
+- Regroupé le code pour photo mode pro et raw
+
+2.5.7 (19/04/26)
+- Adaptation de l'interface Photo Mode Pro pour mobiles (Layout vertical, boutons compacts)
+- Création d'un mode photo pro type lightroom.
+       > Multi-images, application par lot, recadrage interactif...
+- Adaptation du menu 'Fichier' contextuel pour le Mode Photo Pro (Batch actions).
+- Unification des moteurs de rendu GPU (WebGL) et CPU (Workers)
+       > Correction des effets.
+- Ajouts de filtres couleurs multiples
+       > Dans photo pro, ajustement et camera raw
+- Plusieurs images possible dans le slashscreen
+- Création d'un routage URL pour les dimensions et modes personnalisés (ex:/#pro /#pix?w=800&h=600)
+- Création d'un changelog accessible via Paramètres
+
+2.4.2 (17/04/26)
+- Mise a jours de l'outils d'incrustation pour plus de performance et utilisation des hightligt
+- Obtimisation divers des effet/ajustement avec WebGL
+
+2.3.14 (16/04/26)
+- Extension des capacités d'exportation des calques dynamiques
+
+2.3.13 (15/04/26)
+- Création d'un visuel "moderne" en plus de classic
+- Mise a jours du system de calc dynamique 
+- Haronisation visuel divers...
+
+2.3.10 (12/04/26)
+- Ajoute de l'export de l'historique ou non avec les .illu
+- MAJ des comportements des Outils Vectoriels
+
+2.3.8 (11/04/26)
+- Ajout a l'historique des élément de recadrage, et d'autre effet
+- Effacement mémoire mis en "asynchrone"
+- Ajout d'un system de trammage dans effet et création de projet
+- Ajout du bouton "Ouvrir un projet d'exemple" depuis les paramètres
+
+2.3.4 (06/04/26)
+- Optimisation massive des performances du Canvas 2D sur tout le projet
+       > Utilisation systématique de willReadFrequently pour accélérer la lecture GPU -> CPU
+- Refonte de l'outils de déformation (Warp) pour plus de fluidité
+       > Mise en cache des ImageData et optimisation des calculs homographiques
+- Correction de bug de bordure transparente lors des déformations
+- Amélioration de l'accessibilité sur l'interface (correction aria-hidden)
+
+2.2.15 (04/04/26)
+- Ajout des raccourcis clavier complets
+       > Ctrl+A selectionner tout, Ctrl+I inverser couleurs, Ctrl+C/V copier coller, Ctrl+/- zoom canvas, Echap déselection
+- Ajout du pan workspace avec clic molette souris
+- Ajout d'un bouton désélection dans la fenêtre outils
+- Correction des lints CSS dans w98.css (appearance, syntaxe selecteur)
+- Suppression des puces (billes) dans les sous menus
+
+2.2.10 (02/04/26)
+- Refonte majeure: Architecture Multi-Document (MDI) avec onglets
+       > Plusieurs projets ouverts en même temps, chaque onglet garde son état indépendant
+- System de calques avancé avec buffers persistants hors-canvas
+       > Chaque calque a son propre canvas interne et des coordonnées (x, y) pour déplacement libre
+- Ajout du rendu composite (render) pour superposer tous les calques
+- Ajout du bouton "Fusionner" dans la fenêtre calques
+- Dialogue d'import intelligent (coller/glisser-déposer)
+       > Choix entre "Nouvel onglet" (taille auto) ou "Nouveau calque"
+- Ajout de poignées de redimensionnement sur les calques pixel actifs
+- Déplacement de calques entiers avec l'outil déplacer (sans sélection)
+- Correction du bug "handleMouseMove is not defined"
+- Correction du bug "clearAnchors is not defined"
+- Mise a jours de tous les outils de dessin pour le system multi-calques
+
+==========================================================
+En vracs non trié (2.1.14)
+
+- Refonte majeure de l'interface des filtres dynamiques (ƒ)
+       > Système d'interface intelligente : vue simplifiée (Dessous/Ce calque) vs vue avancée (Filtre d'effet)
+       > Élargissement du popover à 380px pour une meilleure lisibilité des réglages
+- Transformation en véritables "Calques de réglage"
+       > Redirection des ajustements du menu principal (Luminosité, Inversion, Filtres...) vers la pile d'effets ƒ
+- Gestion dynamique de la chaîne d'effets
+       > Ajout de commandes de réorganisation (↑/↓) pour ajuster l'ordre d'application en temps réel
+- Correction critique de l'historique (Ctrl+Z / Ctrl+Y) pour les opérations affectant les dimensions du canvas (Recadrage, Redimensionnement, Rotation 90°)
+- Résolution des plantages des workers d'effets (dont l'effet VHS) via la complétion du mock CanvasRenderingContext2D
+- Optimisation importante des prévisualisations sur de forts rendus (comme VHS) avec l'intégration du multirésolution asynchrone (low-res preview)
+- Synchronisation corrigée du déplacement et glisser-déposer (drag & drop) des calques dans la liste
+- Amélioration de l'export d'un projet unique (.illu) en incluant automatiquement les masques alpha associés
+- Refonte modulaire globale et réorganisation de l'architecture
+       > Découpage des fichiers monolithiques (DrawingTools, EditorManager) en modules spécialisés
+       > Organisation du code source par dossiers (js/app, js/tools, js/effects) pour plus de clarté
+- Optimisation de l'outil de Déformation (Transform / Warp)
+       > Correction du rendu "Au plus proche" (Nearest Neighbor) pour l'aperçu et le commit final
+       > Résolution définitive du bug de "coupe de pixels" (pixel-clipping) lors des déformations complexes
+       > Stabilisation de la gestion des sessions worker pour les transformations haute résolution
+- Améliorations Système et UI
+       > Persistance de l'option d'interpolation dans les paramètres (sauvegarde via localStorage)
+       > Nettoyage et optimisation de l'ordre d'appel des scripts dans index.html
+- Amélioration de la persistance et sauvegarde locale
+       > Nouveau bouton "Enregistrer localement" dans l'export pour restauration auto au refresh
+       > Raccourci Ctrl+S pour sauvegarde rapide (silencieuse) et Ctrl+Shift+S pour l'export manuel
+       > Option d'auto-save configurable par projet (onglet) indépendante du global
+- Correctifs outils et effets
+       > Rétablissement de l'effet "Ombre portée" dans le moteur de traitement (worker)
+       > Correction des artefacts visuels lors de la rotation d'une sélection
+       > Ajout et synchronisation du paramètre de Zoom dans la Projection 3D
+- Optimisation du Remplissage (Content-Aware Fill)
+       > Réduction de la consommation mémoire via extraction ROI ciblée
+       > Augmentation du timeout à 5 minutes pour les grandes zones
+       > Correction du bug de buffer détaché après traitement
+
+V2.0.X
+- Ajout d'un système de fenetre volante, menu, effet, ajustement...
+       > Exportation de fichiers, .illu, png, jpg....
+       > Mise en place du system de calc
+       > Barre d'outil, paramètres...
+
+==========================================================
+
+Changelog indisponible avant ça ! 
+
+Basé sur un projet de vecteur uniquement : couleur, forme et remplissage simple sur un theme visuel w98.css, le pitch de base n'étais pas plus compliqué (v1.0.0)

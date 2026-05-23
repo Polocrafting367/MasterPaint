@@ -1,0 +1,710 @@
+.illu-photo-mode-overlay {
+    position: fixed;
+    top: 28px; left: 0; right: 0; bottom: 32px;
+    background: #111;
+    color: #d4d4d4;
+    z-index: 2599;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.illu-photo-mode-overlay.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.illu-pm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: #252526;
+    margin-top: 0;
+    border-bottom: 1px solid #333;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    z-index: 10;
+}
+
+.illu-pm-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+
+/* Button colors using Theme Variables for compatibility */
+
+/* Button colors using Theme Variables for compatibility */
+.illu-pm-btn {
+    --mp-btn-bg: var(--mp-accent);
+    --mp-btn-bg-hover: color-mix(in srgb, var(--mp-accent) 80%, black);
+    color: #fff !important;
+}
+
+.illu-pm-btn-secondary {
+    --mp-btn-bg: #444;
+    --mp-btn-bg-hover: #555;
+    color: #eee !important;
+}
+
+#pm-dlg-discard {
+    --mp-btn-bg: #d93025;
+    --mp-btn-bg-hover: #b92a1d;
+    color: #fff !important;
+}
+
+/* Win98 3D borders adjustment for colored buttons */
+body.theme-win98-modern .illu-pm-btn,
+body.theme-win98-modern .illu-pm-btn-secondary,
+body.theme-win98-modern #pm-dlg-discard {
+    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+}
+
+.illu-pm-zoom-badge {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    top: auto;
+    right: auto;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: white;
+    padding: 5px 8px 5px 12px;
+    border-radius: 50px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+    border: 1px solid rgba(255,255,255,0.15);
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.illu-pm-zoom-badge:hover {
+    background: rgba(30, 30, 30, 0.95);
+    transform: translateY(-2px);
+}
+
+.illu-pm-zoom-badge #pm-zoom-text {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+}
+
+.illu-pm-zoom-btn-toggle {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.illu-pm-zoom-btn-toggle:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.illu-pm-zoom-btn-toggle.is-off {
+    background: #e74c3c !important;
+    border-color: #ff5e4d !important;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);
+}
+
+.illu-pm-zoom-btn-toggle i {
+    font-size: 11px;
+}
+
+.illu-photo-mode-overlay input[type="number"], 
+.illu-photo-mode-overlay select {
+    background: #111 !important;
+    color: #ccc !important;
+    border: 1px solid #333 !important;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+/* Status bar override when photo mode is active */
+body.illu-photo-mode-active #app-status-bar {
+    background: #1e1e1e !important;
+    color: #aaa !important;
+    border-top: 1px solid #333 !important;
+    box-shadow: none !important;
+}
+body.illu-photo-mode-active #app-status-bar .status-bar-cell,
+body.illu-photo-mode-active #app-status-bar button,
+body.illu-photo-mode-active #app-status-bar .status-item {
+    background: transparent !important;
+    color: #aaa !important;
+    border-color: #333 !important;
+    box-shadow: none !important;
+}
+body.illu-photo-mode-active #app-status-bar button:hover {
+    background: #333 !important;
+    color: #fff !important;
+}
+
+.illu-pm-body {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    flex-direction: row;
+}
+
+.illu-pm-main {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    background: #111;
+    position: relative;
+    overflow: hidden;
+}
+
+.illu-pm-canvas-wrap {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(circle, #222 0%, #000 100%);
+    cursor: move;
+    position: relative;
+}
+
+.illu-pm-canvas-wrap canvas {
+    box-shadow: 0 0 30px rgba(0,0,0,1);
+    background-color: #000;
+}
+
+.illu-pm-filmstrip {
+    height: 110px;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-sizing: border-box;
+    box-shadow: inset 0 5px 15px rgba(0,0,0,0.3);
+    scrollbar-width: thin;
+}
+.illu-pm-filmstrip::-webkit-scrollbar { height: 4px; }
+.illu-pm-filmstrip::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+
+.illu-pm-thumb {
+    height: 80px;
+    width: 100px;
+    flex-shrink: 0;
+    background: #000;
+    border: 2px solid #333;
+    cursor: pointer;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+    border-radius: 4px;
+}
+.illu-pm-thumb:hover {
+    background: #222;
+    border-color: #555;
+}
+.illu-pm-thumb.is-active {
+    border-color: var(--mp-accent);
+    background: #333;
+}
+
+.illu-pm-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.illu-pm-thumb:hover img, .illu-pm-thumb.is-active img {
+    opacity: 1;
+}
+
+.illu-pm-thumb-close {
+    position: absolute;
+    top: 4px; left: 4px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s, transform 0.1s;
+    z-index: 10;
+}
+.illu-pm-thumb:hover .illu-pm-thumb-close {
+    opacity: 1;
+}
+.illu-pm-thumb-close:hover {
+    background: #ff4d4d;
+    transform: scale(1.1);
+}
+
+.illu-pm-thumb.is-selected {
+    border: 2px dashed #ffaa00 !important;
+    box-shadow: inset 0 0 0 2px rgba(255,170,0,0.3);
+}
+.illu-pm-thumb.is-selected.is-active {
+    border-style: solid !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: inset 0 0 0 2px rgba(255,170,0,0.5);
+}
+
+.illu-pm-thumb-check {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    width: 14px;
+    height: 14px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    font-size: 8px;
+    z-index: 11;
+    transition: all 0.2s;
+}
+.illu-pm-thumb:hover .illu-pm-thumb-check {
+    border-color: #ffaa00;
+}
+.illu-pm-thumb.is-selected .illu-pm-thumb-check {
+    background: #ffaa00;
+    border-color: #ffaa00;
+    color: #000;
+}
+
+.illu-pm-dlg-sub {
+    font-size: 11px;
+    color: #888;
+    margin-top: -8px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+.illu-pm-thumb.is-active img { opacity: 1; }
+
+.illu-pm-sidebar {
+    width: 300px;
+    background: #252526;
+    border-left: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 0;
+    box-sizing: border-box;
+    color: #eee;
+}
+
+.illu-pm-sidebar .illu-pm-row label {
+    color: #ccc;
+}
+
+/* Collapsible Section Styles */
+.illu-pm-sec {
+    border-bottom: 1px solid #333;
+}
+
+.illu-pm-sec-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    background: #2d2d2d;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    user-select: none;
+}
+
+.illu-pm-sec-h:hover { background: #333; color: #fff; }
+
+.illu-pm-sec-body {
+    padding: 15px;
+    display: block;
+}
+
+.illu-pm-sec--collapsed .illu-pm-sec-body {
+    display: none;
+}
+
+.illu-pm-sec-h i {
+    transition: transform 0.2s;
+    font-size: 10px;
+}
+.illu-pm-sec--collapsed .illu-pm-sec-h i {
+    transform: rotate(-90deg);
+}
+
+.illu-pm-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.illu-pm-row label {
+    font-size: 10px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--mp-text);
+}
+
+.illu-pm-row span.val { color: var(--mp-accent); font-weight: bold; }
+
+/* Standard range inputs within PM rows */
+.illu-pm-row input[type=range] {
+    width: 100%;
+}
+
+.illu-pm-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    z-index: 5;
+}
+
+.illu-pm-empty-state i { font-size: 48px; color: #333; margin-bottom: 20px; }
+
+#pm-file-input { display: none; }
+
+#pm-btn-zoom-fit {
+    background: rgba(255,255,255,0.05);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-left: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+#pm-btn-zoom-fit:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* Status Bar Fix - Dark Mode */
+body.illu-photo-mode-active #app-status-bar {
+    background: #252526 !important;
+    color: #ccc !important;
+    border-top: 1px solid #333 !important;
+    z-index: 1501; /* Just above overlay but below modals */
+}
+body.illu-photo-mode-active #app-status-bar * {
+    color: #ccc !important;
+}
+body.illu-photo-mode-active #app-status-bar .status-bar-cell {
+    background: #2d2d2d !important;
+    border-color: #444 #555 #555 #444 !important;
+    box-shadow: none !important;
+}
+body.illu-photo-mode-active #app-status-bar .status-item {
+    border-right: 1px solid #333 !important;
+}
+
+/* Confirmation Dialog Styles */
+.illu-pm-dlg-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.illu-pm-dlg {
+    background: #252526;
+    border: 1px solid #444;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    width: 450px;
+    padding: 0;
+    color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.illu-pm-dlg-h {
+    background: #333;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    font-size: 13px;
+    border-bottom: 1px solid #444;
+}
+
+.illu-pm-dlg-b {
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.illu-pm-dlg-f {
+    background: #1e1e1e;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.illu-pm-dlg-f-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* --- INTERACTIVE CROP STYLES --- */
+.illu-pm-crop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    pointer-events: none;
+}
+
+.illu-pm-crop-overlay.is-active {
+    display: block;
+}
+
+.illu-pm-crop-svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.illu-pm-crop-mask {
+    fill: rgba(0,0,0,0.65);
+    fill-rule: evenodd;
+}
+
+.illu-pm-crop-handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--mp-accent);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    pointer-events: auto;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    z-index: 2005;
+}
+
+.illu-pm-crop-handle:hover {
+    background: color-mix(in srgb, var(--mp-accent) 80%, white);
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+.illu-pm-crop-actions {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    background: rgba(30,30,30,0.9);
+    padding: 10px 20px;
+    border-radius: 40px;
+    border: 1px solid #444;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    z-index: 2100;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.illu-pm-crop-overlay.is-active .illu-pm-crop-actions {
+    opacity: 1;
+}
+
+/* Filter Gallery Styles */
+.illu-pm-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 5px;
+}
+.illu-pm-filter-card {
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 15px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+}
+.illu-pm-filter-card:hover {
+    background: #444;
+    border-color: #ffaa00;
+    transform: translateY(-2px);
+}
+.illu-pm-filter-card i {
+    font-size: 24px;
+    color: #ffaa00;
+}
+.illu-pm-filter-card span {
+    font-size: 10px;
+    font-weight: 600;
+    color: #eee;
+}
+
+/* --- MOBILE RESPONSIVE ADAPTATIONS --- */
+
+@media (max-width: 768px), screen and (orientation: portrait), .illu-mobile-ui {
+    .illu-photo-mode-overlay {
+        top: 28px; /* Match main app menubar height */
+        bottom: 0;
+    }
+
+    .illu-pm-header {
+        padding: 6px 10px;
+    }
+
+    .illu-pm-header h2 {
+        font-size: 14px;
+    }
+
+    .illu-pm-header-text {
+        display: none; /* Hide 'Mode Photo Pro' text, keep icon */
+    }
+
+    .illu-pm-header-btns {
+        display: flex;
+        gap: 5px;
+    }
+
+    .illu-pm-btn-text {
+        display: none !important; /* Hide labels on buttons */
+    }
+
+    .illu-pm-btn {
+        padding: 6px 10px;
+        min-width: 36px;
+        justify-content: center;
+    }
+
+    .illu-pm-body {
+        flex-direction: column-reverse; /* Put sidebar and filmstrip at the bottom */
+    }
+
+    .illu-pm-main {
+        flex: 1 1 auto; /* Take most space */
+        min-height: 200px;
+    }
+
+    .illu-pm-sidebar {
+        width: 100% !important;
+        height: 220px;
+        flex: none;
+        border-left: none;
+        border-top: 1px solid #333;
+    }
+
+    .illu-pm-filmstrip {
+        height: 80px;
+        padding: 5px;
+        gap: 8px;
+    }
+
+    .illu-pm-thumb {
+        height: 60px;
+        width: 80px;
+    }
+
+    .illu-pm-zoom-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+
+    .illu-pm-hide-mobile {
+        display: none;
+    }
+
+    .illu-pm-sidebar .illu-pm-sec-body {
+        padding: 10px;
+    }
+
+    .illu-pm-row {
+        margin-bottom: 8px;
+    }
+}
+
+/* Optimization for very small screens */
+@media (max-width: 480px) {
+    .illu-pm-header h2 { display: none; } /* Hide title entirely */
+}
+
+/* RAZ (Reset) buttons for adjustments */
+.pm-raz-btn, .cr-raz-btn {
+    font-size: 9px;
+    padding: 1px 4px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    line-height: normal;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+}
+.pm-raz-btn:hover, .cr-raz-btn:hover {
+    background: var(--mp-accent, #0078d7);
+    color: #fff;
+    border-color: var(--mp-accent, #0078d7);
+}

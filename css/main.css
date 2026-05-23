@@ -1,0 +1,3262 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'MS Sans Serif', Arial, sans-serif;
+    font-size: 13px;
+    --illu-palette-cell: 13px;
+}
+
+#app-window {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#workspace {
+    flex-grow: 1;
+    position: relative;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Palettes ancrées (style Photoshop) */
+.floating-window {
+    position: absolute;
+    z-index: 500;
+    min-width: 150px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.floating-window .title-bar {
+    cursor: move;
+}
+
+body.effect-dialog-open #win-tools,
+body.effect-dialog-open #win-history,
+body.effect-dialog-open #win-layers,
+body.effect-dialog-open #win-colors {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Mode Photoshop : les docks gardent de la place si seuls les enfants sont masqués — on masque toute la colonne. */
+body.effect-dialog-open.ui-layout-docked #palette-dock-left,
+body.effect-dialog-open.ui-layout-docked #palette-dock-right,
+body.effect-dialog-open.ui-layout-docked #palette-dock-rail {
+    display: none !important;
+}
+
+#effect-dialog {
+    pointer-events: none;
+    background: transparent !important;
+}
+
+#effect-dialog-window {
+    pointer-events: auto;
+    z-index: 3001;
+}
+
+:root {
+    --palette-dock-width: 260px;
+    --history-panel-width: 200px;
+}
+
+/* Photoshop ancré : colonne outils étroite, ruban droit large */
+body.ui-layout-docked {
+    --palette-dock-left-width: 56px;
+    --palette-dock-right-width: 260px;
+    --palette-dock-rail-content-width: 208px;
+}
+
+/* Rail fixe : curseurs couleur + historique, collé à gauche du dock droit (pas volant) */
+#palette-dock-rail {
+    display: none;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: flex-start;
+    align-self: flex-start;
+    background: #c0c0c0;
+    border-left: 1px solid #808080;
+    border-right: 1px solid #808080;
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked #palette-dock-rail {
+    display: flex;
+}
+
+/* Rail ancré : superposé au bord droit du workspace (plus dans la rangée → plus de largeur pour la toile) */
+body.ui-layout-docked .workspace-dock-center #palette-dock-rail {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 24;
+    align-self: unset;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.15);
+}
+
+body.ui-layout-floating #palette-dock-rail {
+    display: none !important;
+}
+
+.palette-dock-rail__tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px 4px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    align-self: flex-start;
+    border-right: 1px solid #808080;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.35);
+}
+
+.palette-dock-rail__tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 100%);
+    color: #222;
+    box-sizing: border-box;
+}
+
+.palette-dock-rail__tab i {
+    display: block;
+    line-height: 1;
+    width: 1em;
+    text-align: center;
+}
+
+.palette-dock-rail__tab:hover {
+    background: linear-gradient(180deg, #f4f4f4 0%, #d4d4d4 100%);
+}
+
+.palette-dock-rail__tab.palette-dock-rail__tab--active {
+    border-color: #404040 #fff #fff #404040;
+    background: linear-gradient(180deg, #b8b8b8 0%, #a0a0a0 100%);
+}
+
+.palette-dock-rail__content {
+    display: flex;
+    flex-direction: column;
+    width: auto;
+    min-width: 0;
+    max-width: var(--palette-dock-rail-content-width);
+    overflow-x: hidden;
+    overflow-y: auto;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    height: auto;
+    max-height: none;
+}
+
+.palette-dock-rail__content[hidden] {
+    display: none !important;
+}
+
+.palette-dock-rail__host {
+    flex: 0 0 auto;
+    min-height: 0;
+    border-bottom: 1px solid #808080;
+}
+
+.palette-dock-rail__host:last-child {
+    border-bottom: none;
+}
+
+.palette-dock-rail__host[hidden] {
+    display: none !important;
+}
+
+body.ui-layout-docked #palette-dock-left.palette-dock {
+    width: var(--palette-dock-left-width);
+    flex: 0 0 var(--palette-dock-left-width);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+}
+
+body.ui-layout-docked #palette-dock-right.palette-dock {
+    width: var(--palette-dock-right-width);
+    flex: 0 0 var(--palette-dock-right-width);
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+}
+
+body.ui-layout-docked #win-tools .title-bar {
+    display: none !important;
+}
+
+body.ui-layout-docked #win-tools {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.ui-layout-docked #win-tools .window-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding-left: 2px;
+    padding-right: 2px;
+    display: flex;
+    flex-direction: column;
+}
+
+body.ui-layout-docked #main-toolbox.tool-grid--pdn {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    overflow: hidden;
+}
+
+/* Outils : colonne unique ; 2e colonne si hauteur insuffisante (flex-wrap sur #main-toolbox) */
+body.ui-layout-docked #main-toolbox.tool-grid--pdn .tool-group {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 2px 5px;
+    flex: 0 0 auto;
+}
+
+body.ui-layout-docked #main-toolbox.tool-grid--pdn .tool-btn {
+    width: 28px;
+    height: 26px;
+    min-width: 28px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked #win-tools #main-toolbox.tool-grid--pdn {
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+/* Curseurs RVB dans le rail : pas de bordure « sous la roue » */
+body.ui-layout-docked #dock-rail-sliders-host #color-sliders-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    border-top: none !important;
+    margin-left: 0 !important;
+    padding: 6px 4px 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked .palette-dock-rail__host .window.palette-panel {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none;
+}
+
+body.ui-layout-docked .palette-dock-rail__host .palette-panel .title-bar {
+    cursor: default;
+    padding: 2px 4px;
+    min-height: 22px;
+}
+
+/* Pas de « fermer » : panneau ancré, pas une fenêtre volante */
+body.ui-layout-docked .palette-dock-rail__host .illu-palette-float-close {
+    display: none !important;
+}
+
+body.ui-layout-docked .palette-dock-rail__host #win-history .palette-panel-body--fill {
+    max-height: min(40vh, 320px);
+}
+
+body.ui-layout-docked .palette-dock-rail__host #win-history #history-list.list-box--flex {
+    max-height: min(36vh, 280px);
+    min-height: 72px;
+}
+
+.editor-dock-row {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.palette-dock {
+    width: var(--palette-dock-width);
+    flex: 0 0 var(--palette-dock-width);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px 5px;
+    box-sizing: border-box;
+    background: #c0c0c0;
+    border-right: 1px solid #808080;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.palette-dock--right {
+    border-right: none;
+    border-left: 1px solid #808080;
+}
+
+.workspace-dock-center {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+    overflow: auto;
+    background: #808080;
+}
+
+/* Pile d’affichage : un canvas DOM par calque pixel (mode sans masque α / filtre ƒ). */
+.pixel-layer-stack {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pixel-layer-stack canvas.illu-pixel-layer-view {
+    position: absolute;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+}
+
+.pixel-layer-stack canvas.illu-stack-preview-overlay {
+    position: absolute;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+}
+
+body.ui-layout-floating .editor-dock-row .palette-dock,
+body.illu-mobile-ui .editor-dock-row .palette-dock {
+    display: none !important;
+}
+
+body.ui-layout-floating .workspace-dock-center {
+    flex: 1 1 auto;
+}
+
+#floating-palette-host {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 600;
+}
+
+#floating-palette-host .floating-window {
+    pointer-events: auto;
+}
+
+.illu-pdn-edge-strip {
+    pointer-events: none;
+}
+
+.illu-pdn-edge {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 620;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.illu-pdn-edge--left {
+    left: 0;
+}
+
+.illu-pdn-edge--right {
+    right: 0;
+}
+
+.illu-pdn-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    min-height: 54px;
+    padding: 8px 0;
+    margin: 0;
+    box-sizing: border-box;
+    border: 2px solid;
+    border-color: var(--mp-raised-top, #fff) var(--mp-raised-bot, #808080) var(--mp-inset-bot, #404040) var(--mp-inset-top, #a0a0a0);
+    border-radius: 0 6px 6px 0;
+    background: linear-gradient(180deg, #ece9e4 0%, #d8d4cf 100%);
+    color: #1e4a8c;
+    cursor: pointer;
+    font-size: 18px;
+    -webkit-tap-highlight-color: rgba(30, 74, 140, 0.2);
+}
+
+.illu-pdn-edge--right .illu-pdn-tab {
+    border-radius: 6px 0 0 6px;
+}
+
+.illu-pdn-tab[aria-pressed='true'],
+.illu-pdn-tab.illu-pdn-tab--active {
+    border-color: var(--mp-inset-top, #a0a0a0) var(--mp-inset-bot, #404040) var(--mp-raised-bot, #808080) var(--mp-raised-top, #fff);
+    background: linear-gradient(180deg, #d5d1cb 0%, #c9c5bf 100%);
+}
+
+body:not(.illu-pdn-dock-active) .illu-pdn-edge-strip {
+    display: none !important;
+}
+
+/* Téléphone : une seule colonne de languettes à droite (Couleurs, Calques, Historique) ; Outils en haut */
+body.illu-mobile-ui.illu-pdn-dock-active .illu-pdn-edge--left {
+    display: none !important;
+}
+
+body.illu-mobile-ui.illu-pdn-dock-active .illu-pdn-edge--right {
+    gap: 8px;
+}
+
+#illu-mobile-toolbar-host {
+    display: none;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) #illu-mobile-toolbar-host:not(:empty),
+body.effect-dialog-open #illu-mobile-toolbar-host {
+    display: block;
+}
+
+body.effect-dialog-open #illu-mobile-toolbar-host {
+    display: none !important;
+}
+
+/* Barre d’outils téléphone : pas de barre de titre, boutons alignés sur toute la largeur avec retour à la ligne */
+body.illu-mobile-ui.illu-pdn-dock-active #win-tools .title-bar {
+    display: none !important;
+}
+
+body.illu-mobile-ui.illu-pdn-dock-active #win-tools .window-body {
+    padding: 4px 6px 6px;
+}
+
+body.illu-pdn-dock-active.ui-layout-floating #win-tools,
+body.illu-pdn-dock-active.ui-layout-floating #win-colors,
+body.illu-pdn-dock-active.ui-layout-floating #win-layers,
+body.illu-pdn-dock-active.ui-layout-floating #win-history {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+body.ui-layout-floating .floating-window.illu-floating-window-hidden {
+    display: none !important;
+}
+
+body.ui-layout-docked .menu-floating-only {
+    display: none !important;
+}
+
+body.ui-layout-floating .menu-win-hint-docked {
+    display: none !important;
+}
+
+.menu-win-hint-mobile-only {
+    display: none !important;
+}
+
+body.illu-mobile-ui .menu-win-hint-mobile-only {
+    display: list-item !important;
+}
+
+body.illu-mobile-ui .menu-win-hint-docked,
+body.illu-mobile-ui .menu-win-pdn-sep {
+    display: none !important;
+}
+
+
+
+body.ui-layout-floating #win-layers #layers-list.list-box--flex {
+    max-height: 25vh !important;
+}
+
+body.ui-layout-floating #win-history.window.palette-panel {
+    width: 200px !important;
+    min-width: 200px;
+    max-width: min(200px, 96vw);
+    box-sizing: border-box;
+}
+
+body.ui-layout-floating #win-history #history-list.list-box--flex {
+    width: 100%;
+    max-width: 200px;
+    box-sizing: border-box;
+}
+
+/* Flottant : même grille 2 colonnes que l’ancrage (ordre des groupes inchangé), largeur utile */
+body.ui-layout-floating #win-tools {
+    min-width: 64px;
+    max-width: none !important;
+    width: auto !important;
+}
+
+body.ui-layout-floating #win-tools .tool-grid.tool-grid--pdn {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+body.ui-layout-floating #win-tools .tool-grid--pdn .tool-group {
+    display: grid;
+    grid-template-columns: repeat(2, 28px);
+    justify-content: center;
+    gap: 2px;
+    padding: 5px 5px 6px;
+}
+
+/* Téléphone + dock bas : une seule rangée logique qui revient à la ligne sur toute la largeur */
+body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) #win-tools .tool-grid.tool-grid--pdn {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+body.illu-mobile-ui.illu-pdn-dock-active #win-tools .tool-grid--pdn .tool-group {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap !important;
+    grid-template-columns: unset !important;
+    justify-content: center;
+    align-content: flex-start;
+    gap: 3px;
+    padding: 0;
+    border-right: 1px solid rgba(0, 0, 0, 0.2);
+    padding-right: 5px;
+    border-bottom: 0px;
+
+}
+
+/* Téléphone + dock : les 4 palettes pleine largeur écran (pas de largeur fixe flottante) */
+body.illu-mobile-ui.illu-pdn-dock-active.ui-layout-floating #win-history.window.palette-panel,
+body.illu-mobile-ui.illu-pdn-dock-active.ui-layout-floating #win-history #history-list.list-box--flex {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+body.illu-mobile-ui.illu-pdn-dock-active.ui-layout-floating #win-layers .palette-panel-body--fill,
+body.illu-mobile-ui.illu-pdn-dock-active.ui-layout-floating #win-layers #layers-list.list-box--flex {
+    max-width: 100% !important;
+}
+
+/* Uniquement ancré (Photoshop) : pas de !important sur .palette-panel hors dock,
+   sinon en mode Paint.NET les left/top inline sont perdus et les fenêtres restent bloquées. */
+.editor-dock-row .palette-panel.window {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    min-width: 0;
+    z-index: 1;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.editor-dock-row .palette-panel .title-bar {
+    cursor: default;
+}
+
+.palette-panel-body--fill {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+.list-box--flex {
+    flex: 1 1 auto;
+    min-height: 100px;
+    height: auto !important;
+}
+
+#win-tools .tool-grid {
+    justify-content: center;
+}
+
+body:not(.ui-layout-floating) #win-tools .window-body {
+    padding-top: 6px;
+    padding-bottom: 10px;
+    min-height: 0;
+}
+
+/* Photoshop (ancré) : grille d’outils = colonnes auto selon la largeur */
+body:not(.ui-layout-floating) #win-tools .tool-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: center;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: unset;
+}
+
+/* Boîte à outils « inspiration Paint.NET » : bandes groupées, boutons relief */
+#main-toolbox.tool-grid--pdn {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0;
+    padding: 2px 0 4px;
+    box-sizing: border-box;
+}
+
+body:not(.ui-layout-floating) #win-tools .tool-grid.tool-grid--pdn {
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+#main-toolbox.tool-grid--pdn .tool-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    gap: 3px;
+    padding: 5px 4px 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 65%);
+}
+
+#main-toolbox.tool-grid--pdn .tool-group:last-child {
+    border-bottom: none;
+    box-shadow: none;
+    padding-bottom: 4px;
+}
+
+/* Styles outils : bords 3D / actif alignés calques — theme-win98-modern.css (fin de fichier) */
+#win-tools .tool-grid--pdn .tool-btn:disabled {
+    opacity: 0.45;
+}
+
+/* Calques : Photoshop = hauteur généreuse ; flottant = surchargé plus bas (400px max) */
+body:not(.ui-layout-floating) #win-layers .palette-panel-body--fill {
+    max-height: min(82vh, 920px);
+    min-height: 0;
+    overflow: hidden;
+    flex: 1 1 auto;
+}
+
+body:not(.ui-layout-floating) #win-layers #layers-list.list-box--flex {
+    max-height: min(76vh, 840px);
+    min-height: 100px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+/* Historique : largeur fixe dans la colonne droite, hauteur un peu plus généreuse */
+.editor-dock-row .palette-dock--right #win-history.window.palette-panel {
+    width: var(--history-panel-width);
+    max-width: 100%;
+    flex: 0 0 auto;
+    align-self: center;
+    box-sizing: border-box;
+}
+
+#win-history .palette-panel-body--fill {
+    max-height: 308px;
+    min-height: 0;
+    overflow: hidden;
+    flex: 0 1 auto;
+    width: 100%;
+}
+
+#win-history #history-list.list-box--flex {
+    max-height: 276px;
+    min-height: 112px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Barre d’onglets : scroll horizontal */
+.tab-bar-outer {
+    display: flex;
+    flex-shrink: 0;
+    min-height: 24px;
+    align-items: flex-end;
+    background: #c0c0c0;
+    border-bottom: 2px solid #808080;
+    position: relative;
+    z-index: 620;
+}
+
+.tab-bar-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.tab-bar-inner {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    padding: 2px 5px 0 5px;
+    gap: 2px;
+    min-height: 24px;
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+}
+
+#win-colors {
+    min-height: 0;
+}
+
+body.ui-layout-docked #win-colors {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.ui-layout-docked #win-colors .color-window-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.ui-layout-docked #win-colors .color-picker-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+}
+
+.color-window-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Paint.NET (flottant) : colonnes roue+sliders, palette en dessous */
+.color-picker-main {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.color-picker-columns {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.color-picker-left {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-right: 6px;
+    border-right: 1px solid transparent;
+}
+
+body.ui-layout-floating #win-colors.color-window-expanded .color-picker-left {
+    border-right-color: #a0a0a0;
+}
+
+.color-wheel-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.color-top-row {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#btn-col-expand {
+    font-size: 10px;
+    white-space: nowrap;
+    padding: 2px 6px;
+}
+
+/* Photoshop (ancré) : masquer le bouton Plus — les sliders sont gérés par .color-window-expanded + JS */
+body.ui-layout-docked #btn-col-expand {
+    display: none !important;
+}
+
+body.ui-layout-floating #color-sliders-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 6px;
+    border-left: 1px solid #a0a0a0;
+    margin-left: 3px;
+}
+
+/* Photoshop (ancré) : sliders sous la colonne roue, palette en dessous */
+body:not(.ui-layout-floating) .color-picker-columns {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+body:not(.ui-layout-floating) .color-picker-left {
+    padding-right: 0;
+    border-right: none;
+    width: 100%;
+}
+
+body:not(.ui-layout-floating) #win-colors.color-window-expanded .color-picker-left {
+    border-bottom: 1px solid #a0a0a0;
+    padding-bottom: 8px;
+    margin-bottom: 0;
+}
+
+body:not(.ui-layout-floating) #color-sliders-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 0;
+    padding-top: 6px;
+    margin-left: 0;
+    border-left: none;
+    border-top: 1px solid #a0a0a0;
+}
+
+#win-colors.color-window-expanded #color-sliders-panel {
+    display: flex !important;
+}
+
+#win-colors.color-window-expanded .color-top-row {
+    margin-bottom: 4px;
+}
+
+#win-colors.color-window-expanded .color-wheel-row {
+    margin-bottom: 4px;
+}
+
+#palette-grid {
+    margin-top: 6px;
+    flex: 0 0 auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: grid;
+    gap: 0;
+    width: max-content;
+    max-width: 100%;
+}
+
+/* Flottant étendu : grille fixe 37×4 (JS + CSS de secours) */
+body.ui-layout-floating:not(.illu-pdn-dock-active) #win-colors.color-window-expanded #palette-grid:not(.palette-grid--flow) {
+    grid-template-columns: repeat(37, var(--illu-palette-cell, 13px));
+    grid-template-rows: repeat(4, var(--illu-palette-cell, 13px));
+    width: max-content;
+    max-width: 100%;
+}
+
+/* Photoshop / téléphone : dimensions pilotées par JS (.palette-grid--flow) */
+body.ui-layout-docked #win-colors.color-window-expanded #palette-grid,
+body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
+    width: max-content;
+    max-width: 100%;
+}
+
+/* Paramètres : gauche description + langue + raccourcis, droite options — fenêtre compacte */
+#settings-overlay .window {
+    width: min(96vw, 700px) !important;
+    max-width: 96vw;
+}
+
+#settings-overlay .settings-dialog-window-body {
+    padding: 8px 10px !important;
+    font-size: 11px;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    max-height: min(88vh, 570px);
+    box-sizing: border-box;
+}
+
+#settings-overlay .settings-dialog-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+}
+
+#settings-overlay .settings-dialog-aside {
+    flex: 0 0 38%;
+    max-width: 280px;
+    min-width: 0;
+    overflow: auto;
+    padding-right: 4px;
+    border-right: 1px solid #b0b0b0;
+}
+
+#settings-overlay .settings-dialog-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+    padding-left: 2px;
+}
+
+#settings-overlay .settings-dialog-aside p {
+    margin: 0 0 0.45em;
+    font-size: 11px;
+}
+
+#settings-overlay .settings-about-lead {
+    font-weight: 600;
+}
+
+#settings-overlay .settings-ai-note {
+    font-size: 10px;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 0;
+}
+
+#settings-overlay .settings-aside-block--about {
+    margin-bottom: 10px;
+}
+
+#settings-overlay .settings-aside-lang {
+    margin-bottom: 10px;
+}
+
+#settings-overlay .settings-aside-lang legend {
+    font-size: 11px;
+}
+
+#settings-overlay .settings-aside-block--shortcuts {
+    margin-top: 2px;
+}
+
+#settings-overlay .settings-shortcuts-heading {
+    font-weight: bold;
+    margin: 0 0 0.35em;
+    font-size: 11px;
+}
+
+#settings-overlay .settings-shortcuts-list {
+    margin: 0 0 0.5em;
+    padding-left: 16px;
+    line-height: 1.45;
+    font-size: 10px;
+}
+
+#settings-overlay .settings-startup-row {
+    margin: 0;
+    align-items: center;
+}
+
+#settings-overlay .settings-startup-row label {
+    cursor: pointer;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-dialog-actions-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px 14px;
+    width: 100%;
+}
+
+#settings-overlay .settings-dialog-actions .settings-startup-row {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: min(100%, 52ch);
+}
+
+#settings-overlay .settings-fieldset-compact {
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    border: 1px solid #aaa;
+}
+
+#settings-overlay .settings-fieldset-compact legend {
+    font-weight: 600;
+    font-size: 11px;
+    padding: 0 4px;
+}
+
+#settings-overlay .settings-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+#settings-overlay .settings-table-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    padding: 5px 0;
+    border-top: 1px dotted #b8b8b8;
+}
+
+#settings-overlay .settings-table-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+#settings-overlay .settings-table-main {
+    min-width: 0;
+}
+
+#settings-overlay .settings-table-title {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-table-hint {
+    margin-top: 2px;
+    font-size: 9px;
+    color: #555;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-table-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+#settings-overlay .settings-table-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#settings-overlay .settings-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#settings-overlay .settings-table-input {
+    width: 56px;
+    text-align: right;
+}
+
+#settings-overlay .settings-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+#settings-overlay .illu-settings-toggle-row {
+    flex-wrap: nowrap;
+    min-width: 104px;
+}
+
+#settings-overlay .illu-settings-toggle-row .illu-scope-btn {
+    min-width: 46px;
+}
+
+#settings-overlay .settings-checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin: 0 0 8px;
+}
+
+#settings-overlay .settings-sublegend {
+    margin: 0 0 4px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+#settings-overlay .settings-hint-micro {
+    margin: 4px 0 0;
+    font-size: 9px;
+    opacity: 0.88;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-accent-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 2px 0 0;
+}
+
+#settings-overlay .settings-accent-swatch {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+
+#settings-overlay .settings-accent-swatch input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+#settings-overlay .settings-accent-face {
+    display: block;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border: 2px solid rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+}
+
+#settings-overlay .settings-accent-swatch input:checked+.settings-accent-face {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a1a1a;
+    border-color: #111;
+}
+
+#settings-overlay .settings-accent-swatch input:focus-visible+.settings-accent-face {
+    outline: 2px solid var(--mp-focus, #1e4a8c);
+    outline-offset: 2px;
+}
+
+#settings-overlay .settings-lang-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+#settings-overlay .settings-lang-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    margin: 0;
+}
+
+#settings-overlay .settings-layout-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-top: 6px;
+}
+
+#settings-overlay .settings-layout-row label {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    cursor: pointer;
+    margin: 0;
+    min-width: 0;
+}
+
+#settings-overlay .settings-layout-desc {
+    margin: 0 0 6px;
+    color: #444;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+/* Thème classique / icônes monochromes forcés — pas d’UI visible */
+#settings-overlay .settings-appearance-locked-ui,
+#settings-overlay #settings-ui-base-row,
+#settings-overlay #settings-beta-skin-row,
+#settings-overlay #settings-icon-style-row,
+#settings-overlay .settings-appearance-beta-fieldset {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+#settings-overlay .settings-perf-hint,
+#settings-overlay .settings-data-hint {
+    margin: 4px 0 0;
+    font-size: 9px;
+    color: #555;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-fieldset-compact label {
+    font-size: 11px;
+}
+
+#settings-overlay .settings-checkbox-tight {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    margin: 0 0 8px;
+}
+
+#settings-overlay .settings-checkbox-tight:last-of-type {
+    margin-bottom: 0;
+}
+
+#settings-overlay .settings-dialog-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px 12px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ccc;
+    flex-shrink: 0;
+}
+
+#settings-overlay .illu-settings-example-btn {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+#btn-open-example {
+    background: linear-gradient(180deg, #fef3c7 0%, #fbd34d 100%) !important;
+    border: 2px solid !important;
+    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
+    color: #451a03 !important;
+    font-weight: 600;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+#btn-open-example:hover {
+    filter: brightness(1.05);
+}
+
+#btn-open-example:active {
+    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
+    padding: 5px 11px 3px 13px !important;
+}
+
+#btn-open-example i {
+    color: #b45309;
+}
+
+@media (max-width: 640px) {
+    #settings-overlay .illu-settings-example-btn {
+        margin-right: 0;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+#settings-overlay .settings-dialog-actions #settings-ok-btn {
+    flex-shrink: 0;
+}
+
+@media (max-width: 860px) {
+    #settings-overlay .settings-table-control {
+        justify-content: flex-start;
+    }
+
+    #settings-overlay .settings-table-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 1000px) {
+
+    body,
+    html {
+        font-size: 11px;
+    }
+
+    .tab-bar-outer {
+        min-height: 20px;
+    }
+
+    .tab-bar-inner {
+        min-height: 20px;
+        padding: 1px 3px 0;
+    }
+
+    .tool-options-bar,
+    #tool-options-bar-row1,
+    #tool-options-bar-2 {
+        font-size: 10px;
+        padding: 4px;
+        height: auto;
+        min-height: 28px;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        overflow-x: hidden;
+        overflow-y: visible;
+    }
+
+    .opt-tool-name {
+        font-size: 10px !important;
+    }
+
+    #settings-overlay .window {
+        max-width: min(96vw, 700px) !important;
+        width: min(96vw, 700px);
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #settings-overlay .settings-dialog-window-body {
+        max-height: min(85vh, 520px);
+        font-size: 10px;
+    }
+
+    #settings-overlay .settings-dialog-layout {
+        gap: 10px;
+    }
+
+    #settings-overlay .settings-dialog-aside {
+        max-width: none;
+        flex: 1 1 200px;
+    }
+
+    #settings-overlay .settings-dialog-main {
+        flex: 1 1 220px;
+    }
+
+    #settings-overlay .settings-shortcuts-list {
+        padding-left: 14px;
+        font-size: 9px;
+    }
+
+    @media (max-width: 640px) {
+        #settings-overlay .settings-dialog-layout {
+            flex-direction: column;
+        }
+
+        #settings-overlay .settings-dialog-aside {
+            flex: none;
+            max-width: none;
+            border-right: none;
+            border-bottom: 1px solid #b0b0b0;
+            padding-right: 0;
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+        }
+
+        #settings-overlay .settings-dialog-main {
+            padding-left: 0;
+        }
+
+        #settings-overlay .settings-aside-block:not(.settings-aside-block--about) {
+            display: none !important;
+        }
+    }
+
+    /* --- Nouveaux styles pour le menu mobile dynamique --- */
+    .illu-mobile-drawer__menu-btn {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 10px 12px;
+        margin-bottom: 4px;
+        text-align: left;
+        background: #e0e0e0;
+        border: 2px solid;
+        border-color: #fff #808080 #808080 #fff;
+        font-family: inherit;
+        font-size: 13px;
+        color: #222;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .illu-mobile-drawer__menu-btn:active {
+        border-color: #808080 #fff #fff #808080;
+        background: #d0d0d0;
+        padding: 11px 11px 9px 13px;
+    }
+
+    .illu-mobile-drawer__sub-list {
+        display: flex;
+        flex-direction: column;
+        padding-left: 12px;
+        margin-bottom: 8px;
+        border-left: 1px solid #a0a0a0;
+        margin-left: 6px;
+        align-items: stretch;
+    }
+
+    .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn {
+        width: 100%;
+        margin-bottom: 4px;
+        flex-shrink: 0;
+    }
+
+    .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:last-child {
+        margin-bottom: 0;
+    }
+
+    .illu-mobile-drawer__divider {
+        height: 1px;
+        background: #808080;
+        margin: 6px 0;
+        width: 100%;
+    }
+
+    /* Réduction de la taille des tuiles d'actions */
+    .illu-mobile-ui .illu-mobile-drawer__palette-tile {
+        min-width: 64px;
+        height: 56px;
+        font-size: 10px;
+    }
+
+    .illu-mobile-ui .illu-mobile-drawer__palette-tile i {
+        font-size: 18px;
+        margin-bottom: 4px;
+    }
+
+    :root {
+        --palette-dock-width: 220px;
+        --history-panel-width: 200px;
+    }
+
+    .palette-dock {
+        padding: 4px 4px;
+        gap: 5px;
+    }
+
+    body:not(.ui-layout-floating) #win-tools .window-body {
+        padding-top: 4px;
+        padding-bottom: 6px;
+    }
+
+    .color-top-row {
+        gap: 4px;
+        margin-bottom: 4px;
+    }
+
+    .color-wheel-row {
+        gap: 4px;
+        margin-bottom: 4px;
+    }
+
+    body:not(.ui-layout-floating) #win-layers .palette-panel-body--fill {
+        max-height: min(70vh, 720px);
+    }
+
+    body:not(.ui-layout-floating) #win-layers #layers-list.list-box--flex {
+        max-height: min(64vh, 640px);
+        min-height: 88px;
+    }
+
+    body:not(.ui-layout-floating) #win-history .palette-panel-body--fill {
+        max-height: 260px;
+    }
+
+    body:not(.ui-layout-floating) #win-history #history-list.list-box--flex {
+        max-height: 232px;
+        min-height: 96px;
+    }
+
+    .list-box {
+        font-size: 10px;
+    }
+
+    .list-item {
+        padding: 1px 4px;
+    }
+
+    .tool-btn {
+        padding: 2px;
+        min-width: 22px;
+        min-height: 22px;
+    }
+
+    #color-sliders-panel {
+        font-size: 11px !important;
+    }
+}
+
+@media (max-width: 640px) {
+
+    body,
+    html {
+        font-size: 10px;
+    }
+
+    .tab-bar-inner {
+        padding: 1px 2px 0;
+        gap: 1px;
+    }
+
+    :root {
+        --palette-dock-width: 200px;
+        --history-panel-width: 200px;
+    }
+
+    .palette-dock {
+        padding: 3px 3px;
+        gap: 4px;
+    }
+
+    body:not(.ui-layout-floating) #win-tools .window-body {
+        padding-top: 3px;
+        padding-bottom: 5px;
+    }
+
+    body:not(.ui-layout-floating) #win-layers .palette-panel-body--fill {
+        max-height: min(68vh, 640px);
+    }
+
+    body:not(.ui-layout-floating) #win-layers #layers-list.list-box--flex {
+        max-height: min(62vh, 580px);
+        min-height: 80px;
+    }
+
+    body:not(.ui-layout-floating) #win-history .palette-panel-body--fill {
+        max-height: 220px;
+    }
+
+    body:not(.ui-layout-floating) #win-history #history-list.list-box--flex {
+        max-height: 196px;
+        min-height: 80px;
+    }
+
+    .list-box {
+        font-size: 9px;
+    }
+
+    .tool-btn {
+        min-width: 20px;
+        min-height: 20px;
+        padding: 1px;
+    }
+
+    #settings-overlay .window-body {
+        padding: 8px !important;
+        font-size: 10px;
+    }
+
+    #settings-overlay .settings-dialog-layout {
+        gap: 10px;
+    }
+
+    #settings-overlay .settings-shortcuts-list {
+        font-size: 10px;
+        padding-left: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    body,
+    html {
+        font-size: 9px;
+    }
+
+    :root {
+        --palette-dock-width: 180px;
+        --history-panel-width: 200px;
+    }
+
+    .palette-dock {
+        padding: 2px 2px;
+        gap: 3px;
+    }
+
+    body:not(.ui-layout-floating) #win-layers .palette-panel-body--fill {
+        max-height: min(65vh, 560px);
+    }
+
+    body:not(.ui-layout-floating) #win-layers #layers-list.list-box--flex {
+        max-height: min(58vh, 500px);
+        min-height: 72px;
+    }
+
+    body:not(.ui-layout-floating) #win-history .palette-panel-body--fill {
+        max-height: 200px;
+    }
+
+    body:not(.ui-layout-floating) #win-history #history-list.list-box--flex {
+        max-height: 172px;
+        min-height: 72px;
+    }
+
+    .tool-btn {
+        min-width: 19px;
+        min-height: 19px;
+    }
+
+    #settings-overlay .window-body {
+        padding: 6px !important;
+        font-size: 9px;
+    }
+}
+
+/* Canvas Styles — cadrillage sous les zones transparentes */
+#main-canvas-container {
+    position: relative;
+    background: transparent;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    touch-action: none;
+}
+
+#canvas-checker-underlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    background-color: #ffffff;
+    background-image: repeating-conic-gradient(#d6d6d6 0% 25%, #ffffff 0% 50%);
+    background-size: 12px 12px;
+}
+
+#drawing-svg,
+#drawing-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+    z-index: 1;
+}
+
+#drawing-svg {
+    background: transparent;
+}
+
+/* Tool Grid : dimensions / flex — style.css + theme-win98-modern.css */
+
+/* Color Wheel */
+#color-wheel-container {
+    flex: 0 0 auto;
+    width: 128px;
+    height: 128px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #c0c0c0;
+    border: 1px inset #fff;
+    box-sizing: border-box;
+}
+
+#color-wheel {
+    cursor: crosshair;
+    display: block;
+}
+
+/* Layer/History Lists */
+.list-box {
+    height: 120px;
+    background: white;
+    border: 1px inset #fff;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.list-item {
+    padding: 2px 5px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.list-item.active {
+    background: #000080;
+    color: white;
+}
+
+/* Dialogs */
+#dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 13000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mode téléphone : modales et alertes pleine largeur, ancrées en bas (centrage horizontal) */
+body.illu-mobile-ui #settings-overlay,
+body.illu-mobile-ui #dialog-overlay,
+body.illu-mobile-ui #illu-alert-overlay,
+body.illu-mobile-ui #close-tab-overlay,
+body.illu-mobile-ui #import-choice-overlay,
+body.illu-mobile-ui #import-oversize-overlay,
+body.illu-mobile-ui #export-dialog-overlay,
+body.illu-mobile-ui #image-bounds-overlay {
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    align-items: stretch !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    box-sizing: border-box !important;
+}
+
+body.illu-mobile-ui #illu-alert-overlay {
+    padding-top: 0 !important;
+}
+
+body.illu-mobile-ui #settings-overlay .window,
+body.illu-mobile-ui #dialog-overlay>.window,
+body.illu-mobile-ui #close-tab-overlay>.window,
+body.illu-mobile-ui #import-choice-overlay>.window,
+body.illu-mobile-ui #import-oversize-overlay>.window,
+body.illu-mobile-ui #export-dialog-overlay>.window,
+body.illu-mobile-ui #image-bounds-overlay>.window,
+body.illu-mobile-ui #illu-alert-overlay .illu-alert-window {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* ——— Dialogue export (accès rapide PNG / .illu) ——— */
+.illu-export-dialog__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.illu-export-dialog__lead {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #444;
+}
+
+.illu-export-quick {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.illu-export-quick-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 92px;
+    padding: 12px 8px;
+    border: 2px solid;
+    border-color: var(--mp-inset-top, #dfdfdf) var(--mp-inset-bot, #808080) var(--mp-inset-bot, #808080)
+        var(--mp-inset-top, #dfdfdf);
+    background: linear-gradient(180deg, #fff 0%, #ece9d8 100%);
+    cursor: pointer;
+    text-align: center;
+    border-radius: 2px;
+}
+
+.illu-export-quick-btn:hover,
+.illu-export-quick-btn:focus-visible {
+    background: linear-gradient(180deg, #fff 0%, #d8e8ff 100%);
+    outline: none;
+}
+
+.illu-export-quick-btn:active {
+    border-color: var(--mp-inset-bot, #808080) var(--mp-inset-top, #dfdfdf) var(--mp-inset-top, #dfdfdf)
+        var(--mp-inset-bot, #808080);
+    padding-top: 13px;
+    padding-bottom: 11px;
+}
+
+.illu-export-quick-btn__icon {
+    font-size: 1.85rem;
+    color: #0a246a;
+    line-height: 1;
+}
+
+.illu-export-quick-btn__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #000;
+}
+
+.illu-export-quick-btn__hint {
+    font-size: 10px;
+    color: #555;
+    line-height: 1.2;
+    max-width: 11em;
+}
+
+.illu-export-more {
+    border: 1px solid #a0a0a0;
+    border-radius: 2px;
+    background: #f8f8f8;
+    padding: 0 8px 8px;
+}
+
+.illu-export-more__summary {
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 8px 2px;
+    list-style-position: inside;
+    color: #0a246a;
+}
+
+.illu-export-more__summary::-webkit-details-marker {
+    color: #0a246a;
+}
+
+.illu-export-more__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+.illu-export-more__row {
+    margin-bottom: 0;
+}
+
+.illu-export-more__row label {
+    min-width: 72px;
+    font-size: 11px;
+}
+
+.illu-export-more__row select {
+    flex: 1;
+    min-width: 0;
+}
+
+.illu-export-more__opts .field-row {
+    margin-bottom: 0;
+}
+
+.illu-export-more__note {
+    margin: 0;
+    font-size: 10px;
+    color: #666;
+}
+
+.illu-export-more__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.illu-export-dialog__local {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #c0c0c0;
+}
+
+.illu-export-dialog__autosave {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.illu-export-dialog__autosave label {
+    font-size: 11px;
+}
+
+.illu-export-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+body.theme-dark .illu-export-dialog__lead {
+    color: #ccc;
+}
+
+body.theme-dark .illu-export-quick-btn {
+    background: linear-gradient(180deg, #3a3a48 0%, #2a2a36 100%);
+    color: #eee;
+}
+
+body.theme-dark .illu-export-quick-btn__title {
+    color: #f0f0f0;
+}
+
+body.theme-dark .illu-export-quick-btn__hint {
+    color: #aaa;
+}
+
+body.theme-dark .illu-export-more {
+    background: #2a2a34;
+    border-color: #555;
+}
+
+body.illu-mobile-ui #settings-overlay .window {
+    max-height: min(88vh, calc(100vh - 24px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+body.illu-mobile-ui #settings-overlay .settings-dialog-window-body {
+    max-height: min(75vh, calc(100vh - 120px)) !important;
+}
+
+body.illu-mobile-ui #settings-overlay .settings-dialog-layout {
+    flex-direction: column !important;
+}
+
+body.illu-mobile-ui #settings-overlay .settings-dialog-aside {
+    flex: 0 0 auto !important;
+    max-width: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #b0b0b0;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+}
+
+body.illu-mobile-ui.effect-dialog-open #effect-dialog {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    align-items: stretch !important;
+}
+
+body.illu-mobile-ui.effect-dialog-open #effect-dialog-window {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    max-height: min(88vh, calc(100vh - 24px)) !important;
+    box-sizing: border-box !important;
+}
+
+/* Loupe tactile — poignées de sélection / déformation */
+.illu-selection-touch-loupe {
+    position: fixed;
+    z-index: 2500005;
+    width: 96px;
+    height: 96px;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.illu-selection-touch-loupe__ring {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #fff;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.65),
+        0 4px 14px rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* Centre = ancrage poignée (hors du ring pour ne pas être rogné par overflow:hidden) */
+.illu-selection-touch-loupe__cross {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.illu-selection-touch-loupe__cross::before,
+.illu-selection-touch-loupe__cross::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8);
+}
+
+.illu-selection-touch-loupe__cross::before {
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    transform: translateX(-50%);
+}
+
+.illu-selection-touch-loupe__cross::after {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+
+.illu-selection-touch-loupe__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.illu-palette-disabled {
+    display: none !important;
+}
+
+/* --- PHOTO MODE PRO --- */
+body.illu-photo-mode-active #palette-dock-left,
+body.illu-photo-mode-active #palette-dock-right,
+body.illu-photo-mode-active #tab-bar-outer,
+body.illu-photo-mode-active .illu-menubar-toolbar,
+body.illu-photo-mode-active .tool-options-bar,
+body.illu-photo-mode-active #win-tools,
+body.illu-photo-mode-active #main-toolbox,
+body.illu-photo-mode-active .illu-pdn-edge-strip,
+body.illu-photo-mode-active #win-colors,
+body.illu-photo-mode-active #win-layers,
+body.illu-photo-mode-active #win-history {
+    display: none !important;
+}
+
+body.illu-photo-mode-active #app-status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10002;
+    background: #252526;
+    color: #aaa;
+    border-top: 1px solid #333;
+}
+
+/* Ensure menubar is always on top of the and doesn't get covered by overlay if possible, 
+   or the overlay starts below. We will use z-index. */
+.illu-menubar-root {
+    position: relative;
+    z-index: 9999999 !important;
+}
+
+ul[role="menu"] {
+    z-index: 9999999 !important;
+}
+
+/* =========================================================================
+   Universal Link Modernization & Shortcut Cards
+   ========================================================================= */
+a {
+    color: var(--mp-accent, #1e4a8c);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+a:hover {
+    color: var(--mp-accent, #1e4a8c);
+    opacity: 0.8;
+    text-decoration: none;
+}
+
+/* Shortcut UI for Settings */
+.url-shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.theme-dark .url-shortcut-row {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.url-shortcut-code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--mp-accent, #1e4a8c);
+    background: rgba(30, 74, 140, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.url-shortcut-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    cursor: pointer;
+    font-size: 11px !important;
+    opacity: 0.5;
+    transition: all 0.2s !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mp-text, #333) !important;
+}
+
+.url-shortcut-btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: var(--mp-accent, #1e4a8c) !important;
+}
+
+body.theme-dark .url-shortcut-code {
+    color: #8ab4e8 !important;
+    /* Soft light blue for dark mode */
+    background: rgba(138, 180, 232, 0.1);
+    border: 1px solid rgba(138, 180, 232, 0.2);
+}
+
+body.theme-dark .url-shortcut-btn {
+    color: #eee !important;
+    opacity: 1 !important;
+}
+
+body.theme-dark .url-shortcut-btn:hover {
+    color: #8ab4e8 !important;
+}
+
+/* Fix visibility of the URL block title in dark mode */
+body.theme-dark .settings-aside-block--urls {
+    color: #ccc !important;
+}
+
+body.theme-dark .settings-aside-block--urls p {
+    border-bottom-color: #444 !important;
+}
+
+/* Toast Feedback */
+.mp-toast {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 100000;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid #555;
+    transform: translate(-50%, -100%);
+    opacity: 0;
+}
+
+.mp-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -120%);
+}
+
+.settings-shortcuts-heading {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #444;
+}
+
+.settings-shortcuts-heading:hover {
+    background: #e6e6e6;
+    border-color: #bbb;
+    color: #000;
+}
+
+body.theme-dark .settings-shortcuts-heading {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #ccc;
+}
+
+body.theme-dark .settings-shortcuts-heading:hover {
+    background: #333;
+    border-color: #555;
+    color: #fff;
+}
+
+.settings-shortcuts-heading .toggle-icon {
+    font-size: 10px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+/* Developer Credit Styling in Status Bar */
+.status-bar-credit-link {
+    color: var(--mp-accent, #1e4a8c) !important;
+    font-weight: 900;
+    margin-left: 6px;
+    text-shadow: 0.5px 0.5px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-block;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+}
+
+.status-bar-credit-link:hover {
+    transform: scale(1.15) rotate(-2deg);
+    filter: drop-shadow(0 0 8px rgba(var(--mp-accent-rgb, 30, 74, 140), 0.6));
+    color: var(--mp-accent) !important;
+    opacity: 1 !important;
+}
+
+body.theme-dark .status-bar-credit-link {
+    color: var(--mp-accent) !important;
+    filter: brightness(1.3);
+    /* Leger boost pour la lisibilité sur fond sombre */
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+body.theme-dark .status-bar-credit-link:hover {
+    filter: brightness(1.5) drop-shadow(0 0 12px var(--mp-accent));
+    color: #fff !important;
+}
+
+.settings-table-row--flex {
+    display: flex;
+    flex-direction: row !important;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Premium Settings Action Buttons */
+.settings-action-btn {
+    background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+    border: 1px solid #b8babf;
+    border-bottom: 2px solid #a1a3a8;
+    border-radius: 3px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.12s ease;
+    text-shadow: 0 1px 0 #fff;
+    min-height: 28px;
+    line-height: normal;
+}
+
+.settings-action-btn i {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.settings-action-btn:hover {
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    border-color: var(--accent-color, #0078d7);
+    filter: brightness(1.02);
+}
+
+.settings-action-btn:active {
+    background: #e9ecef;
+    border-bottom-width: 1px;
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.settings-action-btn--danger {
+    color: #a91e1e;
+}
+
+.settings-action-btn--danger:hover {
+    background: linear-gradient(180deg, #fff5f5 0%, #fed7d7 100%);
+    border-color: #f56565;
+    color: #c53030;
+}
+
+/* Dark Mode Overrides */
+html:has(body.theme-dark) .settings-action-btn {
+    background: linear-gradient(180deg, #454545 0%, #323232 100%);
+    border: 1px solid #555;
+    border-bottom: 2px solid #222;
+    color: #eee;
+    text-shadow: 0 1px 0 #000;
+}
+
+html:has(body.theme-dark) .settings-action-btn:hover {
+    background: linear-gradient(180deg, #505050 0%, #3a3a3a 100%);
+    border-color: var(--accent-color, #3b82f6);
+}
+
+html:has(body.theme-dark) .settings-action-btn--danger {
+    color: #fc8181;
+}
+
+html:has(body.theme-dark) .settings-action-btn--danger:hover {
+    background: linear-gradient(180deg, #5a2727 0%, #4a1d1d 100%);
+}
+
+#contact-send-btn {
+    background: linear-gradient(180deg, #e0f2fe 0%, #7dd3fc 100%) !important;
+    border: 2px solid !important;
+    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
+    color: #0c4a6e !important;
+    font-weight: 600;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+#contact-send-btn:hover {
+    filter: brightness(1.05);
+}
+
+#contact-send-btn:active {
+    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
+    padding: 5px 11px 3px 13px !important;
+}
+
+/* =========================================================================
+   CUSTOM OVERRIDES FOR MASTERPAINT PREMIUM UI
+   ========================================================================= */
+
+/* 1. Global height limit for .illu-gauge-wrap */
+.illu-gauge-wrap {
+    height: 20px !important;
+}
+
+/* 2. Prevent modern tab-bar overlapping tool-options-container */
+body.theme-modern .tab-bar-outer {
+    margin-top: 0 !important;
+    position: relative !important;
+    z-index: 610 !important;
+    box-shadow: none !important;
+}
+body.theme-modern #tool-options-container {
+    position: relative !important;
+    z-index: 625 !important;
+    border-bottom: var(--modern-border) !important;
+    margin-bottom: 0 !important;
+}
+
+/* 3. Icon Viewer Custom CSS Styling for dynamic previews */
+#iview-scroll {
+    transition: background-color 0.25s ease, color 0.25s ease !important;
+}
+
+/* When light preview is toggled (when the page is in dark mode) */
+#iview-scroll.iview-light-preview {
+    background: #ffffff !important;
+    color: #0f172a !important;
+}
+#iview-scroll.iview-light-preview .iview-grid-item {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+#iview-scroll.iview-light-preview .iview-grid-item:hover {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+}
+#iview-scroll.iview-light-preview .iview-grid-item i {
+    color: #1e293b !important;
+}
+
+/* When dark preview is toggled (when the page is in light mode) */
+#iview-scroll.iview-dark-preview {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+#iview-scroll.iview-dark-preview .iview-grid-item {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+#iview-scroll.iview-dark-preview .iview-grid-item:hover {
+    background: #334155 !important;
+    border-color: #475569 !important;
+}
+#iview-scroll.iview-dark-preview .iview-grid-item i {
+    color: #f8fafc !important;
+}
+
+/* 4. Ensure the Icon Viewer Close Button is always beautifully visible and functional */
+.iview-window .title-bar-controls .title-bar-close-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    position: relative !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Classic Win98 Mode close button styling override */
+body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn {
+    width: 18px !important;
+    height: 18px !important;
+    background: linear-gradient(180deg, #c8d4e8 0%, #7a8fb0 45%, #5a6d8a 100%) !important;
+    border: 1px solid !important;
+    border-color: #ffffff #404040 #404040 #ffffff !important;
+    box-shadow: none !important;
+}
+body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    width: 10px !important;
+    height: 2px !important;
+    background: #000000 !important;
+    transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    width: 10px !important;
+    height: 2px !important;
+    background: #000000 !important;
+    transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+body:not(.theme-modern):not(.theme-aero):not(.theme-luna).theme-dark .iview-window .title-bar-controls .title-bar-close-btn::before {
+    background: #ffffff !important;
+}
+body:not(.theme-modern):not(.theme-aero):not(.theme-luna).theme-dark .iview-window .title-bar-controls .title-bar-close-btn::after {
+    background: #ffffff !important;
+}
+
+/* 5. Icônes dégradé (mode « Dégradé » — illu-colored-icons ; voir icons-flat-colored.css pour « Colorés ») */
+body.illu-colored-icons .fa-solid::before {
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.12));
+}
+
+body.illu-colored-icons .fa-file::before,
+body.illu-colored-icons .fa-file-circle-plus::before {
+    background: linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-folder-open::before {
+    background: linear-gradient(180deg, #fcd34d 0%, #d97706 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-floppy-disk::before {
+    background: linear-gradient(180deg, #4ade80 0%, #047857 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-image::before {
+    background: linear-gradient(180deg, #c4b5fd 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-arrow-rotate-left::before,
+body.illu-colored-icons .fa-undo::before {
+    background: linear-gradient(180deg, #f87171 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-arrow-rotate-right::before,
+body.illu-colored-icons .fa-redo::before {
+    background: linear-gradient(180deg, #fb923c 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-scissors::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-copy::before {
+    background: linear-gradient(180deg, #22d3ee 0%, #0e7490 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-paste::before {
+    background: linear-gradient(180deg, #2dd4bf 0%, #0f766e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-square-dashed::before,
+body.illu-colored-icons .fa-circle-dashed::before,
+body.illu-colored-icons .fa-lasso::before {
+    background: linear-gradient(180deg, #7dd3fc 0%, #0369a1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-wand-magic-sparkles::before {
+    background: linear-gradient(180deg, #e879f9 0%, #a21caf 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-pencil::before,
+body.illu-colored-icons .fa-pen::before {
+    background: linear-gradient(180deg, #fde047 0%, #ca8a04 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-paint-brush::before {
+    background: linear-gradient(180deg, #f472b6 0%, #be185d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-fill-drip::before {
+    background: linear-gradient(180deg, #c084fc 0%, #7e22ce 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-eraser::before {
+    background: linear-gradient(180deg, #fda4af 0%, #e11d48 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-droplet::before,
+body.illu-colored-icons .fa-eye-dropper::before {
+    background: linear-gradient(180deg, #38bdf8 0%, #0369a1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-crop-simple::before {
+    background: linear-gradient(180deg, #fdba74 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-magnifying-glass::before {
+    background: linear-gradient(180deg, #6ee7b7 0%, #047857 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-square::before {
+    background: linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-circle::before {
+    background: linear-gradient(180deg, #4ade80 0%, #047857 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-star::before {
+    background: linear-gradient(180deg, #fde047 0%, #ca8a04 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-heart::before {
+    background: linear-gradient(180deg, #f87171 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-font::before {
+    background: linear-gradient(180deg, #a5b4fc 0%, #4338ca 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* Annuler / refaire (menus) */
+body.illu-colored-icons .fa-rotate-left::before {
+    background: linear-gradient(180deg, #f87171 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-rotate-right::before {
+    background: linear-gradient(180deg, #fb923c 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ——— Ajustements (menu Image) ——— */
+body.illu-colored-icons .fa-sliders::before {
+    background: linear-gradient(180deg, #93c5fd 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-chart-column::before {
+    background: linear-gradient(180deg, #fdba74 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-circle-half-stroke::before {
+    background: linear-gradient(180deg, #818cf8 0%, #3730a3 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-droplet-slash::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #334155 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-image-portrait::before {
+    background: linear-gradient(180deg, #d4a574 0%, #92400e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-swatchbook::before {
+    background: linear-gradient(180deg, #f9a8d4 0%, #9333ea 50%, #2563eb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-sun::before {
+    background: linear-gradient(180deg, #fde047 0%, #ea580c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-palette::before {
+    background: linear-gradient(180deg, #f472b6 0%, #7c3aed 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-camera-retro::before {
+    background: linear-gradient(180deg, #5eead4 0%, #0f766e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-bolt::before {
+    background: linear-gradient(180deg, #fef08a 0%, #ca8a04 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-eye::before {
+    background: linear-gradient(180deg, #67e8f9 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-chart-line::before {
+    background: linear-gradient(180deg, #86efac 0%, #15803d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ——— Effets (sous-menus) ——— */
+body.illu-colored-icons .fa-film::before {
+    background: linear-gradient(180deg, #d4d4d8 0%, #52525b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-border-all::before {
+    background: linear-gradient(180deg, #c4b5fd 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-tape::before {
+    background: linear-gradient(180deg, #fca5a5 0%, #991b1b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-circle-dot::before {
+    background: linear-gradient(180deg, #fb7185 0%, #be123c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-compress::before {
+    background: linear-gradient(180deg, #fdba74 0%, #9a3412 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-mountain::before {
+    background: linear-gradient(180deg, #86efac 0%, #166534 50%, #78716c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-gem::before {
+    background: linear-gradient(180deg, #a5f3fc 0%, #7e22ce 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-arrows-rotate::before {
+    background: linear-gradient(180deg, #7dd3fc 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-border-none::before {
+    background: linear-gradient(180deg, #a8a29e 0%, #57534e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-table-cells-large::before {
+    background: linear-gradient(180deg, #2dd4bf 0%, #0f766e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-hurricane::before {
+    background: linear-gradient(180deg, #64748b 0%, #1e3a5f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-water::before {
+    background: linear-gradient(180deg, #38bdf8 0%, #1e40af 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-clover::before {
+    background: linear-gradient(180deg, #4ade80 0%, #15803d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-snowflake::before {
+    background: linear-gradient(180deg, #e0f2fe 0%, #0284c7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-cube::before {
+    background: linear-gradient(180deg, #fdba74 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-smog::before {
+    background: linear-gradient(180deg, #cbd5e1 0%, #64748b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-circle-notch::before {
+    background: linear-gradient(180deg, #c084fc 0%, #6b21a8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-forward::before {
+    background: linear-gradient(180deg, #60a5fa 0%, #1e3a8a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-eye-slash::before {
+    background: linear-gradient(180deg, #f87171 0%, #991b1b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-camera::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #334155 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-lightbulb::before {
+    background: linear-gradient(180deg, #fef9c3 0%, #eab308 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-pen-nib::before {
+    background: linear-gradient(180deg, #1e293b 0%, #6366f1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-stamp::before {
+    background: linear-gradient(180deg, #d6d3d1 0%, #78350f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-braille::before {
+    background: linear-gradient(180deg, #a1a1aa 0%, #3f3f46 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-glasses::before {
+    background: linear-gradient(180deg, #67e8f9 0%, #0369a1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* Menus : image, calques, divers */
+body.illu-colored-icons .fa-crop::before {
+    background: linear-gradient(180deg, #fdba74 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-maximize::before,
+body.illu-colored-icons .fa-expand::before {
+    background: linear-gradient(180deg, #7dd3fc 0%, #0369a1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-square-plus::before {
+    background: linear-gradient(180deg, #86efac 0%, #15803d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-rotate::before {
+    background: linear-gradient(180deg, #a78bfa 0%, #5b21b6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-align-center::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-table-columns::before {
+    background: linear-gradient(180deg, #f0abfc 0%, #a21caf 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-object-ungroup::before {
+    background: linear-gradient(180deg, #fcd34d 0%, #b45309 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-trash-can::before {
+    background: linear-gradient(180deg, #fca5a5 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-download::before {
+    background: linear-gradient(180deg, #4ade80 0%, #047857 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-file-export::before,
+body.illu-colored-icons .fa-up-right-from-square::before {
+    background: linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-gear::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-file-circle-xmark::before,
+body.illu-colored-icons .fa-xmark::before {
+    background: linear-gradient(180deg, #f87171 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-bug::before {
+    background: linear-gradient(180deg, #f87171 0%, #7f1d1d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-desktop::before {
+    background: linear-gradient(180deg, #60a5fa 0%, #1e3a8a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons .fa-clipboard-list::before {
+    background: linear-gradient(180deg, #fde68a 0%, #b45309 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* Menu « Ajouter du bruit » et palette calques */
+body.illu-colored-icons menu .menu-row-icon .fa-plus::before {
+    background: linear-gradient(180deg, #fdba74 0%, #c2410c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+body.illu-colored-icons menu .menu-row-icon .fa-minus::before {
+    background: linear-gradient(180deg, #fca5a5 0%, #dc2626 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* Toolbar palette calques (neutre) */
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-plus::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-minus::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-arrow-up::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-arrow-down::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-layer-group::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-arrows-left-right::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-clone::before,
+body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-object-group::before {
+    background: linear-gradient(180deg, #94a3b8 0%, #334155 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* Custom Gradient Icon Colored Mode Accent */
+body.illu-colored-icons #tool-gradient svg {
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15)) !important;
+}
+
+/* Disable inversion filter on active icons when colored icons mode is active */
+body.illu-colored-icons .tool-btn.active i,
+body.illu-colored-icons .tool-btn.active .tool-icon,
+body.illu-colored-icons .opt-bar-btn.opt-bar-btn--on i,
+body.illu-colored-icons .illu-icon-toggle--on i,
+body.illu-colored-icons .illu-icon-toggle.active i {
+    filter: none !important;
+}
+
+/* Premium Glow Effect for Active Colored Icons in Modern Theme */
+body.illu-colored-icons #win-tools .tool-btn.active .tool-icon:not(svg),
+body.illu-colored-icons .opt-bar-btn.opt-bar-btn--on i,
+body.illu-colored-icons .illu-icon-toggle--on i,
+body.illu-colored-icons .illu-icon-toggle.active i {
+    filter: brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7)) !important;
+}
+
+body.illu-colored-icons.theme-dark #win-tools .tool-btn.active .tool-icon:not(svg),
+body.illu-colored-icons.theme-dark .opt-bar-btn.opt-bar-btn--on i,
+body.illu-colored-icons.theme-dark .illu-icon-toggle--on i,
+body.illu-colored-icons.theme-dark .illu-icon-toggle.active i {
+    filter: brightness(1.3) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)) !important;
+}
+
+body.illu-colored-icons.theme-dark .fa-solid::before {
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+}
+
+/* Active SVG icon overrides to prevent them from turning completely white or losing color */
+body.theme-modern #win-tools .tool-btn.active svg,
+body.theme-aero #win-tools .tool-btn.active svg {
+    --illu-icon-stroke: #ffffff !important;
+    --illu-icon-bg: rgba(255, 255, 255, 0.2) !important;
+    --illu-icon-accent: #ffffff !important;
+    --illu-icon-accent-subtle: rgba(255, 255, 255, 0.4) !important;
+}
+body.theme-modern.theme-dark #win-tools .tool-btn.active svg,
+body.theme-aero.theme-dark #win-tools .tool-btn.active svg {
+    --illu-icon-stroke: #000000 !important;
+    --illu-icon-bg: rgba(0, 0, 0, 0.2) !important;
+    --illu-icon-accent: #000000 !important;
+    --illu-icon-accent-subtle: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Perfect crisp anti-aliasing for SVG icons */
+body.theme-modern #win-tools #main-toolbox.tool-grid--pdn .tool-btn svg.tool-icon {
+    width: 16px !important;
+    height: 16px !important;
+    shape-rendering: geometricPrecision !important;
+}
