@@ -36,17 +36,10 @@ Inspiré de Paint.NET, Photoshop et Illustrator. Créez des images bitmap et vec
 
 **En local**
 
-```bash
-git clone https://github.com/polocrafting/MasterPaint.git
-cd MasterPaint
-php -S localhost:8000
-```
-
-Puis ouvrez [http://localhost:8000](http://localhost:8000) (ou `index.html` directement).
+Telecharger le ZIP du projet, lancé XAMPP ou tout autre lanceur Web local et profitez
 
 ---
 
 <p align="center">
-  <sub>Thème <code>css/theme-win98-modern.css</code> · Icônes <code>icons/illu-sprite.svg</code></sub><br />
-  <sub>Application développée par <a href="https://github.com/polocrafting">polocrafting</a></sub>
+  <sub>Application développée par <a href="https://polocrafting.fr">polocrafting</a></sub>
 </p>
