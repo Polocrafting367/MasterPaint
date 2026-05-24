@@ -835,21 +835,18 @@
         } else if (ed.kind === 'quadcurve') {
             const lineCss = lineLikeStrokeCss();
             const { x0, y0, qx, qy, x1, y1 } = ed;
-            ctx.beginPath();
-            ctx.moveTo(x0, y0);
-            ctx.quadraticCurveTo(qx, qy, x1, y1);
-            ctx.lineWidth = strokeW;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            const cap0 = EditorManager.toolProps.lineCapStart || 'none';
+            const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
+            let strokeStyle = lineCss;
             if (fillType === 'gradient') {
                 const g = ctx.createLinearGradient(x0, y0, x1, y1);
                 g.addColorStop(0, lineCss);
                 g.addColorStop(1, lineCss);
-                ctx.strokeStyle = g;
-            } else {
-                ctx.strokeStyle = lineCss;
+                strokeStyle = g;
             }
-            ctx.stroke();
+            if (typeof window.illuStrokeQuadraticWithLineCaps === 'function') {
+                window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeStyle, cap0, cap1);
+            }
         } else if (ed.kind === 'ellipse') {
             const { cx, cy, rx, ry } = ed;
             const fillGrad = fillType === 'gradient'

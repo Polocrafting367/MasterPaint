@@ -414,14 +414,14 @@ const TOOL_OPTIONS_UI = {
     gradient: { label: 'Dégradé', actionGroups: ['opt-grp-gradient-actions'], paramGroups: [] },
     rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    line: { label: 'Ligne', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
+    line: { label: 'Ligne', actionGroups: ['opt-grp-line-endpoints'], paramGroups: ['opt-grp-size-params'] },
     fill: { label: 'Pot de peinture', actionGroups: [], paramGroups: ['opt-grp-fill-params'] },
     zoom: { label: 'Loupe', actionGroups: [], paramGroups: [] },
     text: { label: 'Texte', actionGroups: ['opt-grp-text-actions'], paramGroups: ['opt-grp-text-params'] },
     'direct-select': { label: 'Sélection à la volée', actionGroups: [], paramGroups: [] },
     deform: { label: 'Déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'warp-4': { label: 'Déformation 4 coins', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
-    'cubic-3': { label: 'Courbe (3 clics, Q)', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
+    'cubic-3': { label: 'Courbe (3 clics, Q)', actionGroups: ['opt-grp-line-endpoints'], paramGroups: ['opt-grp-size-params'] },
     'pen': { label: 'Plume', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'polygon': { label: 'Polygone', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
@@ -912,7 +912,8 @@ window.updateToolOptionsBar = function () {
     const shapeGradAngleRow = document.getElementById('tool-shape-grad-angle-row');
     const shapeGradTypeActions = document.getElementById('tool-shape-grad-type-actions');
     const quadBulgeRow = document.getElementById('tool-quad-curve-bulge-row');
-    const isLineLike = t === 'line' || t === 'cubic-3' || t === 'pen';
+    const isLineOrCubic = t === 'line' || t === 'cubic-3';
+    const isLineLike = isLineOrCubic || t === 'pen';
     const isShapeRectLike = t === 'rect' || t === 'circle' || t === 'round-3' || t === 'triangle' || t === 'polygon';
 
     const shapeModeSel = document.getElementById('tool-shape-mode');
@@ -942,17 +943,19 @@ window.updateToolOptionsBar = function () {
 
     if (shapeModeRow) shapeModeRow.hidden = !isShapeRectLike;
     if (shapeFillTypeRow) {
-        if (isLineLike) shapeFillTypeRow.hidden = false;
+        if (isLineOrCubic) shapeFillTypeRow.hidden = true;
+        else if (isLineLike) shapeFillTypeRow.hidden = false;
         else shapeFillTypeRow.hidden = mode === 'stroke';
     }
     const showGradTypeRow = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke';
     if (shapeGradTypeActions) shapeGradTypeActions.hidden = !showGradTypeRow;
     const showGradMethodRow =
-        (isShapeRectLike && fillType === 'gradient' && mode !== 'stroke') || (isLineLike && fillType === 'gradient');
+        (isShapeRectLike && fillType === 'gradient' && mode !== 'stroke') ||
+        (t === 'pen' && fillType === 'gradient');
     const shapeGradMethodActions = document.getElementById('tool-shape-grad-method-actions');
     if (shapeGradMethodActions) shapeGradMethodActions.hidden = !showGradMethodRow;
     const showGradAngleRect = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke' && gradType !== 'radial';
-    const showGradAngleLineLike = isLineLike && fillType === 'gradient';
+    const showGradAngleLineLike = t === 'pen' && fillType === 'gradient';
     if (shapeGradAngleRow) shapeGradAngleRow.hidden = !showGradAngleRect && !showGradAngleLineLike;
 
     if (quadBulgeRow) quadBulgeRow.hidden = t !== 'cubic-3';
@@ -4849,22 +4852,165 @@ window.requestQuadBezierDraftRefresh = function () {
     });
 };
 
+function lineCapInsetPx(cap, strokeW) {
+    const W = Math.max(4, strokeW * 2.5);
+    const r = Math.max(1.2, strokeW * 0.55);
+    if (cap === 'arrow' || cap === 'diamond') return W;
+    if (cap === 'round') return r;
+    return 0;
+}
+
+function quadBezierPointAt(x0, y0, qx, qy, x1, y1, t) {
+    const u = 1 - t;
+    return {
+        x: u * u * x0 + 2 * u * t * qx + t * t * x1,
+        y: u * u * y0 + 2 * u * t * qy + t * t * y1
+    };
+}
+
+function splitQuadBezierAt(x0, y0, qx, qy, x1, y1, t) {
+    const l1x = x0 + (qx - x0) * t;
+    const l1y = y0 + (qy - y0) * t;
+    const l2x = qx + (x1 - qx) * t;
+    const l2y = qy + (y1 - qy) * t;
+    const mx = l1x + (l2x - l1x) * t;
+    const my = l1y + (l2y - l1y) * t;
+    return {
+        left: { x0, y0, qx: l1x, qy: l1y, x1: mx, y1: my },
+        right: { x0: mx, y0: my, qx: l2x, qy: l2y, x1, y1 }
+    };
+}
+
+function findQuadTForChordInsetFromEnd(x0, y0, qx, qy, x1, y1, inset) {
+    if (inset <= 0) return 1;
+    const end = quadBezierPointAt(x0, y0, qx, qy, x1, y1, 1);
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) * 0.5;
+        const p = quadBezierPointAt(x0, y0, qx, qy, x1, y1, mid);
+        const d = Math.hypot(p.x - end.x, p.y - end.y);
+        if (d >= inset) lo = mid;
+        else hi = mid;
+    }
+    return lo;
+}
+
+function findQuadTForChordInsetFromStart(x0, y0, qx, qy, x1, y1, inset) {
+    if (inset <= 0) return 0;
+    const start = quadBezierPointAt(x0, y0, qx, qy, x1, y1, 0);
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) * 0.5;
+        const p = quadBezierPointAt(x0, y0, qx, qy, x1, y1, mid);
+        const d = Math.hypot(p.x - start.x, p.y - start.y);
+        if (d >= inset) hi = mid;
+        else lo = mid;
+    }
+    return hi;
+}
+
+function trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, strokeW, startCap, endCap) {
+    let c = { x0, y0, qx, qy, x1, y1 };
+    const inset0 = lineCapInsetPx(startCap, strokeW);
+    const inset1 = lineCapInsetPx(endCap, strokeW);
+    if (inset0 > 0) {
+        const t0 = findQuadTForChordInsetFromStart(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, inset0);
+        if (t0 > 1e-5 && t0 < 1 - 1e-5) c = splitQuadBezierAt(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, t0).right;
+    }
+    if (inset1 > 0) {
+        const t1 = findQuadTForChordInsetFromEnd(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, inset1);
+        if (t1 > 1e-5 && t1 < 1 - 1e-5) c = splitQuadBezierAt(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, t1).left;
+    }
+    return c;
+}
+
+function quadBezierTangentUnitAt(x0, y0, qx, qy, x1, y1, t) {
+    const u = 1 - t;
+    const dx = 2 * u * (qx - x0) + 2 * t * (x1 - qx);
+    const dy = 2 * u * (qy - y0) + 2 * t * (y1 - qy);
+    const L = Math.hypot(dx, dy);
+    if (L < 1e-6) return { x: 1, y: 0 };
+    return { x: dx / L, y: dy / L };
+}
+
+function drawPixelQuadCurveEndpointDecor(ctx, x0, y0, qx, qy, x1, y1, strokeW, color, startCap, endCap) {
+    if (typeof window.illuDrawPixelLineEndpointDecor !== 'function') return;
+    const cap0 = startCap || 'none';
+    const cap1 = endCap || 'none';
+    const d = 1;
+    const ts = quadBezierTangentUnitAt(x0, y0, qx, qy, x1, y1, 0);
+    const te = quadBezierTangentUnitAt(x0, y0, qx, qy, x1, y1, 1);
+    if (cap0 !== 'none') {
+        window.illuDrawPixelLineEndpointDecor(
+            ctx,
+            x0,
+            y0,
+            x0 + ts.x * d,
+            y0 + ts.y * d,
+            strokeW,
+            color,
+            cap0,
+            'none'
+        );
+    }
+    if (cap1 !== 'none') {
+        window.illuDrawPixelLineEndpointDecor(
+            ctx,
+            x1 - te.x * d,
+            y1 - te.y * d,
+            x1,
+            y1,
+            strokeW,
+            color,
+            'none',
+            cap1
+        );
+    }
+}
+
+window.illuDrawPixelQuadCurveEndpointDecor = drawPixelQuadCurveEndpointDecor;
+
+window.illuStrokeQuadraticWithLineCaps = function (
+    ctx,
+    x0,
+    y0,
+    qx,
+    qy,
+    x1,
+    y1,
+    strokeW,
+    strokeStyle,
+    cap0,
+    cap1
+) {
+    const c0 = cap0 || 'none';
+    const c1 = cap1 || 'none';
+    const bothRound = c0 === 'round' && c1 === 'round';
+    const trimmed = trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, strokeW, c0, c1);
+    ctx.beginPath();
+    ctx.moveTo(trimmed.x0, trimmed.y0);
+    ctx.quadraticCurveTo(trimmed.qx, trimmed.qy, trimmed.x1, trimmed.y1);
+    ctx.lineWidth = strokeW;
+    ctx.lineCap = bothRound ? 'round' : 'butt';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = strokeStyle;
+    ctx.stroke();
+    drawPixelQuadCurveEndpointDecor(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeStyle, c0, c1);
+};
+
 function strokePixelQuadCurve(ctx, x0, y0, qx, qy, x1, y1, strokeW) {
     const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
     const fillType = EditorManager.toolProps.fillType || 'solid';
     if (mode === 'fill') return;
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.quadraticCurveTo(qx, qy, x1, y1);
-    ctx.lineWidth = strokeW;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    if (fillType === 'gradient') {
-        ctx.strokeStyle = createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x0, y0, 0, 0, x1, y1);
-    } else {
-        ctx.strokeStyle = shapeLineStrokeCss();
-    }
-    ctx.stroke();
+    const cap0 = EditorManager.toolProps.lineCapStart || 'none';
+    const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
+    const strokeCss =
+        fillType === 'gradient'
+            ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x0, y0, 0, 0, x1, y1)
+            : shapeLineStrokeCss();
+    window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeCss, cap0, cap1);
 }
 
 let _quadDraftRaf = 0;
@@ -4929,14 +5075,21 @@ window.drawQuadBezierDraftInSvgUi = function (svgUI) {
         );
         const d = `M ${st.p0.x} ${st.p0.y} Q ${adj.qx} ${adj.qy} ${end.x} ${end.y}`;
         const path = document.createElementNS(NS, 'path');
+        const draftSw = Math.max(1, EditorManager.toolProps.size || 2);
+        const draftStroke = shapeLineStrokeCss();
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#0a5ebd');
-        path.setAttribute('stroke-width', String(1.5 / z));
+        path.setAttribute('stroke', draftStroke);
+        path.setAttribute('stroke-width', String(draftSw));
+        path.setAttribute('stroke-linecap', 'butt');
+        path.setAttribute('data-illu-quad-3', '1');
         path.setAttribute('stroke-dasharray', '5 4');
         path.setAttribute('vector-effect', 'non-scaling-stroke');
         path.setAttribute('pointer-events', 'none');
         svgUI.appendChild(path);
+        if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
+            window.vectorApplyLineEndpointMarkers(path);
+        }
     }
 };
 
@@ -4956,6 +5109,7 @@ function ensureLineArrowMarker(defs, id, color, sw, forEnd) {
     let m = document.getElementById(id);
     const W = Math.max(8, sw * 3.5);
     const H = Math.max(6, sw * 2.5);
+    const refX = forEnd ? String(W) : '0';
     if (!m) {
         m = document.createElementNS(SVG_NS, 'marker');
         m.setAttribute('id', id);
@@ -4964,14 +5118,14 @@ function ensureLineArrowMarker(defs, id, color, sw, forEnd) {
         if (forEnd) {
             m.setAttribute('markerWidth', String(W));
             m.setAttribute('markerHeight', String(H));
-            m.setAttribute('refX', String(W * 0.92));
+            m.setAttribute('refX', refX);
             m.setAttribute('refY', String(H / 2));
             m.setAttribute('orient', 'auto');
             p.setAttribute('d', `M0,0 L${W},${H / 2} L0,${H} z`);
         } else {
             m.setAttribute('markerWidth', String(W));
             m.setAttribute('markerHeight', String(H));
-            m.setAttribute('refX', String(W * 0.08));
+            m.setAttribute('refX', refX);
             m.setAttribute('refY', String(H / 2));
             m.setAttribute('orient', 'auto-start-reverse');
             p.setAttribute('d', `M${W},0 L0,${H / 2} L${W},${H} z`);
@@ -4980,6 +5134,8 @@ function ensureLineArrowMarker(defs, id, color, sw, forEnd) {
         m.appendChild(p);
         defs.appendChild(m);
     } else {
+        m.setAttribute('refX', refX);
+        m.setAttribute('refY', String(H / 2));
         const p = m.querySelector('path');
         if (p) p.setAttribute('fill', color);
     }
@@ -4988,6 +5144,7 @@ function ensureLineArrowMarker(defs, id, color, sw, forEnd) {
 
 function ensureLineDiamondMarker(defs, id, color, sw, forEnd) {
     const S = Math.max(6, sw * 2.2);
+    const refX = forEnd ? String(S) : '0';
     let m = document.getElementById(id);
     if (!m) {
         m = document.createElementNS(SVG_NS, 'marker');
@@ -4995,7 +5152,7 @@ function ensureLineDiamondMarker(defs, id, color, sw, forEnd) {
         m.setAttribute('markerUnits', 'userSpaceOnUse');
         m.setAttribute('markerWidth', String(S));
         m.setAttribute('markerHeight', String(S));
-        m.setAttribute('refX', forEnd ? String(S * 0.85) : String(S * 0.15));
+        m.setAttribute('refX', refX);
         m.setAttribute('refY', String(S / 2));
         m.setAttribute('orient', forEnd ? 'auto' : 'auto-start-reverse');
         const poly = document.createElementNS(SVG_NS, 'polygon');
@@ -5009,15 +5166,19 @@ function ensureLineDiamondMarker(defs, id, color, sw, forEnd) {
         m.appendChild(poly);
         defs.appendChild(m);
     } else {
+        m.setAttribute('refX', refX);
+        m.setAttribute('refY', String(S / 2));
         const poly = m.querySelector('polygon');
         if (poly) poly.setAttribute('fill', color);
     }
     return id;
 }
 
-function ensureLineRoundMarker(defs, id, color, sw) {
+function ensureLineRoundMarker(defs, id, color, sw, forEnd) {
     const r = Math.max(2, sw / 2);
-    const box = r * 2.2;
+    const span = r * 2;
+    const box = span * 1.1;
+    const refX = forEnd ? String(span) : '0';
     let m = document.getElementById(id);
     if (!m) {
         m = document.createElementNS(SVG_NS, 'marker');
@@ -5025,27 +5186,46 @@ function ensureLineRoundMarker(defs, id, color, sw) {
         m.setAttribute('markerUnits', 'userSpaceOnUse');
         m.setAttribute('markerWidth', String(box));
         m.setAttribute('markerHeight', String(box));
-        m.setAttribute('refX', String(box / 2));
+        m.setAttribute('refX', refX);
         m.setAttribute('refY', String(box / 2));
-        m.setAttribute('orient', '0');
+        m.setAttribute('orient', forEnd ? 'auto' : 'auto-start-reverse');
         const c = document.createElementNS(SVG_NS, 'circle');
-        c.setAttribute('cx', String(box / 2));
+        c.setAttribute('cx', String(r));
         c.setAttribute('cy', String(box / 2));
         c.setAttribute('r', String(r));
         c.setAttribute('fill', color);
         m.appendChild(c);
         defs.appendChild(m);
     } else {
+        m.setAttribute('refX', refX);
+        m.setAttribute('refY', String(box / 2));
+        m.setAttribute('orient', forEnd ? 'auto' : 'auto-start-reverse');
         const c = m.querySelector('circle');
-        if (c) c.setAttribute('fill', color);
+        if (c) {
+            c.setAttribute('fill', color);
+            c.setAttribute('cx', String(r));
+            c.setAttribute('cy', String(box / 2));
+            c.setAttribute('r', String(r));
+        }
     }
     return id;
 }
 
-window.vectorApplyLineEndpointMarkers = function (el) {
+function illuVectorPathHasLineEndpoints(el) {
+    if (!el) return false;
     const tag = (el.tagName || '').toLowerCase();
-    const isCubic = tag === 'path' && el.getAttribute('data-illu-line-cubic') === '1';
-    if (!isCubic && tag !== 'line') return;
+    if (tag === 'line') return true;
+    if (tag !== 'path') return false;
+    return (
+        el.getAttribute('data-illu-line-cubic') === '1' || el.getAttribute('data-illu-quad-3') === '1'
+    );
+}
+
+window.illuVectorPathHasLineEndpoints = illuVectorPathHasLineEndpoints;
+
+window.vectorApplyLineEndpointMarkers = function (el) {
+    if (!illuVectorPathHasLineEndpoints(el)) return;
+    const tag = (el.tagName || '').toLowerCase();
     el.removeAttribute('marker-start');
     el.removeAttribute('marker-end');
     const tp = EditorManager.toolProps;
@@ -5063,7 +5243,7 @@ window.vectorApplyLineEndpointMarkers = function (el) {
         const id = `illu-cap-${kind}-${pos}-${safeCol}-${Math.round(sw * 10)}`;
         if (kind === 'arrow') return ensureLineArrowMarker(defs, id, color, sw, pos === 'e');
         if (kind === 'diamond') return ensureLineDiamondMarker(defs, id, color, sw, pos === 'e');
-        return ensureLineRoundMarker(defs, id, color, sw);
+        return ensureLineRoundMarker(defs, id, color, sw, pos === 'e');
     };
     if (startCap === 'arrow') el.setAttribute('marker-start', `url(#${mk('arrow', 's')})`);
     else if (startCap === 'diamond') el.setAttribute('marker-start', `url(#${mk('diamond', 's')})`);
@@ -5457,7 +5637,7 @@ function refreshVectorDraftFromEditor() {
             el.removeAttribute('data-vgrad');
             el.setAttribute('stroke', strokeStr);
         }
-        if (el.getAttribute('data-illu-line-cubic') === '1') window.vectorApplyLineEndpointMarkers(el);
+        if (illuVectorPathHasLineEndpoints(el)) window.vectorApplyLineEndpointMarkers(el);
         return;
     }
     const kind =
@@ -5836,13 +6016,16 @@ function handleMouseDown(e) {
                 }),
                 fill: 'none',
                 'stroke-width': String(sw),
-                'stroke-linecap': 'round',
+                'stroke-linecap': 'butt',
                 'data-illu-quad-3': '1'
             });
             layer.appendChild(pathEl);
             applyVectorShapePaint(pathEl, 'line');
             if (pathEl.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(pathEl, 'line', p0.x, p0.y, p2.x, p2.y);
+            }
+            if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
+                window.vectorApplyLineEndpointMarkers(pathEl);
             }
             clearAnchors();
             activeVectorShape = pathEl;
@@ -6585,6 +6768,9 @@ function updateVector(pos) {
                 }
                 if (activeVectorShape.getAttribute('data-vgrad')) {
                     syncVectorGradientOnShape(activeVectorShape, 'line', pq.x0, pq.y0, pq.x1, pq.y1);
+                }
+                if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
+                    window.vectorApplyLineEndpointMarkers(activeVectorShape);
                 }
             }
         } else if (type === 'path' && activeVectorShape.getAttribute('data-illu-line-cubic') === '1') {
@@ -10705,7 +10891,11 @@ function handleMouseUp(e) {
             window._activeVectorShapeEl = currentElement;
             generateAnchors(currentElement);
             VE.refreshSelectionUI();
-            if (tool === 'line' && typeof window.vectorApplyLineEndpointMarkers === 'function') {
+            if (
+                typeof window.vectorApplyLineEndpointMarkers === 'function' &&
+                typeof window.illuVectorPathHasLineEndpoints === 'function' &&
+                window.illuVectorPathHasLineEndpoints(currentElement)
+            ) {
                 window.vectorApplyLineEndpointMarkers(currentElement);
             }
         }

@@ -52,6 +52,16 @@
             selectors: ['#tool-shape-grad-method-actions']
         },
         {
+            id: 'line-cap-start',
+            labelKey: 'tools.lineCapStart',
+            selectors: ['#opt-grp-line-endpoints .illu-line-cap-start-group']
+        },
+        {
+            id: 'line-cap-end',
+            labelKey: 'tools.lineCapEnd',
+            selectors: ['#opt-grp-line-endpoints .illu-line-cap-end-group']
+        },
+        {
             id: 'text-style-fill',
             labelKey: 'ribbon.groupTextStyleFill',
             selectors: ['#opt-grp-text-actions .illu-text-style-fill-group']
@@ -355,6 +365,10 @@
         return actionIds.has('opt-grp-shapes-actions');
     }
 
+    function lineEndpointsActive(actionIds) {
+        return actionIds.has('opt-grp-line-endpoints');
+    }
+
     window.illuApplyRibbonGroupsForTool = function (toolId, cfg, ctx) {
         if (!window.illuIsRibbonToolbarActive()) return;
         if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
@@ -400,6 +414,8 @@
                 active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
             } else if (id === 'shape-grad-method') {
                 active = shapesActionsActive(actionIds) && shapeGradMethodEl && !shapeGradMethodEl.hidden;
+            } else if (id === 'line-cap-start' || id === 'line-cap-end') {
+                active = lineEndpointsActive(actionIds);
             } else if (id === 'text-style-fill') {
                 active = actionIds.has('opt-grp-text-actions');
             } else if (id === 'text-grad') {

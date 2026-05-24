@@ -579,47 +579,42 @@ setup8BitMode() {
         }
         const capStart = document.getElementById('tool-line-cap-start');
         const capEnd = document.getElementById('tool-line-cap-end');
-        const refreshVectorLineCaps = () => {
+        const refreshLineEndpointCaps = () => {
+            const el = window._activeVectorShapeEl;
+            if (el && typeof window.vectorApplyLineEndpointMarkers === 'function') {
+                const isLine =
+                    typeof window.illuVectorPathHasLineEndpoints === 'function' &&
+                    window.illuVectorPathHasLineEndpoints(el);
+                if (isLine) {
+                    window.vectorApplyLineEndpointMarkers(el);
+                    this.render();
+                }
+            }
             if (
-                typeof window._activeVectorShapeEl !== 'undefined' &&
-                window._activeVectorShapeEl &&
-                window._activeVectorShapeEl.getAttribute('data-illu-line-cubic') === '1' &&
-                typeof window.vectorApplyLineEndpointMarkers === 'function'
+                window.pixelShapeEdit &&
+                (window.pixelShapeEdit.kind === 'line' || window.pixelShapeEdit.kind === 'quadcurve') &&
+                typeof window.redrawShapeFromEditLive === 'function'
             ) {
-                window.vectorApplyLineEndpointMarkers(window._activeVectorShapeEl);
-                this.render();
+                window.redrawShapeFromEditLive();
+            } else if (typeof window.redrawShapeFromEdit === 'function') {
+                window.redrawShapeFromEdit();
+            } else if (typeof EditorManager !== 'undefined' && EditorManager.render) {
+                EditorManager.render();
             }
         };
+        window.illuRefreshActiveLineEndpointCaps = refreshLineEndpointCaps;
         if (capStart) {
             capStart.value = this.toolProps.lineCapStart || 'none';
             capStart.addEventListener('change', (e) => {
                 this.toolProps.lineCapStart = e.target.value || 'none';
-                refreshVectorLineCaps();
-                if (
-                    window.pixelShapeEdit &&
-                    window.pixelShapeEdit.kind === 'line' &&
-                    typeof window.redrawShapeFromEditLive === 'function'
-                ) {
-                    window.redrawShapeFromEditLive();
-                } else if (typeof window.redrawShapeFromEdit === 'function') {
-                    window.redrawShapeFromEdit();
-                }
+                refreshLineEndpointCaps();
             });
         }
         if (capEnd) {
             capEnd.value = this.toolProps.lineCapEnd || 'none';
             capEnd.addEventListener('change', (e) => {
                 this.toolProps.lineCapEnd = e.target.value || 'none';
-                refreshVectorLineCaps();
-                if (
-                    window.pixelShapeEdit &&
-                    window.pixelShapeEdit.kind === 'line' &&
-                    typeof window.redrawShapeFromEditLive === 'function'
-                ) {
-                    window.redrawShapeFromEditLive();
-                } else if (typeof window.redrawShapeFromEdit === 'function') {
-                    window.redrawShapeFromEdit();
-                }
+                refreshLineEndpointCaps();
             });
         }
         const fillTolSl = document.getElementById('fill-tolerance');

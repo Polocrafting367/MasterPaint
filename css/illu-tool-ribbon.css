@@ -587,6 +587,19 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-fill"]
     max-width: 44px;
 }
 
+/* Ligne / courbe : extrémités (début + fin) en ligne horizontale */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="line-cap-start"] .illu-line-cap-start-group,
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="line-cap-end"] .illu-line-cap-end-group {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 2px 3px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="line-cap-end"] .illu-line-cap-end-group .illu-shape-ico {
+    transform: scaleX(-1);
+}
+
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-corner"] .illu-gauge-field,
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-angle"] .illu-gauge-field {
     min-width: 88px;
@@ -945,32 +958,39 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
     grid-template-rows: auto !important;
 }
 
-/* Baguette : 2 boutons sur une ligne, jauge Tol. en dessous */
-/* Pipette : gauche aperçu, droite HEX / RGB / RAL (une seule ligne de hauteur ruban) */
+/* Pipette : carré couleur à gauche, HEX / RGB / RAL à droite (largeur fixe ruban) */
 .illu-eyedropper-info {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: stretch;
+    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
-    min-width: 0;
+    box-sizing: border-box;
+    width: 152px;
+    min-width: 152px;
+    max-width: 152px;
+    min-height: 0;
     max-height: 42px;
 }
 
 .illu-eyedropper-preview {
-    flex: 0 0 auto;
+    flex: 0 0 32px;
+    width: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    align-self: stretch;
-    padding: 1px 0;
+    padding: 0;
+    align-self: center;
 }
 
 .illu-eyedropper-swatch {
     display: block;
+    box-sizing: border-box;
     flex: 0 0 auto;
     width: 32px;
     height: 36px;
+    margin: 0;
     border: 1px solid var(--illu-border, #808080);
     border-radius: 2px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
@@ -982,8 +1002,10 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: flex-start;
     gap: 0;
     min-width: 0;
+    width: auto;
     font-size: 10px;
     line-height: 1.15;
 }
@@ -991,8 +1013,10 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
 .illu-eyedropper-line {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: baseline;
+    justify-content: flex-start;
     gap: 5px;
+    width: 100%;
     white-space: nowrap;
     min-height: 12px;
 }
@@ -1001,10 +1025,13 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
     flex: 0 0 1.75em;
     min-width: 1.75em;
     font-size: 10px;
+    font-weight: 600;
 }
 
 .illu-eyedropper-code,
 .illu-eyedropper-val {
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
     font-size: 10px;
     font-weight: 600;
@@ -1012,25 +1039,39 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
     line-height: 1.15;
 }
 
+#opt-grp-eyedropper-params,
 body.illu-toolbar-ribbon #opt-grp-eyedropper-params.illu-eyedropper-info {
+    display: flex !important;
+    flex-direction: row !important;
     padding: 0 2px;
     max-height: none;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] {
+    min-width: 152px;
+    max-width: 152px;
     min-height: 0;
     padding-top: 1px;
     padding-bottom: 0;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] .illu-ribbon-group-body {
+    flex-direction: column;
+    flex-wrap: nowrap;
     align-items: center;
-    padding-top: 0;
-    padding-bottom: 0;
+    justify-content: flex-start;
+    width: 152px;
+    min-width: 152px;
+    max-width: 152px;
+    padding: 2px 4px 0;
+    box-sizing: border-box;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] .illu-ribbon-group-label {
-    padding-top: 1px;
+    padding-top: 2px;
+    margin-top: auto;
+    text-align: center;
+    width: 100%;
 }
 
 body.illu-toolbar-ribbon #opt-grp-wand-params .illu-toggle-group--compact-inline-row,

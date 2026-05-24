@@ -956,6 +956,79 @@
                         </span>
                     </div>
 
+                    <div id="opt-grp-line-endpoints" class="opt-grp" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-line-cap-start-group"
+                            data-i18n-title="tools.lineCapStart">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-start"
+                                    data-illu-value="none" data-i18n-title="lineCap.none"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-none" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.noneShort">Droit</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-start"
+                                    data-illu-value="round" data-i18n-title="lineCap.round"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-round" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.roundShort">Rond</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-start"
+                                    data-illu-value="arrow" data-i18n-title="lineCap.arrow"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-arrow" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.arrowShort">Flèche</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-start"
+                                    data-illu-value="diamond" data-i18n-title="lineCap.diamond"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-cap-diamond" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.diamondShort">Losange</span>
+                            </span>
+                        </span>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-line-cap-end-group"
+                            data-i18n-title="tools.lineCapEnd">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-end"
+                                    data-illu-value="none" data-i18n-title="lineCap.none"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-none" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.noneShort">Droit</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-end"
+                                    data-illu-value="round" data-i18n-title="lineCap.round"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-round" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.roundShort">Rond</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-end"
+                                    data-illu-value="arrow" data-i18n-title="lineCap.arrow"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-cap-arrow" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.arrowShort">Flèche</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-line-cap-end"
+                                    data-illu-value="diamond" data-i18n-title="lineCap.diamond"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-cap-diamond" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="lineCap.diamondShort">Losange</span>
+                            </span>
+                        </span>
+                    </div>
+
                     <div id="opt-grp-text-actions" class="opt-grp" hidden>
                         <span class="illu-text-style-fill-group">
                             <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-style-group" data-i18n-title="title.textStyleGroup">
@@ -1200,6 +1273,18 @@
                     <select id="fill-mode" style="display:none !important;" aria-hidden="true" tabindex="-1">
                         <option value="contiguous">contiguous</option>
                         <option value="layer">layer</option>
+                    </select>
+                    <select id="tool-line-cap-start" style="display:none !important;" aria-hidden="true" tabindex="-1">
+                        <option value="none">none</option>
+                        <option value="round">round</option>
+                        <option value="arrow">arrow</option>
+                        <option value="diamond">diamond</option>
+                    </select>
+                    <select id="tool-line-cap-end" style="display:none !important;" aria-hidden="true" tabindex="-1">
+                        <option value="none">none</option>
+                        <option value="round">round</option>
+                        <option value="arrow">arrow</option>
+                        <option value="diamond">diamond</option>
                     </select>
                     </div>
                 </div>

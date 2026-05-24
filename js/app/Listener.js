@@ -718,6 +718,22 @@ document.addEventListener('contextmenu', (e) => {
             if (typeof EditorManager !== 'undefined') {
                 EditorManager.toolProps.fillMode = val === 'layer' ? 'layer' : 'contiguous';
             }
+        },
+        'tool-line-cap-start': (val) => {
+            if (typeof EditorManager !== 'undefined') {
+                EditorManager.toolProps.lineCapStart = val || 'none';
+            }
+            if (typeof window.illuRefreshActiveLineEndpointCaps === 'function') {
+                window.illuRefreshActiveLineEndpointCaps();
+            }
+        },
+        'tool-line-cap-end': (val) => {
+            if (typeof EditorManager !== 'undefined') {
+                EditorManager.toolProps.lineCapEnd = val || 'none';
+            }
+            if (typeof window.illuRefreshActiveLineEndpointCaps === 'function') {
+                window.illuRefreshActiveLineEndpointCaps();
+            }
         }
     };
 
