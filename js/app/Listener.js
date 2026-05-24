@@ -654,79 +654,98 @@ document.addEventListener('contextmenu', (e) => {
         }
     };
 
+    function resolveToolbarToggleButton(target) {
+        if (!target || typeof target.closest !== 'function') return null;
+        if (!target.closest('#tool-options-container')) return null;
+
+        const direct = target.closest(
+            'button.illu-icon-toggle, button[data-illu-brush-sync], button[data-selection-mode]'
+        );
+        if (direct) return direct;
+
+        const item = target.closest('.illu-mode-toggle-item--unified, .illu-mode-toggle-item');
+        if (!item) return null;
+        return item.querySelector(
+            'button.illu-icon-toggle, button[data-illu-brush-sync], button[data-selection-mode]'
+        );
+    }
+
     function setupIlluGenericIconToggles() {
-        const roots = document.querySelectorAll('.tool-options-bar .opt-grp');
-        roots.forEach((grp) => {
-            if (grp.dataset.illuGenericIconToggles === '1') return;
-            grp.dataset.illuGenericIconToggles = '1';
-            grp.addEventListener('click', (e) => {
-                const btn = e.target.closest('button.illu-icon-toggle, button[data-illu-brush-sync]');
-                if (!btn || !grp.contains(btn)) return;
-                e.preventDefault();
-                const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
-                const chkid = btn.getAttribute('data-illu-toggle-check');
-                if (sid) {
-                    const val = btn.getAttribute('data-illu-value');
-                    const sel = document.getElementById(sid);
-                    if (sel) {
-                        sel.value = val;
-                        sel.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    if (ILLU_ICON_SYNC_TOOL_PROPS[sid]) ILLU_ICON_SYNC_TOOL_PROPS[sid](val);
-                    if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
-                } else if (chkid) {
-                    const chk = document.getElementById(chkid);
-                    if (chk) {
-                        chk.checked = !chk.checked;
-                        chk.dispatchEvent(new Event('change', { bubbles: true }));
-                        if (
-                            (chkid === 'tool-text-bold' ||
-                                chkid === 'tool-text-italic' ||
-                                chkid === 'tool-text-stroke') &&
-                            typeof window.syncPixelTextEditorStyles === 'function'
-                        ) {
-                            window.syncPixelTextEditorStyles();
-                        }
-                    }
+        if (document.body.dataset.illuGenericIconToggles === '1') return;
+        document.body.dataset.illuGenericIconToggles = '1';
+
+        document.body.addEventListener('click', (e) => {
+            const btn = resolveToolbarToggleButton(e.target);
+            if (!btn) return;
+            e.preventDefault();
+            const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
+            const chkid = btn.getAttribute('data-illu-toggle-check');
+            if (sid) {
+                const val = btn.getAttribute('data-illu-value');
+                const sel = document.getElementById(sid);
+                if (sel) {
+                    sel.value = val;
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-            });
-            // Wire up changes for all relevant controls in this group
-            grp.querySelectorAll('select, input[type="checkbox"]').forEach(ctrl => {
-                if (ctrl.id && !ctrl.dataset.wiredToggle) {
-                    ctrl.dataset.wiredToggle = '1';
-                    ctrl.addEventListener('change', () => {
-                        window.syncAllToolbarToggles();
-                        if (typeof window.updateToolOptionsBar === 'function') {
-                            window.updateToolOptionsBar();
-                        }
-                    });
+                if (ILLU_ICON_SYNC_TOOL_PROPS[sid]) ILLU_ICON_SYNC_TOOL_PROPS[sid](val);
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+                window.syncAllToolbarToggles();
+            } else if (chkid) {
+                const chk = document.getElementById(chkid);
+                if (chk) {
+                    chk.checked = !chk.checked;
+                    chk.dispatchEvent(new Event('change', { bubbles: true }));
+                    if (
+                        (chkid === 'tool-text-bold' ||
+                            chkid === 'tool-text-italic' ||
+                            chkid === 'tool-text-stroke') &&
+                        typeof window.syncPixelTextEditorStyles === 'function'
+                    ) {
+                        window.syncPixelTextEditorStyles();
+                    }
+                    window.syncAllToolbarToggles();
                 }
-            });
+            }
+        });
+
+        document.body.addEventListener('change', (e) => {
+            const ctrl = e.target;
+            if (!ctrl || !ctrl.closest('#tool-options-container')) return;
+            if (ctrl.tagName === 'SELECT' || (ctrl.tagName === 'INPUT' && ctrl.type === 'checkbox')) {
+                window.syncAllToolbarToggles();
+                if (typeof window.updateToolOptionsBar === 'function') {
+                    window.updateToolOptionsBar();
+                }
+            }
         });
     }
 
     window.syncAllToolbarToggles = function () {
-        document.querySelectorAll('.tool-options-bar button.illu-icon-toggle, .tool-options-bar button[data-illu-brush-sync], .tool-options-bar button[data-selection-mode]').forEach((btn) => {
-            const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
-            const chkid = btn.getAttribute('data-illu-toggle-check');
-            const selMode = btn.getAttribute('data-selection-mode');
+        document
+            .querySelectorAll(
+                '#tool-options-container button.illu-icon-toggle, #tool-options-container button[data-illu-brush-sync], #tool-options-container button[data-selection-mode]'
+            )
+            .forEach((btn) => {
+                const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
+                const chkid = btn.getAttribute('data-illu-toggle-check');
+                const selMode = btn.getAttribute('data-selection-mode');
 
-            let on = false;
-            if (sid) {
-                const val = btn.getAttribute('data-illu-value');
-                const sel = document.getElementById(sid);
-                on = sel && sel.value === val;
-            } else if (chkid) {
-                const chk = document.getElementById(chkid);
-                on = chk && chk.checked;
-            } else if (selMode) {
-                on = window.selectionMode === selMode;
-            }
+                let on = false;
+                if (sid) {
+                    const val = btn.getAttribute('data-illu-value');
+                    const sel = document.getElementById(sid);
+                    on = sel && sel.value === val;
+                } else if (chkid) {
+                    const chk = document.getElementById(chkid);
+                    on = chk && chk.checked;
+                } else if (selMode) {
+                    on = window.selectionMode === selMode;
+                }
 
-            btn.classList.toggle('illu-icon-toggle--on', on);
-            btn.classList.toggle('active', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
+                btn.classList.toggle('illu-icon-toggle--on', on);
+                btn.classList.toggle('active', on);
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
     };
 
     window.syncIlluShapeToolIconToggles = window.syncAllToolbarToggles;

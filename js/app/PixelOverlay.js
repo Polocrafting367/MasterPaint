@@ -1320,7 +1320,7 @@
             const movePivot = shapeEditRotationPivotDoc(ed);
             if (movePivot) {
                 const hsz = EditorManager.svgUiHandleSizeDoc();
-                const size = Math.max(hsz, 18 / z);
+                const size = EditorManager.svgUiMoveButtonSizeDoc();
                 const half = size / 2;
                 const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
                 fo.setAttribute('x', String(movePivot.cx - half));
@@ -1337,7 +1337,7 @@
                 btn.setAttribute('type', 'button');
                 btn.setAttribute('class', 'illu-pixel-text-move-btn illu-deform-selection-move-btn');
                 btn.innerHTML =
-                    '<i class="fa-solid fa-lg fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
+                    '<i class="fa-solid fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
                 const moveTitle =
                     window.IlluI18n && typeof window.IlluI18n.t === 'function'
                         ? window.IlluI18n.t('tools.shapeMoveHandle')

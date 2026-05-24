@@ -19,14 +19,12 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic">
-    <link rel="stylesheet" href="css/theme-modern.css" id="theme-link-modern">
-    <link rel="stylesheet" href="css/theme-luna.css" id="theme-link-luna" disabled>
-    <link rel="stylesheet" href="css/theme-aero.css" id="theme-link-aero" disabled>
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/icons-flat-colored.css">
     <link rel="stylesheet" href="css/photo-mode.css">
     <link rel="stylesheet" href="css/illu-mobile-shell.css">
+    <link rel="stylesheet" href="css/illu-tool-ribbon.css">
     <style>
         .menubar-contact-btn:hover {
             filter: brightness(1.15) contrast(1.1);
@@ -519,11 +517,13 @@
                                 data-i18n="menu.winLivePreview">Aperçu toile 1:1 (fenêtre)…</span></li>
                         <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluPixelGrid()"><span
                                 class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-check" id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><span
+                                    class="fa-solid fa-check" id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><i
+                                    class="fa-solid fa-border-all" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winPixelGrid">Grille de pixels</span></li>
                         <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluRulers()"><span
                                 class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-check" id="menu-win-rulers-check" style="visibility: hidden;"></i></span><span
+                                    class="fa-solid fa-check" id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
+                                    class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winRulers">Règles</span></li>
                         <li role="menuitem" class="divider"></li>
                         <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
@@ -580,8 +580,49 @@
                             class="fa-solid fa-bug"></i></span>
                     <span data-i18n="menu.contact" style="font-weight: 600; color: #fff;">Signaler un problème</span>
                 </li>
-                <li role="none" class="illu-menubar-toolbar-slot" style="margin-left: 15px;" hidden>
-                    <!-- Menubar toolbar content moved to tool-options-bar -->
+                <li role="none" class="illu-menubar-toolbar-slot">
+                    <div class="illu-menubar-toolbar" role="toolbar" aria-label=""
+                        data-i18n-aria-label="menubar.quickToolbarAria">
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-new"
+                            data-i18n-title="menubar.tbNew" title="Nouveau"
+                            onclick="typeof showNewProjectDialog==='function'&&showNewProjectDialog()"><i
+                                class="fa-regular fa-file" aria-hidden="true"></i></button>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-open" title="Ouvrir"
+                            onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><i
+                                class="fa-regular fa-folder-open" aria-hidden="true"></i></button>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-save"
+                            data-i18n-title="menubar.tbSave" title="Enregistrer"
+                            onclick="typeof saveFile==='function'&&saveFile()"><i class="fa-solid fa-floppy-disk"
+                                aria-hidden="true"></i></button>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-print" title="Imprimer"
+                            onclick="typeof window.printCanvasLive==='function'&&window.printCanvasLive()"><i
+                                class="fa-solid fa-print" aria-hidden="true"></i></button>
+                        <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-undo"
+                            data-i18n-title="menubar.tbUndo" title="Annuler"
+                            onclick="typeof undo==='function'&&undo()"><i class="fa-solid fa-rotate-left"
+                                aria-hidden="true"></i></button>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-redo"
+                            data-i18n-title="menubar.tbRedo" title="Rétablir"
+                            onclick="typeof redo==='function'&&redo()"><i class="fa-solid fa-rotate-right"
+                                aria-hidden="true"></i></button>
+                        <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
+                        <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
+                            data-i18n-title="menubar.tbZoomOut" title="Zoom arrière"
+                            onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
+                                class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
+                        <div class="illu-menubar-zoom-wrap">
+                            <span class="illu-menubar-zoom-val" id="illu-zoom-value">100%</span>
+                        </div>
+                        <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
+                            data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
+                            onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
+                                class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-zoom-fit-row1"
+                            title="Adapter au workspace"
+                            onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
+                                class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                    </div>
                 </li>
             </menu>
 
@@ -601,106 +642,72 @@
             </header>
 
             <!-- Tool Options Toolbars -->
-            <div id="tool-options-container" class="illu-app-toolbars-container"
-                style="flex-direction: column; gap: 0;">
+            <div id="tool-options-container" class="illu-app-toolbars-container">
 
                 <!-- Consolidated Top Options Bar (Actions & Tool Config) -->
-                <div id="tool-options-bar-row1" class="tool-options-bar"
-                    style="border-bottom: 1px solid rgba(0,0,0,0.15);">
+                <div id="tool-options-bar-row1" class="tool-options-bar illu-toolbar-ribbon-row">
                     <div id="tool-pinned-toggles" class="tool-pinned-toggles" role="group"
                         aria-label="Modes et actions sélection">
-                        <div class="illu-menubar-toolbar" role="toolbar" aria-label=""
-                            data-i18n-aria-label="menubar.quickToolbarAria" style="margin-right: 8px;">
-
-                            <!-- File Actions -->
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-new"
-                                data-i18n-title="menubar.tbNew" title="Nouveau"
-                                onclick="typeof showNewProjectDialog==='function'&&showNewProjectDialog()"><i
-                                    class="fa-regular fa-file" aria-hidden="true"></i></button>
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-open" title="Ouvrir"
-                                onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><i
-                                    class="fa-regular fa-folder-open" aria-hidden="true"></i></button>
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-save"
-                                data-i18n-title="menubar.tbSave" title="Enregistrer"
-                                onclick="typeof saveFile==='function'&&saveFile()"><i class="fa-solid fa-floppy-disk"
-                                    aria-hidden="true"></i></button>
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-print" title="Imprimer"
-                                onclick="typeof window.printCanvasLive==='function'&&window.printCanvasLive()"><i class="fa-solid fa-print" aria-hidden="true"></i></button>
-
-                            <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
-
-                            <!-- Undo / Redo -->
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-undo"
-                                data-i18n-title="menubar.tbUndo" title="Annuler"
-                                onclick="typeof undo==='function'&&undo()"><i class="fa-solid fa-rotate-left"
-                                    aria-hidden="true"></i></button>
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-redo"
-                                data-i18n-title="menubar.tbRedo" title="R\u00e9tablir"
-                                onclick="typeof redo==='function'&&redo()"><i class="fa-solid fa-rotate-right"
-                                    aria-hidden="true"></i></button>
-
-                            <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
-
-                            <!-- Zoom -->
-                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
-                                data-i18n-title="menubar.tbZoomOut" title="Zoom arrière"
-                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
-                                    class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
-                            <div class="illu-menubar-zoom-wrap" style="width: auto; min-width: 60px;">
-                                <span class="illu-menubar-zoom-val" id="illu-zoom-value"
-                                    style="position: static; font-size: 12px; margin: 0 4px;">100%</span>
-                            </div>
-                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
-                                data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
-                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
-                                    class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
-                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-zoom-fit-row1"
-                                title="Adapter au workspace"
-                                onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
-                                    class="fa-solid fa-expand" aria-hidden="true"></i></button>
-                        </div>
-
-                        <span class="illu-menubar-toolbar__sep illu-tool-pinned-toolbar-sep" aria-hidden="true"
-                            style="margin: 0 6px; flex-shrink: 0;"></span>
-
-                        <div id="tool-main-header"
-                            style="display:flex;align-items:center;padding-right:8px;border-right:1px solid #888;margin-right:4px;">
-                            <span id="tool-icon-preview" style="font-size:14px;width:0px;text-align:center;"></span>
-                            <div class="illu-tool-selector-wrap">
-                                <select id="illu-tool-list-select" class="illu-select-mini opt-tool-name"
-                                    style="border:none;padding:0 20px 0 0; background: transparent; font-weight: bold; cursor: pointer; -webkit-appearance: none; appearance: none;"
+                        <div id="tool-main-header" class="illu-tool-header">
+                            <label class="illu-tool-picker" for="illu-tool-list-select" tabindex="0">
+                                <span id="tool-icon-preview" class="illu-tool-header-icon" aria-hidden="true"></span>
+                                <span id="illu-tool-picker-label" class="illu-tool-picker-label"></span>
+                                <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
+                                <select id="illu-tool-list-select" class="illu-select-mini illu-tool-picker-select opt-tool-name"
                                     data-i18n-title="title.activeTool">
-                                    <option value="select" data-i18n="title.toolSelect">Sélection rect.</option>
-                                    <option value="direct-select" data-i18n="title.toolDirect">Lasso</option>
-                                    <option value="wand" data-i18n="title.toolWand">Baguette magique</option>
-                                    <option value="move" data-i18n="title.toolMove">Déplacer</option>
-                                    <option value="warp-4" data-i18n="title.toolWarp">Déformation 4 coins</option>
-                                    <option value="deform" data-i18n="title.toolDeform">Déformation</option>
-                                    <option value="eyedropper" data-i18n="title.toolEyedropper">Pipette</option>
-                                    <option value="zoom" data-i18n="title.toolZoom">Loupe</option>
-                                    <option value="brush" data-i18n="title.toolBrush">Pinceau</option>
-                                    <option value="pencil" data-i18n="title.toolPencil">Crayon</option>
-                                    <option value="gradient" data-i18n="title.toolGradient">Dégradé</option>
-                                    <option value="fill" data-i18n="title.toolFill">Pot de peinture</option>
-                                    <option value="eraser" data-i18n="title.toolEraser">Gomme</option>
-                                    <option value="rect" data-i18n="title.toolRect">Rectangle</option>
-                                    <option value="circle" data-i18n="title.toolCircle">Ellipse</option>
-                                    <option value="triangle" data-i18n="title.toolTriangle">Triangle</option>
-                                    <option value="line" data-i18n="title.toolLine">Ligne</option>
-                                    <option value="round-3" data-i18n="title.toolRound">Rect. arrondi</option>
-                                    <option value="cubic-3" data-i18n="title.toolCubic">Courbe de Bézier</option>
-                                    <option value="pen" data-i18n="title.toolPen">Plume</option>
-                                    <option value="polygon" data-i18n="title.toolPolygon">Polygone</option>
-                                    <option value="text" data-i18n="title.toolText">Texte</option>
-                                    <option value="shadow" data-i18n="title.toolShadow">Ombre portée</option>
+                                    <option value="select" data-i18n="tool.select">Sélection</option>
+                                    <option value="direct-select" data-i18n="tool.direct-select">Lasso</option>
+                                    <option value="wand" data-i18n="tool.wand">Baguette</option>
+                                    <option value="move" data-i18n="tool.move">Déplacer</option>
+                                    <option value="warp-4" data-i18n="tool.warp-4">Déform. 4 coins</option>
+                                    <option value="deform" data-i18n="tool.deform">Déformation</option>
+                                    <option value="eyedropper" data-i18n="tool.eyedropper">Pipette</option>
+                                    <option value="zoom" data-i18n="tool.zoom">Loupe</option>
+                                    <option value="brush" data-i18n="tool.brush">Pinceau</option>
+                                    <option value="pencil" data-i18n="tool.pencil">Crayon</option>
+                                    <option value="gradient" data-i18n="tool.gradient">Dégradé</option>
+                                    <option value="fill" data-i18n="tool.fill">Pot de peinture</option>
+                                    <option value="eraser" data-i18n="tool.eraser">Gomme</option>
+                                    <option value="rect" data-i18n="tool.rect">Rectangle</option>
+                                    <option value="circle" data-i18n="tool.circle">Ellipse</option>
+                                    <option value="triangle" data-i18n="tool.triangle">Triangle</option>
+                                    <option value="line" data-i18n="tool.line">Ligne</option>
+                                    <option value="round-3" data-i18n="tool.round-3">Rect. arrondi</option>
+                                    <option value="cubic-3" data-i18n="tool.cubic-3">Courbe Bézier</option>
+                                    <option value="pen" data-i18n="tool.pen">Plume</option>
+                                    <option value="polygon" data-i18n="tool.polygon">Polygone</option>
+                                    <option value="text" data-i18n="tool.text">Texte</option>
+                                    <option value="shadow" data-i18n="tool.shadow">Ombre portée</option>
                                 </select>
-                                <i class="fa-solid fa-chevron-down"
-                                    style="position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:8px;pointer-events:none;opacity:0.6;"></i>
-                            </div>
+                            </label>
                         </div>
 
-                        <span id="tool-pinned-select-actions"
-                            class="illu-icon-toggle-group illu-mode-toggle-group" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" id="selection-mode-group"
+                            data-i18n-title="title.selectionModeGroup" hidden>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle active" data-selection-mode="new"
+                                    data-i18n-title="tools.selectionModeNew" title="Nouvelle sélection"><i
+                                        class="fa-solid fa-square"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selectionModeNewShort">Nouv.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-selection-mode="add"
+                                    data-i18n-title="tools.selectionModeAdd" title="Ajouter à la sélection (+)"><i
+                                        class="fa-solid fa-square-plus"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selectionModeAddShort">Ajout</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-selection-mode="subtract"
+                                    data-i18n-title="tools.selectionModeSubtract"
+                                    title="Soustraire de la sélection (-)"><i
+                                        class="fa-solid fa-square-minus"></i></button>
+                                <span class="illu-mode-toggle-lbl"
+                                    data-i18n="tools.selectionModeSubtractShort">Retrait</span>
+                            </span>
+                        </span>
+
+                        <div id="tool-pinned-select-actions" class="illu-select-actions-wrap" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-primary">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" id="opt-invert-selection" class="illu-icon-toggle"
                                     data-i18n-title="tools.optInvert"><svg class="illu-shape-ico" width="16"
@@ -735,6 +742,8 @@
                                 <span class="illu-mode-toggle-lbl"
                                     data-i18n="tools.selectFreeCornersShort">4 coins</span>
                             </span>
+                        </span>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-layout">
                             <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
                                 <button type="button" id="opt-sel-center-h" class="illu-icon-toggle"
                                     data-i18n-title="tools.selCenterH"><svg class="illu-shape-ico illu-center-ico" width="22"
@@ -808,32 +817,21 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="mobile.zoomFitShort">Ajuster</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" id="selection-mode-group"
-                            data-i18n-title="title.selectionModeGroup" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-view">
                             <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle active" data-selection-mode="new"
-                                    data-i18n-title="tools.selectionModeNew" title="Nouvelle sélection"><i
-                                        class="fa-solid fa-square"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selectionModeNewShort">Nouv.</span>
+                                <button type="button" id="opt-sel-pixelgrid" class="illu-icon-toggle opt-toggle-pixelgrid"
+                                    data-i18n-title="menu.winPixelGrid" onclick="window.toggleIlluPixelGrid()"><i
+                                        class="fa-solid fa-border-all"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winPixelGrid">Grille de pixels</span>
                             </span>
                             <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-selection-mode="add"
-                                    data-i18n-title="tools.selectionModeAdd" title="Ajouter à la sélection (+)"><i
-                                        class="fa-solid fa-square-plus"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selectionModeAddShort">Ajout</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-selection-mode="subtract"
-                                    data-i18n-title="tools.selectionModeSubtract"
-                                    title="Soustraire de la sélection (-)"><i
-                                        class="fa-solid fa-square-minus"></i></button>
-                                <span class="illu-mode-toggle-lbl"
-                                    data-i18n="tools.selectionModeSubtractShort">Retrait</span>
+                                <button type="button" id="opt-sel-rulers" class="illu-icon-toggle opt-toggle-rulers"
+                                    data-i18n-title="menu.winRulers" onclick="window.toggleIlluRulers()"><i
+                                        class="fa-solid fa-ruler"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winRulers">Règles</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
+                        </div>
 
                     <div id="opt-grp-brush-actions" class="opt-grp" hidden>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.brushPatternGroup">
@@ -874,7 +872,7 @@
                     </div>
 
                     <div id="opt-grp-shapes-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.shapeModeGroup">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-shape-mode-group" data-i18n-title="title.shapeModeGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
                                     data-illu-value="both" data-i18n-title="shape.mode.both"><svg class="illu-shape-ico"
@@ -900,8 +898,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="shape.mode.strokeShort">Trait</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.shapeFillGroup">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-shape-fill-group" data-i18n-title="title.shapeFillGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-fill-type"
                                     data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
@@ -919,7 +916,6 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
                         <span id="tool-shape-grad-type-actions" class="illu-icon-toggle-group illu-mode-toggle-group" hidden
                             data-i18n-title="title.shapeGradTypeGroup">
                             <span class="illu-mode-toggle-item">
@@ -939,62 +935,61 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="grad.radialShort">Rad.</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
                     </div>
 
                     <div id="opt-grp-text-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.textStyleGroup">
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" id="btn-text-bold" class="illu-icon-toggle"
-                                    data-illu-toggle-check="tool-text-bold" data-i18n-title="tools.textBold"><i
-                                        class="fa-solid fa-bold"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textBoldShort">Gras</span>
+                        <span class="illu-text-style-fill-group" style="display: flex; flex-direction: column; gap: 2px;">
+                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-style-group" data-i18n-title="title.textStyleGroup">
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" id="btn-text-bold" class="illu-icon-toggle"
+                                        data-illu-toggle-check="tool-text-bold" data-i18n-title="tools.textBold"><i
+                                            class="fa-solid fa-bold"></i></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.textBoldShort">Gras</span>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" id="btn-text-italic" class="illu-icon-toggle"
+                                        data-illu-toggle-check="tool-text-italic" data-i18n-title="tools.textItalic"><i
+                                            class="fa-solid fa-italic"></i></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.textItalicShort">Ital.</span>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" id="btn-text-stroke" class="illu-icon-toggle"
+                                        data-illu-toggle-check="tool-text-stroke" data-i18n-title="tools.textStroke"><i
+                                            class="fa-solid fa-border-all"></i></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.textStrokeShort">Trait</span>
+                                </span>
                             </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" id="btn-text-italic" class="illu-icon-toggle"
-                                    data-illu-toggle-check="tool-text-italic" data-i18n-title="tools.textItalic"><i
-                                        class="fa-solid fa-italic"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textItalicShort">Ital.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" id="btn-text-stroke" class="illu-icon-toggle"
-                                    data-illu-toggle-check="tool-text-stroke" data-i18n-title="tools.textStroke"><i
-                                        class="fa-solid fa-border-all"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.textStrokeShort">Trait</span>
+                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-fill-group" data-i18n-title="title.textFillGroup">
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                        data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
+                                            width="16" height="16">
+                                            <use href="#illu-icon-fill-solid" />
+                                        </svg></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.solidShort">Uni</span>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                        data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
+                                            class="illu-shape-ico" width="16" height="16">
+                                            <use href="#illu-icon-fill-gradient" />
+                                        </svg></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
+                                        data-illu-value="none" data-i18n-title="tools.textFillNone"><svg class="illu-shape-ico"
+                                            width="16" height="16">
+                                            <use href="#illu-icon-shape-stroke" />
+                                        </svg></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="text.fill.noneShort">Vide</span>
+                                </span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.textFillGroup">
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                    data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg class="illu-shape-ico"
-                                        width="16" height="16">
-                                        <use href="#illu-icon-fill-solid" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.solidShort">Uni</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                    data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
-                                        class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-fill-gradient" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
-                                    data-illu-value="none" data-i18n-title="tools.textFillNone"><svg class="illu-shape-ico"
-                                        width="16" height="16">
-                                        <use href="#illu-icon-shape-stroke" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="text.fill.noneShort">Vide</span>
-                            </span>
-                        </span>
-                        <div class="opt-sep"></div>
                     </div>
 
                     <div id="opt-grp-gradient-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.gradientTypeGroup">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-grad-type-group" data-i18n-title="title.gradientTypeGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-type"
                                     data-illu-value="linear" data-i18n-title="gradient.typeLinear"><svg
@@ -1012,8 +1007,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="grad.radialShort">Rad.</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.gradientMethodGroup">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-grad-method-group" data-i18n-title="title.gradientMethodGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-gradient-method"
                                     data-illu-value="simple" data-i18n-title="gradient.methodSimple"><svg
@@ -1031,12 +1025,9 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="gradient.methodSmartShort">Intel.</span>
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
                     </div>
 
                     <div id="opt-grp-vector-context-actions" class="opt-grp" hidden>
-                        <span class="illu-chip" id="vector-selection-count">1 sélection</span>
-                        <div class="opt-sep"></div>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" id="opt-grp-vector-fill-buttons"
                             data-illu-generic-icon-toggles="1">
                             <span class="illu-mode-toggle-item">
@@ -1064,6 +1055,8 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.fillNoneShort">Aucun</span>
                             </span>
                         </span>
+                        <span id="opt-grp-vector-ops" class="illu-vector-ops-group">
+                        <span class="illu-chip" id="vector-selection-count">1 sélection</span>
                         <div class="opt-sep"></div>
                         <button type="button" class="illu-btn-mini" onclick="EditorManager.moveSelectedVectorElement(1)"
                             data-i18n-title="props.moveForward"><i class="fa-solid fa-angle-up"></i></button>
@@ -1095,6 +1088,7 @@
                         <button type="button" class="illu-btn-mini illu-btn-mini--danger"
                             onclick="EditorManager.deleteActiveVectorSelection()" data-i18n-title="tools.delete"><i
                                 class="fa-solid fa-trash"></i></button>
+                        </span>
                     </div>
                     </div>
 
@@ -1147,8 +1141,8 @@
                 </div>
 
                 <!-- BAR 2: Consolidated Parameters (Bottom) -->
-                <div id="tool-options-bar-2" class="tool-options-bar" hidden>
-                    <div id="opt-grp-size-params" class="opt-grp" hidden>
+                <div id="tool-options-bar-2" class="tool-options-bar illu-toolbar-ribbon-row" hidden>
+                    <div id="opt-grp-size-params" class="opt-grp illu-ribbon-param-pack" hidden>
                         <span class="field-row illu-gauge-field">
                             <label for="tool-size" class="illu-opt-lbl" data-i18n="tools.size">Taille</label>
                             <span class="illu-gauge-wrap">
@@ -1158,7 +1152,7 @@
                             </span>
                         </span>
                         <div class="opt-sep"></div>
-                        <span id="pencil-close-row" class="field-row" style="margin-left: 4px;">
+                        <span id="pencil-close-row" class="field-row illu-size-extra-row">
                             <label class="opt-bar-check">
                                 <input type="checkbox" data-illu-toggle-check="tool-pencil-close">
                                 <span data-i18n="tools.optClosePath">Fermer</span>
@@ -1180,7 +1174,7 @@
                         </span>
                     </div>
 
-                    <div id="opt-grp-wand-params" class="opt-grp" hidden>
+                    <div id="opt-grp-wand-params" class="opt-grp illu-ribbon-param-pack" hidden>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.wandMode">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="wand-mode"
@@ -1212,8 +1206,8 @@
                         </span>
                     </div>
 
-                    <div id="opt-grp-fill-params" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="tools.fillMode">
+                    <div id="opt-grp-fill-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-fill-mode-group" data-i18n-title="tools.fillMode">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
                                     data-illu-value="contiguous" data-i18n-title="fill.contiguous"><svg
@@ -1273,16 +1267,19 @@
                     </div>
 
                     <div id="opt-grp-text-params" class="opt-grp" hidden>
-                        <select id="tool-text-font" class="illu-select-mini" style="width: 100px;">
-                            <option value="Arial, sans-serif">Arial</option>
-                            <option value="'Courier New', monospace">Courier New</option>
-                            <option value="'Times New Roman', serif">Times New Roman</option>
-                            <option value="Verdana, sans-serif">Verdana</option>
-                            <option value="Georgia, serif">Georgia</option>
-                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
-                        </select>
-                        <div class="opt-sep"></div>
+                        <span id="tool-text-font-size-stack" class="illu-text-font-size-stack">
+                        <span class="field-row illu-text-font-row" style="display: flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; padding: 0;">
+                            <label for="tool-text-font" class="illu-opt-lbl illu-text-font-field-lbl" data-i18n="tools.textFont">Police</label>
+                            <select id="tool-text-font" class="illu-select-mini">
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Courier New', monospace">Courier New</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Verdana, sans-serif">Verdana</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                            </select>
+                        </span>
                         <span class="field-row illu-gauge-field">
                             <label for="tool-text-size" class="illu-opt-lbl" data-i18n="tools.textSize">Taille</label>
                             <span class="illu-gauge-wrap">
@@ -1292,8 +1289,8 @@
                                     value="18">
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-                        <span class="field-row illu-gauge-field">
+                        </span>
+                        <span id="tool-text-stroke-w-row" class="field-row illu-gauge-field">
                             <label for="tool-text-stroke-w" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Ép. contour</label>
                             <span class="illu-gauge-wrap">
                                 <span class="illu-gauge-fill" aria-hidden="true"></span>
@@ -1304,7 +1301,7 @@
                         </span>
                     </div>
 
-                    <div id="opt-grp-warp-params" class="opt-grp" hidden>
+                    <div id="opt-grp-warp-params" class="opt-grp illu-ribbon-param-pack" hidden>
                         <span id="opt-warp-resample-wrap">
                         <span class="illu-opt-lbl" data-i18n="settings.resample">Lissage</span>
                         <select id="tool-warp-resampling" class="illu-select-mini"
@@ -1423,6 +1420,8 @@
                                             class="fa-solid fa-fill-drip"></i></button>
                                     <button class="tool-btn" id="tool-eraser" data-i18n-title="title.toolEraser"><i
                                             class="fa-solid fa-eraser"></i></button>
+                                    <button class="tool-btn" id="tool-text" data-i18n-title="title.toolText"><i
+                                            class="fa-solid fa-font"></i></button>
                                 </div>
                                 <div class="tool-group">
                                     <button class="tool-btn" id="tool-rect" data-i18n-title="title.toolRect"><i
@@ -1451,8 +1450,6 @@
                                         title="Plume (P)"><i class="fa-solid fa-pen-nib"></i></button>
                                     <button class="tool-btn" id="tool-polygon" data-i18n-title="title.toolPolygon"
                                         title="Polygone"><i class="fa-solid fa-draw-polygon"></i></button>
-                                    <button class="tool-btn" id="tool-text" data-i18n-title="title.toolText"><i
-                                            class="fa-solid fa-font"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -3045,6 +3042,7 @@
     <script src="js/tools/SelectionTouchLoupe.js"></script>
     <script src="js/app/IlluGaugeSteppers.js"></script>
     <script src="DrawingTools.js"></script>
+    <script src="js/app/illu-tool-ribbon.js"></script>
     <script src="js/effects/RemoveBgIntelligent.js"></script>
     <script src="js/effects/vhs-core.js"></script>
     <script src="js/effects/VhsEffect.js"></script>

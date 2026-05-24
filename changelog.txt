@@ -1,5 +1,13 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.7.30 (24/05/26)
+- Mise a jours visuel des barre de Paramètres pour quelque chose de plus compact
+- Supprimer toute trace d'autre theme luna, areo moderne...
+- Revue antièrement les obtion d'outil sur le haut pour un ruban type microsoft office
+- Correction de la taille de la croix de déplacement / poignée de déplacement (zoom inverse)
+- Réinitialiser le bureau réaffiche désormais toutes les fenêtres volantes masquées (win-tools, win-layers, win-colors, win-history)
+- Résolution globale du dysfonctionnement des options d'outils déplacées dans le Ruban Office 
+
 2.7.24 (23/05/26)
 - Gestion performance sur grande images
 - Ajout d'outil / fonction pour simplifié fonctionnement sur téléphone

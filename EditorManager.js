@@ -872,6 +872,7 @@ setup8BitMode() {
                     return;
                 }
                 if (typeof window.applyUILayoutFromPreference === 'function') window.applyUILayoutFromPreference();
+                if (typeof window.illuInitToolbarRibbon === 'function') window.illuInitToolbarRibbon();
                 if (typeof window.applyIlluMobileUiClass === 'function') window.applyIlluMobileUiClass();
                 if (window.IlluI18n) window.IlluI18n.apply();
                 if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
@@ -4036,6 +4037,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window.selectionRotationDragActive ? 1 : 0,
             window.selectionPixelWarpActive ? 1 : 0,
             window.selectionIsWarpQuad ? 1 : 0,
+            this.getCanvasZoomLevel().toFixed(4),
             sb ? `${sb.x},${sb.y},${sb.w},${sb.h}` : 'nosb'
         ];
         if (q) {
@@ -4118,6 +4120,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             document.body.classList.contains('illu-mobile-ui') ||
             document.body.classList.contains('illu-mobile-shell-active');
         const px = touch ? 22 : base;
+        return px / this.getCanvasZoomLevel();
+    },
+
+    /** Côté du bouton « déplacer » (poignée centrale) ~22px écran, en unités document SVG. */
+    svgUiMoveButtonSizeDoc() {
+        const touch =
+            document.body.classList.contains('illu-mobile-ui') ||
+            document.body.classList.contains('illu-mobile-shell-active');
+        const px = touch ? 26 : 22;
         return px / this.getCanvasZoomLevel();
     },
 
@@ -4725,7 +4736,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     hnd.id === 'c' &&
                     (window.activeTool === 'deform' || window.illuCropSessionActive);
                 if (useMoveIconCenter) {
-                    const size = Math.max(hsz, 18 / z);
+                    const size = EditorManager.svgUiMoveButtonSizeDoc();
                     const half = size / 2;
                     const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
                     fo.setAttribute('x', String(hnd.x - half));
@@ -4746,7 +4757,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         'illu-pixel-text-move-btn illu-deform-selection-move-btn'
                     );
                     btn.innerHTML =
-                        '<i class="fa-solid fa-lg fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
+                        '<i class="fa-solid fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
                     const moveTitle =
                         window.IlluI18n && typeof window.IlluI18n.t === 'function'
                             ? window.IlluI18n.t('tools.deformMoveHandle')

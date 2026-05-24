@@ -202,6 +202,9 @@
         if (typeof window.refreshChromeDocTitle === 'function') {
             window.refreshChromeDocTitle();
         }
+        if (typeof window.illuInitToolbarRibbon === 'function') {
+            window.illuInitToolbarRibbon();
+        }
     };
 
     /** Dimensions document suggérées pour petit écran (nouveau projet). */

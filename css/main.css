@@ -558,7 +558,7 @@ body.ui-layout-floating #win-tools .tool-grid--pdn .tool-group {
     grid-template-columns: repeat(2, 28px);
     justify-content: center;
     gap: 2px;
-    padding: 5px 5px 6px;
+    padding: 6px 5px;
 }
 
 /* Téléphone + dock bas : une seule rangée logique qui revient à la ligne sur toute la largeur */
@@ -1444,11 +1444,10 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     #tool-options-bar-row1,
     #tool-options-bar-2 {
         font-size: 10px;
-        padding: 4px;
         height: auto;
-        min-height: 28px;
+        min-height: 26px;
         flex-wrap: wrap;
-        gap: 4px 6px;
+        gap: 3px 5px;
         overflow-x: hidden;
         overflow-y: visible;
     }
@@ -2539,20 +2538,6 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     height: 20px !important;
 }
 
-/* 2. Prevent modern tab-bar overlapping tool-options-container */
-body.theme-modern .tab-bar-outer {
-    margin-top: 0 !important;
-    position: relative !important;
-    z-index: 610 !important;
-    box-shadow: none !important;
-}
-body.theme-modern #tool-options-container {
-    position: relative !important;
-    z-index: 625 !important;
-    border-bottom: var(--modern-border) !important;
-    margin-bottom: 0 !important;
-}
-
 /* 3. Icon Viewer Custom CSS Styling for dynamic previews */
 #iview-scroll {
     transition: background-color 0.25s ease, color 0.25s ease !important;
@@ -2606,7 +2591,7 @@ body.theme-modern #tool-options-container {
 }
 
 /* Classic Win98 Mode close button styling override */
-body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn {
+.iview-window .title-bar-controls .title-bar-close-btn {
     width: 18px !important;
     height: 18px !important;
     background: linear-gradient(180deg, #c8d4e8 0%, #7a8fb0 45%, #5a6d8a 100%) !important;
@@ -2614,7 +2599,7 @@ body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-b
     border-color: #ffffff #404040 #404040 #ffffff !important;
     box-shadow: none !important;
 }
-body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn::before {
+.iview-window .title-bar-controls .title-bar-close-btn::before {
     content: "" !important;
     position: absolute !important;
     left: 50% !important;
@@ -2624,7 +2609,7 @@ body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-b
     background: #000000 !important;
     transform: translate(-50%, -50%) rotate(45deg) !important;
 }
-body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-bar-controls .title-bar-close-btn::after {
+.iview-window .title-bar-controls .title-bar-close-btn::after {
     content: "" !important;
     position: absolute !important;
     left: 50% !important;
@@ -2634,10 +2619,10 @@ body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .iview-window .title-b
     background: #000000 !important;
     transform: translate(-50%, -50%) rotate(-45deg) !important;
 }
-body:not(.theme-modern):not(.theme-aero):not(.theme-luna).theme-dark .iview-window .title-bar-controls .title-bar-close-btn::before {
+body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::before {
     background: #ffffff !important;
 }
-body:not(.theme-modern):not(.theme-aero):not(.theme-luna).theme-dark .iview-window .title-bar-controls .title-bar-close-btn::after {
+body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::after {
     background: #ffffff !important;
 }
 
@@ -3341,27 +3326,4 @@ body.illu-colored-icons.theme-dark .illu-icon-toggle.active i {
 
 body.illu-colored-icons.theme-dark .fa-solid::before {
     filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
-}
-
-/* Active SVG icon overrides to prevent them from turning completely white or losing color */
-body.theme-modern #win-tools .tool-btn.active svg,
-body.theme-aero #win-tools .tool-btn.active svg {
-    --illu-icon-stroke: #ffffff !important;
-    --illu-icon-bg: rgba(255, 255, 255, 0.2) !important;
-    --illu-icon-accent: #ffffff !important;
-    --illu-icon-accent-subtle: rgba(255, 255, 255, 0.4) !important;
-}
-body.theme-modern.theme-dark #win-tools .tool-btn.active svg,
-body.theme-aero.theme-dark #win-tools .tool-btn.active svg {
-    --illu-icon-stroke: #000000 !important;
-    --illu-icon-bg: rgba(0, 0, 0, 0.2) !important;
-    --illu-icon-accent: #000000 !important;
-    --illu-icon-accent-subtle: rgba(0, 0, 0, 0.4) !important;
-}
-
-/* Perfect crisp anti-aliasing for SVG icons */
-body.theme-modern #win-tools #main-toolbox.tool-grid--pdn .tool-btn svg.tool-icon {
-    width: 16px !important;
-    height: 16px !important;
-    shape-rendering: geometricPrecision !important;
 }

@@ -9,7 +9,7 @@
 }
 
 .title-bar-text {
-    margin-left: 10px;
+    margin-left: 4px;
 }
 
 body.theme-dark {
@@ -25,14 +25,16 @@ body.theme-dark {
 .illu-mode-toggle-group,
 .tool-pinned-toggles {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 4px 6px;
     flex: 0 1 auto;
     max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
-.tool-pinned-toggles > .illu-menubar-toolbar {
+.tool-pinned-toggles>.illu-menubar-toolbar {
     flex: 0 0 auto;
     flex-shrink: 0;
     display: inline-flex;
@@ -41,18 +43,25 @@ body.theme-dark {
     gap: 2px 4px;
 }
 
-.tool-pinned-toggles > .illu-tool-pinned-toolbar-sep {
+.tool-pinned-toggles>.illu-tool-pinned-toolbar-sep {
     flex: 0 0 auto;
     align-self: center;
 }
 
-.tool-pinned-toggles > #tool-main-header {
+.tool-pinned-toggles>#tool-main-header {
     flex: 0 0 auto;
     flex-shrink: 0;
     min-width: 0;
 }
 
-.tool-pinned-toggles > .opt-grp {
+/* Pas de trait vertical entre l’outil actif et Nouv./modes sélection */
+#tool-pinned-toggles .opt-tool-name,
+#tool-main-header .illu-select-mini.opt-tool-name {
+    border-right: none;
+    padding-right: 20px;
+}
+
+.tool-pinned-toggles>.opt-grp {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
@@ -61,7 +70,7 @@ body.theme-dark {
     min-width: 0;
 }
 
-.tool-pinned-toggles > .opt-grp[hidden] {
+.tool-pinned-toggles>.opt-grp[hidden] {
     display: none !important;
 }
 
@@ -71,6 +80,88 @@ body.theme-dark {
     flex-wrap: wrap;
     align-items: center;
     gap: 4px 6px;
+}
+
+.illu-select-actions-wrap {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    flex: 0 1 auto;
+    max-width: 100%;
+}
+
+/* Séparateurs verticaux entre blocs (pas de coupure de ligne forcée) */
+#tool-pinned-toggles>.opt-sep.illu-toolbar-wrap-sep,
+.illu-select-actions-wrap>.opt-sep.illu-toolbar-wrap-sep {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 14px;
+    margin: 0 3px;
+    padding: 0;
+    align-self: center;
+    background: var(--mp-raised-bot, #888);
+}
+
+.illu-select-actions-wrap:has(#select-rect-free-corners-wrap[hidden])>.illu-sel-corners-center-sep.illu-toolbar-wrap-sep {
+    display: none !important;
+}
+
+#tool-icon-preview.illu-tool-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+}
+
+#tool-icon-preview.illu-tool-header-icon i,
+#tool-icon-preview.illu-tool-header-icon svg {
+    width: 18px;
+    height: 18px;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+/* Sélecteur d’outil : horizontal hors ruban bureau */
+body:not(.illu-toolbar-ribbon) .illu-tool-header {
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+    margin-right: 4px;
+}
+
+body:not(.illu-toolbar-ribbon) .illu-tool-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+body:not(.illu-toolbar-ribbon) .illu-tool-picker-chevron {
+    display: none;
+}
+
+body:not(.illu-toolbar-ribbon) .illu-tool-picker-label {
+    display: none;
+}
+
+body:not(.illu-toolbar-ribbon) .illu-tool-picker-select {
+    border: none;
+    padding: 0 20px 0 0;
+    background: transparent;
+    font-weight: bold;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    opacity: 1;
+    max-width: 11em;
 }
 
 .illu-icon-toggle-group {
@@ -151,12 +242,89 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item.illu
     display: inline-flex;
     flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     flex-shrink: 0;
 }
 
+/* Bouton = icône + libellé (cellule entière cliquable) */
+.illu-mode-toggle-item--unified {
+    display: inline-flex;
+    padding: 0;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+/* Libellé hors bouton (avant unify) : zone cliquable sur toute la cellule */
+.illu-mode-toggle-item--unified > .illu-mode-toggle-lbl {
+    pointer-events: none;
+}
+
+.illu-mode-toggle-item--unified>.illu-mode-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: auto;
+    min-width: 27px;
+    min-height: 27px;
+    height: auto;
+    padding: 2px 4px;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+}
+
+#tool-options-container .illu-icon-toggle,
+#tool-options-container .illu-mode-toggle-btn.illu-icon-toggle,
+.tool-options-bar .illu-icon-toggle,
+.tool-options-bar .illu-mode-toggle-btn.illu-icon-toggle,
+#tool-pinned-toggles .illu-icon-toggle,
+#tool-pinned-toggles .illu-mode-toggle-btn.illu-icon-toggle {
+    border: 2px solid transparent;
+    box-sizing: border-box;
+}
+
+/* Par défaut : icône au-dessus du texte */
+.illu-mode-toggle-item--unified.illu-toggle-layout--stack>.illu-mode-toggle-btn {
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px 3px 3px;
+}
+
+/* Alvéoles denses (Sélection, sliders…) : texte à droite de l’icône */
+.illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn {
+    flex-direction: row;
+    gap: 2px;
+    padding: 2px 4px;
+}
+
+.illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
+    text-align: left;
+    max-width: none;
+}
+
+.illu-mode-toggle-item--unified>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
+    pointer-events: none;
+    font-size: 9px;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 52px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.illu-mode-toggle-item--unified>.illu-mode-toggle-btn.illu-icon-toggle--on .illu-mode-toggle-lbl,
+.illu-mode-toggle-item--unified>.illu-mode-toggle-btn.active .illu-mode-toggle-lbl {
+    color: color-mix(in srgb, var(--mp-opt-bar-text, #333) 82%, var(--mp-accent) 18%);
+}
+
+body.theme-dark .illu-mode-toggle-item--unified>.illu-mode-toggle-btn.illu-icon-toggle--on .illu-mode-toggle-lbl,
+body.theme-dark .illu-mode-toggle-item--unified>.illu-mode-toggle-btn.active .illu-mode-toggle-lbl {
+    color: color-mix(in srgb, var(--mp-opt-bar-text, #e8e8e8) 78%, var(--mp-accent) 22%);
+}
+
 .illu-mode-toggle-lbl {
-    font-size: 10px;
+    font-size: 9px;
     line-height: 1.2;
     color: var(--mp-opt-bar-text, #333);
     text-align: left;
@@ -167,8 +335,7 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item.illu
 
 .illu-mode-toggle-item:has(.illu-icon-toggle--on) .illu-mode-toggle-lbl,
 .illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-toggle-lbl {
-    font-weight: 600;
-    color: var(--mp-accent, #000080);
+    color: color-mix(in srgb, var(--mp-opt-bar-text, #333) 82%, var(--mp-accent) 18%);
 }
 
 body.theme-dark .illu-mode-toggle-lbl {
@@ -177,7 +344,7 @@ body.theme-dark .illu-mode-toggle-lbl {
 
 body.theme-dark .illu-mode-toggle-item:has(.illu-icon-toggle--on) .illu-mode-toggle-lbl,
 body.theme-dark .illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-toggle-lbl {
-    color: var(--mp-accent, #7eb8ff);
+    color: color-mix(in srgb, var(--mp-opt-bar-text, #e8e8e8) 78%, var(--mp-accent) 22%);
 }
 
 /* Icônes Font Awesome dans les toggles mode sélection */
@@ -189,6 +356,20 @@ body.theme-dark .illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-
 
 .illu-mode-toggle-item .illu-icon-toggle .illu-shape-ico {
     display: block;
+}
+
+/* Séparateurs entre toggles (span valide dans un groupe flex) */
+.illu-icon-toggle-group>.opt-sep,
+.illu-mode-toggle-group>.opt-sep {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    margin: 0 3px;
+    padding: 0;
+    flex-shrink: 0;
+    align-self: center;
+    background: var(--mp-raised-bot, #888);
+    vertical-align: middle;
 }
 
 body {
@@ -267,10 +448,12 @@ li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
     margin-left: -2px;
 }
 
+#tool-options-container,
 .tool-options-container {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    gap: 0;
     background: #c0c0c0;
     border-top: 1px solid #dfdfdf;
     position: relative;
@@ -286,13 +469,35 @@ li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 6px 8px;
+    gap: 4px 6px;
     font-size: 11px;
-    min-height: 28px;
+    min-height: 30px;
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1000px) {
+    #app-window .window-body>menu.illu-menubar-root>li.menubar-contact-btn {
+        display: none !important;
+    }
+
+    /* Contact masqué : toolbar reste collée à droite ; masquer seulement Imprimer + Ajuster */
+    #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
+        margin-left: auto !important;
+    }
+
+    #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot #illu-tb-print,
+    #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot #illu-tb-zoom-fit-row1 {
+        display: none !important;
+    }
+}
+
+@media (max-width: 730px) {
+    #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
+        display: none !important;
+    }
 }
 
 /* Téléphone : retour à la ligne, pas de barre de défilement horizontale */
@@ -314,9 +519,9 @@ body.illu-mobile-ui #tool-options-bar-2 {
     column-gap: 6px;
 }
 
-body.illu-mobile-ui #tool-pinned-toggles > .illu-menubar-toolbar,
+body.illu-mobile-ui #tool-pinned-toggles>.illu-menubar-toolbar,
 body.illu-mobile-ui #tool-options-bar-row1 .illu-menubar-toolbar,
-body.illu-mobile-ui #tool-pinned-toggles > #tool-main-header,
+body.illu-mobile-ui #tool-pinned-toggles>#tool-main-header,
 body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header,
 body.illu-mobile-ui #tool-pinned-toggles .opt-grp,
 body.illu-mobile-ui #tool-options-bar-2 .opt-grp {
@@ -384,9 +589,16 @@ body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header {
 
 /* Ne pas laisser un séparateur orphelin avant/après un bloc masqué */
 #tool-options-bar .opt-sep:has(+ [hidden]),
-#tool-options-bar [hidden] + .opt-sep,
+#tool-options-bar [hidden]+.opt-sep,
 #tool-options-bar-2 .opt-sep:has(+ [hidden]),
-#tool-options-bar-2 [hidden] + .opt-sep {
+#tool-options-bar-2 [hidden]+.opt-sep,
+#selection-mode-group[hidden]+.illu-sel-mode-actions-sep,
+.illu-sel-mode-actions-sep:has(+ #tool-pinned-select-actions[hidden]),
+#tool-pinned-select-actions[hidden]+.opt-sep {
+    display: none !important;
+}
+
+.illu-select-actions-wrap:has(#select-rect-free-corners-wrap[hidden])>.illu-sel-corners-center-sep {
     display: none !important;
 }
 
@@ -1200,32 +1412,139 @@ input.illu-num-input::-webkit-inner-spin-button {
    ========================================================================= */
 
 /* Main Toolbar Tools */
-body.illu-colored-icons #tool-select i { color: #2563eb !important; } /* Royal Blue */
-body.illu-colored-icons #tool-direct-select i { color: #10b981 !important; } /* Emerald Green */
-body.illu-colored-icons #tool-wand i { color: #f59e0b !important; } /* Amber Gold */
-body.illu-colored-icons #btn-deselect i { color: #ef4444 !important; } /* Red */
-body.illu-colored-icons #tool-warp-4 svg { color: #8b5cf6 !important; } /* Purple */
-body.illu-colored-icons #tool-deform svg { color: #6366f1 !important; } /* Indigo */
-body.illu-colored-icons #tool-eyedropper i { color: #ec4899 !important; } /* Pink */
-body.illu-colored-icons #tool-move i { color: #14b8a6 !important; } /* Teal */
-body.illu-colored-icons #tool-zoom i { color: #06b6d4 !important; } /* Cyan */
-body.illu-colored-icons #illu-tb-zoom-fit i { color: #f97316 !important; } /* Orange */
-body.illu-colored-icons #tool-brush i { color: #3b82f6 !important; } /* Brush Sky Blue */
-body.illu-colored-icons #tool-pencil i { color: #b45309 !important; } /* Pencil Brownish Orange */
-body.illu-colored-icons #tool-fill i { color: #a855f7 !important; } /* Paint Bucket Purple */
-body.illu-colored-icons #tool-eraser i { color: #f43f5e !important; } /* Eraser Vibrant Pink */
-body.illu-colored-icons #tool-rect i { color: #4b5563 !important; } /* Rect Slate Gray */
-body.illu-colored-icons #tool-circle i { color: #4b5563 !important; } /* Circle Slate Gray */
-body.illu-colored-icons #tool-line i { color: #4b5563 !important; } /* Line Slate Gray */
-body.illu-colored-icons #tool-round-3 svg { stroke: #4b5563 !important; }
-body.illu-colored-icons #tool-cubic-3 i { color: #10b981 !important; } /* Curves Green */
-body.illu-colored-icons #tool-pen i { color: #d97706 !important; } /* Pen nib Orange */
-body.illu-colored-icons #tool-polygon i { color: #8b5cf6 !important; } /* Draw polygon Purple */
-body.illu-colored-icons #tool-text i { color: #ec4899 !important; } /* Text tool Pink */
+body.illu-colored-icons #tool-select i {
+    color: #2563eb !important;
+}
+
+/* Royal Blue */
+body.illu-colored-icons #tool-direct-select i {
+    color: #10b981 !important;
+}
+
+/* Emerald Green */
+body.illu-colored-icons #tool-wand i {
+    color: #f59e0b !important;
+}
+
+/* Amber Gold */
+body.illu-colored-icons #btn-deselect i {
+    color: #ef4444 !important;
+}
+
+/* Red */
+body.illu-colored-icons #tool-warp-4 svg {
+    color: #8b5cf6 !important;
+}
+
+/* Purple */
+body.illu-colored-icons #tool-deform svg {
+    color: #6366f1 !important;
+}
+
+/* Indigo */
+body.illu-colored-icons #tool-eyedropper i {
+    color: #ec4899 !important;
+}
+
+/* Pink */
+body.illu-colored-icons #tool-move i {
+    color: #14b8a6 !important;
+}
+
+/* Teal */
+body.illu-colored-icons #tool-zoom i {
+    color: #06b6d4 !important;
+}
+
+/* Cyan */
+body.illu-colored-icons #illu-tb-zoom-fit i {
+    color: #f97316 !important;
+}
+
+/* Orange */
+body.illu-colored-icons #tool-brush i {
+    color: #3b82f6 !important;
+}
+
+/* Brush Sky Blue */
+body.illu-colored-icons #tool-pencil i {
+    color: #b45309 !important;
+}
+
+/* Pencil Brownish Orange */
+body.illu-colored-icons #tool-fill i {
+    color: #a855f7 !important;
+}
+
+/* Paint Bucket Purple */
+body.illu-colored-icons #tool-eraser i {
+    color: #f43f5e !important;
+}
+
+/* Eraser Vibrant Pink */
+body.illu-colored-icons #tool-rect i {
+    color: #4b5563 !important;
+}
+
+/* Rect Slate Gray */
+body.illu-colored-icons #tool-circle i {
+    color: #4b5563 !important;
+}
+
+/* Circle Slate Gray */
+body.illu-colored-icons #tool-line i {
+    color: #4b5563 !important;
+}
+
+/* Line Slate Gray */
+body.illu-colored-icons #tool-round-3 svg {
+    stroke: #4b5563 !important;
+}
+
+body.illu-colored-icons #tool-cubic-3 i {
+    color: #10b981 !important;
+}
+
+/* Curves Green */
+body.illu-colored-icons #tool-pen i {
+    color: #d97706 !important;
+}
+
+/* Pen nib Orange */
+body.illu-colored-icons #tool-polygon i {
+    color: #8b5cf6 !important;
+}
+
+/* Draw polygon Purple */
+body.illu-colored-icons #tool-text i {
+    color: #ec4899 !important;
+}
+
+/* Text tool Pink */
 
 /* Quick Actions in Menu/Header Bar */
-body.illu-colored-icons .fa-file { color: #2563eb !important; } /* File blue */
-body.illu-colored-icons .fa-folder-open { color: #d97706 !important; } /* Folder orange */
-body.illu-colored-icons .fa-floppy-disk { color: #16a34a !important; } /* Save green */
-body.illu-colored-icons .fa-rotate-left { color: #ea580c !important; } /* Undo red-orange */
-body.illu-colored-icons .fa-rotate-right { color: #0284c7 !important; } /* Redo light-blue */
+body.illu-colored-icons .fa-file {
+    color: #2563eb !important;
+}
+
+/* File blue */
+body.illu-colored-icons .fa-folder-open {
+    color: #d97706 !important;
+}
+
+/* Folder orange */
+body.illu-colored-icons .fa-floppy-disk {
+    color: #16a34a !important;
+}
+
+/* Save green */
+body.illu-colored-icons .fa-rotate-left {
+    color: #ea580c !important;
+}
+
+/* Undo red-orange */
+body.illu-colored-icons .fa-rotate-right {
+    color: #0284c7 !important;
+}
+
+/* Redo light-blue */

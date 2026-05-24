@@ -2479,6 +2479,9 @@ window.applyUILayoutFromPreference = function () {
     if (typeof window.applyIlluMobileUiClass === 'function') {
         window.applyIlluMobileUiClass();
     }
+    if (typeof window.illuInitToolbarRibbon === 'function') {
+        window.illuInitToolbarRibbon();
+    }
     queueMicrotask(() => {
         if (typeof window.initIlluPaletteGridResizeObserver === 'function') {
             window.initIlluPaletteGridResizeObserver();
@@ -2866,6 +2869,7 @@ window.resetWorkspace = function () {
         localStorage.removeItem(ILLU_PALETTE_WINDOWS_POS_KEY);
         localStorage.removeItem(ILLU_EFFECT_DIALOG_POS_KEY);
         localStorage.removeItem(ILLU_PDN_OPEN_KEY);
+        localStorage.removeItem(ILLU_FLOATING_PALETTE_VIS_KEY);
     } catch (e) {
         /* ignore */
     }
@@ -2884,6 +2888,13 @@ window.resetWorkspace = function () {
     }
 
     window.applyUILayoutFromPreference();
+    if (typeof window.applyFloatingPaletteVisibility === 'function') {
+        window.applyFloatingPaletteVisibility();
+    }
+    if (typeof window.refreshFloatingPaletteMenuLabels === 'function') {
+        window.refreshFloatingPaletteMenuLabels();
+    }
+
     if (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'floating') {
         if (!document.body.classList.contains('illu-pdn-dock-active')) {
             if (typeof window.applyFloatingPaletteDefaults === 'function') window.applyFloatingPaletteDefaults();
@@ -3624,17 +3635,7 @@ window.IlluTheme = {
         const isPhotoMode = document.body.classList.contains('illu-photo-mode-active');
         document.body.classList.toggle('theme-dark', darkTheme || isPhotoMode);
 
-        document.body.classList.remove('theme-luna', 'theme-aero', 'theme-modern', 'theme-modern-lite');
         document.body.classList.remove('illu-flat-colored-icons', 'illu-colored-icons');
-
-        const modernLink = document.getElementById('theme-link-modern');
-        if (modernLink) modernLink.disabled = true;
-
-        const lunaLink = document.getElementById('theme-link-luna');
-        if (lunaLink) lunaLink.disabled = true;
-
-        const aeroLink = document.getElementById('theme-link-aero');
-        if (aeroLink) aeroLink.disabled = true;
 
         const classicLink = document.getElementById('theme-link-classic');
         if (classicLink) classicLink.disabled = false;
@@ -3787,6 +3788,11 @@ window.syncIlluPixelGridUI = function () {
     if (checkEl) {
         checkEl.style.visibility = window._illuShowPixelGrid ? 'visible' : 'hidden';
     }
+    document.querySelectorAll('.opt-toggle-pixelgrid').forEach(btn => {
+        btn.classList.toggle('active', !!window._illuShowPixelGrid);
+        btn.classList.toggle('illu-icon-toggle--on', !!window._illuShowPixelGrid);
+        btn.setAttribute('aria-pressed', window._illuShowPixelGrid ? 'true' : 'false');
+    });
     const overlay = document.getElementById('pixel-grid-overlay');
     if (overlay) {
         overlay.style.display = window._illuShowPixelGrid ? 'block' : 'none';
@@ -3801,6 +3807,11 @@ window.syncIlluRulersUI = function () {
     if (checkEl) {
         checkEl.style.visibility = window._illuShowRulers ? 'visible' : 'hidden';
     }
+    document.querySelectorAll('.opt-toggle-rulers').forEach(btn => {
+        btn.classList.toggle('active', !!window._illuShowRulers);
+        btn.classList.toggle('illu-icon-toggle--on', !!window._illuShowRulers);
+        btn.setAttribute('aria-pressed', window._illuShowRulers ? 'true' : 'false');
+    });
     const rTop = document.getElementById('ruler-top');
     const rLeft = document.getElementById('ruler-left');
     const rCorner = document.getElementById('ruler-corner');

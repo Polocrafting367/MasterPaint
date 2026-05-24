@@ -386,7 +386,7 @@ const TOOL_OPTIONS_UI = {
     fill: { label: 'Pot de peinture', actionGroups: [], paramGroups: ['opt-grp-fill-params'] },
     zoom: { label: 'Loupe', actionGroups: [], paramGroups: [] },
     text: { label: 'Texte', actionGroups: ['opt-grp-text-actions'], paramGroups: ['opt-grp-text-params'] },
-    'direct-select': { label: 'Lasso / déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
+    'direct-select': { label: 'Lasso', actionGroups: [], paramGroups: [] },
     deform: { label: 'Déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'warp-4': { label: 'Déformation 4 coins', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'cubic-3': { label: 'Courbe (3 clics, Q)', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
@@ -496,6 +496,8 @@ let selectionWarpThrottleTimeout = null;
 window.updateToolOptionsBar = function () {
     const t = window.activeTool || 'select';
     const cfg = TOOL_OPTIONS_UI[t] || { label: t, actionGroups: [], paramGroups: [] };
+    const isOffice =
+        typeof window.illuIsRibbonToolbarActive === 'function' && window.illuIsRibbonToolbarActive();
     const nameEl = document.getElementById('opt-tool-name');
     const iconEl = document.getElementById('tool-icon-preview');
 
@@ -510,17 +512,21 @@ window.updateToolOptionsBar = function () {
     }
 
     if (iconEl) {
-        // Try to find the icon in the tool palette
-        const btn = document.querySelector(`.tool-btn[data-tool="${t}"] i`);
-        if (btn) {
-            iconEl.innerHTML = btn.outerHTML;
+        const btn = document.getElementById('tool-' + t);
+        const icon = btn && btn.querySelector('i, svg.tool-icon, svg.illu-shape-ico, svg');
+        if (icon) {
+            iconEl.innerHTML = icon.cloneNode(true).outerHTML;
+            iconEl.removeAttribute('aria-hidden');
         } else {
             iconEl.innerHTML = '';
+            iconEl.setAttribute('aria-hidden', 'true');
         }
     }
 
     // Hide all option groups in both bars
-    document.querySelectorAll('.tool-options-bar .opt-grp').forEach((el) => { el.hidden = true; });
+    document.querySelectorAll('.tool-options-bar .opt-grp').forEach((el) => {
+        el.hidden = true;
+    });
 
     const mobileShell =
         typeof window.illuIsMobileShellLayout === 'function' && window.illuIsMobileShellLayout();
@@ -673,6 +679,16 @@ window.updateToolOptionsBar = function () {
     if (toolSelect) {
         toolSelect.value = t;
     }
+    if (typeof window.illuSyncToolPickerLabel === 'function') {
+        window.illuSyncToolPickerLabel(t, cfg);
+    }
+
+    if (typeof window.illuUnifyModeToggleItems === 'function') {
+        window.illuUnifyModeToggleItems();
+    }
+    if (typeof window.illuApplyToggleLayouts === 'function') {
+        window.illuApplyToggleLayouts();
+    }
     const sz = document.getElementById('tool-size');
     if (sz && EditorManager.toolProps.size != null) {
         sz.value = String(EditorManager.toolProps.size);
@@ -819,7 +835,9 @@ window.updateToolOptionsBar = function () {
         window.illuSelectionWarpDestIsAxisRect();
     const showWarpDeformOpts = t === 'warp-4' || t === 'deform';
     const warpRow = document.getElementById('opt-grp-warp-params');
-    if (warpRow) warpRow.hidden = !showWarpDeformOpts && !(t === 'select' && hasSelectFreeQuad);
+    if (warpRow) {
+        warpRow.hidden = !showWarpDeformOpts && !(t === 'select' && hasSelectFreeQuad);
+    }
     const resampleWrap = document.getElementById('opt-warp-resample-wrap');
     const resampleSep = document.getElementById('opt-warp-resample-sep');
     const warpToggles = document.querySelector('#opt-grp-warp-params .illu-warp-bar-toggles');
@@ -926,6 +944,13 @@ window.updateToolOptionsBar = function () {
     }
     if (typeof window.syncIlluMobileActiveToolLabel === 'function') {
         window.syncIlluMobileActiveToolLabel();
+    }
+    if (isOffice && typeof window.illuApplyRibbonGroupsForTool === 'function') {
+        window.illuApplyRibbonGroupsForTool(t, cfg, {
+            isVectorSelect,
+            showHard,
+            warpActive: showWarpDeformOpts || (t === 'select' && hasSelectFreeQuad)
+        });
     }
 };
 
@@ -3294,6 +3319,9 @@ function initTools() {
     if (typeof window.illuEnsurePinnedToggleBarOrder === 'function') {
         window.illuEnsurePinnedToggleBarOrder();
     }
+    if (typeof window.illuEnsureRibbonStructure === 'function') {
+        window.illuEnsureRibbonStructure();
+    }
     if (typeof window.illuSplashLog === 'function') window.illuSplashLog('Outils de dessin prêts.');
 }
 
@@ -3311,21 +3339,8 @@ window.illuEnsurePinnedToggleBarOrder = function () {
         pin.setAttribute('aria-label', 'Modes et actions sélection');
         row1.appendChild(pin);
     }
-    const toolbar = row1.querySelector('.illu-menubar-toolbar') || pin.querySelector('.illu-menubar-toolbar');
-    if (toolbar && toolbar.parentElement !== pin) {
-        pin.insertBefore(toolbar, pin.firstChild);
-    }
-    const toolbarSep =
-        row1.querySelector(':scope > .illu-tool-pinned-toolbar-sep') ||
-        row1.querySelector(':scope > .illu-menubar-toolbar__sep.illu-tool-pinned-toolbar-sep');
-    if (toolbarSep && toolbarSep.parentElement !== pin) {
-        pin.insertBefore(toolbarSep, header.parentElement === pin ? header : null);
-    }
     if (header.parentElement !== pin) {
-        pin.insertBefore(header, toolbarSep && toolbarSep.parentElement === pin ? toolbarSep.nextSibling : null);
-    }
-    if (toolbar && header && toolbar.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_PRECEDING) {
-        pin.insertBefore(toolbar, header);
+        pin.insertBefore(header, pin.firstChild);
     }
     if (pin.parentElement !== row1) {
         const stash = document.getElementById('tool-row1-hidden-sync');
@@ -3341,7 +3356,7 @@ window.illuEnsurePinnedToggleBarOrder = function () {
         global.remove();
     }
     const pinChildSel =
-        '#tool-main-header,#tool-pinned-select-actions,#selection-mode-group,.opt-grp,.illu-menubar-toolbar,.illu-tool-pinned-toolbar-sep';
+        '#tool-main-header,#tool-pinned-select-actions,#selection-mode-group,.opt-grp';
     row1.querySelectorAll(`:scope > ${pinChildSel}`).forEach((el) => {
         if (el.parentElement !== pin) pin.appendChild(el);
     });
@@ -6733,10 +6748,12 @@ function illuUpdateWarpHandlePositionsOnly() {
             el.setAttribute('y', String(hnd.y - hHalf));
             matched++;
         } else if (el.tagName === 'foreignObject' && hnd.id === 'c') {
-            const size = Math.max(hsz, 18 / z);
+            const size = EditorManager.svgUiMoveButtonSizeDoc();
             const half = size / 2;
             el.setAttribute('x', String(hnd.x - half));
             el.setAttribute('y', String(hnd.y - half));
+            el.setAttribute('width', String(size));
+            el.setAttribute('height', String(size));
             matched++;
         } else {
             return false;
