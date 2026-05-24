@@ -72,6 +72,8 @@ const EditorManager = {
         textStroke: false,
         textStrokeWidth: 2,
         textFillType: 'solid',
+        textGradType: 'linear',
+        textGradAngle: 0,
         /** Prochaine sélection rect. → quadrilatère 4 coins (usage unique ; bouton « 4 coins »). */
         selectionRectFreeCornersArm: false,
         /** Poignées 4 coins : déplacement en rectangle axis-aligné (pas quad libre). */
@@ -316,10 +318,33 @@ setup8BitMode() {
     THUMB_IDLE_AFTER_FLUSH_MS: 280,
     /** Délai entre deux miniatures calque (ms) pour ne pas saturer le thread. */
     THUMB_SEQ_GAP_MS: 20,
-    /** Taille de génération interne (plus petit = plus rapide ; l’affichage reste ~28px CSS). */
+    /** Côté max (px) pour miniatures calque (génération + affichage CSS). */
+    THUMB_LAYER_MAX_DIM: 28,
+    /** Taille de génération interne (plus petit = plus rapide). */
     THUMB_LAYER_INTERNAL_SIZE: 22,
     /** Aplat document pour onglet : côté max réduit. */
     THUMB_TAB_MAX_DIM: 28,
+
+    /** Dimensions miniatures en conservant le ratio w/h (côté le plus long ≤ maxDim). */
+    _thumbFitSize(cw, ch, maxDim) {
+        const iw = Math.max(1, cw | 0);
+        const ih = Math.max(1, ch | 0);
+        const ratio = Math.min(maxDim / iw, maxDim / ih, 1);
+        return {
+            width: Math.max(1, Math.round(iw * ratio)),
+            height: Math.max(1, Math.round(ih * ratio))
+        };
+    },
+
+    getLayerThumbCssSize(layer) {
+        if (!layer?.buffer) return { width: this.THUMB_LAYER_MAX_DIM, height: this.THUMB_LAYER_MAX_DIM };
+        return this._thumbFitSize(layer.buffer.width, layer.buffer.height, this.THUMB_LAYER_MAX_DIM);
+    },
+
+    getProjectTabThumbCssSize(p) {
+        if (!p?.width || !p?.height) return { width: 36, height: 28 };
+        return this._thumbFitSize(p.width, p.height, this.THUMB_TAB_MAX_DIM);
+    },
 
     /** Défaut si aucune préférence (localStorage `illu_history_max_entries`). */
     HISTORY_MAX_ENTRIES_DEFAULT: 15,
@@ -467,6 +492,8 @@ setup8BitMode() {
                 ed.opts.fillType = this.toolProps.fillType;
                 ed.opts.gradAngle = this.toolProps.shapeGradAngle;
                 ed.opts.gradType = document.getElementById('tool-shape-grad-type')?.value || 'linear';
+                ed.opts.gradMethod =
+                    typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple';
             }
             if (ed.kind === 'roundrect') {
                 const cap = Math.min(ed.w / 2, ed.h / 2);
@@ -642,6 +669,27 @@ setup8BitMode() {
             if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(scr);
         }
         bind('tool-shape-grad-type', () => syncLiveShapeEdit());
+        bind('tool-text-grad-type', () => {
+            const el = document.getElementById('tool-text-grad-type');
+            if (el) this.toolProps.textGradType = el.value === 'radial' ? 'radial' : 'linear';
+            if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        });
+        const tga = document.getElementById('tool-text-grad-angle');
+        const tgav = document.getElementById('tool-text-grad-angle-val');
+        if (tga) {
+            const syncTextGradAngle = () => {
+                let v = parseInt(tga.value, 10);
+                if (!Number.isFinite(v)) v = 0;
+                this.toolProps.textGradAngle = Math.max(0, Math.min(360, v));
+                if (tgav) tgav.textContent = String(this.toolProps.textGradAngle);
+                if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(tga);
+                if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            };
+            tga.addEventListener('input', syncTextGradAngle);
+            tga.addEventListener('change', syncTextGradAngle);
+            if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(tga);
+        }
         const sga = document.getElementById('tool-shape-grad-angle');
         const sgav = document.getElementById('tool-shape-grad-angle-val');
         if (sga) {
@@ -1473,6 +1521,7 @@ setup8BitMode() {
                 vctx.drawImage(this._shapePreviewCanvas, 0, 0);
             }
             stackEl.appendChild(cv);
+            this._syncImportStagingDomView(stackEl, l, (i + 1) * 10 + 1);
         }
         for (const [id, el] of [...map.entries()]) {
             if (!seen.has(id)) {
@@ -1480,7 +1529,64 @@ setup8BitMode() {
                 map.delete(id);
             }
         }
+        if (this._pixelLayerStagingViewEls) {
+            for (const [id, el] of [...this._pixelLayerStagingViewEls.entries()]) {
+                if (!seen.has(id)) {
+                    el.remove();
+                    this._pixelLayerStagingViewEls.delete(id);
+                }
+            }
+        }
         this._restackStackPreviewOverlays(stackEl);
+    },
+
+    /** Vue DOM du collage volant (tampon séparé, hors dimensions du calque). */
+    _syncImportStagingDomView(stackEl, layer, zIndex) {
+        if (!stackEl || !layer) return;
+        if (!this._pixelLayerStagingViewEls) this._pixelLayerStagingViewEls = new Map();
+        const map = this._pixelLayerStagingViewEls;
+        const key = layer.id;
+        const st = layer.importStagingBuffer;
+        const show =
+            layer.importPlacementPending && st && !layer._ghostDragHide && layer.visible !== false;
+        let cv = map.get(key);
+        if (!show) {
+            if (cv) {
+                cv.remove();
+                map.delete(key);
+            }
+            return;
+        }
+        if (!cv) {
+            cv = document.createElement('canvas');
+            cv.className = 'illu-pixel-layer-staging-view';
+            cv.dataset.layerId = String(key);
+            cv.setAttribute('aria-hidden', 'true');
+            map.set(key, cv);
+        }
+        const iw = st.width | 0;
+        const ih = st.height | 0;
+        if (iw < 1 || ih < 1) {
+            cv.style.display = 'none';
+            return;
+        }
+        if (cv.width !== iw) cv.width = iw;
+        if (cv.height !== ih) cv.height = ih;
+        cv.style.display = 'block';
+        cv.style.left = `${layer.importStagingX | 0}px`;
+        cv.style.top = `${layer.importStagingY | 0}px`;
+        cv.style.opacity = String(layer.opacity != null ? layer.opacity : 1);
+        cv.style.mixBlendMode = this._blendModeToCssMix(layer);
+        cv.style.zIndex = String(zIndex);
+        cv.style.imageRendering = 'pixelated';
+        cv.style.setProperty('image-rendering', 'crisp-edges');
+        const vctx = cv.getContext('2d', { willReadFrequently: true });
+        if (vctx) {
+            vctx.imageSmoothingEnabled = false;
+            vctx.clearRect(0, 0, iw, ih);
+            vctx.drawImage(st, 0, 0);
+        }
+        stackEl.appendChild(cv);
     },
 
     /** Met à jour une seule vue calque DOM (perf : édition forme, etc.). */
@@ -1499,6 +1605,7 @@ setup8BitMode() {
         }
         if (layer._ghostDragHide) {
             cv.style.display = 'none';
+            this._syncImportStagingDomView(stackEl, layer, (i + 1) * 10 + 1);
             return;
         }
         const bw = layer.buffer.width | 0;
@@ -1531,6 +1638,7 @@ setup8BitMode() {
             vctx.drawImage(this._shapePreviewCanvas, 0, 0);
         }
         stackEl.appendChild(cv);
+        this._syncImportStagingDomView(stackEl, layer, (i + 1) * 10 + 1);
         this._restackStackPreviewOverlays(stackEl);
     },
 
@@ -2364,6 +2472,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
             ctx.drawImage(this._shapePreviewCanvas, layer.x, layer.y);
         }
+        /* Collage volant : aperçu uniquement via .illu-pixel-layer-staging-view (DOM), pas dans le tampon composite. */
         ctx.restore();
     },
 
@@ -2652,47 +2761,36 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
-    getLayerThumbnailDataUrl(layer, size = 28, useLowQualityJpeg = false) {
+    getLayerThumbnailDataUrl(layer, maxDim = 28, useLowQualityJpeg = false) {
         const empty =
             'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         if (!layer || !layer.buffer) return empty;
         const cw = layer.buffer.width;
         const ch = layer.buffer.height;
         if (cw < 1 || ch < 1) return empty;
+        const { width: tw, height: th } = this._thumbFitSize(cw, ch, maxDim);
 
         // --- WASM Engine for Thumbnails ---
         if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
             const ctx = layer.buffer.getContext('2d', { willReadFrequently: true });
             const srcData = ctx.getImageData(0, 0, cw, ch);
-            
-            const scale = Math.min(size / cw, size / ch);
-            const dw = Math.max(1, Math.round(cw * scale));
-            const dh = Math.max(1, Math.round(ch * scale));
-            
-            const thumbData = MasterPaintWasm.generateThumbnail(srcData, dw, dh);
+
+            const thumbData = MasterPaintWasm.generateThumbnail(srcData, tw, th);
             if (thumbData) {
                 const sc = document.createElement('canvas');
-                sc.width = size;
-                sc.height = size;
+                sc.width = tw;
+                sc.height = th;
                 const sctx = sc.getContext('2d');
-                // Removed grey background to support transparency
-                sctx.putImageData(thumbData, (size - dw) / 2, (size - dh) / 2);
-                // For thumbnails with transparency, we MUST use PNG
+                sctx.putImageData(thumbData, 0, 0);
                 return sc.toDataURL('image/png');
             }
         }
 
         const sc = document.createElement('canvas');
-        sc.width = size;
-        sc.height = size;
+        sc.width = tw;
+        sc.height = th;
         const sctx = sc.getContext('2d', { willReadFrequently: true });
         sctx.imageSmoothingEnabled = true;
-        const scale = Math.min(size / cw, size / ch);
-        const dw = Math.max(1, Math.round(cw * scale));
-        const dh = Math.max(1, Math.round(ch * scale));
-        const ox = (size - dw) / 2;
-        const oy = (size - dh) / 2;
-        // Removed grey background to support transparency
         let src = layer.buffer;
         if (this._isLiveDynamicFilterLayer(layer)) {
             try {
@@ -2722,7 +2820,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 src = layer.buffer;
             }
         }
-        sctx.drawImage(src, 0, 0, cw, ch, ox, oy, dw, dh);
+        sctx.drawImage(src, 0, 0, cw, ch, 0, 0, tw, th);
         try {
             // For thumbnails with transparency, we MUST use PNG
             return sc.toDataURL('image/png');
@@ -2986,63 +3084,136 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     _computeImportPasteDocXY(W, H, iw, ih, importOpts) {
         importOpts = importOpts || {};
+        if (importOpts.ignorePastePosition) {
+            if (iw < 1 || ih < 1) return { docX: 0, docY: 0 };
+            return { docX: Math.round((W - iw) / 2), docY: Math.round((H - ih) / 2) };
+        }
         const pb = importOpts.pasteDocBounds;
-        // Internal paste: try to keep original position if dimensions match
-        if (
+        const ap = this.activeProject;
+        const pid = ap && ap.id != null ? ap.id : null;
+        const sameProject =
             pb &&
             importOpts.pasteProjectId != null &&
-            iw === (pb.w | 0) &&
-            ih === (pb.h | 0)
-        ) {
+            pid != null &&
+            String(importOpts.pasteProjectId) === String(pid);
+        if (sameProject) {
             return { docX: Math.round(pb.x), docY: Math.round(pb.y) };
         }
         if (iw < 1 || ih < 1) return { docX: 0, docY: 0 };
         return { docX: Math.round((W - iw) / 2), docY: Math.round((H - ih) / 2) };
     },
 
-    promptImport(img, importOpts) {
+    _isSamePasteProject(pasteProjectId) {
+        const ap = this.activeProject;
+        const pid = ap && ap.id != null ? ap.id : null;
+        return pasteProjectId != null && pid != null && String(pasteProjectId) === String(pid);
+    },
+
+    _mergeInternalPasteImportOpts(importOpts) {
         importOpts = importOpts || {};
+        if (!importOpts.pasteDocBounds && window.ctxClipboardDocBounds) {
+            importOpts.pasteDocBounds = window.ctxClipboardDocBounds;
+        }
+        if (importOpts.pasteProjectId == null && window.ctxClipboardProjectId != null) {
+            importOpts.pasteProjectId = window.ctxClipboardProjectId;
+        }
+        return importOpts;
+    },
+
+    /**
+     * Si l'image dépasse la toile : dialogue agrandir / coller tel quel (volant).
+     * @param {HTMLImageElement|HTMLCanvasElement} img
+     * @param {(placement: 'staging'|'fitCanvas') => void} onReady
+     */
+    _runImportOversizeGate(img, onReady) {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        const W = Math.max(1, this.width | 0);
+        const H = Math.max(1, this.height | 0);
+        const finish = (placement) => {
+            if (typeof onReady === 'function') onReady(placement || 'staging');
+        };
+        if (iw <= W && ih <= H) {
+            finish('staging');
+            return;
+        }
+        const overlay = document.getElementById('import-choice-overlay');
+        const overlayOversize = document.getElementById('import-oversize-overlay');
+        if (overlay) overlay.style.display = 'none';
+        if (!overlayOversize) {
+            finish('staging');
+            return;
+        }
+        overlayOversize.style.display = 'flex';
+        const btnExt = document.getElementById('btn-import-oversize-extend');
+        const btnKeep = document.getElementById('btn-import-oversize-keep');
+        const btnBack = document.getElementById('btn-import-oversize-back');
+        if (btnExt) {
+            btnExt.onclick = () => {
+                overlayOversize.style.display = 'none';
+                const mr = Math.max(0, iw - W);
+                const mb = Math.max(0, ih - H);
+                this.extendDocumentMargins(0, 0, mr, mb, { silent: true });
+                finish('staging');
+            };
+        }
+        if (btnKeep) {
+            btnKeep.onclick = () => {
+                overlayOversize.style.display = 'none';
+                finish('staging');
+            };
+        }
+        if (btnBack) {
+            btnBack.onclick = () => {
+                overlayOversize.style.display = 'none';
+                if (overlay && overlay.style.display !== 'none') {
+                    overlay.style.display = 'flex';
+                }
+            };
+        }
+    },
+
+    _finishFloatingPaste(img, importOpts, placement, historyLabel) {
+        this.addImageLayerFromBitmap(img, 'Collage', { ...importOpts, placement: placement || 'staging' });
+        /* Historique enregistré au « poser » (Entrée / changement d’outil), pas tant que le collage est volant. */
+        this.render();
+        if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+            window.scheduleFitActiveProjectZoomOnDocumentOpen();
+        } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
+            window.fitActiveProjectZoomToPageWidth();
+        }
+        if (typeof window.illuAfterImportActivateDeformTool === 'function') {
+            window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
+        }
+    },
+
+    promptImport(img, importOpts) {
+        importOpts = this._mergeInternalPasteImportOpts(importOpts || {});
         if (!this.isPixelMode) {
             window.showIlluAlert('Import image : passez en mode Pixel ou utilisez Fichier pour le mode Vecteur.');
             return;
         }
-        const ap = this.activeProject;
-        const pid = ap && ap.id != null ? ap.id : null;
-        
-        // --- INTERNAL PASTE (from this tab/session) ---
-        if (importOpts.pasteProjectId != null) {
-            const sameProject = pid != null && importOpts.pasteProjectId === pid;
-            if (sameProject) {
-                // Same project: Paste directly on active layer (merge)
-                this.drawImportedImageOnActiveLayer(img, importOpts);
-                this.saveHistory('Import sur calque actif', { patchActiveLayer: true });
-                this.render();
-                if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
-                    window.scheduleFitActiveProjectZoomOnDocumentOpen();
-                } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
-                    window.fitActiveProjectZoomToPageWidth();
-                }
-                if (typeof window.illuAfterImportActivateDeformTool === 'function') {
-                    window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
-                }
-            } else {
-                // Different project: Create a new layer automatically (no dialog)
-                this.addImageLayerFromBitmap(img, 'Image copiée', { ...importOpts, placement: 'fitCanvas' });
-                this.saveHistory('Import calque (inter-projet)');
-                this.render();
-                if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
-                    window.scheduleFitActiveProjectZoomOnDocumentOpen();
-                } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
-                    window.fitActiveProjectZoomToPageWidth();
-                }
-                if (typeof window.illuAfterImportActivateDeformTool === 'function') {
-                    window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
-                }
-            }
+        const fromInternalClipboard = importOpts.pasteProjectId != null;
+        const sameProject = fromInternalClipboard && this._isSamePasteProject(importOpts.pasteProjectId);
+
+        // Collage interne, même projet : calque volant (staging), position d'origine, outil Déformation.
+        if (fromInternalClipboard && sameProject) {
+            this._runImportOversizeGate(img, (placement) => {
+                this._finishFloatingPaste(img, importOpts, placement, 'Coller');
+            });
             return;
         }
 
-        // --- EXTERNAL PASTE (Internet, Files, etc.) ---
+        // Collage interne, autre projet : collage volant centré (pas de dialogue import).
+        if (fromInternalClipboard && !sameProject) {
+            importOpts = { ...importOpts, ignorePastePosition: true };
+            delete importOpts.pasteDocBounds;
+            this._runImportOversizeGate(img, (placement) => {
+                this._finishFloatingPaste(img, importOpts, placement, 'Coller');
+            });
+            return;
+        }
+
         const overlay = document.getElementById('import-choice-overlay');
         const overlayOversize = document.getElementById('import-oversize-overlay');
         overlay.style.display = 'flex';
@@ -3054,8 +3225,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         };
 
         const finishNewLayerImport = (placement) => {
-            this.addImageLayerFromBitmap(img, 'Image importée', { ...importOpts, placement });
-            this.saveHistory('Import calque');
+            const layerName = fromInternalClipboard ? 'Image collée' : 'Image importée';
+            const hist = fromInternalClipboard ? 'Coller (nouveau calque)' : 'Import calque';
+            const place = placement || 'staging';
+            overlay.style.display = 'none';
+            if (overlayOversize) overlayOversize.style.display = 'none';
+            this.addImageLayerFromBitmap(img, layerName, { ...importOpts, placement: place });
+            if (place !== 'staging') this.saveHistory(hist);
             this.render();
             if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
                 window.scheduleFitActiveProjectZoomOnDocumentOpen();
@@ -3066,41 +3242,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         };
 
         document.getElementById('btn-import-layer').onclick = () => {
-            const iw = img.naturalWidth || img.width;
-            const ih = img.naturalHeight || img.height;
-            const W = Math.max(1, this.width | 0);
-            const H = Math.max(1, this.height | 0);
-            if (iw > W || ih > H) {
-                overlay.style.display = 'none';
-                if (overlayOversize) overlayOversize.style.display = 'flex';
-                const btnExt = document.getElementById('btn-import-oversize-extend');
-                const btnKeep = document.getElementById('btn-import-oversize-keep');
-                const btnBack = document.getElementById('btn-import-oversize-back');
-                if (btnExt) {
-                    btnExt.onclick = () => {
-                        if (overlayOversize) overlayOversize.style.display = 'none';
-                        const mr = Math.max(0, iw - W);
-                        const mb = Math.max(0, ih - H);
-                        this.extendDocumentMargins(0, 0, mr, mb, { silent: true });
-                        finishNewLayerImport('fitCanvas');
-                    };
-                }
-                if (btnKeep) {
-                    btnKeep.onclick = () => {
-                        if (overlayOversize) overlayOversize.style.display = 'none';
-                        finishNewLayerImport('staging');
-                    };
-                }
-                if (btnBack) {
-                    btnBack.onclick = () => {
-                        if (overlayOversize) overlayOversize.style.display = 'none';
-                        overlay.style.display = 'flex';
-                    };
-                }
-            } else {
-                overlay.style.display = 'none';
-                finishNewLayerImport('fitCanvas');
-            }
+            overlay.style.display = 'none';
+            this._runImportOversizeGate(img, (placement) => finishNewLayerImport(placement));
         };
 
         const btnCur = document.getElementById('btn-import-current');
@@ -3108,15 +3251,30 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             btnCur.onclick = () => {
                 overlay.style.display = 'none';
                 if (overlayOversize) overlayOversize.style.display = 'none';
-                this.drawImportedImageOnActiveLayer(img, importOpts);
-                this.saveHistory('Import sur calque actif', { patchActiveLayer: true });
-                this.render();
-                if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
-                    window.scheduleFitActiveProjectZoomOnDocumentOpen();
-                } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
-                    window.fitActiveProjectZoomToPageWidth();
-                }
-                afterImport({ skipFullLayerSync: true });
+                const hist = fromInternalClipboard ? 'Coller (calque actif)' : 'Import sur calque actif';
+                this._runImportOversizeGate(img, (placement) => {
+                    if (typeof window.illuSetRectSelectionDocBounds === 'function') {
+                        const iw = img.naturalWidth || img.width;
+                        const ih = img.naturalHeight || img.height;
+                        const W = Math.max(1, this.width | 0);
+                        const H = Math.max(1, this.height | 0);
+                        const { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, importOpts);
+                        window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
+                    }
+                    const place = placement || 'staging';
+                    this.drawImportedImageOnActiveLayer(img, { ...importOpts, placement: place });
+                    const al = this.activeLayer;
+                    if (!al || !al.importPlacementPending) {
+                        this.saveHistory(hist, { patchActiveLayer: true });
+                    }
+                    this.render();
+                    if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+                        window.scheduleFitActiveProjectZoomOnDocumentOpen();
+                    } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
+                        window.fitActiveProjectZoomToPageWidth();
+                    }
+                    afterImport({ skipFullLayerSync: true });
+                });
             };
         }
 
@@ -3260,25 +3418,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const H = this.height;
         const { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, importOpts);
 
-        const placement = importOpts.placement || 'staging';
-        if (placement === 'staging' && typeof window.illuSetImportStaging === 'function') {
-            if (typeof window.illuSetRectSelectionDocBounds === 'function') {
-                window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
-            }
-            window.illuSetImportStaging(scratch);
-            return;
-        }
-
-        let lx = docX - l.x;
-        let ly = docY - l.y;
-        this._expandLayerBufferToIncludeLocalRect(l, lx, ly, iw, ih);
-        lx = docX - l.x;
-        ly = docY - l.y;
-        l.buffer.getContext('2d', { willReadFrequently: true }).drawImage(scratch, lx, ly);
         if (typeof window.illuSetRectSelectionDocBounds === 'function') {
             window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
         }
-        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        if (typeof window.illuSetImportStaging === 'function') {
+            window.illuSetImportStaging(scratch);
+        }
     },
 
     cloneCanvas(source) {
@@ -3294,7 +3439,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * @param {string} [name]
      * @param {{ placement?: 'fitCanvas' | 'staging'; pasteDocBounds?: { x: number; y: number; w: number; h: number }; pasteProjectId?: number | null }} [opts]
      * fitCanvas : tampon = toile, image centrée (parties hors toile coupées dans le buffer).
-     * staging : tampon = taille image, calque centré sur la toile ; hors toile visible coupée à l’affichage jusqu’à « poser » (Entrée).
+     * staging : tampon calque = dimensions projet ; image dans importStagingBuffer (déplaçable hors cadre) jusqu’à « poser » (Entrée).
      */
     /**
      * Importe un document parsé par PdnFile (calques ImageData, dimensions document).
@@ -3367,7 +3512,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     addImageLayerFromBitmap(img, name, opts) {
         opts = opts || {};
-        const placement = opts.placement === 'staging' ? 'staging' : 'fitCanvas';
+        const placement = opts.placement === 'fitCanvas' ? 'fitCanvas' : 'staging';
         const id = Date.now();
         const W = Math.max(1, this.width | 0);
         const H = Math.max(1, this.height | 0);
@@ -3389,26 +3534,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             sctx.putImageData(idata, 0, 0);
         }
 
-        let buffer;
-        let lx = 0;
-        let ly = 0;
         let importPlacementPending = false;
+        let importStagingBuffer = null;
+        let importStagingX = 0;
+        let importStagingY = 0;
+        const buffer = document.createElement('canvas');
+        buffer.width = W;
+        buffer.height = H;
         if (placement === 'staging' && iw >= 1 && ih >= 1) {
-            buffer = document.createElement('canvas');
-            buffer.width = iw;
-            buffer.height = ih;
-            const bctx = buffer.getContext('2d', { willReadFrequently: true });
-            if (bctx) {
-                bctx.imageSmoothingEnabled = false;
-                bctx.drawImage(scratch, 0, 0);
-            }
-            lx = docX;
-            ly = docY;
+            importStagingBuffer = this.cloneCanvas(scratch);
+            importStagingX = docX;
+            importStagingY = docY;
             importPlacementPending = true;
         } else {
-            buffer = document.createElement('canvas');
-            buffer.width = W;
-            buffer.height = H;
             const bctx = buffer.getContext('2d', { willReadFrequently: true });
             if (bctx) {
                 bctx.imageSmoothingEnabled = false;
@@ -3421,26 +3559,35 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             id,
             name: name || 'Image',
             visible: true,
-            x: lx,
-            y: ly,
+            x: 0,
+            y: 0,
             opacity: 1,
             blendMode: 'source-over',
             buffer,
             importPlacementPending,
+            importStagingBuffer,
+            importStagingX,
+            importStagingY,
             alphaMaskProjectId: null,
             ...this._defaultDynamicFilterLayerProps()
         };
         this.layers.push(layer);
         this.setActiveLayerIndex(this.layers.length - 1);
         this.updateLayerUI();
-        if (importPlacementPending && typeof window.syncSelectionToImportPlacementLayer === 'function') {
-            window.syncSelectionToImportPlacementLayer();
+        if (importPlacementPending) {
+            if (typeof illuSetImportPlacementChromeActive === 'function') {
+                illuSetImportPlacementChromeActive(true);
+            }
+            if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+                window.syncSelectionToImportPlacementLayer();
+            }
         } else if (iw >= 1 && ih >= 1 && typeof window.illuSetRectSelectionDocBounds === 'function') {
-            window.illuSetRectSelectionDocBounds(lx + docX, ly + docY, iw, ih);
+            window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
         } else if (typeof window.syncSelectionToActiveLayer === 'function') {
             window.syncSelectionToActiveLayer();
         }
+        this.render({ flushUiThumbnails: true });
     },
 
     freezePixelProject(p) {
@@ -3458,6 +3605,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 alphaMaskProjectId: l.alphaMaskProjectId != null ? l.alphaMaskProjectId : null,
                 ...this._snapshotDynamicFilterProps(l),
                 importPlacementPending: !!l.importPlacementPending,
+                importStagingX: l.importStagingX | 0,
+                importStagingY: l.importStagingY | 0,
+                importStagingCanvas: l.importStagingBuffer ? this.cloneCanvas(l.importStagingBuffer) : null,
                 bufferCanvas: l.buffer ? this.cloneCanvas(l.buffer) : null
             }))
         };
@@ -3479,6 +3629,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 alphaMaskProjectId: s.alphaMaskProjectId != null ? s.alphaMaskProjectId : null,
                 ...this._snapshotDynamicFilterProps(s),
                 importPlacementPending: !!s.importPlacementPending,
+                importStagingX: s.importStagingX | 0,
+                importStagingY: s.importStagingY | 0,
+                importStagingBuffer: s.importStagingCanvas || null,
                 buffer: s.bufferCanvas
             }));
         p.activeLayerIndex = Math.min(Math.max(0, snap.activeLayerIndex), Math.max(0, p.layers.length - 1));
@@ -3792,6 +3945,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 p.activeLayerIndex = 0;
                 this.addLayer('Arrière-plan');
             }
+            this._normalizeAllPixelLayersToDocumentSize();
         } else {
             const svgLayers = document.getElementById('svg-layers');
             if (svgLayers) svgLayers.innerHTML = p.svgData != null ? p.svgData : '';
@@ -4532,7 +4686,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return false;
     },
 
-    deselectAll() {
+    deselectAll(opts) {
+        opts = opts || {};
+        if (
+            this.isPixelMode &&
+            !opts.skipImportCommit &&
+            typeof this.commitImportPlacementIfPending === 'function'
+        ) {
+            this.commitImportPlacementIfPending();
+        }
         // Mode vecteur : vider la sélection SVG
         if (this.mode === 'vector') {
             this.activeVectorSelection = [];
@@ -5420,8 +5582,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             thumb.className = 'tab-thumb';
             thumb.alt = '';
             thumb.draggable = false;
-            thumb.width = isAlphaChild ? 28 : 36;
-            thumb.height = isAlphaChild ? 22 : 28;
+            const tabSz = this.getProjectTabThumbCssSize(p);
+            thumb.width = tabSz.width;
+            thumb.height = tabSz.height;
             const u = this.getProjectTabThumbnailDataUrl(p);
             if (u) thumb.src = u;
             tab.appendChild(thumb);
@@ -5892,6 +6055,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         col.r = r; col.g = g; col.b = b;
         if (a !== null) col.a = a;
         this.syncUItoState();
+        if (window.activeTool === 'eyedropper' && typeof window.illuRefreshEyedropperColorPanel === 'function') {
+            window.illuRefreshEyedropperColorPanel();
+        }
 
         // Propagation aux formes vectorielles sélectionnées
         if (this.mode === 'vector' && this.activeVectorSelection.length) {
@@ -6127,6 +6293,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         stack.style.display = 'none';
                         stack.innerHTML = '';
                         if (this._pixelLayerViewEls) this._pixelLayerViewEls.clear();
+                        if (this._pixelLayerStagingViewEls) this._pixelLayerStagingViewEls.clear();
                     }
                     mainCanvas.style.opacity = '';
                     mainCanvas.style.pointerEvents = '';
@@ -6371,25 +6538,134 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     /**
-     * Après collage « placement » (image plus grande que la toile) : recadre le tampon sur la toile et pose les pixels.
+     * Ramène le tampon du calque aux dimensions du document (0,0) sans changer la taille de la toile.
      */
-    commitImportPlacementIfPending() {
-        const l = this.activeLayer;
-        if (!l || !l.buffer || !l.importPlacementPending || !this.isPixelMode || !this.activeProject) {
+    _fitLayerBufferToDocumentSize(layer) {
+        if (!layer || !layer.buffer || !this.isPixelMode || !this.activeProject) return;
+        const W = Math.max(1, this.width | 0);
+        const H = Math.max(1, this.height | 0);
+        const bw = layer.buffer.width | 0;
+        const bh = layer.buffer.height | 0;
+        const lx = layer.x | 0;
+        const ly = layer.y | 0;
+        if (bw === W && bh === H && lx === 0 && ly === 0) return;
+        const newBuf = document.createElement('canvas');
+        newBuf.width = W;
+        newBuf.height = H;
+        const nctx = newBuf.getContext('2d', { willReadFrequently: true });
+        if (nctx) {
+            nctx.imageSmoothingEnabled = false;
+            nctx.clearRect(0, 0, W, H);
+            nctx.drawImage(layer.buffer, 0, 0, bw, bh, lx, ly, bw, bh);
+        }
+        layer.buffer = newBuf;
+        layer.x = 0;
+        layer.y = 0;
+    },
+
+    /** Calques pixel : tampon = dimensions du document, position (0,0) — le collage volant reste dans importStagingBuffer. */
+    _normalizeAllPixelLayersToDocumentSize() {
+        if (!this.isPixelMode || !this.activeProject) return;
+        for (let i = 0; i < this.layers.length; i++) {
+            this._fitLayerBufferToDocumentSize(this.layers[i]);
+        }
+    },
+
+    _clearImportStagingDomViews() {
+        if (!this._pixelLayerStagingViewEls) return;
+        for (const el of this._pixelLayerStagingViewEls.values()) {
+            if (el && el.parentNode) el.remove();
+        }
+        this._pixelLayerStagingViewEls.clear();
+        if (typeof illuSetImportPlacementChromeActive === 'function') {
+            illuSetImportPlacementChromeActive(false);
+        } else {
+            const mcc = document.getElementById('main-canvas-container');
+            if (mcc) mcc.classList.remove('illu-import-placement-active');
+        }
+    },
+
+    /**
+     * Fusionne le collage volant d’un calque dans son tampon (dimensions projet inchangées).
+     * @param {object} layer
+     * @returns {boolean}
+     */
+    commitImportPlacementForLayer(layer) {
+        if (!layer || !layer.buffer || !layer.importPlacementPending || !this.isPixelMode || !this.activeProject) {
             return false;
         }
         if (this.activeProject.role === 'layerAlphaMask') return false;
-        l.importPlacementPending = false;
-        this.fitActiveLayerBufferToCanvas();
+        this._fitLayerBufferToDocumentSize(layer);
+        const st = layer.importStagingBuffer;
+        const sx = layer.importStagingX | 0;
+        const sy = layer.importStagingY | 0;
+        if (st && (st.width | 0) >= 1 && (st.height | 0) >= 1) {
+            const bctx = layer.buffer.getContext('2d', { willReadFrequently: true });
+            if (bctx) {
+                bctx.imageSmoothingEnabled = false;
+                /* Au « poser » : seule la partie dans le rectangle document est inscrite sur le calque. */
+                bctx.drawImage(st, sx, sy);
+            }
+        }
+        if (typeof illuSetImportPlacementChromeActive === 'function') {
+            illuSetImportPlacementChromeActive(false);
+        } else {
+            const mcc = document.getElementById('main-canvas-container');
+            if (mcc) mcc.classList.remove('illu-import-placement-active');
+        }
+        layer.importPlacementPending = false;
+        delete layer.importStagingBuffer;
+        delete layer.importStagingX;
+        delete layer.importStagingY;
+        if (layer._ghostDragHide) delete layer._ghostDragHide;
+        if (this._pixelLayerViewEls) {
+            const v = this._pixelLayerViewEls.get(layer.id);
+            if (v && v.parentNode) v.remove();
+            this._pixelLayerViewEls.delete(layer.id);
+        }
+        return true;
+    },
+
+    /**
+     * Après collage volant : pose tous les calques en attente (souvent le calque actif seulement).
+     */
+    commitImportPlacementIfPending() {
+        if (!this.isPixelMode || !this.activeProject) return false;
+        if (this.activeProject.role === 'layerAlphaMask') return false;
+        const pending = this.layers.filter((l) => l && l.importPlacementPending && l.buffer);
+        if (!pending.length) return false;
+        const committedBounds = [];
+        let any = false;
+        pending.forEach((l) => {
+            const st = l.importStagingBuffer;
+            if (st && (st.width | 0) >= 1 && (st.height | 0) >= 1) {
+                committedBounds.push({
+                    layerId: l.id,
+                    x: l.importStagingX | 0,
+                    y: l.importStagingY | 0,
+                    w: st.width,
+                    h: st.height
+                });
+            }
+            if (this.commitImportPlacementForLayer(l)) any = true;
+        });
+        if (!any) return false;
+        this._clearImportStagingDomViews();
         const hist =
             window.IlluI18n && typeof window.IlluI18n.t === 'function'
                 ? window.IlluI18n.t('history.importPlacementCommit')
                 : 'Poser le collage';
         this.saveHistory(hist, { patchActiveLayer: true });
-        if (typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        const al = this.activeLayer;
+        const bounds =
+            (al && committedBounds.find((b) => b.layerId === al.id)) ||
+            committedBounds[committedBounds.length - 1];
+        if (bounds && typeof window.syncSelectionToCommittedImportBounds === 'function') {
+            window.syncSelectionToCommittedImportBounds(bounds);
+        } else if (typeof window.refreshSelectionVisual === 'function') {
+            window.refreshSelectionVisual();
         }
-        this.render();
+        this.render({ flushUiThumbnails: true });
         return true;
     },
 
@@ -6453,15 +6729,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const ly = l.y;
         if (bw === W && bh === H && lx === 0 && ly === 0) return;
 
-        const newBuf = document.createElement('canvas');
-        newBuf.width = W;
-        newBuf.height = H;
-        const nctx = newBuf.getContext('2d', { willReadFrequently: true });
-        nctx.clearRect(0, 0, W, H);
-        nctx.drawImage(l.buffer, 0, 0, bw, bh, lx, ly, bw, bh);
-        l.buffer = newBuf;
-        l.x = 0;
-        l.y = 0;
+        this._fitLayerBufferToDocumentSize(l);
 
         if (l.alphaMaskProjectId) {
             const mp = this.projects.find((pr) => pr.id === l.alphaMaskProjectId);
@@ -6898,8 +7166,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const thumb = document.createElement('img');
                 thumb.className = 'layer-thumb';
                 thumb.alt = '';
-                thumb.width = 28;
-                thumb.height = 28;
+                const layerSz = this.getLayerThumbCssSize(layer);
+                thumb.width = layerSz.width;
+                thumb.height = layerSz.height;
                 thumb.draggable = false;
                 thumb.src =
                     'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -7411,9 +7680,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     disposeHistoryEntryData(data) {
         if (!data || typeof data !== 'object') return;
-        if (data.type === 'pixel-patch' && data.patch && data.patch.buffer) {
-            this._disposeCanvasBuffer(data.patch.buffer);
-            data.patch.buffer = null;
+        if (data.type === 'pixel-patch' && data.patch) {
+            if (data.patch.buffer) {
+                this._disposeCanvasBuffer(data.patch.buffer);
+                data.patch.buffer = null;
+            }
+            if (data.patch.importStagingCanvas) {
+                this._disposeCanvasBuffer(data.patch.importStagingCanvas);
+                data.patch.importStagingCanvas = null;
+            }
         } else if (
             (data.type === 'pixel-full' || data.type === 'pixel-layers') &&
             Array.isArray(data.layers)
@@ -7564,6 +7839,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         opacity: al.opacity != null ? al.opacity : 1,
                         blendMode: al.blendMode || 'source-over',
                         alphaMaskProjectId: al.alphaMaskProjectId != null ? al.alphaMaskProjectId : null,
+                        importPlacementPending: !!al.importPlacementPending,
+                        importStagingX: al.importStagingX | 0,
+                        importStagingY: al.importStagingY | 0,
+                        importStagingCanvas: al.importStagingBuffer
+                            ? this.cloneCanvas(al.importStagingBuffer)
+                            : null,
                         ...this._snapshotDynamicFilterProps(al)
                     }
                 };
@@ -7649,6 +7930,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     opacity: p.opacity,
                     blendMode: p.blendMode || 'source-over',
                     alphaMaskProjectId: p.alphaMaskProjectId != null ? p.alphaMaskProjectId : null,
+                    importPlacementPending: !!p.importPlacementPending,
+                    importStagingX: p.importStagingX | 0,
+                    importStagingY: p.importStagingY | 0,
+                    importStagingDataUrl: p.importStagingCanvas
+                        ? p.importStagingCanvas.toDataURL('image/png')
+                        : '',
                     ...this._snapshotDynamicFilterProps(p),
                     bufferDataUrl: p.buffer ? p.buffer.toDataURL('image/png') : ''
                 }
@@ -7710,6 +7997,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     return null;
                 }
             }
+            let importStagingCanvas = null;
+            if (patch.importStagingDataUrl) {
+                try {
+                    importStagingCanvas = await this._canvasFromDataUrl(patch.importStagingDataUrl);
+                } catch (e) {
+                    importStagingCanvas = null;
+                }
+            }
             return {
                 type: 'pixel-patch',
                 layerId: obj.layerId,
@@ -7723,6 +8018,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     opacity: patch.opacity,
                     blendMode: patch.blendMode || 'source-over',
                     alphaMaskProjectId: patch.alphaMaskProjectId != null ? patch.alphaMaskProjectId : null,
+                    importPlacementPending: !!patch.importPlacementPending,
+                    importStagingX: patch.importStagingX | 0,
+                    importStagingY: patch.importStagingY | 0,
+                    importStagingCanvas,
                     ...this._snapshotDynamicFilterProps(patch)
                 }
             };
@@ -7901,6 +8200,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         opacity: p.opacity,
                         blendMode: p.blendMode || 'source-over',
                         alphaMaskProjectId: p.alphaMaskProjectId != null ? p.alphaMaskProjectId : null,
+                        importPlacementPending: !!p.importPlacementPending,
+                        importStagingX: p.importStagingX | 0,
+                        importStagingY: p.importStagingY | 0,
+                        importStagingBuffer: p.importStagingCanvas || null,
                         ...this._snapshotDynamicFilterProps(p)
                     };
                     this.setActiveLayerIndex(

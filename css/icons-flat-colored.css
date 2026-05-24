@@ -35,7 +35,8 @@ body.illu-flat-colored-icons .fa-paste::before { color: #0d9488 !important; }
 
 /* Outils */
 body.illu-flat-colored-icons #tool-select i { color: #2563eb !important; }
-body.illu-flat-colored-icons #tool-direct-select i { color: #10b981 !important; }
+body.illu-flat-colored-icons #tool-direct-select i,
+body.illu-flat-colored-icons #tool-direct-select svg { color: #10b981 !important; }
 body.illu-flat-colored-icons #tool-wand i { color: #f59e0b !important; }
 body.illu-flat-colored-icons #btn-deselect i { color: #ef4444 !important; }
 body.illu-flat-colored-icons #tool-warp-4 svg { color: #8b5cf6 !important; }

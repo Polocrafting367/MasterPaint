@@ -42,9 +42,24 @@
             selectors: ['#tool-shape-grad-type-actions']
         },
         {
+            id: 'shape-grad-method',
+            labelKey: 'ribbon.groupGradientMethod',
+            selectors: ['#tool-shape-grad-method-actions']
+        },
+        {
             id: 'text-style-fill',
             labelKey: 'ribbon.groupTextStyleFill',
             selectors: ['#opt-grp-text-actions .illu-text-style-fill-group']
+        },
+        {
+            id: 'text-grad',
+            labelKey: 'ribbon.groupGradientType',
+            selectors: ['#tool-text-grad-type-actions']
+        },
+        {
+            id: 'text-grad-method',
+            labelKey: 'ribbon.groupGradientMethod',
+            selectors: ['#tool-text-grad-method-actions']
         },
         {
             id: 'gradient-type',
@@ -54,7 +69,7 @@
         {
             id: 'gradient-method',
             labelKey: 'ribbon.groupGradientMethod',
-            selectors: ['#opt-grp-gradient-actions .illu-grad-method-group']
+            selectors: ['#tool-gradient-method-actions']
         },
         {
             id: 'vector-fill',
@@ -68,6 +83,7 @@
         { id: 'size', labelKey: 'ribbon.groupSize', selectors: ['#opt-grp-size-params'] },
         { id: 'hardness', labelKey: 'tools.brushHardnessShort', selectors: ['#opt-grp-brush-hardness'] },
         { id: 'wand', labelKey: 'ribbon.groupWand', selectors: ['#opt-grp-wand-params'] },
+        { id: 'eyedropper', labelKey: 'ribbon.groupEyedropper', selectors: ['#opt-grp-eyedropper-params'] },
         { id: 'fill', labelKey: 'ribbon.groupFill', selectors: ['#opt-grp-fill-params'] },
         {
             id: 'shape-corner',
@@ -88,6 +104,11 @@
             id: 'text-stroke',
             labelKey: 'tools.textStrokeW',
             selectors: ['#tool-text-stroke-w-row']
+        },
+        {
+            id: 'text-grad-angle',
+            labelKey: 'tools.shapeGradAngle',
+            selectors: ['#tool-text-grad-angle-row']
         },
         { id: 'warp', labelKey: 'ribbon.groupWarp', selectors: ['#opt-grp-warp-params'] }
     ];
@@ -315,6 +336,10 @@
         const showHard = !!(ctx && ctx.showHard);
         const warpActive = !!(ctx && ctx.warpActive);
         const gradTypeEl = document.getElementById('tool-shape-grad-type-actions');
+        const shapeGradMethodEl = document.getElementById('tool-shape-grad-method-actions');
+        const textGradTypeEl = document.getElementById('tool-text-grad-type-actions');
+        const textGradMethodEl = document.getElementById('tool-text-grad-method-actions');
+        const textGradAngleRow = document.getElementById('tool-text-grad-angle-row');
 
         const isMobileRibbon =
             typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
@@ -334,8 +359,14 @@
                 active = shapesActionsActive(actionIds);
             } else if (id === 'shape-grad') {
                 active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
+            } else if (id === 'shape-grad-method') {
+                active = shapesActionsActive(actionIds) && shapeGradMethodEl && !shapeGradMethodEl.hidden;
             } else if (id === 'text-style-fill') {
                 active = actionIds.has('opt-grp-text-actions');
+            } else if (id === 'text-grad') {
+                active = actionIds.has('opt-grp-text-actions') && textGradTypeEl && !textGradTypeEl.hidden;
+            } else if (id === 'text-grad-method') {
+                active = actionIds.has('opt-grp-text-actions') && textGradMethodEl && !textGradMethodEl.hidden;
             } else if (id === 'gradient-type' || id === 'gradient-method') {
                 active = actionIds.has('opt-grp-gradient-actions');
             } else if (id === 'vector-fill' || id === 'vector') {
@@ -357,6 +388,7 @@
             else if (id === 'hardness') {
                 active = paramIds.has('opt-grp-brush-hardness') && showHard;
             } else if (id === 'wand') active = paramIds.has('opt-grp-wand-params');
+            else if (id === 'eyedropper') active = paramIds.has('opt-grp-eyedropper-params');
             else if (id === 'fill') active = paramIds.has('opt-grp-fill-params');
             else if (id === 'shape-corner') {
                 active = paramIds.has('opt-grp-shapes-params') && cornerRow && !cornerRow.hidden;
@@ -364,6 +396,8 @@
                 active = paramIds.has('opt-grp-shapes-params') && angleRow && !angleRow.hidden;
             } else if (id === 'text-font' || id === 'text-stroke') {
                 active = paramIds.has('opt-grp-text-params');
+            } else if (id === 'text-grad-angle') {
+                active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
             } else if (id === 'warp') active = paramIds.has('opt-grp-warp-params') || warpActive;
             setGroupHidden(group, !active);
         });

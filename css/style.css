@@ -1368,11 +1368,12 @@ body.illu-colored-icons #tool-select i {
 }
 
 /* Royal Blue */
-body.illu-colored-icons #tool-direct-select i {
+body.illu-colored-icons #tool-direct-select i,
+body.illu-colored-icons #tool-direct-select svg {
     color: #10b981 !important;
 }
 
-/* Emerald Green */
+/* Emerald Green — sélection à la volée */
 body.illu-colored-icons #tool-wand i {
     color: #f59e0b !important;
 }

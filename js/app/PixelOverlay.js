@@ -237,12 +237,13 @@
         }
         if (ed.kind === 'triangle') {
             const adj = ed.adj != null ? ed.adj : 0.5;
+            const vf = ed.vf != null ? ed.vf : 0;
             const x = ed.lx + lx;
             const y = ed.ly + ly;
             const w = ed.w;
             const h = ed.h;
             return {
-                d: `M ${x + w * adj} ${y} L ${x} ${y + h} L ${x + w} ${y + h} Z`,
+                d: `M ${x + w * adj} ${y + h * vf} L ${x} ${y + h} L ${x + w} ${y + h} Z`,
                 closed: true
             };
         }
@@ -507,63 +508,8 @@
                     })`
                   : '#ffffff';
 
-        if (method === 'smart') {
-            // Helper extrêmement robuste pour parser n'importe quelle couleur (hex, rgb, rgba, objet) en RGB
-            const parseToRgb = (c) => {
-                if (!c) return { r: 255, g: 255, b: 255, a: 255 };
-                if (typeof c === 'object') {
-                    return {
-                        r: c.r ?? 255,
-                        g: c.g ?? 255,
-                        b: c.b ?? 255,
-                        a: c.a != null ? c.a : 255
-                    };
-                }
-                if (typeof c === 'string') {
-                    const trimmed = c.trim().toLowerCase();
-                    if (trimmed.startsWith('#')) {
-                        let h = trimmed.replace(/^#/, '');
-                        if (h.length === 3) h = h.split('').map(x => x + x).join('');
-                        const n = parseInt(h, 16);
-                        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 255 };
-                    }
-                    if (trimmed.startsWith('rgb')) {
-                        const parts = trimmed.match(/[\d\.]+/g);
-                        if (parts && parts.length >= 3) {
-                            return {
-                                r: parseInt(parts[0], 10),
-                                g: parseInt(parts[1], 10),
-                                b: parseInt(parts[2], 10),
-                                a: parts[3] != null ? Math.round(parseFloat(parts[3]) * 255) : 255
-                            };
-                        }
-                    }
-                }
-                return { r: 255, g: 255, b: 255, a: 255 };
-            };
-
-            const rgb0 = parseToRgb(c0);
-            const rgb1 = parseToRgb(sec);
-            
-            const hsv0 = EditorManager.rgbToHsv(rgb0.r, rgb0.g, rgb0.b);
-            const hsv1 = EditorManager.rgbToHsv(rgb1.r, rgb1.g, rgb1.b);
-            
-            // Determine shortest path for hue on the HSL/HSV circle (0-360)
-            let h0 = hsv0.h;
-            let h1 = hsv1.h;
-            let dh = h1 - h0;
-            if (dh > 180) h1 -= 360;
-            else if (dh < -180) h1 += 360;
-
-            for (let i = 0; i <= 10; i++) {
-                const t = i / 10;
-                const h = (h0 + t * (h1 - h0) + 360) % 360;
-                const s = hsv0.s + t * (hsv1.s - hsv0.s);
-                const v = hsv0.v + t * (hsv1.v - hsv0.v);
-                const rgb = EditorManager.hsvToRgb(h, s, v);
-                const a = rgb0.a * (1 - t) + rgb1.a * t;
-                grad.addColorStop(t, `rgba(${rgb.r},${rgb.g},${rgb.b},${a/255})`);
-            }
+        if (typeof window.illuApplyGradientColorStops === 'function') {
+            window.illuApplyGradientColorStops(grad, c0, sec, method);
         } else {
             grad.addColorStop(0, c0);
             grad.addColorStop(1, sec);
@@ -726,6 +672,7 @@
         const mode = o.strokeMode || 'both';
         const fillType = o.fillType || 'solid';
         const gradType = o.gradType || 'linear';
+        const gradMethod = o.gradMethod || (typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple');
         const angleDeg = o.gradAngle != null ? o.gradAngle : 0;
         const fillCss = shapeFillCss();
         const strokeCss = shapeStrokeCss();
@@ -758,8 +705,12 @@
                 const r = Math.max(rx, ry, 4);
                 grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
             }
-            grad.addColorStop(0, fillCss);
-            grad.addColorStop(1, strokeCss);
+            if (typeof window.illuApplyGradientColorStops === 'function') {
+                window.illuApplyGradientColorStops(grad, fillCss, strokeCss, gradMethod);
+            } else {
+                grad.addColorStop(0, fillCss);
+                grad.addColorStop(1, strokeCss);
+            }
             return grad;
         };
 
@@ -813,13 +764,15 @@
         } else if (ed.kind === 'triangle') {
             const { lx, ly, w, h } = ed;
             const adj = ed.adj != null ? Math.max(0, Math.min(1, ed.adj)) : 0.5;
+            const vf = ed.vf != null ? Math.max(0, Math.min(0.92, ed.vf)) : 0;
             const ax = lx + w * adj;
+            const ay = ly + h * vf;
             const fillGrad = fillType === 'gradient'
                 ? mkGradientFill(lx, ly, lx + w, ly + h, lx + w / 2, ly + h / 2, w / 2, h / 2)
                 : null;
             const drawTri = () => {
                 ctx.beginPath();
-                ctx.moveTo(ax, ly);
+                ctx.moveTo(ax, ay);
                 ctx.lineTo(lx, ly + h);
                 ctx.lineTo(lx + w, ly + h);
                 ctx.closePath();
@@ -1093,13 +1046,27 @@
         window.redrawShapeFromEditLive();
     };
 
-    window.getShapeAdjustHandleWorld = function (ed) {
-        if (!ed || !EditorManager.activeLayer) return null;
+    function shapeAdjustHandleToWorld(ed, local, type) {
         const lx = EditorManager.activeLayer.x;
         const ly = EditorManager.activeLayer.y;
+        let wx = local.x + lx;
+        let wy = local.y + ly;
+        const ang = ed.angleRad || 0;
+        if (Math.abs(ang) > 1e-8) {
+            const pivot = shapeEditRotationPivotDoc(ed);
+            if (pivot) {
+                const rot = rotateDocPointAround(wx, wy, pivot.cx, pivot.cy, ang);
+                wx = rot.x;
+                wy = rot.y;
+            }
+        }
+        return { x: wx, y: wy, type };
+    }
+
+    window.getShapeAdjustHandlesWorld = function (ed) {
+        if (!ed || !EditorManager.activeLayer) return [];
+        const out = [];
         if (ed.kind === 'roundrect') {
-            const x = ed.lx + lx;
-            const y = ed.ly + ly;
             const w = ed.w;
             const h = ed.h;
             const r = ed.r != null ? ed.r : EditorManager.toolProps.shapeCornerRadius ?? 12;
@@ -1107,31 +1074,45 @@
                 typeof window.illuRoundRectAdjustHandleLocal === 'function'
                     ? window.illuRoundRectAdjustHandleLocal(ed.lx, ed.ly, w, h, r)
                     : { x: ed.lx + r, y: ed.ly + r * 0.35 };
-            return { x: local.x + lx, y: local.y + ly, type: 'adj-round' };
-        }
-        if (ed.kind === 'triangle') {
+            out.push(shapeAdjustHandleToWorld(ed, local, 'adj-round'));
+        } else if (ed.kind === 'triangle') {
             const st = {
                 x: ed.lx,
                 y: ed.ly,
                 w: ed.w,
                 h: ed.h,
-                adj: ed.adj != null ? ed.adj : 0.5
+                adj: ed.adj != null ? ed.adj : 0.5,
+                vf: ed.vf != null ? ed.vf : 0
             };
-            const local =
-                typeof window.illuTriangleAdjustHandleLocal === 'function'
-                    ? window.illuTriangleAdjustHandleLocal(st)
-                    : { x: ed.lx + ed.w * 0.25, y: ed.ly + ed.h * 0.5 };
-            return { x: local.x + lx, y: local.y + ly, type: 'adj-tri' };
+            ['l', 'r'].forEach((side) => {
+                const local =
+                    typeof window.illuTriangleAdjustHandleLocal === 'function'
+                        ? window.illuTriangleAdjustHandleLocal(st, side)
+                        : side === 'r'
+                          ? { x: ed.lx + ed.w * 0.75, y: ed.ly + ed.h * 0.28 }
+                          : { x: ed.lx + ed.w * 0.25, y: ed.ly + ed.h * 0.28 };
+                out.push(shapeAdjustHandleToWorld(ed, local, side === 'r' ? 'adj-tri-r' : 'adj-tri-l'));
+            });
         }
-        return null;
+        return out;
+    };
+
+    window.getShapeAdjustHandleWorld = function (ed) {
+        const all = window.getShapeAdjustHandlesWorld(ed);
+        return all.length ? all[0] : null;
     };
 
     window.hitShapeAdjustHandle = function (worldX, worldY) {
         const ed = window.pixelShapeEdit;
         if (!ed || !EditorManager.activeLayer || ed.layerId !== EditorManager.activeLayer.id) return null;
-        const h = window.getShapeAdjustHandleWorld(ed);
-        if (!h) return null;
-        if (dist(worldX, worldY, h.x, h.y) <= hitRadiusDoc()) return h.type;
+        const handles =
+            typeof window.getShapeAdjustHandlesWorld === 'function'
+                ? window.getShapeAdjustHandlesWorld(ed)
+                : [];
+        for (let i = handles.length - 1; i >= 0; i--) {
+            const h = handles[i];
+            if (dist(worldX, worldY, h.x, h.y) <= hitRadiusDoc()) return h.type;
+        }
         return null;
     };
 
@@ -1151,8 +1132,13 @@
             const scv = document.getElementById('tool-shape-corner-radius-val');
             if (sc) sc.value = String(Math.max(0, Math.min(64, r)));
             if (scv) scv.textContent = String(Math.max(0, Math.min(64, r)));
-        } else if (adjustType === 'adj-tri' && ed.kind === 'triangle') {
+        } else if (
+            (adjustType === 'adj-tri' || adjustType === 'adj-tri-l') &&
+            ed.kind === 'triangle'
+        ) {
             ed.adj = ed.w > 0 ? Math.max(0, Math.min(1, (wx - ed.lx) / ed.w)) : 0.5;
+        } else if (adjustType === 'adj-tri-r' && ed.kind === 'triangle') {
+            ed.vf = ed.h > 0 ? Math.max(0, Math.min(0.92, (wy - ed.ly) / ed.h)) : 0;
         }
         window.redrawShapeFromEditLive();
     };
@@ -1306,10 +1292,11 @@
                     mkShapeHandle(p.x, p.y, 's' + i, cur);
                 });
             }
-            const adj = typeof window.getShapeAdjustHandleWorld === 'function'
-                ? window.getShapeAdjustHandleWorld(ed)
-                : null;
-            if (adj) mkAdjustHandle(adj.x, adj.y, adj.type);
+            const adjHandles =
+                typeof window.getShapeAdjustHandlesWorld === 'function'
+                    ? window.getShapeAdjustHandlesWorld(ed)
+                    : [];
+            adjHandles.forEach((h) => mkAdjustHandle(h.x, h.y, h.type));
             if (SHAPE_ROTATABLE_KINDS.has(ed.kind)) {
                 const sb = shapeEditBoundsDoc(ed);
                 if (sb) {

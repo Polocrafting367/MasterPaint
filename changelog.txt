@@ -1,6 +1,6 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.33 (24/05/26)
+2.7.38 (24/05/26)
 - Mise a jours visuel des barre de Paramètres pour quelque chose de plus compact
 - Supprimer toute trace d'autre theme luna, areo moderne...
 - Revue antièrement les obtion d'outil sur le haut pour un ruban type microsoft office
@@ -10,6 +10,25 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Les icones personalisé prenne maintenant la couleur d'accuentation de la page pour plus de Cohérence
 - Résolu le problème ou après un recadrage si l'on fesait CRTL+Z on ne retrouvait pas l'ancienne résolution
 - Ruban nouvellement ajouter, adapté pour moins de confusion sur téléphone
+- Ajout du dégradé intéligent sur les formes, text...
+- Réintroduit Collage au position de la copier
+- Amélioration du collage a la volé dans et en dehors du projet dit
+- Correction bug de ka selection a la volé qui créait une copie rectangulaire 
+- Ajout d'une visu des variable couleur avec l'outil pipette
+
+
+2.7.24 (23/05/26)
+- Gestion performance sur grande images
+- Ajout d'outil / fonction pour simplifié fonctionnement sur téléphone
+- Ligne, courbe (3 pts) et plume : couleur primaire pour le trait (plus la secondaire)
+- Ajout du triangle dans les formes
+- Ajout pour triangle et carré arrondie d'une point jaune a la microsoft
+- correction bug ou les filtre s'apliquais les un derrière les autre plustot que d'avoir une prévisualisation
+- Corrections divers dans l'interface, perf...
+- Ajouter obtion de centrage de la selection/Obejet
+- Correctif sur la gestion des selections
+- Ajout pour les 4pts d'une obtion de redraissement rectangulaire
+- Ajout obtion Régle et Visu des pixel en mode zoom fort
 
 2.7.13 (22/05/26)
 - Revu gestion de la selection, des déplacements...

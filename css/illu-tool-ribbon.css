@@ -922,6 +922,93 @@ body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
 }
 
 /* Baguette : 2 boutons sur une ligne, jauge Tol. en dessous */
+/* Pipette : gauche aperçu, droite HEX / RGB / RAL (une seule ligne de hauteur ruban) */
+.illu-eyedropper-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+    max-height: 42px;
+}
+
+.illu-eyedropper-preview {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    padding: 1px 0;
+}
+
+.illu-eyedropper-swatch {
+    display: block;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 36px;
+    border: 1px solid var(--illu-border, #808080);
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    background: #000;
+}
+
+.illu-eyedropper-values {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    min-width: 0;
+    font-size: 10px;
+    line-height: 1.15;
+}
+
+.illu-eyedropper-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    min-height: 12px;
+}
+
+.illu-eyedropper-line .illu-opt-lbl {
+    flex: 0 0 1.75em;
+    min-width: 1.75em;
+    font-size: 10px;
+}
+
+.illu-eyedropper-code,
+.illu-eyedropper-val {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.15;
+}
+
+body.illu-toolbar-ribbon #opt-grp-eyedropper-params.illu-eyedropper-info {
+    padding: 0 2px;
+    max-height: none;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] {
+    min-height: 0;
+    padding-top: 1px;
+    padding-bottom: 0;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] .illu-ribbon-group-body {
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] .illu-ribbon-group-label {
+    padding-top: 1px;
+}
+
 body.illu-toolbar-ribbon #opt-grp-wand-params .illu-toggle-group--compact-inline-row,
 body.illu-toolbar-ribbon #opt-grp-fill-params .illu-toggle-group--compact-inline-row {
     display: flex !important;

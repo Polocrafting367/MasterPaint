@@ -673,6 +673,11 @@
                 thumb.className = 'illu-mobile-drawer__tab-thumb';
                 thumb.alt = '';
                 thumb.draggable = false;
+                if (typeof em.getProjectTabThumbCssSize === 'function') {
+                    const tabSz = em.getProjectTabThumbCssSize(p);
+                    thumb.width = tabSz.width;
+                    thumb.height = tabSz.height;
+                }
                 const u = em.getProjectTabThumbnailDataUrl(p);
                 if (u) thumb.src = u;
                 row.appendChild(thumb);

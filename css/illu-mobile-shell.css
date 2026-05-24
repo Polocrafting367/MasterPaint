@@ -777,9 +777,11 @@ body.illu-mobile-shell-active .illu-mobile-sheet__body .palette-panel .window-bo
 }
 
 .illu-mobile-drawer__tab-thumb {
-    width: 36px;
-    height: 28px;
-    object-fit: cover;
+    max-width: 36px;
+    max-height: 28px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     flex-shrink: 0;
     border: 1px solid #808080;
 }

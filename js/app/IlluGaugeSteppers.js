@@ -7,6 +7,7 @@
     const GAUGE_STEP_CONFIG = [
         { id: 'tool-text-size', step: 1 },
         { id: 'tool-text-stroke-w', step: 1 },
+        { id: 'tool-text-grad-angle', step: 1 },
         { id: 'tool-size', step: 1 },
         { id: 'tool-shape-corner-radius', step: 1 },
         { id: 'tool-brush-hardness', step: 5 },

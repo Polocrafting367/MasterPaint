@@ -356,10 +356,11 @@ body.ui-layout-docked .palette-dock-rail__host #win-history #history-list.list-b
     bottom: 0;
     z-index: 1;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
 }
 
-.pixel-layer-stack canvas.illu-pixel-layer-view {
+.pixel-layer-stack canvas.illu-pixel-layer-view,
+.pixel-layer-stack canvas.illu-pixel-layer-staging-view {
     position: absolute;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -1749,6 +1750,11 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     touch-action: none;
 }
 
+/* Collage volant : l’aperçu peut dépasser la zone de dessin jusqu’à validation. */
+#main-canvas-container.illu-import-placement-active {
+    overflow: visible;
+}
+
 #canvas-checker-underlay {
     position: absolute;
     left: 0;
@@ -2181,11 +2187,11 @@ body.illu-photo-mode-active #app-status-bar {
    or the overlay starts below. We will use z-index. */
 .illu-menubar-root {
     position: relative;
-    z-index: 9999999 !important;
+    z-index: 4990 !important;
 }
 
 ul[role="menu"] {
-    z-index: 9999999 !important;
+    z-index: 4990 !important;
 }
 
 /* =========================================================================

@@ -126,7 +126,14 @@
             el.style.color = 'transparent';
         } else if (ft === 'gradient') {
             el.style.color = colorToCss(EditorManager.activeColor);
-            el.style.backgroundImage = `linear-gradient(90deg, ${colorToCss(EditorManager.activeColor)}, ${secondaryCss()})`;
+            const c0 = colorToCss(EditorManager.activeColor);
+            const c1 = secondaryCss();
+            el.style.backgroundImage =
+                typeof window.illuCssTextGradientImage === 'function'
+                    ? window.illuCssTextGradientImage(c0, c1)
+                    : typeof window.illuCssLinearGradientImage === 'function'
+                      ? window.illuCssLinearGradientImage(c0, c1, 90)
+                      : `linear-gradient(90deg, ${c0}, ${c1})`;
             el.style.webkitBackgroundClip = 'text';
             el.style.backgroundClip = 'text';
             el.style.webkitTextFillColor = 'transparent';
@@ -204,9 +211,20 @@
             if (ft === 'none') {
                 /* contour seul */
             } else if (ft === 'gradient') {
-                const grad = ctx.createLinearGradient(drawX, yy, drawX + Math.max(maxW, 8), yy + lineHeight);
-                grad.addColorStop(0, primary);
-                grad.addColorStop(1, sec);
+                const boxW = Math.max(maxW, 8);
+                const grad =
+                    typeof window.illuCreateTextFillGradient === 'function'
+                        ? window.illuCreateTextFillGradient(ctx, drawX, yy, boxW, lineHeight, primary, sec)
+                        : (() => {
+                              const g = ctx.createLinearGradient(drawX, yy, drawX + boxW, yy + lineHeight);
+                              if (typeof window.illuApplyGradientColorStops === 'function') {
+                                  window.illuApplyGradientColorStops(g, primary, sec);
+                              } else {
+                                  g.addColorStop(0, primary);
+                                  g.addColorStop(1, sec);
+                              }
+                              return g;
+                          })();
                 ctx.fillStyle = grad;
                 ctx.fillText(line, drawX, yy);
             } else {

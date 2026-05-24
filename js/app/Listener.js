@@ -80,16 +80,40 @@ document.addEventListener(
 
 
 
-// Advanced Paste for Images (System + Internal + Async Fallback)
+// Advanced Paste for Images (tampon interne prioritaire + repli OS)
 document.addEventListener('paste', async (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
     const dt = e.clipboardData || e.originalEvent?.clipboardData;
     if (!dt) return;
 
-    console.log('Paste: Processing event...');
+    if (typeof window.illuPreferInternalPaste === 'function' && window.illuPreferInternalPaste(dt)) {
+        if (typeof window.ctxPaste === 'function') {
+            e.preventDefault();
+            window.ctxPaste();
+            return;
+        }
+    }
+
     let blob = null;
     let importOpts = {};
+
+    const metaText = dt.getData ? dt.getData('text/plain') : '';
+    if (metaText && metaText.startsWith('ILLU_META:')) {
+        try {
+            const json = JSON.parse(metaText.substring(10));
+            if (json && json.app === 'illu') {
+                importOpts.pasteProjectId = json.projectId;
+                importOpts.pasteDocBounds = { x: json.x, y: json.y, w: json.w, h: json.h };
+            }
+        } catch (err) {
+            /* ignore */
+        }
+    }
+    if (!importOpts.pasteDocBounds && window.ctxClipboardDocBounds) {
+        importOpts.pasteDocBounds = window.ctxClipboardDocBounds;
+        importOpts.pasteProjectId = window.ctxClipboardProjectId;
+    }
 
     // 1. Try files collection
     if (dt.files && dt.files.length > 0) {
@@ -111,7 +135,7 @@ document.addEventListener('paste', async (e) => {
             else if (item.type === 'text/plain') textItem = item;
         }
         if (imageItem) blob = imageItem.getAsFile();
-        if (textItem) {
+        if (textItem && !importOpts.pasteDocBounds) {
             textItem.getAsString((str) => {
                 if (str && str.startsWith('ILLU_META:')) {
                     try {
@@ -120,7 +144,9 @@ document.addEventListener('paste', async (e) => {
                             importOpts.pasteProjectId = json.projectId;
                             importOpts.pasteDocBounds = { x: json.x, y: json.y, w: json.w, h: json.h };
                         }
-                    } catch (err) { }
+                    } catch (err) {
+                        /* ignore */
+                    }
                 }
             });
         }
@@ -174,14 +200,20 @@ document.addEventListener('paste', async (e) => {
 
 document.addEventListener('copy', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-    if (typeof window.ctxCopy === 'function') {
+    if (typeof window.ctxCopy === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
+        e.preventDefault();
+        window.ctxCopy();
+    } else if (typeof window.ctxCopy === 'function') {
         window.ctxCopy();
     }
 });
 
 document.addEventListener('cut', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-    if (typeof window.ctxCut === 'function') {
+    if (typeof window.ctxCut === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
+        e.preventDefault();
+        window.ctxCut();
+    } else if (typeof window.ctxCut === 'function') {
         window.ctxCut();
     }
 });
@@ -352,8 +384,10 @@ window.addEventListener('keydown', (e) => {
         EditorManager.deselectAll();
         return;
     }
+    const isEnterKey =
+        e.key === 'Enter' || e.code === 'NumpadEnter' || e.keyCode === 13;
     if (
-        e.key === 'Enter' &&
+        isEnterKey &&
         !e.ctrlKey &&
         !e.metaKey &&
         !e.altKey &&
@@ -599,7 +633,14 @@ document.addEventListener('contextmenu', (e) => {
                 el.addEventListener('change', () => {
                     if (id === 'tool-brush-pattern') EditorManager.toolProps.brushPattern = el.value;
                     if (id === 'tool-gradient-type') EditorManager.toolProps.gradientType = el.value;
-                    if (id === 'tool-gradient-method') EditorManager.toolProps.gradientMethod = el.value;
+                    if (id === 'tool-gradient-method') {
+                        EditorManager.toolProps.gradientMethod = el.value;
+                        if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
+                        if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+                        if (typeof window.paintGradientFromState === 'function' && window._pixelGradientState) {
+                            window.paintGradientFromState();
+                        }
+                    }
                     window.syncAllToolbarToggles();
                     if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
                 });
@@ -639,12 +680,32 @@ document.addEventListener('contextmenu', (e) => {
         'tool-shape-grad-type': () => {
             refreshShapeToolLivePreview();
         },
+        'tool-gradient-method': () => {
+            const el = document.getElementById('tool-gradient-method');
+            if (typeof EditorManager !== 'undefined' && el) {
+                EditorManager.toolProps.gradientMethod = el.value;
+            }
+            refreshShapeToolLivePreview();
+            if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            if (typeof window.paintGradientFromState === 'function' && window._pixelGradientState) {
+                window.paintGradientFromState();
+            }
+        },
         'tool-text-fill': (val) => {
             if (typeof EditorManager !== 'undefined') {
                 const v = val === 'gradient' || val === 'none' ? val : 'solid';
                 EditorManager.toolProps.textFillType = v;
             }
             if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        },
+        'tool-text-grad-type': () => {
+            const el = document.getElementById('tool-text-grad-type');
+            if (typeof EditorManager !== 'undefined' && el) {
+                EditorManager.toolProps.textGradType = el.value === 'radial' ? 'radial' : 'linear';
+            }
+            if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
         },
         'wand-mode': (val) => {
             if (typeof EditorManager !== 'undefined') {

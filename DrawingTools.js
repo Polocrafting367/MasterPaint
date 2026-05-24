@@ -89,9 +89,12 @@ function illuScheduleInteractiveVisualRefresh(opts) {
     
     if (illuInteractiveVisualRaf) return;
 
-    // Faster throttling: approx 60 FPS (16ms) during active interaction
     const now = performance.now();
-    const threshold = 16; 
+    const floatImport =
+        typeof EditorManager !== 'undefined' &&
+        EditorManager.activeLayer &&
+        EditorManager.activeLayer.importPlacementPending;
+    const threshold = floatImport ? 200 : 16; 
     if (now - illuInteractiveVisualLastTime < threshold) {
         illuInteractiveVisualRaf = setTimeout(() => {
             illuInteractiveVisualRaf = 0;
@@ -118,13 +121,14 @@ function illuClamp01(v) {
     return Math.max(0, Math.min(1, v));
 }
 
-/** Triangle isocèle (style PowerPoint) : sommet réglable via data-illu-triangle-adj (0–1). */
+/** Triangle : sommet réglable (adj = X, vf = Y dans la bbox) ; deux poignées sur les côtés gauche/droit. */
 function illuTriangleReadState(shape) {
     let x = parseFloat(shape.getAttribute('data-illu-bbox-x'));
     let y = parseFloat(shape.getAttribute('data-illu-bbox-y'));
     let w = parseFloat(shape.getAttribute('data-illu-bbox-w'));
     let h = parseFloat(shape.getAttribute('data-illu-bbox-h'));
     let adj = parseFloat(shape.getAttribute('data-illu-triangle-adj'));
+    let vf = parseFloat(shape.getAttribute('data-illu-triangle-vf'));
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
         const pp = parseIlluPolygonPoints(shape.getAttribute('points') || '');
         if (pp.length >= 3) {
@@ -136,43 +140,62 @@ function illuTriangleReadState(shape) {
             h = Math.max(...ys) - y;
             const apex = pp.reduce((best, p) => (p[1] < best[1] ? p : best), pp[0]);
             adj = w > 0 ? (apex[0] - x) / w : 0.5;
+            vf = h > 0 ? (apex[1] - y) / h : 0;
         } else {
             x = 0;
             y = 0;
             w = 10;
             h = 10;
             adj = 0.5;
+            vf = 0;
         }
     }
     if (!Number.isFinite(adj)) adj = 0.5;
-    return { x, y, w: Math.max(2, w), h: Math.max(2, h), adj: illuClamp01(adj) };
+    if (!Number.isFinite(vf)) vf = 0;
+    return {
+        x,
+        y,
+        w: Math.max(2, w),
+        h: Math.max(2, h),
+        adj: illuClamp01(adj),
+        vf: illuClamp01(Math.min(vf, 0.92))
+    };
 }
 
-function illuTriangleWritePoints(shape, x, y, w, h, adj) {
+function illuTriangleWritePoints(shape, x, y, w, h, adj, vf) {
     w = Math.max(2, w);
     h = Math.max(2, h);
     adj = illuClamp01(adj);
+    vf = illuClamp01(vf != null && Number.isFinite(vf) ? Math.min(vf, 0.92) : 0);
     const ax = x + w * adj;
-    shape.setAttribute(
-        'points',
-        `${ax},${y} ${x},${y + h} ${x + w},${y + h}`
-    );
+    const ay = y + h * vf;
+    shape.setAttribute('points', `${ax},${ay} ${x},${y + h} ${x + w},${y + h}`);
     shape.setAttribute('data-illu-triangle', '1');
     shape.setAttribute('data-illu-bbox-x', String(x));
     shape.setAttribute('data-illu-bbox-y', String(y));
     shape.setAttribute('data-illu-bbox-w', String(w));
     shape.setAttribute('data-illu-bbox-h', String(h));
     shape.setAttribute('data-illu-triangle-adj', String(adj));
+    shape.setAttribute('data-illu-triangle-vf', String(vf));
 }
 
-function illuTriangleAdjustHandleLocal(st) {
+/** Poignée jaune sur un côté du triangle (l = angle gauche / adj, r = angle droit / vf). */
+function illuTriangleAdjustHandleLocal(st, side) {
+    const vf = st.vf != null ? st.vf : 0;
     const ax = st.x + st.w * st.adj;
-    const apex = { x: ax, y: st.y };
-    const baseMid = { x: st.x + st.w / 2, y: st.y + st.h };
-    const t = 0.42;
+    const apex = { x: ax, y: st.y + st.h * vf };
+    const t = 0.28;
+    if (side === 'r') {
+        const baseRight = { x: st.x + st.w, y: st.y + st.h };
+        return {
+            x: apex.x + (baseRight.x - apex.x) * t,
+            y: apex.y + (baseRight.y - apex.y) * t
+        };
+    }
+    const baseLeft = { x: st.x, y: st.y + st.h };
     return {
-        x: apex.x + (baseMid.x - apex.x) * t,
-        y: apex.y + (baseMid.y - apex.y) * t
+        x: apex.x + (baseLeft.x - apex.x) * t,
+        y: apex.y + (baseLeft.y - apex.y) * t
     };
 }
 
@@ -189,10 +212,19 @@ function illuRoundRectRadiusFromLocalDrag(x, y, w, h, lx, ly) {
 function illuUpdateVectorAdjustFromPointer(shape, adjustType, docPos) {
     if (!shape) return;
     const lp = vectorDocToShapeAttrPoint(shape, docPos.x, docPos.y);
-    if (adjustType === 'triangle-adj') {
+    if (adjustType === 'triangle-adj' || adjustType === 'triangle-adj-l') {
         const st = illuTriangleReadState(shape);
         const adj = st.w > 0 ? illuClamp01((lp.x - st.x) / st.w) : 0.5;
-        illuTriangleWritePoints(shape, st.x, st.y, st.w, st.h, adj);
+        illuTriangleWritePoints(shape, st.x, st.y, st.w, st.h, adj, st.vf);
+        if (shape.getAttribute('data-vgrad')) {
+            syncVectorGradientOnShape(shape, 'rect', st.x, st.y, st.x + st.w, st.y + st.h);
+        }
+        return;
+    }
+    if (adjustType === 'triangle-adj-r') {
+        const st = illuTriangleReadState(shape);
+        const vf = st.h > 0 ? illuClamp01(Math.min(0.92, (lp.y - st.y) / st.h)) : 0;
+        illuTriangleWritePoints(shape, st.x, st.y, st.w, st.h, st.adj, vf);
         if (shape.getAttribute('data-vgrad')) {
             syncVectorGradientOnShape(shape, 'rect', st.x, st.y, st.x + st.w, st.y + st.h);
         }
@@ -367,7 +399,7 @@ const TOOL_OPTIONS_UI = {
     select: { label: 'Sélection', actionGroups: [], paramGroups: [] },
     move: { label: 'Déplacer', actionGroups: [], paramGroups: [] },
     wand: { label: 'Baguette', actionGroups: [], paramGroups: ['opt-grp-wand-params'] },
-    eyedropper: { label: 'Pipette', actionGroups: [], paramGroups: [] },
+    eyedropper: { label: 'Pipette', actionGroups: [], paramGroups: ['opt-grp-eyedropper-params'] },
     brush: {
         label: 'Pinceau',
         actionGroups: ['opt-grp-brush-actions'],
@@ -386,7 +418,7 @@ const TOOL_OPTIONS_UI = {
     fill: { label: 'Pot de peinture', actionGroups: [], paramGroups: ['opt-grp-fill-params'] },
     zoom: { label: 'Loupe', actionGroups: [], paramGroups: [] },
     text: { label: 'Texte', actionGroups: ['opt-grp-text-actions'], paramGroups: ['opt-grp-text-params'] },
-    'direct-select': { label: 'Lasso', actionGroups: [], paramGroups: [] },
+    'direct-select': { label: 'Sélection à la volée', actionGroups: [], paramGroups: [] },
     deform: { label: 'Déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'warp-4': { label: 'Déformation 4 coins', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'cubic-3': { label: 'Courbe (3 clics, Q)', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
@@ -395,6 +427,117 @@ const TOOL_OPTIONS_UI = {
     'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     triangle: { label: 'Triangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     shadow: { label: 'Ombre portée', actionGroups: [], paramGroups: [] }
+};
+
+window.TOOL_OPTIONS_UI = TOOL_OPTIONS_UI;
+
+/** RAL Classic (approx. sRGB) : [numéro, r, g, b] — voisin le plus proche pour la pipette. */
+const ILLU_RAL_CLASSIC = [
+    [1000, 205, 186, 136], [1001, 208, 176, 132], [1002, 210, 170, 109], [1003, 249, 218, 108],
+    [1004, 228, 183, 72], [1005, 228, 183, 23], [1006, 237, 185, 11], [1007, 221, 175, 39],
+    [1011, 232, 227, 201], [1012, 221, 210, 152], [1013, 227, 218, 197], [1014, 221, 196, 154],
+    [1015, 230, 210, 181], [1016, 237, 222, 139], [1017, 247, 173, 99], [1018, 250, 202, 48],
+    [1019, 164, 143, 122], [1020, 160, 143, 101], [1021, 246, 182, 0], [1023, 247, 181, 0],
+    [1024, 186, 143, 76], [1027, 145, 95, 49], [1028, 128, 100, 31], [1032, 226, 163, 0],
+    [1033, 250, 163, 26], [1034, 225, 144, 49], [1035, 143, 131, 112], [1036, 128, 107, 42],
+    [1037, 246, 120, 40], [2000, 218, 110, 41], [2001, 186, 72, 27], [2002, 191, 64, 29],
+    [2003, 250, 121, 33], [2004, 226, 97, 65], [2005, 255, 83, 0], [2007, 255, 117, 20],
+    [2008, 237, 95, 28], [2009, 208, 84, 40], [2010, 209, 92, 49], [2011, 226, 110, 14],
+    [2012, 213, 101, 77], [2013, 146, 62, 37], [3000, 167, 41, 32], [3001, 155, 36, 35],
+    [3002, 155, 35, 33], [3003, 134, 26, 34], [3004, 107, 28, 35], [3005, 89, 25, 31],
+    [3007, 62, 32, 30], [3009, 89, 37, 30], [3011, 120, 31, 25], [3012, 196, 159, 152],
+    [3013, 151, 85, 84], [3014, 203, 115, 117], [3015, 216, 160, 166], [3016, 166, 61, 47],
+    [3017, 203, 85, 93], [3018, 199, 63, 74], [3020, 187, 30, 16], [3022, 207, 105, 110],
+    [3024, 255, 45, 33], [3026, 255, 42, 27], [3027, 171, 39, 79], [3028, 204, 44, 43],
+    [3031, 166, 52, 55], [4001, 129, 97, 131], [4002, 141, 60, 75], [4003, 196, 98, 140],
+    [4004, 101, 73, 122], [4005, 118, 106, 154], [4006, 144, 108, 152], [4007, 71, 36, 96],
+    [4008, 132, 76, 130], [4009, 157, 134, 146], [4010, 203, 115, 172], [4011, 140, 133, 153],
+    [4012, 176, 165, 177], [5000, 49, 79, 111], [5001, 15, 76, 129], [5002, 0, 56, 123],
+    [5003, 31, 56, 85], [5004, 25, 30, 40], [5005, 16, 44, 84], [5007, 61, 85, 104],
+    [5008, 38, 58, 91], [5009, 36, 93, 110], [5010, 0, 79, 124], [5011, 26, 43, 60],
+    [5012, 0, 137, 182], [5013, 25, 77, 121], [5014, 18, 104, 179], [5015, 0, 94, 131],
+    [5017, 0, 91, 140], [5018, 0, 131, 136], [5019, 0, 65, 75], [5020, 0, 117, 114],
+    [5021, 0, 111, 122], [5022, 34, 45, 90], [5023, 78, 100, 114], [5024, 47, 79, 94],
+    [6000, 60, 116, 96], [6001, 54, 103, 53], [6002, 50, 89, 40], [6003, 80, 83, 60],
+    [6004, 3, 85, 48], [6005, 17, 66, 50], [6006, 52, 95, 70], [6007, 57, 99, 53],
+    [6008, 54, 103, 45], [6009, 48, 89, 42], [6010, 56, 116, 43], [6011, 108, 124, 89],
+    [6012, 70, 88, 88], [6013, 73, 92, 55], [6014, 70, 76, 53], [6015, 61, 61, 54],
+    [6016, 47, 140, 51], [6017, 0, 132, 94], [6018, 87, 166, 57], [6019, 189, 236, 79],
+    [6020, 47, 76, 38], [6021, 137, 172, 118], [6022, 55, 66, 47], [6024, 0, 131, 81],
+    [6025, 88, 110, 62], [6026, 1, 93, 82], [6027, 49, 84, 66], [6028, 40, 114, 84],
+    [6029, 0, 117, 94], [6032, 7, 139, 41], [6033, 73, 135, 115], [6034, 64, 160, 112],
+    [6035, 7, 139, 48], [6036, 0, 89, 79], [6037, 0, 139, 41], [6038, 0, 181, 26],
+    [7000, 122, 136, 142], [7001, 140, 151, 156], [7002, 129, 137, 127], [7003, 122, 123, 122],
+    [7004, 155, 155, 155], [7005, 108, 110, 107], [7006, 118, 117, 112], [7008, 116, 108, 79],
+    [7009, 93, 96, 88], [7010, 88, 92, 86], [7011, 82, 89, 93], [7012, 87, 93, 94],
+    [7013, 87, 90, 91], [7015, 79, 83, 88], [7016, 82, 89, 93], [7021, 47, 50, 52],
+    [7022, 76, 81, 86], [7023, 128, 128, 118], [7024, 105, 102, 100], [7026, 55, 67, 69],
+    [7030, 152, 147, 132], [7031, 91, 104, 105], [7032, 181, 176, 156], [7033, 125, 132, 113],
+    [7034, 143, 135, 124], [7035, 215, 215, 191], [7036, 151, 147, 146], [7037, 125, 127, 120],
+    [7038, 195, 195, 180], [7039, 108, 105, 96], [7040, 152, 158, 161], [7042, 143, 148, 150],
+    [7043, 79, 82, 80], [7044, 202, 196, 176], [7045, 132, 135, 137], [7046, 100, 102, 103],
+    [7047, 129, 133, 133], [7048, 144, 144, 144], [8000, 130, 108, 71], [8001, 149, 95, 53],
+    [8002, 108, 59, 36], [8003, 94, 58, 34], [8004, 141, 73, 49], [8007, 112, 69, 42],
+    [8008, 114, 74, 37], [8011, 90, 56, 38], [8012, 102, 51, 43], [8014, 74, 53, 38],
+    [8015, 94, 47, 43], [8016, 76, 43, 32], [8017, 68, 47, 41], [8019, 61, 54, 53],
+    [8022, 26, 23, 24], [8023, 164, 87, 41], [8024, 121, 80, 56], [8025, 117, 88, 71],
+    [8028, 41, 27, 20], [8029, 255, 111, 0], [9001, 233, 224, 210], [9002, 215, 213, 203],
+    [9003, 236, 236, 231], [9004, 43, 43, 44], [9005, 14, 14, 16], [9006, 241, 236, 225],
+    [9007, 56, 62, 66], [9010, 241, 236, 225], [9011, 39, 41, 43], [9016, 241, 242, 236],
+    [9017, 42, 41, 42], [9018, 215, 215, 192]
+];
+
+function illuRgbToNearestRal(r, g, b) {
+    let best = null;
+    let bestD = Infinity;
+    for (let i = 0; i < ILLU_RAL_CLASSIC.length; i++) {
+        const e = ILLU_RAL_CLASSIC[i];
+        const dr = r - e[1];
+        const dg = g - e[2];
+        const db = b - e[3];
+        const d = dr * dr + dg * dg + db * db;
+        if (d < bestD) {
+            bestD = d;
+            best = e;
+        }
+    }
+    return best ? { code: best[0], r: best[1], g: best[2], b: best[3] } : null;
+}
+
+/** Met à jour le panneau couleur de la pipette (barre d’options). */
+window.illuRefreshEyedropperColorPanel = function () {
+    const grp = document.getElementById('opt-grp-eyedropper-params');
+    if (!grp || grp.hidden || typeof EditorManager === 'undefined') return;
+    const col =
+        EditorManager.activeColorTarget === 'primary' ? EditorManager.primaryColor : EditorManager.secondaryColor;
+    const r = col.r | 0;
+    const g = col.g | 0;
+    const b = col.b | 0;
+    const a = col.a != null ? col.a : 255;
+    const hex =
+        typeof EditorManager.rgbToHex === 'function'
+            ? EditorManager.rgbToHex(r, g, b).toUpperCase()
+            : '#' +
+              [r, g, b]
+                  .map((v) => v.toString(16).padStart(2, '0'))
+                  .join('')
+                  .toUpperCase();
+    const swatch = document.getElementById('eyedropper-swatch');
+    const hexEl = document.getElementById('eyedropper-hex');
+    const rgbEl = document.getElementById('eyedropper-rgb');
+    const ralEl = document.getElementById('eyedropper-ral');
+    if (swatch) {
+        swatch.style.backgroundColor = `rgba(${r},${g},${b},${a / 255})`;
+    }
+    if (hexEl) hexEl.textContent = hex;
+    if (rgbEl) rgbEl.textContent = `${r} · ${g} · ${b}`;
+    if (ralEl) {
+        const ral = illuRgbToNearestRal(r, g, b);
+        ralEl.textContent = ral ? `RAL ${ral.code}` : '—';
+        ralEl.title = ral
+            ? `RAL ${ral.code} (approx., RGB ${ral.r}, ${ral.g}, ${ral.b})`
+            : '';
+    }
 };
 
 /** Clic sur chrome UI : ne pas démarrer tracé / texte / courbe sur le canevas. */
@@ -807,6 +950,10 @@ window.updateToolOptionsBar = function () {
     }
     const showGradTypeRow = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke';
     if (shapeGradTypeActions) shapeGradTypeActions.hidden = !showGradTypeRow;
+    const showGradMethodRow =
+        (isShapeRectLike && fillType === 'gradient' && mode !== 'stroke') || (isLineLike && fillType === 'gradient');
+    const shapeGradMethodActions = document.getElementById('tool-shape-grad-method-actions');
+    if (shapeGradMethodActions) shapeGradMethodActions.hidden = !showGradMethodRow;
     const showGradAngleRect = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke' && gradType !== 'radial';
     const showGradAngleLineLike = isLineLike && fillType === 'gradient';
     if (shapeGradAngleRow) shapeGradAngleRow.hidden = !showGradAngleRect && !showGradAngleLineLike;
@@ -918,7 +1065,28 @@ window.updateToolOptionsBar = function () {
     const textStrokeCb = document.getElementById('tool-text-stroke');
     if (textStrokeCb) textStrokeCb.checked = !!EditorManager.toolProps.textStroke;
     const textFillSel = document.getElementById('tool-text-fill');
-    if (textFillSel) textFillSel.value = EditorManager.toolProps.textFillType || 'solid';
+    const textFillType = EditorManager.toolProps.textFillType || 'solid';
+    if (textFillSel) textFillSel.value = textFillType;
+    const textGradTypeSel = document.getElementById('tool-text-grad-type');
+    const textGradType = EditorManager.toolProps.textGradType === 'radial' ? 'radial' : 'linear';
+    if (textGradTypeSel && textGradTypeSel.value !== textGradType) textGradTypeSel.value = textGradType;
+    const textGradTypeActions = document.getElementById('tool-text-grad-type-actions');
+    if (textGradTypeActions) textGradTypeActions.hidden = textFillType !== 'gradient';
+    const textGradMethodActions = document.getElementById('tool-text-grad-method-actions');
+    if (textGradMethodActions) textGradMethodActions.hidden = textFillType !== 'gradient';
+    const textGradAngleRow = document.getElementById('tool-text-grad-angle-row');
+    const textGradAngleSep = document.getElementById('tool-text-grad-angle-sep');
+    const showTextGradAngle = textFillType === 'gradient' && textGradType !== 'radial';
+    if (textGradAngleRow) textGradAngleRow.hidden = !showTextGradAngle;
+    if (textGradAngleSep) textGradAngleSep.hidden = !showTextGradAngle;
+    const textGradAngleSl = document.getElementById('tool-text-grad-angle');
+    const textGradAngleV = document.getElementById('tool-text-grad-angle-val');
+    if (textGradAngleSl) {
+        const tga = EditorManager.toolProps.textGradAngle ?? 0;
+        textGradAngleSl.value = String(Math.max(0, Math.min(360, tga)));
+        if (textGradAngleV) textGradAngleV.textContent = textGradAngleSl.value;
+        if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(textGradAngleSl);
+    }
     const pencilCb = document.getElementById('pencil-auto-close');
     if (pencilCb) pencilCb.checked = !!EditorManager.toolProps.pencilAutoClose;
     const capStartEl = document.getElementById('tool-line-cap-start');
@@ -946,6 +1114,9 @@ window.updateToolOptionsBar = function () {
     }
     if (typeof window.syncIlluMobileActiveToolLabel === 'function') {
         window.syncIlluMobileActiveToolLabel();
+    }
+    if (t === 'eyedropper' && typeof window.illuRefreshEyedropperColorPanel === 'function') {
+        window.illuRefreshEyedropperColorPanel();
     }
     if (isOffice && typeof window.illuApplyRibbonGroupsForTool === 'function') {
         window.illuApplyRibbonGroupsForTool(t, cfg, {
@@ -1046,6 +1217,71 @@ window.illuAfterImportActivateDeformTool = function (opts) {
         window.syncSelectionToActiveLayer();
     }
     window.activateIlluToolButtonById('tool-deform');
+    EditorManager.render();
+};
+
+/** Après collage / import volant : sélection du calque flottant, puis outil Déplacer. */
+window.illuAfterImportActivateMoveTool = function (opts) {
+    opts = opts || {};
+    if (typeof EditorManager === 'undefined' || !EditorManager.isPixelMode) return;
+    const l = EditorManager.activeLayer;
+    if (l && l.importPlacementPending && typeof window.syncSelectionToImportPlacementLayer === 'function') {
+        window.syncSelectionToImportPlacementLayer();
+    } else if (opts.skipFullLayerSync) {
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+    } else if (typeof window.syncSelectionToActiveLayer === 'function') {
+        window.syncSelectionToActiveLayer();
+    }
+    window.activateIlluToolButtonById('tool-move');
+    EditorManager.render();
+};
+
+/**
+ * Collage volant sur le calque actif : le tampon du calque reste aux dimensions du projet ;
+ * l’image collée vit dans importStagingBuffer jusqu’à validation (Entrée).
+ * @param {HTMLCanvasElement} scratch
+ */
+window.illuSetImportStaging = function (scratch) {
+    const l = EditorManager.activeLayer;
+    if (!l || !scratch || !EditorManager.isPixelMode) return;
+    if (l.alphaMaskProjectId) {
+        window.showIlluAlert(
+            window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                ? window.IlluI18n.t('msg.layerResizeBlockedAlphaMask')
+                : 'Détachez le masque α lié avant de coller sur ce calque.'
+        );
+        return;
+    }
+    const iw = scratch.width | 0;
+    const ih = scratch.height | 0;
+    if (iw < 1 || ih < 1) return;
+    let docX = 0;
+    let docY = 0;
+    if (window.selectionBounds) {
+        docX = Math.round(window.selectionBounds.x);
+        docY = Math.round(window.selectionBounds.y);
+    }
+    if (!l.buffer) {
+        const W = Math.max(1, EditorManager.width | 0);
+        const H = Math.max(1, EditorManager.height | 0);
+        const buf = document.createElement('canvas');
+        buf.width = W;
+        buf.height = H;
+        l.buffer = buf;
+    }
+    if (typeof EditorManager._fitLayerBufferToDocumentSize === 'function') {
+        EditorManager._fitLayerBufferToDocumentSize(l);
+    }
+    l.importStagingBuffer = EditorManager.cloneCanvas(scratch);
+    l.importStagingX = docX | 0;
+    l.importStagingY = docY | 0;
+    l.importPlacementPending = true;
+    if (typeof illuSetImportPlacementChromeActive === 'function') {
+        illuSetImportPlacementChromeActive(true);
+    }
+    if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+        window.syncSelectionToImportPlacementLayer();
+    }
     EditorManager.render();
 };
 
@@ -1440,6 +1676,33 @@ window.illuNudgeSelectionPixelsDelta = function (dx, dy) {
     const al = EditorManager.activeLayer;
     if (!al || !al.buffer) return false;
 
+    if (illuIsFloatingImportPending()) {
+        al.importStagingX = (al.importStagingX | 0) + dx;
+        al.importStagingY = (al.importStagingY | 0) + dy;
+        if (window.selectionPixelWarpActive && selectionWarpDeformRect && window.selectionWarpQuad) {
+            selectionWarpDeformRect.rx += dx;
+            selectionWarpDeformRect.ry += dy;
+            const R = selectionWarpDeformRect;
+            const q = window.selectionWarpQuad;
+            q.tl.x = R.rx;
+            q.tl.y = R.ry;
+            q.tr.x = R.rx + R.rw;
+            q.tr.y = R.ry;
+            q.br.x = R.rx + R.rw;
+            q.br.y = R.ry + R.rh;
+            q.bl.x = R.rx;
+            q.bl.y = R.ry + R.rh;
+        } else if (typeof window.illuTranslateSelectionGeometry === 'function') {
+            window.illuTranslateSelectionGeometry(dx, dy);
+        }
+        if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+            window.syncSelectionToImportPlacementLayer();
+        }
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        EditorManager.render({ skipUiThumbnails: true });
+        return true;
+    }
+
     const hasSel =
         typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
     const sb = window.selectionBounds;
@@ -1628,14 +1891,16 @@ window.nudgeSelectionWarpSessionDelta = function (dx, dy) {
     if (tool === 'deform' && selectionWarpDeformRect) {
         const R = selectionWarpDeformRect;
         const q = window.selectionWarpQuad;
-        const Wd = EditorManager.width;
-        const Hd = EditorManager.height;
         R.rx += dx;
         R.ry += dy;
-        const maxX = Math.max(0, Wd - R.rw);
-        const maxY = Math.max(0, Hd - R.rh);
-        R.rx = Math.max(0, Math.min(R.rx, maxX));
-        R.ry = Math.max(0, Math.min(R.ry, maxY));
+        if (!illuIsFloatingImportPending()) {
+            const Wd = EditorManager.width;
+            const Hd = EditorManager.height;
+            const maxX = Math.max(0, Wd - R.rw);
+            const maxY = Math.max(0, Hd - R.rh);
+            R.rx = Math.max(0, Math.min(R.rx, maxX));
+            R.ry = Math.max(0, Math.min(R.ry, maxY));
+        }
         q.tl.x = R.rx;
         q.tl.y = R.ry;
         q.tr.x = R.rx + R.rw;
@@ -1664,6 +1929,13 @@ window.nudgeSelectionWarpSessionDelta = function (dx, dy) {
             selectionWarpDeformRect.ry += dy;
         }
         illuSyncSelectionBoundsFromWarpQuad(q);
+    }
+
+    if (illuIsFloatingImportPending()) {
+        illuSyncFloatingImportStagingFromDeformRect();
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        EditorManager.render({ skipUiThumbnails: true });
+        return true;
     }
 
     const prevH = selectionWarpHandleId;
@@ -2293,6 +2565,8 @@ let selectionWarpSourceClearBounds = null;
 let selectionWarpSourceClearLocalPoints = null;
 /** Pendant le glisser d’une poignée warp : le tampon calque reste figé ; l’aperçu va sur un overlay. */
 let selectionWarpHandlePointerDown = false;
+/** Déformation sur collage volant (importStagingBuffer, pas le tampon calque). */
+let selectionWarpImportStagingMode = false;
 let selectionWarpDragLayerSnapshot = null;
 let selectionWarpPreviewOverlayEl = null;
 let selectionWarpBasePreviewOverlayEl = null;
@@ -2350,6 +2624,110 @@ function pointInPolygon(x, y, pts) {
         if (intersect) inside = !inside;
     }
     return inside;
+}
+
+/** Masque un ImageData (bbox sélection) selon lasso ou baguette — pas le rectangle englobant seul. */
+window.illuMaskImageDataToActiveSelection = function (imageData, ox, oy, sw, sh) {
+    if (!imageData || !imageData.data || sw < 1 || sh < 1) return imageData;
+    const l = EditorManager.activeLayer;
+    if (!l) return imageData;
+    const lx = l.x;
+    const ly = l.y;
+    const d = imageData.data;
+    if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+        for (let yy = 0; yy < sh; yy++) {
+            for (let xx = 0; xx < sw; xx++) {
+                if (!pointInPolygon(xx + ox + lx + 0.5, yy + oy + ly + 0.5, window.selectionLassoPoints)) {
+                    const idx = (yy * sw + xx) * 4;
+                    d[idx + 3] = 0;
+                }
+            }
+        }
+    } else if (
+        window.selectionKind === 'color' &&
+        window.selectionColorMask &&
+        EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+    ) {
+        const m = window.selectionColorMask;
+        for (let yy = 0; yy < sh; yy++) {
+            for (let xx = 0; xx < sw; xx++) {
+                const lpx = ox + xx;
+                const lpy = oy + yy;
+                if (lpx < 0 || lpx >= m.w || lpy < 0 || lpy >= m.h || !m.data[lpy * m.w + lpx]) {
+                    const idx = (yy * sw + xx) * 4;
+                    d[idx + 3] = 0;
+                }
+            }
+        }
+    }
+    return imageData;
+};
+
+/** Efface la zone sélectionnée sur le calque actif (lasso, couleur ou rect). */
+function clearActiveSelectionPixelsOnLayer(ctx) {
+    if (!ctx || !EditorManager.activeLayer || !EditorManager.activeLayer.buffer) return;
+    const lx = EditorManager.activeLayer.x;
+    const ly = EditorManager.activeLayer.y;
+    const cw = EditorManager.activeLayer.buffer.width;
+    const ch = EditorManager.activeLayer.buffer.height;
+    const sb = window.selectionBounds;
+    if (!sb) return;
+    ctx.save();
+    ctx.beginPath();
+    if (!window.selectionInverted) {
+        if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+            window.selectionLassoPoints.forEach((p, i) => {
+                const px = p.x - lx;
+                const py = p.y - ly;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.clip();
+            ctx.clearRect(0, 0, cw, ch);
+        } else if (
+            window.selectionKind === 'color' &&
+            window.selectionColorMask &&
+            EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+        ) {
+            const ox = sb.x - lx;
+            const oy = sb.y - ly;
+            ctx.rect(ox, oy, sb.w, sb.h);
+            ctx.clip();
+            ctx.beginPath();
+            EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+            ctx.clip();
+            ctx.clearRect(0, 0, cw, ch);
+        } else {
+            ctx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
+            ctx.clip();
+            ctx.clearRect(0, 0, cw, ch);
+        }
+    } else {
+        if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+            ctx.rect(0, 0, cw, ch);
+            window.selectionLassoPoints.forEach((p, i) => {
+                const px = p.x - lx;
+                const py = p.y - ly;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+        } else if (
+            window.selectionKind === 'color' &&
+            window.selectionColorMask &&
+            EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+        ) {
+            ctx.rect(0, 0, cw, ch);
+            EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+        } else {
+            ctx.rect(0, 0, cw, ch);
+            ctx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
+        }
+        ctx.clip('evenodd');
+        ctx.clearRect(0, 0, cw, ch);
+    }
+    ctx.restore();
 }
 
 /** Points lasso en coordonnées locales au tampon (origine = coin haut-gauche du calque). */
@@ -3092,6 +3470,12 @@ function initTools() {
                 return;
             }
             const prev = window.activeTool;
+            if (
+                typeof EditorManager.commitImportPlacementIfPending === 'function' &&
+                EditorManager.commitImportPlacementIfPending()
+            ) {
+                /* collage volant posé avant changement d’outil */
+            }
             toolBtns.forEach((b) => {
                 if (b.id !== 'illu-tb-zoom-fit' && b.id !== 'btn-deselect') {
                     b.classList.remove('active');
@@ -3606,8 +3990,51 @@ function clampSelectionBoundsToDocument(sb) {
     return illuSnapSelectionBounds({ x, y, w, h });
 }
 
+/** Collage / import en attente de validation (tampon volant). */
+function illuIsFloatingImportPending() {
+    const l = EditorManager.activeLayer;
+    return !!(EditorManager.isPixelMode && l && l.importPlacementPending && l.importStagingBuffer);
+}
+
+function illuSetImportPlacementChromeActive(active) {
+    const mcc = document.getElementById('main-canvas-container');
+    if (!mcc) return;
+    if (active) mcc.classList.add('illu-import-placement-active');
+    else mcc.classList.remove('illu-import-placement-active');
+}
+window.illuSetImportPlacementChromeActive = illuSetImportPlacementChromeActive;
+
+/** Aligne tampon volant + sélection sur le cadre Déformation (coords document). */
+function illuSyncFloatingImportStagingFromDeformRect() {
+    const l = EditorManager.activeLayer;
+    const R = selectionWarpDeformRect;
+    const st = l && l.importStagingBuffer;
+    if (!illuIsFloatingImportPending() || !R || !st) return;
+    l.importStagingX = Math.round(R.rx);
+    l.importStagingY = Math.round(R.ry);
+    if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+        window.syncSelectionToImportPlacementLayer();
+    }
+    if (typeof EditorManager._syncImportStagingDomView === 'function') {
+        const stack = document.getElementById('pixel-layer-stack');
+        if (stack && EditorManager.activeLayer) {
+            const li = EditorManager.layers.indexOf(EditorManager.activeLayer);
+            EditorManager._syncImportStagingDomView(stack, EditorManager.activeLayer, (li + 1) * 10 + 1);
+        }
+    }
+}
+
+function illuPointInSelectionBoundsDoc(px, py, pad) {
+    const sb = window.selectionBounds;
+    if (!sb) return false;
+    const z = EditorManager.getCanvasZoomLevel() || 1;
+    const p = pad != null ? pad : 6 / z;
+    return px >= sb.x - p && px <= sb.x + sb.w + p && py >= sb.y - p && py <= sb.y + sb.h + p;
+}
+
 /** Hors recadrage : Déplacer / Déformation / warp-4 autorisent un cadre (et calque) hors toile. */
 function illuClampSelectionBoundsToDocumentForActiveTool() {
+    if (illuIsFloatingImportPending()) return false;
     if (window.illuCropSessionActive) return true;
     const t = window.activeTool;
     if (t === 'move' || t === 'deform' || t === 'warp-4') return false;
@@ -3831,9 +4258,23 @@ function illuSetSvgAdjustAnchorPoints(adjEl, rootX, rootY) {
 
 function syncShapeAdjustAnchorPosition(anchorsG, shape) {
     if (!anchorsG || !shape) return;
-    const adjEl = anchorsG.querySelector('.svg-adjust-anchor');
-    if (!adjEl) return;
+    const adjEls = anchorsG.querySelectorAll('.svg-adjust-anchor');
+    if (!adjEls.length) return;
     const tag = (shape.tagName || '').toLowerCase();
+    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
+        const st = illuTriangleReadState(shape);
+        adjEls.forEach((adjEl) => {
+            const t = adjEl.dataset.adjustType || '';
+            let local = null;
+            if (t === 'triangle-adj-r') local = illuTriangleAdjustHandleLocal(st, 'r');
+            else if (t === 'triangle-adj-l' || t === 'triangle-adj') local = illuTriangleAdjustHandleLocal(st, 'l');
+            if (!local) return;
+            const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
+            illuSetSvgAdjustAnchorPoints(adjEl, r.x, r.y);
+        });
+        return;
+    }
+    const adjEl = adjEls[0];
     let local = null;
     if (tag === 'rect' && shape.getAttribute('data-illu-round') === '1') {
         const x = parseFloat(shape.getAttribute('x')) || 0;
@@ -3842,8 +4283,6 @@ function syncShapeAdjustAnchorPosition(anchorsG, shape) {
         const h = parseFloat(shape.getAttribute('height')) || 0;
         const rx = parseFloat(shape.getAttribute('rx')) || 0;
         local = illuRoundRectAdjustHandleLocal(x, y, w, h, rx);
-    } else if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
-        local = illuTriangleAdjustHandleLocal(illuTriangleReadState(shape));
     }
     if (!local) return;
     const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
@@ -3875,9 +4314,12 @@ function appendShapeAdjustAnchors(svgUI, shape) {
     }
     if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
         const st = illuTriangleReadState(shape);
-        const local = illuTriangleAdjustHandleLocal(st);
-        const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
-        svgUI.appendChild(createSvgAdjustAnchor(r.x, r.y, 'triangle-adj'));
+        const localL = illuTriangleAdjustHandleLocal(st, 'l');
+        const localR = illuTriangleAdjustHandleLocal(st, 'r');
+        const rL = vectorShapeAttrPointToRoot(shape, localL.x, localL.y);
+        const rR = vectorShapeAttrPointToRoot(shape, localR.x, localR.y);
+        svgUI.appendChild(createSvgAdjustAnchor(rL.x, rL.y, 'triangle-adj-l'));
+        svgUI.appendChild(createSvgAdjustAnchor(rR.x, rR.y, 'triangle-adj-r'));
     }
 }
 
@@ -4259,6 +4701,52 @@ window.shapePrimaryFillCss = shapePrimaryFillCss;
 window.shapeSecondaryStrokeCss = shapeSecondaryStrokeCss;
 window.shapeLineStrokeCss = shapeLineStrokeCss;
 
+function setVectorGradientColorStops(gradEl, c1, c2, method) {
+    if (!gradEl) return;
+    while (gradEl.firstChild) gradEl.removeChild(gradEl.firstChild);
+    const m =
+        method ||
+        (typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple');
+    if (
+        m === 'smart' &&
+        typeof EditorManager !== 'undefined' &&
+        typeof EditorManager.rgbToHsv === 'function' &&
+        typeof EditorManager.hsvToRgb === 'function' &&
+        typeof window.illuParseColorToRgb === 'function'
+    ) {
+        const rgb0 = window.illuParseColorToRgb(c1);
+        const rgb1 = window.illuParseColorToRgb(c2);
+        const hsv0 = EditorManager.rgbToHsv(rgb0.r, rgb0.g, rgb0.b);
+        const hsv1 = EditorManager.rgbToHsv(rgb1.r, rgb1.g, rgb1.b);
+        let h0 = hsv0.h;
+        let h1 = hsv1.h;
+        const dh = h1 - h0;
+        if (dh > 180) h1 -= 360;
+        else if (dh < -180) h1 += 360;
+        for (let i = 0; i <= 10; i++) {
+            const t = i / 10;
+            const h = (h0 + t * (h1 - h0) + 360) % 360;
+            const s = hsv0.s + t * (hsv1.s - hsv0.s);
+            const v = hsv0.v + t * (hsv1.v - hsv0.v);
+            const rgb = EditorManager.hsvToRgb(h, s, v);
+            const a = rgb0.a * (1 - t) + rgb1.a * t;
+            const stop = document.createElementNS(SVG_NS, 'stop');
+            stop.setAttribute('offset', `${Math.round(t * 100)}%`);
+            stop.setAttribute('stop-color', `rgba(${rgb.r},${rgb.g},${rgb.b},${a / 255})`);
+            gradEl.appendChild(stop);
+        }
+        return;
+    }
+    const s0 = document.createElementNS(SVG_NS, 'stop');
+    s0.setAttribute('offset', '0%');
+    s0.setAttribute('stop-color', c1);
+    const s1 = document.createElementNS(SVG_NS, 'stop');
+    s1.setAttribute('offset', '100%');
+    s1.setAttribute('stop-color', c2);
+    gradEl.appendChild(s0);
+    gradEl.appendChild(s1);
+}
+
 function ensureVectorLinearGradient(defs, id, x1, y1, x2, y2, c1, c2) {
     let lg = document.getElementById(id);
     if (!lg || lg.tagName.toLowerCase() !== 'lineargradient') {
@@ -4266,20 +4754,13 @@ function ensureVectorLinearGradient(defs, id, x1, y1, x2, y2, c1, c2) {
         lg = document.createElementNS(SVG_NS, 'linearGradient');
         lg.setAttribute('id', id);
         lg.setAttribute('gradientUnits', 'userSpaceOnUse');
-        const s0 = document.createElementNS(SVG_NS, 'stop');
-        s0.setAttribute('offset', '0%');
-        s0.setAttribute('stop-color', c1);
-        const s1 = document.createElementNS(SVG_NS, 'stop');
-        s1.setAttribute('offset', '100%');
-        s1.setAttribute('stop-color', c2);
-        lg.appendChild(s0);
-        lg.appendChild(s1);
         defs.appendChild(lg);
     }
     lg.setAttribute('x1', String(x1));
     lg.setAttribute('y1', String(y1));
     lg.setAttribute('x2', String(x2));
     lg.setAttribute('y2', String(y2));
+    setVectorGradientColorStops(lg, c1, c2);
 }
 
 function ensureVectorRadialGradient(defs, id, cx, cy, r, c1, c2) {
@@ -4289,19 +4770,12 @@ function ensureVectorRadialGradient(defs, id, cx, cy, r, c1, c2) {
         rg = document.createElementNS(SVG_NS, 'radialGradient');
         rg.setAttribute('id', id);
         rg.setAttribute('gradientUnits', 'userSpaceOnUse');
-        const s0 = document.createElementNS(SVG_NS, 'stop');
-        s0.setAttribute('offset', '0%');
-        s0.setAttribute('stop-color', c1);
-        const s1 = document.createElementNS(SVG_NS, 'stop');
-        s1.setAttribute('offset', '100%');
-        s1.setAttribute('stop-color', c2);
-        rg.appendChild(s0);
-        rg.appendChild(s1);
         defs.appendChild(rg);
     }
     rg.setAttribute('cx', String(cx));
     rg.setAttribute('cy', String(cy));
     rg.setAttribute('r', String(Math.max(1, r)));
+    setVectorGradientColorStops(rg, c1, c2);
 }
 
 function parseIlluLinePath(d) {
@@ -5141,6 +5615,11 @@ function handleMouseDown(e) {
     window._shiftConstraintProportions = e.shiftKey;
     const pos = getPos(e);
 
+    if (EditorManager.isPixelMode && illuTryCommitImportPlacementOnOutsideClick(e, pos)) {
+        isDrawing = false;
+        return;
+    }
+
     if (EditorManager.mode === 'vector') {
         try {
             const clientX = e.clientX != null ? e.clientX : 0;
@@ -5414,6 +5893,7 @@ function handleMouseDown(e) {
                 strokeMode: EditorManager.toolProps.shapeStrokeMode || 'both',
                 fillType: EditorManager.toolProps.fillType || 'solid',
                 gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
+                gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
                 gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
                 strokeWidth: sw
             };
@@ -5836,7 +6316,8 @@ function startVector(pos, e) {
                 points: `${pos.x},${pos.y} ${pos.x},${pos.y} ${pos.x},${pos.y}`,
                 fill: color,
                 'data-illu-triangle': '1',
-                'data-illu-triangle-adj': '0.5'
+                'data-illu-triangle-adj': '0.5',
+                'data-illu-triangle-vf': '0'
             });
             layer.appendChild(currentElement);
             applyVectorShapePaint(currentElement, 'polygon');
@@ -6017,6 +6498,7 @@ function updateVector(pos) {
             let w = st0.w;
             let h = st0.h;
             const adj = st0.adj;
+            const vf = st0.vf;
             const wx = lp.x;
             const wy = lp.y;
             const hi = activeAnchorIndex;
@@ -6086,7 +6568,7 @@ function updateVector(pos) {
                     w = h = m;
                 }
             }
-            illuTriangleWritePoints(activeVectorShape, x, y, w, h, adj);
+            illuTriangleWritePoints(activeVectorShape, x, y, w, h, adj, vf);
             if (activeVectorShape.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(activeVectorShape, 'rect', x, y, x + w, y + h);
             }
@@ -6374,8 +6856,8 @@ function updateVector(pos) {
                 w = Math.abs(pos.x - startX);
                 h = Math.abs(pos.y - startY);
             }
-            const adj = parseFloat(currentElement.getAttribute('data-illu-triangle-adj')) || 0.5;
-            illuTriangleWritePoints(currentElement, x, y, w, h, adj);
+            const stTri = illuTriangleReadState(currentElement);
+            illuTriangleWritePoints(currentElement, x, y, w, h, stTri.adj, stTri.vf);
             if (currentElement.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(currentElement, 'rect', x, y, x + w, y + h);
             }
@@ -6574,6 +7056,14 @@ window.selectionMatchesActiveLayer = function () {
     const sb = window.selectionBounds;
     if (!l || !l.buffer || !sb) return false;
     const tol = 2.5;
+    if (l.importPlacementPending && l.importStagingBuffer) {
+        return (
+            Math.abs(sb.x - (l.importStagingX | 0)) < tol &&
+            Math.abs(sb.y - (l.importStagingY | 0)) < tol &&
+            Math.abs(sb.w - l.importStagingBuffer.width) < tol &&
+            Math.abs(sb.h - l.importStagingBuffer.height) < tol
+        );
+    }
     return (
         Math.abs(sb.x - l.x) < tol &&
         Math.abs(sb.y - l.y) < tol &&
@@ -6620,10 +7110,9 @@ window.syncSelectionToActiveLayer = function () {
     EditorManager.render();
 };
 
-/** Sélection = rectangle du tampon du calque (collage « placement » avant validation). */
-window.syncSelectionToImportPlacementLayer = function () {
-    const l = EditorManager.activeLayer;
-    if (!l || !l.buffer || !EditorManager.isPixelMode || !l.importPlacementPending) return;
+/** Sélection = rectangle de l’image posée après validation du collage volant. */
+window.syncSelectionToCommittedImportBounds = function (bounds) {
+    if (!bounds || !EditorManager.isPixelMode) return;
     window.selectionInverted = false;
     window.selectionKind = 'rect';
     window.selectionColorMask = null;
@@ -6631,10 +7120,33 @@ window.syncSelectionToImportPlacementLayer = function () {
     window.selectionIsWarpQuad = false;
     window.selectionPreviewAngleRad = 0;
     window.selectionBounds = {
-        x: l.x,
-        y: l.y,
-        w: l.buffer.width,
-        h: l.buffer.height
+        x: bounds.x | 0,
+        y: bounds.y | 0,
+        w: Math.max(1, bounds.w | 0),
+        h: Math.max(1, bounds.h | 0)
+    };
+    if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
+    window.refreshSelectionVisual();
+    EditorManager.render();
+};
+
+/** Sélection = rectangle du tampon du calque (collage « placement » avant validation). */
+window.syncSelectionToImportPlacementLayer = function () {
+    const l = EditorManager.activeLayer;
+    if (!l || !l.buffer || !EditorManager.isPixelMode || !l.importPlacementPending) return;
+    const st = l.importStagingBuffer;
+    if (!st) return;
+    window.selectionInverted = false;
+    window.selectionKind = 'rect';
+    window.selectionColorMask = null;
+    window.selectionLassoPoints = null;
+    window.selectionIsWarpQuad = false;
+    window.selectionPreviewAngleRad = 0;
+    window.selectionBounds = {
+        x: l.importStagingX | 0,
+        y: l.importStagingY | 0,
+        w: st.width,
+        h: st.height
     };
     if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
     window.refreshSelectionVisual();
@@ -6715,9 +7227,59 @@ function illuHideActiveLayerForWarpPreview() {
     const cv = map && map.get(l.id);
     if (cv) {
         cv.style.display = 'none';
-    } else {
+    }
+    if (selectionWarpImportStagingMode && EditorManager._pixelLayerStagingViewEls) {
+        const stv = EditorManager._pixelLayerStagingViewEls.get(l.id);
+        if (stv) stv.style.display = 'none';
+    }
+    if (!cv) {
         EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
     }
+}
+
+function illuWarpPixelOrigin(layer) {
+    if (selectionWarpImportStagingMode && layer && layer.importStagingBuffer) {
+        return {
+            x: layer.importStagingX | 0,
+            y: layer.importStagingY | 0,
+            buffer: layer.importStagingBuffer
+        };
+    }
+    if (!layer) return { x: 0, y: 0, buffer: null };
+    return { x: layer.x, y: layer.y, buffer: layer.buffer };
+}
+
+/** Clic hors du cadre du collage volant → poser sur le calque. */
+function illuTryCommitImportPlacementOnOutsideClick(e, pos) {
+    const l = EditorManager.activeLayer;
+    if (!EditorManager.isPixelMode || !l || !l.importPlacementPending) return false;
+    if (e.target && e.target.closest) {
+        if (
+            e.target.closest(
+                '#svg-ui, .illu-deform-move-fo, .tool-btn, #win-tools, #tool-options-container, #layer-panel, .ctx-menu'
+            )
+        ) {
+            return false;
+        }
+    }
+    const sb = window.selectionBounds;
+    if (sb) {
+        const z = EditorManager.getCanvasZoomLevel() || 1;
+        const pad = 6 / z;
+        const inside =
+            pos.x >= sb.x - pad &&
+            pos.x <= sb.x + sb.w + pad &&
+            pos.y >= sb.y - pad &&
+            pos.y <= sb.y + sb.h + pad;
+        if (inside) return false;
+    }
+    if (
+        typeof EditorManager.commitImportPlacementIfPending === 'function' &&
+        EditorManager.commitImportPlacementIfPending()
+    ) {
+        return true;
+    }
+    return false;
 }
 
 function illuComputeWarpSelectionHandles() {
@@ -6863,9 +7425,19 @@ function illuRemoveWarpPreviewOverlay() {
     if (l) {
         if (l._ghostDragHide) delete l._ghostDragHide;
         if (l._warpSrcHoleCleared && selectionWarpFullLayerCanvas) {
-            const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(selectionWarpFullLayerCanvas, 0, 0);
+            if (selectionWarpImportStagingMode && l.importStagingBuffer) {
+                const sctx = l.importStagingBuffer.getContext('2d', { willReadFrequently: true });
+                if (sctx) sctx.drawImage(selectionWarpFullLayerCanvas, 0, 0);
+            } else if (l.buffer) {
+                const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
+                if (ctx) ctx.drawImage(selectionWarpFullLayerCanvas, 0, 0);
+            }
             delete l._warpSrcHoleCleared;
+        }
+        if (selectionWarpImportStagingMode && EditorManager._pixelLayerStagingViewEls) {
+            const stv = EditorManager._pixelLayerStagingViewEls.get(l.id);
+            if (stv) stv.style.display = '';
+            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
         }
     }
 }
@@ -7171,9 +7743,15 @@ function illuQueueWarpWorkerJob(job) {
 function illuRestoreWarpDragSnapshotLayer() {
     if (!selectionWarpDragLayerSnapshot || !EditorManager.activeLayer) return;
     const l = EditorManager.activeLayer;
-    l.buffer = EditorManager.cloneCanvas(selectionWarpDragLayerSnapshot.buffer);
-    l.x = selectionWarpDragLayerSnapshot.x;
-    l.y = selectionWarpDragLayerSnapshot.y;
+    if (selectionWarpDragLayerSnapshot.importStaging) {
+        l.importStagingBuffer = EditorManager.cloneCanvas(selectionWarpDragLayerSnapshot.buffer);
+        l.importStagingX = selectionWarpDragLayerSnapshot.x | 0;
+        l.importStagingY = selectionWarpDragLayerSnapshot.y | 0;
+    } else {
+        l.buffer = EditorManager.cloneCanvas(selectionWarpDragLayerSnapshot.buffer);
+        l.x = selectionWarpDragLayerSnapshot.x;
+        l.y = selectionWarpDragLayerSnapshot.y;
+    }
 }
 
 /** Perce le trou source sur le tampon calque (aperçu déformation / déplacement). */
@@ -7291,6 +7869,7 @@ window.cancelSelectionInteractionState = function () {
     selectionWarpDragLayerSnapshot = null;
     illuSelectionInteractionOwner = null;
     selectionWarpHandlePointerDown = false;
+    selectionWarpImportStagingMode = false;
     if (selectionWarpPreviewRaf) {
         cancelAnimationFrame(selectionWarpPreviewRaf);
         selectionWarpPreviewRaf = 0;
@@ -7765,24 +8344,34 @@ window.startSelectionPixelWarp = function (e, handleId) {
     const l = EditorManager.activeLayer;
     const sb = window.selectionBounds;
     if (!l || !l.buffer || !sb) return;
+    selectionWarpImportStagingMode = !!(l.importPlacementPending && l.importStagingBuffer);
+    const warpOrigin = illuWarpPixelOrigin(l);
+    const buf = warpOrigin.buffer;
+    if (!buf) return;
     const qStart = (window.selectionIsWarpQuad && window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length === 4)
         ? { tl: window.selectionLassoPoints[0], tr: window.selectionLassoPoints[1], br: window.selectionLassoPoints[2], bl: window.selectionLassoPoints[3] }
         : { tl: { x: sb.x, y: sb.y }, tr: { x: sb.x + sb.w, y: sb.y }, br: { x: sb.x + sb.w, y: sb.y + sb.h }, bl: { x: sb.x, y: sb.y + sb.h } };
     illuCloseWarpWorkerSession();
     selectionWarpDeformMoveOffset = null;
     illuRemoveWarpPreviewOverlay();
-    selectionWarpDragLayerSnapshot = {
-        buffer: cloneCanvasForWarp(l.buffer),
-        x: l.x,
-        y: l.y
-    };
+    const lx = warpOrigin.x;
+    const ly = warpOrigin.y;
+    selectionWarpDragLayerSnapshot = selectionWarpImportStagingMode
+        ? {
+            importStaging: true,
+            buffer: cloneCanvasForWarp(buf),
+            x: lx,
+            y: ly
+        }
+        : {
+            buffer: cloneCanvasForWarp(l.buffer),
+            x: l.x,
+            y: l.y
+        };
     illuSelectionInteractionOwner = 'warp';
     selectionWarpHandlePointerDown = true;
-    selectionWarpFullLayerCanvas = cloneCanvasForWarp(l.buffer);
+    selectionWarpFullLayerCanvas = cloneCanvasForWarp(buf);
     selectionWarpBackupCanvas = document.createElement('canvas');
-    const lx = l.x;
-    const ly = l.y;
-    const buf = l.buffer;
     const pts =
         window.selectionIsWarpQuad &&
             window.selectionKind === 'lasso' &&
@@ -8010,15 +8599,22 @@ window.updateSelectionWarpFromPointer = function (worldX, worldY) {
             /* Même logique que l’outil Déplacer : position absolue (pointeur − offset), pas delta frame-à-frame. */
             const off = selectionWarpDeformMoveOffset;
             if (off) {
-                let nx = Math.round(worldX - off.x);
-                let ny = Math.round(worldY - off.y);
-                const Wd = EditorManager.width;
-                const Hd = EditorManager.height;
-                const maxX = Math.max(0, Wd - R.rw);
-                const maxY = Math.max(0, Hd - R.rh);
-                R.rx = Math.max(0, Math.min(nx, maxX));
-                R.ry = Math.max(0, Math.min(ny, maxY));
-                syncRectToQuad();
+                const nx = Math.round(worldX - off.x);
+                const ny = Math.round(worldY - off.y);
+                if (illuIsFloatingImportPending()) {
+                    R.rx = nx;
+                    R.ry = ny;
+                    syncRectToQuad();
+                    illuSyncFloatingImportStagingFromDeformRect();
+                } else {
+                    const Wd = EditorManager.width;
+                    const Hd = EditorManager.height;
+                    const maxX = Math.max(0, Wd - R.rw);
+                    const maxY = Math.max(0, Hd - R.rh);
+                    R.rx = Math.max(0, Math.min(nx, maxX));
+                    R.ry = Math.max(0, Math.min(ny, maxY));
+                    syncRectToQuad();
+                }
             }
             return;
         }
@@ -8134,6 +8730,9 @@ window.updateSelectionWarpFromPointer = function (worldX, worldY) {
             R.rw = r0.rw;
         }
         syncRectToQuad();
+        if (illuIsFloatingImportPending()) {
+            illuSyncFloatingImportStagingFromDeformRect();
+        }
         return;
     }
 
@@ -8182,6 +8781,9 @@ window.updateSelectionWarpFromPointer = function (worldX, worldY) {
     } else if (h === 'e') {
         q.tr.x = worldX;
         q.br.x = worldX;
+    }
+    if (illuIsFloatingImportPending() && selectionWarpDeformRect) {
+        illuSyncFloatingImportStagingFromDeformRect();
     }
 };
 
@@ -8272,10 +8874,13 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     const isFinal = !!(opts.isFinal || opts.forceCommit);
     const defer = !isFinal;
     const l = EditorManager.activeLayer;
-    if (isFinal) {
+    const warpOrigin = illuWarpPixelOrigin(l);
+    const warpBuf = warpOrigin.buffer;
+    if (!warpBuf) return null;
+    if (isFinal && !selectionWarpImportStagingMode) {
         illuExpandActiveLayerBufferForWarpDestQuad(l, window.selectionWarpQuad, { allowExpand: true });
     }
-    const ctx = isFinal ? l.buffer.getContext('2d', { willReadFrequently: true }) : null;
+    const ctx = isFinal ? warpBuf.getContext('2d', { willReadFrequently: true }) : null;
     if (isFinal && !ctx) return null;
 
     const sw = selectionWarpSw;
@@ -8284,8 +8889,8 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     const oy = selectionWarpOy;
     const q = window.selectionWarpQuad;
 
-    const lx = l.x;
-    const ly = l.y;
+    const lx = warpOrigin.x;
+    const ly = warpOrigin.y;
     const dstQuad = [
         [q.tl.x - lx, q.tl.y - ly],
         [q.tr.x - lx, q.tr.y - ly],
@@ -8310,9 +8915,9 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     const polyLocal = window._selectionWarpInitialPolyLocal || selectionLassoLocalFromDoc(); const xs = dstQuad.map((p) => p[0]);
     const ys = dstQuad.map((p) => p[1]);
     const minX = Math.max(0, Math.floor(Math.min(...xs)));
-    const maxX = Math.min(l.buffer.width - 1, Math.ceil(Math.max(...xs)));
+    const maxX = Math.min(warpBuf.width - 1, Math.ceil(Math.max(...xs)));
     const minY = Math.max(0, Math.floor(Math.min(...ys)));
-    const maxY = Math.min(l.buffer.height - 1, Math.ceil(Math.max(...ys)));
+    const maxY = Math.min(warpBuf.height - 1, Math.ceil(Math.max(...ys)));
     const bw = maxX - minX + 1;
     const bh = maxY - minY + 1;
     if (!sourceData || bw < 1 || bh < 1) {
@@ -8336,8 +8941,8 @@ function illuPrepareSelectionWarpPreviewState(opts) {
         invalid: false,
         ctx: ctx,
         l: l,
-        previewLayerX: l.x,
-        previewLayerY: l.y,
+        previewLayerX: lx,
+        previewLayerY: ly,
         srcQuad: srcQuad,
         dstQuad: dstQuad,
         polyLocal: polyLocal,
@@ -8408,11 +9013,11 @@ function illuRunSelectionWarpPreviewSync(state) {
                 0,
                 0
             );
-            illuEnsureWarpBasePreviewOverlay(state.l.x, state.l.y);
+            illuEnsureWarpBasePreviewOverlay(state.previewLayerX, state.previewLayerY);
             illuSetWarpPreviewOverlay(
                 scratch,
-                state.l.x + state.patchX,
-                state.l.y + state.patchY,
+                state.previewLayerX + state.patchX,
+                state.previewLayerY + state.patchY,
                 true,
                 state.patchWidth,
                 state.patchHeight
@@ -8449,6 +9054,9 @@ function illuRunSelectionWarpPreviewSync(state) {
     }
 
     if (!state.defer) {
+        if (selectionWarpImportStagingMode && state.l && state.l.importStagingBuffer) {
+            selectionWarpFullLayerCanvas = cloneCanvasForWarp(state.l.importStagingBuffer);
+        }
         EditorManager.render();
     }
     if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
@@ -8555,7 +9163,8 @@ window.finishSelectionPixelWarp = async function () {
     selectionWarpHandlePointerDown = false;
 
     const l = EditorManager.activeLayer;
-    if (l && l.buffer) {
+    const wasImportFloating = !!(l && l.importPlacementPending);
+    if (l && !selectionWarpImportStagingMode && l.buffer) {
         const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
         if (ctx) {
             ctx.save();
@@ -8584,23 +9193,30 @@ window.finishSelectionPixelWarp = async function () {
     }
 
     if (!warpFailed) {
-        const hist =
-            window.activeTool === 'warp-4'
-                ? 'Déformation 4 coins'
-                : window.activeTool === 'deform'
-                    ? 'Déformation'
-                    : 'Déformation pixels (sélection)';
-        
-        // Re-dither after warp if in dither mode
-        if (EditorManager.mode === 'pixel-dither' && l && l.buffer) {
-            const lctx = l.buffer.getContext('2d', { willReadFrequently: true });
-            const idata = lctx.getImageData(0, 0, l.buffer.width, l.buffer.height);
-            const inv = EditorManager.activeProject?.ditherInvert || false;
-            EditorManager._ditherImageData(idata, EditorManager.ditherEffectSize, { invert: inv });
-            lctx.putImageData(idata, 0, 0);
-        }
+        const stillFloating = l && l.importPlacementPending;
+        if (!stillFloating) {
+            const hist =
+                window.activeTool === 'warp-4'
+                    ? 'Déformation 4 coins'
+                    : window.activeTool === 'deform'
+                        ? 'Déformation'
+                        : 'Déformation pixels (sélection)';
 
-        EditorManager.saveHistory(hist, { patchActiveLayer: true });
+            if (EditorManager.mode === 'pixel-dither' && l && l.buffer) {
+                const lctx = l.buffer.getContext('2d', { willReadFrequently: true });
+                const idata = lctx.getImageData(0, 0, l.buffer.width, l.buffer.height);
+                const inv = EditorManager.activeProject?.ditherInvert || false;
+                EditorManager._ditherImageData(idata, EditorManager.ditherEffectSize, { invert: inv });
+                lctx.putImageData(idata, 0, 0);
+            }
+
+            EditorManager.saveHistory(hist, { patchActiveLayer: true });
+        } else if (l && l.importStagingBuffer) {
+            if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+                window.syncSelectionToImportPlacementLayer();
+            }
+            EditorManager.render({ skipUiThumbnails: true, flushUiThumbnails: true });
+        }
     }
 
     const finalQuad = window.selectionWarpQuad;
@@ -8634,14 +9250,13 @@ window.finishSelectionPixelWarp = async function () {
         window.selectionIsWarpQuad = true;
 
         const l = EditorManager.activeLayer;
-        if (l && l.buffer) {
-            // CRITIQUE : Avant de terminer, on s'assure que le buffer du calque 
-            // couvre au moins la zone de la sélection pour éviter le rognage au prochain clic.
+        if (l && l.buffer && !selectionWarpImportStagingMode) {
             if (typeof illuExpandActiveLayerBufferForWarpDestQuad === 'function') {
                 illuExpandActiveLayerBufferForWarpDestQuad(l, finalQuad, { allowExpand: true });
             }
         }
 
+        selectionWarpImportStagingMode = false;
         selectionWarpDragLayerSnapshot = null;
         illuSelectionInteractionOwner = null;
 
@@ -8682,7 +9297,7 @@ window.finishSelectionPixelWarp = async function () {
 
     // --- ÉTAPE 1 : EFFACEMENT COMPLET (Désélection pour forcer le flush du DOM) ---
     if (typeof EditorManager.deselectAll === 'function') {
-        EditorManager.deselectAll();
+        EditorManager.deselectAll(wasImportFloating ? { skipImportCommit: true } : undefined);
     }
     EditorManager.render();
 
@@ -8968,7 +9583,53 @@ function illuPixelMoveToolStartDrag(pos, e) {
             return;
         }
     }
+    /* Collage volant : déplacer le tampon staging (hors toile jusqu’à validation). */
+    if (
+        hasSel &&
+        EditorManager.activeLayer &&
+        EditorManager.activeLayer.importPlacementPending &&
+        EditorManager.activeLayer.importStagingBuffer &&
+        illuPointInSelectionBoundsDoc(pos.x, pos.y, 0)
+    ) {
+        const keepDeformMoveBtn = window._illuDeformMoveFromButtonActive;
+        illuResetMoveSelectionDragArtifacts();
+        window._illuDeformMoveFromButtonActive = keepDeformMoveBtn;
+        const ml = EditorManager.activeLayer;
+        const st = ml.importStagingBuffer;
+        const sx = ml.importStagingX | 0;
+        const sy = ml.importStagingY | 0;
+        moveLayerStartPos = { x: sx, y: sy };
+        moveLayerStartLassoPoints = null;
+        moveOffset = { x: pos.x - sx, y: pos.y - sy };
+        illuSelectionInteractionOwner = 'moveLayer';
+        if (st) {
+            ml._ghostDragHide = true;
+            moveLayerWholeGhostEl = document.createElement('canvas');
+            moveLayerWholeGhostEl.setAttribute('aria-hidden', 'true');
+            moveLayerWholeGhostEl.className = 'illu-move-layer-whole-ghost';
+            moveLayerWholeGhostEl.width = st.width;
+            moveLayerWholeGhostEl.height = st.height;
+            moveLayerWholeGhostEl.style.left = `${sx}px`;
+            moveLayerWholeGhostEl.style.top = `${sy}px`;
+            moveLayerWholeGhostEl.style.imageRendering = 'pixelated';
+            moveLayerWholeGhostEl.style.setProperty('image-rendering', 'crisp-edges');
+            const gctx = moveLayerWholeGhostEl.getContext('2d', { willReadFrequently: true });
+            if (gctx) {
+                gctx.imageSmoothingEnabled = false;
+                gctx.drawImage(st, 0, 0);
+            }
+            EditorManager.render();
+            illuMountMoveLayerWholeGhostInStack();
+        }
+        isDrawing = true;
+        return;
+    }
+
     /* Avec une sélection active : toujours déplacer les pixels (même si le cadre couvre tout le calque), pas layer.x/y ni le cadre seul. */
+    if (hasSel && illuIsFloatingImportPending()) {
+        isDrawing = false;
+        return;
+    }
     if (hasSel) {
         moveLayerStartPos = null;
         moveLayerStartLassoPoints = null;
@@ -9053,43 +9714,8 @@ function illuPixelMoveToolStartDrag(pos, e) {
         /* Rendu d’abord : vues calque dans la pile, puis fantôme inséré « entre » les calques au bon plan. */
         EditorManager.render();
         illuMountPreviewCanvasBeforeSelectionOverlay(moveGhostLayer);
-    } else if (EditorManager.activeLayer) {
-        const keepDeformMoveBtn = window._illuDeformMoveFromButtonActive;
-        illuResetMoveSelectionDragArtifacts();
-        window._illuDeformMoveFromButtonActive = keepDeformMoveBtn;
-        moveDragBoundsStart = null;
-        moveDragLassoBaseline = null;
-        const ml = EditorManager.activeLayer;
-        moveLayerStartPos = {
-            x: ml.x,
-            y: ml.y
-        };
-        moveLayerStartLassoPoints =
-            window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length
-                ? window.selectionLassoPoints.map((p) => ({ x: p.x, y: p.y }))
-                : null;
-        moveOffset = { x: pos.x - ml.x, y: pos.y - ml.y };
-        illuSelectionInteractionOwner = 'moveLayer';
-        if (ml.buffer) {
-            ml._ghostDragHide = true;
-            moveLayerWholeGhostEl = document.createElement('canvas');
-            moveLayerWholeGhostEl.setAttribute('aria-hidden', 'true');
-            moveLayerWholeGhostEl.className = 'illu-move-layer-whole-ghost';
-            moveLayerWholeGhostEl.width = ml.buffer.width;
-            moveLayerWholeGhostEl.height = ml.buffer.height;
-            moveLayerWholeGhostEl.style.left = `${Math.round(ml.x)}px`;
-            moveLayerWholeGhostEl.style.top = `${Math.round(ml.y)}px`;
-            moveLayerWholeGhostEl.style.imageRendering = 'pixelated';
-            moveLayerWholeGhostEl.style.setProperty('image-rendering', 'crisp-edges');
-            const gctx = moveLayerWholeGhostEl.getContext('2d', { willReadFrequently: true });
-            if (gctx) {
-                gctx.imageSmoothingEnabled = false;
-                gctx.drawImage(ml.buffer, 0, 0);
-            }
-            EditorManager.render();
-            illuMountMoveLayerWholeGhostInStack();
-        }
     }
+    /* Sans sélection : pas de déplacement du calque entier (uniquement une sélection de pixels ou collage volant). */
 }
 
 /**
@@ -9492,8 +10118,30 @@ function updatePixel(pos, pointerEv) {
                 moveLayerWholeGhostEl.style.top = `${ny}px`;
                 illuMountMoveLayerWholeGhostInStack();
             }
-            /* Sélection en coords document : ne pas la translater avec le calque (style Paint.NET). */
-            illuScheduleInteractiveVisualRefresh({ render: false, selection: true });
+            if (l.importPlacementPending && l.importStagingBuffer) {
+                l.importStagingX = nx;
+                l.importStagingY = ny;
+                if (window.selectionPixelWarpActive && selectionWarpDeformRect) {
+                    selectionWarpDeformRect.rx = nx;
+                    selectionWarpDeformRect.ry = ny;
+                    illuSyncDeformWarpQuadToGhostBounds(nx, ny, selectionWarpDeformRect.rw, selectionWarpDeformRect.rh);
+                }
+                if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+                    window.syncSelectionToImportPlacementLayer();
+                } else {
+                    window.selectionBounds = {
+                        x: nx,
+                        y: ny,
+                        w: l.importStagingBuffer.width,
+                        h: l.importStagingBuffer.height
+                    };
+                    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+                }
+                illuScheduleInteractiveVisualRefresh({ render: true, selection: true });
+            } else {
+                /* Sélection en coords document : ne pas la translater avec le calque (style Paint.NET). */
+                illuScheduleInteractiveVisualRefresh({ render: false, selection: true });
+            }
             return;
         }
     }
@@ -10231,10 +10879,15 @@ function handleMouseUp(e) {
             moveLayerStartLassoPoints = null;
             let ghostEl = moveLayerWholeGhostEl;
             if (ghostEl) {
-                const nx = parseFloat(ghostEl.style.left) || l.x;
-                const ny = parseFloat(ghostEl.style.top) || l.y;
-                l.x = Math.round(nx);
-                l.y = Math.round(ny);
+                const nx = parseFloat(ghostEl.style.left) || (l.importPlacementPending ? l.importStagingX : l.x);
+                const ny = parseFloat(ghostEl.style.top) || (l.importPlacementPending ? l.importStagingY : l.y);
+                if (l.importPlacementPending && l.importStagingBuffer) {
+                    l.importStagingX = Math.round(nx);
+                    l.importStagingY = Math.round(ny);
+                } else {
+                    l.x = Math.round(nx);
+                    l.y = Math.round(ny);
+                }
             }
             if (l._ghostDragHide) delete l._ghostDragHide;
             /* Invalide le cache du filtre dynamique asynchrone pour que le render final
@@ -10244,7 +10897,11 @@ function handleMouseUp(e) {
             if (window.selectionPixelWarpActive && typeof window.runSelectionWarpPreview === 'function') {
                 window.runSelectionWarpPreview({ forceCommit: true });
             }
-            if (l.x !== p0.x || l.y !== p0.y) {
+            if (l.importPlacementPending && l.importStagingBuffer) {
+                if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
+                    window.syncSelectionToImportPlacementLayer();
+                }
+            } else if (l.x !== p0.x || l.y !== p0.y) {
                 EditorManager.saveHistory('Déplacement calque', { patchActiveLayer: true });
             }
             window._illuDeformMoveFromButtonActive = false;
@@ -10493,69 +11150,7 @@ window.clearSelectionContent = function () {
     if (canErase && EditorManager.isPixelMode) {
         const actx = EditorManager.activeCtx;
         if (actx && (window.selectionBounds || window.selectionColorMask || window.selectionLassoPoints)) {
-            const lx = EditorManager.activeLayer.x;
-            const ly = EditorManager.activeLayer.y;
-            const cw = EditorManager.activeLayer.buffer.width;
-            const ch = EditorManager.activeLayer.buffer.height;
-            const sb = window.selectionBounds;
-            actx.save();
-            actx.beginPath();
-            if (!window.selectionInverted) {
-                if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
-                    window.selectionLassoPoints.forEach((p, i) => {
-                        const px = p.x - lx;
-                        const py = p.y - ly;
-                        if (i === 0) actx.moveTo(px, py);
-                        else actx.lineTo(px, py);
-                    });
-                    actx.closePath();
-                    actx.clip();
-                    actx.clearRect(0, 0, cw, ch);
-                } else if (
-                    window.selectionKind === 'color' &&
-                    window.selectionColorMask &&
-                    EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
-                ) {
-                    const ox = sb.x - lx;
-                    const oy = sb.y - ly;
-                    actx.rect(ox, oy, sb.w, sb.h);
-                    actx.clip();
-                    actx.beginPath();
-                    EditorManager.appendColorMaskRectsToPath(actx, window.selectionColorMask);
-                    actx.clip();
-                    actx.clearRect(0, 0, cw, ch);
-                } else {
-                    actx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
-                    actx.clip();
-                    actx.clearRect(0, 0, cw, ch);
-                }
-            } else {
-                // Inverted: clear everything OUTSIDE the shape
-                if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
-                    actx.rect(0, 0, cw, ch);
-                    window.selectionLassoPoints.forEach((p, i) => {
-                        const px = p.x - lx;
-                        const py = p.y - ly;
-                        if (i === 0) actx.moveTo(px, py);
-                        else actx.lineTo(px, py);
-                    });
-                    actx.closePath();
-                } else if (
-                    window.selectionKind === 'color' &&
-                    window.selectionColorMask &&
-                    EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
-                ) {
-                    // Inverted color mask: clear outside the mask pixels
-                    actx.rect(0, 0, cw, ch);
-                    EditorManager.appendColorMaskRectsToPath(actx, window.selectionColorMask);
-                } else {
-                    actx.rect(0, 0, cw, ch);
-                    actx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
-                }
-                actx.clip('evenodd');
-                actx.clearRect(0, 0, cw, ch);
-            }
-            actx.restore();
+            clearActiveSelectionPixelsOnLayer(actx);
             EditorManager.saveHistory('Effacer sélection', { patchActiveLayer: true });
             EditorManager.render();
         }
@@ -10677,6 +11272,197 @@ function makeShapeSecondaryColor() {
         : '#ffffff';
 }
 
+window.illuGetGradientMethod = function () {
+    const el = document.getElementById('tool-gradient-method');
+    if (el && el.value) return el.value;
+    if (typeof EditorManager !== 'undefined' && EditorManager.toolProps && EditorManager.toolProps.gradientMethod) {
+        return EditorManager.toolProps.gradientMethod;
+    }
+    return 'simple';
+};
+
+window.illuParseColorToRgb = function (c) {
+    if (!c) return { r: 255, g: 255, b: 255, a: 255 };
+    if (typeof c === 'object') {
+        return {
+            r: c.r ?? 255,
+            g: c.g ?? 255,
+            b: c.b ?? 255,
+            a: c.a != null ? c.a : 255
+        };
+    }
+    if (typeof c === 'string') {
+        const trimmed = c.trim().toLowerCase();
+        if (trimmed.startsWith('#')) {
+            let h = trimmed.replace(/^#/, '');
+            if (h.length === 3) h = h.split('').map((x) => x + x).join('');
+            const n = parseInt(h, 16);
+            if (!Number.isNaN(n)) {
+                return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 255 };
+            }
+        }
+        if (trimmed.startsWith('rgb')) {
+            const parts = trimmed.match(/[\d.]+/g);
+            if (parts && parts.length >= 3) {
+                return {
+                    r: parseInt(parts[0], 10),
+                    g: parseInt(parts[1], 10),
+                    b: parseInt(parts[2], 10),
+                    a: parts[3] != null ? Math.round(parseFloat(parts[3]) * 255) : 255
+                };
+            }
+        }
+    }
+    return { r: 255, g: 255, b: 255, a: 255 };
+};
+
+window.illuApplyGradientColorStops = function (grad, c0, c1, method) {
+    const m = method || window.illuGetGradientMethod();
+    if (
+        m === 'smart' &&
+        typeof EditorManager !== 'undefined' &&
+        typeof EditorManager.rgbToHsv === 'function' &&
+        typeof EditorManager.hsvToRgb === 'function'
+    ) {
+        const rgb0 = window.illuParseColorToRgb(c0);
+        const rgb1 = window.illuParseColorToRgb(c1);
+        const hsv0 = EditorManager.rgbToHsv(rgb0.r, rgb0.g, rgb0.b);
+        const hsv1 = EditorManager.rgbToHsv(rgb1.r, rgb1.g, rgb1.b);
+        let h0 = hsv0.h;
+        let h1 = hsv1.h;
+        let dh = h1 - h0;
+        if (dh > 180) h1 -= 360;
+        else if (dh < -180) h1 += 360;
+        for (let i = 0; i <= 10; i++) {
+            const t = i / 10;
+            const h = (h0 + t * (h1 - h0) + 360) % 360;
+            const s = hsv0.s + t * (hsv1.s - hsv0.s);
+            const v = hsv0.v + t * (hsv1.v - hsv0.v);
+            const rgb = EditorManager.hsvToRgb(h, s, v);
+            const a = rgb0.a * (1 - t) + rgb1.a * t;
+            grad.addColorStop(t, `rgba(${rgb.r},${rgb.g},${rgb.b},${a / 255})`);
+        }
+    } else {
+        grad.addColorStop(0, c0);
+        grad.addColorStop(1, c1);
+    }
+    return grad;
+};
+
+window.illuCssLinearGradientImage = function (c0, c1, angleDeg, method) {
+    const m = method || window.illuGetGradientMethod();
+    const ang = angleDeg != null ? angleDeg : 0;
+    if (m === 'smart' && typeof EditorManager !== 'undefined' && EditorManager.rgbToHsv) {
+        const rgb0 = window.illuParseColorToRgb(c0);
+        const rgb1 = window.illuParseColorToRgb(c1);
+        const hsv0 = EditorManager.rgbToHsv(rgb0.r, rgb0.g, rgb0.b);
+        const hsv1 = EditorManager.rgbToHsv(rgb1.r, rgb1.g, rgb1.b);
+        let h0 = hsv0.h;
+        let h1 = hsv1.h;
+        let dh = h1 - h0;
+        if (dh > 180) h1 -= 360;
+        else if (dh < -180) h1 += 360;
+        const stops = [];
+        for (let i = 0; i <= 10; i++) {
+            const t = i / 10;
+            const h = (h0 + t * (h1 - h0) + 360) % 360;
+            const s = hsv0.s + t * (hsv1.s - hsv0.s);
+            const v = hsv0.v + t * (hsv1.v - hsv0.v);
+            const rgb = EditorManager.hsvToRgb(h, s, v);
+            const a = rgb0.a * (1 - t) + rgb1.a * t;
+            stops.push(`rgba(${rgb.r},${rgb.g},${rgb.b},${a / 255}) ${Math.round(t * 100)}%`);
+        }
+        return `linear-gradient(${ang}deg, ${stops.join(', ')})`;
+    }
+    return `linear-gradient(${ang}deg, ${c0}, ${c1})`;
+};
+
+window.illuGetTextGradType = function () {
+    const el = document.getElementById('tool-text-grad-type');
+    if (el && el.value) return el.value === 'radial' ? 'radial' : 'linear';
+    if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+        return EditorManager.toolProps.textGradType === 'radial' ? 'radial' : 'linear';
+    }
+    return 'linear';
+};
+
+window.illuGetTextGradAngle = function () {
+    if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+        return EditorManager.toolProps.textGradAngle ?? 0;
+    }
+    const el = document.getElementById('tool-text-grad-angle');
+    return el ? parseInt(el.value, 10) || 0 : 0;
+};
+
+window.illuCreateTextFillGradient = function (ctx, x0, y0, w, h, c0, c1) {
+    const gradType = window.illuGetTextGradType();
+    const cx = x0 + w / 2;
+    const cy = y0 + h / 2;
+    const rw = Math.max(w / 2, 4);
+    const rh = Math.max(h / 2, 4);
+    let grad;
+    if (gradType === 'radial') {
+        grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rw, rh));
+    } else {
+        const angleDeg = window.illuGetTextGradAngle();
+        const rad = (angleDeg * Math.PI) / 180;
+        const L = Math.max(rw, rh) * 1.6;
+        grad = ctx.createLinearGradient(
+            cx - Math.cos(rad) * L,
+            cy - Math.sin(rad) * L,
+            cx + Math.cos(rad) * L,
+            cy + Math.sin(rad) * L
+        );
+    }
+    if (typeof window.illuApplyGradientColorStops === 'function') {
+        window.illuApplyGradientColorStops(grad, c0, c1);
+    } else {
+        grad.addColorStop(0, c0);
+        grad.addColorStop(1, c1);
+    }
+    return grad;
+};
+
+window.illuCssTextGradientImage = function (c0, c1) {
+    const gradType = window.illuGetTextGradType();
+    const method = window.illuGetGradientMethod();
+    if (gradType === 'radial') {
+        if (
+            method === 'smart' &&
+            typeof EditorManager !== 'undefined' &&
+            EditorManager.rgbToHsv &&
+            typeof window.illuParseColorToRgb === 'function'
+        ) {
+            const rgb0 = window.illuParseColorToRgb(c0);
+            const rgb1 = window.illuParseColorToRgb(c1);
+            const hsv0 = EditorManager.rgbToHsv(rgb0.r, rgb0.g, rgb0.b);
+            const hsv1 = EditorManager.rgbToHsv(rgb1.r, rgb1.g, rgb1.b);
+            let h0 = hsv0.h;
+            let h1 = hsv1.h;
+            const dh = h1 - h0;
+            if (dh > 180) h1 -= 360;
+            else if (dh < -180) h1 += 360;
+            const stops = [];
+            for (let i = 0; i <= 10; i++) {
+                const t = i / 10;
+                const h = (h0 + t * (h1 - h0) + 360) % 360;
+                const s = hsv0.s + t * (hsv1.s - hsv0.s);
+                const v = hsv0.v + t * (hsv1.v - hsv0.v);
+                const rgb = EditorManager.hsvToRgb(h, s, v);
+                const a = rgb0.a * (1 - t) + rgb1.a * t;
+                stops.push(`rgba(${rgb.r},${rgb.g},${rgb.b},${a / 255}) ${Math.round(t * 100)}%`);
+            }
+            return `radial-gradient(ellipse at center, ${stops.join(', ')})`;
+        }
+        return `radial-gradient(ellipse at center, ${c0}, ${c1})`;
+    }
+    const angleDeg = window.illuGetTextGradAngle();
+    if (typeof window.illuCssLinearGradientImage === 'function') {
+        return window.illuCssLinearGradientImage(c0, c1, angleDeg, method);
+    }
+    return `linear-gradient(${angleDeg}deg, ${c0}, ${c1})`;
+};
+
 function createShapeFillGradient(ctx, kind, lx, ly, w, h, lsx, lsy, rx, ry, lpx, lpy) {
     const gradShapeType = document.getElementById('tool-shape-grad-type')?.value || 'linear';
     const angleDeg = EditorManager.toolProps.shapeGradAngle ?? 0;
@@ -10705,14 +11491,12 @@ function createShapeFillGradient(ctx, kind, lx, ly, w, h, lsx, lsy, rx, ry, lpx,
             cx + Math.cos(rad) * L,
             cy + Math.sin(rad) * L
         );
-        g.addColorStop(0, c1);
-        g.addColorStop(1, sec);
+        window.illuApplyGradientColorStops(g, c1, sec);
         return g;
     }
     const rmax = Math.max(rrx, rry, 2);
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rmax);
-    g.addColorStop(0, c1);
-    g.addColorStop(1, sec);
+    window.illuApplyGradientColorStops(g, c1, sec);
     return g;
 }
 
@@ -10878,6 +11662,7 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
         strokeMode: mode,
         fillType,
         gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
+        gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
         gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
         strokeWidth: strokeW
     };
@@ -10975,9 +11760,11 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
     }
     if (window.activeTool === 'triangle') {
         const adj = 0.5;
+        const vf = 0;
         const ax = lx + w * adj;
+        const ay = ly + h * vf;
         ctx.beginPath();
-        ctx.moveTo(ax, ly);
+        ctx.moveTo(ax, ay);
         ctx.lineTo(lx, ly + h);
         ctx.lineTo(lx + w, ly + h);
         ctx.closePath();
@@ -10993,7 +11780,7 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
             applyShapeStrokeStyle();
             ctx.stroke();
         }
-        return { kind: 'triangle', params: { lx, ly, w, h, adj }, opts };
+        return { kind: 'triangle', params: { lx, ly, w, h, adj, vf: 0 }, opts };
     }
     return null;
 }
@@ -11024,6 +11811,12 @@ function drawFinalShapeOnCanvas(pos, shiftKey) {
  */
 window.finalizePendingPixelLiveEdits = function () {
     if (typeof EditorManager === 'undefined' || !EditorManager.activeProject) return false;
+    if (
+        typeof EditorManager.commitImportPlacementIfPending === 'function' &&
+        EditorManager.commitImportPlacementIfPending()
+    ) {
+        return true;
+    }
     let done = false;
 
     if (
@@ -11705,7 +12498,82 @@ window.closeCtxMenu = function () {
     if (window.ctxMenu) window.ctxMenu.style.display = 'none';
 };
 
-// Copy / Paste / Cut
+// Copy / Paste / Cut — presse-papiers interne = source de vérité ; sync OS avec numéro de génération.
+window.ctxClipboardGeneration = window.ctxClipboardGeneration || 0;
+
+function illuCloneImageData(src) {
+    if (!src || !src.data) return src;
+    if (
+        typeof MasterPaintWasm !== 'undefined' &&
+        MasterPaintWasm.isLoaded &&
+        src.data.buffer instanceof ArrayBuffer
+    ) {
+        try {
+            return new ImageData(new Uint8ClampedArray(src.data), src.width, src.height);
+        } catch (e) {
+            /* fall through */
+        }
+    }
+    return new ImageData(new Uint8ClampedArray(src.data), src.width, src.height);
+}
+
+function illuSyncSystemClipboardFromInternal(gen, copyBounds, projectId) {
+    if (!window.ctxClipboard || !navigator.clipboard || typeof ClipboardItem === 'undefined') return;
+    const scratch = document.createElement('canvas');
+    scratch.width = window.ctxClipboard.width;
+    scratch.height = window.ctxClipboard.height;
+    scratch.getContext('2d', { willReadFrequently: true }).putImageData(window.ctxClipboard, 0, 0);
+    scratch.toBlob((blob) => {
+        if (!blob || gen !== window.ctxClipboardGeneration) return;
+        const meta = {
+            app: 'illu',
+            generation: gen,
+            projectId,
+            x: copyBounds.x,
+            y: copyBounds.y,
+            w: copyBounds.w,
+            h: copyBounds.h,
+            cw: window.ctxClipboard.width,
+            ch: window.ctxClipboard.height
+        };
+        const metaBlob = new Blob(['ILLU_META:' + JSON.stringify(meta)], { type: 'text/plain' });
+        const item = new ClipboardItem({
+            [blob.type]: blob,
+            'text/plain': metaBlob
+        });
+        navigator.clipboard.write([item]).catch((err) => {
+            console.warn('System clipboard sync failed:', err);
+        });
+    }, 'image/png');
+}
+
+/** Coller depuis le tampon interne plutôt que l’OS (évite copier/coller rapide → ancienne image). */
+window.illuPreferInternalPaste = function (dt) {
+    if (!window.ctxClipboard || !EditorManager?.isPixelMode || EditorManager.mode === 'vector') return false;
+    const gen = window.ctxClipboardGeneration || 0;
+    const metaText = dt && dt.getData ? dt.getData('text/plain') : '';
+    if (metaText && metaText.startsWith('ILLU_META:')) {
+        try {
+            const json = JSON.parse(metaText.substring(10));
+            if (json && json.app === 'illu') {
+                if (json.generation == null || json.generation < gen) return true;
+                if (json.generation === gen) return true;
+            }
+        } catch (e) {
+            return true;
+        }
+    }
+    const age = Date.now() - (window.ctxClipboardTimestamp || 0);
+    if (age < 2500) return true;
+    const hasImage =
+        dt &&
+        dt.files &&
+        dt.files.length > 0 &&
+        Array.from(dt.files).some((f) => f.type && f.type.indexOf('image') !== -1);
+    if (!hasImage) return true;
+    return false;
+};
+
 window.ctxCopy = function () {
     const ap = EditorManager.activeProject;
     const l = EditorManager.activeLayer;
@@ -11729,26 +12597,30 @@ window.ctxCopy = function () {
     let copyBounds;
 
     if (useSelection) {
-        const ctx = EditorManager.activeCtx;
-        if (!ctx) return;
-        const ox = sb.x - l.x;
-        const oy = sb.y - l.y;
-        copyData = ctx.getImageData(ox, oy, sb.w, sb.h);
-        copyBounds = { x: sb.x, y: sb.y, w: sb.w, h: sb.h };
-
-        if (window.selectionKind === 'color' && window.selectionColorMask && EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)) {
-            const m = window.selectionColorMask;
-            const d = copyData.data;
-            for (let yy = 0; yy < sb.h; yy++) {
-                for (let xx = 0; xx < sb.w; xx++) {
-                    const lpx = ox + xx;
-                    const lpy = oy + yy;
-                    if (lpx < 0 || lpx >= m.w || lpy < 0 || lpy >= m.h || !m.data[lpy * m.w + lpx]) {
-                        const idx = (yy * sb.w + xx) * 4;
-                        d[idx + 3] = 0;
-                    }
-                }
-            }
+        const lx = l.x;
+        const ly = l.y;
+        const ox = Math.floor(sb.x - lx);
+        const oy = Math.floor(sb.y - ly);
+        const sw = Math.max(1, Math.ceil(sb.x - lx + sb.w) - ox);
+        const sh = Math.max(1, Math.ceil(sb.y - ly + sb.h) - oy);
+        if (l.importPlacementPending && l.importStagingBuffer) {
+            const st = l.importStagingBuffer;
+            const sx = l.importStagingX | 0;
+            const sy = l.importStagingY | 0;
+            const sox = Math.floor(sb.x - sx);
+            const soy = Math.floor(sb.y - sy);
+            const sctx = st.getContext('2d', { willReadFrequently: true });
+            if (!sctx) return;
+            copyData = sctx.getImageData(sox, soy, sw, sh);
+            copyBounds = { x: sb.x, y: sb.y, w: sw, h: sh };
+        } else {
+            const ctx = EditorManager.activeCtx;
+            if (!ctx) return;
+            copyData = ctx.getImageData(ox, oy, sw, sh);
+            copyBounds = { x: sb.x, y: sb.y, w: sw, h: sh };
+        }
+        if (typeof window.illuMaskImageDataToActiveSelection === 'function') {
+            window.illuMaskImageDataToActiveSelection(copyData, ox, oy, sw, sh);
         }
     } else {
         // Copy whole layer
@@ -11758,47 +12630,18 @@ window.ctxCopy = function () {
         copyBounds = { x: l.x, y: l.y, w: l.buffer.width, h: l.buffer.height };
     }
 
-    window.ctxClipboard = copyData;
+    window.ctxClipboard = illuCloneImageData(copyData);
     window.ctxClipboardDocBounds = copyBounds;
     window.ctxClipboardProjectId = ap.id != null ? ap.id : null;
     window.ctxClipboardTimestamp = Date.now();
+    window.ctxClipboardGeneration = (window.ctxClipboardGeneration || 0) + 1;
+    const copyGen = window.ctxClipboardGeneration;
 
     if (typeof window.illuActivateDeformToolOnly === 'function') {
         window.illuActivateDeformToolOnly();
     }
 
-    // --- Sync with System Clipboard (with metadata for same-position paste) ---
-    if (window.ctxClipboard && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        const scratch = document.createElement('canvas');
-        scratch.width = window.ctxClipboard.width;
-        scratch.height = window.ctxClipboard.height;
-        scratch.getContext('2d').putImageData(window.ctxClipboard, 0, 0);
-
-        scratch.toBlob(blob => {
-            if (blob) {
-                // Metadata to allow same-position paste and परियोजना identification
-                const meta = {
-                    projectId: ap.id,
-                    x: copyBounds.x,
-                    y: copyBounds.y,
-                    w: copyBounds.w,
-                    h: copyBounds.h,
-                    app: 'illu'
-                };
-                const metaText = 'ILLU_META:' + JSON.stringify(meta);
-                const metaBlob = new Blob([metaText], { type: 'text/plain' });
-
-                const item = new ClipboardItem({
-                    [blob.type]: blob,
-                    'text/plain': metaBlob
-                });
-
-                navigator.clipboard.write([item]).catch(err => {
-                    console.warn('System clipboard sync failed:', err);
-                });
-            }
-        }, 'image/png');
-    }
+    illuSyncSystemClipboardFromInternal(copyGen, copyBounds, ap.id);
 };
 window.ctxCut = function () {
     if (EditorManager.mode === 'vector') {
@@ -11821,32 +12664,7 @@ window.ctxCut = function () {
     ctxCopy();
     const ctx = EditorManager.activeCtx;
     if (ctx) {
-        const sb = window.selectionBounds;
-        const lx = EditorManager.activeLayer.x;
-        const ly = EditorManager.activeLayer.y;
-        const ox = Math.floor(sb.x - lx);
-        const oy = Math.floor(sb.y - ly);
-        const sw = Math.ceil(sb.x - lx + sb.w) - ox;
-        const sh = Math.ceil(sb.y - ly + sb.h) - oy;
-        const cw = EditorManager.activeLayer.buffer.width;
-        const ch = EditorManager.activeLayer.buffer.height;
-        if (
-            window.selectionKind === 'color' &&
-            window.selectionColorMask &&
-            EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
-        ) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(ox, oy, sw, sh);
-            ctx.clip();
-            ctx.beginPath();
-            EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
-            ctx.clip();
-            ctx.clearRect(0, 0, cw, ch);
-            ctx.restore();
-        } else {
-            ctx.clearRect(ox, oy, sw, sh);
-        }
+        clearActiveSelectionPixelsOnLayer(ctx);
         EditorManager.saveHistory('Couper', { patchActiveLayer: true });
         EditorManager.render();
     }
