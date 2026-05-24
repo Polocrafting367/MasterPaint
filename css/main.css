@@ -1440,18 +1440,6 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
         padding: 1px 3px 0;
     }
 
-    .tool-options-bar,
-    #tool-options-bar-row1,
-    #tool-options-bar-2 {
-        font-size: 10px;
-        height: auto;
-        min-height: 26px;
-        flex-wrap: wrap;
-        gap: 3px 5px;
-        overflow-x: hidden;
-        overflow-y: visible;
-    }
-
     .opt-tool-name {
         font-size: 10px !important;
     }
@@ -1512,8 +1500,8 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
         }
     }
 
-    /* --- Nouveaux styles pour le menu mobile dynamique --- */
-    .illu-mobile-drawer__menu-btn {
+    /* --- Menu mobile dynamique (Win98 clair uniquement ; thème sombre → theme-win98-modern.css) --- */
+    body:not(.theme-dark) .illu-mobile-drawer__menu-btn {
         display: flex;
         align-items: center;
         width: 100%;
@@ -1530,7 +1518,7 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
         box-sizing: border-box;
     }
 
-    .illu-mobile-drawer__menu-btn:active {
+    body:not(.theme-dark) .illu-mobile-drawer__menu-btn:active {
         border-color: #808080 #fff #fff #808080;
         background: #d0d0d0;
         padding: 11px 11px 9px 13px;

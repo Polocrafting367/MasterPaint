@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="icons/readme-banner.svg" alt="MasterPaint 98 Pro" width="800" />
+</p>
 
 <p align="center">
   <a href="http://polocrafting.fr/Illu">

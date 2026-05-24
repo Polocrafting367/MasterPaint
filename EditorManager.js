@@ -4358,6 +4358,144 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     /**
+     * Aligne la sélection sur les bords de la toile tout en gardant l'axe orthogonal fixe.
+     * @param {'left'|'right'|'top'|'bottom'} edge
+     */
+    alignSelection(edge) {
+        const st = this._illuSelectionLayoutState();
+        if (!st) {
+            window.showIlluAlert('Aucune sélection active utilisable pour l\'alignement.');
+            return false;
+        }
+        const { sb, W, H } = st;
+        let dx = 0;
+        let dy = 0;
+        if (edge === 'left') {
+            dx = 0 - sb.x;
+        } else if (edge === 'right') {
+            dx = (W - sb.w) - sb.x;
+        } else if (edge === 'top') {
+            dy = 0 - sb.y;
+        } else if (edge === 'bottom') {
+            dy = (H - sb.h) - sb.y;
+        } else {
+            return false;
+        }
+        if (dx === 0 && dy === 0) return true;
+        if (st.mode === 'pixel') {
+            return this.nudgeSelectionZone(dx, dy);
+        }
+        if (st.mode === 'vector') {
+            if (typeof window.illuMoveVectorSelectionByDelta === 'function') {
+                return window.illuMoveVectorSelectionByDelta(dx, dy);
+            }
+            return false;
+        }
+        if (st.mode === 'pixelEdit') {
+            if (typeof window.illuMovePixelShapeEditByDelta === 'function') {
+                return window.illuMovePixelShapeEditByDelta(dx, dy);
+            }
+            return false;
+        }
+        return false;
+    },
+
+    /**
+     * Ajuste/étire la sélection pour occuper la totalité de la toile.
+     */
+    fitSelectionToCanvas() {
+        if (!this.activeProject) return false;
+        const W = this.width;
+        const H = this.height;
+        const tool = window.activeTool;
+        
+        if (this.mode === 'vector') {
+            const sel = this.activeVectorSelection;
+            if (sel && sel.length) {
+                for (const el of sel) {
+                    if (['rect', 'ellipse', 'image', 'foreignObject'].includes(el.tagName)) {
+                        el.setAttribute('x', '0');
+                        el.setAttribute('y', '0');
+                        el.setAttribute('width', String(W));
+                        el.setAttribute('height', String(H));
+                    } else if (el.tagName === 'circle') {
+                        el.setAttribute('cx', String(W / 2));
+                        el.setAttribute('cy', String(H / 2));
+                        el.setAttribute('r', String(Math.min(W, H) / 2));
+                    }
+                }
+                if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+                    window.VectorEngine.refreshSelectionUI();
+                }
+                this.saveHistory('Ajuster à la toile', { patchActiveLayer: true });
+                this.render();
+                return true;
+            } else {
+                window.showIlluAlert('Aucun élément vectoriel sélectionné.');
+                return false;
+            }
+        }
+        
+        if (this.isPixelMode) {
+            const hasSel = typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
+            if (!hasSel) {
+                window.showIlluAlert('Aucune sélection active utilisable pour l\'ajustement.');
+                return false;
+            }
+            
+            if (tool === 'deform' || tool === 'warp-4') {
+                if (window.selectionPixelWarpActive && window.selectionWarpQuad) {
+                    const q = window.selectionWarpQuad;
+                    q.tl = { x: 0, y: 0 };
+                    q.tr = { x: W, y: 0 };
+                    q.br = { x: W, y: H };
+                    q.bl = { x: 0, y: H };
+                    if (window.selectionWarpDeformRect) {
+                        window.selectionWarpDeformRect.rx = 0;
+                        window.selectionWarpDeformRect.ry = 0;
+                        window.selectionWarpDeformRect.rw = W;
+                        window.selectionWarpDeformRect.rh = H;
+                    }
+                    window.selectionBounds = { x: 0, y: 0, w: W, h: H };
+                    if (window.selectionLassoPoints && window.selectionLassoPoints.length === 4) {
+                        window.selectionLassoPoints = [
+                            { x: 0, y: 0 },
+                            { x: W, y: 0 },
+                            { x: W, y: H },
+                            { x: 0, y: H }
+                        ];
+                    }
+                    if (typeof window.runSelectionWarpPreview === 'function') {
+                        window.runSelectionWarpPreview({ forceCommit: true });
+                    }
+                    if (typeof window.refreshSelectionVisual === 'function') {
+                        window.refreshSelectionVisual();
+                    }
+                    this.saveHistory('Ajuster à la toile', { patchActiveLayer: true });
+                    this.render();
+                    return true;
+                }
+            }
+            
+            if (['select', 'wand', 'direct-select'].includes(tool)) {
+                window.selectionInverted = false;
+                window.selectionKind = 'rect';
+                window.selectionLassoPoints = null;
+                window.selectionColorMask = null;
+                window.selectionIsWarpQuad = false;
+                window.selectionPreviewAngleRad = 0;
+                window.selectionBounds = { x: 0, y: 0, w: W, h: H };
+                if (typeof window.refreshSelectionVisual === 'function') {
+                    window.refreshSelectionVisual();
+                }
+                this.render();
+                return true;
+            }
+        }
+        return false;
+    },
+
+    /**
      * Déplace la zone sélectionnée selon l’outil actif (marquee, pixels, warp…).
      * @param {number} dx
      * @param {number} dy
@@ -5676,6 +5814,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     window.getUILayoutMode() === 'photoshop'
                 )
                     return;
+                if (
+                    typeof window.illuIsPhoneColorSlidersHidden === 'function' &&
+                    window.illuIsPhoneColorSlidersHidden()
+                )
+                    return;
                 window._illuColorSlidersExpanded = !window._illuColorSlidersExpanded;
                 if (typeof window.syncColorPanelToUILayout === 'function') window.syncColorPanelToUILayout();
             });
@@ -6160,7 +6303,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         });
         this.activeProject.width = newW;
         this.activeProject.height = newH;
-        this.saveHistory('Ajuster la page au contenu');
+        this.saveHistory('Ajuster la page au contenu', { documentGeometry: true });
         this.applyProjectToUI();
     },
 
@@ -6222,7 +6365,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
 
         if (!silent) {
-            this.saveHistory('Étendre la zone de travail');
+            this.saveHistory('Étendre la zone de travail', { documentGeometry: true });
         }
         this.applyProjectToUI();
     },
@@ -6290,7 +6433,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window.IlluI18n && typeof window.IlluI18n.t === 'function'
                 ? window.IlluI18n.t('layer.fitCanvasHistory')
                 : 'Toile = calque actif';
-        this.saveHistory(hist);
+        this.saveHistory(hist, { documentGeometry: true });
         this.applyProjectToUI();
     },
 
@@ -7390,12 +7533,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     /**
      * @param {string} actionName
-     * @param {{ patchActiveLayer?: boolean }} [opts] — patchActiveLayer : ne cloner que le calque actif (léger, dessin / retouches).
-     *   Sinon cliché complet (effets, fusion, import, calques…).
+     * @param {{ patchActiveLayer?: boolean, documentGeometry?: boolean }} [opts]
+     *   patchActiveLayer : ne cloner que le calque actif (léger, dessin / retouches).
+     *   documentGeometry : recadrage, redimensionnement, extension… — cliché complet + docW/docH.
      */
     saveHistory(actionName, opts = {}) {
         if (!this.activeProject) return;
         const usePatch =
+            !opts.documentGeometry &&
             opts.patchActiveLayer === true &&
             this.isPixelMode &&
             this.activeLayer &&
@@ -7625,11 +7770,43 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (!he || typeof he.name !== 'string') continue;
             const mode = he.mode === 'vector' ? 'vector' : 'pixel';
             const data = await this._deserializeHistoryDataFromPayload(he.data);
-            out.push({ name: he.name, mode, data });
+            out.push({
+                name: he.name,
+                mode,
+                data,
+                docW: he.docW != null ? he.docW : null,
+                docH: he.docH != null ? he.docH : null
+            });
         }
         p.history = out;
         const hi = sp.historyIndex != null ? sp.historyIndex : out.length - 1;
         p.historyIndex = out.length ? Math.min(Math.max(0, hi), out.length - 1) : -1;
+    },
+
+    _syncLinkedAlphaMaskProjectDimensions(docW, docH) {
+        const maskIds = new Set();
+        this.layers.forEach((l) => {
+            if (l.alphaMaskProjectId) maskIds.add(l.alphaMaskProjectId);
+        });
+        maskIds.forEach((mid) => {
+            const mp = this.projects.find((pr) => pr.id === mid);
+            if (!mp) return;
+            mp.width = docW;
+            mp.height = docH;
+        });
+    },
+
+    _restoreHistoryDocumentDimensions(docW, docH) {
+        const p = this.activeProject;
+        if (!p || docW == null || docH == null) return false;
+        const nw = Math.max(1, docW | 0);
+        const nh = Math.max(1, docH | 0);
+        if (p.width === nw && p.height === nh) return false;
+        p.width = nw;
+        p.height = nh;
+        this._syncLinkedAlphaMaskProjectDimensions(nw, nh);
+        if (typeof this.applyProjectToUI === 'function') this.applyProjectToUI();
+        return true;
     },
 
     /** Fusionne l’image affichée sur le canevas document (après un effet) dans un seul calque pixel. */
@@ -7678,30 +7855,35 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this.render();
     },
 
+    _inferHistoryDocSizeFromPixelFull(data) {
+        if (!data || data.type !== 'pixel-full' || !Array.isArray(data.layers) || !data.layers.length) {
+            return null;
+        }
+        let maxX = 0;
+        let maxY = 0;
+        data.layers.forEach((s) => {
+            if (!s.buffer) return;
+            maxX = Math.max(maxX, (s.x | 0) + s.buffer.width);
+            maxY = Math.max(maxY, (s.y | 0) + s.buffer.height);
+        });
+        if (maxX < 1 || maxY < 1) return null;
+        return { docW: maxX, docH: maxY };
+    },
+
     applyHistoryEntry() {
         const state = this.history[this.historyIndex];
         if (!state) return;
 
-        // Restore document dimensions if they changed (crop, resize, rotation)
-        const _dimChanged = state.docW && state.docH && (state.docW !== this.width || state.docH !== this.height);
-        if (_dimChanged) {
-            const p = this.activeProject;
-            p.width = state.docW;
-            p.height = state.docH;
-            const container = document.getElementById('drawing-container');
-            const canvas = document.getElementById('drawing-canvas');
-            if (container) container.style.width = p.width + 'px';
-            if (canvas) {
-                canvas.width = p.width;
-                canvas.height = p.height;
+        let docW = state.docW;
+        let docH = state.docH;
+        if (docW == null || docH == null) {
+            const inferred = this._inferHistoryDocSizeFromPixelFull(state.data);
+            if (inferred) {
+                docW = inferred.docW;
+                docH = inferred.docH;
             }
-            if (window.svg) {
-                window.svg.setAttribute('width', String(p.width));
-                window.svg.setAttribute('height', String(p.height));
-            }
-            // Sync full UI (title bar, rulers, canvas wrapper size, etc.)
-            if (typeof this.applyProjectToUI === 'function') this.applyProjectToUI();
         }
+        this._restoreHistoryDocumentDimensions(docW, docH);
         
         if (state.mode === 'pixel' || state.mode === 'pixel-dither') {
             const d = state.data;
@@ -8264,7 +8446,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     ? p.history.map((h) => ({
                           name: h.name,
                           mode: h.mode,
-                          data: this._serializeHistoryDataForPayload(h.data)
+                          data: this._serializeHistoryDataForPayload(h.data),
+                          docW: h.docW != null ? h.docW : null,
+                          docH: h.docH != null ? h.docH : null
                       }))
                     : [];
             } else {
@@ -8286,7 +8470,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     ? p.history.map((h) => ({
                           name: h.name,
                           mode: h.mode,
-                          data: this._serializeHistoryDataForPayload(h.data)
+                          data: this._serializeHistoryDataForPayload(h.data),
+                          docW: h.docW != null ? h.docW : null,
+                          docH: h.docH != null ? h.docH : null
                       }))
                     : [];
             }
@@ -8598,13 +8784,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             layer.y = Math.round(layer.y * sy);
         };
 
-        // Save history BEFORE modifying data so undo can restore original size + pixels
-        const hist =
-            window.IlluI18n && typeof window.IlluI18n.t === 'function'
-                ? window.IlluI18n.t('history.resizeDocument')
-                : 'Redimensionnement document';
-        this.saveHistory(hist);
-
         p.layers.forEach(transformLayerUniform);
         p.width = newW;
         p.height = newH;
@@ -8635,6 +8814,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         }
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+
+        const hist =
+            window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                ? window.IlluI18n.t('history.resizeDocument')
+                : 'Redimensionnement document';
+        this.saveHistory(`${hist} (${oldW}x${oldH} → ${newW}x${newH})`, { documentGeometry: true });
         this.applyProjectToUI();
         this.render();
         return true;
@@ -8701,12 +8886,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             layer.y = docIy0 - ry;
         };
 
-        // Save history BEFORE cropping so undo can restore both original size and original pixel data
-        const histLabel = window.IlluI18n && typeof window.IlluI18n.t === 'function' && window.IlluI18n.t('history.crop') !== 'history.crop'
-            ? window.IlluI18n.t('history.crop')
-            : 'Recadrage';
-        this.saveHistory(`${histLabel} (${W}x${H} → ${rw}x${rh})`);
-
         p.layers.forEach(cropOneLayer);
 
         p.width = rw;
@@ -8750,7 +8929,110 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this.applyProjectToUI();
         this.render();
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+
+        const histLabel =
+            window.IlluI18n && typeof window.IlluI18n.t === 'function' && window.IlluI18n.t('history.crop') !== 'history.crop'
+                ? window.IlluI18n.t('history.crop')
+                : 'Recadrage';
+        this.saveHistory(`${histLabel} (${W}x${H} → ${rw}x${rh})`, { documentGeometry: true });
         return true;
+    },
+
+    /**
+     * Recadre l'image (le document entier) selon le rectangle de la sélection active.
+     */
+    cropToSelection() {
+        if (!this.activeProject) return false;
+        
+        let sb = null;
+        if (this.isPixelMode) {
+            const state = this._illuRectSelectionLayoutState();
+            if (state && state.sb) {
+                sb = state.sb;
+            }
+        } else if (this.mode === 'vector') {
+            const state = this._illuSelectionLayoutState();
+            if (state && state.sb) {
+                sb = state.sb;
+            }
+        }
+        
+        if (!sb || sb.w < 1 || sb.h < 1) {
+            window.showIlluAlert(
+                window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                    ? window.IlluI18n.t('msg.noSelectionToCrop')
+                    : 'Aucune sélection active pour recadrer l\'image.'
+            );
+            return false;
+        }
+        
+        if (this.isPixelMode) {
+            const success = this.cropPixelWorkspace(sb.x, sb.y, sb.w, sb.h);
+            if (success) {
+                window.selectionBounds = { x: 0, y: 0, w: this.width, h: this.height };
+                if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+            }
+            return success;
+        } else if (this.mode === 'vector') {
+            const p = this.activeProject;
+            const rx = Math.floor(sb.x);
+            const ry = Math.floor(sb.y);
+            const rw = Math.floor(sb.w);
+            const rh = Math.floor(sb.h);
+            
+            const oldW = p.width;
+            const oldH = p.height;
+            p.width = rw;
+            p.height = rh;
+
+            const svg = document.getElementById('drawing-svg');
+            if (svg) {
+                for (const child of svg.childNodes) {
+                    if (child.nodeType !== 1) continue;
+                    if (child.id === 'selection-group-ui') continue;
+                    if (typeof child.getBBox === 'function') {
+                        if (['rect', 'ellipse', 'image', 'text', 'foreignObject'].includes(child.tagName)) {
+                            const cx = parseFloat(child.getAttribute('x') || 0);
+                            const cy = parseFloat(child.getAttribute('y') || 0);
+                            child.setAttribute('x', String(cx - rx));
+                            child.setAttribute('y', String(cy - ry));
+                        } else if (child.tagName === 'circle') {
+                            const cx = parseFloat(child.getAttribute('cx') || 0);
+                            const cy = parseFloat(child.getAttribute('cy') || 0);
+                            child.setAttribute('cx', String(cx - rx));
+                            child.setAttribute('cy', String(cy - ry));
+                        } else if (child.tagName === 'path') {
+                            if (typeof window.illuTranslateSvgPath === 'function') {
+                                window.illuTranslateSvgPath(child, -rx, -ry);
+                            } else {
+                                const transform = child.getAttribute('transform') || '';
+                                child.setAttribute('transform', `${transform} translate(${-rx}, ${-ry})`.trim());
+                            }
+                        } else if (child.tagName === 'g') {
+                            const transform = child.getAttribute('transform') || '';
+                            child.setAttribute('transform', `${transform} translate(${-rx}, ${-ry})`.trim());
+                        }
+                    }
+                }
+            }
+            
+            if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+                window.VectorEngine.refreshSelectionUI();
+            }
+            
+            window.selectionBounds = { x: 0, y: 0, w: rw, h: rh };
+            if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+
+            const histLabel =
+                window.IlluI18n && typeof window.IlluI18n.t === 'function' && window.IlluI18n.t('history.crop') !== 'history.crop'
+                    ? window.IlluI18n.t('history.crop')
+                    : 'Recadrage';
+            this.saveHistory(`${histLabel} (${oldW}x${oldH} → ${rw}x${rh})`, { documentGeometry: true });
+            this.applyProjectToUI();
+            this.render();
+            return true;
+        }
+        return false;
     },
 
     /**
@@ -8929,12 +9211,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         } else if (action === 'rot90cw' || action === 'rot90ccw') {
             const newW = H;
             const newH = W;
-            // Save BEFORE so undo restores original size + pixels
-            const histRot =
-                window.IlluI18n && typeof window.IlluI18n.t === 'function'
-                    ? window.IlluI18n.t('history.pixelTransform')
-                    : 'Transformation image';
-            this.saveHistory(histRot);
             p.layers.forEach((l) => applyGeomToLayer(l, W, H));
             p.width = newW;
             p.height = newH;
@@ -8969,6 +9245,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     window.selectionLassoPoints = null;
                 }
             }
+            const histRot =
+                window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                    ? window.IlluI18n.t('history.pixelTransform')
+                    : 'Transformation image';
+            this.saveHistory(`${histRot} (${W}x${H} → ${newW}x${newH})`, { documentGeometry: true });
         } else {
             p.layers.forEach((l) => applyGeomToLayer(l, W, H));
             const maskIds = new Set();

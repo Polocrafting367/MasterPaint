@@ -580,12 +580,11 @@ window.updateToolOptionsBar = function () {
 
     const bar2 = document.getElementById('tool-options-bar-2');
 
-    const SELECTION_TOOLS = new Set(['select', 'wand', 'direct-select']);
     const pinnedToggles = document.getElementById('tool-pinned-toggles');
     if (pinnedToggles) pinnedToggles.hidden = false;
     const modeGroup = document.getElementById('selection-mode-group');
     if (modeGroup) {
-        modeGroup.hidden = !SELECTION_TOOLS.has(t);
+        modeGroup.hidden = !SELECT_ACTION_TOOLS.has(t);
         const activeMode = window.selectionMode || 'new';
         modeGroup.querySelectorAll('.illu-icon-toggle').forEach((btn) => {
             const on = btn.getAttribute('data-selection-mode') === activeMode;
@@ -742,7 +741,10 @@ window.updateToolOptionsBar = function () {
         document.getElementById('select-rect-free-corners-wrap') ||
         document.getElementById('select-free-corners-row');
     const showFreeCornersBtn = ['select', 'wand', 'direct-select', 'deform', 'warp-4'].includes(t);
-    if (freeCornersRow) freeCornersRow.hidden = !showFreeCornersBtn;
+    const hideFreeCornersOnPhone =
+        document.body.classList.contains('illu-mobile-ui') ||
+        (typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout());
+    if (freeCornersRow) freeCornersRow.hidden = hideFreeCornersOnPhone || !showFreeCornersBtn;
     if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
         window.syncSelectionRectFreeCornersArmUI();
     }
@@ -1696,6 +1698,27 @@ window.illuWireSelectionLayoutToolbarButtons = function () {
     const centerBoth = document.getElementById('opt-sel-center-both');
     if (centerBoth) {
         centerBoth.onclick = () => EditorManager.centerSelection('both');
+    }
+
+    const alignLeft = document.getElementById('opt-sel-align-left');
+    if (alignLeft) {
+        alignLeft.onclick = () => EditorManager.alignSelection('left');
+    }
+    const alignRight = document.getElementById('opt-sel-align-right');
+    if (alignRight) {
+        alignRight.onclick = () => EditorManager.alignSelection('right');
+    }
+    const alignTop = document.getElementById('opt-sel-align-top');
+    if (alignTop) {
+        alignTop.onclick = () => EditorManager.alignSelection('top');
+    }
+    const alignBottom = document.getElementById('opt-sel-align-bottom');
+    if (alignBottom) {
+        alignBottom.onclick = () => EditorManager.alignSelection('bottom');
+    }
+    const fitCanvas = document.getElementById('opt-sel-fit-canvas');
+    if (fitCanvas) {
+        fitCanvas.onclick = () => EditorManager.fitSelectionToCanvas();
     }
 
     root.querySelectorAll('button[data-illu-nudge-dx]').forEach((btn) => {

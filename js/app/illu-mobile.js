@@ -67,6 +67,11 @@
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'illu-mobile-drawer__menu-btn';
+
+                    // Bouton contact : style accentué (comme dans la menubar et les paramètres)
+                    if (li.classList.contains('menubar-contact-btn')) {
+                        btn.classList.add('illu-mobile-drawer__menu-btn--contact');
+                    }
                     
                     // Récupérer l'icône si dispo
                     const icon = li.querySelector('.menu-icon i');

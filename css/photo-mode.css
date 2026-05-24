@@ -3,7 +3,7 @@
     top: 28px; left: 0; right: 0; bottom: 32px;
     background: #111;
     color: #d4d4d4;
-    z-index: 2599;
+    z-index: 4500; /* Au-dessus du dock mobile (z-index 4000) et des sheets (4100) */
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -47,10 +47,26 @@
     color: #fff !important;
 }
 
+/* Label court sur bouton (visible uniquement mobile) */
+.illu-pm-btn-text--mobile-short {
+    display: none;
+}
+
 .illu-pm-btn-secondary {
     --mp-btn-bg: #444;
     --mp-btn-bg-hover: #555;
     color: #eee !important;
+}
+
+.illu-pm-btn-danger {
+    --mp-btn-bg: #c0392b;
+    --mp-btn-bg-hover: #e74c3c;
+    color: #fff !important;
+    border-color: rgba(255,100,80,0.35) rgba(100,0,0,0.5) rgba(100,0,0,0.5) rgba(255,100,80,0.35) !important;
+}
+
+.illu-pm-btn-danger:hover {
+    --mp-btn-bg: #e74c3c;
 }
 
 #pm-dlg-discard {
@@ -62,6 +78,7 @@
 /* Win98 3D borders adjustment for colored buttons */
 body.theme-win98-modern .illu-pm-btn,
 body.theme-win98-modern .illu-pm-btn-secondary,
+body.theme-win98-modern .illu-pm-btn-danger,
 body.theme-win98-modern #pm-dlg-discard {
     border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
 }
@@ -604,10 +621,26 @@ body.illu-photo-mode-active #app-status-bar .status-item {
 
 /* --- MOBILE RESPONSIVE ADAPTATIONS --- */
 
-@media (max-width: 768px), screen and (orientation: portrait), .illu-mobile-ui {
+/* Masquer le dock bas et la top-bar mobile quand Photo Mode Pro est actif */
+body.illu-photo-mode-active #illu-mobile-bottom-dock,
+body.illu-photo-mode-active #illu-mobile-top-bar {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Photo Mode overlay pleine hauteur en mode mobile shell */
+body.illu-mobile-shell-active .illu-photo-mode-overlay,
+body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
+    top: 0 !important;
+    bottom: 0 !important;
+    z-index: 4500 !important;
+}
+
+@media (max-width: 768px) {
     .illu-photo-mode-overlay {
-        top: 28px; /* Match main app menubar height */
-        bottom: 0;
+        top: 0 !important;
+        bottom: 0 !important;
     }
 
     .illu-pm-header {
@@ -619,7 +652,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     }
 
     .illu-pm-header-text {
-        display: none; /* Hide 'Mode Photo Pro' text, keep icon */
+        display: none; /* Masquer le texte 'Mode Photo Pro', garder l'icône */
     }
 
     .illu-pm-header-btns {
@@ -627,31 +660,49 @@ body.illu-photo-mode-active #app-status-bar .status-item {
         gap: 5px;
     }
 
+    /* Masquer le texte long, montrer le libellé court sur tous les boutons d'action */
     .illu-pm-btn-text {
-        display: none !important; /* Hide labels on buttons */
+        display: none !important;
+    }
+    .illu-pm-btn-text--mobile-short {
+        display: inline !important;
+        font-size: 11px;
     }
 
     .illu-pm-btn {
-        padding: 6px 10px;
+        padding: 6px 8px;
         min-width: 36px;
         justify-content: center;
+        font-size: 12px;
+        gap: 4px;
+    }
+
+    /* Bouton fermer : conserver uniquement l'icône × en rouge vif */
+    #pm-btn-close {
+        min-width: 36px;
+        padding: 6px 10px;
+        font-size: 16px;
     }
 
     .illu-pm-body {
-        flex-direction: column-reverse; /* Put sidebar and filmstrip at the bottom */
+        flex-direction: column-reverse; /* Sidebar + pellicule en bas */
     }
 
     .illu-pm-main {
-        flex: 1 1 auto; /* Take most space */
-        min-height: 200px;
+        flex: 1 1 auto;
+        min-height: 150px;
     }
 
+    /* Sidebar : 60% de la hauteur d'écran */
     .illu-pm-sidebar {
         width: 100% !important;
-        height: 220px;
+        height: 60dvh;
+        min-height: 220px;
+        max-height: 60dvh;
         flex: none;
         border-left: none;
-        border-top: 1px solid #333;
+        border-top: 2px solid #444;
+        overflow-y: auto;
     }
 
     .illu-pm-filmstrip {

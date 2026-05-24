@@ -3359,15 +3359,6 @@ body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) #win-too
     min-height: 26px;
 }
 
-body.illu-mobile-ui #tool-options-bar,
-body.illu-mobile-ui #tool-options-bar-row1,
-body.illu-mobile-ui #tool-options-bar-2 {
-    flex-wrap: wrap !important;
-    max-height: none;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-}
-
 body.illu-mobile-ui .tab-bar-outer {
     min-height: 36px;
 }
@@ -3751,6 +3742,71 @@ body.illu-mobile-drawer-open #app-window {
     margin: 4px 10px;
 }
 
+/* Bouton "Signaler un problème" : style accentué identique à la menubar et aux paramètres */
+.illu-mobile-drawer__menu-btn--contact {
+    width: 100%;
+    margin: 10px 0 2px;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%) !important;
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    border: 2px solid;
+    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.illu-mobile-drawer__menu-btn--contact i {
+    color: #fff !important;
+    font-size: 14px;
+    margin-right: 0 !important;
+}
+
+.illu-mobile-drawer__menu-btn--contact:hover {
+    background: linear-gradient(180deg, var(--mp-accent) 0%, var(--mp-title) 100%) !important;
+    color: #fff !important;
+}
+
+.illu-mobile-drawer__menu-btn--contact:active {
+    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    padding: 10px 13px 8px 15px;
+}
+
+/* Pied de page crédit du tiroir mobile */
+.illu-mobile-drawer__footer {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    background: var(--mp-surface-deep);
+    border-top: 1px solid var(--mp-inset-top);
+    text-align: center;
+}
+
+.illu-mobile-drawer__credit {
+    margin: 0;
+    font-size: 11px;
+    color: var(--mp-text);
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.illu-mobile-drawer__credit-link {
+    color: var(--mp-accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.illu-mobile-drawer__credit-link:hover {
+    text-decoration: underline;
+}
+
 /* Modern overrides for mobile drawer elements */
 body.theme-modern .illu-mobile-drawer__panel {
     background: var(--mp-surface);
@@ -3805,6 +3861,45 @@ body.theme-dark .illu-mobile-drawer__palette-tile {
 
 body.theme-dark .illu-mobile-drawer__palette-tile i {
     color: #8ab4e8;
+}
+
+body.theme-dark .illu-mobile-drawer__footer {
+    background: var(--mp-surface-deep);
+    border-top-color: var(--mp-inset-top);
+}
+
+body.theme-dark .illu-mobile-drawer__credit-link {
+    color: #8ab4e8;
+}
+
+/* Sous-menus drawer : survol discret (pas de gris/blanc Win98 hérité de main.css) */
+body.theme-dark .illu-mobile-drawer__menu-btn,
+body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--mp-text) !important;
+}
+
+body.theme-dark .illu-mobile-drawer__menu-btn:hover,
+body.theme-dark .illu-mobile-drawer__menu-btn:active,
+body.theme-dark .illu-mobile-drawer__menu-btn:focus-visible,
+body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:hover,
+body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:active,
+body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:focus-visible {
+    background: color-mix(in srgb, var(--mp-accent-muted, #4a6fa8) 50%, var(--mp-surface-deep, #1e2126) 50%) !important;
+    color: var(--mp-text) !important;
+    border: none !important;
+}
+
+body.theme-dark .illu-mobile-drawer__summary:hover,
+body.theme-dark .illu-mobile-drawer__summary:active {
+    background: color-mix(in srgb, var(--mp-accent-muted, #4a6fa8) 42%, var(--mp-surface-deep, #1e2126) 58%) !important;
+    color: var(--mp-text) !important;
+}
+
+body.theme-dark .illu-mobile-drawer__sub-list {
+    border-left-color: var(--mp-inset-bot, #3a4048);
 }
 
 /* Hide old cloned menu styles if they interfere */
@@ -4783,7 +4878,7 @@ body.illu-levels-open {
     top: max(48px, env(safe-area-inset-top, 0px));
     bottom: max(10px, env(safe-area-inset-bottom, 0px));
     z-index: 38500;
-    max-width: min(232px, calc(100vw - 20px));
+    max-width: min(280px, calc(100vw - 20px));
     max-height: none;
     display: flex;
     align-items: flex-start;
@@ -4792,7 +4887,7 @@ body.illu-levels-open {
 
 .illu-crop-panel-host .illu-crop-panel {
     pointer-events: auto;
-    width: 232px;
+    width: 280px;
     max-width: 100%;
     max-height: 100%;
     min-height: 0;

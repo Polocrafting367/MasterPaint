@@ -72,12 +72,12 @@
             <div class="illu-pm-header">
                 <h2><i class="fa-solid fa-camera"></i> <span class="illu-pm-header-text">${tKey('menu.photoModePro', 'Mode Photo Pro')}</span></h2>
                 <div class="illu-pm-header-btns">
-                    <button class="illu-pm-btn" id="pm-btn-import" title="${tKey('photo.importTitle', 'Importer des photos')}"><i class="fa-solid fa-plus"></i> <span class="illu-pm-btn-text">${tKey('photo.importTitle', 'Importer Photos')}</span></button>
+                    <button class="illu-pm-btn" id="pm-btn-import" title="${tKey('photo.importTitle', 'Importer des photos')}"><i class="fa-solid fa-plus"></i> <span class="illu-pm-btn-text--mobile-short">${tKey('photo.importShort', 'Importer')}</span><span class="illu-pm-btn-text">${tKey('photo.importTitle', 'Importer Photos')}</span></button>
                     <input type="file" id="pm-file-input" multiple accept="image/*,.raw,.cr2,.nef,.arw,.dng">
                     <button class="illu-pm-btn illu-pm-btn-secondary" id="pm-btn-open-editor" title="${tKey('photo.openInEditor', 'Ouvrir dans l\'éditeur MasterPaint')}"><i class="fa-solid fa-up-right-from-square"></i> <span class="illu-pm-btn-text">${tKey('photo.openInEditor', 'Ouvrir')}</span></button>
-                    <button class="illu-pm-btn illu-pm-btn-accent" id="pm-btn-export-all" title="${tKey('photo.exportOptions', 'Options d\'exportation')}"><i class="fa-solid fa-file-export"></i> <span class="illu-pm-btn-text">${tKey('photo.exportBtn', 'Exporter...')}</span></button>
+                    <button class="illu-pm-btn illu-pm-btn-accent" id="pm-btn-export-all" title="${tKey('photo.exportOptions', 'Options d\'exportation')}"><i class="fa-solid fa-file-export"></i> <span class="illu-pm-btn-text--mobile-short">${tKey('photo.exportShort', 'Exporter')}</span><span class="illu-pm-btn-text">${tKey('photo.exportBtn', 'Exporter...')}</span></button>
                     <button class="illu-pm-btn illu-pm-btn-secondary" id="pm-btn-apply-all" title="${tKey('photo.applyAllTitle', 'Appliquer à toute la sélection / pellicule')}"><i class="fa-solid fa-copy"></i> <span class="illu-pm-btn-text">${tKey('photo.applyAll', 'Appliquer à toutes')}</span></button>
-                    <button class="illu-pm-btn illu-pm-btn-secondary" id="pm-btn-close" title="${tKey('photo.closeTitle', 'Fermer le mode Photo Pro')}"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="illu-pm-btn illu-pm-btn-danger" id="pm-btn-close" title="${tKey('photo.closeTitle', 'Fermer le mode Photo Pro')}"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
             <div class="illu-pm-body">

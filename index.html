@@ -228,23 +228,28 @@
                 </li>
                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.image">Image</span>
                     <ul role="menu">
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCrop">Recadrage /
-                                Taille</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCrop">Recadrage</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-crop"></i></span><span
-                                        data-i18n="menu.imageCropLive">Recadrer (sélection sur la toile)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.cropToSelection()"><span
+                                    class="menu-icon" aria-hidden="true"><i
+                                        class="fa-solid fa-scissors"></i></span><span
+                                    data-i18n="menu.imageCropToSelection">Régler la zone de travail à la sélection</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="resizeCanvas()"><span
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-maximize"></i></span><span
                                         data-i18n="menu.imageResize">Redimensionner…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-square-plus"></i></span><span
-                                        data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
                             </ul>
                         </li>
+                       
+                                <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span
+                                    class="menu-icon" aria-hidden="true"><i
+                                        class="fa-solid fa-crop"></i></span><span
+                                    data-i18n="menu.imageCropLive">Recadrer (sélection sur la toile)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span
+                                class="menu-icon" aria-hidden="true"><i
+                                    class="fa-solid fa-square-plus"></i></span><span
+                                data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
+                        <li role="menuitem" class="divider"></li>
                         <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span
                                 class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span><span
                                 data-i18n="menu.imageTransform">Rotation et retournement…</span></li>
@@ -265,12 +270,6 @@
                         <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span
                                 class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser"></i></span><span
                                 data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelectionHorizontally()">
-                            <span class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-align-center"></i></span><span
-                                data-i18n="menu.imageCenterSel">Centrer la sélection…</span>
-                        </li>
                         <li role="menuitem" class="divider"></li>
 
                     </ul>
@@ -704,6 +703,14 @@
                                 <span class="illu-mode-toggle-lbl"
                                     data-i18n="tools.selectionModeSubtractShort">Retrait</span>
                             </span>
+                            <span class="illu-mode-toggle-item illu-mobile-zoom-fit-item" id="illu-mobile-zoom-fit-wrap"
+                                hidden>
+                                <button type="button" id="illu-tb-zoom-fit-mobile" class="illu-icon-toggle"
+                                    data-i18n-title="menubar.tbZoomFit"
+                                    onclick="typeof fitActiveProjectZoomToWorkspaceMobile==='function'&&fitActiveProjectZoomToWorkspaceMobile()"><i
+                                        class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menubar.tbZoomFitShort">Ajuster</span>
+                            </span>
                         </span>
 
                         <div id="tool-pinned-select-actions" class="illu-select-actions-wrap" hidden>
@@ -744,77 +751,68 @@
                             </span>
                         </span>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-layout">
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="opt-sel-align-left" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selAlignLeft"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-align-left" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selAlignLeftShort">Gauche</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-center-item">
                                 <button type="button" id="opt-sel-center-h" class="illu-icon-toggle"
-                                    data-i18n-title="tools.selCenterH"><svg class="illu-shape-ico illu-center-ico" width="22"
-                                        height="22">
+                                    data-i18n-title="tools.selCenterH"><svg class="illu-shape-ico" width="16"
+                                        height="16">
                                         <use href="#illu-icon-sel-center-h" />
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterHShort">Ctr H</span>
                             </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="opt-sel-align-right" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selAlignRight"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-align-right" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selAlignRightShort">Droite</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="illu-tb-zoom-fit" class="illu-icon-toggle"
+                                    data-i18n-title="menubar.tbZoomFit"
+                                    onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
+                                        class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menubar.tbZoomFitShort">Ajuster</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="opt-sel-align-top" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selAlignTop"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-align-top" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selAlignTopShort">Haut</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-center-item">
                                 <button type="button" id="opt-sel-center-v" class="illu-icon-toggle"
-                                    data-i18n-title="tools.selCenterV"><svg class="illu-shape-ico illu-center-ico" width="22"
-                                        height="22">
+                                    data-i18n-title="tools.selCenterV"><svg class="illu-shape-ico" width="16"
+                                        height="16">
                                         <use href="#illu-icon-sel-center-v" />
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterVShort">Ctr V</span>
                             </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-center-item">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" id="opt-sel-align-bottom" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selAlignBottom"><svg class="illu-shape-ico" width="16"
+                                        height="16">
+                                        <use href="#illu-icon-sel-align-bottom" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selAlignBottomShort">Bas</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-sel-center-item">
                                 <button type="button" id="opt-sel-center-both" class="illu-icon-toggle"
-                                    data-i18n-title="tools.selCenterBoth"><svg class="illu-shape-ico illu-center-ico" width="22"
-                                        height="22">
+                                    data-i18n-title="tools.selCenterBoth"><svg class="illu-shape-ico" width="16"
+                                        height="16">
                                         <use href="#illu-icon-sel-center-both" />
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterBothShort">Centrer</span>
-                            </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
-                                <button type="button" id="opt-sel-nudge-up" class="illu-icon-toggle" disabled
-                                    tabindex="-1" aria-disabled="true"
-                                    data-illu-nudge-dx="0" data-illu-nudge-dy="-1"
-                                    data-i18n-title="tools.selNudgeUp"><svg class="illu-shape-ico" width="16"
-                                        height="16">
-                                        <use href="#illu-icon-sel-nudge-up" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeUpShort">Haut</span>
-                            </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
-                                <button type="button" id="opt-sel-nudge-down" class="illu-icon-toggle" disabled
-                                    tabindex="-1" aria-disabled="true"
-                                    data-illu-nudge-dx="0" data-illu-nudge-dy="1"
-                                    data-i18n-title="tools.selNudgeDown"><svg class="illu-shape-ico" width="16"
-                                        height="16">
-                                        <use href="#illu-icon-sel-nudge-down" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeDownShort">Bas</span>
-                            </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
-                                <button type="button" id="opt-sel-nudge-left" class="illu-icon-toggle" disabled
-                                    tabindex="-1" aria-disabled="true"
-                                    data-illu-nudge-dx="-1" data-illu-nudge-dy="0"
-                                    data-i18n-title="tools.selNudgeLeft"><svg class="illu-shape-ico" width="16"
-                                        height="16">
-                                        <use href="#illu-icon-sel-nudge-left" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeLeftShort">G.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item illu-sel-layout-item illu-sel-nudge-item" hidden aria-hidden="true">
-                                <button type="button" id="opt-sel-nudge-right" class="illu-icon-toggle" disabled
-                                    tabindex="-1" aria-disabled="true"
-                                    data-illu-nudge-dx="1" data-illu-nudge-dy="0"
-                                    data-i18n-title="tools.selNudgeRight"><svg class="illu-shape-ico" width="16"
-                                        height="16">
-                                        <use href="#illu-icon-sel-nudge-right" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.selNudgeRightShort">D.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item illu-mobile-zoom-fit-item" id="illu-mobile-zoom-fit-wrap"
-                                hidden>
-                                <button type="button" id="illu-tb-zoom-fit-mobile" class="illu-icon-toggle"
-                                    data-i18n-title="menubar.tbZoomFit"
-                                    onclick="typeof fitActiveProjectZoomToWorkspaceMobile==='function'&&fitActiveProjectZoomToWorkspaceMobile()"><i
-                                        class="fa-solid fa-expand" aria-hidden="true"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="mobile.zoomFitShort">Ajuster</span>
                             </span>
                         </span>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-view">
@@ -822,14 +820,15 @@
                                 <button type="button" id="opt-sel-pixelgrid" class="illu-icon-toggle opt-toggle-pixelgrid"
                                     data-i18n-title="menu.winPixelGrid" onclick="window.toggleIlluPixelGrid()"><i
                                         class="fa-solid fa-border-all"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winPixelGrid">Grille de pixels</span>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winPixelGridShort">Grille</span>
                             </span>
                             <span class="illu-mode-toggle-item">
                                 <button type="button" id="opt-sel-rulers" class="illu-icon-toggle opt-toggle-rulers"
                                     data-i18n-title="menu.winRulers" onclick="window.toggleIlluRulers()"><i
                                         class="fa-solid fa-ruler"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winRulers">Règles</span>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menu.winRulersShort">Règles</span>
                             </span>
+
                         </span>
                         </div>
 
@@ -938,7 +937,7 @@
                     </div>
 
                     <div id="opt-grp-text-actions" class="opt-grp" hidden>
-                        <span class="illu-text-style-fill-group" style="display: flex; flex-direction: column; gap: 2px;">
+                        <span class="illu-text-style-fill-group">
                             <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-style-group" data-i18n-title="title.textStyleGroup">
                                 <span class="illu-mode-toggle-item">
                                     <button type="button" id="btn-text-bold" class="illu-icon-toggle"
@@ -1607,51 +1606,55 @@
                     </div>
                 </aside>
 
-                <div id="workspace" class="workspace-dock-center">
-                    <!-- Règles et Grille de pixels -->
-                    <canvas id="ruler-top" style="position: absolute; left: 18px; top: 0; right: 0; height: 18px; z-index: 99; background: #f0f0f0; border-bottom: 1px solid #808080; display: none; pointer-events: none;"></canvas>
-                    <canvas id="ruler-left" style="position: absolute; left: 0; top: 18px; bottom: 0; width: 18px; z-index: 99; background: #f0f0f0; border-right: 1px solid #808080; display: none; pointer-events: none;"></canvas>
-                    <div id="ruler-corner" style="position: absolute; left: 0; top: 0; width: 18px; height: 18px; z-index: 100; background: #e0e0e0; border-right: 1px solid #808080; border-bottom: 1px solid #808080; display: none;"></div>
-                    <canvas id="pixel-grid-overlay" style="position: absolute; pointer-events: none; z-index: 4; display: none;"></canvas>
+                <!-- Conteneur Wrapper avec règles sur le contour du workspace (hors défilement et zone de travail) -->
+                <div id="workspace-wrapper" class="workspace-dock-center" style="display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr; overflow: hidden; padding: 0; position: relative;">
+                    <!-- Règles et Grille de pixels (sur le contour externe) -->
+                    <div id="ruler-corner" style="grid-column: 1; grid-row: 1; width: 18px; height: 18px; background: #e0e0e0; border-right: 1px solid #808080; border-bottom: 1px solid #808080; display: none; z-index: 100; box-sizing: border-box;"></div>
+                    <canvas id="ruler-top" style="grid-column: 2; grid-row: 1; height: 18px; background: #f0f0f0; border-bottom: 1px solid #808080; display: none; pointer-events: none; width: 100%; z-index: 99; box-sizing: border-box;"></canvas>
+                    <canvas id="ruler-left" style="grid-column: 1; grid-row: 2; width: 18px; background: #f0f0f0; border-right: 1px solid #808080; display: none; pointer-events: none; height: 100%; z-index: 99; box-sizing: border-box;"></canvas>
+                    
+                    <div id="workspace" style="grid-column: 2; grid-row: 2; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; background: #808080; width: 100%; height: 100%;">
+                        <canvas id="pixel-grid-overlay" style="position: absolute; pointer-events: none; z-index: 4; display: none;"></canvas>
 
-                    <div id="main-canvas-container"
-                        style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 10px rgba(0,0,0,0.5); width: 1280px; height: 720px;">
-                        <div id="canvas-checker-underlay" aria-hidden="true"
-                            style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;">
+                        <div id="main-canvas-container"
+                            style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 10px rgba(0,0,0,0.5); width: 1280px; height: 720px;">
+                            <div id="canvas-checker-underlay" aria-hidden="true"
+                                style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;">
+                            </div>
+                            <div id="pixel-layer-stack" class="pixel-layer-stack" aria-hidden="true"></div>
+                            <canvas id="drawing-canvas" width="1280" height="720"
+                                style="position:absolute;left:0;top:0;z-index:2;image-rendering:pixelated;"></canvas>
+                            <svg id="drawing-svg" width="1280" height="720"
+                                style="position: absolute; top: 0; left: 0; z-index: 3; overflow: visible; pointer-events: none;">
+                                <defs id="vector-doc-defs"></defs>
+                                <g id="svg-layers" style="pointer-events: auto;"></g>
+                                <g id="svg-ui" style="pointer-events: none;"></g>
+                            </svg>
                         </div>
-                        <div id="pixel-layer-stack" class="pixel-layer-stack" aria-hidden="true"></div>
-                        <canvas id="drawing-canvas" width="1280" height="720"
-                            style="position:absolute;left:0;top:0;z-index:2;image-rendering:pixelated;"></canvas>
-                        <svg id="drawing-svg" width="1280" height="720"
-                            style="position: absolute; top: 0; left: 0; z-index: 3; overflow: visible; pointer-events: none;">
-                            <defs id="vector-doc-defs"></defs>
-                            <g id="svg-layers" style="pointer-events: auto;"></g>
-                            <g id="svg-ui" style="pointer-events: none;"></g>
-                        </svg>
-                    </div>
 
-                    <!-- Photoshop ancré : dans la zone workspace (superposition à droite) pour ne pas réduire la largeur utile entre les docks -->
-                    <div id="palette-dock-rail" class="palette-dock-rail" aria-label="Panneaux couleur / historique"
-                        data-i18n-aria-label="dock.railAria">
-                        <div class="palette-dock-rail__tabs" role="tablist" aria-orientation="vertical">
-                            <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
-                                id="btn-dock-rail-sliders" role="tab" aria-pressed="true"
-                                data-i18n-title="dock.railSlidersTitle" title=""
-                                onclick="window.illuToggleDockRailPanel('sliders')"><i class="fa-solid fa-sliders"
-                                    aria-hidden="true"></i></button>
-                            <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
-                                id="btn-dock-rail-history" role="tab" aria-pressed="true"
-                                data-i18n-title="dock.railHistoryTitle" title=""
-                                onclick="window.illuToggleDockRailPanel('history')"><i
-                                    class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                        <!-- Photoshop ancré : dans la zone workspace (superposition à droite) pour ne pas réduire la largeur utile entre les docks -->
+                        <div id="palette-dock-rail" class="palette-dock-rail" aria-label="Panneaux couleur / historique"
+                            data-i18n-aria-label="dock.railAria">
+                            <div class="palette-dock-rail__tabs" role="tablist" aria-orientation="vertical">
+                                <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
+                                    id="btn-dock-rail-sliders" role="tab" aria-pressed="true"
+                                    data-i18n-title="dock.railSlidersTitle" title=""
+                                    onclick="window.illuToggleDockRailPanel('sliders')"><i class="fa-solid fa-sliders"
+                                        aria-hidden="true"></i></button>
+                                <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
+                                    id="btn-dock-rail-history" role="tab" aria-pressed="true"
+                                    data-i18n-title="dock.railHistoryTitle" title=""
+                                    onclick="window.illuToggleDockRailPanel('history')"><i
+                                        class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="palette-dock-rail__content">
+                                <div id="dock-rail-sliders-host" class="palette-dock-rail__host"></div>
+                                <div id="dock-rail-history-host" class="palette-dock-rail__host"></div>
+                            </div>
                         </div>
-                        <div class="palette-dock-rail__content">
-                            <div id="dock-rail-sliders-host" class="palette-dock-rail__host"></div>
-                            <div id="dock-rail-history-host" class="palette-dock-rail__host"></div>
-                        </div>
-                    </div>
 
-                </div><!-- /#workspace -->
+                    </div><!-- /#workspace -->
+                </div><!-- /#workspace-wrapper -->
 
                 <aside id="palette-dock-right" class="palette-dock palette-dock--right" aria-label="Palettes droite"
                     data-i18n-aria-label="dock.right">
@@ -2083,6 +2086,14 @@
                     <div id="illu-mobile-drawer-menus" class="illu-mobile-drawer__menus"
                         data-i18n-aria-label="mobile.menusSection"></div>
                 </div>
+                <footer class="illu-mobile-drawer__footer">
+                    <p class="illu-mobile-drawer__credit">
+                        <span data-i18n="status.creditPrefix">MasterPaint par </span><a
+                            href="https://polocrafting.fr/" class="illu-mobile-drawer__credit-link" target="_blank"
+                            rel="noopener noreferrer" data-i18n-title="status.creditLinkTitle"
+                            title="Site web — polocrafting.fr"> Polocrafting 367</a>
+                    </p>
+                </footer>
             </div>
         </div>
     </div><!-- /#app-window -->
@@ -2511,6 +2522,7 @@
                                     <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>Z</kbd>
                                 </li>
                                 <li><kbd>Ctrl</kbd>+<kbd>A</kbd> · <kbd>Échap</kbd> / <kbd>Ctrl</kbd>+<kbd>D</kbd></li>
+                                <li><kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>X</kbd> : Régler la zone de travail à la sélection</li>
                                 <li><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>X</kbd> · <kbd>Suppr</kbd> /
                                     <kbd>Retour arrière</kbd>
                                 </li>

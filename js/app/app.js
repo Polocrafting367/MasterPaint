@@ -1230,14 +1230,14 @@ window.clampIlluFloatingWindowToWorkspace = function (win, pad) {
     if (document.body.classList.contains('illu-pdn-dock-active')) return;
     const p = pad != null ? pad : 5;
     if (!win) return;
-    const ws = document.querySelector('.workspace-dock-center');
+    const ws = document.getElementById('workspace');
     if (!ws) return;
     const wr = ws.getBoundingClientRect();
+    const minL = wr.left + p;
+    const minT = wr.top + p;
     const br = win.getBoundingClientRect();
     const w = br.width;
     const h = br.height;
-    const minL = wr.left + p;
-    const minT = wr.top + p;
     const maxL = wr.right - w - p;
     const maxT = wr.bottom - h - p;
     if (!Number.isFinite(w) || !Number.isFinite(h) || w < 8 || h < 8) return;
@@ -2412,6 +2412,15 @@ window.illuToggleDockRailPanel = function (which) {
     }
 };
 
+/** Mode téléphone / shell : panneau RVB/TSV/Alpha toujours masqué (roue + palette uniquement). */
+window.illuIsPhoneColorSlidersHidden = function () {
+    return (
+        document.body.classList.contains('illu-mobile-ui') ||
+        document.body.classList.contains('illu-mobile-shell-active') ||
+        (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive())
+    );
+};
+
 /** Panneau RVB/TSV/Alpha : toujours visible en mode Photoshop ; bouton Plus/Masquer seulement en flottant. */
 window.syncColorPanelToUILayout = function () {
     const btnExpand = document.getElementById('btn-col-expand');
@@ -2419,8 +2428,14 @@ window.syncColorPanelToUILayout = function () {
     const winColors = document.getElementById('win-colors');
     if (!slidersPanel || !winColors) return;
     const mode = typeof window.getUILayoutMode === 'function' ? window.getUILayoutMode() : 'floating';
-    const mobileShell = document.body.classList.contains('illu-mobile-shell-active');
-    const dockedLikePs = mode === 'photoshop' || mobileShell;
+    if (typeof window.illuIsPhoneColorSlidersHidden === 'function' && window.illuIsPhoneColorSlidersHidden()) {
+        if (btnExpand) btnExpand.style.display = 'none';
+        slidersPanel.style.display = 'none';
+        slidersPanel.setAttribute('aria-hidden', 'true');
+        if (typeof window.refreshPaletteGridLayout === 'function') window.refreshPaletteGridLayout();
+        return;
+    }
+    const dockedLikePs = mode === 'photoshop';
     if (dockedLikePs) {
         if (btnExpand) btnExpand.style.display = 'none';
         slidersPanel.style.removeProperty('display');
@@ -3015,16 +3030,17 @@ window.illuIsMobileShellLayout = function () {
     return document.body.classList.contains('illu-mobile-shell-active');
 };
 
-/** Marges pour le zoom « ajuster » dans #workspace (shell : bandeau options au-dessus du dock). */
+/** Marges pour le zoom « ajuster » dans #workspace (shell : #workspace a déjà le padding dock). */
 window.illuMobileWorkspaceFitInsets = function () {
     const shell = window.illuIsMobileShellLayout();
     const phone = typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
     if (!shell && !phone) {
         return { top: 28, bottom: 28, left: 28, right: 28 };
     }
-    let bottom = 12;
-    let top = shell ? 12 : 20;
-    const side = 14;
+    let top = 10;
+    let bottom = 10;
+    let left = 10;
+    let right = 10;
     if (
         shell &&
         typeof window.illuMobileEffectDialogCanvasLayout === 'function' &&
@@ -3034,10 +3050,10 @@ window.illuMobileWorkspaceFitInsets = function () {
         if (strip && !strip.hidden) {
             bottom += Math.ceil(strip.getBoundingClientRect().height) || 0;
         }
-    } else if (phone && document.body.classList.contains('illu-pdn-dock-active')) {
+    } else if (phone && !shell && document.body.classList.contains('illu-pdn-dock-active')) {
         bottom += 48;
     }
-    return { top, bottom, left: side, right: side };
+    return { top, bottom, left, right };
 };
 
 /**
@@ -3122,21 +3138,27 @@ window.illuShouldClampCanvasPan = function () {
 window.illuWorkspaceFitAvailableSize = function () {
     const ws = document.getElementById('workspace');
     if (!ws) return { availW: 1280, availH: 720 };
-    const wr = ws.getBoundingClientRect();
     const shell = window.illuIsMobileShellLayout && window.illuIsMobileShellLayout();
     const effectTop =
         typeof window.illuMobileEffectDialogCanvasLayout === 'function' &&
         window.illuMobileEffectDialogCanvasLayout();
-    const mobile =
+    const phone =
         effectTop ||
         (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
+
+    /* Mobile / shell : #workspace = zone toile (à droite/sous les règles), pas la bande 18px des règles */
+    if (shell || phone) {
+        const pad = 8;
+        return {
+            availW: Math.max(80, ws.clientWidth - pad * 2),
+            availH: Math.max(80, ws.clientHeight - pad * 2)
+        };
+    }
+
+    const wr = ws.getBoundingClientRect();
     const ins = window.illuMobileWorkspaceFitInsets();
     const availW = Math.max(80, wr.width - ins.left - ins.right);
     let availH = Math.max(80, wr.height - ins.top - ins.bottom);
-    if (mobile && !shell && document.body.classList.contains('illu-pdn-dock-active')) {
-        const dockReserve = Math.min(wr.height * 0.24, 220);
-        availH = Math.max(80, availH - dockReserve);
-    }
     return { availW, availH };
 };
 
@@ -3268,9 +3290,9 @@ window.scheduleFitActiveProjectZoomOnDocumentOpen = function (em) {
     });
 };
 
-/** Shell mobile : ajuster manuel (bouton) — cadre complet visible. */
+/** Shell mobile : ajuster — largeur utile du #workspace (comme à l’ouverture d’image). */
 window.fitActiveProjectZoomToWorkspaceMobile = function (em) {
-    return window.fitActiveProjectZoomToWorkspace(em, { force: true });
+    return window.fitActiveProjectZoomToWorkspace(em, { force: true, fitWidth: true });
 };
 
 /** Shell mobile : ajuster calé en haut — uniquement à l’ouverture d’un dialogue d’effet. */
@@ -3781,6 +3803,9 @@ window.toggleIlluRulers = function () {
         localStorage.setItem(ILLU_SHOW_RULERS_KEY, String(window._illuShowRulers));
     } catch (e) {}
     window.syncIlluRulersUI();
+    if (typeof window.illuClampAllFloatingPalettes === 'function') {
+        requestAnimationFrame(() => window.illuClampAllFloatingPalettes());
+    }
 };
 
 window.syncIlluPixelGridUI = function () {
@@ -3823,6 +3848,9 @@ window.syncIlluRulersUI = function () {
     }
     if (typeof window.illuUpdateRulers === 'function') {
         window.illuUpdateRulers();
+    }
+    if (typeof window.illuClampAllFloatingPalettes === 'function') {
+        requestAnimationFrame(() => window.illuClampAllFloatingPalettes());
     }
 };
 
@@ -3939,15 +3967,15 @@ window.illuUpdateRulers = function () {
     
     rTop.style.background = rulerBg;
     rTop.style.borderBottom = `1px solid ${rulerBorder}`;
-    rTop.style.width = `${wsW - 18}px`;
-    rTop.width = wsW - 18;
+    rTop.style.width = `${wsW}px`;
+    rTop.width = wsW;
     rTop.height = 18;
     
     rLeft.style.background = rulerBg;
     rLeft.style.borderRight = `1px solid ${rulerBorder}`;
-    rLeft.style.height = `${wsH - 18}px`;
+    rLeft.style.height = `${wsH}px`;
     rLeft.width = 18;
-    rLeft.height = wsH - 18;
+    rLeft.height = wsH;
     
     const rCorner = document.getElementById('ruler-corner');
     if (rCorner) {
@@ -3980,7 +4008,7 @@ window.illuUpdateRulers = function () {
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
         
-        const startX = canvasStartX - 18;
+        const startX = canvasStartX;
         const startCX = Math.max(0, Math.floor(-startX / z));
         const endCX = Math.min(w, Math.ceil((width - startX) / z));
         
@@ -4026,7 +4054,7 @@ window.illuUpdateRulers = function () {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         
-        const startY = canvasStartY - 18;
+        const startY = canvasStartY;
         const startCY = Math.max(0, Math.floor(-startY / z));
         const endCY = Math.min(h, Math.ceil((height - startY) / z));
         
@@ -4056,5 +4084,14 @@ window.illuUpdateRulers = function () {
                 }
             }
         }
+    }
+
+    if (
+        window._illuShowRulers &&
+        typeof window.getUILayoutMode === 'function' &&
+        window.getUILayoutMode() === 'floating' &&
+        typeof window.illuClampAllFloatingPalettes === 'function'
+    ) {
+        requestAnimationFrame(() => window.illuClampAllFloatingPalettes());
     }
 };

@@ -100,18 +100,15 @@
         return fallback;
     }
 
-    /** Ruban groupé actif (bureau ; pas téléphone / shell mobile). */
+    /** Ruban groupé actif (bureau et téléphone). */
     window.illuIsRibbonToolbarActive = function () {
-        if (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'phone') {
-            return false;
-        }
-        if (document.body.classList.contains('illu-mobile-shell-active')) {
-            return false;
-        }
-        if (document.body.classList.contains('illu-mobile-ui')) {
-            return false;
-        }
         return true;
+    };
+
+    /** Ruban en disposition téléphone (uniquement mode UI mobile, pas les seuils 900/1000px). */
+    window.illuIsRibbonMobileLayout = function () {
+        if (!window.illuIsRibbonToolbarActive()) return false;
+        return document.body.classList.contains('illu-mobile-ui');
     };
 
     window.illuIsOfficeToolbarActive = window.illuIsRibbonToolbarActive;
@@ -161,6 +158,9 @@
     }
 
     window.illuEnsureRibbonStructure = function () {
+        if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+            window.illuSyncSelectionExtraPlacement();
+        }
         const pin = document.getElementById('tool-pinned-toggles');
         if (pin) {
             let actionsWrap = pin.querySelector('.illu-ribbon-groups--actions');
@@ -170,6 +170,9 @@
                 pin.insertBefore(actionsWrap, pin.firstChild);
             }
             ACTION_RIBBON_GROUPS.forEach((spec) => createRibbonGroup(actionsWrap, spec));
+            actionsWrap
+                .querySelectorAll('.illu-ribbon-group[data-illu-ribbon-group="selection-extra"]')
+                .forEach((g) => g.remove());
             pin.querySelectorAll(':scope > .illu-ribbon-group').forEach((g) => {
                 if (g.parentElement === pin) actionsWrap.appendChild(g);
             });
@@ -200,6 +203,9 @@
         if (typeof window.illuUnifyModeToggleItems === 'function') {
             window.illuUnifyModeToggleItems();
         }
+        if (typeof window.illuWireZoomFitToolbarButtons === 'function') {
+            window.illuWireZoomFitToolbarButtons();
+        }
     };
 
     function setGroupHidden(group, hidden) {
@@ -208,12 +214,100 @@
         group.setAttribute('aria-hidden', hidden ? 'true' : 'false');
     }
 
+    /** Bureau : 4 coins dans Sélection, Ajuster sélection dans Ajustements ; mobile : 4 coins en Sélection, zoom dans Outils. */
+    function querySelRibbonGroup(className) {
+        return document.querySelector('.' + className);
+    }
+
+    /** Déplace des nœuds dans un parent et impose l’ordre (appendChild = safe si déjà enfant). */
+    function moveNodesInOrder(container, nodes) {
+        if (!container) return;
+        const list = nodes.filter(Boolean);
+        list.forEach((node) => {
+            if (node.parentElement !== container) {
+                container.appendChild(node);
+            }
+        });
+        list.forEach((node) => container.appendChild(node));
+    }
+
+    function insertBeforeIfChild(parent, node, before) {
+        if (!parent || !node) return;
+        if (before && before.parentElement === parent) {
+            parent.insertBefore(node, before);
+        } else {
+            parent.appendChild(node);
+        }
+    }
+
+    window.illuSyncMobileViewActions = function () {
+        if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+            window.illuSyncSelectionExtraPlacement();
+        }
+    };
+
+    window.illuSyncSelectionExtraPlacement = function () {
+        const primary = querySelRibbonGroup('illu-sel-actions-primary');
+        const layout = querySelRibbonGroup('illu-sel-actions-layout');
+        const cornersItem = document.getElementById('select-rect-free-corners-wrap');
+        const zoomWrap = document.getElementById('illu-mobile-zoom-fit-wrap');
+        const layoutZoomBtn = document.getElementById('illu-tb-zoom-fit');
+        const layoutZoomItem = layoutZoomBtn ? layoutZoomBtn.closest('.illu-mode-toggle-item') : null;
+        const isMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+        if (!primary) return;
+        if (!layout && !isMobile) return;
+
+        if (cornersItem && cornersItem.parentElement !== primary) {
+            primary.appendChild(cornersItem);
+        }
+
+        if (isMobile) {
+            if (cornersItem) {
+                cornersItem.hidden = true;
+                cornersItem.setAttribute('aria-hidden', 'true');
+            }
+            if (zoomWrap && primary) {
+                if (cornersItem && cornersItem.parentElement === primary) {
+                    primary.insertBefore(zoomWrap, cornersItem);
+                } else if (zoomWrap.parentElement !== primary) {
+                    primary.appendChild(zoomWrap);
+                }
+                zoomWrap.hidden = false;
+                zoomWrap.setAttribute('aria-hidden', 'false');
+            }
+            if (layoutZoomItem && layout && layoutZoomItem.parentElement === layout) {
+                layoutZoomItem.remove();
+            }
+        } else {
+            if (zoomWrap) {
+                zoomWrap.hidden = true;
+                zoomWrap.setAttribute('aria-hidden', 'true');
+                if (layout && zoomWrap.parentElement !== layout) {
+                    layout.appendChild(zoomWrap);
+                }
+            }
+        }
+        if (typeof window.illuUnifyModeToggleItems === 'function') {
+            window.illuUnifyModeToggleItems();
+        }
+        if (typeof window.illuApplyToggleLayouts === 'function') {
+            window.illuApplyToggleLayouts();
+        }
+        if (typeof window.illuWireZoomFitToolbarButtons === 'function') {
+            window.illuWireZoomFitToolbarButtons();
+        }
+    };
+
     function shapesActionsActive(actionIds) {
         return actionIds.has('opt-grp-shapes-actions');
     }
 
     window.illuApplyRibbonGroupsForTool = function (toolId, cfg, ctx) {
         if (!window.illuIsRibbonToolbarActive()) return;
+        if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+            window.illuSyncSelectionExtraPlacement();
+        }
         const tool = toolId || 'select';
         const actionIds = new Set((cfg && cfg.actionGroups) || []);
         const paramIds = new Set((cfg && cfg.paramGroups) || []);
@@ -222,6 +316,9 @@
         const warpActive = !!(ctx && ctx.warpActive);
         const gradTypeEl = document.getElementById('tool-shape-grad-type-actions');
 
+        const isMobileRibbon =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+
         document.querySelectorAll('.illu-ribbon-groups--actions .illu-ribbon-group').forEach((group) => {
             const id = group.dataset.illuRibbonGroup;
             let active = false;
@@ -229,7 +326,7 @@
             else if (id === 'selection') {
                 active = SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool);
             } else if (id === 'adjustments') {
-                active = SELECT_ACTION_TOOLS.has(tool);
+                active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'view') {
                 active = SELECT_ACTION_TOOLS.has(tool);
             } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
@@ -246,6 +343,10 @@
             }
             setGroupHidden(group, !active);
         });
+
+        if (isMobileRibbon && typeof window.illuSyncMobileViewActions === 'function') {
+            window.illuSyncMobileViewActions();
+        }
 
         document.querySelectorAll('.illu-ribbon-groups--params .illu-ribbon-group').forEach((group) => {
             const id = group.dataset.illuRibbonGroup;
@@ -268,40 +369,38 @@
         });
     };
 
+    /** Ruban actif : disposition compacte (grilles 2 lignes, inline) sur tous les viewports. */
     window.illuIsRibbonCompact = function () {
-        if (!window.illuIsRibbonToolbarActive()) return false;
-        return window.matchMedia('(max-width: 900px)').matches;
+        return !!window.illuIsRibbonToolbarActive();
     };
-
-    function syncRibbonCompactClass() {
-        document.body.classList.toggle('illu-ribbon-compact', !!window.illuIsRibbonCompact());
-    }
-
-    function ensureRibbonCompactListener() {
-        if (window._illuRibbonCompactMqBound) return;
-        const mq = window.matchMedia('(max-width: 900px)');
-        const onChange = () => {
-            syncRibbonCompactClass();
-            if (typeof window.illuApplyToggleLayouts === 'function') {
-                window.illuApplyToggleLayouts();
-            }
-        };
-        if (typeof mq.addEventListener === 'function') {
-            mq.addEventListener('change', onChange);
-        } else if (typeof mq.addListener === 'function') {
-            mq.addListener(onChange);
-        }
-        window._illuRibbonCompactMqBound = true;
-    }
 
     window.illuInitToolbarRibbon = function () {
         const active = window.illuIsRibbonToolbarActive();
         document.body.classList.toggle('illu-toolbar-ribbon', active);
-        syncRibbonCompactClass();
-        ensureRibbonCompactListener();
+        document.body.classList.remove('illu-ribbon-compact');
 
         if (active) {
             window.illuEnsureRibbonStructure();
+        } else if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+            window.illuSyncSelectionExtraPlacement();
+        }
+
+        if (!window._illuSelExtraPlacementBound) {
+            window.addEventListener('illu-mobile-ui-changed', () => {
+                if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+                    window.illuSyncSelectionExtraPlacement();
+                }
+                if (typeof window.illuSyncMobileViewActions === 'function') {
+                    window.illuSyncMobileViewActions();
+                }
+                if (typeof window.illuApplyToggleLayouts === 'function') {
+                    window.illuApplyToggleLayouts();
+                }
+                if (typeof window.updateToolOptionsBar === 'function') {
+                    window.updateToolOptionsBar();
+                }
+            });
+            window._illuSelExtraPlacementBound = true;
         }
 
         if (typeof window.illuUnifyModeToggleItems === 'function') {
@@ -347,38 +446,67 @@
         }
     };
 
-    /** ≤900px : colonnes de grille selon le nombre de boutons visibles. */
+    /**
+     * Grille compacte : jamais plus de 2 lignes → colonnes = ceil(n/2) (max 4).
+     * 8→4×2, 6→3×2, 4→2×2, 3→3×1, 2→1×2, 1→1.
+     */
+    function defaultCompactGridLayout(visible) {
+        if (visible <= 1) return { cols: 1, oneRow: false };
+        if (visible === 2) return { cols: 1, oneRow: false };
+        if (visible === 3) return { cols: 3, oneRow: true };
+        const cols = Math.min(4, Math.ceil(visible / 2));
+        return { cols, oneRow: false };
+    }
+
     function applyCompactGridCols(tg, visible) {
         tg.classList.remove(
             'illu-toggle-group--compact-cols-1',
             'illu-toggle-group--compact-cols-2',
-            'illu-toggle-group--compact-cols-3'
+            'illu-toggle-group--compact-cols-3',
+            'illu-toggle-group--compact-cols-4',
+            'illu-toggle-group--compact-one-row',
+            'illu-toggle-group--compact-max-rows-2'
         );
-        const isGrad =
-            tg.classList.contains('illu-grad-type-group') ||
-            tg.classList.contains('illu-grad-method-group');
-        const isShapeFill = tg.classList.contains('illu-shape-fill-group');
-        const isView = tg.classList.contains('illu-sel-actions-view');
 
-        let cols = 2;
-        if (visible <= 1) {
-            cols = 1;
-        } else if (visible === 2) {
-            /* Affichage : 2×1 ; Dégradé : 2×2 ; Remplissage formes : géré à part (1 ligne) */
-            if (isView) cols = 1;
-            else if (isGrad) cols = 2;
-            else if (isShapeFill) cols = 2;
-            else cols = 1;
-        } else if (visible === 3 || visible === 4) {
-            /* Ajustements (3), Contour (3), Pinceau (4)… : 2 colonnes × 2 lignes */
-            cols = 2;
-        } else {
-            cols = 3;
-        }
-        tg.classList.add('illu-toggle-group--compact-cols-' + cols);
+        const def = defaultCompactGridLayout(visible);
+        if (def.oneRow) tg.classList.add('illu-toggle-group--compact-one-row');
+        tg.classList.add('illu-toggle-group--compact-cols-' + def.cols);
     }
 
-    /** Stack (icône au-dessus) ou inline (icône à gauche) ; groupes 2×ligne ou 1×ligne. */
+    /** Grille compacte ruban (tous viewports). gridSlots = cellules du groupe (y compris [hidden]). */
+    function applyRibbonCompactToggleGroup(tg, visible, gridSlots) {
+        if (tg.closest('.illu-tool-picker, #tool-main-header')) {
+            return;
+        }
+
+        if (tg.classList.contains('illu-sel-actions-view')) {
+            tg.classList.add('illu-toggle-group--compact-grid', 'illu-toggle-group--compact-cols-1');
+            return;
+        }
+
+        if (tg.closest('.illu-ribbon-selection-stack')) {
+            return;
+        }
+
+        const slots = gridSlots > 0 ? gridSlots : visible;
+
+        if (visible >= 1) {
+            /* Baguette / pot de peinture / remplissage forme (2 modes) : ligne + jauge en dessous */
+            if (
+                (tg.closest('#opt-grp-wand-params') ||
+                    tg.closest('#opt-grp-fill-params') ||
+                    tg.classList.contains('illu-shape-fill-group')) &&
+                slots === 2
+            ) {
+                tg.classList.add('illu-toggle-group--compact-inline-row');
+            } else {
+                tg.classList.add('illu-toggle-group--compact-grid');
+                applyCompactGridCols(tg, slots);
+            }
+        }
+    }
+
+    /** Disposition compacte ruban : grilles 2 lignes, inline icône + texte. */
     window.illuApplyToggleLayouts = function () {
         const compact =
             typeof window.illuIsRibbonCompact === 'function' && window.illuIsRibbonCompact();
@@ -390,28 +518,21 @@
                 'illu-toggle-group--stack-cells',
                 'illu-toggle-group--compact-grid',
                 'illu-toggle-group--compact-inline-row',
+                'illu-toggle-group--compact-one-row',
+                'illu-toggle-group--compact-max-rows-2',
+                'illu-toggle-group--view-list',
                 'illu-toggle-group--compact-cols-1',
                 'illu-toggle-group--compact-cols-2',
-                'illu-toggle-group--compact-cols-3'
+                'illu-toggle-group--compact-cols-3',
+                'illu-toggle-group--compact-cols-4'
             );
             const visible = tg.querySelectorAll('.illu-mode-toggle-item--unified:not([hidden])').length;
+            const total = tg.querySelectorAll('.illu-mode-toggle-item--unified').length;
+            /* Grille stable : colonnes selon le nombre de cellules du groupe, pas seulement les visibles */
+            const gridSlots = total > 0 ? total : visible;
 
             if (compact) {
-                if (tg.closest('.illu-tool-picker, #tool-main-header')) {
-                    return;
-                }
-                if (visible >= 1) {
-                    /* Baguette / Remplissage formes : 2 boutons côte à côte (jauge ou alvéole voisine en dessous) */
-                    if (
-                        (tg.closest('#opt-grp-wand-params') || tg.classList.contains('illu-shape-fill-group')) &&
-                        visible === 2
-                    ) {
-                        tg.classList.add('illu-toggle-group--compact-inline-row');
-                    } else {
-                        tg.classList.add('illu-toggle-group--compact-grid');
-                        applyCompactGridCols(tg, visible);
-                    }
-                }
+                applyRibbonCompactToggleGroup(tg, visible, gridSlots);
                 return;
             }
 
@@ -427,7 +548,6 @@
                 !!tg.closest('#tool-options-bar-2, .illu-ribbon-groups--params') &&
                 !inSelectionStack;
             const isViewActions = tg.classList.contains('illu-sel-actions-view');
-
             const isShapeFillGroup = tg.classList.contains('illu-shape-fill-group');
             if (inSelectionStack) {
                 return;
@@ -456,7 +576,15 @@
 
             if (compact) {
                 if (!item.closest('.illu-tool-picker, #tool-main-header')) {
-                    if (item.closest('.illu-shape-fill-group')) {
+                    if (
+                        item.closest('.illu-sel-actions-view') ||
+                        item.closest('.illu-ribbon-selection-stack')
+                    ) {
+                        item.classList.add('illu-toggle-layout--inline');
+                    } else if (
+                        item.closest('.illu-text-style-fill-group') ||
+                        item.closest('.illu-shape-fill-group')
+                    ) {
                         item.classList.add('illu-toggle-layout--stack');
                     } else {
                         item.classList.add('illu-toggle-layout--inline');
@@ -473,7 +601,11 @@
             const groupId = item.closest('.illu-ribbon-group')?.dataset?.illuRibbonGroup;
             const inStackCells = !!item.closest('.illu-toggle-group--stack-cells');
 
-            if (inSelectionStack || inGradientActions || inBrushActions) {
+            if (item.closest('.illu-sel-actions-view')) {
+                item.classList.add('illu-toggle-layout--inline');
+            } else if (item.closest('.illu-sel-actions-layout')) {
+                item.classList.add('illu-toggle-layout--stack');
+            } else if (inSelectionStack || inGradientActions || inBrushActions) {
                 item.classList.add('illu-toggle-layout--inline');
             } else if (
                 groupId === 'tool' ||

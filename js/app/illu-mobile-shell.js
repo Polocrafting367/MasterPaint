@@ -109,9 +109,21 @@
         const selectTools = new Set(['select', 'move', 'wand', 'direct-select', 'deform', 'warp-4']);
         const grp = document.getElementById('tool-pinned-select-actions');
         const show = isShellMode() && selectTools.has(t) && grp && !grp.hidden;
+        const ribbonMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
         ['illu-mobile-zoom-fit-wrap', 'illu-mobile-deselect-wrap'].forEach((id) => {
             const wrap = document.getElementById(id);
-            if (wrap) wrap.hidden = !show;
+            if (!wrap) return;
+            if (ribbonMobile && (id === 'illu-mobile-zoom-fit-wrap' || id === 'illu-mobile-deselect-wrap')) {
+                if (id === 'illu-mobile-zoom-fit-wrap' && typeof window.illuSyncMobileViewActions === 'function') {
+                    window.illuSyncMobileViewActions();
+                } else {
+                    wrap.hidden = true;
+                    wrap.setAttribute('aria-hidden', 'true');
+                }
+                return;
+            }
+            wrap.hidden = !show;
         });
     }
 
@@ -433,7 +445,10 @@
         const expandBtn = document.getElementById('btn-col-expand');
         if (expandBtn) expandBtn.style.display = 'none';
         const sliders = document.getElementById('color-sliders-panel');
-        if (sliders) sliders.style.display = 'none';
+        if (sliders) {
+            sliders.style.display = 'none';
+            sliders.setAttribute('aria-hidden', 'true');
+        }
     }
 
     function openMobileSheet(sheetKey) {
@@ -554,6 +569,25 @@
     function mountOptStrip() {
         const strip = document.getElementById('illu-mobile-opt-strip');
         const bar2 = document.getElementById('tool-options-bar-2');
+        const container = document.getElementById('tool-options-container');
+        const ribbonActive =
+            typeof window.illuIsRibbonToolbarActive === 'function' && window.illuIsRibbonToolbarActive();
+
+        if (ribbonActive) {
+            if (bar2 && container && bar2.parentNode !== container) {
+                rememberPanelHome(bar2);
+                container.appendChild(bar2);
+            }
+            if (strip) {
+                strip.hidden = true;
+                strip.setAttribute('aria-hidden', 'true');
+            }
+            if (typeof window.illuEnsureRibbonStructure === 'function') {
+                window.illuEnsureRibbonStructure();
+            }
+            return;
+        }
+
         if (!strip || !bar2) return;
         if (bar2.parentNode !== strip) {
             rememberPanelHome(bar2);
@@ -786,7 +820,9 @@
         if (typeof window.illuEnsurePinnedToggleBarOrder === 'function') {
             window.illuEnsurePinnedToggleBarOrder();
         }
-        if (typeof window.updateToolOptionsBar === 'function') {
+        if (typeof window.illuInitToolbarRibbon === 'function') {
+            window.illuInitToolbarRibbon();
+        } else if (typeof window.updateToolOptionsBar === 'function') {
             window.updateToolOptionsBar();
         }
     };

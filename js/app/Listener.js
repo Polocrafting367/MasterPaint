@@ -446,6 +446,12 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
+    if (e.shiftKey && k === 'x') {
+        e.preventDefault();
+        EditorManager.cropToSelection();
+        return;
+    }
+
     if (k === 'z' && e.shiftKey) {
         e.preventDefault();
         EditorManager.doHistory(1);
@@ -677,6 +683,16 @@ document.addEventListener('contextmenu', (e) => {
         document.body.addEventListener('click', (e) => {
             const btn = resolveToolbarToggleButton(e.target);
             if (!btn) return;
+            /* Ajuster / règles / grille : onclick dédié — ne pas avaler le clic */
+            if (
+                btn.id === 'illu-tb-zoom-fit' ||
+                btn.id === 'illu-tb-zoom-fit-mobile' ||
+                btn.classList.contains('opt-toggle-rulers') ||
+                btn.classList.contains('opt-toggle-pixelgrid')
+            ) {
+                return;
+            }
+            if (btn.hasAttribute('data-selection-mode')) return;
             e.preventDefault();
             const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
             const chkid = btn.getAttribute('data-illu-toggle-check');
@@ -731,7 +747,11 @@ document.addEventListener('contextmenu', (e) => {
                 const selMode = btn.getAttribute('data-selection-mode');
 
                 let on = false;
-                if (sid) {
+                if (btn.classList.contains('opt-toggle-rulers')) {
+                    on = !!window._illuShowRulers;
+                } else if (btn.classList.contains('opt-toggle-pixelgrid')) {
+                    on = !!window._illuShowPixelGrid;
+                } else if (sid) {
                     const val = btn.getAttribute('data-illu-value');
                     const sel = document.getElementById(sid);
                     on = sel && sel.value === val;
@@ -751,6 +771,31 @@ document.addEventListener('contextmenu', (e) => {
     window.syncIlluShapeToolIconToggles = window.syncAllToolbarToggles;
     window.syncIlluBrushPatternIconToggles = window.syncAllToolbarToggles;
     window.setupIlluShapeToolIconToggles = setupIlluGenericIconToggles;
+
+    function wireZoomFitToolbarButtons() {
+        ['illu-tb-zoom-fit', 'illu-tb-zoom-fit-mobile'].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (!btn || btn.dataset.illuZoomFitWired === '1') return;
+            btn.dataset.illuZoomFitWired = '1';
+            btn.addEventListener(
+                'click',
+                (e) => {
+                    e.stopPropagation();
+                    const shell =
+                        typeof window.illuIsMobileShellLayout === 'function' &&
+                        window.illuIsMobileShellLayout();
+                    if (shell && typeof window.fitActiveProjectZoomToWorkspaceMobile === 'function') {
+                        window.fitActiveProjectZoomToWorkspaceMobile();
+                    } else if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
+                        window.fitActiveProjectZoomToWorkspace(undefined, { force: true });
+                    }
+                },
+                true
+            );
+        });
+    }
+    wireZoomFitToolbarButtons();
+    window.illuWireZoomFitToolbarButtons = wireZoomFitToolbarButtons;
     window.setupIlluTextToolIconToggles = setupIlluGenericIconToggles;
     window.setupIlluBrushPatternIconToggles = setupIlluGenericIconToggles;
 

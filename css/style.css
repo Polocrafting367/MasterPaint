@@ -3,8 +3,9 @@
     /* Variables adaptatives pour le sprite d'icônes SVG */
     --illu-icon-stroke: #1a1a1a;
     --illu-icon-bg: #ffffff;
-    --illu-icon-accent: #6b9bd9;
-    --illu-icon-accent-subtle: #c5d8f0;
+    /* Icône accent : légèrement plus claire que l'accent brut pour meilleure lisibilité sur fond pâle */
+    --illu-icon-accent: color-mix(in srgb, var(--mp-accent, #6b9bd9) 72%, #ffffff);
+    --illu-icon-accent-subtle: color-mix(in srgb, var(--mp-accent, #6b9bd9) 30%, var(--illu-icon-bg, #ffffff));
     --illu-icon-subtle: #e2e8f0;
 }
 
@@ -16,8 +17,9 @@ body.theme-dark {
     /* Ajustements en mode sombre pour les icônes SVG */
     --illu-icon-stroke: #f8fafc;
     --illu-icon-bg: #2d2d2d;
-    --illu-icon-accent: #6b9bd9;
-    --illu-icon-accent-subtle: #4a6fa5;
+    /* Thème sombre : encore plus claire car le fond est lui-même sombre */
+    --illu-icon-accent: color-mix(in srgb, var(--mp-accent, #6b9bd9) 58%, #ffffff);
+    --illu-icon-accent-subtle: color-mix(in srgb, var(--mp-accent, #6b9bd9) 30%, var(--illu-icon-bg, #2d2d2d));
     --illu-icon-subtle: #475569;
 }
 
@@ -498,57 +500,6 @@ li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
     #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
         display: none !important;
     }
-}
-
-/* Téléphone : retour à la ligne, pas de barre de défilement horizontale */
-body.illu-mobile-ui #tool-options-container {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-body.illu-mobile-ui #tool-options-bar-row1,
-body.illu-mobile-ui #tool-options-bar-2 {
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: flex-start;
-    overflow-x: hidden;
-    overflow-y: visible;
-    max-height: none;
-    row-gap: 4px;
-    column-gap: 6px;
-}
-
-body.illu-mobile-ui #tool-pinned-toggles>.illu-menubar-toolbar,
-body.illu-mobile-ui #tool-options-bar-row1 .illu-menubar-toolbar,
-body.illu-mobile-ui #tool-pinned-toggles>#tool-main-header,
-body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header,
-body.illu-mobile-ui #tool-pinned-toggles .opt-grp,
-body.illu-mobile-ui #tool-options-bar-2 .opt-grp {
-    flex-wrap: wrap;
-    max-width: 100%;
-}
-
-body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-row1 .illu-icon-toggle-group,
-body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-row1 .illu-mode-toggle-group,
-body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-2 .illu-icon-toggle-group,
-body.illu-mobile-shell-active.illu-mobile-ui #tool-options-bar-2 .illu-mode-toggle-group {
-    flex-wrap: wrap;
-    row-gap: 2px;
-    height: auto !important;
-    max-width: 100%;
-    flex: 0 1 auto;
-}
-
-body.illu-mobile-ui #tool-options-bar-row1 .illu-menubar-toolbar__sep,
-body.illu-mobile-ui #tool-options-bar-row1 .opt-sep {
-    display: none;
-}
-
-body.illu-mobile-ui #tool-options-bar-row1 #tool-main-header {
-    border-right: none;
-    margin-right: 0;
-    padding-right: 0;
 }
 
 .tool-context-bar {

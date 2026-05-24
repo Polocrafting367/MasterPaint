@@ -6,11 +6,13 @@ body.illu-mobile-shell-active {
     --illu-mobile-panel-bottom: calc(var(--illu-mobile-dock-h, 64px) + 4px);
     --illu-mobile-dock-btn-w: 68px;
     --illu-mobile-dock-menu-w: 50px;
+    --illu-mobile-dock-bg: var(--mp-dock-bg, #c0c0c0);
+    --illu-mobile-dock-scroll-bg: color-mix(in srgb, var(--mp-dock-bg, #c0c0c0) 92%, var(--mp-text, #1a1a1a) 8%);
     /* Barres de défilement compactes (surcharge --mp-scrollbar-* globales) */
     --mp-scrollbar-size: 4px;
     --mp-scrollbar-size-h: 4px;
     --illu-mobile-scroll-thumb: rgba(0, 0, 0, 0.32);
-    --illu-mobile-scroll-track: rgba(0, 0, 0, 0.06);
+    --illu-mobile-scroll-track: var(--illu-mobile-dock-scroll-bg);
     scrollbar-width: thin;
     scrollbar-color: var(--illu-mobile-scroll-thumb) var(--illu-mobile-scroll-track);
 }
@@ -105,7 +107,7 @@ body.illu-mobile-shell-active #illu-mobile-top-bar {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-body.illu-mobile-shell-active #tool-options-container {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-container {
     display: flex !important;
     flex: 0 0 auto;
     flex-direction: column;
@@ -116,7 +118,7 @@ body.illu-mobile-shell-active #tool-options-container {
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-body.illu-mobile-shell-active #tool-options-bar-row1 {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center;
@@ -147,24 +149,38 @@ body.illu-mobile-shell-active #tool-options-bar-row1 .illu-menubar-toolbar {
 }
 
 /* Sélecteur + icônes : un seul conteneur flex (#tool-pinned-toggles) */
-body.illu-mobile-shell-active #tool-options-bar-row1 > #tool-pinned-toggles {
+body.illu-mobile-shell-active.illu-toolbar-ribbon #tool-options-bar-row1 > #tool-pinned-toggles {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+}
+
+body.illu-mobile-shell-active.illu-toolbar-ribbon #tool-options-bar-2 {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+}
+
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 > #tool-pinned-toggles {
     flex: 1 1 100%;
     width: 100%;
 }
 
-body.illu-mobile-shell-active #tool-pinned-toggles {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
-    align-content: flex-start !important;
+    align-content: center !important;
     gap: 4px 6px !important;
     min-width: 0 !important;
     max-width: none !important;
     margin-right: 0 !important;
     box-sizing: border-box;
+    overflow: visible !important;
 }
 
-body.illu-mobile-shell-active #tool-pinned-toggles > .opt-grp:not([hidden]) {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles > .opt-grp:not([hidden]) {
     display: inline-flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
@@ -184,12 +200,13 @@ body.illu-mobile-shell-active #tool-pinned-toggles > #tool-main-header {
     box-sizing: border-box;
 }
 
-body.illu-mobile-shell-active #tool-pinned-toggles .illu-icon-toggle-group,
-body.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-group {
+/* Ruban : ne pas aplatir les groupes (sinon les boutons débordent sous les alvéoles voisines) */
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-icon-toggle-group,
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-mode-toggle-group {
     display: contents !important;
 }
 
-body.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-item {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-mode-toggle-item {
     display: inline-flex !important;
     flex: 0 0 auto;
 }
@@ -199,9 +216,9 @@ body.illu-mobile-shell-active #tool-options-bar-row1 > .opt-sep {
     display: none !important;
 }
 
-/* Libellés courts à côté des icônes (ligne 1 + bande options) */
-body.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-lbl,
-body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-lbl,
+/* Libellés courts (hors ruban Office) */
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-mode-toggle-lbl,
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 .illu-mode-toggle-lbl,
 body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-lbl {
     display: inline !important;
     font-size: 10px;
@@ -209,8 +226,8 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-lbl {
     white-space: nowrap;
 }
 
-body.illu-mobile-shell-active #tool-pinned-toggles .illu-mode-toggle-item,
-body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-item,
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-mode-toggle-item,
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 .illu-mode-toggle-item,
 body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item {
     flex-direction: row !important;
     align-items: center !important;
@@ -339,8 +356,8 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-opt-lbl {
 /* Groupes d’icônes : retour à la ligne, sans scroll */
 body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-icon-toggle-group,
 body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-group,
-body.illu-mobile-shell-active #tool-options-bar-row1 .illu-icon-toggle-group,
-body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-group {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 .illu-icon-toggle-group,
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 .illu-mode-toggle-group {
     display: inline-flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
@@ -351,7 +368,7 @@ body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-group {
 }
 
 body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item,
-body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-item {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-options-bar-row1 .illu-mode-toggle-item {
     height: auto !important;
     line-height: normal !important;
     padding: 0 !important;
@@ -359,9 +376,16 @@ body.illu-mobile-shell-active #tool-options-bar-row1 .illu-mode-toggle-item {
 }
 
 /* Options sélection réservées au shell mobile (Ajuster, Aucun) */
-body.illu-mobile-shell-active #illu-mobile-zoom-fit-wrap:not([hidden]),
-body.illu-mobile-shell-active #illu-mobile-deselect-wrap:not([hidden]) {
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #illu-mobile-zoom-fit-wrap:not([hidden]),
+body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #illu-mobile-deselect-wrap:not([hidden]) {
     display: inline-flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+body.illu-mobile-shell-active.illu-toolbar-ribbon #illu-mobile-zoom-fit-wrap:not([hidden]),
+body.illu-mobile-shell-active.illu-toolbar-ribbon #illu-mobile-deselect-wrap:not([hidden]) {
+    display: block !important;
     visibility: visible !important;
     pointer-events: auto !important;
 }
@@ -418,9 +442,9 @@ body.illu-mobile-shell-active #app-window .window-body.illu-app-window-body {
     box-sizing: border-box;
     flex-direction: row;
     align-items: stretch;
-    background: #ffffff;
+    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
     border-top: 1px solid var(--mp-dock-border, #808080);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.18);
     overflow: hidden;
     gap: 0;
 }
@@ -436,7 +460,8 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     max-width: var(--illu-mobile-dock-menu-w, 50px);
     padding: 4px 6px;
     gap: 2px;
-    border-right: 1px solid rgba(0, 0, 0, 0.12);
+    border-right: 1px solid var(--mp-dock-border, #808080);
+    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
     scroll-snap-align: none;
     box-sizing: border-box;
 }
@@ -468,6 +493,27 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     gap: 4px;
     padding: 4px 6px;
     box-sizing: border-box;
+    background: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0));
+    scrollbar-width: thin;
+    scrollbar-color: var(--illu-mobile-scroll-thumb) var(--illu-mobile-dock-scroll-bg);
+}
+
+.illu-mobile-dock-scroll::-webkit-scrollbar {
+    height: var(--mp-scrollbar-size-h, 4px);
+}
+
+.illu-mobile-dock-scroll::-webkit-scrollbar-track {
+    background-color: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0)) !important;
+    background-image: none !important;
+}
+
+.illu-mobile-dock-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--illu-mobile-scroll-thumb) !important;
+    border-radius: 2px;
+}
+
+.illu-mobile-dock-scroll::-webkit-scrollbar-corner {
+    background: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0)) !important;
 }
 
 .illu-mobile-dock-btn {
@@ -867,13 +913,26 @@ body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #color-target-sel {
     font-size: 14px !important;
 }
 
+body.illu-mobile-ui #btn-col-expand,
 body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #btn-toggle-8bit,
 body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #btn-col-expand {
     display: none !important;
 }
 
+/* Panneau RVB/TSV/Alpha : jamais visible en mode téléphone (même si .color-window-expanded) */
+body.illu-mobile-ui #win-colors.color-window-expanded #color-sliders-panel,
+body.illu-mobile-ui #color-sliders-panel,
+body.illu-mobile-shell-active #win-colors.color-window-expanded #color-sliders-panel,
+body.illu-mobile-shell-active #color-sliders-panel,
 body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #color-sliders-panel {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
 }
 
 body.illu-mobile-shell-active #illu-mobile-sheet-colors-body .color-picker-body {
@@ -1056,8 +1115,9 @@ html:has(body.illu-mobile-shell-active) ::-webkit-scrollbar-corner {
 }
 
 html:has(body.illu-mobile-shell-active.theme-dark) {
+    --illu-mobile-dock-scroll-bg: color-mix(in srgb, var(--mp-dock-bg, #252830) 88%, #000 12%);
     --illu-mobile-scroll-thumb: rgba(255, 255, 255, 0.38);
-    --illu-mobile-scroll-track: rgba(255, 255, 255, 0.08);
+    --illu-mobile-scroll-track: var(--illu-mobile-dock-scroll-bg);
 }
 
 html:has(body.illu-mobile-shell-active.theme-dark) ::-webkit-scrollbar-thumb:hover {
