@@ -263,6 +263,27 @@
         }
     }
 
+    /** Bureau : 4 coins dans la grille Sélection (après Tout, avant Nouv.) ; mobile : groupe ruban dédié. */
+    window.illuSyncFreeCornersRibbonPlacement = function () {
+        const corners = document.getElementById('select-rect-free-corners-wrap');
+        const primary = querySelRibbonGroup('illu-sel-actions-primary');
+        const extraGroup = document.querySelector(
+            '.illu-ribbon-group[data-illu-ribbon-group="selection-extra"]'
+        );
+        const isMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+        if (!corners) return;
+        if (isMobile) {
+            if (extraGroup) {
+                const body = extraGroup.querySelector('.illu-ribbon-group-body');
+                if (body) insertBeforeIfChild(body, corners, null);
+            }
+        } else if (primary) {
+            insertBeforeIfChild(primary, corners, null);
+            if (extraGroup) setGroupHidden(extraGroup, true);
+        }
+    };
+
     window.illuSyncMobileViewActions = function () {
         const isMobile =
             typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
@@ -276,6 +297,9 @@
         );
         if (viewRibbon && isMobile) {
             setGroupHidden(viewRibbon, true);
+        }
+        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+            window.illuSyncFreeCornersRibbonPlacement();
         }
         if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
             window.illuSyncSelectionExtraPlacement();
@@ -322,6 +346,9 @@
         if (typeof window.illuWireZoomFitToolbarButtons === 'function') {
             window.illuWireZoomFitToolbarButtons();
         }
+        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+            window.illuSyncFreeCornersRibbonPlacement();
+        }
     };
 
     function shapesActionsActive(actionIds) {
@@ -357,7 +384,10 @@
             } else if (id === 'selection-extra') {
                 const cornersItem = document.getElementById('select-rect-free-corners-wrap');
                 active =
-                    SELECT_ACTION_TOOLS.has(tool) && cornersItem && !cornersItem.hidden;
+                    isMobileRibbon &&
+                    SELECT_ACTION_TOOLS.has(tool) &&
+                    cornersItem &&
+                    !cornersItem.hidden;
             } else if (id === 'adjustments') {
                 active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'view') {
@@ -384,6 +414,9 @@
             setGroupHidden(group, !active);
         });
 
+        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+            window.illuSyncFreeCornersRibbonPlacement();
+        }
         if (isMobileRibbon && typeof window.illuSyncMobileViewActions === 'function') {
             window.illuSyncMobileViewActions();
         }
@@ -430,6 +463,9 @@
 
         if (!window._illuSelExtraPlacementBound) {
             window.addEventListener('illu-mobile-ui-changed', () => {
+                if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+                    window.illuSyncFreeCornersRibbonPlacement();
+                }
                 if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
                     window.illuSyncSelectionExtraPlacement();
                 }

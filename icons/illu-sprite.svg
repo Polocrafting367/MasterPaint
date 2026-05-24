@@ -136,21 +136,21 @@
 </symbol>
 
 <symbol id="illu-icon-tool-direct-select" viewBox="0 0 16 16">
-  <path d="M 2 8 C 2 3, 7 2, 11 3 C 13.5 3.5, 14 7, 12 11" 
-        fill="none" 
-        stroke="var(--illu-icon-stroke, #1e293b)" 
-        stroke-width="1.25" 
-        stroke-linecap="round"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linecap="round">
+    <path d="M 3 7.5 C 3.5 5, 4.5 3.5, 6 2.5"/>
+    <path d="M 7.5 2 C 8.5 2, 9.5 2.2, 10.5 2.5"/>
+    <path d="M 12 3 C 13.5 4, 14 6, 12.5 9.5"/>
+  </g>
 
-  <rect x="1" y="6.5" width="2.5" height="2.5" rx="0.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
-  <rect x="5.5" y="1" width="2.5" height="2.5" rx="0.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
-  <rect x="10" y="1.5" width="2.5" height="2.5" rx="0.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round">
+    <rect x="1" y="6.5" width="2.5" height="2.5" rx="0.5"/>
+    <rect x="5.5" y="1" width="2.5" height="2.5" rx="0.5"/>
+    <rect x="10.5" y="1.5" width="2.5" height="2.5" rx="0.5"/>
+  </g>
 
-  <path d="M 7.5 7 L 14 14.5 L 11 15 L 12.5 16 L 11.5 16.5 L 10 15 L 7.5 15.5 Z" 
+  <path d="M 7.5 8.5 L 13.5 14.5 L 11 15 L 12.5 16.5 L 11.5 17 L 10 15 L 7.5 15.5 Z" 
         fill="var(--illu-icon-stroke, #1e293b)" 
-        stroke="var(--illu-icon-bg, #ffffff)" 
-        stroke-width="1" 
-        stroke-linejoin="round"/>
+        stroke="none"/>
 </symbol>
 
 <symbol id="illu-icon-sel-free-corners" viewBox="0 0 16 16">
