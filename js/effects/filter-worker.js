@@ -11,7 +11,7 @@
         const url = path.startsWith('http') ? path : workerDir + path;
         importScripts(url);
     }
-    const deps = ['ChromaKeyer.js', 'vhs-core.js', 'image-adjust-core.js', 'pdn-effects.js'];
+    const deps = ['ral_colors.js', 'ChromaKeyer.js', 'vhs-core.js', 'image-adjust-core.js', 'pdn-effects.js'];
     for (let i = 0; i < deps.length; i++) {
         try {
             illuWorkerImport(deps[i]);
@@ -373,6 +373,223 @@ const FilterManager = {
                     for(let c=0; c<3; c++) d_[i+c]=Math.max(0, Math.min(255, f*(d_[i+c]+br-128)+128));
                 }
                 this.ctx.putImageData(img,0,0); return; 
+            }
+            case 'ral': {
+                const category = val('ef-ral-category') || 'all';
+                const dither = (val('ef-ral-dither') || 0) / 100;
+
+                // Filter RAL_COLORS based on category
+                let colors = typeof RAL_COLORS !== 'undefined' ? RAL_COLORS : [];
+                if (category !== 'all' && colors.length > 0) {
+                    let prefix = 'RAL ';
+                    if (category === 'yellow') prefix += '1';
+                    else if (category === 'orange') prefix += '2';
+                    else if (category === 'red') prefix += '3';
+                    else if (category === 'violet') prefix += '4';
+                    else if (category === 'blue') prefix += '5';
+                    else if (category === 'green') prefix += '6';
+                    else if (category === 'grey') prefix += '7';
+                    else if (category === 'brown') prefix += '8';
+                    else if (category === 'white-black') prefix += '9';
+                    colors = colors.filter(c => c.code.startsWith(prefix));
+                }
+                if (colors.length === 0 && typeof RAL_COLORS !== 'undefined') {
+                    colors = RAL_COLORS;
+                }
+
+                const findNearestRal = (r, g, b) => {
+                    let bestDist = Infinity;
+                    let bestColor = colors[0] || { r: 0, g: 0, b: 0 };
+                    for (let c = 0; c < colors.length; c++) {
+                        const col = colors[c];
+                        const dr = r - col.r;
+                        const dg = g - col.g;
+                        const db = b - col.b;
+                        // Perceptually weighted Euclidean distance
+                        const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestColor = col;
+                        }
+                    }
+                    return bestColor;
+                };
+
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
+                const d_ = img.data;
+
+                if (dither > 0 && colors.length > 0) {
+                    for (let y = sy; y < ey; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const i = (y * w + x) * 4;
+                            const a = d_[i + 3];
+                            if (a < 128) continue;
+
+                            const r = d_[i];
+                            const g = d_[i + 1];
+                            const b = d_[i + 2];
+
+                            const nearest = findNearestRal(r, g, b);
+
+                            const errR = (r - nearest.r) * dither;
+                            const errG = (g - nearest.g) * dither;
+                            const errB = (b - nearest.b) * dither;
+
+                            d_[i] = nearest.r;
+                            d_[i + 1] = nearest.g;
+                            d_[i + 2] = nearest.b;
+
+                            if (x + 1 < w) {
+                                const ni = (y * w + (x + 1)) * 4;
+                                d_[ni] = Math.max(0, Math.min(255, d_[ni] + errR * 7 / 16));
+                                d_[ni + 1] = Math.max(0, Math.min(255, d_[ni + 1] + errG * 7 / 16));
+                                d_[ni + 2] = Math.max(0, Math.min(255, d_[ni + 2] + errB * 7 / 16));
+                            }
+                            if (y + 1 < ey) {
+                                if (x - 1 >= 0) {
+                                    const ni = ((y + 1) * w + (x - 1)) * 4;
+                                    d_[ni] = Math.max(0, Math.min(255, d_[ni] + errR * 3 / 16));
+                                    d_[ni + 1] = Math.max(0, Math.min(255, d_[ni + 1] + errG * 3 / 16));
+                                    d_[ni + 2] = Math.max(0, Math.min(255, d_[ni + 2] + errB * 3 / 16));
+                                }
+                                const ni_b = ((y + 1) * w + x) * 4;
+                                d_[ni_b] = Math.max(0, Math.min(255, d_[ni_b] + errR * 5 / 16));
+                                d_[ni_b + 1] = Math.max(0, Math.min(255, d_[ni_b + 1] + errG * 5 / 16));
+                                d_[ni_b + 2] = Math.max(0, Math.min(255, d_[ni_b + 2] + errB * 5 / 16));
+                                if (x + 1 < w) {
+                                    const ni = ((y + 1) * w + (x + 1)) * 4;
+                                    d_[ni] = Math.max(0, Math.min(255, d_[ni] + errR * 1 / 16));
+                                    d_[ni + 1] = Math.max(0, Math.min(255, d_[ni + 1] + errG * 1 / 16));
+                                    d_[ni + 2] = Math.max(0, Math.min(255, d_[ni + 2] + errB * 1 / 16));
+                                }
+                            }
+                        }
+                    }
+                } else if (colors.length > 0) {
+                    for (let y = sy; y < ey; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const i = (y * w + x) * 4;
+                            const a = d_[i + 3];
+                            if (a < 128) continue;
+                            const nearest = findNearestRal(d_[i], d_[i + 1], d_[i + 2]);
+                            d_[i] = nearest.r;
+                            d_[i + 1] = nearest.g;
+                            d_[i + 2] = nearest.b;
+                        }
+                    }
+                }
+
+                this.ctx.putImageData(img, 0, 0);
+                return;
+            }
+            case 'contour': {
+                const width = pxInt(val('ef-contour-width') || 3);
+                const colorHex = vals['ef-contour-color'] || '#ff0000';
+                const opacity = (val('ef-contour-opacity') || 100) / 100;
+                const mode = val('ef-contour-mode') || 'outside';
+                const color = this._parseHexColor(colorHex);
+
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
+                const d_ = img.data;
+
+                const radiusSq = width * width;
+
+                for (let y = sy; y < ey; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+                        const currentAlpha = srcOrig[i + 3];
+                        const isCurrentOpaque = currentAlpha >= 128;
+
+                        let isBoundary = false;
+
+                        if (mode === 'outside' && !isCurrentOpaque) {
+                            for (let dy = -width; dy <= width; dy++) {
+                                const ny = y + dy;
+                                if (ny < 0 || ny >= h) continue;
+                                for (let dx = -width; dx <= width; dx++) {
+                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    const nx = x + dx;
+                                    if (nx < 0 || nx >= w) continue;
+
+                                    const ni = (ny * w + nx) * 4;
+                                    if (srcOrig[ni + 3] >= 128) {
+                                        isBoundary = true;
+                                        break;
+                                    }
+                                }
+                                if (isBoundary) break;
+                            }
+                        } else if (mode === 'inside' && isCurrentOpaque) {
+                            for (let dy = -width; dy <= width; dy++) {
+                                const ny = y + dy;
+                                if (ny < 0 || ny >= h) {
+                                    isBoundary = true;
+                                    break;
+                                }
+                                for (let dx = -width; dx <= width; dx++) {
+                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    const nx = x + dx;
+                                    if (nx < 0 || nx >= w) {
+                                        isBoundary = true;
+                                        break;
+                                    }
+
+                                    const ni = (ny * w + nx) * 4;
+                                    if (srcOrig[ni + 3] < 128) {
+                                        isBoundary = true;
+                                        break;
+                                    }
+                                }
+                                if (isBoundary) break;
+                            }
+                        } else if (mode === 'both') {
+                            for (let dy = -width; dy <= width; dy++) {
+                                const ny = y + dy;
+                                const isYOut = ny < 0 || ny >= h;
+                                for (let dx = -width; dx <= width; dx++) {
+                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    const nx = x + dx;
+                                    const isXOut = nx < 0 || nx >= w;
+
+                                    let isNeighborOpaque = false;
+                                    if (!isYOut && !isXOut) {
+                                        const ni = (ny * w + nx) * 4;
+                                        isNeighborOpaque = srcOrig[ni + 3] >= 128;
+                                    }
+
+                                    if (isCurrentOpaque !== isNeighborOpaque) {
+                                        isBoundary = true;
+                                        break;
+                                    }
+                                }
+                                if (isBoundary) break;
+                            }
+                        }
+
+                        if (isBoundary) {
+                            const outAlpha = Math.round(opacity * 255);
+                            if (opacity === 1) {
+                                d_[i] = color.r;
+                                d_[i + 1] = color.g;
+                                d_[i + 2] = color.b;
+                                d_[i + 3] = 255;
+                            } else {
+                                const a1 = opacity;
+                                const a2 = (currentAlpha / 255) * (1 - opacity);
+                                const aOut = a1 + a2;
+                                if (aOut > 0) {
+                                    d_[i] = Math.round((color.r * a1 + srcOrig[i] * a2) / aOut);
+                                    d_[i + 1] = Math.round((color.g * a1 + srcOrig[i + 1] * a2) / aOut);
+                                    d_[i + 2] = Math.round((color.b * a1 + srcOrig[i + 2] * a2) / aOut);
+                                    d_[i + 3] = Math.round(aOut * 255);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                this.ctx.putImageData(img, 0, 0);
+                return;
             }
             case 'grayscale': {
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;

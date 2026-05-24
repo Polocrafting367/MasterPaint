@@ -74,6 +74,16 @@ chroma: {
         'ef-vhs-luma_contrast': '1',
         'ef-vhs-luma_brightness': '0',
         'ef-vhs-chroma_phase': '0'
+    },
+    ral: {
+        'ef-ral-category': 'all',
+        'ef-ral-dither': '0'
+    },
+    contour: {
+        'ef-contour-width': '3',
+        'ef-contour-color': '#ff0000',
+        'ef-contour-opacity': '100',
+        'ef-contour-mode': 'outside'
     }
 };
 
@@ -108,7 +118,9 @@ const EFFECT_HISTORY_LABELS = {
     sketch: 'Esquisse',
     autolevel: 'Auto-niveau',
     median: 'Réduction du bruit (médian)',
-    temperature: 'Température de couleur'
+    temperature: 'Température de couleur',
+    ral: 'Conversion de couleur RAL',
+    contour: 'Contour (Transparence)'
 };
 
 /** Effets sans implémentation worker : repli sur _previewOneTarget (thread principal). */
@@ -1154,6 +1166,62 @@ window.FilterManager = {
             case 'mirrorquad':
                 this.showModal('Miroir 4 secteurs', `
                     <p style="margin:0;font-size:11px;color:#333;">Le quadrant haut-gauche est répété par symétrie dans les 4 quarts (effet « kaleïdoscope carré »).</p>
+                `);
+                break;
+            case 'ral':
+                this.showModal('Conversion RAL', `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Convertit l'image aux teintes industrielles standard de la palette RAL Classic.</p>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;">Nuancier RAL</label>
+                        <select id="ef-ral-category" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="all">Tous (216 couleurs)</option>
+                            <option value="yellow">Jaunes (RAL 1000 - 1037)</option>
+                            <option value="orange">Oranges (RAL 2000 - 2017)</option>
+                            <option value="red">Rouges (RAL 3000 - 3033)</option>
+                            <option value="violet">Violets (RAL 4001 - 4012)</option>
+                            <option value="blue">Bleus (RAL 5000 - 5026)</option>
+                            <option value="green">Verts (RAL 6000 - 6038)</option>
+                            <option value="grey">Gris (RAL 7000 - 7048)</option>
+                            <option value="brown">Bruns (RAL 8000 - 8029)</option>
+                            <option value="white-black">Blancs et Noirs (RAL 9001 - 9023)</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:92px;">Tramage %</label>
+                        <input type="range" id="ef-ral-dither" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-ral-dither-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-ral-dither-val" style="width:28px;text-align:right;">0</span>
+                    </div>
+                    <div id="ral-stats-container" style="margin-top:12px;padding:8px;border:1px solid #ccc;background:#f5f5f5;border-radius:4px;display:none;">
+                        <div style="font-weight:bold;font-size:11px;margin-bottom:6px;color:#333;">Couleurs RAL principales détectées :</div>
+                        <div id="ral-stats-list" style="display:flex;flex-direction:column;gap:4px;font-size:10px;"></div>
+                    </div>
+                `);
+                break;
+            case 'contour':
+                this.showModal('Contour (Transparence)', `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Dessine un contour de couleur autour des éléments basé sur la transparence.</p>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:92px;">Largeur (px)</label>
+                        <input type="range" id="ef-contour-width" min="1" max="20" value="3" style="flex-grow:1;" oninput="document.getElementById('ef-contour-width-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-contour-width-val" style="width:28px;text-align:right;">3</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;">Couleur</label>
+                        <input type="color" id="ef-contour-color" value="#ff0000" oninput="FilterManager.preview()">
+                    </div>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:92px;">Opacité %</label>
+                        <input type="range" id="ef-contour-opacity" min="0" max="100" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-contour-opacity-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-contour-opacity-val" style="width:28px;text-align:right;">100</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;">Position</label>
+                        <select id="ef-contour-mode" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="outside">Extérieur</option>
+                            <option value="inside">Intérieur</option>
+                            <option value="both">Double (Centré)</option>
+                        </select>
+                    </div>
                 `);
                 break;
             case 'duotone':
@@ -2348,10 +2416,102 @@ window.FilterManager = {
         if (this.currentEffect === 'vhs') {
             requestAnimationFrame(() => this._updateVhsDialogPreviewCanvas());
         }
+        if (this.currentEffect === 'ral') {
+            this._updateRalHistogram();
+        }
 
         if (this._effectPreviewIsFinal) {
             console.log(`[COMMIT] Effect '${this.currentEffect}' applied successfully using ${this._usedEngine || 'CPU'} engine.`);
             this._lastLogEffect = null;
+        }
+    },
+
+    _updateRalHistogram() {
+        const statsContainer = document.getElementById('ral-stats-container');
+        const statsList = document.getElementById('ral-stats-list');
+        if (!statsContainer || !statsList) return;
+
+        if (!this._ralLookupMap && typeof RAL_COLORS !== 'undefined') {
+            this._ralLookupMap = {};
+            for (const color of RAL_COLORS) {
+                const rgbKey = `${color.r},${color.g},${color.b}`;
+                this._ralLookupMap[rgbKey] = color;
+            }
+        }
+        if (!this._ralLookupMap) return;
+
+        const ctx = this._workCanvas.getContext('2d');
+        const w = this._workCanvas.width;
+        const h = this._workCanvas.height;
+        let imgData;
+        try {
+            imgData = ctx.getImageData(0, 0, w, h);
+        } catch (e) {
+            return;
+        }
+
+        const counts = {};
+        const data = imgData.data;
+        const step = 4;
+        let totalCounted = 0;
+        for (let i = 0; i < data.length; i += 4 * step) {
+            const a = data[i + 3];
+            if (a < 128) continue;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const key = `${r},${g},${b}`;
+            counts[key] = (counts[key] || 0) + 1;
+            totalCounted++;
+        }
+
+        if (totalCounted === 0) {
+            statsContainer.style.display = 'none';
+            return;
+        }
+
+        const sorted = Object.entries(counts)
+            .map(([key, count]) => {
+                const colorInfo = this._ralLookupMap[key];
+                return {
+                    key,
+                    count,
+                    info: colorInfo
+                };
+            })
+            .filter(item => item.info)
+            .sort((a, b) => b.count - a.count);
+
+        if (sorted.length === 0) {
+            statsContainer.style.display = 'none';
+            return;
+        }
+
+        statsContainer.style.display = 'block';
+        statsList.innerHTML = '';
+
+        const top5 = sorted.slice(0, 5);
+        const isFrench = (window.IlluI18n && window.IlluI18n.getLanguage && window.IlluI18n.getLanguage() === 'fr') || true;
+
+        for (const item of top5) {
+            const pct = Math.round((item.count / totalCounted) * 100);
+            const color = item.info;
+            const name = isFrench ? color.fr : color.en;
+
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.marginBottom = '4px';
+
+            row.innerHTML = `
+                <div style="width:20px;height:12px;border:1px solid #999;background-color:${color.hex};border-radius:2px;flex-shrink:0;"></div>
+                <div style="flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <strong>${color.code}</strong> — ${name}
+                </div>
+                <div style="font-weight:bold;color:#555;width:32px;text-align:right;">${pct}%</div>
+            `;
+            statsList.appendChild(row);
         }
     },
 
