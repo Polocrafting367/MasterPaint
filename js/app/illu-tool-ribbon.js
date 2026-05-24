@@ -91,7 +91,8 @@
             labelKey: 'ribbon.groupFill',
             selectors: ['#opt-grp-vector-fill-buttons']
         },
-        { id: 'vector', labelKey: 'ribbon.groupVector', selectors: ['#opt-grp-vector-ops'] }
+        { id: 'vector', labelKey: 'ribbon.groupVector', selectors: ['#opt-grp-vector-ops'] },
+        { id: 'vector-grad', labelKey: 'ribbon.groupGradientType', selectors: ['#opt-grp-vector-grad-toggles'] }
     ];
 
     const PARAM_RIBBON_GROUPS = [
@@ -125,7 +126,8 @@
             labelKey: 'tools.shapeGradAngle',
             selectors: ['#tool-text-grad-angle-row']
         },
-        { id: 'warp', labelKey: 'ribbon.groupWarp', selectors: ['#opt-grp-warp-params'] }
+        { id: 'warp', labelKey: 'ribbon.groupWarp', selectors: ['#opt-grp-warp-params'] },
+        { id: 'vector-params', labelKey: 'ribbon.groupVector', selectors: ['#opt-grp-vector-params'] }
     ];
 
     function t(key, fallback) {
@@ -394,10 +396,11 @@
             let active = false;
             if (id === 'tool') active = true;
             else if (id === 'selection') {
-                active = SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool);
+                active = !isVectorSelect && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
             } else if (id === 'selection-extra') {
                 const cornersItem = document.getElementById('select-rect-free-corners-wrap');
                 active =
+                    !isVectorSelect &&
                     isMobileRibbon &&
                     SELECT_ACTION_TOOLS.has(tool) &&
                     cornersItem &&
@@ -405,8 +408,8 @@
             } else if (id === 'adjustments') {
                 active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'view') {
-                /* Mobile : masqué (comme « 4 coins ») — Grille / Règles restent dans le menu Fenêtre. */
-                active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                /* Mobile : masque (comme 4 coins) - Grille / Regles restent dans le menu Fenetre. */
+                active = !isVectorSelect && SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
             else if (id === 'shape-mode' || id === 'shape-fill') {
                 active = shapesActionsActive(actionIds);
@@ -424,7 +427,7 @@
                 active = actionIds.has('opt-grp-text-actions') && textGradMethodEl && !textGradMethodEl.hidden;
             } else if (id === 'gradient-type' || id === 'gradient-method') {
                 active = actionIds.has('opt-grp-gradient-actions');
-            } else if (id === 'vector-fill' || id === 'vector') {
+            } else if (id === 'vector-fill' || id === 'vector' || id === 'vector-grad') {
                 active = isVectorSelect;
             }
             setGroupHidden(group, !active);
@@ -457,6 +460,7 @@
             } else if (id === 'text-grad-angle') {
                 active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
             } else if (id === 'warp') active = paramIds.has('opt-grp-warp-params') || warpActive;
+            else if (id === 'vector-params') active = isVectorSelect;
             setGroupHidden(group, !active);
         });
     };

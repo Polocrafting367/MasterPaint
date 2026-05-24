@@ -38,7 +38,7 @@ export declare function createBuffer(size: number): Uint8Array;
  * @param startY `i32`
  * @param endY `i32`
  */
-export declare function applyCameraRaw(dataPtr: number, width: number, height: number, exposure: number, contrast: number, highlights: number, shadows: number, temperature: number, tint: number, vibrance: number, saturation: number, red: number, redHi: number, redSh: number, green: number, greenHi: number, greenSh: number, blue: number, blueHi: number, blueSh: number, hslPtr: number, lutPtr: number, startY?: number, endY?: number): void;
+export declare function applyCameraRaw(dataPtr: number, width: number, height: number, exposure: number, contrast: number, highlights: number, shadows: number, temperature: number, tint: number, vibrance: number, saturation: number, red: number, redHi: number, redSh: number, green: number, greenHi: number, greenSh: number, blue: number, blueHi: number, blueSh: number, hslPtr: number, lutPtr: number, startY: number, endY: number): void;
 /**
  * assembly/camera_raw/generateThumbnail
  * @param srcPtr `usize`
@@ -100,10 +100,14 @@ export declare function pinch(srcPtr: number, dstPtr: number, w: number, h: numb
  * @param w `i32`
  * @param h `i32`
  * @param amount `f32`
+ * @param r `u8`
+ * @param g `u8`
+ * @param b `u8`
+ * @param blend `i32`
  * @param startY `i32`
  * @param endY `i32`
  */
-export declare function vignette(srcPtr: number, w: number, h: number, amount: number, startY: number, endY: number): void;
+export declare function vignette(srcPtr: number, w: number, h: number, amount: number, r: number, g: number, b: number, blend: number, startY: number, endY: number): void;
 /**
  * assembly/filters/adjustBCS
  * @param srcPtr `usize`

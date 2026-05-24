@@ -100,10 +100,14 @@ export declare function pinch(srcPtr: number, dstPtr: number, w: number, h: numb
  * @param w `i32`
  * @param h `i32`
  * @param amount `f32`
+ * @param r `u8`
+ * @param g `u8`
+ * @param b `u8`
+ * @param blend `i32`
  * @param startY `i32`
  * @param endY `i32`
  */
-export declare function vignette(srcPtr: number, w: number, h: number, amount: number, startY: number, endY: number): void;
+export declare function vignette(srcPtr: number, w: number, h: number, amount: number, r: number, g: number, b: number, blend: number, startY: number, endY: number): void;
 /**
  * assembly/filters/adjustBCS
  * @param srcPtr `usize`

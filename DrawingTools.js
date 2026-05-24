@@ -805,7 +805,11 @@ window.updateToolOptionsBar = function () {
 
         // Sync fill model buttons
         const fm = primary ? primary.getAttribute('fill') : 'none';
-        const fillModel = (fm === 'none') ? 'none' : (fm && fm.startsWith('url(#') ? 'pattern' : 'solid');
+        let fillModel = 'solid';
+        if (fm === 'none' || !fm) fillModel = 'none';
+        else if (fm.startsWith('url(#')) {
+            fillModel = fm.includes('grad-') ? 'gradient' : 'pattern';
+        }
         document.querySelectorAll('#opt-grp-vector-fill-buttons .illu-icon-toggle').forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-illu-value') === fillModel);
         });
@@ -2672,6 +2676,15 @@ function clearActiveSelectionPixelsOnLayer(ctx) {
     const ch = EditorManager.activeLayer.buffer.height;
     const sb = window.selectionBounds;
     if (!sb) return;
+
+    // Masque couleur (baguette) : fonctionne meme si on est sur un calque different
+    // en recalculant l'offset via les coordonnees document (origX/origY du masque).
+    const hasColorMask = window.selectionKind === 'color' && window.selectionColorMask;
+    const colorMaskOnThisLayer =
+        hasColorMask && EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask);
+    const colorMaskCrossLayer =
+        hasColorMask && !colorMaskOnThisLayer && window.selectionColorMask.origX != null;
+
     ctx.save();
     ctx.beginPath();
     if (!window.selectionInverted) {
@@ -2685,17 +2698,26 @@ function clearActiveSelectionPixelsOnLayer(ctx) {
             ctx.closePath();
             ctx.clip();
             ctx.clearRect(0, 0, cw, ch);
-        } else if (
-            window.selectionKind === 'color' &&
-            window.selectionColorMask &&
-            EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
-        ) {
+        } else if (colorMaskOnThisLayer) {
             const ox = sb.x - lx;
             const oy = sb.y - ly;
             ctx.rect(ox, oy, sb.w, sb.h);
             ctx.clip();
             ctx.beginPath();
             EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+            ctx.clip();
+            ctx.clearRect(0, 0, cw, ch);
+        } else if (colorMaskCrossLayer) {
+            // Masque cree sur un autre calque : repositionner en coords document -> calque cible
+            const m = window.selectionColorMask;
+            const tlx = m.origX - lx;  // offset dans le tampon du calque cible
+            const tly = m.origY - ly;
+            const ox = sb.x - lx;
+            const oy = sb.y - ly;
+            ctx.rect(ox, oy, sb.w, sb.h);
+            ctx.clip();
+            ctx.beginPath();
+            EditorManager.appendColorMaskRectsToPath(ctx, m, tlx, tly);
             ctx.clip();
             ctx.clearRect(0, 0, cw, ch);
         } else {
@@ -2713,13 +2735,15 @@ function clearActiveSelectionPixelsOnLayer(ctx) {
                 else ctx.lineTo(px, py);
             });
             ctx.closePath();
-        } else if (
-            window.selectionKind === 'color' &&
-            window.selectionColorMask &&
-            EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
-        ) {
+        } else if (colorMaskOnThisLayer) {
             ctx.rect(0, 0, cw, ch);
             EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+        } else if (colorMaskCrossLayer) {
+            const m = window.selectionColorMask;
+            const tlx = m.origX - lx;
+            const tly = m.origY - ly;
+            ctx.rect(0, 0, cw, ch);
+            EditorManager.appendColorMaskRectsToPath(ctx, m, tlx, tly);
         } else {
             ctx.rect(0, 0, cw, ch);
             ctx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
@@ -3587,6 +3611,10 @@ function initTools() {
         // If it's a middle click (button=1) or right click (button=2), let standard mouse handlers handle it
         if (e.button != null && e.button !== 0) {
             return;
+        }
+        const ae = document.activeElement;
+        if (ae && ae.tagName === 'INPUT' && (ae.type || '').toLowerCase() === 'range') {
+            ae.blur();
         }
         // We now handle mouse via PointerEvents for better performance (coalesced events)
         if (e.isPrimary === false) {
@@ -5376,6 +5404,55 @@ function applyVectorShapePaint(el, kind) {
     }
 }
 window.applyVectorShapePaint = applyVectorShapePaint;
+
+window.syncVectorGradientBoundsForEl = function(el) {
+    if (!el) return;
+    const defs = document.getElementById('vector-doc-defs');
+    if (!defs) return;
+    
+    let gid = el.getAttribute('data-vgrad');
+    if (!gid) return;
+
+    let gradEl = document.getElementById(gid);
+    if (!gradEl) {
+        const gradType = EditorManager.toolProps.gradientType || 'linear';
+        gradEl = document.createElementNS('http://www.w3.org/2000/svg', gradType === 'radial' ? 'radialGradient' : 'linearGradient');
+        gradEl.setAttribute('id', gid);
+        
+        const angleEl = document.getElementById('vector-prop-grad-angle');
+        const angle = angleEl ? parseFloat(angleEl.value || '0') : 0;
+        
+        if (gradType === 'linear') {
+            const rad = (angle) * Math.PI / 180;
+            const r = 50; 
+            const cx = 50, cy = 50;
+            const x1 = cx - r * Math.cos(rad), y1 = cy - r * Math.sin(rad);
+            const x2 = cx + r * Math.cos(rad), y2 = cy + r * Math.sin(rad);
+            gradEl.setAttribute('x1', `$${x1}%`);
+            gradEl.setAttribute('y1', `$${y1}%`);
+            gradEl.setAttribute('x2', `$${x2}%`);
+            gradEl.setAttribute('y2', `$${y2}%`);
+        }
+        
+        const c1 = shapePrimaryFillCss() || '#000000';
+        const c2 = typeof EditorManager !== 'undefined' ? (EditorManager.secondaryColor || '#ffffff') : '#ffffff';
+        
+        const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        s1.setAttribute('offset', '0%');
+        s1.setAttribute('stop-color', c1);
+        const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        s2.setAttribute('offset', '100%');
+        s2.setAttribute('stop-color', c2);
+        
+        gradEl.appendChild(s1);
+        gradEl.appendChild(s2);
+        defs.appendChild(gradEl);
+    } else {
+        // If it exists, update it if needed? (We'll leave it as is for bounds, 
+        // since we use default objectBoundingBox it auto-stretches)
+    }
+};
+
 
 /** Recalcule le dégradé SVG après redimensionnement ou édition de la forme. */
 window.syncVectorGradientBoundsForEl = function (el) {
@@ -10022,6 +10099,9 @@ function startPixel(pos, e) {
     }
 
     if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) && typeof window.cloneLayerBuffer === 'function') {
+        if (typeof EditorManager.pushHistoryCheckpoint === 'function') {
+            EditorManager.pushHistoryCheckpoint('Avant forme');
+        }
         window._shapeBackupCanvas = window.cloneLayerBuffer(EditorManager.activeLayer.buffer);
         window._shapeLivePreviewAngleRad = 0;
         window._shapeRotDragActive = false;
@@ -10086,6 +10166,9 @@ function startPixel(pos, e) {
     }
 
     if (window.activeTool === 'fill') {
+        if (typeof EditorManager.pushHistoryCheckpoint === 'function') {
+            EditorManager.pushHistoryCheckpoint('Avant remplissage');
+        }
         floodFill(Math.round(pos.x - EditorManager.activeLayer.x), Math.round(pos.y - EditorManager.activeLayer.y));
         ctx.restore();
         EditorManager.saveHistory('Remplissage', { patchActiveLayer: true });
@@ -12930,7 +13013,7 @@ function isFormFieldTarget(el) {
     if (t === 'textarea' || t === 'select') return true;
     if (t === 'input') {
         const type = (el.type || '').toLowerCase();
-        if (['button', 'checkbox', 'radio', 'submit', 'reset', 'file'].includes(type)) return false;
+        if (['button', 'checkbox', 'radio', 'submit', 'reset', 'file', 'range'].includes(type)) return false;
         return true;
     }
     return el.isContentEditable === true;

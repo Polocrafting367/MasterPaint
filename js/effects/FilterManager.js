@@ -22,8 +22,8 @@ const EFFECT_PARAM_DEFAULTS = {
     edges: { 'ef-edge': '40' },
     emboss: { 'ef-emb': '12' },
     solarize: { 'ef-sol': '128' },
-    radialblur: { 'ef-rblur': '12' },
-    zoomblur: { 'ef-zblur': '12' },
+    radialblur: { 'ef-rblur-sharp': '15', 'ef-rblur-start': '30', 'ef-rblur': '24', 'ef-rblur-angle': '0' },
+    zoomblur: { 'ef-zblur-sharp': '15', 'ef-zblur-start': '30', 'ef-zblur': '24' },
     motionblur: { 'ef-mblur-angle': '25', 'ef-mblur-dist': '10', 'ef-mblur-center': '1' },
     surfaceblur: { 'ef-sblur-r': '6', 'ef-sblur-t': '15' },
     fragment: { 'ef-frag-n': '4', 'ef-frag-d': '8', 'ef-frag-r': '0' },
@@ -125,7 +125,7 @@ const EFFECT_HISTORY_LABELS = {
 
 /** Effets sans implémentation worker : repli sur _previewOneTarget (thread principal). */
 const ILLU_MAIN_THREAD_PREVIEW_EFFECTS = new Set([
-    'autolevel', 'emboss', 'filmgrain', 'fragment', 'frosted', 'redeyeremove', 'solarize', 'temperature'
+    'autolevel', 'dropshadow', 'emboss', 'filmgrain', 'fragment', 'frosted', 'redeyeremove', 'solarize', 'temperature'
 ]);
 
 window.FilterManager = {
@@ -141,6 +141,8 @@ window.FilterManager = {
     _effectPersistBound: false,
     _frozenSnapshots: null,
     _effectTargets: null,
+    /** Portée mémorisée à l’ouverture de la modale (pour l’historique à la validation). */
+    _effectSessionScopeAll: false,
     /** Mode téléphone : portée de la modale effet en cours (ignorer localStorage / sélection). */
     _effectDialogScope: null,
     _workCanvas: null,
@@ -185,6 +187,20 @@ window.FilterManager = {
     _effectDialogDidClose() {
         document.body.classList.remove('effect-dialog-open');
         this._clearEffectDialogScopeSession();
+    },
+
+    _scopeAffectsAllLayers() {
+        return this._readEffectScope() === 'all';
+    },
+
+    /** Enregistre l’historique selon la portée (calque actif / sélection / tous les calques). */
+    _commitEffectHistory(label) {
+        const scopeAll = this._effectSessionScopeAll === true || this._scopeAffectsAllLayers();
+        if (scopeAll) {
+            EditorManager.saveHistoryAllLayers(`${label} (tous les calques)`);
+        } else {
+            EditorManager.saveHistory(label, { patchActiveLayer: true });
+        }
     },
 
     _readEffectScope() {
@@ -384,9 +400,37 @@ window.FilterManager = {
         return !this._effectPreviewIsFinal && runSeq !== this._previewRunSeq;
     },
 
+    _realignEffectHistoryCheckpoint() {
+        if (EditorManager.mode === 'vector') return;
+        if (!this._effectTargets || !this._effectTargets.length) return;
+        const em = EditorManager;
+        if (!em.activeProject || !em.history.length) return;
+        const idx = em.historyIndex;
+        if (idx < 0) return;
+        const last = em.history[idx];
+        if (!last || !/^État avant effet/.test(last.name)) return;
+        em.history.pop();
+        if (last.data && typeof em.disposeHistoryEntryData === 'function') {
+            em.disposeHistoryEntryData(last.data);
+        }
+        em.historyIndex = em.history.length - 1;
+        em.updateHistoryUI();
+        this._effectSessionScopeAll = this._scopeAffectsAllLayers();
+        if (typeof em.pushHistoryCheckpoint === 'function') {
+            em.pushHistoryCheckpoint(
+                this._effectSessionScopeAll
+                    ? 'État avant effet (tous les calques)'
+                    : 'État avant effet',
+                { allLayers: this._effectSessionScopeAll }
+            );
+        }
+    },
+
     _onEffectScopeChange() {
         this._restoreAllLayersFromFrozen();
         this._setupEffectTargets();
+        this._effectSessionScopeAll = this._scopeAffectsAllLayers();
+        this._realignEffectHistoryCheckpoint();
         if (this.currentEffect === 'gallery') {
             this.previewInstantFilter(this._galleryPresetId || 'none');
         } else {
@@ -836,6 +880,20 @@ window.FilterManager = {
         this.ctx = this._workCtx;
         this.currentEffect = effect;
 
+        this._effectSessionScopeAll = this._scopeAffectsAllLayers();
+
+        /* Point d’annulation Ctrl+Z : état calque avant que l’aperçu live ne modifie les pixels. */
+        if (this._effectTargets && this._effectTargets.length && EditorManager.mode !== 'vector') {
+            if (typeof EditorManager.pushHistoryCheckpoint === 'function') {
+                EditorManager.pushHistoryCheckpoint(
+                    this._effectSessionScopeAll
+                        ? 'État avant effet (tous les calques)'
+                        : 'État avant effet',
+                    { allLayers: this._effectSessionScopeAll }
+                );
+            }
+        }
+
         switch (effect) {
             case 'brightness':
                 this.showModal('Luminosité / Contraste', `
@@ -1021,6 +1079,19 @@ window.FilterManager = {
             case 'vignette':
                 this.showModal('Vignettage', `
                     <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-vig" min="0" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vig-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vig-val" style="width:25px; text-align:right;">50</span></div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:70px;">Couleur</label>
+                        <input type="color" id="ef-vig-color" value="#000000" oninput="FilterManager.preview()">
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:70px;">Fusion</label>
+                        <select id="ef-vig-blend" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="0">Normal</option>
+                            <option value="1">Produit</option>
+                            <option value="2">Superposition</option>
+                            <option value="3">Incrustation</option>
+                        </select>
+                    </div>
                 `);
                 break;
             case 'redeyeremove':
@@ -1061,12 +1132,19 @@ window.FilterManager = {
                 break;
             case 'radialblur':
                 this.showModal('Flou radial', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-rblur" min="2" max="80" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-val" style="width:30px; text-align:right;">12</span></div>
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Zone nette au centre, puis flou tangential progressif (rotation).</p>
+                    <div class="field-row"><label style="width: 92px;">Centre net %</label><input type="range" id="ef-rblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Début flou %</label><input type="range" id="ef-rblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-start-val" style="width:28px;text-align:right;">30</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Intensité</label><input type="range" id="ef-rblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-val" style="width:28px;text-align:right;">24</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Angle °</label><input type="range" id="ef-rblur-angle" min="-180" max="180" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:28px;text-align:right;">0</span></div>
                 `);
                 break;
             case 'zoomblur':
                 this.showModal('Flou de zoom', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-zblur" min="2" max="80" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-val" style="width:30px; text-align:right;">12</span></div>
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Zone nette au centre, flou radial progressif depuis le point focal.</p>
+                    <div class="field-row"><label style="width: 92px;">Centre net %</label><input type="range" id="ef-zblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Début flou %</label><input type="range" id="ef-zblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-start-val" style="width:28px;text-align:right;">30</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Intensité</label><input type="range" id="ef-zblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-val" style="width:28px;text-align:right;">24</span></div>
                 `);
                 break;
             case 'motionblur':
@@ -1523,6 +1601,30 @@ window.FilterManager = {
         }
     },
 
+    dismissEffectDialogWithoutRestore() {
+        if (this._previewRaf != null) {
+            cancelAnimationFrame(this._previewRaf);
+            this._previewRaf = null;
+        }
+        this._cancelActiveWorkerPreview();
+        this._effectPreviewIsFinal = false;
+        window._chromaKeyPickActive = false;
+        document.body.style.cursor = '';
+        document.body.classList.remove('effect-dialog-open');
+        const shell = document.getElementById('effect-dialog');
+        if (shell) shell.style.display = 'none';
+        this._effectDialogDidClose();
+        this._tearDownVhsEffectDialogUI();
+        window.applyCurrentEffectModal = function () {
+            FilterManager.apply();
+        };
+        this._frozenSnapshots = null;
+        this._effectTargets = null;
+        this._effectSessionScopeAll = false;
+        this.originalImageData = null;
+        this.currentEffect = null;
+    },
+
     closeModal() {
         if (this._previewRaf != null) {
             cancelAnimationFrame(this._previewRaf);
@@ -1548,6 +1650,7 @@ window.FilterManager = {
 
         this._frozenSnapshots = null;
         this._effectTargets = null;
+        this._effectSessionScopeAll = false;
         this.originalImageData = null;
         this.currentEffect = null;
     },
@@ -1574,21 +1677,19 @@ window.FilterManager = {
             if (shell) shell.style.display = 'none';
             this._effectDialogDidClose();
             if (preset !== 'none') {
-                const multi = this._effectTargets.length > 1;
                 const histLabel =
                     (window.IlluI18n && window.IlluI18n.t
                         ? window.IlluI18n.t('photo.filtersGallery')
                         : 'Galerie') + ` : ${preset}`;
                 if (this._effectTargets[0] && this._effectTargets[0].isPhotoMode) {
                     /* déjà sur PhotoModeManager via dernier aperçu */
-                } else if (multi) {
-                    EditorManager.saveHistory(`${histLabel} (tous les calques)`);
                 } else {
-                    EditorManager.saveHistory(histLabel, { patchActiveLayer: true });
+                    this._commitEffectHistory(histLabel);
                 }
             }
             this._frozenSnapshots = null;
             this._effectTargets = null;
+            this._effectSessionScopeAll = false;
             this.originalImageData = null;
             this.currentEffect = null;
             this._galleryPresetId = 'none';
@@ -1631,18 +1732,16 @@ window.FilterManager = {
                 // before we freeze the CPU taking a heavy history snapshot.
                 await new Promise(resolve => setTimeout(resolve, 30));
                 
-                const multi = this._effectTargets && this._effectTargets.length > 1;
                 const isPM = this._effectTargets && this._effectTargets[0] && this._effectTargets[0].isPhotoMode;
                 
                 if (isPM) {
                     window.PhotoModeManager.updateActivePhotoData(this._effectTargets[0].backup);
-                } else if (multi) {
-                    EditorManager.saveHistory(`Effet : ${label} (tous les calques)`);
                 } else {
-                    EditorManager.saveHistory(`Effet : ${label}`, { patchActiveLayer: true });
+                    this._commitEffectHistory(`Effet : ${label}`);
                 }
                 this._frozenSnapshots = null;
                 this._effectTargets = null;
+                this._effectSessionScopeAll = false;
                 this.originalImageData = null;
                 this.currentEffect = null;
             } finally {
@@ -1675,16 +1774,12 @@ window.FilterManager = {
                 this._effectPreviewIsFinal = false;
                 this._vhsUseLowResPreview = wasLow;
 
-                const multi = this._effectTargets && this._effectTargets.length > 1;
-                if (multi) {
-                    EditorManager.saveHistory(`Effet : ${label} (tous les calques)`);
-                } else {
-                    EditorManager.saveHistory(`Effet : ${label}`, { patchActiveLayer: true });
-                }
+                this._commitEffectHistory(`Effet : ${label}`);
             } finally {
                 this._effectPreviewIsFinal = false;
                 this._frozenSnapshots = null;
                 this._effectTargets = null;
+                this._effectSessionScopeAll = false;
                 this.originalImageData = null;
                 this.currentEffect = null;
                 this._endHeavyBusyToken(busyToken);
@@ -1825,9 +1920,8 @@ window.FilterManager = {
         this._effectDialogDidClose();
         window._chromaKeyPickActive = false;
         document.body.style.cursor = '';
-        const multi = this._effectTargets.length > 1;
         const base = EFFECT_HISTORY_LABELS.chromaAlphaMask || 'Incrustation (masque alpha)';
-        EditorManager.saveHistory(multi ? `${base} (tous les calques)` : base);
+        this._commitEffectHistory(base);
         this._frozenSnapshots = null;
         this._effectTargets = null;
         this.originalImageData = null;
@@ -2212,6 +2306,9 @@ window.FilterManager = {
                     case 'vignette': {
                         shader = 'vignette';
                         uniforms.u_intensity = (vals['ef-vig'] || 50) / 100;
+                        const vc = this._parseHexColor(vals['ef-vig-color'] || '#000000');
+                        uniforms.u_color = [vc.r / 255, vc.g / 255, vc.b / 255];
+                        uniforms.u_blend = parseInt(vals['ef-vig-blend'] || 0, 10);
                         break;
                     }
                     case 'temperature': {
@@ -2542,15 +2639,19 @@ window.FilterManager = {
                 m = Math.ceil(rad * p * scale) + 1;
                 break;
             case 'median':
-                m = val('ef-med-rad') || 2; break;
+                m = Math.ceil((val('ef-med-rad') || 2) * scale) + 1; break;
             case 'oil':
-                m = val('ef-oil') || 4; break;
+                m = Math.ceil((val('ef-oil') || 4) * scale) + 1; break;
             case 'crystallize':
-                m = val('ef-cry') || 12; break;
+                m = Math.ceil((val('ef-cry') || 12) * scale) + 1; break;
             case 'chromatic':
-                m = val('ef-chr') || 6; break;
+                m = Math.ceil((val('ef-chr') || 6) * scale) + 1; break;
             case 'halftone':
-                m = (val('ef-half-rad') || 4) * 2; break;
+                m = Math.ceil((val('ef-half-rad') || 4) * 2 * scale) + 1; break;
+            case 'radialblur':
+            case 'zoomblur':
+                m = Math.ceil((val('ef-rblur') || val('ef-zblur') || 12) * scale) + 4;
+                break;
             case 'motionblur':
                 m = Math.ceil((val('ef-mblur-dist') || 10) * scale) + 2;
                 break;
@@ -2747,6 +2848,9 @@ window.FilterManager = {
                 case 'vignette': {
                     shader = 'vignette';
                     uniforms.u_intensity = (val('ef-vig') || 50) / 100;
+                    const vc = this._parseHexColor(val('ef-vig-color') || '#000000');
+                    uniforms.u_color = [vc.r / 255, vc.g / 255, vc.b / 255];
+                    uniforms.u_blend = parseInt(val('ef-vig-blend') || 0, 10);
                     break;
                 }
                 case 'temperature': {
@@ -2824,7 +2928,11 @@ window.FilterManager = {
                 : 1;
         const pxU = (v) => (ps >= 1 - 1e-9 ? v : v * ps);
         const pxInt = (v) => Math.max(1, Math.round(pxU(v)));
-        const pxRad = (v) => Math.max(0, Math.round(pxU(v)));
+        const pxRad = (v) => {
+            const n = Number(v) || 0;
+            if (n < 1) return 0;
+            return Math.max(1, Math.round(pxU(n)));
+        };
 
         const geometricOutput = (mapFn) => {
             const out = new ImageData(w, h);
@@ -3021,73 +3129,38 @@ window.FilterManager = {
                 return;
             }
             case 'radialblur': {
-                const steps = Math.max(2, val('ef-rblur'));
-                const out = new ImageData(w, h);
-                const od = out.data;
-                const cx = w / 2, cy = h / 2;
-                const maxR = Math.hypot(cx, cy) || 1;
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        let dx = x - cx, dy = y - cy;
-                        const dist = Math.hypot(dx, dy);
-                        let r = 0, g = 0, b = 0, a = 0, c = 0;
-                        if (dist < 0.5) {
-                            const i = (y * w + x) * 4;
-                            od[i] = srcOrig[i]; od[i + 1] = srcOrig[i + 1]; od[i + 2] = srcOrig[i + 2]; od[i + 3] = srcOrig[i + 3];
-                            continue;
-                        }
-                        dx /= dist; dy /= dist;
-                        const n = Math.max(2, Math.ceil((dist / maxR) * steps));
-                        for (let s = 0; s < n; s++) {
-                            const t = s / (n - 1);
-                            const sx = cx + dx * dist * t;
-                            const sy = cy + dy * dist * t;
-                            const [rr, gg, bb, aa] = this._sampleBilinear(srcOrig, w, h, sx, sy);
-                            r += rr; g += gg; b += bb; a += aa; c++;
-                        }
-                        const i = (y * w + x) * 4;
-                        od[i] = r / c; od[i + 1] = g / c; od[i + 2] = b / c; od[i + 3] = a / c;
-                    }
-                }
-                this.ctx.putImageData(out, 0, 0);
+                const fn = typeof illuRadialBlurRGBA === 'function' ? illuRadialBlurRGBA : null;
+                if (!fn) return;
+                const out = fn(srcOrig, w, h, {
+                    cx: w / 2,
+                    cy: h / 2,
+                    sharpPct: pxU(val('ef-rblur-sharp') ?? 15),
+                    startPct: pxU(val('ef-rblur-start') ?? 30),
+                    intensity: pxU(val('ef-rblur') || 12),
+                    angleDeg: val('ef-rblur-angle') || 0,
+                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                });
+                this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
             }
             case 'zoomblur': {
-                const steps = Math.max(2, val('ef-zblur'));
-                const out = new ImageData(w, h);
-                const od = out.data;
-                const fx = w / 2, fy = h / 2;
-                const maxLen = Math.hypot(w, h);
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        let dx = x - fx, dy = y - fy;
-                        const dist = Math.hypot(dx, dy);
-                        let r = 0, g = 0, b = 0, a = 0, c = 0;
-                        if (dist < 0.5) {
-                            const i = (y * w + x) * 4;
-                            od[i] = srcOrig[i]; od[i + 1] = srcOrig[i + 1]; od[i + 2] = srcOrig[i + 2]; od[i + 3] = srcOrig[i + 3];
-                            continue;
-                        }
-                        dx /= dist; dy /= dist;
-                        const n = steps;
-                        for (let s = 0; s < n; s++) {
-                            const t = s / (n - 1);
-                            const sx = fx + dx * dist * t;
-                            const sy = fy + dy * dist * t;
-                            const [rr, gg, bb, aa] = this._sampleBilinear(srcOrig, w, h, sx, sy);
-                            r += rr; g += gg; b += bb; a += aa; c++;
-                        }
-                        const i = (y * w + x) * 4;
-                        od[i] = r / c; od[i + 1] = g / c; od[i + 2] = b / c; od[i + 3] = a / c;
-                    }
-                }
-                this.ctx.putImageData(out, 0, 0);
+                const fn = typeof illuZoomBlurRGBA === 'function' ? illuZoomBlurRGBA : null;
+                if (!fn) return;
+                const out = fn(srcOrig, w, h, {
+                    cx: w / 2,
+                    cy: h / 2,
+                    sharpPct: pxU(val('ef-zblur-sharp') ?? 15),
+                    startPct: pxU(val('ef-zblur-start') ?? 30),
+                    intensity: pxU(val('ef-zblur') || 12),
+                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                });
+                this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
             }
             case 'motionblur': {
                 if (!window.PdnEffects) return;
                 const angle = parseFloat(document.getElementById('ef-mblur-angle')?.value || '25');
-                const dist = parseInt(document.getElementById('ef-mblur-dist')?.value || '10', 10);
+                const dist = Math.max(1, Math.round(pxU(parseInt(document.getElementById('ef-mblur-dist')?.value || '10', 10))));
                 const centered = !!document.getElementById('ef-mblur-center')?.checked;
                 const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
                 const out = window.PdnEffects.motionBlur(imgData, angle, dist, centered);
@@ -3096,7 +3169,7 @@ window.FilterManager = {
             }
             case 'surfaceblur': {
                 if (!window.PdnEffects) return;
-                const rad = parseInt(document.getElementById('ef-sblur-r')?.value || '6', 10);
+                const rad = pxRad(parseInt(document.getElementById('ef-sblur-r')?.value || '6', 10));
                 const th = parseInt(document.getElementById('ef-sblur-t')?.value || '15', 10);
                 const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
                 const out = window.PdnEffects.surfaceBlur(imgData, rad, th);
@@ -3106,7 +3179,7 @@ window.FilterManager = {
             case 'fragment': {
                 if (!window.PdnEffects?.fragment) return;
                 const n = parseInt(document.getElementById('ef-frag-n')?.value || '4', 10);
-                const d = parseInt(document.getElementById('ef-frag-d')?.value || '8', 10);
+                const d = Math.max(0, Math.round(pxU(parseInt(document.getElementById('ef-frag-d')?.value || '8', 10))));
                 const rot = parseFloat(document.getElementById('ef-frag-r')?.value || '0');
                 const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
                 const out = window.PdnEffects.fragment(imgData, n, d, rot);
@@ -3333,16 +3406,51 @@ window.FilterManager = {
             }
             case 'vignette': {
                 const vig = val('ef-vig') / 100;
+                const vc = this._parseHexColor(val('ef-vig-color') || '#000000');
+                const blend = parseInt(val('ef-vig-blend') || 0, 10);
                 const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
                 const data = imgData.data;
                 const cx = w / 2, cy = h / 2;
                 const maxR = Math.hypot(cx, cy) || 1;
                 for (let y = 0; y < h; y++) {
                     for (let x = 0; x < w; x++) {
-                        const dr = Math.hypot(x - cx, y - cy) / maxR;
-                        const f = 1 - vig * dr * dr;
+                        const dist = Math.hypot(x - cx, y - cy);
+                        // Using same smoothstep logic as WebGL: smoothstep(0.8, 0.2, dist * u_intensity * 2.0)
+                        // but JS fallback used: Math.hypot(x-cx,y-cy)/maxR ... 1 - vig * dr * dr
+                        // Let's implement the WebGL smoothstep logic to be consistent
+                        let normDist = dist / maxR;
+                        let d = normDist * vig * 2.0;
+                        let mask = 0.0;
+                        if (d <= 0.2) mask = 1.0;
+                        else if (d >= 0.8) mask = 0.0;
+                        else {
+                            let t = (d - 0.8) / (0.2 - 0.8);
+                            mask = t * t * (3.0 - 2.0 * t);
+                        }
+                        
                         const i = (y * w + x) * 4;
-                        data[i] *= f; data[i + 1] *= f; data[i + 2] *= f;
+                        const r = data[i], g = data[i+1], b = data[i+2];
+                        const oR = r/255, oG = g/255, oB = b/255;
+                        const mR = vc.r/255, mG = vc.g/255, mB = vc.b/255;
+                        
+                        let fR = oR, fG = oG, fB = oB;
+                        if (blend === 1) { // Multiply
+                            fR = oR * mR; fG = oG * mG; fB = oB * mB;
+                        } else if (blend === 2) { // Screen
+                            fR = 1.0 - (1.0 - oR) * (1.0 - mR);
+                            fG = 1.0 - (1.0 - oG) * (1.0 - mG);
+                            fB = 1.0 - (1.0 - oB) * (1.0 - mB);
+                        } else if (blend === 3) { // Overlay
+                            fR = (oR < 0.5) ? (2.0 * oR * mR) : (1.0 - 2.0 * (1.0 - oR) * (1.0 - mR));
+                            fG = (oG < 0.5) ? (2.0 * oG * mG) : (1.0 - 2.0 * (1.0 - oG) * (1.0 - mG));
+                            fB = (oB < 0.5) ? (2.0 * oB * mB) : (1.0 - 2.0 * (1.0 - oB) * (1.0 - mB));
+                        } else { // Normal
+                            fR = mR; fG = mG; fB = mB;
+                        }
+                        
+                        data[i] = Math.max(0, Math.min(255, (oR * mask + fR * (1.0 - mask)) * 255));
+                        data[i+1] = Math.max(0, Math.min(255, (oG * mask + fG * (1.0 - mask)) * 255));
+                        data[i+2] = Math.max(0, Math.min(255, (oB * mask + fB * (1.0 - mask)) * 255));
                     }
                 }
                 this.ctx.putImageData(imgData, 0, 0);
@@ -3664,28 +3772,31 @@ case 'chroma': {
                 {
                     const rad = pxRad(val('ef-rad'));
                     const edgeAware = !!document.getElementById('ef-blur-edge')?.checked;
+                    const passes = this.currentEffect === 'gaussian' ? 3 : 1;
                     const cw = w;
                     const ch = h;
-                    const tempData = new Uint8ClampedArray(data);
-                    for (let y = 0; y < ch; y++) {
-                        for (let x = 0; x < cw; x++) {
-                            let r = 0, g = 0, b = 0, count = 0;
-                            for (let dy = -rad; dy <= rad; dy++) {
-                                for (let dx = -rad; dx <= rad; dx++) {
-                                    let nx = x + dx, ny = y + dy;
-                                    if (edgeAware) {
-                                        nx = Math.max(0, Math.min(cw - 1, nx));
-                                        ny = Math.max(0, Math.min(ch - 1, ny));
-                                    }
-                                    if (nx >= 0 && nx < cw && ny >= 0 && ny < ch) {
-                                        const idx = (ny * cw + nx) * 4;
-                                        r += tempData[idx]; g += tempData[idx + 1]; b += tempData[idx + 2];
-                                        count++;
+                    for (let pass = 0; pass < passes; pass++) {
+                        const tempData = new Uint8ClampedArray(data);
+                        for (let y = 0; y < ch; y++) {
+                            for (let x = 0; x < cw; x++) {
+                                let r = 0, g = 0, b = 0, count = 0;
+                                for (let dy = -rad; dy <= rad; dy++) {
+                                    for (let dx = -rad; dx <= rad; dx++) {
+                                        let nx = x + dx, ny = y + dy;
+                                        if (edgeAware) {
+                                            nx = Math.max(0, Math.min(cw - 1, nx));
+                                            ny = Math.max(0, Math.min(ch - 1, ny));
+                                        }
+                                        if (nx >= 0 && nx < cw && ny >= 0 && ny < ch) {
+                                            const idx = (ny * cw + nx) * 4;
+                                            r += tempData[idx]; g += tempData[idx + 1]; b += tempData[idx + 2];
+                                            count++;
+                                        }
                                     }
                                 }
+                                const target = (y * cw + x) * 4;
+                                data[target] = r / count; data[target + 1] = g / count; data[target + 2] = b / count;
                             }
-                            const target = (y * cw + x) * 4;
-                            data[target] = r / count; data[target + 1] = g / count; data[target + 2] = b / count;
                         }
                     }
                 }

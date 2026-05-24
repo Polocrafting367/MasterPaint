@@ -1286,6 +1286,59 @@ setup8BitMode() {
         this._shapePreviewActive = false;
     },
 
+    /**
+     * Annule les sessions pixel « live » (forme vectorielle pixel, dégradé, aperçu effet…)
+     * qui réécrivent le calque après un undo/redo.
+     */
+    clearTransientPixelEditState() {
+        if (typeof window.clearPixelToolSessions === 'function') {
+            window.clearPixelToolSessions();
+        } else {
+            window.pixelShapeEdit = null;
+            window.shapeHandleDrag = null;
+            window._pixelGradientState = null;
+            window._gradientHandleDrag = null;
+            window._gradientNewDrag = false;
+            window._gradientBackup = null;
+            window._shapeBackupCanvas = null;
+            window._shapeLivePreviewAngleRad = 0;
+            window._shapeRotDragActive = false;
+            window._shapeRotDragMode = null;
+        }
+        this.disposeStrokeIntermediate();
+        this.clearShapePreviewOverlay();
+        if (window.FilterManager && typeof window.FilterManager.dismissEffectDialogWithoutRestore === 'function') {
+            if (document.body.classList.contains('effect-dialog-open')) {
+                window.FilterManager.dismissEffectDialogWithoutRestore();
+            } else {
+                window.FilterManager._cancelActiveWorkerPreview?.();
+            }
+        }
+    },
+
+    /** Sauvegarde l’état courant avant une action destructive (remplissage, forme…). */
+    pushHistoryCheckpoint(label, opts = {}) {
+        if (!this.activeProject || !this.isPixelMode) return;
+        const allLayers = opts.allLayers === true;
+        if (allLayers) {
+            this.saveHistoryAllLayers(label || 'Point de restauration');
+        } else {
+            this.saveHistory(label || 'Point de restauration', {
+                patchActiveLayer: !!this.activeLayer?.buffer
+            });
+        }
+    },
+
+    /** Historique : cliché de tous les calques bitmap (effets « tous les calques », recadrage…). */
+    saveHistoryAllLayers(actionName, opts = {}) {
+        if (!this.activeProject) return;
+        this.saveHistory(actionName, {
+            ...opts,
+            patchActiveLayer: false,
+            documentGeometry: opts.documentGeometry === true
+        });
+    },
+
     getLayerBlendMode(layer) {
         if (layer && layer.pdnBlendMode && typeof window.PdnBlendModes !== 'undefined') {
             return window.PdnBlendModes.mapPdnBlendToMasterPaint(layer.pdnBlendMode, layer.blendMode);
@@ -2703,6 +2756,29 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const lowSize = this.THUMB_LAYER_INTERNAL_SIZE;
         if (stage === 'layers') {
             const list = document.getElementById('layers-list');
+
+            // --- Mode vecteur : miniatures async par blob SVG ---
+            if (list && !this.isPixelMode) {
+                const items = [...list.children];
+                if (index >= items.length) {
+                    this._queueThumbSeqStep(gen, 'tab', 0, gap);
+                    return;
+                }
+                const item = items[index];
+                const idx = parseInt(item.dataset.layerIndex, 10);
+                if (!Number.isNaN(idx)) {
+                    const layer = this.layers[idx];
+                    const img = item.querySelector('img.layer-thumb');
+                    if (img && layer) {
+                        this._getVectorLayerThumbnailDataUrl(layer).then((u) => {
+                            if (gen === this._thumbPassGeneration && u) img.src = u;
+                        }).catch(() => {});
+                    }
+                }
+                this._queueThumbSeqStep(gen, 'layers', index + 1, gap * 2);
+                return;
+            }
+
             if (!list || !this.isPixelMode) {
                 this._thumbPassSingleLayerIndex = null;
                 this._queueThumbSeqStep(gen, 'tab', 0, gap);
@@ -2826,6 +2902,161 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 return empty;
             }
         }
+    },
+
+    /**
+     * Génère une miniature pour un calque vecteur en rendant son groupe SVG dans un canvas.
+     * Retourne une Promise<string> (data URL PNG ou gif transparent si vide).
+     */
+    async _getVectorLayerThumbnailDataUrl(layer) {
+        const empty = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        if (!layer) return empty;
+        const p = this.activeProject;
+        if (!p || p.mode !== 'vector') return empty;
+
+        const W = Math.max(1, p.width || 1280);
+        const H = Math.max(1, p.height || 720);
+        const maxDim = 36;
+        const ratio = Math.min(maxDim / W, maxDim / H, 1);
+        const tw = Math.max(1, Math.round(W * ratio));
+        const th = Math.max(1, Math.round(H * ratio));
+
+        // Récupère le groupe SVG de ce calque dans le DOM
+        const layerGroup = document.getElementById(`layer-${layer.id}`);
+        const groupContent = layerGroup ? layerGroup.innerHTML : '';
+        if (!groupContent || !groupContent.trim()) return empty;
+
+        // Defs partagées (gradients, filtres, clips…)
+        const defsEl = document.getElementById('vector-doc-defs');
+        const defsContent = defsEl ? `<defs>${defsEl.innerHTML}</defs>` : '';
+
+        // Construit un SVG minimal contenant uniquement ce calque
+        const opacity = layer.opacity != null ? layer.opacity : 1;
+        const svgMarkup = [
+            `<?xml version="1.0" encoding="UTF-8"?>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
+            ` width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+            defsContent,
+            `<g opacity="${opacity}">`,
+            groupContent,
+            `</g>`,
+            `</svg>`
+        ].join('');
+
+        // --- Helpers couleur (inline, pas de dépendance externe) ---
+        const rgbToHsl = (r, g, b) => {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0;
+            const l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h, s, l };
+        };
+        const hslToRgb = (h, s, l) => {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1; if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const pp = 2 * l - q;
+            return {
+                r: Math.round(hue2rgb(pp, q, h + 1/3) * 255),
+                g: Math.round(hue2rgb(pp, q, h) * 255),
+                b: Math.round(hue2rgb(pp, q, h - 1/3) * 255)
+            };
+        };
+
+        return new Promise((resolve) => {
+            const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                try {
+                    // Étape 1 : rendre le SVG dans un canvas temporaire
+                    const tmp = document.createElement('canvas');
+                    tmp.width = tw; tmp.height = th;
+                    const tctx = tmp.getContext('2d', { willReadFrequently: true });
+                    tctx.imageSmoothingEnabled = true;
+                    tctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
+
+                    // Étape 2 : échantillonner la couleur dominante (pixels visibles, α-pondérés)
+                    const imgData = tctx.getImageData(0, 0, tw, th);
+                    const d = imgData.data;
+                    let rSum = 0, gSum = 0, bSum = 0, aSum = 0;
+                    const step = 2; // 1 pixel sur {step} pour la vitesse
+                    for (let i = 0; i < d.length; i += 4 * step) {
+                        const a = d[i + 3];
+                        if (a > 12) {
+                            rSum += d[i]     * a;
+                            gSum += d[i + 1] * a;
+                            bSum += d[i + 2] * a;
+                            aSum += a;
+                        }
+                    }
+
+                    // Étape 3 : calculer la couleur de fond contrastante
+                    let bgA, bgB;
+                    if (aSum < 1) {
+                        // Calque vide → damier gris neutre
+                        bgA = '#aaaaaa'; bgB = '#777777';
+                    } else {
+                        const avgR = rSum / aSum;
+                        const avgG = gSum / aSum;
+                        const avgB = bSum / aSum;
+
+                        const hsl = rgbToHsl(avgR, avgG, avgB);
+
+                        // Teinte complémentaire (180°)
+                        const ch = (hsl.h + 0.5) % 1;
+                        // Saturation élevée pour que le fond reste coloré
+                        const cs = Math.min(1, Math.max(0.45, hsl.s));
+                        // Luminosité inverse : fond sombre si contenu clair, clair si sombre
+                        const cl1 = hsl.l > 0.45 ? 0.18 : 0.80;
+                        const cl2 = hsl.l > 0.45 ? 0.30 : 0.65;
+
+                        const c1 = hslToRgb(ch, cs, cl1);
+                        const c2 = hslToRgb(ch, cs, cl2);
+                        bgA = `rgb(${c1.r},${c1.g},${c1.b})`;
+                        bgB = `rgb(${c2.r},${c2.g},${c2.b})`;
+                    }
+
+                    // Étape 4 : dessiner le damier contrasté puis le SVG par-dessus
+                    const sc = document.createElement('canvas');
+                    sc.width = tw; sc.height = th;
+                    const sctx = sc.getContext('2d');
+                    const cs = 3; // taille des cases en px
+                    for (let y = 0; y < th; y += cs) {
+                        for (let x = 0; x < tw; x += cs) {
+                            sctx.fillStyle = ((Math.floor(x / cs) + Math.floor(y / cs)) % 2 === 0) ? bgA : bgB;
+                            sctx.fillRect(x, y, cs, cs);
+                        }
+                    }
+                    sctx.imageSmoothingEnabled = true;
+                    sctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
+                    resolve(sc.toDataURL('image/png'));
+                } catch (e) {
+                    resolve(empty);
+                }
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve(empty);
+            };
+            img.src = url;
+        });
     },
 
     getProjectTabThumbnailDataUrl(p) {
@@ -7157,16 +7388,25 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             };
             item.appendChild(eye);
 
-            if (this.isPixelMode && layer.buffer && this._uiThumbsVisible()) {
+            if ((this.isPixelMode && layer.buffer && this._uiThumbsVisible()) ||
+                (!this.isPixelMode && this._uiThumbsVisible())) {
                 const thumb = document.createElement('img');
                 thumb.className = 'layer-thumb';
                 thumb.alt = '';
                 const layerSz = this.getLayerThumbCssSize(layer);
-                thumb.width = layerSz.width;
-                thumb.height = layerSz.height;
+                thumb.width = layerSz.width || 28;
+                thumb.height = layerSz.height || 28;
                 thumb.draggable = false;
-                thumb.src =
-                    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                const emptyGif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                // Mode vecteur : prévisualiser le contenu SVG de ce calque
+                if (!this.isPixelMode) {
+                    thumb.src = emptyGif;
+                    this._getVectorLayerThumbnailDataUrl(layer, idx).then(url => {
+                        if (url) thumb.src = url;
+                    }).catch(() => {});
+                } else {
+                    thumb.src = emptyGif;
+                }
                 item.appendChild(thumb);
             }
 
@@ -7855,6 +8095,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         opacity: l.opacity,
                         blendMode: l.blendMode || 'source-over',
                         alphaMaskProjectId: l.alphaMaskProjectId != null ? l.alphaMaskProjectId : null,
+                        importPlacementPending: !!l.importPlacementPending,
+                        importStagingX: l.importStagingX | 0,
+                        importStagingY: l.importStagingY | 0,
+                        importStagingCanvas: l.importStagingBuffer
+                            ? this.cloneCanvas(l.importStagingBuffer)
+                            : null,
                         ...this._snapshotDynamicFilterProps(l),
                         buffer: l.buffer ? this.cloneCanvas(l.buffer) : null
                     })),
@@ -8168,6 +8414,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const state = this.history[this.historyIndex];
         if (!state) return;
 
+        this.clearTransientPixelEditState();
+
         let docW = state.docW;
         let docH = state.docH;
         if (docW == null || docH == null) {
@@ -8182,7 +8430,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (state.mode === 'pixel' || state.mode === 'pixel-dither') {
             const d = state.data;
             if (d && d.type === 'pixel-patch' && d.patch) {
-                const li = this.layers.findIndex((l) => l.id === d.layerId);
+                let li = this.layers.findIndex((l) => l.id === d.layerId);
+                if (li < 0 && d.activeLayerIndex != null && this.layers[d.activeLayerIndex]?.buffer) {
+                    li = d.activeLayerIndex;
+                }
                 if (li >= 0) {
                     const p = d.patch;
                     this.layers[li] = {
@@ -8198,11 +8449,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         importPlacementPending: !!p.importPlacementPending,
                         importStagingX: p.importStagingX | 0,
                         importStagingY: p.importStagingY | 0,
-                        importStagingBuffer: p.importStagingCanvas || null,
+                        importStagingBuffer: p.importStagingCanvas
+                            ? this.cloneCanvas(p.importStagingCanvas)
+                            : null,
                         ...this._snapshotDynamicFilterProps(p)
                     };
                     this.setActiveLayerIndex(
-                        Math.min(Math.max(0, d.activeLayerIndex), this.layers.length - 1)
+                        Math.min(Math.max(0, d.activeLayerIndex != null ? d.activeLayerIndex : li), this.layers.length - 1)
                     );
                 }
                 this.updateLayerUI();
@@ -8213,7 +8466,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 Array.isArray(d.layers)
             ) {
                 const src = d;
-                this.activeProject.layers = src.layers
+                const restored = src.layers
                     .filter((s) => s.buffer)
                     .map((s) => ({
                         id: s.id,
@@ -8224,10 +8477,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         opacity: s.opacity,
                         blendMode: s.blendMode || 'source-over',
                         alphaMaskProjectId: s.alphaMaskProjectId != null ? s.alphaMaskProjectId : null,
+                        importPlacementPending: !!s.importPlacementPending,
+                        importStagingX: s.importStagingX | 0,
+                        importStagingY: s.importStagingY | 0,
+                        importStagingBuffer: s.importStagingCanvas
+                            ? this.cloneCanvas(s.importStagingCanvas)
+                            : null,
                         ...this._snapshotDynamicFilterProps(s),
                         buffer: this.cloneCanvas(s.buffer)
                     }));
+                this.activeProject.layers = restored;
                 this.layers.forEach((l) => this._normalizeDynamicFilterProps(l));
+                if (this._pixelLayerViewEls) this._pixelLayerViewEls.clear();
+                if (this._pixelLayerStagingViewEls) this._pixelLayerStagingViewEls.clear();
                 this.setActiveLayerIndex(
                     Math.min(Math.max(0, src.activeLayerIndex || 0), this.layers.length - 1)
                 );
@@ -9688,6 +9950,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const p = this.activeProject;
         if (!p) return;
         if (p.mode === 'vector') {
+            // Synchronise svgData depuis le DOM avant de rasteriser
+            this.syncActiveVectorSvg();
+            // Pour le projet actif, récupère le markup SVG standalone complet
+            p.svgData = this.getStandaloneSvgMarkup() || p.svgData || '';
             await this._rasterizeProjectLayers(p);
             p.mode = 'pixel';
         } else if (p.mode === 'pixel-dither') {
@@ -9816,40 +10082,51 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * Pixélise les calques d'un projet vecteur en créant des buffers bitmap.
      */
     async _rasterizeProjectLayers(p) {
-        const svgData = p.svgData || this.getStandaloneSvgMarkup();
-        if (svgData) {
-            const canvas = document.createElement('canvas');
-            canvas.width = p.width;
-            canvas.height = p.height;
-            const ctx = canvas.getContext('2d');
-            
-            await new Promise((resolve) => {
-                const img = new Image();
-                const svgBlob = new Blob([p.svgData], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(svgBlob);
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
-                    URL.revokeObjectURL(url);
-                    resolve();
-                };
-                img.onerror = resolve;
-                img.src = url;
-            });
-            
-            // On remplace les calques par ce calque unique ratérisé
-            p.layers = [{
-                id: Date.now(),
-                name: 'Calque ratérisé',
-                buffer: canvas,
-                x: 0,
-                y: 0,
-                opacity: 1,
-                visible: true,
-                _thumbDirty: true
-            }];
-            p.activeLayerIndex = 0;
-            p.svgData = null;
+        // Utilise le svgData déjà calculé (standalone markup complet)
+        const svgData = p.svgData || '';
+        if (!svgData || !svgData.includes('<svg')) {
+            console.warn('_rasterizeProjectLayers: aucun contenu SVG valide à rasteriser.');
+            return;
         }
+        const canvas = document.createElement('canvas');
+        canvas.width = p.width || 1280;
+        canvas.height = p.height || 720;
+        const ctx = canvas.getContext('2d');
+
+        await new Promise((resolve) => {
+            const img = new Image();
+            // Important : utiliser svgData (variable locale) et non p.svgData
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, img.naturalWidth || canvas.width, img.naturalHeight || canvas.height, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url);
+                resolve();
+            };
+            img.onerror = (err) => {
+                console.error('_rasterizeProjectLayers: erreur de chargement du SVG dans Image()', err);
+                URL.revokeObjectURL(url);
+                resolve();
+            };
+            img.src = url;
+        });
+
+        // Remplace les calques par ce calque unique rasterisé
+        p.layers = [{
+            id: Date.now(),
+            name: 'Calque rasterisé',
+            buffer: canvas,
+            x: 0,
+            y: 0,
+            opacity: 1,
+            visible: true,
+            blendMode: 'source-over',
+            alphaMaskProjectId: null,
+            _thumbDirty: true,
+            ...this._defaultDynamicFilterLayerProps()
+        }];
+        p.activeLayerIndex = 0;
+        p.svgData = null;
     },
 
     async startWorkspace() {
@@ -10375,6 +10652,42 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (prop === 'fill-model') {
                 if (value === 'none') {
                     el.setAttribute('fill', 'none');
+                } else if (value === 'gradient') {
+                    const defs = document.getElementById('vector-doc-defs');
+                    if (!defs) { el.setAttribute('fill', this.activeColor); return; }
+                    const gradId = 'illu-grad-' + Date.now().toString(36);
+                    const gradType = this.toolProps.gradientType || 'linear';
+                    const gradEl = document.createElementNS('http://www.w3.org/2000/svg', gradType === 'radial' ? 'radialGradient' : 'linearGradient');
+                    gradEl.setAttribute('id', gradId);
+                    
+                    const angleEl = document.getElementById('vector-prop-grad-angle');
+                    const angle = angleEl ? parseFloat(angleEl.value || '0') : 0;
+                    if (gradType === 'linear') {
+                        const rad = (angle) * Math.PI / 180;
+                        const r = 50; 
+                        const cx = 50, cy = 50;
+                        const x1 = cx - r * Math.cos(rad), y1 = cy - r * Math.sin(rad);
+                        const x2 = cx + r * Math.cos(rad), y2 = cy + r * Math.sin(rad);
+                        gradEl.setAttribute('x1', `${x1}%`);
+                        gradEl.setAttribute('y1', `${y1}%`);
+                        gradEl.setAttribute('x2', `${x2}%`);
+                        gradEl.setAttribute('y2', `${y2}%`);
+                    }
+                    
+                    const c1 = this.activeColor || '#000000';
+                    const c2 = this.secondaryColor || '#ffffff';
+                    
+                    const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                    s1.setAttribute('offset', '0%');
+                    s1.setAttribute('stop-color', c1);
+                    const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                    s2.setAttribute('offset', '100%');
+                    s2.setAttribute('stop-color', c2);
+                    
+                    gradEl.appendChild(s1);
+                    gradEl.appendChild(s2);
+                    defs.appendChild(gradEl);
+                    el.setAttribute('fill', `url(#${gradId})`);
                 } else if (value === 'pattern') {
                     const defs = document.getElementById('vector-doc-defs');
                     const patCanv = window._illuFillPattern;

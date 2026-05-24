@@ -21,7 +21,6 @@
     <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/icons-flat-colored.css">
     <link rel="stylesheet" href="css/photo-mode.css">
     <link rel="stylesheet" href="css/illu-mobile-shell.css">
     <link rel="stylesheet" href="css/illu-tool-ribbon.css">
@@ -1167,31 +1166,57 @@
                     </div>
 
                     <div id="opt-grp-vector-context-actions" class="opt-grp" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" id="opt-grp-vector-fill-buttons"
-                            data-illu-generic-icon-toggles="1">
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                    data-illu-value="solid" data-i18n-title="tools.fillSolid"><svg class="illu-shape-ico"
-                                        width="16" height="16">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-4" id="opt-grp-vector-fill-buttons" data-illu-generic-icon-toggles="1">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="vector-prop-fill-model" data-illu-value="solid" data-i18n-title="tools.fillSolid">
+                                    <svg class="illu-shape-ico" width="16" height="16">
                                         <use href="#illu-icon-shape-fill"></use>
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillSolidShort">Uni</span>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.fillSolidShort">Uni</span>
+                                </button>
                             </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                    data-illu-value="pattern" data-i18n-title="tools.fillPattern"><svg
-                                        class="illu-shape-ico" width="16" height="16">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="vector-prop-fill-model" data-illu-value="gradient" data-i18n-title="tools.fillGradient">
+                                    <svg class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-linear"></use>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.fillGradientShort">Dégradé</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="vector-prop-fill-model" data-illu-value="pattern" data-i18n-title="tools.fillPattern">
+                                    <svg class="illu-shape-ico" width="16" height="16">
                                         <use href="#illu-icon-shape-both"></use>
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillPatternShort">Motif</span>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.fillPatternShort">Motif</span>
+                                </button>
                             </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="vector-prop-fill-model"
-                                    data-illu-value="none" data-i18n-title="tools.fillNone"><svg class="illu-shape-ico"
-                                        width="16" height="16">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="vector-prop-fill-model" data-illu-value="none" data-i18n-title="tools.fillNone">
+                                    <svg class="illu-shape-ico" width="16" height="16">
                                         <use href="#illu-icon-fill-none"></use>
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.fillNoneShort">Aucun</span>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.fillNoneShort">Aucun</span>
+                                </button>
+                            </span>
+                        </span>
+                        
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-2" id="opt-grp-vector-grad-toggles" data-illu-generic-icon-toggles="1">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="tool-gradient-type" data-illu-value="linear" data-i18n-title="gradient.typeLinear">
+                                    <svg class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-linear"></use>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="grad.linearShort">Lin.</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="tool-gradient-type" data-illu-value="radial" data-i18n-title="gradient.typeRadial">
+                                    <svg class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-grad-radial"></use>
+                                    </svg>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="grad.radialShort">Rad.</span>
+                                </button>
                             </span>
                         </span>
                         <span id="opt-grp-vector-ops" class="illu-vector-ops-group">
@@ -1232,6 +1257,7 @@
                     </div>
 
                     <div id="tool-row1-hidden-sync" hidden aria-hidden="true">
+                    <input type="hidden" id="vector-prop-fill-model" value="solid">
                     <select id="tool-brush-pattern" style="display:none !important;">
                         <option value="round">Round</option>
                         <option value="soft">Soft</option>
@@ -1484,6 +1510,35 @@
                                 <span class="illu-gauge-val" id="tool-text-grad-angle-val">0</span>
                                 <input type="range" id="tool-text-grad-angle" class="illu-gauge-input" min="0"
                                     max="360" value="0">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-vector-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span id="vector-prop-stroke-w-row" class="field-row illu-gauge-field">
+                            <label for="vector-prop-stroke-width" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Contour</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-stroke-width-val">0</span>
+                                <input type="range" id="vector-prop-stroke-width" class="illu-gauge-input" min="0" max="150" value="0">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="vector-prop-grad-angle-sep"></div>
+                        <span id="vector-prop-grad-angle-row" class="field-row illu-gauge-field">
+                            <label for="vector-prop-grad-angle" class="illu-opt-lbl" data-i18n="tools.shapeGradAngle">Angle °</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-grad-angle-val">0</span>
+                                <input type="range" id="vector-prop-grad-angle" class="illu-gauge-input" min="0" max="360" value="0">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="vector-prop-corner-radius-sep"></div>
+                        <span id="vector-prop-corner-radius-wrap" class="field-row illu-gauge-field">
+                            <label for="vector-prop-corner-radius" class="illu-opt-lbl" data-i18n="tools.shapeCornerRadius">Arrondi</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-corner-radius-val">0</span>
+                                <input type="range" id="vector-prop-corner-radius" class="illu-gauge-input" min="0" max="64" value="0">
                             </span>
                         </span>
                     </div>
@@ -3253,6 +3308,7 @@
     <script src="js/effects/FilterShaders.js"></script>
     <script src="js/effects/WebGLFilterEngine.js"></script>
     <script src="js/effects/ral_colors.js"></script>
+    <script src="js/effects/radial-zoom-blur.js"></script>
     <script src="js/effects/FilterManager.js"></script>
     <script src="js/app/PixelOverlay.js"></script>
     <script src="js/app/PixelTextEdit.js"></script>

@@ -79,21 +79,54 @@ export function pinch(srcPtr: usize, dstPtr: usize, w: i32, h: i32, amount: f32,
 }
 
 @inline
-export function vignette(srcPtr: usize, w: i32, h: i32, amount: f32, startY: i32, endY: i32): void {
+export function vignette(srcPtr: usize, w: i32, h: i32, amount: f32, r: u8, g: u8, b: u8, blend: i32, startY: i32, endY: i32): void {
     const cx = <f32>w / 2.0;
     const cy = <f32>h / 2.0;
     const maxD = <f32>Math.sqrt(<f64>(cx * cx + cy * cy));
+    
+    const mR = <f32>r / 255.0;
+    const mG = <f32>g / 255.0;
+    const mB = <f32>b / 255.0;
+    
     for (let y = startY; y < endY; y++) {
         const row = <usize>y * <usize>w * 4;
         const dy2 = (<f32>y - cy) * (<f32>y - cy);
         for (let x = 0; x < w; x++) {
             const idx = row + (<usize>x << 2);
             const dx2 = (<f32>x - cx) * (<f32>x - cx);
-            const d = <f32>Math.sqrt(<f64>(dx2 + dy2)) / maxD;
-            const factor = <f32>Math.max(0.0, 1.0 - d * d * amount);
-            store<u8>(srcPtr + idx, clamp255(<f32>load<u8>(srcPtr + idx) * factor));
-            store<u8>(srcPtr + idx + 1, clamp255(<f32>load<u8>(srcPtr + idx + 1) * factor));
-            store<u8>(srcPtr + idx + 2, clamp255(<f32>load<u8>(srcPtr + idx + 2) * factor));
+            const dist = <f32>Math.sqrt(<f64>(dx2 + dy2)) / maxD;
+            
+            let d = dist * amount * 2.0;
+            let mask: f32 = 0.0;
+            if (d <= 0.2) mask = 1.0;
+            else if (d >= 0.8) mask = 0.0;
+            else {
+                let t = (d - 0.8) / (0.2 - 0.8);
+                mask = t * t * (3.0 - 2.0 * t);
+            }
+            
+            const oR = <f32>load<u8>(srcPtr + idx) / 255.0;
+            const oG = <f32>load<u8>(srcPtr + idx + 1) / 255.0;
+            const oB = <f32>load<u8>(srcPtr + idx + 2) / 255.0;
+            
+            let fR = oR, fG = oG, fB = oB;
+            if (blend == 1) { // Multiply
+                fR = oR * mR; fG = oG * mG; fB = oB * mB;
+            } else if (blend == 2) { // Screen
+                fR = 1.0 - (1.0 - oR) * (1.0 - mR);
+                fG = 1.0 - (1.0 - oG) * (1.0 - mG);
+                fB = 1.0 - (1.0 - oB) * (1.0 - mB);
+            } else if (blend == 3) { // Overlay
+                fR = (oR < 0.5) ? (2.0 * oR * mR) : (1.0 - 2.0 * (1.0 - oR) * (1.0 - mR));
+                fG = (oG < 0.5) ? (2.0 * oG * mG) : (1.0 - 2.0 * (1.0 - oG) * (1.0 - mG));
+                fB = (oB < 0.5) ? (2.0 * oB * mB) : (1.0 - 2.0 * (1.0 - oB) * (1.0 - mB));
+            } else { // Normal
+                fR = mR; fG = mG; fB = mB;
+            }
+            
+            store<u8>(srcPtr + idx, clamp255((oR * mask + fR * (1.0 - mask)) * 255.0));
+            store<u8>(srcPtr + idx + 1, clamp255((oG * mask + fG * (1.0 - mask)) * 255.0));
+            store<u8>(srcPtr + idx + 2, clamp255((oB * mask + fB * (1.0 - mask)) * 255.0));
         }
     }
 }

@@ -246,7 +246,15 @@ class WasmManager {
             this.exports.pinch(this.inputPtr, this.outputPtr, width, height, amount, startY, endY);
         } else if (type === 'vignette') {
             const amount = params.amount || 0.5;
-            this.exports.vignette(this.inputPtr, width, height, amount, startY, endY);
+            const colorStr = params['ef-vig-color'] || '#000000';
+            const h_str = colorStr.replace('#', '').trim();
+            const hn = parseInt(h_str, 16);
+            let r = 0, g = 0, b = 0;
+            if (!Number.isNaN(hn)) {
+                r = (hn>>16)&255; g = (hn>>8)&255; b = hn&255;
+            }
+            const blend = parseInt(params['ef-vig-blend'] || 0, 10);
+            this.exports.vignette(this.inputPtr, width, height, amount, r, g, b, blend, startY, endY);
             targetOutPtr = this.inputPtr;
         } else if (type === 'crystallize') {
             const size = params.size || 15;

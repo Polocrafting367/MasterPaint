@@ -1,6 +1,7 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.41 (24/05/26)
+2.7.47 (24/05/26)
+- Adaptation des prévisualisation a faible résolution pour collé au rendu final
 - Mise a jours visuel des barre de Paramètres pour quelque chose de plus compact
 - Supprimer toute trace d'autre theme luna, areo moderne...
 - Revue antièrement les obtion d'outil sur le haut pour un ruban type microsoft office
@@ -18,6 +19,13 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ajout de décorration sur le bout des trais (arrondie et fixe)
 - Ajout effet de contour
 - Ajout effet de conversion RAL
+- MAJ effet d'ombre portée
+- MAJ effet de flou simple
+- MAJ effet de vignetage
+- Ajout mignature contrasté sur layer SVG
+- Revu les menu pour le mode SVG oublié
+- Correctif sur le CRTL+Z qui ne fonctionnait plus très bien !
+- Annulation (Ctrl+Z) : effets « tous les calques » enregistrent désormais tout le document (plus seulement le calque actif)
 
 2.7.24 (23/05/26)
 - Gestion performance sur grande images

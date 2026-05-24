@@ -82,7 +82,7 @@ document.addEventListener(
 
 // Advanced Paste for Images (tampon interne prioritaire + repli OS)
 document.addEventListener('paste', async (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
 
     const dt = e.clipboardData || e.originalEvent?.clipboardData;
     if (!dt) return;
@@ -199,7 +199,7 @@ document.addEventListener('paste', async (e) => {
 });
 
 document.addEventListener('copy', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
     if (typeof window.ctxCopy === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
         e.preventDefault();
         window.ctxCopy();
@@ -209,7 +209,7 @@ document.addEventListener('copy', (e) => {
 });
 
 document.addEventListener('cut', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
     if (typeof window.ctxCut === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
         e.preventDefault();
         window.ctxCut();
@@ -543,10 +543,16 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // v, c, x are now handled by global copy/cut/paste event listeners to support OS integration
+    // v, c : événements copy/paste natifs ; x : cut + repli keydown ci-dessous
     if (k === 'v' && !e.shiftKey) return;
     if (k === 'c' && !e.shiftKey) return;
-    if (k === 'x' && !e.shiftKey) return;
+    if (k === 'x' && !e.shiftKey) {
+        if (!(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) && typeof window.ctxCut === 'function') {
+            e.preventDefault();
+            window.ctxCut();
+        }
+        return;
+    }
 
     if (k === '+' || k === '=' || e.code === 'NumpadAdd') {
         e.preventDefault();
@@ -627,12 +633,40 @@ document.addEventListener('contextmenu', (e) => {
         }
 
         // Hidden sync controls listeners
+        ['vector-prop-stroke-width', 'vector-prop-grad-angle', 'vector-prop-corner-radius'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    const val = el.value;
+                    const valEl = document.getElementById(id + '-val');
+                    if (valEl) valEl.textContent = val;
+                    if (typeof EditorManager !== 'undefined') {
+                        if (id === 'vector-prop-stroke-width') EditorManager.applyVectorProperty('stroke-width', val);
+                        else if (id === 'vector-prop-corner-radius') EditorManager.applyVectorProperty('corner-radius', val);
+                        else if (id === 'vector-prop-grad-angle') EditorManager.applyVectorProperty('fill-model', 'gradient'); // Re-apply gradient to update angle
+                        if (EditorManager.render) EditorManager.render();
+                    }
+                });
+                el.addEventListener('change', () => {
+                    if (typeof EditorManager !== 'undefined' && EditorManager.saveHistoryVector) {
+                        EditorManager.saveHistoryVector();
+                    }
+                });
+            }
+        });
+        
         ['tool-brush-pattern', 'tool-gradient-type', 'tool-gradient-method'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('change', () => {
                     if (id === 'tool-brush-pattern') EditorManager.toolProps.brushPattern = el.value;
-                    if (id === 'tool-gradient-type') EditorManager.toolProps.gradientType = el.value;
+                    if (id === 'tool-gradient-type') {
+                        EditorManager.toolProps.gradientType = el.value;
+                        if (typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector' && EditorManager.activeVectorSelection.length) {
+                             EditorManager.applyVectorProperty('fill-model', 'gradient');
+                             if (EditorManager.render) EditorManager.render();
+                        }
+                    }
                     if (id === 'tool-gradient-method') {
                         EditorManager.toolProps.gradientMethod = el.value;
                         if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
@@ -665,6 +699,17 @@ document.addEventListener('contextmenu', (e) => {
     }
 
     const ILLU_ICON_SYNC_TOOL_PROPS = {
+        'vector-prop-fill-model': (val) => {
+            if (typeof EditorManager !== 'undefined') {
+                EditorManager.applyVectorProperty('fill-model', val);
+                if (val === 'solid' || val === 'gradient' || val === 'none') {
+                    EditorManager.toolProps.fillType = val;
+                }
+                if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
+                if (EditorManager.render) EditorManager.render();
+                if (EditorManager.saveHistoryVector) EditorManager.saveHistoryVector();
+            }
+        },
         'tool-shape-mode': (val) => {
             if (typeof EditorManager !== 'undefined') EditorManager.toolProps.shapeStrokeMode = val;
             refreshShapeToolLivePreview();

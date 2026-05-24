@@ -142,17 +142,17 @@ body.illu-toolbar-ribbon .illu-grad-method-group .illu-mode-toggle-item--unified
     max-width: none;
 }
 
-body.illu-toolbar-ribbon #opt-grp-gradient-actions .illu-toggle-layout--inline > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-grad-type-group .illu-toggle-layout--inline > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-grad-method-group .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon #opt-grp-gradient-actions .illu-toggle-layout--inline>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon .illu-grad-type-group .illu-toggle-layout--inline>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon .illu-grad-method-group .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     width: auto !important;
     min-width: 52px;
     justify-content: flex-start !important;
 }
 
-#opt-grp-gradient-actions .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn.illu-icon-toggle,
-.illu-grad-type-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn.illu-icon-toggle,
-.illu-grad-method-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn.illu-icon-toggle {
+#opt-grp-gradient-actions .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn.illu-icon-toggle,
+.illu-grad-type-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn.illu-icon-toggle,
+.illu-grad-method-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn.illu-icon-toggle {
     width: auto !important;
     height: auto !important;
     min-width: 48px;
@@ -161,9 +161,9 @@ body.illu-toolbar-ribbon .illu-grad-method-group .illu-toggle-layout--inline > .
     padding: 2px 6px !important;
 }
 
-#opt-grp-gradient-actions .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl,
-.illu-grad-type-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl,
-.illu-grad-method-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+#opt-grp-gradient-actions .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl,
+.illu-grad-type-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl,
+.illu-grad-method-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: left;
     max-width: none;
 }
@@ -176,7 +176,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group {
     justify-content: flex-start;
     padding: 2px 4px 0;
     border-right: 1px solid rgba(0, 0, 0, 0.14);
-    min-height: 64px;
+    min-height: 84px;
     height: auto;
     overflow: visible;
 }
@@ -216,10 +216,10 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body {
 }
 
 /* Groupes une ligne compacts : icône au-dessus du texte */
-body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-icon-toggle-group,
-body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-mode-toggle-group,
-body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-icon-toggle-group,
-body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-mode-toggle-group,
+body.illu-toolbar-ribbon .illu-ribbon-group-body>.illu-icon-toggle-group,
+body.illu-toolbar-ribbon .illu-ribbon-group-body>.illu-mode-toggle-group,
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp>.illu-icon-toggle-group,
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp>.illu-mode-toggle-group,
 body.illu-toolbar-ribbon .illu-sel-actions-layout {
     display: inline-flex;
     flex-direction: row;
@@ -244,14 +244,14 @@ body.illu-toolbar-ribbon .illu-mode-toggle-item--unified.illu-toggle-layout--sta
     overflow: visible;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-layout--stack>.illu-mode-toggle-btn {
     width: 100% !important;
     max-width: 44px;
     min-height: 36px;
     height: auto !important;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-layout--stack > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+body.illu-toolbar-ribbon .illu-toggle-layout--stack>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: center;
     max-width: 44px;
 }
@@ -266,7 +266,7 @@ body.illu-toolbar-ribbon .illu-mode-toggle-item--unified.illu-toggle-layout--inl
     overflow: visible;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -278,7 +278,7 @@ body.illu-toolbar-ribbon .illu-toggle-layout--inline > .illu-mode-toggle-btn {
     padding: 2px 10px !important;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+body.illu-toolbar-ribbon .illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: left;
     max-width: none;
 }
@@ -340,10 +340,10 @@ body.illu-toolbar-ribbon .illu-ribbon-selection-stack {
     overflow: visible !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack > .illu-sel-actions-primary,
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack > #selection-mode-group,
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack > .illu-icon-toggle-group,
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack > .illu-mode-toggle-group {
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack>.illu-sel-actions-primary,
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack>#selection-mode-group,
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack>.illu-icon-toggle-group,
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack>.illu-mode-toggle-group {
     display: contents !important;
 }
 
@@ -407,6 +407,35 @@ body.illu-toolbar-ribbon .illu-text-style-fill-group {
     flex-direction: column !important;
     gap: 2px !important;
     min-width: 0;
+}
+
+/* Style/Remplissage texte : icône à gauche, texte à droite */
+body.illu-toolbar-ribbon .illu-text-style-fill-group .illu-mode-toggle-item--unified.illu-toggle-layout--stack {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-text-style-fill-group .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 27px !important;
+    height: auto !important;
+    padding: 2px 6px !important;
+    gap: 5px !important;
+}
+
+body.illu-toolbar-ribbon .illu-text-style-fill-group .illu-toggle-layout--stack > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+    text-align: left !important;
+    max-width: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-text-style-fill-group .illu-toggle-group--compact-grid {
+    grid-template-columns: repeat(3, minmax(0, max-content)) !important;
+    gap: 2px 4px !important;
 }
 
 body.illu-toolbar-ribbon .illu-text-font-size-stack {
@@ -500,7 +529,7 @@ body.illu-toolbar-ribbon .illu-tool-picker {
     flex-shrink: 0;
 }
 
-body.illu-toolbar-ribbon .illu-tool-picker > :not(.illu-tool-picker-select) {
+body.illu-toolbar-ribbon .illu-tool-picker> :not(.illu-tool-picker-select) {
     pointer-events: none;
     flex-shrink: 0;
 }
@@ -625,7 +654,7 @@ body.illu-toolbar-ribbon .illu-ribbon-icon-grid2 .illu-mode-toggle-item[hidden] 
     display: none !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-group-body > .opt-grp:empty {
+body.illu-toolbar-ribbon .illu-ribbon-group-body>.opt-grp:empty {
     display: none !important;
 }
 
@@ -638,23 +667,23 @@ body.illu-toolbar-ribbon .illu-ribbon-param-pack {
     min-width: 0;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .opt-sep {
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.opt-sep {
     display: none !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .illu-gauge-field,
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .field-row.illu-gauge-field,
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .field-row.illu-size-extra-row {
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.illu-gauge-field,
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.field-row.illu-gauge-field,
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.field-row.illu-size-extra-row {
     width: 100%;
     min-width: 0;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .field-row.illu-size-extra-row {
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.field-row.illu-size-extra-row {
     justify-content: flex-start;
     margin: 0;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > #opt-warp-resample-wrap {
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>#opt-warp-resample-wrap {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -664,7 +693,7 @@ body.illu-toolbar-ribbon .illu-ribbon-param-pack > #opt-warp-resample-wrap {
     min-width: 0;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-param-pack > .illu-icon-toggle-group {
+body.illu-toolbar-ribbon .illu-ribbon-param-pack>.illu-icon-toggle-group {
     width: 100%;
     min-width: 0;
 }
@@ -685,7 +714,7 @@ body.illu-toolbar-ribbon .illu-toggle-group--two-rows .illu-mode-toggle-item--un
     max-width: none;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-group--two-rows .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-group--two-rows .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     width: 100% !important;
     min-width: 0;
     justify-content: flex-start !important;
@@ -707,7 +736,7 @@ body.illu-toolbar-ribbon .illu-toggle-group--one-row .illu-mode-toggle-item--uni
     max-width: none;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-group--one-row .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-group--one-row .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     width: 100% !important;
     min-width: 0;
     justify-content: flex-start !important;
@@ -726,7 +755,7 @@ body.illu-toolbar-ribbon .illu-toggle-group--one-row.illu-toggle-group--stack-ce
     max-width: none;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-group--one-row.illu-toggle-group--stack-cells .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-group--one-row.illu-toggle-group--stack-cells .illu-toggle-layout--stack>.illu-mode-toggle-btn {
     width: 100% !important;
     max-width: none;
 }
@@ -743,7 +772,7 @@ body.illu-toolbar-ribbon .illu-toggle-group--two-rows.illu-toggle-group--stack-c
     max-width: none;
 }
 
-body.illu-toolbar-ribbon .illu-toggle-group--two-rows.illu-toggle-group--stack-cells .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-toggle-group--two-rows.illu-toggle-group--stack-cells .illu-toggle-layout--stack>.illu-mode-toggle-btn {
     width: 100% !important;
     max-width: none;
     min-height: 27px;
@@ -768,7 +797,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="size"] .illu
 }
 
 /* Pinceau : 4 boutons sur une ligne, icône à gauche / texte à droite */
-body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group {
+body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
@@ -778,23 +807,23 @@ body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group {
     min-width: 0 !important;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group.illu-toggle-group--one-row .illu-mode-toggle-item--unified {
+body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group.illu-toggle-group--one-row .illu-mode-toggle-item--unified {
     flex: 0 0 auto;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline {
+body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline {
     width: auto;
     min-width: 0;
     max-width: none;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     width: auto !important;
     min-width: 48px;
     justify-content: flex-start !important;
 }
 
-#opt-grp-brush-actions > .illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline > .illu-mode-toggle-btn.illu-icon-toggle {
+#opt-grp-brush-actions>.illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline>.illu-mode-toggle-btn.illu-icon-toggle {
     width: auto !important;
     height: auto !important;
     min-width: 48px;
@@ -1092,8 +1121,8 @@ body.illu-toolbar-ribbon #opt-grp-fill-params .illu-toggle-group--compact-inline
     max-width: none;
 }
 
-body.illu-toolbar-ribbon #opt-grp-wand-params .illu-toggle-group--compact-inline-row .illu-toggle-layout--inline > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon #opt-grp-fill-params .illu-toggle-group--compact-inline-row .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon #opt-grp-wand-params .illu-toggle-group--compact-inline-row .illu-toggle-layout--inline>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon #opt-grp-fill-params .illu-toggle-group--compact-inline-row .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     width: 100% !important;
     min-width: 0;
     justify-content: flex-start !important;
@@ -1118,13 +1147,13 @@ body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inlin
     max-width: 44px;
 }
 
-body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inline-row .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inline-row .illu-toggle-layout--stack>.illu-mode-toggle-btn {
     width: 100% !important;
     max-width: 44px;
     min-height: 36px;
 }
 
-body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inline-row .illu-toggle-layout--stack > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inline-row .illu-toggle-layout--stack>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: center;
     max-width: 44px;
 }
@@ -1143,7 +1172,7 @@ body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-mode-toggle-item--un
     flex: none;
 }
 
-body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline>.illu-mode-toggle-btn {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -1155,19 +1184,19 @@ body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline > .
     padding: 2px 10px !important;
 }
 
-body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: left;
     max-width: none;
     font-size: 9px;
 }
 
-body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-shape-ico,
-body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline > .illu-mode-toggle-btn i {
+body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-shape-ico,
+body.illu-toolbar-ribbon #tool-options-container .illu-toggle-layout--inline>.illu-mode-toggle-btn i {
     flex-shrink: 0;
 }
 
 /* Priorité sur layouts bureau (pinceau / dégradé une ligne) */
-body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group,
+body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group,
 body.illu-toolbar-ribbon .illu-grad-type-group,
 body.illu-toolbar-ribbon .illu-grad-method-group {
     display: grid !important;
@@ -1216,10 +1245,10 @@ body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-mode-toggle-item--unifie
     max-width: none !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--inline > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--stack > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--inline > .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--inline>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--stack>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--inline>.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--stack>.illu-mode-toggle-btn {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -1233,10 +1262,10 @@ body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--stack > .
     gap: 5px !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl,
-body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--stack > .illu-mode-toggle-btn .illu-mode-toggle-lbl,
-body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--inline > .illu-mode-toggle-btn .illu-mode-toggle-lbl,
-body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--stack > .illu-mode-toggle-btn .illu-mode-toggle-lbl {
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl,
+body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-toggle-layout--stack>.illu-mode-toggle-btn .illu-mode-toggle-lbl,
+body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--inline>.illu-mode-toggle-btn .illu-mode-toggle-lbl,
+body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-toggle-layout--stack>.illu-mode-toggle-btn .illu-mode-toggle-lbl {
     text-align: left !important;
     max-width: none !important;
     font-size: 11px !important;

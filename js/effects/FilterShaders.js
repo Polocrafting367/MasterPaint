@@ -143,11 +143,30 @@ void main() {
 
     vignette: `
 uniform float u_intensity; // 0.0 to 1.0
+uniform vec3 u_color;
+uniform int u_blend; // 0=normal, 1=multiply, 2=screen, 3=overlay
 void main() {
     vec4 c = texture2D(u_tex, v_uv);
     float dist = distance(v_uv, vec2(0.5));
     float mask = smoothstep(0.8, 0.2, dist * u_intensity * 2.0);
-    gl_FragColor = vec4(c.rgb * mask, c.a);
+    vec3 base = c.rgb;
+    vec3 blend = u_color;
+    vec3 result;
+    if (u_blend == 1) { // Multiply
+        result = base * blend;
+    } else if (u_blend == 2) { // Screen
+        result = 1.0 - (1.0 - base) * (1.0 - blend);
+    } else if (u_blend == 3) { // Overlay
+        vec3 mask_overlay = step(0.5, base);
+        result = mix(
+            2.0 * base * blend,
+            1.0 - 2.0 * (1.0 - base) * (1.0 - blend),
+            mask_overlay
+        );
+    } else { // Normal
+        result = blend;
+    }
+    gl_FragColor = vec4(mix(result, base, mask), c.a);
 }`,
 
     pixelate: `
