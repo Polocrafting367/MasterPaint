@@ -1,6 +1,6 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.39 (24/05/26)
+2.7.41 (24/05/26)
 - Mise a jours visuel des barre de Paramètres pour quelque chose de plus compact
 - Supprimer toute trace d'autre theme luna, areo moderne...
 - Revue antièrement les obtion d'outil sur le haut pour un ruban type microsoft office
@@ -16,6 +16,8 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Correction bug de ka selection a la volé qui créait une copie rectangulaire 
 - Ajout d'une visu des variable couleur avec l'outil pipette
 - Ajout de décorration sur le bout des trais (arrondie et fixe)
+- Ajout effet de contour
+- Ajout effet de conversion RAL
 
 2.7.24 (23/05/26)
 - Gestion performance sur grande images
