@@ -16,6 +16,11 @@
             stack: true
         },
         {
+            id: 'selection-extra',
+            labelKey: 'tools.selectFreeCornersShort',
+            selectors: ['#select-rect-free-corners-wrap']
+        },
+        {
             id: 'adjustments',
             labelKey: 'ribbon.groupAdjustments',
             selectors: ['#tool-pinned-select-actions .illu-sel-actions-layout']
@@ -191,9 +196,6 @@
                 pin.insertBefore(actionsWrap, pin.firstChild);
             }
             ACTION_RIBBON_GROUPS.forEach((spec) => createRibbonGroup(actionsWrap, spec));
-            actionsWrap
-                .querySelectorAll('.illu-ribbon-group[data-illu-ribbon-group="selection-extra"]')
-                .forEach((g) => g.remove());
             pin.querySelectorAll(':scope > .illu-ribbon-group').forEach((g) => {
                 if (g.parentElement === pin) actionsWrap.appendChild(g);
             });
@@ -235,7 +237,7 @@
         group.setAttribute('aria-hidden', hidden ? 'true' : 'false');
     }
 
-    /** Bureau : 4 coins dans Sélection, Ajuster sélection dans Ajustements ; mobile : 4 coins en Sélection, zoom dans Outils. */
+    /** Bureau / mobile ruban : 4 coins + actions dans Sélection ; mobile : zoom « Ajuster » aussi dans Sélection. */
     function querySelRibbonGroup(className) {
         return document.querySelector('.' + className);
     }
@@ -262,6 +264,19 @@
     }
 
     window.illuSyncMobileViewActions = function () {
+        const isMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+        const viewGrp = document.querySelector('.illu-sel-actions-view');
+        if (viewGrp) {
+            viewGrp.hidden = !!isMobile;
+            viewGrp.setAttribute('aria-hidden', isMobile ? 'true' : 'false');
+        }
+        const viewRibbon = document.querySelector(
+            '.illu-ribbon-group[data-illu-ribbon-group="view"]'
+        );
+        if (viewRibbon && isMobile) {
+            setGroupHidden(viewRibbon, true);
+        }
         if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
             window.illuSyncSelectionExtraPlacement();
         }
@@ -270,7 +285,6 @@
     window.illuSyncSelectionExtraPlacement = function () {
         const primary = querySelRibbonGroup('illu-sel-actions-primary');
         const layout = querySelRibbonGroup('illu-sel-actions-layout');
-        const cornersItem = document.getElementById('select-rect-free-corners-wrap');
         const zoomWrap = document.getElementById('illu-mobile-zoom-fit-wrap');
         const layoutZoomBtn = document.getElementById('illu-tb-zoom-fit');
         const layoutZoomItem = layoutZoomBtn ? layoutZoomBtn.closest('.illu-mode-toggle-item') : null;
@@ -279,19 +293,9 @@
         if (!primary) return;
         if (!layout && !isMobile) return;
 
-        if (cornersItem && cornersItem.parentElement !== primary) {
-            primary.appendChild(cornersItem);
-        }
-
         if (isMobile) {
-            if (cornersItem) {
-                cornersItem.hidden = true;
-                cornersItem.setAttribute('aria-hidden', 'true');
-            }
             if (zoomWrap && primary) {
-                if (cornersItem && cornersItem.parentElement === primary) {
-                    primary.insertBefore(zoomWrap, cornersItem);
-                } else if (zoomWrap.parentElement !== primary) {
+                if (zoomWrap.parentElement !== primary) {
                     primary.appendChild(zoomWrap);
                 }
                 zoomWrap.hidden = false;
@@ -350,10 +354,15 @@
             if (id === 'tool') active = true;
             else if (id === 'selection') {
                 active = SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool);
+            } else if (id === 'selection-extra') {
+                const cornersItem = document.getElementById('select-rect-free-corners-wrap');
+                active =
+                    SELECT_ACTION_TOOLS.has(tool) && cornersItem && !cornersItem.hidden;
             } else if (id === 'adjustments') {
                 active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'view') {
-                active = SELECT_ACTION_TOOLS.has(tool);
+                /* Mobile : masqué (comme « 4 coins ») — Grille / Règles restent dans le menu Fenêtre. */
+                active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
             else if (id === 'shape-mode' || id === 'shape-fill') {
                 active = shapesActionsActive(actionIds);
@@ -518,6 +527,10 @@
             return;
         }
 
+        if (tg.closest('[data-illu-ribbon-group="selection-extra"]')) {
+            return;
+        }
+
         if (tg.closest('.illu-ribbon-selection-stack')) {
             return;
         }
@@ -637,6 +650,8 @@
 
             if (item.closest('.illu-sel-actions-view')) {
                 item.classList.add('illu-toggle-layout--inline');
+            } else if (item.closest('[data-illu-ribbon-group="selection-extra"]')) {
+                item.classList.add('illu-toggle-layout--inline');
             } else if (item.closest('.illu-sel-actions-layout')) {
                 item.classList.add('illu-toggle-layout--stack');
             } else if (inSelectionStack || inGradientActions || inBrushActions) {
@@ -645,6 +660,7 @@
                 groupId === 'tool' ||
                 groupId === 'adjustments' ||
                 groupId === 'view' ||
+                groupId === 'selection-extra' ||
                 inStackCells ||
                 !!item.closest('.illu-shape-fill-group')
             ) {

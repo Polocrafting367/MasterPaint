@@ -305,6 +305,26 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
     padding-right: 6px;
 }
 
+/* 4 coins : groupe ruban dédié (corps séparé de Sélection) */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-extra"] {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-extra"] .illu-ribbon-group-body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-width: 52px;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-extra"] .illu-mode-toggle-item--unified {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
 /* Sélection : grille 3×2 (6 boutons typiques) — sous-groupes en display:contents */
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack {
     display: grid !important;
@@ -331,11 +351,15 @@ body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-mode-toggle-item[hid
     display: none !important;
 }
 
-/* Hors grille Sélection : Aucun ; 4 coins masqué sur téléphone (remplacé par Ajuster) */
-body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-selection-stack #select-rect-free-corners-wrap,
-body.illu-toolbar-ribbon.illu-mobile-ui #select-rect-free-corners-wrap,
+/* Hors grille Sélection : Aucun (mobile) */
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack #illu-mobile-deselect-wrap,
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-mobile-only-opt {
+    display: none !important;
+}
+
+/* Affichage (Grille / Règles) : masqué sur mobile — menu Fenêtre */
+body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-group[data-illu-ribbon-group="view"],
+body.illu-toolbar-ribbon.illu-mobile-ui #tool-pinned-select-actions .illu-sel-actions-view {
     display: none !important;
 }
 

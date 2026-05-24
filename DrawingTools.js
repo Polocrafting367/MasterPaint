@@ -884,10 +884,7 @@ window.updateToolOptionsBar = function () {
         document.getElementById('select-rect-free-corners-wrap') ||
         document.getElementById('select-free-corners-row');
     const showFreeCornersBtn = ['select', 'wand', 'direct-select', 'deform', 'warp-4'].includes(t);
-    const hideFreeCornersOnPhone =
-        document.body.classList.contains('illu-mobile-ui') ||
-        (typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout());
-    if (freeCornersRow) freeCornersRow.hidden = hideFreeCornersOnPhone || !showFreeCornersBtn;
+    if (freeCornersRow) freeCornersRow.hidden = !showFreeCornersBtn;
     if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
         window.syncSelectionRectFreeCornersArmUI();
     }
@@ -8264,20 +8261,24 @@ window.illuFreeCornersFromDeformTool = function () {
     return t === 'deform' || t === 'warp-4';
 };
 
-/** Bouton « 4 coins » : selon l’outil actif → sélection quad ou déformation 4 coins. */
+/** Bouton « 4 coins » : cadre quadrilatère (outil Sélection) ; déformation pixels → warp-4 via opt-select-quad-to-warp. */
 window.illuHandleSelectRectFreeCornersClick = function () {
     if (typeof EditorManager === 'undefined') return;
-    const fromDeform = window.illuFreeCornersFromDeformTool();
     const sb = window.selectionBounds;
-    const instantQuad =
+    const hasQuad =
+        typeof window.illuSelectionHasFreeWarpQuad === 'function' &&
+        window.illuSelectionHasFreeWarpQuad();
+    const canQuad =
         EditorManager.isPixelMode &&
         sb &&
         !window.selectionInverted &&
         sb.w > 2 &&
-        sb.h > 2 &&
-        window.selectionKind === 'rect';
-    if (instantQuad) {
-        window.illuSyncWarpQuadPointsFromBounds(sb);
+        sb.h > 2;
+
+    if (canQuad) {
+        if (window.selectionKind === 'rect' || !hasQuad) {
+            window.illuSyncWarpQuadPointsFromBounds(sb);
+        }
         EditorManager.toolProps.selectionRectFreeCornersArm = false;
     } else {
         EditorManager.toolProps.selectionRectFreeCornersArm = true;
@@ -8285,14 +8286,19 @@ window.illuHandleSelectRectFreeCornersClick = function () {
     if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
         window.syncSelectionRectFreeCornersArmUI();
     }
-    window.illuActivateToolById(fromDeform ? 'tool-warp-4' : 'tool-select');
+    window.illuActivateToolById('tool-select');
     if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
-    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual({ forceFull: true });
+    if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
     EditorManager.render();
 };
 
 window.illuWireSelectRectFreeCornersButtons = function () {
-    const handler = () => window.illuHandleSelectRectFreeCornersClick();
+    const handler = (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        window.illuHandleSelectRectFreeCornersClick();
+    };
     const btn = document.getElementById('select-rect-free-corners');
     if (!btn || btn.dataset.illuFreeCornersWired === '1') return;
     btn.dataset.illuFreeCornersWired = '1';
@@ -9538,10 +9544,19 @@ window.onSelectionHandleMouseDown = function (e, handleId) {
         window.selectionKind === 'lasso' &&
         window.selectionLassoPoints &&
         window.selectionLassoPoints.length === 4;
+    const freeQuadOutline =
+        typeof window.illuSelectionHasFreeWarpQuad === 'function' &&
+        window.illuSelectionHasFreeWarpQuad() &&
+        window.activeTool === 'select';
     const usePixelWarp =
         (strictSubset || warpQuadContinues) &&
         EditorManager.isPixelMode &&
         isPixelWarpOrDeformTool();
+    if (freeQuadOutline) {
+        window.startSelectionResize(e, handleId);
+        isDrawing = true;
+        return;
+    }
     if (window.selectionMatchesActiveLayer()) {
         if (isPixelWarpOrDeformTool()) {
             window.startSelectionPixelWarp(e, handleId);
@@ -9553,6 +9568,9 @@ window.onSelectionHandleMouseDown = function (e, handleId) {
         window.startSelectionPixelWarp(e, handleId);
     } else {
         window.startSelectionResize(e, handleId);
+    }
+    if (window.selectionPixelWarpActive || window.selectionBoundsResizeActive) {
+        isDrawing = true;
     }
 };
 
@@ -10192,6 +10210,7 @@ function updatePixel(pos, pointerEv) {
         originalSelectionBounds &&
         window.selectionBounds &&
         window.selectionIsWarpQuad &&
+        !window.selectionPixelWarpActive &&
         window.activeTool === 'select' &&
         window.selectionKind === 'lasso' &&
         window.selectionLassoPoints &&
