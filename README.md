@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="icons/readme-banner.svg" alt="MasterPaint 98 Pro" width="800" />
-</p>
-
-<p align="center">
   <a href="http://polocrafting.fr/Illu">
     <img src="https://img.shields.io/badge/D%C3%A9mo-En%20ligne-0d7a7a?style=for-the-badge" alt="Démo en ligne" />
   </a>
