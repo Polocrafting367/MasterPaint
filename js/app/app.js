@@ -21,6 +21,26 @@ window.illuSplashLog = function (msg) {
 window.ILLU_DEFAULT_DOC_WIDTH = 1280;
 window.ILLU_DEFAULT_DOC_HEIGHT = 720;
 
+/** Rayon d’arrondi rectangle (outil forme + ruban vecteur). */
+window.ILLU_SHAPE_CORNER_RADIUS_MAX = 256;
+
+window.illuShapeCornerRadiusMax = function () {
+    const m = window.ILLU_SHAPE_CORNER_RADIUS_MAX;
+    return Number.isFinite(m) && m > 0 ? m : 256;
+};
+
+window.illuClampShapeCornerRadius = function (v) {
+    return Math.max(0, Math.min(window.illuShapeCornerRadiusMax(), Number(v) || 0));
+};
+
+window.illuApplyShapeCornerRadiusMaxToInputs = function () {
+    const max = window.illuShapeCornerRadiusMax();
+    ['tool-shape-corner-radius', 'vector-prop-corner-radius'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.max = String(max);
+    });
+};
+
 /** Remplace window.alert par une fenêtre modale au style de l’application. */
 window.showIlluAlert = function (message) {
     const ov = document.getElementById('illu-alert-overlay');
@@ -2966,7 +2986,7 @@ window.initTabBarScrollBehavior = function () {
     const wrap = document.getElementById('tab-bar-scroll');
     if (!wrap || wrap.dataset.illuTabScrollInit) return;
     wrap.dataset.illuTabScrollInit = '1';
-    wrap.style.cursor = 'grab';
+    wrap.style.cursor = typeof window.illuGrabCursor === 'function' ? window.illuGrabCursor() : 'grab';
     wrap.addEventListener(
         'wheel',
         (e) => {
@@ -3006,7 +3026,7 @@ window.initTabBarScrollBehavior = function () {
             /* ignore */
         }
         drag = null;
-        wrap.style.cursor = 'grab';
+        wrap.style.cursor = typeof window.illuGrabCursor === 'function' ? window.illuGrabCursor() : 'grab';
     };
     wrap.addEventListener('pointerup', endDrag);
     wrap.addEventListener('pointercancel', endDrag);
@@ -3028,6 +3048,14 @@ window.initTabBarScrollBehavior = function () {
  */
 window.illuIsMobileShellLayout = function () {
     return document.body.classList.contains('illu-mobile-shell-active');
+};
+
+/** Hauteur réelle du dock bas (menu + .illu-mobile-dock-scroll), 0 si masqué. */
+window.illuMobileBottomDockHeight = function () {
+    const dock = document.getElementById('illu-mobile-bottom-dock');
+    if (!dock || dock.hidden || dock.getAttribute('aria-hidden') === 'true') return 0;
+    const h = dock.getBoundingClientRect().height;
+    return h > 0 ? Math.ceil(h) : 0;
 };
 
 /** Marges pour le zoom « ajuster » dans #workspace (shell : #workspace a déjà le padding dock). */
@@ -3126,6 +3154,10 @@ window.illuApplyCanvasViewportStyles = function (container, p) {
 /** false pendant pinch / pan tactile : évite le « recentrage » qui annule le geste. */
 window.illuShouldClampCanvasPan = function () {
     if (window._illuPinchGestureActive) return false;
+    if (window.isPanning) return false;
+    const em = window.EditorManager;
+    const p = em && em.activeProject;
+    if (p && p.mode === 'vector') return false;
     if (typeof window.illuIsMobileShellLayout === 'function' && window.illuIsMobileShellLayout()) {
         return (
             typeof window.illuMobileEffectDialogCanvasLayout === 'function' &&
@@ -3146,12 +3178,23 @@ window.illuWorkspaceFitAvailableSize = function () {
         effectTop ||
         (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
 
-    /* Mobile / shell : #workspace = zone toile (à droite/sous les règles), pas la bande 18px des règles */
+    /* Mobile / shell : zone utile = client moins padding (dont dock bas via padding-bottom). */
     if (shell || phone) {
         const pad = 8;
+        const cs = getComputedStyle(ws);
+        let pt = parseFloat(cs.paddingTop) || 0;
+        let pb = parseFloat(cs.paddingBottom) || 0;
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        if (shell && typeof window.illuMobileBottomDockHeight === 'function') {
+            const dockH = window.illuMobileBottomDockHeight();
+            if (dockH > 0) pb = Math.max(pb, dockH);
+        }
+        const innerW = Math.max(0, ws.clientWidth - pl - pr);
+        const innerH = Math.max(0, ws.clientHeight - pt - pb);
         return {
-            availW: Math.max(80, ws.clientWidth - pad * 2),
-            availH: Math.max(80, ws.clientHeight - pad * 2)
+            availW: Math.max(80, innerW - pad * 2),
+            availH: Math.max(80, innerH - pad * 2)
         };
     }
 
@@ -3290,9 +3333,9 @@ window.scheduleFitActiveProjectZoomOnDocumentOpen = function (em) {
     });
 };
 
-/** Shell mobile : ajuster — largeur utile du #workspace (comme à l’ouverture d’image). */
+/** Shell mobile : ajuster — tient dans #workspace au-dessus du dock (largeur + hauteur). */
 window.fitActiveProjectZoomToWorkspaceMobile = function (em) {
-    return window.fitActiveProjectZoomToWorkspace(em, { force: true, fitWidth: true });
+    return window.fitActiveProjectZoomToWorkspace(em, { force: true });
 };
 
 /** Shell mobile : ajuster calé en haut — uniquement à l’ouverture d’un dialogue d’effet. */

@@ -2400,6 +2400,7 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 #image-bounds-overlay,
 #settings-overlay,
 #illu-alert-overlay {
+    z-index: 6000 !important;
     background: rgba(15, 25, 40, 0.38) !important;
     backdrop-filter: blur(1px);
 }

@@ -102,6 +102,11 @@
         return og;
     }
 
+    /** HTMLOptGroupElement n’a pas de .options — uniquement les &lt;option&gt; enfants. */
+    function optgroupOptions(og) {
+        return og ? [...og.querySelectorAll('option')] : [];
+    }
+
     function ensureLocalOptgroup(sel) {
         let og = document.getElementById('illu-text-font-local-optgroup');
         if (!og) {
@@ -172,7 +177,7 @@
             return;
         }
         const cog = ensureCustomOptgroup(sel);
-        if (![...cog.options].some((o) => o.value === v)) {
+        if (!optgroupOptions(cog).some((o) => o.value === v)) {
             const o = document.createElement('option');
             o.value = v;
             o.textContent = (v.split(',')[0] || 'Police').replace(/^["']|["']$/g, '').trim() || 'Police';

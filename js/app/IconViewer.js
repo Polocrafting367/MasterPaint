@@ -111,30 +111,79 @@
         </div>`;
     }
 
-    // ── Construit le HTML pour les SVG symbols ───────────────────────────────
-    function buildSvgHtml() {
-        const sprite = document.getElementById('illu-shape-icons-sprite');
-        if (!sprite) return '<p style="opacity:.6;padding:16px;">Sprite SVG non trouvé dans le DOM.</p>';
-        const symbols = sprite.querySelectorAll('symbol[id]');
-        if (!symbols.length) return '<p style="opacity:.6;padding:16px;">Aucun symbol trouvé.</p>';
+    function symbolPreviewInner(sym) {
+        const parts = sym.querySelectorAll(':scope > *');
+        let inner = '';
+        parts.forEach((node) => {
+            inner += new XMLSerializer().serializeToString(node);
+        });
+        return inner || sym.innerHTML || '';
+    }
 
-        let html = `<p style="margin:0 0 12px;opacity:.65;font-size:11px;">
-            ${symbols.length} icônes — cliquer pour copier l'ID.<br>
-            Définies dans <code>index.html</code> (sprite inline) et <code>icons/illu-sprite.svg</code> (fichier externe).
-        </p><div class="iview-svg-grid">`;
+    function cursorFilterDefsMarkup(sprite) {
+        const f = sprite && sprite.querySelector('#illu-filter-mac-shadow');
+        if (!f) return '';
+        return `<defs>${new XMLSerializer().serializeToString(f)}</defs>`;
+    }
 
-        symbols.forEach(sym => {
+    function buildSymbolPreviewSvg(sym, sprite, includeCursorDefs) {
+        const id = sym.getAttribute('id') || '';
+        const vb = sym.getAttribute('viewBox') || '0 0 16 16';
+        const inner = symbolPreviewInner(sym);
+        const defs =
+            includeCursorDefs && id.startsWith('illu-cursor-') ? cursorFilterDefsMarkup(sprite) : '';
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="28" height="28" aria-hidden="true">${defs}${inner}</svg>`;
+    }
+
+    function buildSymbolGrid(symbols, sprite, labelClass) {
+        let html = `<div class="iview-svg-grid">`;
+        symbols.forEach((sym) => {
             const id = sym.getAttribute('id');
-            const vb = sym.getAttribute('viewBox') || '0 0 16 16';
-            const shortName = id.replace('illu-icon-', '');
-            html += `<div class="iview-icon-cell" title="Cliquer pour copier #${id}" onclick="iviewCopyClass(this,'${id}')">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="28" height="28" aria-hidden="true">
-                    <use href="#${id}"/>
-                </svg>
-                <span class="iview-icon-name">${shortName}</span>
+            const shortName = id.replace(/^illu-(?:icon|cursor)-/, '');
+            const isCursor = id.startsWith('illu-cursor-');
+            const preview = buildSymbolPreviewSvg(sym, sprite, isCursor);
+            html += `<div class="iview-icon-cell" title="Cliquer pour copier ${id}" onclick="iviewCopyClass(this,'${id}')">
+                ${preview}
+                <span class="iview-icon-name ${labelClass || ''}">${shortName}</span>
             </div>`;
         });
         html += `</div>`;
+        return html;
+    }
+
+    // ── Construit le HTML pour les SVG symbols ───────────────────────────────
+    function buildSvgHtml() {
+        const sprite = document.getElementById('illu-shape-icons-sprite');
+        if (!sprite) {
+            return '<p style="opacity:.6;padding:16px;">Sprite SVG non trouvé — rechargez la page ou ouvrez <code>icons/illu-sprite.svg</code> via Fichier → Ouvrir.</p>';
+        }
+        const all = [...sprite.querySelectorAll('symbol[id]')];
+        if (!all.length) return '<p style="opacity:.6;padding:16px;">Aucun symbole trouvé.</p>';
+
+        const icons = all.filter((s) => s.getAttribute('id').startsWith('illu-icon-'));
+        const cursors = all.filter((s) => s.getAttribute('id').startsWith('illu-cursor-'));
+        const other = all.filter((s) => {
+            const id = s.getAttribute('id');
+            return !id.startsWith('illu-icon-') && !id.startsWith('illu-cursor-');
+        });
+
+        let html = `<p style="margin:0 0 12px;opacity:.65;font-size:11px;">
+            ${all.length} symboles — clic pour copier l’ID (<code>illu-icon-*</code> / <code>illu-cursor-*</code>).<br>
+            Fichier : <code>icons/illu-sprite.svg</code> (sprite unique, symboles à la racine).
+        </p>`;
+
+        if (icons.length) {
+            html += `<div class="iview-fa-cat-label" style="margin:12px 0 8px;">Interface <span class="iview-fa-cat-count">${icons.length}</span></div>`;
+            html += buildSymbolGrid(icons, sprite);
+        }
+        if (cursors.length) {
+            html += `<div class="iview-fa-cat-label" style="margin:16px 0 8px;">Curseurs <span class="iview-fa-cat-count">${cursors.length}</span></div>`;
+            html += buildSymbolGrid(cursors, sprite);
+        }
+        if (other.length) {
+            html += `<div class="iview-fa-cat-label" style="margin:16px 0 8px;">Autres <span class="iview-fa-cat-count">${other.length}</span></div>`;
+            html += buildSymbolGrid(other, sprite);
+        }
         return html;
     }
 

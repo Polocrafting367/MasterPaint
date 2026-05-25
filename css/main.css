@@ -1855,6 +1855,7 @@ body.illu-mobile-ui #image-bounds-overlay {
 
 body.illu-mobile-ui #illu-alert-overlay {
     padding-top: 0 !important;
+    z-index: 6000 !important;
 }
 
 body.illu-mobile-ui #settings-overlay .window,
@@ -1999,12 +2000,39 @@ body.illu-mobile-ui #illu-alert-overlay .illu-alert-window {
 
 .illu-export-dialog__local {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #c0c0c0;
+}
+
+.illu-export-local-status {
+    font-size: 11px;
+    line-height: 1.35;
+    color: #404040;
+    background: #f4f4f4;
+    border: 1px solid #c0c0c0;
+    padding: 6px 8px;
+    border-radius: 2px;
+}
+
+.illu-export-local-status__row {
+    margin: 1px 0;
+}
+
+body.theme-dark .illu-export-local-status {
+    color: #ccc;
+    background: #2a2a36;
+    border-color: #555;
+}
+
+.illu-export-dialog__local-actions {
+    display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding-top: 4px;
-    border-top: 1px solid #c0c0c0;
 }
 
 .illu-export-dialog__autosave {

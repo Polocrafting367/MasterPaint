@@ -37,28 +37,22 @@
 
 <body class="ui-layout-floating illu-splash-active" style="background-color: #0d8f8f;">
 
-    <!-- Chargement dynamique et asynchrone du sprite SVG pour conserver l'index.html propre et modifiable -->
+    <!-- Sprite SVG icônes internes -->
+    <script src="js/app/illu-sprite-loader.js"></script>
+    <script src="js/app/illu-sprite-editor.js"></script>
     <script>
-        (function() {
+        (function () {
             fetch('icons/illu-sprite.svg')
-                .then(response => {
-                    if (!response.ok) throw new Error('HTTP error ' + response.status);
-                    return response.text();
+                .then((r) => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
                 })
-                .then(svgText => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(svgText, 'image/svg+xml');
-                    const svgEl = doc.querySelector('svg');
-                    if (svgEl) {
-                        svgEl.id = 'illu-shape-icons-sprite';
-                        svgEl.setAttribute('aria-hidden', 'true');
-                        svgEl.setAttribute('focusable', 'false');
-                        svgEl.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;';
-                        document.body.insertBefore(svgEl, document.body.firstChild);
-                        window.dispatchEvent(new CustomEvent('illuSpriteLoaded'));
+                .then((svgText) => {
+                    if (typeof window.illuApplySpriteSvgText === 'function') {
+                        window.illuApplySpriteSvgText(svgText);
                     }
                 })
-                .catch(err => console.error('Erreur de chargement du sprite SVG:', err));
+                .catch((err) => console.error('Erreur de chargement du sprite SVG:', err));
         })();
     </script>
 
@@ -754,8 +748,51 @@
                                 <span class="illu-mode-toggle-lbl"
                                     data-i18n="tools.selectFreeCornersShort">4 coins</span>
                             </span>
+                            <span class="illu-mode-toggle-item illu-mobile-ribbon-only" id="illu-mobile-ribbon-deselect-wrap"
+                                hidden>
+                                <button type="button" id="opt-ribbon-deselect" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="title.btnDeselect" title="Désélectionner (Échap)"><i
+                                        class="fa-solid fa-rectangle-xmark" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.optDeselectShort">Aucun</span>
+                            </span>
                         </span>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-layout">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-ribbon-clipboard-desktop"
+                            id="illu-sel-clipboard-actions" hidden>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="opt-sel-copy-ribbon" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="ctx.copy" title="Copier"><i class="fa-solid fa-copy"
+                                        aria-hidden="true"></i><span class="illu-mode-toggle-lbl"
+                                        data-i18n="tools.optCopyShort">Copier</span></button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="opt-sel-paste-ribbon" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="ctx.paste" title="Coller"><i class="fa-solid fa-paste"
+                                        aria-hidden="true"></i><span class="illu-mode-toggle-lbl"
+                                        data-i18n="tools.optPasteShort">Coller</span></button>
+                            </span>
+                        </span>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-mobile-edit illu-mobile-only-ribbon"
+                            id="illu-mobile-sel-edit-actions" hidden>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="opt-sel-clear-content" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="ctx.clearSel" title="Effacer le contenu de la sélection"><i
+                                        class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.optClearSelShort">Effacer</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="opt-sel-copy" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="ctx.copy" title="Copier"><i class="fa-solid fa-copy"
+                                        aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.optCopyShort">Copier</span>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="opt-sel-paste" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    data-i18n-title="ctx.paste" title="Coller"><i class="fa-solid fa-paste"
+                                        aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.optPasteShort">Coller</span>
+                            </span>
+                        </span>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-layout illu-ribbon-icon-only-group">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" id="opt-sel-align-left" class="illu-icon-toggle"
                                     data-i18n-title="tools.selAlignLeft"><svg class="illu-shape-ico" width="16"
@@ -780,7 +817,14 @@
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.selAlignRightShort">Droite</span>
                             </span>
-                            <span class="illu-mode-toggle-item">
+                            <span class="illu-mode-toggle-item illu-desktop-clear-in-layout" id="illu-desktop-clear-sel-wrap"
+                                hidden>
+                                <button type="button" id="opt-sel-clear-ribbon" class="illu-icon-toggle"
+                                    data-i18n-title="ctx.clearSel" title="Effacer le contenu de la sélection"><i
+                                        class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.optClearSelShort">Effacer</span>
+                            </span>
+                            <span class="illu-mode-toggle-item" id="illu-layout-zoom-fit-wrap">
                                 <button type="button" id="illu-tb-zoom-fit" class="illu-icon-toggle"
                                     data-i18n-title="menubar.tbZoomFit"
                                     onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
@@ -1228,8 +1272,20 @@
                             onclick="EditorManager.moveSelectedVectorElement(-1)"
                             data-i18n-title="props.moveBackward"><i class="fa-solid fa-angle-down"></i></button>
                         <button type="button" class="illu-btn-mini"
+                            onclick="EditorManager.moveSelectedVectorElement('front')"
+                            data-i18n-title="props.bringToFront" title="Premier plan"><i
+                                class="fa-solid fa-angles-up"></i></button>
+                        <button type="button" class="illu-btn-mini"
+                            onclick="EditorManager.moveSelectedVectorElement('back')"
+                            data-i18n-title="props.sendToBack" title="Arrière-plan"><i
+                                class="fa-solid fa-angles-down"></i></button>
+                        <button type="button" class="illu-btn-mini"
                             onclick="EditorManager.duplicateActiveVectorSelection()"
                             data-i18n-title="tools.duplicate"><i class="fa-solid fa-clone"></i></button>
+                        <button type="button" class="illu-btn-mini"
+                            onclick="EditorManager.createNewLayerFromActiveVectorSelection()"
+                            data-i18n-title="props.newLayerFromSelection" title="Nouveau calque avec la sélection"><i
+                                class="fa-solid fa-layer-group"></i></button>
                         <div class="opt-sep"></div>
                         <span id="vector-group-actions" style="display:flex;gap:2px;">
                             <button type="button" class="illu-btn-mini"
@@ -1452,7 +1508,7 @@
                                 <span class="illu-gauge-fill" aria-hidden="true"></span>
                                 <span class="illu-gauge-val" id="tool-shape-corner-radius-val">12</span>
                                 <input type="range" id="tool-shape-corner-radius" class="illu-gauge-input" min="0"
-                                    max="64" value="12">
+                                    max="256" value="12">
                             </span>
                         </span>
                         <div class="opt-sep"></div>
@@ -1538,7 +1594,7 @@
                             <span class="illu-gauge-wrap">
                                 <span class="illu-gauge-fill" aria-hidden="true"></span>
                                 <span class="illu-gauge-val" id="vector-prop-corner-radius-val">0</span>
-                                <input type="range" id="vector-prop-corner-radius" class="illu-gauge-input" min="0" max="64" value="0">
+                                <input type="range" id="vector-prop-corner-radius" class="illu-gauge-input" min="0" max="256" value="0">
                             </span>
                         </span>
                     </div>
@@ -2459,6 +2515,33 @@
         </div>
     </div>
 
+    <!-- Import SVG (vecteur) -->
+    <div id="svg-import-overlay"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 13001; align-items: center; justify-content: center;">
+        <div class="window" style="width: 400px; max-width: 96vw;">
+            <div class="title-bar">
+                <div class="title-bar-text">Importer un SVG</div>
+            </div>
+            <div class="window-body" style="font-size: 12px; line-height: 1.4;">
+                <p style="margin: 0 0 8px;">Où importer ce fichier&nbsp;?</p>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+                    <label><input type="radio" name="svg-import-target" value="new" checked> Nouveau projet</label>
+                    <label><input type="radio" name="svg-import-target" value="current"> Projet en cours (mode vecteur)</label>
+                </div>
+                <p style="margin: 0 0 8px;">Découpage des éléments&nbsp;:</p>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+                    <label><input type="radio" name="svg-import-layers" value="single"> Tous les éléments sur un seul calque</label>
+                    <label><input type="radio" name="svg-import-layers" value="split" checked> Un calque par élément (ou groupe racine)</label>
+                    <label id="svg-import-layers-sprite-wrap" hidden><input type="radio" name="svg-import-layers" value="sprite"> Grille sprite (édition symboles, type <code>illu-sprite.svg</code>)</label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" id="btn-svg-import-cancel">Annuler</button>
+                    <button type="button" id="btn-svg-import-ok">Importer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Choice Dialog -->
     <div id="import-choice-overlay"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 13000; align-items: center; justify-content: center;">
@@ -2599,13 +2682,16 @@
                 </details>
 
                 <div class="illu-export-dialog__local">
-                    <div class="field-row illu-export-dialog__autosave">
-                        <input type="checkbox" id="export-auto-save-check">
-                        <label for="export-auto-save-check" id="export-auto-save-label"
-                            data-i18n="dlg.autoSaveInterval">Auto-sauvegarde</label>
+                    <div id="export-local-save-status" class="illu-export-local-status" aria-live="polite"></div>
+                    <div class="illu-export-dialog__local-actions">
+                        <div class="field-row illu-export-dialog__autosave">
+                            <input type="checkbox" id="export-auto-save-check">
+                            <label for="export-auto-save-check" id="export-auto-save-label"
+                                data-i18n="dlg.autoSaveInterval">Auto-sauvegarde</label>
+                        </div>
+                        <button type="button" id="export-dialog-save-local" class="illu-btn-secondary"
+                            data-i18n="dlg.saveLocal">Copie dans le navigateur</button>
                     </div>
-                    <button type="button" id="export-dialog-save-local" class="illu-btn-secondary"
-                        data-i18n="dlg.saveLocal">Copie dans le navigateur</button>
                 </div>
 
                 <div class="illu-export-dialog__footer">
@@ -3212,7 +3298,7 @@
 
     <!-- Message modal (remplace window.alert), style Win98 -->
     <div id="illu-alert-overlay"
-        style="display: none; position: fixed; inset: 0; z-index: 4000; align-items: center; justify-content: center; flex-direction: column; padding: 16px; box-sizing: border-box;"
+        style="display: none; position: fixed; inset: 0; z-index: 6000; align-items: center; justify-content: center; flex-direction: column; padding: 16px; box-sizing: border-box;"
         role="dialog" aria-modal="true" aria-labelledby="illu-alert-title">
         <div class="window illu-alert-window"
             style="min-width: 280px; max-width: min(800px, 94vw); box-shadow: 2px 2px 10px rgba(0,0,0,0.45);">
@@ -3293,12 +3379,14 @@
     <script src="js/app/text-fonts.js"></script>
     <script src="js/WasmManager.js"></script>
     <script src="js/VectorWasm.js"></script>
+    <script src="js/app/illu-svg-import.js"></script>
     <script src="EditorManager.js"></script>
     <script src="js/VectorEngine.js"></script>
     <script src="js/tools/SelectionModel.js"></script>
     <script src="js/tools/SelectionChrome.js"></script>
     <script src="js/tools/SelectionTouchLoupe.js"></script>
     <script src="js/app/IlluGaugeSteppers.js"></script>
+    <script src="js/app/illu-cursors.js"></script>
     <script src="DrawingTools.js"></script>
     <script src="js/app/illu-tool-ribbon.js"></script>
     <script src="js/effects/RemoveBgIntelligent.js"></script>

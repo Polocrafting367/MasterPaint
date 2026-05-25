@@ -476,7 +476,10 @@ setup8BitMode() {
         };
         const syncLiveShapeEdit = () => {
             if (this.mode === 'vector' && window.VectorEngine) {
-                window.VectorEngine.applyStyleToSelection();
+                /* Ne pas écraser contour / épaisseur définis sur la sélection (vector-prop-stroke-width). */
+                if (!this.activeVectorSelection || !this.activeVectorSelection.length) {
+                    window.VectorEngine.applyStyleToSelection();
+                }
             }
             if (
                 !window.pixelShapeEdit ||
@@ -651,7 +654,10 @@ setup8BitMode() {
             const syncCorner = () => {
                 let v = parseInt(scr.value, 10);
                 if (!Number.isFinite(v)) v = 12;
-                this.toolProps.shapeCornerRadius = Math.max(0, Math.min(64, v));
+                this.toolProps.shapeCornerRadius =
+                    typeof window.illuClampShapeCornerRadius === 'function'
+                        ? window.illuClampShapeCornerRadius(v)
+                        : Math.max(0, Math.min(256, v));
                 if (scrv) scrv.textContent = String(this.toolProps.shapeCornerRadius);
                 if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(scr);
                 syncLiveShapeEdit();
@@ -726,6 +732,9 @@ setup8BitMode() {
                 if (tszv) tszv.textContent = String(this.toolProps.textSize);
                 if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(tsz);
                 if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+                if (this.mode === 'vector' && typeof window.syncVectorTextEditorStyles === 'function') {
+                    window.syncVectorTextEditorStyles();
+                }
             });
             if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(tsz);
         }
@@ -734,6 +743,9 @@ setup8BitMode() {
             tf.addEventListener('change', (e) => {
                 this.toolProps.textFont = e.target.value;
                 if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+                if (this.mode === 'vector' && typeof window.syncVectorTextEditorStyles === 'function') {
+                    window.syncVectorTextEditorStyles();
+                }
             });
         }
         const tfill = document.getElementById('tool-text-fill');
@@ -746,8 +758,14 @@ setup8BitMode() {
         const tb = document.getElementById('tool-text-bold');
         const ti = document.getElementById('tool-text-italic');
         const tst = document.getElementById('tool-text-stroke');
-        if (tb) tb.addEventListener('change', (e) => { this.toolProps.textBold = e.target.checked; if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles(); });
-        if (ti) ti.addEventListener('change', (e) => { this.toolProps.textItalic = e.target.checked; if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles(); });
+        const syncTextStyleUi = () => {
+            if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            if (this.mode === 'vector' && typeof window.syncVectorTextEditorStyles === 'function') {
+                window.syncVectorTextEditorStyles();
+            }
+        };
+        if (tb) tb.addEventListener('change', (e) => { this.toolProps.textBold = e.target.checked; syncTextStyleUi(); });
+        if (ti) ti.addEventListener('change', (e) => { this.toolProps.textItalic = e.target.checked; syncTextStyleUi(); });
         if (tst) tst.addEventListener('change', (e) => { this.toolProps.textStroke = e.target.checked; if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles(); });
         const tsw = document.getElementById('tool-text-stroke-w');
         const tswv = document.getElementById('tool-text-stroke-w-val');
@@ -2822,13 +2840,25 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         if (stage === 'tab') {
             const bar = document.getElementById('tab-bar');
-            if (!bar || !this.activeProject || !this.isPixelMode) return;
-            const tab = bar.querySelector(`[data-project-index="${this.activeProjectIndex}"]`);
+            if (!bar) return;
+            const projects = this.projects || [];
+            if (index >= projects.length) return;
+            const proj = projects[index];
+            const tab = bar.querySelector(`[data-project-index="${index}"]`);
             const img = tab && tab.querySelector ? tab.querySelector('img.tab-thumb') : null;
-            if (img) {
-                const u = this.getProjectTabThumbnailDataUrl(this.activeProject);
+            if (!img || !proj) return;
+            if (proj.mode === 'vector') {
+                this._getVectorProjectThumbnailDataUrl(proj).then((u) => {
+                    if (gen === this._thumbPassGeneration && u) img.src = u;
+                }).catch(() => {});
+                this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
+                return;
+            }
+            if (proj.mode === 'pixel' || proj.mode === 'pixel-dither') {
+                const u = this.getProjectTabThumbnailDataUrl(proj);
                 if (u) img.src = u;
             }
+            this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
         }
     },
 
@@ -2908,6 +2938,67 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * Génère une miniature pour un calque vecteur en rendant son groupe SVG dans un canvas.
      * Retourne une Promise<string> (data URL PNG ou gif transparent si vide).
      */
+    async _getVectorProjectThumbnailDataUrl(project) {
+        const empty = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        const p = project || this.activeProject;
+        if (!p || p.mode !== 'vector') return empty;
+        let groupContent = p.svgData != null ? String(p.svgData) : '';
+        if (!groupContent.trim() && p === this.activeProject) {
+            const layersRoot = document.getElementById('svg-layers');
+            groupContent = layersRoot ? layersRoot.innerHTML : '';
+        }
+        if (!groupContent.trim()) return empty;
+        const W = Math.max(1, p.width || 1280);
+        const H = Math.max(1, p.height || 720);
+        let defsContent = '';
+        if (p.illuSpriteDefsData != null && String(p.illuSpriteDefsData).trim()) {
+            defsContent = `<defs>${p.illuSpriteDefsData}</defs>`;
+        } else if (p === this.activeProject) {
+            const defsEl = document.getElementById('vector-doc-defs');
+            defsContent = defsEl ? `<defs>${defsEl.innerHTML}</defs>` : '';
+        }
+        const svgMarkup = [
+            `<?xml version="1.0" encoding="UTF-8"?>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
+            ` width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+            defsContent,
+            `<g>`,
+            groupContent,
+            `</g>`,
+            `</svg>`
+        ].join('');
+        const maxDim = this.THUMB_TAB_MAX_DIM;
+        const ratio = Math.min(maxDim / W, maxDim / H, 1);
+        const tw = Math.max(1, Math.round(W * ratio));
+        const th = Math.max(1, Math.round(H * ratio));
+        return new Promise((resolve) => {
+            const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                try {
+                    const sc = document.createElement('canvas');
+                    sc.width = tw;
+                    sc.height = th;
+                    const sctx = sc.getContext('2d');
+                    sctx.fillStyle = '#808080';
+                    sctx.fillRect(0, 0, tw, th);
+                    sctx.imageSmoothingEnabled = true;
+                    sctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
+                    resolve(sc.toDataURL('image/png'));
+                } catch (e) {
+                    resolve(empty);
+                }
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve(empty);
+            };
+            img.src = url;
+        });
+    },
+
     async _getVectorLayerThumbnailDataUrl(layer) {
         const empty = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         if (!layer) return empty;
@@ -3286,7 +3377,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         // Initial setup for the new project
         this.addLayer('Arrière-plan');
         if (project.mode === 'vector') {
-            project.svgData = document.getElementById('svg-layers').innerHTML;
+            const sl = document.getElementById('svg-layers');
+            if (sl) project.svgData = sl.innerHTML;
         }
         this.saveHistory('Nouveau Document');
 
@@ -3940,7 +4032,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (this.isPixelMode) {
                 this.freezePixelProject(this.activeProject);
             } else {
-                this.activeProject.svgData = document.getElementById('svg-layers').innerHTML;
+                const sl = document.getElementById('svg-layers');
+                if (sl) this.activeProject.svgData = sl.innerHTML;
             }
         }
 
@@ -3954,8 +4047,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const px = nextProj && (nextProj.mode === 'pixel' || nextProj.mode === 'pixel-dither') ? nextProj.width * nextProj.height : 0;
         const heavyComposite = maskToParent && px >= 800000;
 
+        if (nextProj && nextProj.mode === 'vector') {
+            if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
+                window.illuPurgeSelectionOverlayAndGhostDom();
+            }
+            this.activeVectorSelection = [];
+            window._activeVectorShapeEl = null;
+        }
+
         this.applyProjectToUI(heavyComposite ? { compositeProgressRender: true } : undefined);
         this.updateTabUI();
+        if (nextProj && nextProj.mode === 'vector' && typeof this.refreshVectorProjectTabThumbnails === 'function') {
+            this.refreshVectorProjectTabThumbnails();
+        }
 
         // Save active project ID to reopen it on next session
         if (nextProj && nextProj.id) {
@@ -4173,8 +4277,29 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
             this._normalizeAllPixelLayersToDocumentSize();
         } else {
+            if (p.illuSpriteSheet && p.illuSpriteDefsData) {
+                const defsHost = document.getElementById('vector-doc-defs');
+                if (defsHost) defsHost.innerHTML = p.illuSpriteDefsData;
+            }
             const svgLayers = document.getElementById('svg-layers');
             if (svgLayers) svgLayers.innerHTML = p.svgData != null ? p.svgData : '';
+            if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
+                window.illuPurgeSelectionOverlayAndGhostDom();
+            } else {
+                window.selectionBounds = null;
+                if (typeof window.invalidateSelectionOverlayFast === 'function') {
+                    window.invalidateSelectionOverlayFast();
+                }
+                if (window.SelectionChrome && typeof window.SelectionChrome.hideOverlay === 'function') {
+                    window.SelectionChrome.hideOverlay();
+                } else {
+                    const ov = document.getElementById('selection-overlay');
+                    if (ov) {
+                        ov.style.display = 'none';
+                        ov.innerHTML = '';
+                    }
+                }
+            }
         }
 
         this.updateLayerUI();
@@ -4308,6 +4433,77 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /**
      * Garde une marge visible de la toile dans #workspace quand le zoom est > 100 % (évite tout hors écran).
      */
+    /**
+     * Agrandit width/height du projet vecteur pour englober tout le dessin (imports hors cadre).
+     * @param {number} [pad] marge en px
+     */
+    expandActiveProjectToVectorContentBounds(pad) {
+        const p = this.activeProject;
+        if (!p || p.mode !== 'vector') return false;
+        const layers = document.getElementById('svg-layers');
+        if (!layers) return false;
+        let bb;
+        try {
+            bb = layers.getBBox();
+        } catch (e) {
+            return false;
+        }
+        if (!bb || !Number.isFinite(bb.width) || bb.width < 0.5) return false;
+
+        const margin = Math.max(0, pad != null ? pad : 24);
+        let shifted = false;
+        let dx = 0;
+        let dy = 0;
+        if (bb.x < -0.5) {
+            dx = Math.ceil(-bb.x) + margin;
+            shifted = true;
+        }
+        if (bb.y < -0.5) {
+            dy = Math.ceil(-bb.y) + margin;
+            shifted = true;
+        }
+        if (shifted) {
+            const NS = 'http://www.w3.org/2000/svg';
+            [...layers.children].forEach((g) => {
+                const tr = g.getAttribute('transform') || '';
+                const lead = `translate(${dx},${dy})`;
+                g.setAttribute('transform', tr ? `${lead} ${tr}` : lead);
+            });
+            try {
+                bb = layers.getBBox();
+            } catch (e2) {
+                return false;
+            }
+        }
+
+        const needW = Math.max(1, Math.ceil(bb.x + bb.width + margin));
+        const needH = Math.max(1, Math.ceil(bb.y + bb.height + margin));
+        const curW = Math.max(1, p.width | 0);
+        const curH = Math.max(1, p.height | 0);
+        if (needW <= curW && needH <= curH) return false;
+
+        p.width = Math.max(curW, needW);
+        p.height = Math.max(curH, needH);
+        return true;
+    },
+
+    /** Met à jour largeur/hauteur du SVG sans recharger svg-layers (évite d’effacer un import non synchronisé). */
+    _applyVectorCanvasDimensionsOnly() {
+        const p = this.activeProject;
+        if (!p || p.mode !== 'vector') return;
+        const svg = document.getElementById('drawing-svg');
+        const container = document.getElementById('main-canvas-container');
+        if (svg) {
+            svg.setAttribute('width', String(p.width));
+            svg.setAttribute('height', String(p.height));
+            svg.setAttribute('viewBox', `0 0 ${p.width} ${p.height}`);
+        }
+        if (container) {
+            container.style.width = p.width + 'px';
+            container.style.height = p.height + 'px';
+        }
+    },
+
     clampCanvasPanInWorkspace(marginPx) {
         if (typeof window.illuShouldClampCanvasPan === 'function' && !window.illuShouldClampCanvasPan()) {
             return;
@@ -4921,13 +5117,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         ) {
             this.commitImportPlacementIfPending();
         }
-        // Mode vecteur : vider la sélection SVG
+        // Mode vecteur : vider la sélection SVG + fantôme sélection pixel
         if (this.mode === 'vector') {
             this.activeVectorSelection = [];
             window._activeVectorShapeEl = null;
             if (window.VectorEngine) window.VectorEngine.clearUI();
             if (window.clearAnchors) window.clearAnchors();
             if (window.VectorEngine) window.VectorEngine.cancelAll();
+            if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
+                window.illuPurgeSelectionOverlayAndGhostDom();
+            }
             if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             this.render();
             return;
@@ -5341,7 +5540,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             r.setAttribute('fill', '#ffffff');
             r.setAttribute('stroke', '#000000');
                 r.setAttribute('stroke-width', String(1 / z));
-                r.setAttribute('style', `cursor: ${hnd.cursor}; pointer-events: all; touch-action: none;`);
+                const handleCursor =
+                    typeof window.illuResizeHandleCursor === 'function'
+                        ? window.illuResizeHandleCursor(hnd.cursor)
+                        : hnd.cursor;
+                r.setAttribute('style', `cursor: ${handleCursor}; pointer-events: all; touch-action: none;`);
                 r.setAttribute('data-selection-handle', hnd.id);
                 const runSelectionHandleDown = (ev) => {
                     if (ev.button != null && ev.button !== 0) return;
@@ -5404,7 +5607,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 rh.setAttribute('fill', '#aecbfa');
                 rh.setAttribute('stroke', '#000000');
                 rh.setAttribute('stroke-width', String(1 / this.getCanvasZoomLevel()));
-                rh.setAttribute('style', 'cursor: grab; pointer-events: all; touch-action: none;');
+                rh.setAttribute('style', `cursor: ${typeof window.illuGrabCursor === 'function' ? window.illuGrabCursor() : 'grab'}; pointer-events: all; touch-action: none;`);
                 rh.setAttribute('data-selection-handle', 'rot');
                 const runRotationHandleDown = (ev) => {
                     if (ev.button != null && ev.button !== 0) return;
@@ -5803,7 +6006,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             true
         );
         tab.addEventListener('click', () => this.switchProject(i));
-        if ((p.mode === 'pixel' || p.mode === 'pixel-dither') && this._uiThumbsVisible()) {
+        if (
+            (p.mode === 'pixel' || p.mode === 'pixel-dither' || p.mode === 'vector') &&
+            this._uiThumbsVisible()
+        ) {
             const thumb = document.createElement('img');
             thumb.className = 'tab-thumb';
             thumb.alt = '';
@@ -5811,8 +6017,20 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const tabSz = this.getProjectTabThumbCssSize(p);
             thumb.width = tabSz.width;
             thumb.height = tabSz.height;
-            const u = this.getProjectTabThumbnailDataUrl(p);
-            if (u) thumb.src = u;
+            if (p.mode === 'vector') {
+                const projRef = p;
+                const tabIdx = i;
+                this._getVectorProjectThumbnailDataUrl(projRef).then((u) => {
+                    if (!u) return;
+                    const bar = document.getElementById('tab-bar');
+                    const t = bar && bar.querySelector(`[data-project-index="${tabIdx}"]`);
+                    const im = t && t.querySelector('img.tab-thumb');
+                    if (im) im.src = u;
+                }).catch(() => {});
+            } else {
+                const u = this.getProjectTabThumbnailDataUrl(p);
+                if (u) thumb.src = u;
+            }
             tab.appendChild(thumb);
         }
         const label = document.createElement('span');
@@ -6287,8 +6505,39 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         // Propagation aux formes vectorielles sélectionnées
         if (this.mode === 'vector' && this.activeVectorSelection.length) {
-            this.applyVectorProperty('fill-model', 'solid');
+            this.applyVectorColorFromPicker();
         }
+    },
+
+    /**
+     * Applique la couleur primaire (remplissage) ou secondaire (contour) sans réinitialiser
+     * stroke-width ni écraser l’autre attribut via applyVectorShapePaint.
+     */
+    applyVectorColorFromPicker() {
+        if (!this.activeVectorSelection || !this.activeVectorSelection.length) return;
+
+        const onlyText = this.activeVectorSelection.every((el) => {
+            const t = (el.tagName || '').toLowerCase();
+            return t === 'foreignobject' || t === 'text';
+        });
+        if (onlyText && window.VectorEngine && typeof window.VectorEngine.applyStyleToSelection === 'function') {
+            window.VectorEngine.applyStyleToSelection();
+            return;
+        }
+
+        const target = this.activeColorTarget === 'secondary' ? 'secondary' : 'primary';
+        if (target === 'secondary') {
+            const strokeCss =
+                typeof window.shapeSecondaryStrokeCss === 'function'
+                    ? window.shapeSecondaryStrokeCss()
+                    : this.cssRgbaFromPart(this.secondaryColor);
+            this.applyVectorProperty('stroke', strokeCss, { skipRenderHistory: false });
+            return;
+        }
+
+        const fmEl = document.getElementById('vector-prop-fill-model');
+        const model = fmEl && fmEl.value ? fmEl.value : 'solid';
+        this.applyVectorProperty('fill-model', model, { skipRenderHistory: false });
     },
 
     setColorFromHex(hex) {
@@ -6355,6 +6604,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         if (typeof window.extendPixelTextEditorIgnoreBlur === 'function') window.extendPixelTextEditorIgnoreBlur(3000);
         if (typeof window.onEditorColorsChanged === 'function') window.onEditorColorsChanged();
+        if (typeof window.syncVectorTextEditorStyles === 'function') window.syncVectorTextEditorStyles();
     },
 
     rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); },
@@ -6433,7 +6683,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         } else {
             const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             group.setAttribute('id', `layer-${id}`);
-            document.getElementById('svg-layers').appendChild(group);
+            const sl = document.getElementById('svg-layers');
+            if (sl) sl.appendChild(group);
         }
 
         this.layers.push(layer);
@@ -6551,7 +6802,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 }
             });
         }
-        if (!skipDrawUI) this.drawUI();
+        if (!skipDrawUI && !(this.mode === 'vector' && window._illuVectorDragActive)) {
+            this.drawUI();
+        }
         if (skipUiThumbnails) {
             return;
         }
@@ -7328,7 +7581,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this.render();
     },
 
+    _syncLayerPaletteToolbar() {
+        const n = this.layers ? this.layers.length : 0;
+        const singleLayer = n <= 1;
+        ['btn-del-layer', 'btn-move-up', 'btn-move-down'].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.disabled = singleLayer;
+            btn.setAttribute('aria-disabled', singleLayer ? 'true' : 'false');
+        });
+    },
+
     updateLayerUI() {
+        this._syncLayerPaletteToolbar();
         const list = document.getElementById('layers-list');
         if (!list) return;
         const sig = [
@@ -8108,9 +8373,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 };
             }
         } else {
+            const sl = document.getElementById('svg-layers');
             data = {
                 type: 'vector-full',
-                svg: document.getElementById('svg-layers').innerHTML
+                svg: sl ? sl.innerHTML : (this.activeProject && this.activeProject.svgData) || ''
             };
         }
 
@@ -8529,7 +8795,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             let html = '';
             if (typeof state.data === 'string') html = state.data;
             else if (state.data && state.data.type === 'vector-full') html = state.data.svg || '';
-            if (html) document.getElementById('svg-layers').innerHTML = html;
+            const sl = document.getElementById('svg-layers');
+            if (html && sl) sl.innerHTML = html;
             this.render();
         }
         this.updateHistoryUI();
@@ -8601,7 +8868,26 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (p && p.mode === 'vector') {
             const el = document.getElementById('svg-layers');
             if (el) p.svgData = el.innerHTML;
+            if (p.illuSpriteSheet) {
+                const defsHost = document.getElementById('vector-doc-defs');
+                if (defsHost) p.illuSpriteDefsData = defsHost.innerHTML;
+            }
         }
+    },
+
+    /** Met à jour les miniatures d’onglets SVG à partir de chaque projet.svgData (pas le DOM actif). */
+    refreshVectorProjectTabThumbnails() {
+        const bar = document.getElementById('tab-bar');
+        if (!bar || !this.projects) return;
+        this.projects.forEach((proj, i) => {
+            if (!proj || proj.mode !== 'vector') return;
+            const tab = bar.querySelector(`[data-project-index="${i}"]`);
+            const img = tab && tab.querySelector('img.tab-thumb');
+            if (!img) return;
+            this._getVectorProjectThumbnailDataUrl(proj).then((u) => {
+                if (u) img.src = u;
+            }).catch(() => {});
+        });
     },
 
     /**
@@ -8609,6 +8895,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     getStandaloneSvgMarkup() {
         this.syncActiveVectorSvg();
+        if (
+            this.activeProject &&
+            this.activeProject.illuSpriteSheet &&
+            typeof window.illuExportSpriteSheetMarkup === 'function'
+        ) {
+            return window.illuExportSpriteSheetMarkup();
+        }
         const svg = document.getElementById('drawing-svg');
         if (!svg) return '';
         const clone = svg.cloneNode(true);
@@ -8633,15 +8926,141 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
-    importSvgFromFileContent(text, filename) {
-        if (this.isPixelMode) {
-            this._importSvgAsNewVectorProject(text, filename);
-        } else {
-            this._importSvgIntoActiveVectorProject(text);
+    importSvgFromFileContent(text, filename, importOpts) {
+        importOpts = importOpts || {};
+        const layerMode = importOpts.layerMode || 'split';
+        const target = importOpts.target === 'current' ? 'current' : 'new';
+
+        if (layerMode === 'sprite') {
+            try {
+                this._importSvgSpriteLibrary(text, filename);
+                return;
+            } catch (spriteErr) {
+                console.error('importSvgFromFileContent (sprite)', spriteErr);
+                if (typeof window.showIlluAlert === 'function') {
+                    window.showIlluAlert(
+                        spriteErr && spriteErr.message
+                            ? `Feuille sprite : ${spriteErr.message}`
+                            : 'Impossible d’ouvrir ce fichier en grille sprite.'
+                    );
+                }
+                return;
+            }
+        }
+
+        const injectOpts = { layerMode: layerMode === 'single' ? 'single' : 'split' };
+
+        if (target === 'current') {
+            if (this.isPixelMode || !this.activeProject || this.activeProject.mode !== 'vector') {
+                if (typeof window.showIlluAlert === 'function') {
+                    window.showIlluAlert(
+                        'Import sur le projet en cours : passez en mode vecteur avec un projet actif, ou choisissez « Nouveau projet ».'
+                    );
+                }
+                return;
+            }
+            this._importSvgIntoActiveVectorProject(text, injectOpts);
+            return;
+        }
+
+        this._importSvgAsNewVectorProject(text, filename, injectOpts);
+    },
+
+    /**
+     * Fichier type illu-sprite.svg : feuille vectorielle (grille / cellules), réexportable en symboles.
+     */
+    _importSvgSpriteLibrary(text, filename) {
+        if (typeof window.illuBuildSpriteSheetFromSvgRoot !== 'function') {
+            throw new Error('Éditeur sprite indisponible (illu-sprite-editor.js).');
+        }
+        const parsed = this._parseSvgFileToStructure(text);
+        if (typeof window.illuFlattenSpriteSvg === 'function') {
+            window.illuFlattenSpriteSvg(parsed.svgRoot);
+        }
+        const sheet = window.illuBuildSpriteSheetFromSvgRoot(parsed.svgRoot);
+        const baseName = String(filename || 'illu-sprite')
+            .replace(/\.[^.]+$/i, '')
+            .replace(/[/\\?%*:|"<>]/g, '-')
+            .trim() || 'illu-sprite';
+
+        const project = {
+            id: Date.now(),
+            name: baseName,
+            mode: 'vector',
+            width: sheet.width,
+            height: sheet.height,
+            layers: [],
+            activeLayerIndex: 0,
+            history: [],
+            historyIndex: -1,
+            zoomLevel: 1,
+            canvasPanX: 0,
+            canvasPanY: 0,
+            canvasData: null,
+            svgData: '',
+            role: 'main',
+            parentProjectId: null,
+            parentLayerId: null,
+            illuSpriteSheet: true,
+            illuSpriteSourceName: filename || 'illu-sprite.svg',
+            illuSpriteDefsData: ''
+        };
+
+        this.projects.push(project);
+        this.activeProjectIndex = this.projects.length - 1;
+
+        const defsHost = document.getElementById('vector-doc-defs');
+        const layersRoot = document.getElementById('svg-layers');
+        if (defsHost) defsHost.innerHTML = '';
+        if (layersRoot) layersRoot.innerHTML = '';
+
+        if (defsHost) {
+            sheet.defsNodes.forEach((n) => defsHost.appendChild(document.importNode(n, true)));
+            project.illuSpriteDefsData = defsHost.innerHTML;
+        }
+
+        const layerId = Date.now() + 1;
+        project.layers.push({
+            id: layerId,
+            name: 'Icônes (sprite)',
+            visible: true,
+            x: 0,
+            y: 0,
+            opacity: 1,
+            blendMode: 'source-over',
+            buffer: null
+        });
+
+        const NS = 'http://www.w3.org/2000/svg';
+        const layerG = document.createElementNS(NS, 'g');
+        layerG.setAttribute('id', `layer-${layerId}`);
+        layerG.setAttribute('data-illu-sprite-sheet', '1');
+        if (sheet.sheetChrome) {
+            layerG.appendChild(document.importNode(sheet.sheetChrome, true));
+        }
+        sheet.cells.forEach((cell) => {
+            layerG.appendChild(document.importNode(cell, true));
+        });
+        if (layersRoot) layersRoot.appendChild(layerG);
+
+        this.syncActiveVectorSvg();
+        this.saveHistory('Ouvrir sprite (grille)');
+        this.updateTabUI();
+        this.applyProjectToUI();
+
+        if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+            window.scheduleFitActiveProjectZoomOnDocumentOpen(this);
+        }
+
+        if (typeof window.showIlluAlert === 'function') {
+            window.showIlluAlert(
+                `Feuille sprite « ${baseName} » : ${sheet.symbolCount} icônes. Modifiez le nom au-dessus de chaque icône (texte), l’icône, puis exportez en SVG.`
+            );
         }
     },
 
-    _importSvgAsNewVectorProject(text, filename) {
+    _importSvgAsNewVectorProject(text, filename, importOpts) {
+        importOpts = importOpts || {};
         const parsed = this._parseSvgFileToStructure(text);
         const baseName = String(filename || 'import')
             .replace(/\.[^.]+$/i, '')
@@ -8672,16 +9091,23 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const layersRoot = document.getElementById('svg-layers');
         if (defsHost) defsHost.innerHTML = '';
         if (layersRoot) layersRoot.innerHTML = '';
-        this._injectParsedSvgIntoWorkspace(parsed, { append: false });
+        this._injectParsedSvgIntoWorkspace(parsed, {
+            append: false,
+            layerMode: importOpts.layerMode === 'single' ? 'single' : 'split'
+        });
         this.syncActiveVectorSvg();
         this.saveHistory('Import SVG');
         this.updateTabUI();
         this.applyProjectToUI();
     },
 
-    _importSvgIntoActiveVectorProject(text) {
+    _importSvgIntoActiveVectorProject(text, importOpts) {
+        importOpts = importOpts || {};
         const parsed = this._parseSvgFileToStructure(text);
-        this._injectParsedSvgIntoWorkspace(parsed, { append: true });
+        this._injectParsedSvgIntoWorkspace(parsed, {
+            append: true,
+            layerMode: importOpts.layerMode === 'single' ? 'single' : 'split'
+        });
         this.syncActiveVectorSvg();
         this.saveHistory('Import SVG');
         this.applyProjectToUI();
@@ -8763,6 +9189,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     _injectParsedSvgIntoWorkspace(parsed, opts) {
         const append = opts && opts.append;
+        const singleLayer = opts && opts.layerMode === 'single';
         const defsTarget = document.getElementById('vector-doc-defs');
         const srcDefs = parsed.svgRoot.querySelector('defs');
         if (srcDefs && defsTarget) {
@@ -8774,11 +9201,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const NS = 'http://www.w3.org/2000/svg';
         if (!layersRoot) return;
 
-        if (append) {
-            const al = this.activeLayer;
-            if (!al) return;
-            const g = document.getElementById(`layer-${al.id}`);
-            if (!g) return;
+        const buildImportHolder = () => {
             const holder = document.createElementNS(NS, 'g');
             holder.setAttribute('data-illu-svg-import', '1');
             const vmxA = parsed.viewMinX != null ? parsed.viewMinX : 0;
@@ -8794,11 +9217,58 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     holder.appendChild(document.importNode(node, true));
                 }
             });
-            g.appendChild(holder);
+            return holder;
+        };
+
+        if (append && !singleLayer) {
+            const planned = this._planSvgImportLayers(parsed);
+            const vmxA = parsed.viewMinX != null ? parsed.viewMinX : 0;
+            const vmyA = parsed.viewMinY != null ? parsed.viewMinY : 0;
+            const needVb = Math.abs(vmxA) > 1e-9 || Math.abs(vmyA) > 1e-9;
+            planned.forEach((slot, idx) => {
+                const id = Date.now() + idx + 1;
+                this.activeProject.layers.push({
+                    id,
+                    name: slot.name,
+                    visible: slot.visible,
+                    x: slot.x,
+                    y: slot.y,
+                    opacity: slot.opacity,
+                    blendMode: 'source-over',
+                    buffer: null
+                });
+                const ng = document.createElementNS(NS, 'g');
+                ng.setAttribute('id', `layer-${id}`);
+                if (needVb) {
+                    const wrap = document.createElementNS(NS, 'g');
+                    wrap.setAttribute('transform', `translate(${-vmxA},${-vmyA})`);
+                    slot.fragments.forEach((frag) => wrap.appendChild(frag));
+                    ng.appendChild(wrap);
+                } else {
+                    slot.fragments.forEach((frag) => ng.appendChild(frag));
+                }
+                layersRoot.appendChild(ng);
+            });
+            this.setActiveLayerIndex(this.activeProject.layers.length - 1);
+            if (this.expandActiveProjectToVectorContentBounds(24)) {
+                this._applyVectorCanvasDimensionsOnly();
+            }
             return;
         }
 
-        const planned = this._planSvgImportLayers(parsed);
+        if (append) {
+            const al = this.activeLayer;
+            if (!al) return;
+            const g = document.getElementById(`layer-${al.id}`);
+            if (!g) return;
+            g.appendChild(buildImportHolder());
+            if (this.expandActiveProjectToVectorContentBounds(24)) {
+                this._applyVectorCanvasDimensionsOnly();
+            }
+            return;
+        }
+
+        const planned = singleLayer ? this._planSvgImportSingleLayer(parsed) : this._planSvgImportLayers(parsed);
         planned.forEach((slot, idx) => {
             const id = Date.now() + idx;
             this.activeProject.layers.push({
@@ -8828,14 +9298,203 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             layersRoot.appendChild(nrm);
         }
         this.setActiveLayerIndex(0);
+        const layersRootFin = document.getElementById('svg-layers');
+        if (layersRootFin) this._enrichSvgImportTree(layersRootFin);
+        if (this.expandActiveProjectToVectorContentBounds(24)) {
+            this._applyVectorCanvasDimensionsOnly();
+        }
+    },
+
+    _svgFillIsNone(el) {
+        const f = (el.getAttribute && el.getAttribute('fill')) || '';
+        const s = String(f).trim().toLowerCase();
+        return !s || s === 'none' || s === 'transparent';
+    },
+
+    _svgNodeIsStrokeOnly(el) {
+        const tag = this._svgLocalTag(el);
+        if (!['path', 'line', 'polyline'].includes(tag)) return false;
+        if (!this._svgFillIsNone(el)) return false;
+        const st = el.getAttribute && el.getAttribute('stroke');
+        return !!(st && String(st).trim().toLowerCase() !== 'none');
+    },
+
+    _svgPathDKey(d) {
+        const seg =
+            typeof window.illuParseSimpleLineSegmentD === 'function'
+                ? window.illuParseSimpleLineSegmentD(d)
+                : null;
+        if (seg) return `L|${seg.x1}|${seg.y1}|${seg.x2}|${seg.y2}`;
+        return String(d || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLowerCase();
+    },
+
+    _svgPathsSameSegment(a, b) {
+        const da = a.getAttribute && a.getAttribute('d');
+        const db = b.getAttribute && b.getAttribute('d');
+        if (!da || !db) return false;
+        return this._svgPathDKey(da) === this._svgPathDKey(db);
+    },
+
+    _svgPathSubpathCount(d) {
+        const s = String(d || '').trim();
+        if (!s) return 0;
+        return (s.match(/M/gi) || []).length;
+    },
+
+    _svgSplitMultiSubpathPath(pathEl) {
+        const d = pathEl.getAttribute('d') || '';
+        const chunks = d
+            .trim()
+            .split(/(?=M)/i)
+            .map((c) => c.trim())
+            .filter((c) => c.length > 0);
+        if (chunks.length <= 1) return pathEl;
+        const NS = 'http://www.w3.org/2000/svg';
+        const g = document.createElementNS(NS, 'g');
+        g.setAttribute('data-illu-import-compound', String(chunks.length));
+        g.setAttribute('data-illu-import-group', 'compound');
+        chunks.forEach((part, idx) => {
+            const p = document.createElementNS(NS, 'path');
+            ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'transform'].forEach(
+                (attr) => {
+                    const v = pathEl.getAttribute(attr);
+                    if (v != null) p.setAttribute(attr, v);
+                }
+            );
+            p.setAttribute('d', part);
+            if (!this._svgFillIsNone(pathEl) && idx > 0) {
+                /* sous-tracés remplis : conserver le fill du path d’origine */
+            }
+            this._svgAnnotateImportedNode(p);
+            g.appendChild(p);
+        });
+        return g;
+    },
+
+    _svgAnnotateImportedNode(el) {
+        if (!el || el.nodeType !== 1) return;
+        const tag = this._svgLocalTag(el);
+        if (tag === 'path' || tag === 'line' || tag === 'polyline') {
+            if (this._svgNodeIsStrokeOnly(el)) {
+                el.setAttribute('data-illu-stroke-only', '1');
+                const d = el.getAttribute('d') || '';
+                const seg =
+                    typeof window.illuParseSimpleLineSegmentD === 'function'
+                        ? window.illuParseSimpleLineSegmentD(d)
+                        : null;
+                if (seg && typeof window.formatIlluStraightLinePath === 'function') {
+                    el.setAttribute('d', window.formatIlluStraightLinePath(seg.x1, seg.y1, seg.x2, seg.y2));
+                    el.setAttribute('data-illu-line-straight', '1');
+                }
+            } else if (tag === 'path' && !this._svgFillIsNone(el)) {
+                const sub = this._svgPathSubpathCount(el.getAttribute('d') || '');
+                if (sub > 1) el.setAttribute('data-illu-import-subpaths', String(sub));
+            }
+        }
+    },
+
+    _svgWrapStrokeStacks(parent) {
+        if (!parent || !parent.children) return;
+        if (parent.getAttribute && parent.getAttribute('data-illu-import-group') === 'stroke-stack') return;
+        const NS = 'http://www.w3.org/2000/svg';
+        let node = parent.firstElementChild;
+        while (node) {
+            const next = node.nextElementSibling;
+            if (this._svgNodeIsStrokeOnly(node)) {
+                const batch = [node];
+                let scan = next;
+                while (scan && this._svgNodeIsStrokeOnly(scan) && this._svgPathsSameSegment(node, scan)) {
+                    batch.push(scan);
+                    scan = scan.nextElementSibling;
+                }
+                if (batch.length >= 2) {
+                    const g = document.createElementNS(NS, 'g');
+                    g.setAttribute('data-illu-import-group', 'stroke-stack');
+                    g.setAttribute('data-illu-stroke-stack', String(batch.length));
+                    parent.insertBefore(g, batch[0]);
+                    batch.forEach((b) => g.appendChild(b));
+                    node = g.nextElementSibling;
+                    continue;
+                }
+            }
+            node = next;
+        }
+    },
+
+    /** Analyse sémantique post-import : traits empilés, formes composées, métadonnées traits. */
+    _enrichSvgImportTree(root) {
+        if (!root || root.nodeType !== 1) return;
+        if (root.getAttribute && root.getAttribute('data-illu-import-enriched') === '1') return;
+        root.setAttribute('data-illu-import-enriched', '1');
+        [...root.children].forEach((ch) => this._enrichSvgImportTree(ch));
+        this._svgWrapStrokeStacks(root);
+        const kids = [...root.children];
+        kids.forEach((ch) => {
+            const tag = this._svgLocalTag(ch);
+            if (tag === 'path') {
+                const rep = this._svgSplitMultiSubpathPath(ch);
+                if (rep !== ch && ch.parentElement) ch.parentElement.replaceChild(rep, ch);
+                else this._svgAnnotateImportedNode(ch);
+            } else if (tag === 'g' && ch.getAttribute('data-illu-import-compound')) {
+                [...ch.children].forEach((p) => this._svgAnnotateImportedNode(p));
+            } else {
+                this._svgAnnotateImportedNode(ch);
+            }
+        });
     },
 
     /** Nom d’affichage pour un nœud SVG importé. */
     _svgImportLabelForNode(node, index) {
         const tid = node.getAttribute && node.getAttribute('id');
         if (tid && tid.trim()) return tid.trim().slice(0, 48);
+        const ig = node.getAttribute && node.getAttribute('data-illu-import-group');
+        if (ig === 'stroke-stack') {
+            const n = node.getAttribute('data-illu-stroke-stack') || '';
+            return n ? `Traits empilés (×${n})` : 'Traits empilés';
+        }
+        if (ig === 'compound') {
+            const n = node.getAttribute('data-illu-import-compound') || '';
+            return n ? `Formes groupées (×${n})` : 'Formes groupées';
+        }
+        if (node.getAttribute && node.getAttribute('data-illu-stroke-only') === '1') return `Trait ${index + 1}`;
+        const sub = node.getAttribute && node.getAttribute('data-illu-import-subpaths');
+        if (sub && parseInt(sub, 10) > 1) return `Forme composite (×${sub})`;
         const tag = this._svgLocalTag(node) || 'el';
         return `${tag} ${index + 1}`;
+    },
+
+    /** Un seul calque contenant tout le contenu racine (avec correction viewBox). */
+    _planSvgImportSingleLayer(parsed) {
+        const NS = 'http://www.w3.org/2000/svg';
+        const ngInner = document.createElementNS(NS, 'g');
+        ngInner.setAttribute('data-illu-svg-import', '1');
+        const vmx = parsed.viewMinX != null ? parsed.viewMinX : 0;
+        const vmy = parsed.viewMinY != null ? parsed.viewMinY : 0;
+        if (Math.abs(vmx) > 1e-9 || Math.abs(vmy) > 1e-9) {
+            ngInner.setAttribute('transform', `translate(${-vmx},${-vmy})`);
+        }
+        parsed.content.forEach((node) => {
+            const tag = this._svgLocalTag(node);
+            if (tag === 'g' && parsed.content.length === 1) {
+                [...node.children].forEach((ch) => ngInner.appendChild(document.importNode(ch, true)));
+            } else {
+                ngInner.appendChild(document.importNode(node, true));
+            }
+        });
+        this._enrichSvgImportTree(ngInner);
+        return [
+            {
+                name: 'SVG importé',
+                visible: true,
+                x: 0,
+                y: 0,
+                opacity: 1,
+                fragments: [ngInner]
+            }
+        ];
     },
 
     /**
@@ -8854,6 +9513,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const oa = gEl.getAttribute('opacity');
             if (oa != null && oa !== '') opacity = parseFloat(oa) || 1;
             const frag = document.importNode(gEl, true);
+            this._enrichSvgImportTree(frag);
             return {
                 name: baseName || `Calque ${idx + 1}`,
                 visible,
@@ -8871,6 +9531,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const oa = node.getAttribute('opacity');
                 if (oa != null && oa !== '') opacity = parseFloat(oa) || 1;
                 const inner = document.importNode(node, true);
+                this._enrichSvgImportTree(inner);
                 return {
                     name: nameFn(node, idx),
                     visible,
@@ -8908,7 +9569,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         if (pTr) wrap.setAttribute('transform', pTr);
                         if (pOp != null && pOp !== '') wrap.setAttribute('opacity', pOp);
                         if (pDisp) wrap.setAttribute('display', pDisp);
-                        wrap.appendChild(document.importNode(ch, true));
+                        const imported = document.importNode(ch, true);
+                        this._enrichSvgImportTree(imported);
+                        wrap.appendChild(imported);
                         const visible = ch.getAttribute('display') !== 'none' && pDisp !== 'none';
                         let opacity = 1;
                         const oa = ch.getAttribute('opacity');
@@ -8986,7 +9649,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 vectorLayers: [],
                 role: p.role || 'main',
                 parentProjectId: p.parentProjectId != null ? p.parentProjectId : null,
-                parentLayerId: p.parentLayerId != null ? p.parentLayerId : null
+                parentLayerId: p.parentLayerId != null ? p.parentLayerId : null,
+                autoSaveLocal: p.autoSaveLocal === true,
+                illuSpriteSheet: p.illuSpriteSheet === true,
+                illuSpriteSourceName: p.illuSpriteSourceName || null,
+                illuSpriteDefsData: p.illuSpriteDefsData || ''
             };
             if (p.role === 'layerAlphaMask') {
                 base.alphaMaskUiHidden = p.alphaMaskUiHidden === true;
@@ -9141,7 +9808,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 pixelSnapshot: null,
                 role: sp.role || 'main',
                 parentProjectId: sp.parentProjectId != null ? sp.parentProjectId : null,
-                parentLayerId: sp.parentLayerId != null ? sp.parentLayerId : null
+                parentLayerId: sp.parentLayerId != null ? sp.parentLayerId : null,
+                autoSaveLocal: sp.autoSaveLocal === true,
+                illuSpriteSheet: sp.illuSpriteSheet === true,
+                illuSpriteSourceName: sp.illuSpriteSourceName || null,
+                illuSpriteDefsData: sp.illuSpriteDefsData || ''
             };
             if (p.role === 'layerAlphaMask' && sp.alphaMaskUiHidden === true) {
                 p.alphaMaskUiHidden = true;
@@ -10224,6 +10895,29 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
+    /** Déplace la sélection vectorielle vers un nouveau calque. */
+    createNewLayerFromActiveVectorSelection() {
+        if (!this.activeVectorSelection || !this.activeVectorSelection.length) return;
+        const sel = [...this.activeVectorSelection];
+        const layerName = `Calque ${this.layers.length + 1}`;
+        this.addLayer(layerName);
+        const g = document.getElementById(`layer-${this.activeLayer.id}`);
+        if (!g) return;
+        sel.forEach((el) => {
+            if (el.parentElement) g.appendChild(el);
+        });
+        this.activeVectorSelection = sel;
+        window._activeVectorShapeEl = sel[sel.length - 1] || null;
+        this.syncActiveVectorSvg();
+        this.saveHistory('Nouveau calque (sélection)', {
+            type: 'vector-full',
+            svg: this.activeProject.svgData
+        });
+        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+        this.render();
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+    },
+
     /**
      * Apply boolean operation between two vector shapes and replace them with a real <path>.
      * Implementation is self-contained (no external deps): rasterize both shapes to masks,
@@ -10645,11 +11339,35 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /**
      * Apply a property (fill, stroke, etc.) to all elements in the active vector selection.
      */
-    applyVectorProperty(prop, value) {
+    applyVectorProperty(prop, value, opts) {
+        opts = opts || {};
         if (!this.activeVectorSelection.length) return;
         
         this.activeVectorSelection.forEach(el => {
             if (prop === 'fill-model') {
+                const tagFill = (el.tagName || '').toLowerCase();
+                if (tagFill === 'foreignobject') {
+                    const div = el.querySelector('div[contenteditable]');
+                    el.removeAttribute('fill');
+                    if (!div) return;
+                    if (value === 'none') {
+                        div.style.color = 'transparent';
+                    } else if (value === 'solid') {
+                        const css =
+                            typeof window.shapePrimaryFillCss === 'function'
+                                ? window.shapePrimaryFillCss()
+                                : this.cssRgbaFromPart(this.primaryColor);
+                        div.style.color = css;
+                    } else if (value === 'gradient') {
+                        /* dégradé texte SVG : couleur primaire en attendant */
+                        const css =
+                            typeof window.shapePrimaryFillCss === 'function'
+                                ? window.shapePrimaryFillCss()
+                                : this.cssRgbaFromPart(this.primaryColor);
+                        div.style.color = css;
+                    }
+                    return;
+                }
                 if (value === 'none') {
                     el.setAttribute('fill', 'none');
                 } else if (value === 'gradient') {
@@ -10674,8 +11392,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         gradEl.setAttribute('y2', `${y2}%`);
                     }
                     
-                    const c1 = this.activeColor || '#000000';
-                    const c2 = this.secondaryColor || '#ffffff';
+                    const c1 =
+                        typeof window.shapePrimaryFillCss === 'function'
+                            ? window.shapePrimaryFillCss()
+                            : this.cssRgbaFromPart(this.primaryColor);
+                    const c2 =
+                        typeof window.makeShapeSecondaryColor === 'function'
+                            ? window.makeShapeSecondaryColor()
+                            : this.cssRgbaFromPart(this.secondaryColor);
                     
                     const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
                     s1.setAttribute('offset', '0%');
@@ -10714,10 +11438,30 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 } else {
                     el.setAttribute('fill', this.activeColor);
                 }
+            } else if (prop === 'stroke') {
+                const strokeVal = value == null ? '' : String(value);
+                if (!strokeVal || strokeVal === 'none') {
+                    el.setAttribute('stroke', 'none');
+                } else {
+                    el.setAttribute('stroke', strokeVal);
+                    const sw0 = parseFloat(el.getAttribute('stroke-width') || '0');
+                    if (!(sw0 > 0)) el.setAttribute('stroke-width', '1');
+                }
             } else if (prop === 'stroke-width') {
-                el.setAttribute('stroke-width', value);
-                if (parseFloat(value) === 0) el.setAttribute('stroke', 'none');
-                else if (el.getAttribute('stroke') === 'none' || !el.getAttribute('stroke')) el.setAttribute('stroke', '#000000');
+                const w = Math.max(0, parseFloat(value) || 0);
+                el.setAttribute('stroke-width', String(w));
+                if (w <= 0) {
+                    el.setAttribute('stroke', 'none');
+                } else {
+                    const cur = el.getAttribute('stroke');
+                    if (!cur || cur === 'none') {
+                        const strokeCss =
+                            typeof window.shapeSecondaryStrokeCss === 'function'
+                                ? window.shapeSecondaryStrokeCss()
+                                : this.cssRgbaFromPart(this.secondaryColor);
+                        el.setAttribute('stroke', strokeCss);
+                    }
+                }
             } else if (prop === 'corner-radius') {
                 const tag = (el.tagName || '').toLowerCase();
                 if (tag !== 'rect') return;
@@ -10740,7 +11484,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     el.setAttribute('font-family', String(value || 'Arial, sans-serif'));
                 } else if (tag === 'foreignobject') {
                     try {
-                        const div = el.querySelector('div');
+                        const div =
+                            el.querySelector('div[contenteditable]') || el.querySelector('div');
                         if (div) div.style.fontFamily = String(value || 'Arial, sans-serif');
                     } catch (e) { /* ignore */ }
                 }
@@ -10751,7 +11496,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     el.setAttribute('font-size', String(fs));
                 } else if (tag === 'foreignobject') {
                     try {
-                        const div = el.querySelector('div');
+                        const div =
+                            el.querySelector('div[contenteditable]') || el.querySelector('div');
                         if (div) div.style.fontSize = `${fs}px`;
                     } catch (e) { /* ignore */ }
                 }
@@ -10760,8 +11506,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         });
 
-        this.saveHistory('Propriétés vecteur', { type: 'vector-full', svg: this.activeProject.svgData });
+        if (typeof window.syncVectorTextEditorStyles === 'function') window.syncVectorTextEditorStyles();
+        if (typeof this.syncActiveVectorSvg === 'function') this.syncActiveVectorSvg();
+        if (!opts.skipRenderHistory) {
+            this.saveHistory('Propriétés vecteur', {
+                type: 'vector-full',
+                svg: this.activeProject ? this.activeProject.svgData : ''
+            });
+        }
         this.render();
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
     },
 
     /** Apply SVG filter to active vector selection (for vector mode Effects) */
@@ -10887,33 +11641,74 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
+    /** Éléments vectoriels groupables (exclut calques, UI, racines d’import). */
+    _vectorGroupableSelection() {
+        return (this.activeVectorSelection || []).filter((el) => {
+            if (!el || !el.isConnected) return false;
+            if (el.closest && el.closest('#svg-ui')) return false;
+            const id = el.id || '';
+            if (/^layer-\d+$/.test(id) || id === 'illu-import-viewbox-root' || id === 'svg-layers') return false;
+            const tag = (el.tagName || '').toLowerCase();
+            if (tag === 'defs') return false;
+            return true;
+        });
+    },
+
+    /** Parent d’insertion commun pour un groupe (même calque, frères ou ancêtre commun). */
+    _vectorGroupInsertParent(items) {
+        if (!items.length) return null;
+        const layerRoot = items[0].closest ? items[0].closest('[id^="layer-"]') : null;
+        if (!layerRoot || !items.every((el) => layerRoot.contains(el))) return null;
+        const parentSet = new Set(items.map((el) => el.parentElement));
+        if (parentSet.size === 1) return items[0].parentElement;
+        let lca = items[0];
+        for (let i = 1; i < items.length; i++) {
+            while (lca && !lca.contains(items[i])) lca = lca.parentElement;
+        }
+        if (!lca || lca === layerRoot || lca.id === 'svg-layers') return layerRoot;
+        return lca;
+    },
+
+    _vectorInsertRefChild(parent, items) {
+        const sorted = [...items].sort((a, b) =>
+            a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+        );
+        for (const child of parent.children) {
+            if (sorted.some((el) => child === el || (child.contains && child.contains(el)))) return child;
+        }
+        return sorted[0];
+    },
+
     /** Group currently selected vector elements into a <g>. */
     groupActiveVectorSelection() {
-        if (this.mode !== 'vector' || this.activeVectorSelection.length < 2) return;
-        
-        // Sort items by DOM order to maintain visual layering inside the group
-        const items = [...this.activeVectorSelection].sort((a, b) => {
-            return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
-        });
+        if (this.mode !== 'vector') return;
+        const items = this._vectorGroupableSelection();
+        if (items.length < 2) return;
 
-        const parent = items[0].parentElement;
-        if (!parent) return;
-        // Ensure all share same parent
-        if (items.some(el => el.parentElement !== parent)) {
-            alert("Groupe impossible : les éléments doivent être dans le même calque/groupe.");
+        const parent = this._vectorGroupInsertParent(items);
+        if (!parent) {
+            alert('Groupe impossible : sélectionnez au moins deux formes du même calque.');
             return;
         }
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+        const sorted = [...items].sort((a, b) =>
+            a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+        );
+        const NS = 'http://www.w3.org/2000/svg';
+        const g = document.createElementNS(NS, 'g');
         g.setAttribute('data-illu-group', '1');
-        
-        // Insert group before the highest ordered element so it stays at the correct z-index overall
-        parent.insertBefore(g, items[0]);
-        items.forEach(el => g.appendChild(el));
-        
+        const ref = this._vectorInsertRefChild(parent, sorted);
+        parent.insertBefore(g, ref);
+        sorted.forEach((el) => g.appendChild(el));
+
         this.activeVectorSelection = [g];
         window._activeVectorShapeEl = g;
+        if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+            window.VectorEngine.refreshSelectionUI();
+        }
         this.syncActiveVectorSvg();
         this.saveHistory('Groupe vecteur', { type: 'vector-full', svg: this.activeProject.svgData });
+        this.refreshVectorProjectTabThumbnails();
         this.render();
         if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
     },
@@ -10921,17 +11716,32 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /** Ungroup selected <g data-illu-group>. */
     ungroupActiveVectorSelection() {
         if (this.mode !== 'vector' || !this.activeVectorSelection.length) return;
-        const sel = this.activeVectorSelection[0];
-        if (!sel || (sel.tagName || '').toLowerCase() !== 'g') return;
-        const parent = sel.parentElement;
-        if (!parent) return;
-        const children = [...sel.childNodes].filter(n => n.nodeType === 1);
-        children.forEach(ch => parent.insertBefore(ch, sel));
-        parent.removeChild(sel);
+        const groups = this.activeVectorSelection.filter((el) => {
+            const tag = (el.tagName || '').toLowerCase();
+            return tag === 'g' && el.getAttribute('data-illu-group') === '1';
+        });
+        if (!groups.length) return;
+
+        const children = [];
+        groups.forEach((grp) => {
+            const parent = grp.parentElement;
+            if (!parent) return;
+            [...grp.children].forEach((ch) => {
+                if (ch.nodeType !== 1) return;
+                parent.insertBefore(ch, grp);
+                children.push(ch);
+            });
+            parent.removeChild(grp);
+        });
+
         this.activeVectorSelection = children;
         window._activeVectorShapeEl = children[children.length - 1] || null;
+        if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+            window.VectorEngine.refreshSelectionUI();
+        }
         this.syncActiveVectorSvg();
         this.saveHistory('Dégrouper vecteur', { type: 'vector-full', svg: this.activeProject.svgData });
+        this.refreshVectorProjectTabThumbnails();
         this.render();
         if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
     },

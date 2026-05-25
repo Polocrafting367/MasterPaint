@@ -7,6 +7,7 @@
     const RAM_MIRROR_PREF_KEY = 'illu_ram_session_mirror';
     const AUTO_SAVE_MODE_KEY = 'illu_auto_save_mode';
     const AUTO_SAVE_INTERVAL_MIN_KEY = 'illu_auto_save_interval_min';
+    const LAST_PERSIST_META_KEY = 'illu_last_persist_meta_v1';
     const MAX_LOCAL_BYTES = 4 * 1024 * 1024;
     const IDB_NAME = 'illu_workspace_blobs_v1';
     const IDB_STORE = 'blobs';
@@ -22,17 +23,146 @@
      * continuous = après chaque action (avec pause si la toile est manipulée) ;
      * interval = sauvegarde planifiée + fenêtre ;
      * off = rien en local (rafraîchir = perte).
-     * Si la clé est absente : déjà une session → continuous, sinon off.
+     * Si la clé est absente : off (choix explicite dans Paramètres).
      */
     function getAutoSaveMode() {
         try {
             const v = localStorage.getItem(AUTO_SAVE_MODE_KEY);
             if (v === 'continuous' || v === 'interval' || v === 'off') return v;
-            if (localStorage.getItem(STORAGE_KEY)) return 'continuous';
         } catch (e) {
             /* ignore */
         }
         return 'off';
+    }
+
+    function shouldPersistOnExit() {
+        const mode = getAutoSaveMode();
+        if (mode === 'off') return false;
+        if (mode === 'continuous') return true;
+        if (mode === 'interval') return isAnyProjectAutoSaveEnabled();
+        return false;
+    }
+
+    function recordPersistMeta(reason, em) {
+        const ap = em && em.activeProject;
+        const meta = {
+            at: new Date().toISOString(),
+            reason: reason || 'unknown',
+            mode: getAutoSaveMode(),
+            projectId: ap && ap.id != null ? ap.id : null,
+            projectName: ap && ap.name ? ap.name : null,
+            projectAutoSaveLocal: !!(ap && ap.autoSaveLocal)
+        };
+        try {
+            localStorage.setItem(LAST_PERSIST_META_KEY, JSON.stringify(meta));
+        } catch (e) {
+            /* ignore */
+        }
+        const ov = document.getElementById('export-dialog-overlay');
+        if (ov && ov.style.display !== 'none') syncExportLocalSaveStatus();
+    }
+
+    function getLastPersistMeta() {
+        try {
+            const raw = localStorage.getItem(LAST_PERSIST_META_KEY);
+            if (raw) {
+                const o = JSON.parse(raw);
+                if (o && typeof o.at === 'string') return o;
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        return null;
+    }
+
+    function hasBrowserWorkspaceCopy() {
+        try {
+            if (localStorage.getItem(STORAGE_KEY)) return true;
+            if (sessionStorage.getItem(SESSION_MIRROR_KEY)) return true;
+        } catch (e) {
+            /* ignore */
+        }
+        return false;
+    }
+
+    function formatPersistDateTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        const lang =
+            window.IlluI18n && typeof window.IlluI18n.getLang === 'function'
+                ? window.IlluI18n.getLang()
+                : 'fr';
+        try {
+            return d.toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', {
+                dateStyle: 'short',
+                timeStyle: 'medium'
+            });
+        } catch (e) {
+            return d.toLocaleString();
+        }
+    }
+
+    function syncExportLocalSaveStatus() {
+        const el = document.getElementById('export-local-save-status');
+        if (!el) return;
+        const t =
+            window.IlluI18n && typeof window.IlluI18n.t === 'function'
+                ? window.IlluI18n.t.bind(window.IlluI18n)
+                : (k, fb) => fb || k;
+        const em = window.EditorManager;
+        const mode = getAutoSaveMode();
+        const min = getAutoSaveIntervalMinutes();
+        let modeLabel;
+        if (mode === 'continuous') {
+            modeLabel = t('dlg.exportLocalModeContinuous', 'continu');
+        } else if (mode === 'interval') {
+            modeLabel = t('dlg.exportLocalModeInterval', 'intervalle {min} min').replace(
+                '{min}',
+                String(min)
+            );
+        } else {
+            modeLabel = t('dlg.exportLocalModeOff', 'aucune');
+        }
+        const copyLine = t('dlg.exportLocalBrowserCopy', 'Copie navigateur : {state}').replace(
+            '{state}',
+            hasBrowserWorkspaceCopy()
+                ? t('dlg.exportLocalBrowserYes', 'oui')
+                : t('dlg.exportLocalBrowserNo', 'non')
+        );
+        const meta = getLastPersistMeta();
+        const lastLine =
+            meta && meta.at
+                ? t('dlg.exportLocalLast', 'Dernier : {when}').replace(
+                      '{when}',
+                      formatPersistDateTime(meta.at)
+                  )
+                : t('dlg.exportLocalLastNever', 'Dernier : —');
+        const paramLine = t('dlg.exportLocalMode', 'Paramètres : {mode}').replace('{mode}', modeLabel);
+        const lines = [copyLine, lastLine, paramLine];
+        if (mode === 'interval') {
+            const projOn = !!(em && em.activeProject && em.activeProject.autoSaveLocal);
+            lines.push(
+                t('dlg.exportLocalProjectShort', 'Intervalle ce projet : {state}').replace(
+                    '{state}',
+                    projOn ? t('dlg.exportLocalBrowserYes', 'oui') : t('dlg.exportLocalBrowserNo', 'non')
+                )
+            );
+        }
+        el.innerHTML = '';
+        lines.forEach((text) => {
+            const row = document.createElement('div');
+            row.className = 'illu-export-local-status__row';
+            row.textContent = text;
+            el.appendChild(row);
+        });
+        const ck = document.getElementById('export-auto-save-check');
+        const ckRow = document.querySelector('.illu-export-dialog__autosave');
+        if (ck) {
+            const intervalMode = mode === 'interval';
+            ck.disabled = !intervalMode;
+            if (ckRow) ckRow.style.opacity = intervalMode ? '' : '0.55';
+        }
     }
 
     function getAutoSaveIntervalMinutes() {
@@ -146,6 +276,7 @@
         }
         window._illuIntervalPersistDeferred = false;
         setAutosaveModalVisible(true, 5);
+        const intervalReason = { persistReason: 'interval' };
         const fill = document.getElementById('illu-autosave-fill');
         let fake = 5;
         const tick = window.setInterval(() => {
@@ -153,7 +284,7 @@
             if (fill) fill.style.width = `${fake}%`;
         }, 120);
         persistQueue = persistQueue
-            .then(() => persistToLocalStorageAsync())
+            .then(() => persistToLocalStorageAsync(intervalReason))
             .then(() => {
                 if (fill) fill.style.width = '100%';
                 window.clearInterval(tick);
@@ -557,6 +688,7 @@
                 if (typeof window.onWorkspacePersisted === 'function') {
                     window.onWorkspacePersisted();
                 }
+                recordPersistMeta(opts.persistReason || 'continuous', em);
             } catch (err) {
                 console.error('persistToLocalStorage (work) :', err);
             }
@@ -584,17 +716,18 @@
             window._illuPersistDeferred = true;
             return;
         }
-        queuePersistForced();
+        queuePersistForced({ persistReason: 'continuous' });
     }
 
     /**
-     * @param {{ force?: boolean }} [opts] — force : fermeture d’onglet / perte de focus (sauf mode « sans sauvegarde »).
+     * @param {{ force?: boolean, manual?: boolean, persistReason?: string }} [opts]
      */
     function persistToLocalStorage(opts) {
         opts = opts || {};
         if (opts.force) {
-            if (getAutoSaveMode() === 'off' && !opts.manual) return;
-            queuePersistForced({ ignoreBusy: true });
+            if (!opts.manual && !shouldPersistOnExit()) return;
+            const reason = opts.manual ? 'manual' : 'exit';
+            queuePersistForced({ ignoreBusy: true, persistReason: opts.persistReason || reason });
             return;
         }
         queuePersistToLocalStorage();
@@ -872,6 +1005,8 @@
                 lbl.textContent = raw.replace('{min}', min);
             }
         }
+
+        syncExportLocalSaveStatus();
 
         ov.style.display = 'flex';
     }
@@ -1200,8 +1335,8 @@ if (fmt === 'png' || fmt === 'gif') {
                 }
                 try {
                     // Manual trigger of all local backup systems
-                    persistToLocalStorage({ force: true, manual: true });
-                    
+                    persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+
                     // Simple confirm
                     window.setTimeout(() => {
                         if (P && typeof P.setInstantEffectBusy === 'function') {
@@ -1246,6 +1381,7 @@ if (fmt === 'png' || fmt === 'gif') {
                 if (em && em.activeProject) {
                     em.activeProject.autoSaveLocal = ck.checked;
                     setupAutoSaveIntervalTimer();
+                    syncExportLocalSaveStatus();
                 }
             };
         }
@@ -1278,9 +1414,13 @@ if (fmt === 'png' || fmt === 'gif') {
         RAM_MIRROR_PREF_KEY,
         AUTO_SAVE_MODE_KEY,
         AUTO_SAVE_INTERVAL_MIN_KEY,
+        LAST_PERSIST_META_KEY,
         getAutoSaveMode,
         getAutoSaveIntervalMinutes,
         shouldScheduleHistoryPersist,
+        shouldPersistOnExit,
+        getLastPersistMeta,
+        syncExportLocalSaveStatus,
         persistToLocalStorage,
         persistToLocalStorageAsync,
         queuePersistToLocalStorage,

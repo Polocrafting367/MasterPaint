@@ -23,6 +23,43 @@ window.VectorEngine = (() => {
     // Node editing
     let _nodeSelection = [];  // [{ el, index, type: 'node'|'cp1'|'cp2' }]
     let _nodeSnapshots = [];  // [{ el, points:[] }]
+    let _uiRefreshRaf = 0;
+    let _uiBuiltForDrag = false;
+
+    function _setVectorDragActive(on) {
+        window._illuVectorDragActive = !!on;
+    }
+
+    function _veKey(el, idx) {
+        if (el.id) return el.id;
+        const sid = el.getAttribute && el.getAttribute('data-illu-sprite-id');
+        if (sid) return sid;
+        return `ve-el-${idx}`;
+    }
+
+    function _elementScreenBounds(el) {
+        try {
+            const bb = el.getBBox();
+            const ctm = el.getCTM();
+            if (!bb || !ctm) return null;
+            const pts = [
+                { x: bb.x, y: bb.y },
+                { x: bb.x + bb.width, y: bb.y },
+                { x: bb.x + bb.width, y: bb.y + bb.height },
+                { x: bb.x, y: bb.y + bb.height }
+            ].map((p) => ({
+                x: p.x * ctm.a + p.y * ctm.c + ctm.e,
+                y: p.x * ctm.b + p.y * ctm.d + ctm.f
+            }));
+            const minX = Math.min(...pts.map((p) => p.x));
+            const minY = Math.min(...pts.map((p) => p.y));
+            const maxX = Math.max(...pts.map((p) => p.x));
+            const maxY = Math.max(...pts.map((p) => p.y));
+            return { minX, minY, rw: maxX - minX, rh: maxY - minY };
+        } catch (e) {
+            return null;
+        }
+    }
 
     function _clearNodeSelection() {
         _nodeSelection = [];
@@ -55,88 +92,195 @@ window.VectorEngine = (() => {
         if (ui) ui.innerHTML = '';
     }
 
-    /**
-     * Redessine tous les handles + boîtes pour activeVectorSelection.
-     * Les handles suivent toujours la position réelle de la forme (getBBox).
-     */
-    function refreshSelectionUI() {
+    function _updateSelectionUIPositions(sel) {
+        const ui = getUI();
+        if (!ui || !sel.length) return false;
+        const z = zoom();
+        const hz = _hz();
+        const nodeMode = isNodeMode();
+        let ok = true;
+
+        sel.forEach((el, idx) => {
+            const b = _elementScreenBounds(el);
+            if (!b || b.rw < 0.1 || b.rh < 0.1) return;
+            const key = _veKey(el, idx);
+            const rect = ui.querySelector(`[data-ve-sel-box="${key}"]`);
+            if (!rect) {
+                ok = false;
+                return;
+            }
+            rect.setAttribute('x', String(b.minX));
+            rect.setAttribute('y', String(b.minY));
+            rect.setAttribute('width', String(b.rw));
+            rect.setAttribute('height', String(b.rh));
+            if (idx === sel.length - 1 && !nodeMode && sel.length === 1) {
+                _positionResizeHandles(ui, key, b, hz, z);
+            }
+        });
+
+        if (sel.length > 1 && !nodeMode) {
+            const gb = ui.querySelector('[data-ve-group-box="1"]');
+            if (!gb) ok = false;
+            else {
+                let minX = Infinity;
+                let minY = Infinity;
+                let maxX = -Infinity;
+                let maxY = -Infinity;
+                sel.forEach((el) => {
+                    const b = _elementScreenBounds(el);
+                    if (!b) return;
+                    minX = Math.min(minX, b.minX);
+                    minY = Math.min(minY, b.minY);
+                    maxX = Math.max(maxX, b.minX + b.rw);
+                    maxY = Math.max(maxY, b.minY + b.rh);
+                });
+                if (isFinite(minX)) {
+                    gb.setAttribute('x', String(minX - 2 / z));
+                    gb.setAttribute('y', String(minY - 2 / z));
+                    gb.setAttribute('width', String(maxX - minX + 4 / z));
+                    gb.setAttribute('height', String(maxY - minY + 4 / z));
+                    _positionResizeHandles(ui, 'group', { minX, minY, rw: maxX - minX, rh: maxY - minY }, hz, z);
+                }
+            }
+        }
+        return ok;
+    }
+
+    function _positionResizeHandles(ui, parentKey, b, hz, z) {
+        const { minX: x, minY: y, rw: w, rh: h } = b;
+        const coords = [
+            { cx: x, cy: y },
+            { cx: x + w / 2, cy: y },
+            { cx: x + w, cy: y },
+            { cx: x, cy: y + h / 2 },
+            { cx: x + w, cy: y + h / 2 },
+            { cx: x, cy: y + h },
+            { cx: x + w / 2, cy: y + h },
+            { cx: x + w, cy: y + h }
+        ];
+        const handles = ui.querySelectorAll(`[data-ve-handle-parent="${parentKey}"]`);
+        if (handles.length !== 8) return false;
+        handles.forEach((r, idx) => {
+            const { cx, cy } = coords[idx];
+            r.setAttribute('x', String(cx - hz));
+            r.setAttribute('y', String(cy - hz));
+            r.setAttribute('width', String(hz * 2));
+            r.setAttribute('height', String(hz * 2));
+            r.setAttribute('rx', String(hz * 0.35));
+            r.setAttribute('stroke-width', String(1.2 / z));
+        });
+        return true;
+    }
+
+    function refreshSelectionUIImpl() {
         const ui = getUI();
         if (!ui) return;
 
-        // Préserver les hints pen/polygon
-        const penDots  = [...ui.querySelectorAll('.ve-pen-dot')];
+        const penDots = [...ui.querySelectorAll('.ve-pen-dot')];
         const polyDots = [...ui.querySelectorAll('.ve-poly-dot')];
 
         ui.innerHTML = '';
 
-        // Remettre les hints
-        penDots.forEach(n => ui.appendChild(n));
-        polyDots.forEach(n => ui.appendChild(n));
+        penDots.forEach((n) => ui.appendChild(n));
+        polyDots.forEach((n) => ui.appendChild(n));
 
         const sel = EditorManager.activeVectorSelection;
-        if (!sel || !sel.length) return;
+        if (!sel || !sel.length) {
+            _uiBuiltForDrag = false;
+            return;
+        }
 
         const z = zoom();
         const hz = _hz();
-
         const nodeMode = isNodeMode();
 
         sel.forEach((el, idx) => {
             try {
                 const tag = el.tagName.toLowerCase();
                 const isPrimary = idx === sel.length - 1;
+                const key = _veKey(el, idx);
 
                 if (nodeMode && (tag === 'path' || tag === 'polygon' || tag === 'polyline')) {
                     _drawPathNodes(ui, el, z, hz);
                 }
 
-                // Utiliser le CTM pour avoir la position réelle dans le repère du SVG UI
-                const bb = el.getBBox();
-                const ctm = el.getCTM();
-                if (!bb || !ctm) return;
+                const b = _elementScreenBounds(el);
+                if (!b || b.rw < 0.1 || b.rh < 0.1) return;
 
-                // Transformer les 4 coins de la BBox
-                const pts = [
-                    {x: bb.x, y: bb.y},
-                    {x: bb.x + bb.width, y: bb.y},
-                    {x: bb.x + bb.width, y: bb.y + bb.height},
-                    {x: bb.x, y: bb.y + bb.height}
-                ].map(p => {
-                    return {
-                        x: p.x * ctm.a + p.y * ctm.c + ctm.e,
-                        y: p.x * ctm.b + p.y * ctm.d + ctm.f
-                    };
-                });
-
-                const minX = Math.min(...pts.map(p => p.x));
-                const minY = Math.min(...pts.map(p => p.y));
-                const maxX = Math.max(...pts.map(p => p.x));
-                const maxY = Math.max(...pts.map(p => p.y));
-                const rw = maxX - minX;
-                const rh = maxY - minY;
-
-                if (rw < 0.1 && rh < 0.1) return;
-
-                // Contour de sélection
                 const rect = document.createElementNS(NS, 'rect');
-                rect.setAttribute('x',      String(minX));
-                rect.setAttribute('y',      String(minY));
-                rect.setAttribute('width',  String(rw));
-                rect.setAttribute('height', String(rh));
-                rect.setAttribute('fill',   'none');
+                rect.setAttribute('data-ve-sel-box', key);
+                rect.setAttribute('x', String(b.minX));
+                rect.setAttribute('y', String(b.minY));
+                rect.setAttribute('width', String(b.rw));
+                rect.setAttribute('height', String(b.rh));
+                rect.setAttribute('fill', 'none');
                 rect.setAttribute('stroke', isPrimary ? SEL_PRIMARY : SEL_SECONDARY);
                 rect.setAttribute('stroke-width', String(1.5 / z));
-                if (!isPrimary) rect.setAttribute('stroke-dasharray', String(4/z) + ',' + String(2/z));
+                if (!isPrimary) rect.setAttribute('stroke-dasharray', `${4 / z},${2 / z}`);
                 rect.setAttribute('pointer-events', 'none');
                 ui.appendChild(rect);
 
-                if (isPrimary && !nodeMode) {
-                    _drawHandles(ui, {x: minX, y: minY, width: rw, height: rh}, hz, z);
+                if (isPrimary && !nodeMode && sel.length === 1) {
+                    _drawHandles(ui, { x: b.minX, y: b.minY, width: b.rw, height: b.rh }, hz, z, key);
                 }
-            } catch(e) { console.error("refreshSelectionUI error:", e); }
+            } catch (e) {
+                console.error('refreshSelectionUI error:', e);
+            }
         });
 
-        if (sel.length > 1 && !nodeMode) _drawGroupBBox(ui, sel, z, hz);
+        if (sel.length > 1 && !nodeMode) {
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            sel.forEach((el) => {
+                const b = _elementScreenBounds(el);
+                if (!b) return;
+                minX = Math.min(minX, b.minX);
+                minY = Math.min(minY, b.minY);
+                maxX = Math.max(maxX, b.minX + b.rw);
+                maxY = Math.max(maxY, b.minY + b.rh);
+            });
+            if (isFinite(minX)) {
+                const r = document.createElementNS(NS, 'rect');
+                r.setAttribute('data-ve-group-box', '1');
+                r.setAttribute('x', String(minX - 2 / z));
+                r.setAttribute('y', String(minY - 2 / z));
+                r.setAttribute('width', String(maxX - minX + 4 / z));
+                r.setAttribute('height', String(maxY - minY + 4 / z));
+                r.setAttribute('fill', 'none');
+                r.setAttribute('stroke', SEL_PRIMARY);
+                r.setAttribute('stroke-width', String(1 / z));
+                r.setAttribute('stroke-dasharray', String(4 / z));
+                r.setAttribute('pointer-events', 'none');
+                ui.appendChild(r);
+                _drawHandles(ui, { x: minX, y: minY, width: maxX - minX, height: maxY - minY }, hz, z, 'group');
+            }
+        }
+        _uiBuiltForDrag = true;
+    }
+
+    function _scheduleRefreshSelectionUI() {
+        if (_uiRefreshRaf) return;
+        _uiRefreshRaf = requestAnimationFrame(() => {
+            _uiRefreshRaf = 0;
+            const sel = EditorManager.activeVectorSelection;
+            if (_dragging && _uiBuiltForDrag && sel && sel.length && _updateSelectionUIPositions(sel)) {
+                return;
+            }
+            refreshSelectionUIImpl();
+        });
+    }
+
+    /**
+     * Redessine les poignées / cadres de sélection (throttlé pendant un glisser).
+     */
+    function refreshSelectionUI() {
+        if (_dragging || window._illuVectorDragActive) {
+            _scheduleRefreshSelectionUI();
+            return;
+        }
+        refreshSelectionUIImpl();
     }
 
     function _drawPathNodes(ui, el, z, hz) {
@@ -188,62 +332,40 @@ window.VectorEngine = (() => {
         ui.appendChild(c);
     }
 
-    function _drawHandles(ui, bb, hz, z) {
+    function _drawHandles(ui, bb, hz, z, parentKey) {
         const { x, y, width: w, height: h } = bb;
+        const pk = parentKey || 'primary';
         [
-            { cx: x,     cy: y,     cur: 'nw-resize' },
-            { cx: x+w/2, cy: y,     cur: 'n-resize'  },
-            { cx: x+w,   cy: y,     cur: 'ne-resize'  },
-            { cx: x,     cy: y+h/2, cur: 'w-resize'  },
-            { cx: x+w,   cy: y+h/2, cur: 'e-resize'  },
-            { cx: x,     cy: y+h,   cur: 'sw-resize' },
-            { cx: x+w/2, cy: y+h,   cur: 's-resize'  },
-            { cx: x+w,   cy: y+h,   cur: 'se-resize' },
+            { cx: x, cy: y, cur: 'nw-resize' },
+            { cx: x + w / 2, cy: y, cur: 'n-resize' },
+            { cx: x + w, cy: y, cur: 'ne-resize' },
+            { cx: x, cy: y + h / 2, cur: 'w-resize' },
+            { cx: x + w, cy: y + h / 2, cur: 'e-resize' },
+            { cx: x, cy: y + h, cur: 'sw-resize' },
+            { cx: x + w / 2, cy: y + h, cur: 's-resize' },
+            { cx: x + w, cy: y + h, cur: 'se-resize' }
         ].forEach(({ cx, cy, cur }, idx) => {
             const r = document.createElementNS(NS, 'rect');
-            r.setAttribute('x',      String(cx - hz));
-            r.setAttribute('y',      String(cy - hz));
-            r.setAttribute('width',  String(hz * 2));
+            r.setAttribute('x', String(cx - hz));
+            r.setAttribute('y', String(cy - hz));
+            r.setAttribute('width', String(hz * 2));
             r.setAttribute('height', String(hz * 2));
-            r.setAttribute('rx',     String(hz * 0.35));
-            r.setAttribute('fill',   '#ffffff');
+            r.setAttribute('rx', String(hz * 0.35));
+            r.setAttribute('fill', '#ffffff');
             r.setAttribute('stroke', SEL_PRIMARY);
             r.setAttribute('stroke-width', String(1.2 / z));
             r.setAttribute('vector-effect', 'non-scaling-stroke');
             r.setAttribute('class', 'svg-resize-handle');
             r.setAttribute('pointer-events', 'auto');
+            r.setAttribute('data-ve-handle-parent', pk);
             r.dataset.handleIdx = String(idx);
-            r.style.cursor = cur;
+            if (typeof window.illuResizeHandleCursor === 'function') {
+                r.style.cursor = window.illuResizeHandleCursor(cur);
+            } else {
+                r.style.cursor = cur;
+            }
             ui.appendChild(r);
         });
-    }
-
-    function _drawGroupBBox(ui, sel, z, hz) {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        sel.forEach(el => {
-            try {
-                const bb = getPreciseBBox(el);
-                minX = Math.min(minX, bb.x); minY = Math.min(minY, bb.y);
-                maxX = Math.max(maxX, bb.x + bb.width);
-                maxY = Math.max(maxY, bb.y + bb.height);
-            } catch(e) {}
-        });
-        if (!isFinite(minX)) return;
-        const bb = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-        
-        const r = document.createElementNS(NS, 'rect');
-        r.setAttribute('x',      String(bb.x - 2/z));
-        r.setAttribute('y',      String(bb.y - 2/z));
-        r.setAttribute('width',  String(bb.width + 4/z));
-        r.setAttribute('height', String(bb.height + 4/z));
-        r.setAttribute('fill',   'none');
-        r.setAttribute('stroke', SEL_PRIMARY);
-        r.setAttribute('stroke-width', String(1/z));
-        r.setAttribute('stroke-dasharray', String(4/z));
-        r.setAttribute('pointer-events', 'none');
-        ui.appendChild(r);
-
-        _drawHandles(ui, bb, hz, z);
     }
 
     // ─── Rubber-band ────────────────────────────────────────────────────────
@@ -280,11 +402,19 @@ window.VectorEngine = (() => {
         _rubberBand = null;
         if (rw < 3 && rh < 3) return;
 
-        const layer = getLayer();
+        const tool = window.activeTool;
+        const layer =
+            tool === 'select'
+                ? document.getElementById('svg-layers')
+                : getLayer();
         if (!layer) return;
         const hits = [];
-        const SEL = 'rect,ellipse,circle,line,path,polygon,polyline,foreignObject,text,g[data-illu-group]';
+        const SEL =
+            'rect,ellipse,circle,line,path,polygon,polyline,foreignObject,text,g[data-illu-group],g[data-illu-import-group]';
+        const skipLayerIds = /^layer-\d+$/;
         layer.querySelectorAll(SEL).forEach(el => {
+            if (tool === 'select' && el.id && skipLayerIds.test(el.id)) return;
+            if (tool === 'select' && el.id === 'illu-import-viewbox-root') return;
             try {
                 const bb = el.getBBox();
                 if (bb.x < rx + rw && bb.x + bb.width > rx &&
@@ -309,6 +439,15 @@ window.VectorEngine = (() => {
 
     // ─── Hit-test ───────────────────────────────────────────────────────────
     function hitTest(pos, evt) {
+        const layer = getLayer();
+        if (evt && evt.target && layer) {
+            const t = evt.target;
+            const fo =
+                (t.closest && t.closest('foreignObject')) ||
+                (t.closest && t.closest('foreignobject'));
+            if (fo && layer.contains(fo)) return fo;
+        }
+
         const ui = getUI();
         if (ui) {
             if (isNodeMode()) {
@@ -323,7 +462,6 @@ window.VectorEngine = (() => {
             }
         }
 
-        const layer = getLayer();
         if (!layer) return null;
         const canvasEl = document.getElementById('main-canvas-container');
         if (!canvasEl) return null;
@@ -331,7 +469,8 @@ window.VectorEngine = (() => {
         const z = zoom();
         const clientX = evt ? evt.clientX : cr.left + pos.x * z;
         const clientY = evt ? evt.clientY : cr.top  + pos.y * z;
-        const SEL = 'rect,ellipse,circle,line,path,polygon,polyline,foreignObject,text,g[data-illu-group]';
+        const SEL =
+            'rect,ellipse,circle,line,path,polygon,polyline,foreignObject,text,g[data-illu-group],g[data-illu-import-group]';
         const nodes = [...layer.querySelectorAll(SEL)].reverse();
         
         for (const el of nodes) {
@@ -429,8 +568,8 @@ window.VectorEngine = (() => {
     }
 
     function beginDrag(sel, pos, evt) {
-        console.log("VectorEngine.beginDrag", { selCount: sel.length, pos, tool: window.activeTool });
         const nodeMode = isNodeMode();
+        _setVectorDragActive(true);
         _transformMode = null;
         if (nodeMode) {
             const target = evt?.target;
@@ -490,7 +629,6 @@ window.VectorEngine = (() => {
         if (!_dragStart) return false;
         const dx = pos.x - _dragStart.x, dy = pos.y - _dragStart.y;
         if (!_dragging && Math.hypot(dx, dy) < 2) return false;
-        if (!_dragging) console.log("VectorEngine drag actually started moving", { dx, dy, snapshots: _snapshots.length });
         _dragging = true;
 
         if (_transformMode) {
@@ -588,7 +726,16 @@ window.VectorEngine = (() => {
 
     function endDrag() {
         const moved = _dragging;
-        _snapshots = []; _nodeSnapshots = []; _dragStart = null; _dragging = false;
+        _snapshots = [];
+        _nodeSnapshots = [];
+        _dragStart = null;
+        _dragging = false;
+        _setVectorDragActive(false);
+        _uiBuiltForDrag = false;
+        if (_uiRefreshRaf) {
+            cancelAnimationFrame(_uiRefreshRaf);
+            _uiRefreshRaf = 0;
+        }
         return moved;
     }
 

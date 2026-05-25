@@ -1,5 +1,16 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.7.56 (25/05/26)
+- Calques : Supprimer / Monter / Descendre désactivés s’il ne reste qu’un calque
+- Ruban : mobile — Effacer/Copier/Coller dans l’alvéole Sélection ; bureau — Copier/Coller (icône+texte)...
+- Export : panneau affiche date/heure du dernier enregistrement
+- Effets (luminosité/contraste, etc.) : le rendu final après OK est de nouveau en pleine résolution (plus écrasé par l’aperçu basse résolution)
+- Déplacer / Déformation / 4 coins : Réintroduit le fait de crée une noluvelle selection depuis l'outil dit
+- Ruban vecteur : boutons − / + sur les jauges (ép. contour, angle, rayon des coins) ; rayon max 256 px
+- Import SVG : dialogue (nouveau / projet en cours, un calque / découpage / grille sprite)
+- Miniature sur l’onglet actif en mode vecteur 
+- Correctif multiples sur la gestion du mode svg qui reste en BETA quand meme! 
+
 2.7.47 (24/05/26)
 - Adaptation des prévisualisation a faible résolution pour collé au rendu final
 - Mise a jours visuel des barre de Paramètres pour quelque chose de plus compact

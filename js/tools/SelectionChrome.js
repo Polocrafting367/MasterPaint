@@ -72,7 +72,15 @@
             this.invalidateFast();
         },
 
+        _isVectorDocumentMode() {
+            return typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector';
+        },
+
         updateRectFast(sb) {
+            if (this._isVectorDocumentMode()) {
+                this.hideOverlay();
+                return false;
+            }
             sb = sb || window.selectionBounds;
             if (!sb || typeof EditorManager === 'undefined' || !this.canUseRectFast()) {
                 this.invalidateFast();
@@ -152,6 +160,10 @@
 
         /** Quad warp actif : un seul SVG, mise à jour du path `d` (évite innerHTML à chaque frame). */
         updateWarpQuadFast(quad) {
+            if (this._isVectorDocumentMode()) {
+                this.hideOverlay();
+                return false;
+            }
             if (
                 !quad ||
                 !window.selectionPixelWarpActive ||
@@ -217,6 +229,10 @@
 
         /** Tracé lasso à la volée : un seul SVG, mise à jour du path `d`. */
         updateLassoDraft(points) {
+            if (this._isVectorDocumentMode()) {
+                this.hideOverlay();
+                return false;
+            }
             if (!this.canUseLassoDraftFast(points)) return false;
             if (typeof EditorManager === 'undefined') return false;
             const overlay = this.ensureOverlayRoot(EditorManager.width, EditorManager.height);
@@ -319,6 +335,10 @@
 
         /** Overlay seul, zéro render (tracé rect/lasso en cours). */
         paintOverlayOnly(extra) {
+            if (this._isVectorDocumentMode()) {
+                this.hideOverlay();
+                return;
+            }
             const o = extra || {};
             if (o.lassoPoints) this.updateLassoDraft(o.lassoPoints);
             else this.updateRectFast(window.selectionBounds);

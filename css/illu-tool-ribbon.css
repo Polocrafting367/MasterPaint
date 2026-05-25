@@ -305,7 +305,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
     padding-right: 6px;
 }
 
-/* 4 coins : groupe ruban dédié (corps séparé de Sélection) */
+/* Outils (mobile) : 4 coins + Désélectionner — groupe ruban à part de Sélection */
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-extra"] {
     padding-left: 4px;
     padding-right: 4px;
@@ -323,6 +323,19 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-ex
     display: block !important;
     width: 100% !important;
     min-width: 0 !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-group[data-illu-ribbon-group="selection-extra"]:not([hidden]) {
+    display: flex !important;
+    visibility: visible !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui
+    .illu-ribbon-group[data-illu-ribbon-group="selection-extra"]
+    #illu-mobile-ribbon-deselect-wrap:not([hidden]) {
+    display: block !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
 }
 
 /* Sélection : grille 3×2 (6 boutons typiques) — sous-groupes en display:contents */
@@ -345,6 +358,42 @@ body.illu-toolbar-ribbon .illu-ribbon-selection-stack>#selection-mode-group,
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack>.illu-icon-toggle-group,
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack>.illu-mode-toggle-group {
     display: contents !important;
+}
+
+/* Hors mode téléphone : jamais afficher le bloc mobile Effacer/Copier/Coller */
+body.illu-toolbar-ribbon:not(.illu-mobile-ui) #illu-mobile-sel-edit-actions,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-selection-stack
+    #illu-mobile-sel-edit-actions {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+body.illu-toolbar-ribbon #illu-mobile-sel-edit-actions[hidden],
+body.illu-toolbar-ribbon:not(.illu-mobile-ui) #illu-mobile-sel-edit-actions .illu-mode-toggle-item {
+    display: none !important;
+}
+
+/* Ruban téléphone : Effacer / Copier / Coller à la place de Nouv. / Ajout / Retrait */
+body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-selection-stack .illu-mode-toggle-item:has([data-selection-mode]) {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-selection-stack #selection-mode-group[hidden] {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection-extra"] .illu-mode-toggle-btn i.fa-solid {
+    font-size: 15px;
+    line-height: 1;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-mode-toggle-item[hidden] {
@@ -852,6 +901,11 @@ body.illu-toolbar-ribbon .illu-gauge-field .illu-gauge-wrap {
     min-width: 80px;
 }
 
+body.illu-toolbar-ribbon .illu-gauge-field .illu-gauge-wrap.illu-gauge-wrap--has-steps {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
 body.illu-toolbar-ribbon .illu-vector-ops-group {
     display: inline-flex;
     flex-wrap: wrap;
@@ -1293,6 +1347,200 @@ body.illu-toolbar-ribbon .illu-sel-actions-layout .illu-sel-center-item .illu-sh
     height: 16px !important;
     fill: currentColor;
     stroke: none;
+}
+
+/* Boutons ruban icône seule (Édition + Ajustements bureau) */
+body.illu-toolbar-ribbon .illu-ribbon-icon-only-group {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #808080;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #fff 0%, #e8e8e8 100%);
+    color: #222;
+    cursor: pointer;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-icon-btn:hover {
+    background: linear-gradient(180deg, #f8f8f8 0%, #ddd 100%);
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-icon-btn:active {
+    background: #c8c8c8;
+    border-color: #404040;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-icon-btn i {
+    font-size: 14px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+body.illu-toolbar-ribbon.theme-dark .illu-ribbon-icon-btn {
+    border-color: #555;
+    background: linear-gradient(180deg, #4a4a58 0%, #353c48 100%);
+    color: #eee;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="clipboard"] .illu-ribbon-icon-only-group {
+    padding: 2px 0;
+}
+
+/* Bureau — Ajustements : 8 boutons icône seule (grille 4×2) */
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout.illu-ribbon-icon-only-group,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout.illu-toggle-group--compact-grid {
+    grid-template-columns: repeat(4, 28px) !important;
+    gap: 4px !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-lbl {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-btn {
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 28px !important;
+    max-width: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 2px !important;
+    gap: 0 !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-item,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-item--unified {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-btn
+    .illu-shape-ico,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    .illu-sel-actions-layout
+    .illu-mode-toggle-btn
+    i.fa-solid {
+    margin: 0 auto !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui #illu-sel-clipboard-actions,
+body.illu-toolbar-ribbon.illu-mobile-ui .illu-ribbon-group[data-illu-ribbon-group="clipboard"] {
+    display: none !important;
+}
+
+/* Téléphone : Effacer / Copier / Coller dans la grille Sélection */
+body.illu-toolbar-ribbon.illu-mobile-ui
+    .illu-ribbon-selection-stack
+    #illu-mobile-sel-edit-actions:not([hidden]) {
+    display: contents !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui
+    .illu-ribbon-selection-stack
+    #illu-mobile-sel-edit-actions:not([hidden])
+    .illu-mode-toggle-item {
+    display: block !important;
+}
+
+/* Bureau — Édition : icône + texte à droite */
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="clipboard"]
+    .illu-ribbon-clipboard-desktop {
+    display: inline-flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="clipboard"]
+    .illu-ribbon-clipboard-desktop
+    .illu-mode-toggle-btn {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+    min-height: 27px !important;
+    height: 27px !important;
+    padding: 2px 8px !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="clipboard"]
+    .illu-ribbon-clipboard-desktop
+    .illu-mode-toggle-lbl {
+    display: inline !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    #illu-desktop-clear-sel-wrap:not([hidden])
+    .illu-mode-toggle-btn
+    i.fa-solid {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    text-align: center;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="adjustments"]
+    #illu-layout-zoom-fit-wrap {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon.illu-mobile-ui #illu-desktop-clear-sel-wrap {
+    display: none !important;
 }
 
 /* Téléphone : fond pleine largeur ; retour à la ligne par .illu-ribbon-group (plus row1|row2) */

@@ -397,7 +397,26 @@ window.FilterManager = {
     },
 
     _isPreviewRunStale(runSeq) {
-        return !this._effectPreviewIsFinal && runSeq !== this._previewRunSeq;
+        /* runSeq -1 = rendu final (OK) ; tout autre run pendant/après final = obsolète */
+        if (runSeq === -1) return false;
+        if (this._effectPreviewIsFinal) return true;
+        return runSeq !== this._previewRunSeq;
+    },
+
+    /** Attend la fin des aperçus live avant le rendu pleine résolution (évite qu’un preview retardé écrase le final). */
+    async _waitForPreviewIdle(maxMs = 800) {
+        const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        while (this._previewActive) {
+            const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            if (now - t0 > maxMs) break;
+            await new Promise((r) => setTimeout(r, 16));
+        }
+    },
+
+    _abortLivePreviewRuns() {
+        this._previewRunSeq++;
+        this._previewQueued = false;
+        this._cancelActiveWorkerPreview();
     },
 
     _realignEffectHistoryCheckpoint() {
@@ -1663,7 +1682,8 @@ window.FilterManager = {
             cancelAnimationFrame(this._previewRaf);
             this._previewRaf = null;
         }
-        this._cancelActiveWorkerPreview();
+        this._abortLivePreviewRuns();
+        await this._waitForPreviewIdle();
         const eff = this.currentEffect;
         const label = eff ? EFFECT_HISTORY_LABELS[eff] || eff : '';
         const P = window.IlluProgress;
@@ -1720,6 +1740,8 @@ window.FilterManager = {
                     this._vhsUseLowResPreview = false;
                     this._vhsSkipCanvasWrite = false;
                 }
+                this._restoreAllLayersFromFrozen();
+                this._setupEffectTargets();
                 this._effectPreviewIsFinal = true;
                 await this._runPreview();
                 this._effectPreviewIsFinal = false;
@@ -1769,6 +1791,9 @@ window.FilterManager = {
                     this._vhsUseLowResPreview = false;
                     this._vhsSkipCanvasWrite = false;
                 }
+                /* Repartir des pixels d’origine (pas de l’aperçu 480 px déjà injecté dans les calques). */
+                this._restoreAllLayersFromFrozen();
+                this._setupEffectTargets();
                 this._effectPreviewIsFinal = true;
                 await this._runPreview();
                 this._effectPreviewIsFinal = false;
@@ -2498,6 +2523,10 @@ window.FilterManager = {
             }
 
             this._refreshLayerBufferFromWorkCanvas(layer, backup, fw, fh, pw, ph, useLowResModal);
+            if (this._effectPreviewIsFinal && layer && layer.id && EditorManager._pixelLayerViewEls) {
+                const v = EditorManager._pixelLayerViewEls.get(layer.id);
+                if (v) EditorManager._pixelLayerViewEls.delete(layer.id);
+            }
         }
 
         if (this._isPreviewRunStale(runSeq)) {
@@ -2506,7 +2535,10 @@ window.FilterManager = {
         }
 
         if (!vhsPreviewOnly) {
-            EditorManager.render();
+            EditorManager.render({
+                flushUiThumbnails: !!this._effectPreviewIsFinal,
+                uiThumbnailsAllLayers: !!this._effectPreviewIsFinal
+            });
         }
         this._effectPreviewPxScale = 1;
 

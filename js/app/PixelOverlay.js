@@ -1127,8 +1127,12 @@
             EditorManager.toolProps.shapeCornerRadius = r;
             const sc = document.getElementById('tool-shape-corner-radius');
             const scv = document.getElementById('tool-shape-corner-radius-val');
-            if (sc) sc.value = String(Math.max(0, Math.min(64, r)));
-            if (scv) scv.textContent = String(Math.max(0, Math.min(64, r)));
+            const crCap =
+                typeof window.illuClampShapeCornerRadius === 'function'
+                    ? window.illuClampShapeCornerRadius(r)
+                    : Math.max(0, Math.min(256, r));
+            if (sc) sc.value = String(crCap);
+            if (scv) scv.textContent = String(crCap);
         } else if (
             (adjustType === 'adj-tri' || adjustType === 'adj-tri-l') &&
             ed.kind === 'triangle'
@@ -1232,7 +1236,7 @@
             rh.setAttribute('fill', '#aecbfa');
             rh.setAttribute('stroke', '#000000');
             rh.setAttribute('stroke-width', String(inv));
-            rh.setAttribute('style', 'cursor:grab;pointer-events:all;touch-action:none;');
+            rh.setAttribute('style', `cursor:${typeof window.illuGrabCursor === 'function' ? window.illuGrabCursor() : 'grab'};pointer-events:all;touch-action:none;`);
             rh.setAttribute('data-pixel-handle', 'shape-rot');
             svgUI.appendChild(rh);
         };
@@ -1406,9 +1410,18 @@
             window.VectorEngine.refreshLiveDrawPreview();
         }
         if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
-        // Mode vecteur : appliquer couleur/style à la sélection active
-        if (window.VectorEngine && window.EditorManager && EditorManager.mode === 'vector') {
-            window.VectorEngine.applyStyleToSelection();
+        if (typeof window.syncVectorTextEditorStyles === 'function') window.syncVectorTextEditorStyles();
+        // Mode vecteur : primaire = remplissage, secondaire = contour (sans réinitialiser l’épaisseur)
+        if (window.EditorManager && EditorManager.mode === 'vector') {
+            if (
+                EditorManager.activeVectorSelection &&
+                EditorManager.activeVectorSelection.length &&
+                typeof EditorManager.applyVectorColorFromPicker === 'function'
+            ) {
+                EditorManager.applyVectorColorFromPicker();
+            } else if (window.VectorEngine && typeof window.VectorEngine.applyStyleToSelection === 'function') {
+                window.VectorEngine.applyStyleToSelection();
+            }
         } else if (typeof window.refreshVectorDraftFromEditor === 'function') {
             window.refreshVectorDraftFromEditor();
         }

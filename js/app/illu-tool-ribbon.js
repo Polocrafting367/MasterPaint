@@ -12,13 +12,22 @@
         {
             id: 'selection',
             labelKey: 'ribbon.groupSelection',
-            selectors: ['#tool-pinned-select-actions .illu-sel-actions-primary', '#selection-mode-group'],
+            selectors: [
+                '#tool-pinned-select-actions .illu-sel-actions-primary',
+                '#illu-mobile-sel-edit-actions',
+                '#selection-mode-group'
+            ],
             stack: true
         },
         {
+            id: 'clipboard',
+            labelKey: 'ribbon.groupClipboard',
+            selectors: ['#illu-sel-clipboard-actions']
+        },
+        {
             id: 'selection-extra',
-            labelKey: 'tools.selectFreeCornersShort',
-            selectors: ['#select-rect-free-corners-wrap']
+            labelKey: 'ribbon.groupSelectionExtra',
+            selectors: ['#select-rect-free-corners-wrap', '#illu-mobile-ribbon-deselect-wrap']
         },
         {
             id: 'adjustments',
@@ -176,6 +185,12 @@
             group.appendChild(body);
             group.appendChild(label);
             parent.appendChild(group);
+        } else {
+            const label = group.querySelector('.illu-ribbon-group-label');
+            if (label && spec.labelKey) {
+                label.setAttribute('data-i18n', spec.labelKey);
+                label.textContent = t(spec.labelKey, spec.id);
+            }
         }
         const body = group.querySelector('.illu-ribbon-group-body');
         let target = body;
@@ -241,6 +256,12 @@
         if (typeof window.illuWireZoomFitToolbarButtons === 'function') {
             window.illuWireZoomFitToolbarButtons();
         }
+        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+            window.illuSyncFreeCornersRibbonPlacement();
+        }
+        if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+            window.illuSyncMobileSelectionRibbonActions();
+        }
     };
 
     function setGroupHidden(group, hidden) {
@@ -278,19 +299,25 @@
     /** Bureau : 4 coins dans la grille Sélection (après Tout, avant Nouv.) ; mobile : groupe ruban dédié. */
     window.illuSyncFreeCornersRibbonPlacement = function () {
         const corners = document.getElementById('select-rect-free-corners-wrap');
+        const deselectWrap = document.getElementById('illu-mobile-ribbon-deselect-wrap');
         const primary = querySelRibbonGroup('illu-sel-actions-primary');
         const extraGroup = document.querySelector(
             '.illu-ribbon-group[data-illu-ribbon-group="selection-extra"]'
         );
         const isMobile =
             typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
-        if (!corners) return;
         if (isMobile) {
             if (extraGroup) {
                 const body = extraGroup.querySelector('.illu-ribbon-group-body');
-                if (body) insertBeforeIfChild(body, corners, null);
+                if (body && corners) insertBeforeIfChild(body, corners, deselectWrap);
+                if (body && deselectWrap) insertBeforeIfChild(body, deselectWrap, null);
             }
         } else if (primary) {
+            const deselectWrap = document.getElementById('illu-mobile-ribbon-deselect-wrap');
+            if (deselectWrap) {
+                deselectWrap.hidden = true;
+                deselectWrap.setAttribute('aria-hidden', 'true');
+            }
             insertBeforeIfChild(primary, corners, null);
             if (extraGroup) setGroupHidden(extraGroup, true);
         }
@@ -318,18 +345,85 @@
         }
     };
 
+    /** Ruban téléphone : Effacer/Copier/Coller à la place de Nouv./Ajout/Retrait ; désélection dans le groupe 4 coins. */
+    window.illuSyncMobileSelectionRibbonActions = function () {
+        const isMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+        const tool = window.activeTool || 'select';
+        const showSelTools = SELECT_ACTION_TOOLS.has(tool);
+        const editWrap = document.getElementById('illu-mobile-sel-edit-actions');
+        const deskClip = document.getElementById('illu-sel-clipboard-actions');
+        const modeGrp = document.getElementById('selection-mode-group');
+        const ribbonDeselect = document.getElementById('illu-mobile-ribbon-deselect-wrap');
+        const showEdit = isMobile && showSelTools;
+        const showDeskClip = !isMobile && showSelTools;
+
+        if (deskClip) {
+            const showDesk = !isMobile && showSelTools;
+            deskClip.hidden = !showDesk;
+            deskClip.setAttribute('aria-hidden', showDesk ? 'false' : 'true');
+        }
+        if (editWrap) {
+            editWrap.hidden = !showEdit;
+            editWrap.setAttribute('aria-hidden', showEdit ? 'false' : 'true');
+        }
+        if (modeGrp) {
+            if (isMobile) {
+                modeGrp.hidden = showEdit;
+                modeGrp.setAttribute('aria-hidden', showEdit ? 'true' : 'false');
+                modeGrp.querySelectorAll('button[data-selection-mode]').forEach((btn) => {
+                    btn.disabled = showEdit;
+                    btn.setAttribute('aria-disabled', showEdit ? 'true' : 'false');
+                });
+            } else {
+                modeGrp.hidden = false;
+                modeGrp.setAttribute('aria-hidden', 'false');
+                modeGrp.querySelectorAll('button[data-selection-mode]').forEach((btn) => {
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-disabled');
+                });
+            }
+        }
+        if (ribbonDeselect) {
+            const showRd = isMobile && showSelTools;
+            ribbonDeselect.hidden = !showRd;
+            ribbonDeselect.setAttribute('aria-hidden', showRd ? 'false' : 'true');
+        }
+        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+            window.illuSyncFreeCornersRibbonPlacement();
+        }
+        if (typeof window.illuApplyToggleLayouts === 'function') {
+            window.illuApplyToggleLayouts();
+        }
+        if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
+            window.illuSyncSelectionExtraPlacement();
+        }
+    };
+
     window.illuSyncSelectionExtraPlacement = function () {
         const primary = querySelRibbonGroup('illu-sel-actions-primary');
         const layout = querySelRibbonGroup('illu-sel-actions-layout');
         const zoomWrap = document.getElementById('illu-mobile-zoom-fit-wrap');
+        const layoutZoomWrap = document.getElementById('illu-layout-zoom-fit-wrap');
+        const clearInLayout = document.getElementById('illu-desktop-clear-sel-wrap');
         const layoutZoomBtn = document.getElementById('illu-tb-zoom-fit');
-        const layoutZoomItem = layoutZoomBtn ? layoutZoomBtn.closest('.illu-mode-toggle-item') : null;
+        const layoutZoomItem =
+            layoutZoomWrap ||
+            (layoutZoomBtn ? layoutZoomBtn.closest('.illu-mode-toggle-item') : null);
         const isMobile =
             typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
         if (!primary) return;
         if (!layout && !isMobile) return;
 
         if (isMobile) {
+            if (clearInLayout) {
+                clearInLayout.hidden = true;
+                clearInLayout.setAttribute('aria-hidden', 'true');
+            }
+            if (layoutZoomWrap) {
+                layoutZoomWrap.hidden = true;
+                layoutZoomWrap.setAttribute('aria-hidden', 'true');
+            }
             if (zoomWrap && primary) {
                 if (zoomWrap.parentElement !== primary) {
                     primary.appendChild(zoomWrap);
@@ -341,6 +435,19 @@
                 layoutZoomItem.remove();
             }
         } else {
+            if (clearInLayout && layout) {
+                if (clearInLayout.parentElement !== layout) {
+                    const anchor = layoutZoomItem && layout.contains(layoutZoomItem) ? layoutZoomItem : null;
+                    if (anchor) layout.insertBefore(clearInLayout, anchor);
+                    else layout.appendChild(clearInLayout);
+                }
+                clearInLayout.hidden = false;
+                clearInLayout.setAttribute('aria-hidden', 'false');
+            }
+            if (layoutZoomWrap) {
+                layoutZoomWrap.hidden = true;
+                layoutZoomWrap.setAttribute('aria-hidden', 'true');
+            }
             if (zoomWrap) {
                 zoomWrap.hidden = true;
                 zoomWrap.setAttribute('aria-hidden', 'true');
@@ -397,14 +504,11 @@
             if (id === 'tool') active = true;
             else if (id === 'selection') {
                 active = !isVectorSelect && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
+            } else if (id === 'clipboard') {
+                active = !isVectorSelect && !isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
             } else if (id === 'selection-extra') {
-                const cornersItem = document.getElementById('select-rect-free-corners-wrap');
-                active =
-                    !isVectorSelect &&
-                    isMobileRibbon &&
-                    SELECT_ACTION_TOOLS.has(tool) &&
-                    cornersItem &&
-                    !cornersItem.hidden;
+                /* Téléphone : alvéole « Outils » (4 coins si pertinent + Désélectionner) pour tous les outils sélection/déplacement. */
+                active = !isVectorSelect && isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
             } else if (id === 'adjustments') {
                 active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
             } else if (id === 'view') {
@@ -439,6 +543,9 @@
         if (isMobileRibbon && typeof window.illuSyncMobileViewActions === 'function') {
             window.illuSyncMobileViewActions();
         }
+        if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+            window.illuSyncMobileSelectionRibbonActions();
+        }
 
         document.querySelectorAll('.illu-ribbon-groups--params .illu-ribbon-group').forEach((group) => {
             const id = group.dataset.illuRibbonGroup;
@@ -463,6 +570,10 @@
             else if (id === 'vector-params') active = isVectorSelect;
             setGroupHidden(group, !active);
         });
+
+        if (typeof window.setupIlluGaugeSteppers === 'function') {
+            window.setupIlluGaugeSteppers();
+        }
     };
 
     /** Ruban actif : disposition compacte (grilles 2 lignes, inline) sur tous les viewports. */
@@ -491,6 +602,9 @@
                 }
                 if (typeof window.illuSyncMobileViewActions === 'function') {
                     window.illuSyncMobileViewActions();
+                }
+                if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+                    window.illuSyncMobileSelectionRibbonActions();
                 }
                 if (typeof window.illuApplyToggleLayouts === 'function') {
                     window.illuApplyToggleLayouts();

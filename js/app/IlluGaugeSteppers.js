@@ -10,6 +10,9 @@
         { id: 'tool-text-grad-angle', step: 1 },
         { id: 'tool-size', step: 1 },
         { id: 'tool-shape-corner-radius', step: 1 },
+        { id: 'vector-prop-stroke-width', step: 1 },
+        { id: 'vector-prop-grad-angle', step: 1 },
+        { id: 'vector-prop-corner-radius', step: 1 },
         { id: 'tool-brush-hardness', step: 5 },
         { id: 'wand-tolerance', step: 1 },
         { id: 'fill-tolerance', step: 1 }
@@ -41,6 +44,9 @@
     }
 
     function wireGaugeSteppers() {
+        if (typeof window.illuApplyShapeCornerRadiusMaxToInputs === 'function') {
+            window.illuApplyShapeCornerRadiusMaxToInputs();
+        }
         GAUGE_STEP_CONFIG.forEach((cfg) => {
             const range = document.getElementById(cfg.id);
             if (!range || range.dataset.illuGaugeStepWired === '1') return;

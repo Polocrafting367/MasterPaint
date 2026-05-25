@@ -290,12 +290,26 @@ window.addEventListener('pointermove', (e) => {
     e.stopPropagation();
 }, true);
 
+function illuEndMiddlePan() {
+    if (!window.isPanning) return;
+    window.isPanning = false;
+    document.body.style.cursor = '';
+    const ws = document.getElementById('workspace');
+    if (ws) ws.style.cursor = '';
+    if (typeof window.updateMainCanvasCursor === 'function') window.updateMainCanvasCursor();
+}
+
 window.addEventListener('pointerup', (e) => {
     if (window.isPanning && e.button === 1) {
-        window.isPanning = false;
-        document.body.style.cursor = '';
-        const ws = document.getElementById('workspace');
-        if (ws) ws.style.cursor = '';
+        illuEndMiddlePan();
+        e.preventDefault();
+        e.stopPropagation();
+    }
+}, true);
+
+window.addEventListener('pointercancel', (e) => {
+    if (window.isPanning) {
+        illuEndMiddlePan();
         e.preventDefault();
         e.stopPropagation();
     }
@@ -372,6 +386,13 @@ window.addEventListener('keydown', (e) => {
             return;
         }
         if (typeof window.finalizePendingPixelLiveEdits === 'function' && window.finalizePendingPixelLiveEdits()) {
+            e.preventDefault();
+            return;
+        }
+        if (
+            typeof window.illuCancelActiveVectorTextDraft === 'function' &&
+            window.illuCancelActiveVectorTextDraft()
+        ) {
             e.preventDefault();
             return;
         }
@@ -643,8 +664,7 @@ document.addEventListener('contextmenu', (e) => {
                     if (typeof EditorManager !== 'undefined') {
                         if (id === 'vector-prop-stroke-width') EditorManager.applyVectorProperty('stroke-width', val);
                         else if (id === 'vector-prop-corner-radius') EditorManager.applyVectorProperty('corner-radius', val);
-                        else if (id === 'vector-prop-grad-angle') EditorManager.applyVectorProperty('fill-model', 'gradient'); // Re-apply gradient to update angle
-                        if (EditorManager.render) EditorManager.render();
+                        else if (id === 'vector-prop-grad-angle') EditorManager.applyVectorProperty('fill-model', 'gradient');
                     }
                 });
                 el.addEventListener('change', () => {

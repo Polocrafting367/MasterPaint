@@ -124,7 +124,11 @@
                 return;
             }
             wrap.hidden = !show;
+            wrap.setAttribute('aria-hidden', !show ? 'true' : 'false');
         });
+        if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+            window.illuSyncMobileSelectionRibbonActions();
+        }
     }
 
     window.syncIlluMobileZoomFitButtonVisibility = syncIlluMobileSelectActionExtras;
@@ -829,6 +833,9 @@
             window.illuInitToolbarRibbon();
         } else if (typeof window.updateToolOptionsBar === 'function') {
             window.updateToolOptionsBar();
+        }
+        if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+            window.illuSyncMobileSelectionRibbonActions();
         }
     };
 
