@@ -1,20 +1,24 @@
 <p align="center">
-  <a href="http://polocrafting.fr/Illu"><strong>▶ Démo en ligne</strong></a>
-  &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; 100 % local &nbsp;·&nbsp; Thème Win98 Modern
+  <img src="https://img.shields.io/badge/Open%20Source-oui-1e4a8c?style=flat-square" alt="Open Source" />
+  <img src="https://img.shields.io/badge/Donn%C3%A9es-100%25%20local-fe8511?style=flat-square" alt="100 % local" />
+  <img src="https://img.shields.io/badge/Th%C3%A8me-Win98%20Modern-0f2d5c?style=flat-square" alt="Win98 Modern" />
 </p>
-
-<p align="center">
-  <img src="icons/icon.svg" width="48" height="48" alt="MasterPaint" />
-</p>
-
 <h1 align="center">MasterPaint 98</h1>
-
 <p align="center">
-  <img src="IMG/Paint.jpeg" height="180" alt="Mise en page type Paint.NET" />
-  &nbsp;
-  <img src="IMG/Photo.jpeg" height="180" alt="Colonnes ancrées : type Photoshop" />
-  &nbsp;
-  <img src="IMG/Phone.jpeg" height="180" alt="Menu ☰, ajusté pour téléphone" />
+  <img src="icons/icon.svg" width="60" height="60" alt="MasterPaint" align="middle" />
+
+</p>
+<p align="center">
+<a href="http://polocrafting.fr/Illu"><strong>▶ Démo en ligne</strong></a>
+</p>
+
+<h1 align="center"></h1>
+<p align="center">
+  <img src="IMG/Paint.jpeg" width="38%" alt="Mise en page type Paint.NET" />
+  &nbsp;&nbsp;
+  <img src="IMG/Photo.jpeg" width="38%" alt="Colonnes ancrées : type Photoshop" />
+  &nbsp;&nbsp;
+  <img src="IMG/Phone.jpeg" width="19%" alt="Menu ☰, ajusté pour téléphone" />
 </p>
 
 <p align="center">
@@ -39,15 +43,12 @@ Choisissez la mise en page dans **Paramètres → Disposition de l’interface**
 - **Photoshop** — colonnes ancrées : outils à gauche, couleurs et calques à droite, rail curseurs / historique.
 - **Téléphone** — menu ☰, barre d’outils compacte, panneaux adaptés au petit écran.
 
-Le passage entre mode **téléphone** et modes **bureau** (Paint.NET / Photoshop) recharge la page pour réinitialiser l’interface.
-
 ## Fonctionnalités
 
 - **Formes et calques** — Bitmap et vectoriel, calques et formes modifiables
 - **Dessin** — Pinceau, crayon, gomme, pot de peinture, dégradé
 - **Effets** — Filtres, effets dynamiques sur calques, accélération WebGL / WebAssembly
 - **Outils** — Déformation, perspective, sélection et alignement
-- **Interface** — Trois dispositions (voir captures ci-dessus)
 
 ## Démarrage
 
