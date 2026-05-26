@@ -2004,7 +2004,6 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 .tool-options-bar .illu-select-mini,
 .tool-options-bar .opt-bar-btn,
 .illu-menubar-toolbar .illu-menubar-icon-btn {
-    height: 27px !important;
     line-height: 27px !important;
     box-sizing: border-box !important;
     display: inline-flex !important;

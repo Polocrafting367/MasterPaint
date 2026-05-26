@@ -3441,3 +3441,7 @@ body.illu-mobile-ui #palette-dock-left {
     resize: none;
     max-width: none;
 }
+
+#tool-text-font {
+    width: 130px;
+}

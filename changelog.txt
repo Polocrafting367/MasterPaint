@@ -9,6 +9,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Permettre via l'outil triangle de crée des étoils
 - Modifier forme trais pour avoir le comportement d'une forme et non plus que d'un simple trais
        > CAD permettre les bordure sur les forme trais
+       > Encore beaucoup de BUG
 - Correction bug lors du zoom avec le molette en mode SVG/BITMAT
 - Correction d'import de fichier illu qui fesait planté MasterPaint (chargement par calques, filtres dynamiques différés)
 - Revu annimation de chargement du site
