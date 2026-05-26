@@ -41,14 +41,9 @@
         },
         { id: 'brush', labelKey: 'ribbon.groupBrush', selectors: ['#opt-grp-brush-actions'] },
         {
-            id: 'shape-mode',
-            labelKey: 'ribbon.groupShapeMode',
-            selectors: ['#opt-grp-shapes-actions .illu-shape-mode-group']
-        },
-        {
-            id: 'shape-fill',
-            labelKey: 'ribbon.groupFill',
-            selectors: ['#opt-grp-shapes-actions .illu-shape-fill-group']
+            id: 'shape-style-fill',
+            labelKey: 'ribbon.groupShapeStyleFill',
+            selectors: ['#opt-grp-shapes-actions .illu-shape-style-fill-group']
         },
         {
             id: 'shape-grad',
@@ -106,29 +101,18 @@
 
     const PARAM_RIBBON_GROUPS = [
         { id: 'size', labelKey: 'ribbon.groupSize', selectors: ['#opt-grp-size-params'] },
-        { id: 'hardness', labelKey: 'tools.brushHardnessShort', selectors: ['#opt-grp-brush-hardness'] },
         { id: 'wand', labelKey: 'ribbon.groupWand', selectors: ['#opt-grp-wand-params'] },
         { id: 'eyedropper', labelKey: 'ribbon.groupEyedropper', selectors: ['#opt-grp-eyedropper-params'] },
         { id: 'fill', labelKey: 'ribbon.groupFill', selectors: ['#opt-grp-fill-params'] },
-        {
-            id: 'shape-corner',
-            labelKey: 'tools.shapeCornerRadius',
-            selectors: ['#tool-shape-corner-row']
-        },
         {
             id: 'shape-angle',
             labelKey: 'tools.shapeGradAngle',
             selectors: ['#tool-shape-grad-angle-row']
         },
         {
-            id: 'text-font',
-            labelKey: 'ribbon.groupFont',
+            id: 'text-params',
+            labelKey: 'ribbon.groupText',
             selectors: ['#tool-text-font-size-stack']
-        },
-        {
-            id: 'text-stroke',
-            labelKey: 'tools.textStrokeW',
-            selectors: ['#tool-text-stroke-w-row']
         },
         {
             id: 'text-grad-angle',
@@ -198,8 +182,10 @@
             let stack = body.querySelector('.illu-ribbon-selection-stack');
             if (!stack) {
                 stack = document.createElement('div');
-                stack.className = 'illu-ribbon-selection-stack';
+                stack.className = 'illu-ribbon-selection-stack illu-ribbon-grid-3x2';
                 body.appendChild(stack);
+            } else {
+                stack.classList.add('illu-ribbon-grid-3x2');
             }
             target = stack;
         }
@@ -248,6 +234,44 @@
             bar2.querySelectorAll(':scope > .illu-ribbon-group').forEach((g) => {
                 if (g.parentElement === bar2) paramsWrap.appendChild(g);
             });
+        }
+
+        const textFillWrap = document.querySelector(
+            '.illu-ribbon-group[data-illu-ribbon-group="text-style-fill"] .illu-text-style-fill-group'
+        );
+        if (textFillWrap) {
+            textFillWrap.classList.add('illu-ribbon-grid-3x2');
+        }
+        const shapeStyleFillWrap = document.querySelector(
+            '#opt-grp-shapes-actions .illu-shape-style-fill-group'
+        );
+        if (shapeStyleFillWrap) {
+            shapeStyleFillWrap.classList.add('illu-ribbon-grid-3x2');
+        }
+        if (typeof window.syncRibbonParamPackGaugeLayout === 'function') {
+            window.syncRibbonParamPackGaugeLayout();
+        }
+
+        const selSpec = ACTION_RIBBON_GROUPS.find((s) => s.id === 'selection');
+        if (selSpec && selSpec.stack) {
+            const selGroup = document.querySelector('.illu-ribbon-group[data-illu-ribbon-group="selection"]');
+            const body = selGroup?.querySelector('.illu-ribbon-group-body');
+            if (body) {
+                let stack = body.querySelector('.illu-ribbon-selection-stack');
+                if (!stack) {
+                    stack = document.createElement('div');
+                    stack.className = 'illu-ribbon-selection-stack illu-ribbon-grid-3x2';
+                    body.appendChild(stack);
+                } else {
+                    stack.classList.add('illu-ribbon-grid-3x2');
+                }
+                selSpec.selectors.forEach((sel) => {
+                    const el = document.querySelector(sel);
+                    if (el && el.parentElement !== stack) {
+                        stack.appendChild(el);
+                    }
+                });
+            }
         }
 
         if (typeof window.illuUnifyModeToggleItems === 'function') {
@@ -480,6 +504,10 @@
 
     window.illuApplyRibbonGroupsForTool = function (toolId, cfg, ctx) {
         if (!window.illuIsRibbonToolbarActive()) return;
+        window.illuActiveToolId = toolId;
+        window.illuActiveToolCfg = cfg;
+        window.illuActiveToolCtx = ctx;
+
         if (typeof window.illuSyncSelectionExtraPlacement === 'function') {
             window.illuSyncSelectionExtraPlacement();
         }
@@ -501,38 +529,42 @@
         document.querySelectorAll('.illu-ribbon-groups--actions .illu-ribbon-group').forEach((group) => {
             const id = group.dataset.illuRibbonGroup;
             let active = false;
-            if (id === 'tool') active = true;
-            else if (id === 'selection') {
-                active = !isVectorSelect && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
-            } else if (id === 'clipboard') {
-                active = !isVectorSelect && !isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
-            } else if (id === 'selection-extra') {
-                /* Téléphone : alvéole « Outils » (4 coins si pertinent + Désélectionner) pour tous les outils sélection/déplacement. */
-                active = !isVectorSelect && isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
-            } else if (id === 'adjustments') {
-                active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
-            } else if (id === 'view') {
-                /* Mobile : masque (comme 4 coins) - Grille / Regles restent dans le menu Fenetre. */
-                active = !isVectorSelect && SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
-            } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
-            else if (id === 'shape-mode' || id === 'shape-fill') {
-                active = shapesActionsActive(actionIds);
-            } else if (id === 'shape-grad') {
-                active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
-            } else if (id === 'shape-grad-method') {
-                active = shapesActionsActive(actionIds) && shapeGradMethodEl && !shapeGradMethodEl.hidden;
-            } else if (id === 'line-cap-start' || id === 'line-cap-end') {
-                active = lineEndpointsActive(actionIds);
-            } else if (id === 'text-style-fill') {
-                active = actionIds.has('opt-grp-text-actions');
-            } else if (id === 'text-grad') {
-                active = actionIds.has('opt-grp-text-actions') && textGradTypeEl && !textGradTypeEl.hidden;
-            } else if (id === 'text-grad-method') {
-                active = actionIds.has('opt-grp-text-actions') && textGradMethodEl && !textGradMethodEl.hidden;
-            } else if (id === 'gradient-type' || id === 'gradient-method') {
-                active = actionIds.has('opt-grp-gradient-actions');
-            } else if (id === 'vector-fill' || id === 'vector' || id === 'vector-grad') {
-                active = isVectorSelect;
+            if (window.illuShowAllRibbonOptions) {
+                active = true;
+            } else {
+                if (id === 'tool') active = true;
+                else if (id === 'selection') {
+                    active = !isVectorSelect && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
+                } else if (id === 'clipboard') {
+                    active = !isVectorSelect && !isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
+                } else if (id === 'selection-extra') {
+                    /* Téléphone : alvéole « Outils » (4 coins si pertinent + Désélectionner) pour tous les outils sélection/déplacement. */
+                    active = !isVectorSelect && isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
+                } else if (id === 'adjustments') {
+                    active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                } else if (id === 'view') {
+                    /* Mobile : masque (comme 4 coins) - Grille / Regles restent dans le menu Fenetre. */
+                    active = !isVectorSelect && SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
+                else if (id === 'shape-style-fill') {
+                    active = shapesActionsActive(actionIds);
+                } else if (id === 'shape-grad') {
+                    active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
+                } else if (id === 'shape-grad-method') {
+                    active = shapesActionsActive(actionIds) && shapeGradMethodEl && !shapeGradMethodEl.hidden;
+                } else if (id === 'line-cap-start' || id === 'line-cap-end') {
+                    active = lineEndpointsActive(actionIds);
+                } else if (id === 'text-style-fill') {
+                    active = actionIds.has('opt-grp-text-actions');
+                } else if (id === 'text-grad') {
+                    active = actionIds.has('opt-grp-text-actions') && textGradTypeEl && !textGradTypeEl.hidden;
+                } else if (id === 'text-grad-method') {
+                    active = actionIds.has('opt-grp-text-actions') && textGradMethodEl && !textGradMethodEl.hidden;
+                } else if (id === 'gradient-type' || id === 'gradient-method') {
+                    active = actionIds.has('opt-grp-gradient-actions');
+                } else if (id === 'vector-fill' || id === 'vector' || id === 'vector-grad') {
+                    active = isVectorSelect;
+                }
             }
             setGroupHidden(group, !active);
         });
@@ -552,28 +584,144 @@
             let active = false;
             const cornerRow = document.getElementById('tool-shape-corner-row');
             const angleRow = document.getElementById('tool-shape-grad-angle-row');
-            if (id === 'size') active = paramIds.has('opt-grp-size-params');
-            else if (id === 'hardness') {
-                active = paramIds.has('opt-grp-brush-hardness') && showHard;
-            } else if (id === 'wand') active = paramIds.has('opt-grp-wand-params');
-            else if (id === 'eyedropper') active = paramIds.has('opt-grp-eyedropper-params');
-            else if (id === 'fill') active = paramIds.has('opt-grp-fill-params');
-            else if (id === 'shape-corner') {
-                active = paramIds.has('opt-grp-shapes-params') && cornerRow && !cornerRow.hidden;
-            } else if (id === 'shape-angle') {
-                active = paramIds.has('opt-grp-shapes-params') && angleRow && !angleRow.hidden;
-            } else if (id === 'text-font' || id === 'text-stroke') {
-                active = paramIds.has('opt-grp-text-params');
-            } else if (id === 'text-grad-angle') {
-                active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
-            } else if (id === 'warp') active = paramIds.has('opt-grp-warp-params') || warpActive;
-            else if (id === 'vector-params') active = isVectorSelect;
+            if (window.illuShowAllRibbonOptions) {
+                active = true;
+            } else {
+                if (id === 'size') active = paramIds.has('opt-grp-size-params');
+                else if (id === 'wand') active = paramIds.has('opt-grp-wand-params');
+                else if (id === 'eyedropper') active = paramIds.has('opt-grp-eyedropper-params');
+                else if (id === 'fill') active = paramIds.has('opt-grp-fill-params');
+                else if (id === 'shape-angle') {
+                    const lineGradAngle =
+                        (tool === 'line' || tool === 'cubic-3') && angleRow && !angleRow.hidden;
+                    active =
+                        (paramIds.has('opt-grp-shapes-params') && angleRow && !angleRow.hidden) || lineGradAngle;
+                } else if (id === 'text-params') {
+                    active = paramIds.has('opt-grp-text-params');
+                } else if (id === 'text-grad-angle') {
+                    active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
+                } else if (id === 'warp') active = paramIds.has('opt-grp-warp-params') || warpActive;
+                else if (id === 'vector-params') active = isVectorSelect;
+            }
             setGroupHidden(group, !active);
         });
 
         if (typeof window.setupIlluGaugeSteppers === 'function') {
             window.setupIlluGaugeSteppers();
         }
+        if (typeof window.illuSyncMergedShapeParamGauges === 'function') {
+            window.illuSyncMergedShapeParamGauges(tool, paramIds);
+        }
+        if (typeof window.syncRibbonParamPackGaugeLayout === 'function') {
+            window.syncRibbonParamPackGaugeLayout();
+        }
+    };
+
+    /** Branches = triangle ; arrondi = rect. à coins arrondis (round-3) uniquement. */
+    window.illuShapeExtraGaugeFlags = function (tool, shapesOn) {
+        const on = !!shapesOn;
+        return {
+            showBranches: on && tool === 'triangle',
+            showCorner: on && tool === 'round-3'
+        };
+    };
+
+    /** Visibilité + emplacement ruban des jauges Branches / Arrondi. */
+    window.illuSyncShapeExtraGaugeVisibility = function (tool, paramIds) {
+        const shapesOn = paramIds && paramIds.has('opt-grp-shapes-params');
+        const flags = window.illuShapeExtraGaugeFlags(tool, shapesOn);
+        const cornerRow = document.getElementById('tool-shape-corner-row');
+        const branchesRow = document.getElementById('tool-triangle-branches-row');
+        const triSep = document.getElementById('tool-triangle-branches-sep');
+
+        if (cornerRow) {
+            cornerRow.hidden = !flags.showCorner;
+            if (flags.showCorner) cornerRow.removeAttribute('aria-hidden');
+            else cornerRow.setAttribute('aria-hidden', 'true');
+        }
+        if (branchesRow) {
+            branchesRow.hidden = !flags.showBranches;
+            if (flags.showBranches) branchesRow.removeAttribute('aria-hidden');
+            else branchesRow.setAttribute('aria-hidden', 'true');
+        }
+        if (triSep) triSep.hidden = !flags.showBranches;
+
+        return flags;
+    };
+
+    /** Fusionne Taille + Arrondi (round-3) ou Taille + Branches (triangle) dans l’alvéole size. */
+    window.illuSyncMergedShapeParamGauges = function (tool, paramIds) {
+        const sizePack = document.getElementById('opt-grp-size-params');
+        const shapesPack = document.getElementById('opt-grp-shapes-params');
+        const sizeGroup = document.querySelector('.illu-ribbon-group[data-illu-ribbon-group="size"]');
+        const sizeLabel = sizeGroup?.querySelector('.illu-ribbon-group-label');
+        const cornerRow = document.getElementById('tool-shape-corner-row');
+        const branchesRow = document.getElementById('tool-triangle-branches-row');
+        const triSep = document.getElementById('tool-triangle-branches-sep');
+        const angleRow = document.getElementById('tool-shape-grad-angle-row');
+
+        const flags =
+            typeof window.illuSyncShapeExtraGaugeVisibility === 'function'
+                ? window.illuSyncShapeExtraGaugeVisibility(tool, paramIds)
+                : window.illuShapeExtraGaugeFlags(tool, paramIds && paramIds.has('opt-grp-shapes-params'));
+        const showCorner = flags.showCorner;
+        const showBranches = flags.showBranches;
+
+        if (!window.illuIsRibbonToolbarActive || !window.illuIsRibbonToolbarActive()) {
+            if (shapesPack) {
+                if (branchesRow && branchesRow.parentElement !== shapesPack) {
+                    shapesPack.insertBefore(branchesRow, triSep || cornerRow || angleRow);
+                }
+                if (cornerRow && cornerRow.parentElement !== shapesPack) {
+                    shapesPack.insertBefore(cornerRow, angleRow);
+                }
+            }
+            return;
+        }
+
+        if (!sizePack) return;
+
+        if (cornerRow && showCorner && cornerRow.parentElement !== sizePack) {
+            sizePack.appendChild(cornerRow);
+        }
+        if (branchesRow && showBranches && branchesRow.parentElement !== sizePack) {
+            sizePack.appendChild(branchesRow);
+        }
+
+        if (sizeLabel) {
+            let lblKey = 'ribbon.groupSize';
+            if (showBranches) lblKey = 'ribbon.groupShapeSizeBranches';
+            else if (showCorner) lblKey = 'ribbon.groupShapeSizeCorner';
+            sizeLabel.setAttribute('data-i18n', lblKey);
+            sizeLabel.textContent = t(lblKey, lblKey);
+        }
+    };
+
+    /** Jauges ruban : 1–3 = une colonne ; 4 = 2×2 ; 5+ = 2 colonnes × 3 lignes max. */
+    window.syncRibbonParamPackGaugeLayout = function syncRibbonParamPackGaugeLayout() {
+        const packs = document.querySelectorAll(
+            '.illu-ribbon-param-pack:not(.illu-ribbon-param-pack--stacked), .illu-text-font-size-stack'
+        );
+        packs.forEach((pack) => {
+            if (pack.classList.contains('illu-text-font-size-stack')) {
+                pack.classList.add('illu-ribbon-gauge-stack');
+            }
+            const items = [...pack.children].filter((el) => {
+                if (el.matches('.opt-sep, .illu-icon-toggle-group, .illu-mode-toggle-group, .illu-size-extra-row')) {
+                    return false;
+                }
+                if (!el.matches('.illu-gauge-field, .field-row.illu-gauge-field, #opt-warp-resample-wrap, .illu-text-font-row')) {
+                    return false;
+                }
+                if (el.hidden || el.getAttribute('aria-hidden') === 'true') return false;
+                return true;
+            });
+            pack.classList.remove('illu-param-gauges-4', 'illu-param-gauges-multi');
+            const n = items.length;
+            if (n === 4) pack.classList.add('illu-param-gauges-4');
+            else if (n > 4) pack.classList.add('illu-param-gauges-multi');
+            pack.dataset.illuGaugeCount = String(n);
+        });
     };
 
     /** Ruban actif : disposition compacte (grilles 2 lignes, inline) sur tous les viewports. */
@@ -629,10 +777,16 @@
         if (typeof window.updateToolOptionsBar === 'function') {
             window.updateToolOptionsBar();
         }
+        if (typeof window.syncTextStrokeWidthControlState === 'function') {
+            window.syncTextStrokeWidthControlState();
+        }
 
         if (active && window.IlluI18n && typeof window.IlluI18n.apply === 'function') {
             const container = document.getElementById('tool-options-container');
             if (container) window.IlluI18n.apply(container);
+        }
+        if (typeof window.syncIlluShowAllRibbonOptionsUI === 'function') {
+            window.syncIlluShowAllRibbonOptionsUI();
         }
     };
 
@@ -701,7 +855,7 @@
             return;
         }
 
-        if (tg.closest('.illu-ribbon-selection-stack')) {
+        if (tg.closest('.illu-ribbon-selection-stack') || tg.closest('.illu-ribbon-grid-3x2')) {
             return;
         }
 
@@ -710,9 +864,15 @@
         if (visible >= 1) {
             /* Baguette / pot de peinture / remplissage forme (2 modes) : ligne + jauge en dessous */
             if (
-                (tg.closest('#opt-grp-wand-params') ||
-                    tg.closest('#opt-grp-fill-params') ||
-                    tg.classList.contains('illu-shape-fill-group')) &&
+                (tg.closest('#opt-grp-fill-params') || tg.closest('#opt-grp-wand-params')) &&
+                slots === 2
+            ) {
+                tg.classList.add('illu-toggle-group--compact-inline-row');
+            } else if (tg.classList.contains('illu-sel-actions-layout')) {
+                tg.classList.add('illu-toggle-group--compact-grid');
+                applyCompactGridCols(tg, visible > 0 ? visible : slots);
+            } else if (
+                tg.classList.contains('illu-shape-fill-group') &&
                 slots === 2
             ) {
                 tg.classList.add('illu-toggle-group--compact-inline-row');
@@ -755,6 +915,7 @@
 
             const inParamPack = !!tg.closest('.illu-ribbon-param-pack');
             const inSelectionStack = !!tg.closest('.illu-ribbon-selection-stack');
+            const inUnifiedGrid3x2 = !!tg.closest('.illu-ribbon-grid-3x2');
             const inBrushActions = !!tg.closest('#opt-grp-brush-actions');
             const inGradGroup =
                 tg.classList.contains('illu-grad-type-group') ||
@@ -766,7 +927,7 @@
                 !inSelectionStack;
             const isViewActions = tg.classList.contains('illu-sel-actions-view');
             const isShapeFillGroup = tg.classList.contains('illu-shape-fill-group');
-            if (inSelectionStack) {
+            if (inSelectionStack || inUnifiedGrid3x2) {
                 return;
             }
             if (isViewActions) {
@@ -798,10 +959,13 @@
                         item.closest('.illu-ribbon-selection-stack')
                     ) {
                         item.classList.add('illu-toggle-layout--inline');
-                    } else if (
-                        item.closest('.illu-text-style-fill-group') ||
-                        item.closest('.illu-shape-fill-group')
-                    ) {
+                    } else if (item.closest('.illu-text-style-fill-group')) {
+                        item.classList.add('illu-toggle-layout--inline');
+                    } else if (item.closest('.illu-shape-style-fill-group')) {
+                        item.classList.add('illu-toggle-layout--inline');
+                    } else if (item.closest('.illu-shape-mode-group')) {
+                        item.classList.add('illu-toggle-layout--stack');
+                    } else if (item.closest('.illu-shape-fill-group')) {
                         item.classList.add('illu-toggle-layout--stack');
                     } else {
                         item.classList.add('illu-toggle-layout--inline');
@@ -824,6 +988,10 @@
                 item.classList.add('illu-toggle-layout--inline');
             } else if (item.closest('.illu-sel-actions-layout')) {
                 item.classList.add('illu-toggle-layout--stack');
+            } else if (item.closest('.illu-shape-style-fill-group')) {
+                item.classList.add('illu-toggle-layout--inline');
+            } else if (item.closest('.illu-shape-mode-group')) {
+                item.classList.add('illu-toggle-layout--stack');
             } else if (inSelectionStack || inGradientActions || inBrushActions) {
                 item.classList.add('illu-toggle-layout--inline');
             } else if (
@@ -841,7 +1009,11 @@
         });
 
         document.querySelectorAll('.tool-options-bar .illu-gauge-field').forEach((field) => {
-            field.classList.add('illu-gauge-field--inline');
+            if (field.closest('.illu-ribbon-param-pack, .illu-text-font-size-stack')) {
+                field.classList.remove('illu-gauge-field--inline');
+            } else {
+                field.classList.add('illu-gauge-field--inline');
+            }
         });
     };
 
@@ -860,49 +1032,86 @@
         lbl.title = toolLabel;
         const sel = document.getElementById('illu-tool-list-select');
         if (sel) sel.setAttribute('aria-label', toolLabel);
+        const header = document.getElementById('tool-main-header');
+        if (header) {
+            header.setAttribute('aria-label', toolLabel);
+            header.setAttribute('title', toolLabel);
+        }
     };
 
-    /** Clic n’importe où sur le picker → ouverture de la liste (fallback navigateurs). */
+  /** Ouvre la liste d’outils (select natif = ancré au rectangle de #tool-main-header). */
+    function illuOpenToolListSelect(sel) {
+        if (!sel) return;
+        if (typeof sel.showPicker === 'function') {
+            try {
+                sel.showPicker();
+                return;
+            } catch (err) {
+                /* showPicker peut échouer si pas déclenché par un vrai geste utilisateur */
+            }
+        }
+        sel.focus({ preventScroll: true });
+        sel.click();
+    }
+
+    /** Clic sur toute la cellule outil (#tool-main-header), pas seulement l’icône. */
     window.illuInitToolPicker = function () {
-        const picker = document.querySelector('.illu-tool-picker');
+        const header = document.getElementById('tool-main-header');
         const sel = document.getElementById('illu-tool-list-select');
-        if (!picker || !sel || picker.dataset.illuPickerBound === '1') return;
-        picker.dataset.illuPickerBound = '1';
-        if (!picker.hasAttribute('tabindex')) {
-            picker.setAttribute('tabindex', '0');
+        if (!header || !sel || header.dataset.illuPickerBound === '1') return;
+        header.dataset.illuPickerBound = '1';
+        if (!header.hasAttribute('tabindex')) {
+            header.setAttribute('tabindex', '0');
         }
 
-        picker.addEventListener('mousedown', (e) => {
+        header.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
-            if (e.target === sel) return;
             e.preventDefault();
-            if (typeof sel.showPicker === 'function') {
-                try {
-                    sel.showPicker();
-                    return;
-                } catch (err) {
-                    /* showPicker peut échouer si pas déclenché par un vrai geste utilisateur */
-                }
-            }
-            sel.focus({ preventScroll: true });
-            sel.click();
+            illuOpenToolListSelect(sel);
         });
 
-        picker.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (typeof sel.showPicker === 'function') {
-                    try {
-                        sel.showPicker();
-                        return;
-                    } catch (err) {
-                        /* ignore */
-                    }
-                }
-                sel.focus({ preventScroll: true });
-                sel.click();
+                illuOpenToolListSelect(sel);
             }
         });
+    };
+
+    window.illuShowAllRibbonOptions = false;
+    window.toggleIlluShowAllRibbonOptions = function () {
+        window.illuShowAllRibbonOptions = !window.illuShowAllRibbonOptions;
+        window.syncIlluShowAllRibbonOptionsUI();
+        if (typeof window.illuApplyRibbonGroupsForTool === 'function') {
+            window.illuApplyRibbonGroupsForTool(
+                window.illuActiveToolId,
+                window.illuActiveToolCfg,
+                window.illuActiveToolCtx
+            );
+        }
+    };
+    /** Ép. contour texte : actif seulement si le contour est coché (ruban ou case masquée). */
+    window.syncTextStrokeWidthControlState = function () {
+        const on = !!document.getElementById('tool-text-stroke')?.checked;
+        const row = document.getElementById('tool-text-stroke-w-row');
+        const sl = document.getElementById('tool-text-stroke-w');
+        if (row) {
+            row.classList.toggle('illu-text-stroke-w-row--disabled', !on);
+            row.setAttribute('aria-disabled', on ? 'false' : 'true');
+        }
+        if (sl) {
+            sl.disabled = !on;
+            if (typeof window.syncIlluGaugeForRange === 'function') {
+                window.syncIlluGaugeForRange(sl);
+            }
+        }
+    };
+
+    window.syncIlluShowAllRibbonOptionsUI = function () {
+        const checkEl = document.getElementById('menu-win-show-all-ribbon-options-check');
+        if (checkEl) {
+            checkEl.style.visibility = window.illuShowAllRibbonOptions ? 'visible' : 'hidden';
+        }
     };
 
     if (document.readyState === 'loading') {

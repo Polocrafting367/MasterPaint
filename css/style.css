@@ -23,6 +23,31 @@ body.theme-dark {
     --illu-icon-subtle: #475569;
 }
 
+/* Étiquette BETA (dialogues, menus) */
+.illu-beta-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    color: #5a3e00;
+    background: #ffe566;
+    border: 1px solid #c9a000;
+    border-radius: 2px;
+}
+
+.illu-beta-tag--title {
+    margin-left: 8px;
+    vertical-align: baseline;
+}
+
+.illu-new-project-window .field-row .illu-beta-tag {
+    margin-left: 8px;
+}
+
 /* Toggles barre d’options : bouton + mot descriptif à droite */
 .illu-mode-toggle-group,
 .tool-pinned-toggles {
@@ -627,7 +652,7 @@ li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
 .illu-gauge-wrap--has-steps .illu-gauge-track {
     position: relative;
     display: inline-block;
-    width: 104px;
+    width: 90px;
     height: 20px;
     box-sizing: border-box;
     border: 1px solid #000;

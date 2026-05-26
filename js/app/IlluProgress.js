@@ -1,6 +1,6 @@
 /**
  * Barre de progression globale (splash au boot + barre de statut 0–100 %).
- * window.IlluProgress.splash(pct, msg) | finishBoot([cb]) (splash ≥ 1 s puis cb) | status(pct, msg) | statusDone()
+ * window.IlluProgress.splash(pct, msg) | finishBoot([cb]) (splash ≥ durée min puis fondu) | status(pct, msg) | statusDone()
  * Effets instantanés (sans modale) : instantEffectStart(name) | instantEffectProgress(pct) | instantEffectDone()
  */
 (function () {
@@ -30,6 +30,150 @@
 
     /** Horodatage du premier `splash()` au boot (évite le scintillement si l’init est trop rapide). */
     let splashBootStartMs = null;
+
+    const MIN_SPLASH_MS = 1650;
+    const SPLASH_FADE_MS = 480;
+
+    function illuSplashFadeDurationMs() {
+        try {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return 120;
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        return SPLASH_FADE_MS;
+    }
+
+    function illuFinalizeSplashHidden(onSplashHidden) {
+        splashBootStartMs = null;
+        const sp = document.getElementById('illu-splash');
+        const app = document.getElementById('app-window');
+        if (sp) {
+            sp.getAnimations().forEach((a) => a.cancel());
+            sp.classList.remove('illu-splash--hiding');
+            sp.classList.add('illu-splash--gone');
+            sp.setAttribute('aria-hidden', 'true');
+            sp.setAttribute('aria-busy', 'false');
+            sp.style.removeProperty('opacity');
+            sp.style.display = 'none';
+        }
+        if (app) {
+            app.getAnimations().forEach((a) => a.cancel());
+            app.classList.remove('illu-boot-hidden');
+            app.removeAttribute('aria-hidden');
+            app.style.removeProperty('opacity');
+            app.style.removeProperty('visibility');
+            app.style.removeProperty('pointer-events');
+        }
+        document.body.classList.remove('illu-splash-active', 'illu-splash-fading');
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+                if (window.EditorManager && typeof EditorManager.applyCanvasViewportOnly === 'function') {
+                    EditorManager.applyCanvasViewportOnly();
+                }
+                if (typeof window.illuClampAllFloatingPalettes === 'function') {
+                    window.illuClampAllFloatingPalettes();
+                }
+            });
+        });
+        if (typeof onSplashHidden === 'function') {
+            queueMicrotask(() => {
+                try {
+                    onSplashHidden();
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+        }
+    }
+
+    /**
+     * Fondu splash 1→0 + fondu entrant de l’app (évite le « cut »).
+     * Ne pas retirer body.illu-splash-active avant la fin : le fond bureau reste stable.
+     */
+    function illuRunSplashFadeOut(onDone) {
+        const sp = document.getElementById('illu-splash');
+        const app = document.getElementById('app-window');
+        if (!sp) {
+            onDone();
+            return;
+        }
+
+        const fadeMs = illuSplashFadeDurationMs();
+
+        sp.setAttribute('aria-busy', 'false');
+        sp.classList.remove('illu-splash--gone', 'illu-splash--hiding');
+        sp.style.removeProperty('display');
+        sp.getAnimations().forEach((a) => a.cancel());
+        sp.style.opacity = '1';
+
+        if (app) {
+            app.getAnimations().forEach((a) => a.cancel());
+            app.classList.remove('illu-boot-hidden');
+            app.removeAttribute('aria-hidden');
+            app.style.visibility = 'visible';
+            app.style.opacity = '0';
+            app.style.pointerEvents = 'none';
+        }
+
+        let finished = false;
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            sp.getAnimations().forEach((a) => a.cancel());
+            if (app) app.getAnimations().forEach((a) => a.cancel());
+            sp.classList.add('illu-splash--hiding');
+            sp.style.opacity = '0';
+            if (app) {
+                app.style.opacity = '1';
+                app.style.removeProperty('pointer-events');
+            }
+            onDone();
+        };
+
+        void sp.offsetWidth;
+        if (app) void app.offsetWidth;
+
+        const animOpts = { duration: fadeMs, easing: 'ease-out', fill: 'forwards' };
+        const runners = [];
+        if (typeof sp.animate === 'function') {
+            runners.push(sp.animate([{ opacity: 1 }, { opacity: 0 }], animOpts).finished);
+        }
+        if (app && typeof app.animate === 'function') {
+            runners.push(app.animate([{ opacity: 0 }, { opacity: 1 }], animOpts).finished);
+        }
+
+        if (runners.length) {
+            Promise.all(runners.map((p) => p.catch(() => {}))).then(finish);
+        } else {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    sp.classList.add('illu-splash--hiding');
+                    const onEnd = (e) => {
+                        if (e.target !== sp || e.propertyName !== 'opacity') return;
+                        finish();
+                    };
+                    sp.addEventListener('transitionend', onEnd, { once: true });
+                });
+            });
+        }
+
+        window.setTimeout(finish, fadeMs + 150);
+    }
+
+    /** Affiche la zone statut + barre une fois la couleur d’accent appliquée (évite le scintillement). */
+    window.illuRevealSplashProgress = function () {
+        const ov = document.querySelector('.illu-splash__overlay-bottom--boot');
+        if (ov) ov.classList.add('illu-splash__overlay-bottom--ready');
+    };
+
+    /** Animation d’entrée du sous-titre (version) quand le texte est prêt. */
+    window.illuRevealSplashSub = function () {
+        const sub = document.getElementById('illu-splash-sub');
+        if (sub) sub.classList.add('illu-splash__sub--ready');
+    };
 
     window.IlluBusyState = window.IlluBusyState || {
         begin(tag, meta) {
@@ -66,6 +210,9 @@
          */
         splash(pct, msg) {
             if (splashBootStartMs === null) splashBootStartMs = Date.now();
+            if (typeof window.illuRevealSplashProgress === 'function') {
+                window.illuRevealSplashProgress();
+            }
             setFill('illu-splash-fill', pct);
             if (msg !== undefined) {
                 const el = document.getElementById('illu-splash-status');
@@ -74,54 +221,22 @@
         },
 
         /**
-         * Ferme le splash (durée minimale 1 s depuis le premier splash).
+         * Ferme le splash (durée minimale depuis le premier splash, puis fondu).
          * @param {function} [onSplashHidden] appelé une fois le splash masqué et `illu-splash-active` retiré (ex. fenêtre paramètres au 1er lancement).
          */
         finishBoot(onSplashHidden) {
-            const MIN_SPLASH_MS = 1000;
             const t0 = splashBootStartMs != null ? splashBootStartMs : Date.now();
             const elapsed = Date.now() - t0;
             const delay = Math.max(0, MIN_SPLASH_MS - elapsed);
 
-            const hideSplash = () => {
-                splashBootStartMs = null;
-                const sp = document.getElementById('illu-splash');
-                const app = document.getElementById('app-window');
-                if (sp) {
-                    sp.style.display = 'none';
-                    sp.setAttribute('aria-hidden', 'true');
-                }
-                if (app) {
-                    app.classList.remove('illu-boot-hidden');
-                    app.removeAttribute('aria-hidden');
-                }
-                document.body.classList.remove('illu-splash-active');
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        window.dispatchEvent(new Event('resize'));
-                        if (window.EditorManager && typeof window.EditorManager.applyCanvasViewportOnly === 'function') {
-                            window.EditorManager.applyCanvasViewportOnly();
-                        }
-                        if (typeof window.illuClampAllFloatingPalettes === 'function') {
-                            window.illuClampAllFloatingPalettes();
-                        }
-                    });
-                });
-                if (typeof onSplashHidden === 'function') {
-                    queueMicrotask(() => {
-                        try {
-                            onSplashHidden();
-                        } catch (e) {
-                            /* ignore */
-                        }
-                    });
-                }
+            const startFadeOut = () => {
+                illuRunSplashFadeOut(() => illuFinalizeSplashHidden(onSplashHidden));
             };
 
             if (delay > 0) {
-                setTimeout(hideSplash, delay);
+                setTimeout(startFadeOut, delay);
             } else {
-                hideSplash();
+                startFadeOut();
             }
         },
 
@@ -129,25 +244,12 @@
          * Masquage immédiat (ou presque) du splash / overlay de progression.
          */
         hide() {
-            // On réutilise la logique de masquage
             const sp = document.getElementById('illu-splash');
-            const app = document.getElementById('app-window');
             if (sp) {
-                sp.style.display = 'none';
-                sp.setAttribute('aria-hidden', 'true');
+                sp.classList.remove('illu-splash--hiding');
+                sp.classList.add('illu-splash--gone');
             }
-            if (app) {
-                app.classList.remove('illu-boot-hidden');
-                app.removeAttribute('aria-hidden');
-            }
-            document.body.classList.remove('illu-splash-active');
-            splashBootStartMs = null;
-            
-            // On déclenche un resize car l'UI peut avoir changé
-            requestAnimationFrame(() => {
-                window.dispatchEvent(new Event('resize'));
-            });
-            
+            illuFinalizeSplashHidden(null);
             this.statusDone();
         },
 
@@ -176,7 +278,6 @@
             setFill('illu-status-progress-fill', pct);
             const n = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
             row.setAttribute('aria-valuenow', String(n));
-            // Message supprimé à la demande de l'utilisateur
         },
 
         statusDone() {
@@ -242,16 +343,6 @@
 
         /**
          * Affiche la fenêtre « Traitement » uniquement si l’opération dépasse un court délai.
-         * Usage :
-         *   const busy = IlluProgress.createDelayedInstantEffect('Niveaux', 180);
-         *   busy.progress(20);
-         *   await workerPromise;
-         *   busy.progress(100);
-         *   busy.done();
-         *
-         * @param {string} effectDisplayName
-         * @param {number} [delayMs]
-         * @returns {{ progress: (pct:number)=>void, done: ()=>void, showNow: ()=>void, get visible(): boolean }}
          */
         createDelayedInstantEffect(effectDisplayName, delayMs) {
             const api = this;

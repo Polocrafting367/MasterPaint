@@ -326,38 +326,27 @@ const workspaceEl = document.getElementById('workspace');
 
 if (workspaceEl) {
     workspaceEl.addEventListener('wheel', (e) => {
-        const t = window.activeTool || 'select';
+        const onCanvas = e.target.closest('#main-canvas-container');
+        const inWorkspace = e.target.closest('#workspace');
+        if (!onCanvas && !inWorkspace) return;
 
-        // Si Ctrl est enfoncé, on zoome toujours et on bloque le scroll
-        if (e.ctrlKey) {
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        const p = EditorManager.activeProject;
+
+        // Maj + molette : panoramique (pixel et SVG)
+        if (e.shiftKey && !e.ctrlKey && p) {
             e.preventDefault();
-            const delta = e.deltaY < 0 ? 0.08 : -0.08;
-            EditorManager.zoom(delta, e.clientX, e.clientY);
+            const scrollStep = e.deltaY;
+            p.canvasPanX = (p.canvasPanX || 0) - scrollStep;
+            EditorManager.applyCanvasViewportOnly();
             return;
         }
 
-        // Si on est précisément sur le canevas, on peut capturer le wheel pour les outils
-        const onCanvas = e.target.closest('#main-canvas-container');
-
-        // Sinon, comportement contextuel
-        const isSizeTool = ['brush', 'pencil', 'eraser'].includes(t);
-        const isTextTool = (t === 'text');
-
-        if (onCanvas && isSizeTool) {
+        // Molette sur workspace / canevas : zoom (Ctrl optionnel, pixel et SVG)
+        if (p) {
             e.preventDefault();
-            const delta = e.deltaY < 0 ? 5 : -5;
-            window.adjustToolSizeStep(delta);
-        } else if (onCanvas && isTextTool) {
-            e.preventDefault();
-            const delta = e.deltaY < 0 ? 2 : -2;
-            window.adjustTextSizeStep(delta);
-        } else if (onCanvas) {
-            // Zoom direct sur canevas sans Ctrl
-            e.preventDefault();
-            const delta = e.deltaY < 0 ? 0.08 : -0.08;
             EditorManager.zoom(delta, e.clientX, e.clientY);
         }
-        // Si on n'est pas sur le canevas, on laisse le wheel buller pour scroller la page
     }, { passive: false });
 }
 
@@ -402,7 +391,12 @@ window.addEventListener('keydown', (e) => {
             window.vectorQuadBezierClickState = null;
         }
         if (typeof window._quadBezierPreviewDoc !== 'undefined') window._quadBezierPreviewDoc = null;
-        EditorManager.deselectAll();
+        e.preventDefault();
+        if (typeof window.illuDeselectLikeCtrlD === 'function') {
+            window.illuDeselectLikeCtrlD();
+        } else if (typeof EditorManager.deselectAll === 'function') {
+            EditorManager.deselectAll();
+        }
         return;
     }
     const isEnterKey =
@@ -525,10 +519,11 @@ window.addEventListener('keydown', (e) => {
 
     if (k === 'd' && !e.shiftKey) {
         e.preventDefault();
-        if (typeof window.finalizePendingPixelLiveEdits === 'function' && window.finalizePendingPixelLiveEdits()) {
-            return;
+        if (typeof window.illuDeselectLikeCtrlD === 'function') {
+            window.illuDeselectLikeCtrlD();
+        } else if (typeof EditorManager.deselectAll === 'function') {
+            EditorManager.deselectAll();
         }
-        EditorManager.deselectAll();
         return;
     }
 
@@ -835,6 +830,17 @@ document.addEventListener('contextmenu', (e) => {
                 return;
             }
             if (btn.hasAttribute('data-selection-mode')) return;
+            if (btn.id === 'tool-shape-free-corners') {
+                e.preventDefault();
+                if (typeof window.illuHandleShapeRectFreeCornersClick === 'function') {
+                    window.illuHandleShapeRectFreeCornersClick();
+                }
+                if (typeof window.syncShapeRectFreeCornersArmUI === 'function') {
+                    window.syncShapeRectFreeCornersArmUI();
+                }
+                return;
+            }
+            if (btn.id === 'select-rect-free-corners') return;
             e.preventDefault();
             const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
             const chkid = btn.getAttribute('data-illu-toggle-check');
@@ -860,6 +866,12 @@ document.addEventListener('contextmenu', (e) => {
                         typeof window.syncPixelTextEditorStyles === 'function'
                     ) {
                         window.syncPixelTextEditorStyles();
+                    }
+                    if (
+                        chkid === 'tool-text-stroke' &&
+                        typeof window.syncTextStrokeWidthControlState === 'function'
+                    ) {
+                        window.syncTextStrokeWidthControlState();
                     }
                     window.syncAllToolbarToggles();
                 }
@@ -902,12 +914,20 @@ document.addEventListener('contextmenu', (e) => {
                     on = chk && chk.checked;
                 } else if (selMode) {
                     on = window.selectionMode === selMode;
+                } else if (btn.id === 'tool-shape-free-corners' && typeof EditorManager !== 'undefined') {
+                    on = !!EditorManager.toolProps.shapeRectFreeCornersArm;
                 }
 
                 btn.classList.toggle('illu-icon-toggle--on', on);
                 btn.classList.toggle('active', on);
                 btn.setAttribute('aria-pressed', on ? 'true' : 'false');
             });
+        if (typeof window.syncTextStrokeWidthControlState === 'function') {
+            window.syncTextStrokeWidthControlState();
+        }
+        if (typeof window.syncShapeRectFreeCornersArmUI === 'function') {
+            window.syncShapeRectFreeCornersArmUI();
+        }
     };
 
     window.syncIlluShapeToolIconToggles = window.syncAllToolbarToggles;

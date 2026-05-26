@@ -35,7 +35,46 @@
     </style>
 </head>
 
-<body class="ui-layout-floating illu-splash-active" style="background-color: #0d8f8f;">
+<body class="ui-layout-floating illu-splash-active">
+    <script>
+        (function () {
+            function hexToRgb(hex) {
+                const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex || '').trim());
+                if (!m) return [15, 45, 92];
+                return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+            }
+            function rgbToHex(r, g, b) {
+                const h = (n) => {
+                    const x = Math.max(0, Math.min(255, Math.round(n))).toString(16);
+                    return x.length === 1 ? '0' + x : x;
+                };
+                return '#' + h(r) + h(g) + h(b);
+            }
+            function mix(a, b, t) {
+                return [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
+            }
+            const presets = [
+                '#b91c1c', '#f97316', '#b45309', '#ca8a04', '#166534', '#059669',
+                '#0d7a7a', '#0f2d5c', '#5b21b6', '#c026d3', '#db2777'
+            ];
+            let hex = '#0f2d5c';
+            try {
+                const s = localStorage.getItem('illu_accent');
+                if (s && presets.includes(String(s).toLowerCase())) hex = String(s).toLowerCase();
+            } catch (e) { /* ignore */ }
+            const rgb = hexToRgb(hex);
+            const light = mix(rgb, [255, 255, 255], 0.38);
+            const desk = mix(rgb, [0, 128, 128], 0.42);
+            const root = document.documentElement;
+            root.style.setProperty('--mp-accent', hex);
+            root.style.setProperty('--mp-accent-rgb', rgb.join(', '));
+            root.style.setProperty('--mp-title-light', rgbToHex(light[0], light[1], light[2]));
+            const deskHex = rgbToHex(desk[0], desk[1], desk[2]);
+            root.style.setProperty('--illu-splash-desk', deskHex);
+            document.body.style.backgroundColor = deskHex;
+            window._illuSplashDeskColor = deskHex;
+        })();
+    </script>
 
     <!-- Sprite SVG icônes internes -->
     <script src="js/app/illu-sprite-loader.js"></script>
@@ -83,20 +122,23 @@
             window._illuSplashSrc = selectedSrc;
         })();
     </script>
-    <div id="illu-splash" class="illu-splash" style="background-color: #0d8f8f;" role="alert" aria-live="polite"
-        aria-busy="true">
+    <div id="illu-splash" class="illu-splash" role="alert" aria-live="polite" aria-busy="true">
         <div class="illu-splash__frame">
             <img id="illu-splash-img" class="illu-splash__img" src="start1.png" alt="" width="640" height="360"
                 decoding="async" onerror="this.classList.add('illu-splash__img--missing')">
             <script>
                 // Application immédiate pour éviter le flash de l'image par défaut si différente
                 if (window._illuSplashSrc) document.getElementById('illu-splash-img').src = window._illuSplashSrc;
+                (function () {
+                    const sp = document.getElementById('illu-splash');
+                    if (sp && window._illuSplashDeskColor) sp.style.backgroundColor = window._illuSplashDeskColor;
+                })();
             </script>
             <div class="illu-splash__brand">
                 <h1 class="illu-splash__title">MasterPaint</h1>
-                <p class="illu-splash__sub"><span id="illu-version-text"></span>Par polocrafting 367</p>
+                <p class="illu-splash__sub illu-splash__sub--boot" id="illu-splash-sub"><span id="illu-version-text"></span>Par polocrafting 367</p>
             </div>
-            <div class="illu-splash__overlay-bottom">
+            <div class="illu-splash__overlay-bottom illu-splash__overlay-bottom--boot">
                 <p class="illu-splash__status" id="illu-splash-status"></p>
                 <div class="illu-mp-progress-indicator illu-mp-progress-indicator--segmented illu-splash__track"
                     aria-hidden="true">
@@ -133,7 +175,7 @@
                                 aria-hidden="true"><i class="fa-regular fa-folder-open"></i></span><span
                                 data-i18n="menu.fileOpen">Ouvrir / Importer image…</span></li>
                         <input type="file" id="file-import" style="display: none"
-                            accept="image/png,image/jpeg,image/svg+xml,.illu,.pdn,application/json,.cr2,.cr3,.nef,.nrw,.arw,.dng,.raf,.orf,.rw2,.pef,.srw,.3fr,.iiq,.raw,.rwz,.kdc,.dcr,.x3f,.mef,.mos,.j6i,.rwl,.sr2,.srf,.bay,.cap,.dcs,.drf,.eip,.erf,.fff,.k25,.mdc,.mrw,.obm,.pxn,.r3d"
+                            accept="image/*,image/svg+xml,.svg,.illu,.pdn"
                             onchange="importFile(event)">
                         <li role="menuitem" class="menu-row-icon" onclick="WorkspaceIO&&WorkspaceIO.showExportDialog()">
                             <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-download"></i></span>
@@ -523,6 +565,11 @@
                                     class="fa-solid fa-check" id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
                                     class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winRulers">Règles</span></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluShowAllRibbonOptions()"><span
+                                class="menu-icon" aria-hidden="true"><i
+                                    class="fa-solid fa-check" id="menu-win-show-all-ribbon-options-check" style="visibility: hidden;"></i></span><i
+                                    class="fa-solid fa-eye" style="margin-right: 6px;"></i><span
+                                data-i18n="menu.winShowAllRibbonOptions">Toutes les options du ruban</span></li>
                         <li role="menuitem" class="divider"></li>
                         <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
                                 aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
@@ -646,13 +693,11 @@
                 <div id="tool-options-bar-row1" class="tool-options-bar illu-toolbar-ribbon-row">
                     <div id="tool-pinned-toggles" class="tool-pinned-toggles" role="group"
                         aria-label="Modes et actions sélection">
-                        <div id="tool-main-header" class="illu-tool-header">
-                            <label class="illu-tool-picker" for="illu-tool-list-select" tabindex="0">
-                                <span id="tool-icon-preview" class="illu-tool-header-icon" aria-hidden="true"></span>
-                                <span id="illu-tool-picker-label" class="illu-tool-picker-label"></span>
-                                <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
-                                <select id="illu-tool-list-select" class="illu-select-mini illu-tool-picker-select opt-tool-name"
-                                    data-i18n-title="title.activeTool">
+                        <div id="tool-main-header" class="illu-tool-header" tabindex="0" role="combobox"
+                            aria-haspopup="listbox" aria-controls="illu-tool-list-select"
+                            data-i18n-aria-label="title.activeTool">
+                            <select id="illu-tool-list-select" class="illu-select-mini illu-tool-picker-select opt-tool-name"
+                                    data-i18n-title="title.activeTool" tabindex="-1" aria-hidden="true">
                                     <option value="select" data-i18n="tool.select">Sélection</option>
                                     <option value="direct-select" data-i18n="tool.direct-select">Lasso</option>
                                     <option value="wand" data-i18n="tool.wand">Baguette</option>
@@ -677,6 +722,10 @@
                                     <option value="text" data-i18n="tool.text">Texte</option>
                                     <option value="shadow" data-i18n="tool.shadow">Ombre portée</option>
                                 </select>
+                            <label class="illu-tool-picker" for="illu-tool-list-select" aria-hidden="true">
+                                <span id="tool-icon-preview" class="illu-tool-header-icon" aria-hidden="true"></span>
+                                <span id="illu-tool-picker-label" class="illu-tool-picker-label"></span>
+                                <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
                             </label>
                         </div>
 
@@ -920,6 +969,7 @@
                     </div>
 
                     <div id="opt-grp-shapes-actions" class="opt-grp" hidden>
+                        <span class="illu-shape-style-fill-group illu-ribbon-grid-3x2">
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-shape-mode-group" data-i18n-title="title.shapeModeGroup">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="tool-shape-mode"
@@ -963,6 +1013,17 @@
                                     </svg></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.gradientShort">Dégr.</span>
                             </span>
+                        </span>
+                        <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline"
+                            id="tool-shape-free-corners-wrap" hidden>
+                            <button type="button" id="tool-shape-free-corners"
+                                class="illu-icon-toggle illu-mode-toggle-btn" aria-pressed="false"
+                                data-i18n-title="tools.shapeFreeCorners"><svg class="illu-shape-ico" width="16"
+                                    height="16" aria-hidden="true">
+                                    <use href="#illu-icon-sel-free-corners" />
+                                </svg></button>
+                            <span class="illu-mode-toggle-lbl" data-i18n="tools.shapeFreeCornersShort">4 coins</span>
+                        </span>
                         </span>
                         <span id="tool-shape-grad-type-actions" class="illu-icon-toggle-group illu-mode-toggle-group" hidden
                             data-i18n-title="title.shapeGradTypeGroup">
@@ -1079,7 +1140,7 @@
                     </div>
 
                     <div id="opt-grp-text-actions" class="opt-grp" hidden>
-                        <span class="illu-text-style-fill-group">
+                        <span class="illu-text-style-fill-group illu-ribbon-grid-3x2">
                             <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-style-group" data-i18n-title="title.textStyleGroup">
                                 <span class="illu-mode-toggle-item">
                                     <button type="button" id="btn-text-bold" class="illu-icon-toggle"
@@ -1388,18 +1449,16 @@
                                 <input type="range" id="tool-size" class="illu-gauge-input" min="1" max="600" value="5">
                             </span>
                         </span>
-                        <div class="opt-sep"></div>
-                        <span id="pencil-close-row" class="field-row illu-size-extra-row">
-                            <label class="opt-bar-check">
-                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close">
-                                <span data-i18n="tools.optClosePath">Fermer</span>
-                            </label>
+                        <span id="tool-line-contour-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-line-contour" class="illu-opt-lbl" data-i18n="tools.lineContour">Contour</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-line-contour-val">0</span>
+                                <input type="range" id="tool-line-contour" class="illu-gauge-input" min="0" max="128"
+                                    value="0">
+                            </span>
                         </span>
-                    </div>
-
-                    <div id="opt-grp-brush-hardness" class="opt-grp" hidden>
-                        <div class="opt-sep"></div>
-                        <span id="tool-brush-hardness-row" class="field-row illu-gauge-field">
+                        <span id="tool-brush-hardness-row" class="field-row illu-gauge-field" hidden>
                             <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
                                 data-i18n-title="tools.brushHardness">Dureté</label>
                             <span class="illu-gauge-wrap">
@@ -1408,6 +1467,13 @@
                                 <input type="range" id="tool-brush-hardness" class="illu-gauge-input" min="0" max="100"
                                     value="100">
                             </span>
+                        </span>
+                        <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
+                            <label class="opt-bar-check">
+                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1"
+                                    disabled>
+                                <span data-i18n="tools.optClosePath">Fermer</span>
+                            </label>
                         </span>
                     </div>
 
@@ -1464,7 +1530,7 @@
                         </span>
                     </div>
 
-                    <div id="opt-grp-fill-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                    <div id="opt-grp-fill-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked" hidden>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-fill-mode-group" data-i18n-title="tools.fillMode">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
@@ -1501,7 +1567,18 @@
                             <label data-i18n="tools.shapeFillStyle">Style rempl.</label>
                         </span>
                         <div class="opt-sep"></div>
-                        <span id="tool-shape-corner-row" class="field-row illu-gauge-field">
+                        <span id="tool-triangle-branches-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-triangle-branches" class="illu-opt-lbl"
+                                data-i18n="tools.triangleBranches">Branches</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-triangle-branches-val">3</span>
+                                <input type="range" id="tool-triangle-branches" class="illu-gauge-input" min="3"
+                                    max="24" value="3" step="1">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="tool-triangle-branches-sep"></div>
+                        <span id="tool-shape-corner-row" class="field-row illu-gauge-field" hidden>
                             <label for="tool-shape-corner-radius" class="illu-opt-lbl"
                                 data-i18n="tools.shapeCornerRadius">Arrondi</label>
                             <span class="illu-gauge-wrap">
@@ -1526,9 +1603,9 @@
 
                     <div id="opt-grp-text-params" class="opt-grp" hidden>
                         <span id="tool-text-font-size-stack" class="illu-text-font-size-stack">
-                        <span class="field-row illu-text-font-row" style="display: flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; padding: 0;">
-                            <label for="tool-text-font" class="illu-opt-lbl illu-text-font-field-lbl" data-i18n="tools.textFont">Police</label>
-                            <select id="tool-text-font" class="illu-select-mini">
+                        <span class="field-row illu-gauge-field illu-text-font-row">
+                            <label for="tool-text-font" class="illu-opt-lbl" data-i18n="tools.textFont">Police</label>
+                            <select id="tool-text-font" class="illu-select-mini illu-text-font-select">
                                 <option value="Arial, sans-serif">Arial</option>
                                 <option value="'Courier New', monospace">Courier New</option>
                                 <option value="'Times New Roman', serif">Times New Roman</option>
@@ -1547,15 +1624,15 @@
                                     value="18">
                             </span>
                         </span>
-                        </span>
-                        <span id="tool-text-stroke-w-row" class="field-row illu-gauge-field">
+                        <span id="tool-text-stroke-w-row" class="field-row illu-gauge-field illu-text-stroke-w-row">
                             <label for="tool-text-stroke-w" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Ép. contour</label>
                             <span class="illu-gauge-wrap">
                                 <span class="illu-gauge-fill" aria-hidden="true"></span>
                                 <span class="illu-gauge-val" id="tool-text-stroke-w-val">2</span>
                                 <input type="range" id="tool-text-stroke-w" class="illu-gauge-input" min="1" max="150"
-                                    value="2">
+                                    value="2" disabled>
                             </span>
+                        </span>
                         </span>
                         <div class="opt-sep" id="tool-text-grad-angle-sep"></div>
                         <span id="tool-text-grad-angle-row" class="field-row illu-gauge-field" hidden>
@@ -1599,9 +1676,9 @@
                         </span>
                     </div>
 
-                    <div id="opt-grp-warp-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                    <div id="opt-grp-warp-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked" hidden>
                         <span id="opt-warp-resample-wrap">
-                        <span class="illu-opt-lbl" data-i18n="settings.resample">Lissage</span>
+                        <span class="illu-opt-lbl" data-i18n="settings.resampleRibbonShort">Interp.</span>
                         <select id="tool-warp-resampling" class="illu-select-mini"
                             onchange="if(window.EditorManager) window.EditorManager.toolProps.warpResampling = this.value">
                             <option value="smooth" data-i18n="settings.resampleSmooth">Lissage</option>
@@ -1727,16 +1804,6 @@
                                 <div class="tool-group">
                                     <button class="tool-btn" id="tool-rect" data-i18n-title="title.toolRect"><i
                                             class="fa-regular fa-square"></i></button>
-                                    <button class="tool-btn" id="tool-circle" data-i18n-title="title.toolCircle"><i
-                                            class="fa-regular fa-circle"></i></button>
-                                    <button class="tool-btn" type="button" id="tool-triangle"
-                                        data-i18n-title="title.toolTriangle"><svg class="tool-icon" viewBox="0 0 16 16"
-                                            width="14" height="14" aria-hidden="true" focusable="false">
-                                            <path d="M8 2.5 L14.5 13.5 H1.5 Z" fill="none" stroke="currentColor"
-                                                stroke-width="1.35" stroke-linejoin="round" />
-                                        </svg></button>
-                                    <button class="tool-btn" id="tool-line" data-i18n-title="title.toolLine"><i
-                                            class="fa-solid fa-minus"></i></button>
                                     <button class="tool-btn" type="button" id="tool-round-3"
                                         data-i18n-title="title.toolRound"><svg class="tool-icon-roundrect"
                                             viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
@@ -1744,6 +1811,16 @@
                                             <rect x="2.25" y="2.25" width="11.5" height="11.5" rx="3.25" ry="3.25"
                                                 fill="none" stroke="currentColor" stroke-width="1.35" />
                                         </svg></button>
+                                    <button class="tool-btn" type="button" id="tool-triangle"
+                                        data-i18n-title="title.toolTriangle"><svg class="tool-icon" viewBox="0 0 16 16"
+                                            width="14" height="14" aria-hidden="true" focusable="false">
+                                            <path d="M8 2.5 L14.5 13.5 H1.5 Z" fill="none" stroke="currentColor"
+                                                stroke-width="1.35" stroke-linejoin="round" />
+                                        </svg></button>
+                                    <button class="tool-btn" id="tool-circle" data-i18n-title="title.toolCircle"><i
+                                            class="fa-regular fa-circle"></i></button>
+                                    <button class="tool-btn" id="tool-line" data-i18n-title="title.toolLine"><i
+                                            class="fa-solid fa-minus"></i></button>
                                     <button class="tool-btn" type="button" id="tool-cubic-3"
                                         data-i18n-title="title.toolCubic"><i
                                             class="fa-solid fa-bezier-curve"></i></button>
@@ -2416,6 +2493,7 @@
                 <div class="field-row">
                     <input type="radio" id="mode-vector" name="proj-mode" value="vector">
                     <label for="mode-vector" data-i18n="dlg.vectorMode">Vecteur (SVG)</label>
+                    <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
                 </div>
                 <div class="field-row">
                     <input type="radio" id="mode-pixel-dither" name="proj-mode" value="pixel-dither">
@@ -2520,7 +2598,10 @@
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 13001; align-items: center; justify-content: center;">
         <div class="window" style="width: 400px; max-width: 96vw;">
             <div class="title-bar">
-                <div class="title-bar-text">Importer un SVG</div>
+                <div class="title-bar-text">
+                    <span data-i18n="dlg.importSvg">Importer un SVG</span>
+                    <span class="illu-beta-tag illu-beta-tag--title" data-i18n="common.beta">BETA</span>
+                </div>
             </div>
             <div class="window-body" style="font-size: 12px; line-height: 1.4;">
                 <p style="margin: 0 0 8px;">Où importer ce fichier&nbsp;?</p>
@@ -3324,16 +3405,22 @@
     <div id="illu-instant-effect-busy" class="illu-instant-effect-busy" hidden aria-hidden="true" aria-live="polite">
         <div class="illu-instant-effect-busy__backdrop" aria-hidden="true"></div>
         <div class="window illu-instant-effect-busy__box" role="dialog" aria-modal="true"
-            aria-labelledby="illu-instant-effect-busy-title">
+            aria-labelledby="illu-instant-effect-busy-title" style="min-width: 250px;">
             <div class="title-bar">
                 <div class="title-bar-text" id="illu-instant-effect-busy-title">Traitement</div>
+                <div class="title-bar-controls">
+                    <button type="button" aria-label="Close" onclick="if (window.IlluProgress) window.IlluProgress.instantEffectDone();"></button>
+                </div>
             </div>
-            <div class="window-body illu-instant-effect-busy__body">
-                <p id="illu-instant-effect-busy-msg" class="illu-instant-effect-busy__line"></p>
+            <div class="window-body illu-instant-effect-busy__body" style="display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
+                <p id="illu-instant-effect-busy-msg" class="illu-instant-effect-busy__line" style="margin: 0; text-align: center;"></p>
                 <div
                     class="illu-mp-progress-indicator illu-mp-progress-indicator--segmented illu-status-progress-track illu-instant-effect-busy__track">
                     <span class="illu-mp-progress-indicator__bar illu-status-progress-fill"
                         id="illu-instant-effect-busy-fill"></span>
+                </div>
+                <div style="text-align: right; margin-top: 4px;">
+                    <button type="button" style="padding: 2px 12px; font-size: 11px;" onclick="if (window.IlluProgress) window.IlluProgress.instantEffectDone();">Forcer la fermeture</button>
                 </div>
             </div>
         </div>

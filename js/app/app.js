@@ -17,6 +17,18 @@ window.illuSplashLog = function (msg) {
     }
 };
 
+/** Laisse le navigateur peindre / répondre (évite freeze sur gros .illu). */
+window.illuYieldToMain = function (frames) {
+    const n = Math.max(1, Number(frames) || 1);
+    return new Promise((resolve) => {
+        const step = (left) => {
+            if (left <= 0) resolve();
+            else requestAnimationFrame(() => step(left - 1));
+        };
+        step(n);
+    });
+};
+
 /** Taille document par défaut (nouveau projet / repli). */
 window.ILLU_DEFAULT_DOC_WIDTH = 1280;
 window.ILLU_DEFAULT_DOC_HEIGHT = 720;
@@ -200,6 +212,9 @@ function initIlluBeforeUnloadGuard() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initIlluBeforeUnloadGuard();
+    setTimeout(() => {
+        if (typeof window.illuRevealSplashSub === 'function') window.illuRevealSplashSub();
+    }, 900);
     window.illuSplashLog('Démarrage de l\'application...');
 
     // Auto-fetch version from changelog
@@ -209,7 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const m = t.match(/(\d+\.\d+\.\d+)/);
             const vEl = document.getElementById('illu-version-text');
             if (m && vEl) vEl.textContent = 'v' + m[1] + ' - ';
-        }).catch(() => { });
+            if (typeof window.illuRevealSplashSub === 'function') window.illuRevealSplashSub();
+        })
+        .catch(() => {
+            if (typeof window.illuRevealSplashSub === 'function') window.illuRevealSplashSub();
+        });
 
     const ov = document.getElementById('illu-alert-overlay');
     const ok = document.getElementById('illu-alert-ok');
@@ -1574,12 +1593,14 @@ window.loadExampleProject = async function () {
         const text = await res.text();
 
         if (window.IlluProgress) window.IlluProgress.splash(60, 'Analyse du projet…');
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
         const data = JSON.parse(text);
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
 
         if (data && data.format === 'illu-workspace') {
             if (window.WorkspaceIO && typeof window.WorkspaceIO.applyWorkspaceFromJsonText === 'function') {
                 if (window.IlluProgress) window.IlluProgress.splash(80, 'Application du projet…');
-                await window.WorkspaceIO.applyWorkspaceFromJsonText(text);
+                await window.WorkspaceIO.applyWorkspaceFromJsonText(data);
             } else {
                 throw new Error('Module WorkspaceIO indisponible');
             }
@@ -2122,6 +2143,58 @@ window.layoutPalettePhotoshop = function () {
     /* Les colonnes #palette-dock-* gèrent le placement ; rien à faire ici. */
 };
 
+/** Photoshop ancré : largeur du rail outils = contenu (#main-toolbox), sans resize manuel ni localStorage. */
+window.illuSyncToolsDockAutoWidth = function () {
+    if (!document.body.classList.contains('ui-layout-docked')) return;
+    if (document.body.classList.contains('illu-mobile-ui')) return;
+    const dock = document.getElementById('palette-dock-left');
+    const box = document.getElementById('main-toolbox');
+    if (!dock || !box) return;
+
+    dock.style.removeProperty('width');
+    dock.style.removeProperty('flex-basis');
+    dock.style.removeProperty('max-width');
+
+    const pad = 4;
+    const sw = Math.ceil(box.scrollWidth);
+    const w = Math.min(168, Math.max(36, sw + pad));
+    /* Sur body : body.ui-layout-docked définit aussi cette variable en CSS et gagnerait sur <html>. */
+    document.body.style.setProperty('--palette-dock-left-width', w + 'px');
+    document.documentElement.style.removeProperty('--palette-dock-left-width');
+};
+
+/** Observe la boîte à outils pour ajuster --palette-dock-left-width automatiquement. */
+window.illuInitToolsDockAutoWidth = function () {
+    const dock = document.getElementById('palette-dock-left');
+    const box = document.getElementById('main-toolbox');
+    if (!dock || !box) return;
+
+    dock.querySelectorAll('.illu-dock-left-resize-e').forEach((el) => el.remove());
+    try {
+        localStorage.removeItem('illu_tools_dock_width');
+    } catch (e) {
+        /* ignore */
+    }
+
+    if (dock.dataset.illuDockAutoWired === '1') {
+        window.illuSyncToolsDockAutoWidth();
+        return;
+    }
+    dock.dataset.illuDockAutoWired = '1';
+
+    const schedule = () => {
+        requestAnimationFrame(() => window.illuSyncToolsDockAutoWidth());
+    };
+
+    schedule();
+    if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(schedule);
+        ro.observe(box);
+        ro.observe(dock);
+    }
+    window.addEventListener('resize', schedule);
+};
+
 /**
  * Vide le dock bas Paint.NET sans détruire les nœuds des palettes (sinon innerHTML les retire du document).
  */
@@ -2224,6 +2297,14 @@ function mountPalettesFloating() {
     queueMicrotask(() => {
         if (typeof window.illuClampAllFloatingPalettes === 'function') window.illuClampAllFloatingPalettes();
     });
+    const leftDock = document.getElementById('palette-dock-left');
+    if (leftDock) {
+        delete leftDock.dataset.illuDockAutoWired;
+        leftDock.style.removeProperty('width');
+        leftDock.style.removeProperty('flex-basis');
+    }
+    document.body.style.removeProperty('--palette-dock-left-width');
+    document.documentElement.style.removeProperty('--palette-dock-left-width');
 }
 
 /** Téléphone : shell mobile (dock + sheets) ; palettes dans #illu-mobile-palette-pool. */
@@ -2381,6 +2462,9 @@ function mountPalettesDocked() {
     if (typeof window.illuUpdateDockRailVisibility === 'function') {
         window.illuUpdateDockRailVisibility();
     }
+    if (typeof window.illuSyncToolsDockAutoWidth === 'function') {
+        queueMicrotask(() => window.illuSyncToolsDockAutoWidth());
+    }
 }
 
 /** Masque uniquement la colonne de contenu du rail si les deux panneaux sont repliés ; les onglets restent visibles. */
@@ -2516,6 +2600,9 @@ window.applyUILayoutFromPreference = function () {
     }
     if (typeof window.illuInitToolbarRibbon === 'function') {
         window.illuInitToolbarRibbon();
+    }
+    if (typeof window.illuInitToolsDockAutoWidth === 'function') {
+        window.illuInitToolsDockAutoWidth();
     }
     queueMicrotask(() => {
         if (typeof window.initIlluPaletteGridResizeObserver === 'function') {
@@ -3704,6 +3791,14 @@ window.IlluTheme = {
 
         const classicLink = document.getElementById('theme-link-classic');
         if (classicLink) classicLink.disabled = false;
+
+        const desk = this.mix(rgb, [0, 128, 128], 0.42);
+        const deskHex = this.rgbToHex(desk[0], desk[1], desk[2]);
+        window._illuSplashDeskColor = deskHex;
+        document.documentElement.style.setProperty('--illu-splash-desk', deskHex);
+        document.body.style.backgroundColor = deskHex;
+        const sp = document.getElementById('illu-splash');
+        if (sp) sp.style.backgroundColor = deskHex;
     }
 };
 

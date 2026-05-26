@@ -1,5 +1,18 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.7.66 (26/05/26)
+- Réduit la selection d'importation au fichiers supporté
+- Modifier les outil de selection/déofrmation/déplacement pour plus de performance
+- Revu gestion des mignature pour les calcs
+- Continuer mise a jour du ruban d'obtion type office
+- Ajouter obtion 4 coins sur les forme type rectangle/rectangle arrondies
+- Permettre via l'outil triangle de crée des étoils
+- Modifier forme trais pour avoir le comportement d'une forme et non plus que d'un simple trais
+       > CAD permettre les bordure sur les forme trais
+- Correction bug lors du zoom avec le molette en mode SVG/BITMAT
+- Correction d'import de fichier illu qui fesait planté MasterPaint (chargement par calques, filtres dynamiques différés)
+- Revu annimation de chargement du site
+
 2.7.56 (25/05/26)
 - Calques : Supprimer / Monter / Descendre désactivés s’il ne reste qu’un calque
 - Ruban : mobile — Effacer/Copier/Coller dans l’alvéole Sélection ; bureau — Copier/Coller (icône+texte)...
@@ -51,7 +64,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ajout pour les 4pts d'une obtion de redraissement rectangulaire
 - Ajout obtion Régle et Visu des pixel en mode zoom fort
 
-2.7.13 (22/05/26)
+2.7.13 (22/05/26) MAJ VISUEL TELEPHONE
 - Revu gestion de la selection, des déplacements...
 - Obtimisation divers
 - Mode téléphone type app : barre du bas (menu fixe + scroll), sheets outils/couleurs/calques/effets...

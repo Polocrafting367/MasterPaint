@@ -47,6 +47,34 @@ let illuInteractiveVisualNeedSelection = false;
 let illuInteractiveVisualRenderOpts = {};
 let illuInteractiveVisualRaf = 0;
 
+/** Incrémenté à chaque nouvelle baguette ou annulation (rect/lasso/outil) — ignore les workers obsolètes. */
+window._illuWandOpGeneration = 0;
+window._illuWandWorker = null;
+
+/** Annule une baguette en cours (réponse worker trop tardive après sélection rect., etc.). */
+window.illuInvalidatePendingWandWorker = function () {
+    window._illuWandOpGeneration = (window._illuWandOpGeneration | 0) + 1;
+    if (window._illuWandWorker) {
+        try {
+            window._illuWandWorker.terminate();
+        } catch (e) {
+            /* ignore */
+        }
+        window._illuWandWorker = null;
+    }
+};
+
+/** Rafraîchit l’affichage du calque actif après modification des pixels (tampon + vues DOM). */
+window.illuFlushActiveLayerDisplay = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.isPixelMode) return;
+    EditorManager.render({ flushUiThumbnails: true });
+    const stack = document.getElementById('pixel-layer-stack');
+    const al = EditorManager.activeLayer;
+    if (stack && al && typeof EditorManager._syncSinglePixelDomLayerView === 'function') {
+        EditorManager._syncSinglePixelDomLayerView(stack, al);
+    }
+};
+
 function illuFlushInteractiveVisualRefresh() {
     if (illuInteractiveVisualNeedRender) {
         if (typeof EditorManager !== 'undefined' && EditorManager.render) {
@@ -73,6 +101,9 @@ function scheduleSelectionChromeRefresh(extra) {
             lassoPoints: o.lassoPoints
         });
     }
+    if (extra && extra.forceFullSelectionOverlay && typeof window.updateToolOptionsBar === 'function') {
+        window.updateToolOptionsBar();
+    }
 }
 
 function canUseSelectionOverlayFast() {
@@ -86,7 +117,7 @@ function illuScheduleInteractiveVisualRefresh(opts) {
     if (o.render) illuInteractiveVisualNeedRender = true;
     if (o.selection) illuInteractiveVisualNeedSelection = true;
     if (o.renderOpts) Object.assign(illuInteractiveVisualRenderOpts, o.renderOpts);
-    
+
     if (illuInteractiveVisualRaf) return;
 
     const now = performance.now();
@@ -94,7 +125,7 @@ function illuScheduleInteractiveVisualRefresh(opts) {
         typeof EditorManager !== 'undefined' &&
         EditorManager.activeLayer &&
         EditorManager.activeLayer.importPlacementPending;
-    const threshold = floatImport ? 200 : 16; 
+    const threshold = floatImport ? 200 : 16;
     if (now - illuInteractiveVisualLastTime < threshold) {
         illuInteractiveVisualRaf = setTimeout(() => {
             illuInteractiveVisualRaf = 0;
@@ -179,6 +210,272 @@ function illuTriangleWritePoints(shape, x, y, w, h, adj, vf) {
     shape.setAttribute('data-illu-bbox-h', String(h));
     shape.setAttribute('data-illu-triangle-adj', String(adj));
     shape.setAttribute('data-illu-triangle-vf', String(vf));
+    shape.removeAttribute('data-illu-star-branches');
+}
+
+/** Nombre de branches (3 = triangle, 4+ = étoile à n pointes). */
+function illuClampTriangleBranches(n) {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v)) return 3;
+    return Math.max(3, Math.min(24, v));
+}
+window.illuClampTriangleBranches = illuClampTriangleBranches;
+
+/** Points canvas (layer local) pour triangle ou étoile. */
+function illuStarCanvasPoints(lx, ly, w, h, branches) {
+    const n = illuClampTriangleBranches(branches);
+    w = Math.max(2, w);
+    h = Math.max(2, h);
+    if (n === 3) {
+        const adj = 0.5;
+        const vf = 0;
+        return [
+            { x: lx + w * adj, y: ly + h * vf },
+            { x: lx, y: ly + h },
+            { x: lx + w, y: ly + h }
+        ];
+    }
+    const cx = lx + w / 2;
+    const cy = ly + h / 2;
+    const outerR = Math.min(w, h) / 2;
+    const innerR = outerR * 0.38;
+    const pts = [];
+    const start = -Math.PI / 2;
+    for (let i = 0; i < n * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const a = start + (i * Math.PI) / n;
+        pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+    }
+    return pts;
+}
+window.illuStarCanvasPoints = illuStarCanvasPoints;
+
+function illuStarPathD(lx, ly, w, h, branches) {
+    const pts = illuStarCanvasPoints(lx, ly, w, h, branches);
+    if (!pts.length) return '';
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
+    return d + ' Z';
+}
+window.illuStarPathD = illuStarPathD;
+
+function illuShapeQuadPtsFromRect(lx, ly, w, h) {
+    return [
+        { x: lx, y: ly },
+        { x: lx + w, y: ly },
+        { x: lx + w, y: ly + h },
+        { x: lx, y: ly + h }
+    ];
+}
+
+function illuSyncShapeEditBBoxFromQuadPts(ed) {
+    if (!ed || !ed.pts || ed.pts.length < 4) return;
+    const xs = ed.pts.map((p) => p.x);
+    const ys = ed.pts.map((p) => p.y);
+    ed.lx = Math.min(...xs);
+    ed.ly = Math.min(...ys);
+    ed.w = Math.max(1, Math.max(...xs) - ed.lx);
+    ed.h = Math.max(1, Math.max(...ys) - ed.ly);
+}
+window.illuSyncShapeEditBBoxFromQuadPts = illuSyncShapeEditBBoxFromQuadPts;
+
+function illuQuadPtsMatchAxisRect(pts, lx, ly, w, h, eps) {
+    if (!pts || pts.length < 4) return false;
+    const e = eps != null ? eps : 0.5;
+    const x1 = lx + w;
+    const y1 = ly + h;
+    return (
+        Math.abs(pts[0].x - lx) <= e &&
+        Math.abs(pts[0].y - ly) <= e &&
+        Math.abs(pts[1].x - x1) <= e &&
+        Math.abs(pts[1].y - ly) <= e &&
+        Math.abs(pts[2].x - x1) <= e &&
+        Math.abs(pts[2].y - y1) <= e &&
+        Math.abs(pts[3].x - lx) <= e &&
+        Math.abs(pts[3].y - y1) <= e
+    );
+}
+window.illuQuadPtsMatchAxisRect = illuQuadPtsMatchAxisRect;
+
+function illuClampQuadCornerRadius(r, pts) {
+    if (!pts || pts.length < 3 || r <= 0) return 0;
+    let maxR = r;
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+        const prev = pts[(i + n - 1) % n];
+        const curr = pts[i];
+        const next = pts[(i + 1) % n];
+        maxR = Math.min(maxR, illuLen2d(prev.x, prev.y, curr.x, curr.y) * 0.5);
+        maxR = Math.min(maxR, illuLen2d(curr.x, curr.y, next.x, next.y) * 0.5);
+    }
+    return Math.max(0, maxR);
+}
+
+function illuLen2d(x0, y0, x1, y1) {
+    return Math.hypot(x1 - x0, y1 - y0);
+}
+
+/** Quad convexe à coins arrondis (mode 4 coins issu d’un rect. arrondi). */
+function illuDrawCanvasRoundedQuadPath(ctx, pts, r) {
+    const n = pts ? pts.length : 0;
+    if (!ctx || n < 3) return;
+    const rr = illuClampQuadCornerRadius(r, pts);
+    if (rr <= 0) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        return;
+    }
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+        const prev = pts[(i + n - 1) % n];
+        const curr = pts[i];
+        const next = pts[(i + 1) % n];
+        const len1 = illuLen2d(prev.x, prev.y, curr.x, curr.y);
+        const len2 = illuLen2d(curr.x, curr.y, next.x, next.y);
+        if (len1 < 1e-6 || len2 < 1e-6) continue;
+        const u1x = (curr.x - prev.x) / len1;
+        const u1y = (curr.y - prev.y) / len1;
+        const u2x = (next.x - curr.x) / len2;
+        const u2y = (next.y - curr.y) / len2;
+        const d1 = Math.min(rr, len1 * 0.5);
+        const d2 = Math.min(rr, len2 * 0.5);
+        const sx = curr.x - u1x * d1;
+        const sy = curr.y - u1y * d1;
+        const ex = curr.x + u2x * d2;
+        const ey = curr.y + u2y * d2;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+        ctx.quadraticCurveTo(curr.x, curr.y, ex, ey);
+    }
+    ctx.closePath();
+}
+
+function illuShapeRoundedQuadPathD(pts, r, docOx, docOy) {
+    if (!pts || pts.length < 4) return '';
+    const ox = docOx || 0;
+    const oy = docOy || 0;
+    const rr = illuClampQuadCornerRadius(r, pts);
+    if (rr <= 0) return illuShapeQuadPathD(pts, ox, oy);
+    const n = pts.length;
+    let d = '';
+    for (let i = 0; i < n; i++) {
+        const prev = pts[(i + n - 1) % n];
+        const curr = pts[i];
+        const next = pts[(i + 1) % n];
+        const len1 = illuLen2d(prev.x, prev.y, curr.x, curr.y);
+        const len2 = illuLen2d(curr.x, curr.y, next.x, next.y);
+        if (len1 < 1e-6 || len2 < 1e-6) continue;
+        const u1x = (curr.x - prev.x) / len1;
+        const u1y = (curr.y - prev.y) / len1;
+        const u2x = (next.x - curr.x) / len2;
+        const u2y = (next.y - curr.y) / len2;
+        const d1 = Math.min(rr, len1 * 0.5);
+        const d2 = Math.min(rr, len2 * 0.5);
+        const sx = curr.x - u1x * d1 + ox;
+        const sy = curr.y - u1y * d1 + oy;
+        const ex = curr.x + u2x * d2 + ox;
+        const ey = curr.y + u2y * d2 + oy;
+        const cx = curr.x + ox;
+        const cy = curr.y + oy;
+        if (i === 0) d += `M ${sx} ${sy}`;
+        else d += ` L ${sx} ${sy}`;
+        d += ` Q ${cx} ${cy} ${ex} ${ey}`;
+    }
+    return d + ' Z';
+}
+
+function illuDrawCanvasQuadPath(ctx, pts, opts) {
+    if (!ctx || !pts || pts.length < 4) return;
+    const o = opts || {};
+    const lx = o.lx;
+    const ly = o.ly;
+    const w = o.w;
+    const h = o.h;
+    const r = o.r != null ? o.r : 0;
+    if (o.quadBase === 'roundrect' && r > 0) {
+        if (
+            lx != null &&
+            ly != null &&
+            w > 0 &&
+            h > 0 &&
+            illuQuadPtsMatchAxisRect(pts, lx, ly, w, h)
+        ) {
+            const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+            ctx.beginPath();
+            if (typeof ctx.roundRect === 'function') ctx.roundRect(lx, ly, w, h, rr);
+            else ctx.rect(lx, ly, w, h);
+            return;
+        }
+        illuDrawCanvasRoundedQuadPath(ctx, pts, r);
+        return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+}
+window.illuDrawCanvasRoundedQuadPath = illuDrawCanvasRoundedQuadPath;
+window.illuShapeRoundedQuadPathD = illuShapeRoundedQuadPathD;
+window.illuClampQuadCornerRadius = illuClampQuadCornerRadius;
+
+function illuShapeQuadPathD(pts, docOx, docOy) {
+    if (!pts || pts.length < 4) return '';
+    const ox = docOx || 0;
+    const oy = docOy || 0;
+    let d = `M ${pts[0].x + ox} ${pts[0].y + oy}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x + ox} ${pts[i].y + oy}`;
+    return d + ' Z';
+}
+window.illuShapeQuadPathD = illuShapeQuadPathD;
+window.illuDrawCanvasQuadPath = illuDrawCanvasQuadPath;
+
+function illuShapeReadBranches(shape) {
+    const sb = parseInt(shape?.getAttribute?.('data-illu-star-branches'), 10);
+    if (Number.isFinite(sb) && sb > 3) return illuClampTriangleBranches(sb);
+    if (shape?.getAttribute?.('data-illu-triangle') === '1') return 3;
+    return illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+}
+
+/** Étoile / polygone à n branches dans une bbox (3 branches → triangle via illuTriangleWritePoints). */
+function illuStarWritePoints(shape, x, y, w, h, branches, adj, vf) {
+    const n = illuClampTriangleBranches(branches);
+    if (n === 3) {
+        illuTriangleWritePoints(
+            shape,
+            x,
+            y,
+            w,
+            h,
+            adj != null ? adj : 0.5,
+            vf != null ? vf : 0
+        );
+        return;
+    }
+    w = Math.max(2, w);
+    h = Math.max(2, h);
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const outerR = Math.min(w, h) / 2;
+    const innerR = outerR * 0.38;
+    const pts = [];
+    const total = n * 2;
+    const start = -Math.PI / 2;
+    for (let i = 0; i < total; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const a = start + (i * Math.PI) / n;
+        pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
+    }
+    shape.setAttribute('points', pts.join(' '));
+    shape.setAttribute('data-illu-star-branches', String(n));
+    shape.removeAttribute('data-illu-triangle');
+    shape.removeAttribute('data-illu-triangle-adj');
+    shape.removeAttribute('data-illu-triangle-vf');
+    shape.setAttribute('data-illu-bbox-x', String(x));
+    shape.setAttribute('data-illu-bbox-y', String(y));
+    shape.setAttribute('data-illu-bbox-w', String(w));
+    shape.setAttribute('data-illu-bbox-h', String(h));
 }
 
 /** Poignée jaune sur un côté du triangle (l = angle gauche / adj, r = angle droit / vf). */
@@ -290,9 +587,21 @@ function illuVectorShapeLocalBbox(shape) {
             h: parseFloat(shape.getAttribute('height')) || 0
         };
     }
-    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
-        const st = illuTriangleReadState(shape);
-        return { x: st.x, y: st.y, w: st.w, h: st.h };
+    if (tag === 'polygon') {
+        const sb = shape.getAttribute('data-illu-star-branches');
+        if (sb && parseInt(sb, 10) > 3) {
+            const x = parseFloat(shape.getAttribute('data-illu-bbox-x'));
+            const y = parseFloat(shape.getAttribute('data-illu-bbox-y'));
+            const w = parseFloat(shape.getAttribute('data-illu-bbox-w'));
+            const h = parseFloat(shape.getAttribute('data-illu-bbox-h'));
+            if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h)) {
+                return { x, y, w: Math.max(2, w), h: Math.max(2, h) };
+            }
+        }
+        if (shape.getAttribute('data-illu-triangle') === '1') {
+            const st = illuTriangleReadState(shape);
+            return { x: st.x, y: st.y, w: st.w, h: st.h };
+        }
     }
     return null;
 }
@@ -387,6 +696,119 @@ window.applyVectorRoundRectRadiusFromToolProps = function () {
     }
     EditorManager.render();
 };
+
+/** Met à jour un polygone triangle/étoile vecteur selon toolProps.triangleBranches. */
+function illuApplyTriangleBranchesToVectorPolygon(shape) {
+    if (!shape || (shape.tagName || '').toLowerCase() !== 'polygon') return false;
+    if (
+        shape.getAttribute('data-illu-triangle') !== '1' &&
+        !shape.getAttribute('data-illu-star-branches')
+    ) {
+        return false;
+    }
+    const st = illuTriangleReadState(shape);
+    if (st.w < 2 || st.h < 2) return false;
+    const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+    if (branches === 3) {
+        illuTriangleWritePoints(shape, st.x, st.y, st.w, st.h, st.adj, st.vf);
+    } else {
+        illuStarWritePoints(shape, st.x, st.y, st.w, st.h, branches);
+    }
+    return true;
+}
+
+/** Rafraîchit l’aperçu pixel pendant un drag de forme (triangle inclus). */
+window.illuRepaintShapeLiveDrawPreview = function () {
+    if (window.activeTool !== 'triangle') return false;
+    if (typeof window.illuIsShapeLiveDrawSession !== 'function' || !window.illuIsShapeLiveDrawSession()) {
+        return false;
+    }
+    const layer = EditorManager.activeLayer;
+    const ctx = EditorManager.activeCtx;
+    const buf = layer?.buffer;
+    if (!ctx || !buf || !window._shapeBackupCanvas) return false;
+    const pos = window._illuLastPointerDoc || { x: startX, y: startY };
+    const useShapePreview =
+        typeof EditorManager._canUseShapePreviewOverlay === 'function' &&
+        EditorManager._canUseShapePreviewOverlay();
+    if (useShapePreview) {
+        if (!EditorManager._shapePreviewActive && typeof EditorManager.beginShapePreviewIfNeeded === 'function') {
+            EditorManager.beginShapePreviewIfNeeded();
+        }
+        const pc = EditorManager._shapePreviewCanvas;
+        if (!pc) return false;
+        const pctx = pc.getContext('2d', { willReadFrequently: true });
+        pctx.clearRect(0, 0, buf.width, buf.height);
+        pctx.save();
+        if (
+            window.selectionBounds &&
+            (typeof window.hasActivePixelSelection !== 'function' || window.hasActivePixelSelection()) &&
+            window.activeTool !== 'select' &&
+            window.activeTool !== 'direct-select' &&
+            !isPixelWarpOrDeformTool()
+        ) {
+            applySelectionClip(pctx, layer.x, layer.y);
+        }
+        paintPixelShapeAt(pctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
+        pctx.restore();
+    } else {
+        ctx.clearRect(0, 0, buf.width, buf.height);
+        ctx.drawImage(window._shapeBackupCanvas, 0, 0);
+        paintPixelShapeAt(ctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
+    }
+    if (typeof illuScheduleInteractiveVisualRefresh === 'function') {
+        illuScheduleInteractiveVisualRefresh({ render: true });
+    }
+    if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+    return true;
+};
+
+/** Branches triangle/étoile : forme en édition pixel, brouillon vecteur ou aperçu en cours de tracé. */
+window.syncTriangleBranchesLivePreview = function () {
+    if (typeof EditorManager === 'undefined') return false;
+    const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+    let changed = false;
+
+    const ed = window.pixelShapeEdit;
+    if (ed && (ed.kind === 'triangle' || ed.kind === 'star')) {
+        if (branches === 3) {
+            ed.kind = 'triangle';
+            ed.adj = ed.adj != null ? ed.adj : 0.5;
+            ed.vf = ed.vf != null ? ed.vf : 0;
+            delete ed.branches;
+        } else {
+            ed.kind = 'star';
+            ed.branches = branches;
+        }
+        if (typeof window.redrawShapeFromEditLive === 'function') window.redrawShapeFromEditLive();
+        else if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
+        changed = true;
+    }
+
+    if (EditorManager.mode === 'vector') {
+        const seen = new Set();
+        const tryShape = (shape) => {
+            if (!shape || seen.has(shape)) return;
+            seen.add(shape);
+            if (illuApplyTriangleBranchesToVectorPolygon(shape)) changed = true;
+        };
+        if (currentElement) tryShape(currentElement);
+        const sel = EditorManager.activeVectorSelection;
+        if (sel && sel.length) sel.forEach(tryShape);
+        if (changed) {
+            if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
+            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+            EditorManager.render({ flushUiThumbnails: true });
+        }
+    }
+
+    if (typeof window.illuRepaintShapeLiveDrawPreview === 'function' && window.illuRepaintShapeLiveDrawPreview()) {
+        changed = true;
+    }
+
+    if (changed && typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+    return changed;
+};
 let currentElement = null; // For vector mode
 
 /** Désactivés en mode vecteur (réservés au bitmap / sélection pixel). */
@@ -409,25 +831,33 @@ const TOOL_OPTIONS_UI = {
     brush: {
         label: 'Pinceau',
         actionGroups: ['opt-grp-brush-actions'],
-        paramGroups: ['opt-grp-size-params', 'opt-grp-brush-hardness']
+        paramGroups: ['opt-grp-size-params']
     },
     pencil: { label: 'Crayon', actionGroups: [], paramGroups: ['opt-grp-size-params'] },
     eraser: {
         label: 'Gomme',
         actionGroups: ['opt-grp-brush-actions'],
-        paramGroups: ['opt-grp-size-params', 'opt-grp-brush-hardness']
+        paramGroups: ['opt-grp-size-params']
     },
     gradient: { label: 'Dégradé', actionGroups: ['opt-grp-gradient-actions'], paramGroups: [] },
     rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    line: { label: 'Ligne', actionGroups: ['opt-grp-line-endpoints'], paramGroups: ['opt-grp-size-params'] },
+    line: {
+        label: 'Ligne',
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-endpoints'],
+        paramGroups: ['opt-grp-size-params']
+    },
     fill: { label: 'Pot de peinture', actionGroups: [], paramGroups: ['opt-grp-fill-params'] },
     zoom: { label: 'Loupe', actionGroups: [], paramGroups: [] },
     text: { label: 'Texte', actionGroups: ['opt-grp-text-actions'], paramGroups: ['opt-grp-text-params'] },
     'direct-select': { label: 'Sélection à la volée', actionGroups: [], paramGroups: [] },
     deform: { label: 'Déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'warp-4': { label: 'Déformation 4 coins', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
-    'cubic-3': { label: 'Courbe (3 clics, Q)', actionGroups: ['opt-grp-line-endpoints'], paramGroups: ['opt-grp-size-params'] },
+    'cubic-3': {
+        label: 'Courbe (3 clics, Q)',
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-endpoints'],
+        paramGroups: ['opt-grp-size-params']
+    },
     'pen': { label: 'Plume', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'polygon': { label: 'Polygone', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
     'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
@@ -436,61 +866,81 @@ const TOOL_OPTIONS_UI = {
 };
 
 window.TOOL_OPTIONS_UI = TOOL_OPTIONS_UI;
-
-/** RAL Classic (approx. sRGB) : [numéro, r, g, b] — voisin le plus proche pour la pipette. */
 const ILLU_RAL_CLASSIC = [
-    [1000, 205, 186, 136], [1001, 208, 176, 132], [1002, 210, 170, 109], [1003, 249, 218, 108],
-    [1004, 228, 183, 72], [1005, 228, 183, 23], [1006, 237, 185, 11], [1007, 221, 175, 39],
-    [1011, 232, 227, 201], [1012, 221, 210, 152], [1013, 227, 218, 197], [1014, 221, 196, 154],
-    [1015, 230, 210, 181], [1016, 237, 222, 139], [1017, 247, 173, 99], [1018, 250, 202, 48],
-    [1019, 164, 143, 122], [1020, 160, 143, 101], [1021, 246, 182, 0], [1023, 247, 181, 0],
-    [1024, 186, 143, 76], [1027, 145, 95, 49], [1028, 128, 100, 31], [1032, 226, 163, 0],
-    [1033, 250, 163, 26], [1034, 225, 144, 49], [1035, 143, 131, 112], [1036, 128, 107, 42],
-    [1037, 246, 120, 40], [2000, 218, 110, 41], [2001, 186, 72, 27], [2002, 191, 64, 29],
-    [2003, 250, 121, 33], [2004, 226, 97, 65], [2005, 255, 83, 0], [2007, 255, 117, 20],
-    [2008, 237, 95, 28], [2009, 208, 84, 40], [2010, 209, 92, 49], [2011, 226, 110, 14],
-    [2012, 213, 101, 77], [2013, 146, 62, 37], [3000, 167, 41, 32], [3001, 155, 36, 35],
-    [3002, 155, 35, 33], [3003, 134, 26, 34], [3004, 107, 28, 35], [3005, 89, 25, 31],
-    [3007, 62, 32, 30], [3009, 89, 37, 30], [3011, 120, 31, 25], [3012, 196, 159, 152],
-    [3013, 151, 85, 84], [3014, 203, 115, 117], [3015, 216, 160, 166], [3016, 166, 61, 47],
-    [3017, 203, 85, 93], [3018, 199, 63, 74], [3020, 187, 30, 16], [3022, 207, 105, 110],
-    [3024, 255, 45, 33], [3026, 255, 42, 27], [3027, 171, 39, 79], [3028, 204, 44, 43],
-    [3031, 166, 52, 55], [4001, 129, 97, 131], [4002, 141, 60, 75], [4003, 196, 98, 140],
-    [4004, 101, 73, 122], [4005, 118, 106, 154], [4006, 144, 108, 152], [4007, 71, 36, 96],
-    [4008, 132, 76, 130], [4009, 157, 134, 146], [4010, 203, 115, 172], [4011, 140, 133, 153],
-    [4012, 176, 165, 177], [5000, 49, 79, 111], [5001, 15, 76, 129], [5002, 0, 56, 123],
-    [5003, 31, 56, 85], [5004, 25, 30, 40], [5005, 16, 44, 84], [5007, 61, 85, 104],
-    [5008, 38, 58, 91], [5009, 36, 93, 110], [5010, 0, 79, 124], [5011, 26, 43, 60],
-    [5012, 0, 137, 182], [5013, 25, 77, 121], [5014, 18, 104, 179], [5015, 0, 94, 131],
-    [5017, 0, 91, 140], [5018, 0, 131, 136], [5019, 0, 65, 75], [5020, 0, 117, 114],
-    [5021, 0, 111, 122], [5022, 34, 45, 90], [5023, 78, 100, 114], [5024, 47, 79, 94],
+    // --- RAL 1xxx (Jaunes) ---
+    [1000, 204, 197, 143], [1001, 208, 176, 132], [1002, 210, 170, 109], [1003, 249, 168, 0],
+    [1004, 228, 158, 0], [1005, 203, 142, 0], [1006, 226, 144, 0], [1007, 232, 140, 0],
+    [1011, 175, 128, 79], [1012, 221, 175, 39], [1013, 227, 217, 198], [1014, 221, 196, 154],
+    [1015, 230, 210, 181], [1016, 237, 226, 117], [1017, 246, 169, 80], [1018, 250, 202, 48],
+    [1019, 164, 143, 122], [1020, 160, 143, 101], [1021, 243, 165, 5], [1023, 246, 166, 11],
+    [1024, 186, 143, 76], [1026, 255, 255, 0], [1027, 167, 119, 32], [1028, 255, 155, 0],
+    [1032, 226, 163, 0], [1033, 249, 154, 28], [1034, 235, 156, 82], [1035, 143, 131, 112],
+    [1036, 128, 107, 42], [1037, 240, 146, 0],
+
+    // --- RAL 2xxx (Oranges) ---
+    [2000, 218, 110, 41], [2001, 186, 72, 27], [2002, 191, 57, 34], [2003, 246, 120, 40],
+    [2004, 226, 83, 3], [2005, 255, 35, 1], [2007, 255, 117, 20], [2008, 237, 107, 50],
+    [2009, 225, 85, 1], [2010, 212, 101, 47], [2011, 226, 110, 14], [2012, 213, 101, 77],
+    [2013, 146, 62, 37],
+
+    // --- RAL 3xxx (Rouges) ---
+    [3000, 167, 41, 32], [3001, 155, 36, 35], [3002, 155, 35, 33], [3003, 134, 26, 34],
+    [3004, 107, 28, 35], [3005, 89, 25, 31], [3007, 62, 32, 30], [3009, 89, 37, 30],
+    [3011, 120, 31, 25], [3012, 196, 159, 152], [3013, 151, 85, 84], [3014, 203, 115, 117],
+    [3015, 216, 160, 166], [3016, 166, 61, 47], [3017, 203, 85, 93], [3018, 199, 63, 74],
+    [3020, 187, 30, 16], [3022, 207, 105, 110], [3024, 255, 45, 33], [3026, 255, 42, 27],
+    [3027, 171, 39, 79], [3028, 204, 44, 43], [3031, 166, 52, 55], [3032, 113, 21, 33],
+    [3033, 165, 58, 45],
+
+    // --- RAL 4xxx (Violets) ---
+    [4001, 129, 97, 131], [4002, 141, 60, 75], [4003, 196, 98, 140], [4004, 101, 73, 122],
+    [4005, 118, 106, 154], [4006, 144, 108, 152], [4007, 71, 36, 96], [4008, 132, 76, 130],
+    [4009, 157, 134, 146], [4010, 203, 115, 172], [4011, 140, 133, 153], [4012, 176, 165, 177],
+
+    // --- RAL 5xxx (Bleus) ---
+    [5000, 49, 79, 111], [5001, 15, 76, 129], [5002, 0, 56, 123], [5003, 31, 56, 85],
+    [5004, 25, 30, 40], [5005, 0, 83, 135], [5007, 61, 85, 104], [5008, 38, 58, 91],
+    [5009, 36, 93, 110], [5010, 0, 79, 124], [5011, 26, 43, 60], [5012, 0, 137, 182],
+    [5013, 25, 49, 83], [5014, 96, 111, 140], [5015, 0, 116, 184], [5017, 0, 91, 140],
+    [5018, 0, 131, 136], [5019, 0, 94, 131], [5020, 0, 65, 75], [5021, 0, 117, 114],
+    [5022, 34, 45, 90], [5023, 78, 100, 114], [5024, 93, 155, 155], [5025, 42, 100, 120],
+    [5026, 16, 44, 84],
+
+    // --- RAL 6xxx (Verts) ---
     [6000, 60, 116, 96], [6001, 54, 103, 53], [6002, 50, 89, 40], [6003, 80, 83, 60],
-    [6004, 3, 85, 48], [6005, 17, 66, 50], [6006, 52, 95, 70], [6007, 57, 99, 53],
-    [6008, 54, 103, 45], [6009, 48, 89, 42], [6010, 56, 116, 43], [6011, 108, 124, 89],
-    [6012, 70, 88, 88], [6013, 73, 92, 55], [6014, 70, 76, 53], [6015, 61, 61, 54],
-    [6016, 47, 140, 51], [6017, 0, 132, 94], [6018, 87, 166, 57], [6019, 189, 236, 79],
-    [6020, 47, 76, 38], [6021, 137, 172, 118], [6022, 55, 66, 47], [6024, 0, 131, 81],
-    [6025, 88, 110, 62], [6026, 1, 93, 82], [6027, 49, 84, 66], [6028, 40, 114, 84],
-    [6029, 0, 117, 94], [6032, 7, 139, 41], [6033, 73, 135, 115], [6034, 64, 160, 112],
-    [6035, 7, 139, 48], [6036, 0, 89, 79], [6037, 0, 139, 41], [6038, 0, 181, 26],
+    [6004, 3, 85, 48], [6005, 17, 66, 50], [6006, 52, 95, 70], [6007, 40, 52, 36],
+    [6008, 45, 50, 40], [6009, 33, 53, 41], [6010, 71, 115, 55], [6011, 108, 124, 89],
+    [6012, 70, 88, 88], [6013, 125, 118, 90], [6014, 70, 76, 53], [6015, 61, 61, 54],
+    [6016, 0, 105, 76], [6017, 74, 143, 56], [6018, 87, 166, 57], [6019, 185, 206, 172],
+    [6020, 55, 66, 47], [6021, 137, 172, 118], [6022, 55, 66, 47], [6024, 0, 131, 81],
+    [6025, 88, 110, 62], [6026, 0, 93, 82], [6027, 129, 192, 187], [6028, 40, 114, 84],
+    [6029, 0, 117, 94], [6032, 35, 127, 82], [6033, 73, 135, 115], [6034, 127, 180, 181],
+    [6035, 23, 85, 41], [6036, 0, 89, 79], [6037, 0, 143, 57], [6038, 0, 181, 26],
+
+    // --- RAL 7xxx (Gris) ---
     [7000, 122, 136, 142], [7001, 140, 151, 156], [7002, 129, 137, 127], [7003, 122, 123, 122],
     [7004, 155, 155, 155], [7005, 108, 110, 107], [7006, 118, 117, 112], [7008, 116, 108, 79],
     [7009, 93, 96, 88], [7010, 88, 92, 86], [7011, 82, 89, 93], [7012, 87, 93, 94],
-    [7013, 87, 90, 91], [7015, 79, 83, 88], [7016, 82, 89, 93], [7021, 47, 50, 52],
-    [7022, 76, 81, 86], [7023, 128, 128, 118], [7024, 105, 102, 100], [7026, 55, 67, 69],
-    [7030, 152, 147, 132], [7031, 91, 104, 105], [7032, 181, 176, 156], [7033, 125, 132, 113],
+    [7013, 87, 90, 91], [7015, 79, 83, 88], [7016, 56, 62, 66], [7021, 47, 50, 52],
+    [7022, 76, 81, 86], [7023, 128, 128, 118], [7024, 69, 73, 78], [7026, 55, 67, 69],
+    [7030, 146, 142, 133], [7031, 91, 104, 105], [7032, 181, 176, 156], [7033, 125, 132, 113],
     [7034, 143, 135, 124], [7035, 215, 215, 191], [7036, 151, 147, 146], [7037, 125, 127, 120],
     [7038, 195, 195, 180], [7039, 108, 105, 96], [7040, 152, 158, 161], [7042, 143, 148, 150],
-    [7043, 79, 82, 80], [7044, 202, 196, 176], [7045, 132, 135, 137], [7046, 100, 102, 103],
-    [7047, 129, 133, 133], [7048, 144, 144, 144], [8000, 130, 108, 71], [8001, 149, 95, 53],
-    [8002, 108, 59, 36], [8003, 94, 58, 34], [8004, 141, 73, 49], [8007, 112, 69, 42],
-    [8008, 114, 74, 37], [8011, 90, 56, 38], [8012, 102, 51, 43], [8014, 74, 53, 38],
-    [8015, 94, 47, 43], [8016, 76, 43, 32], [8017, 68, 47, 41], [8019, 61, 54, 53],
-    [8022, 26, 23, 24], [8023, 164, 87, 41], [8024, 121, 80, 56], [8025, 117, 88, 71],
-    [8028, 41, 27, 20], [8029, 255, 111, 0], [9001, 233, 224, 210], [9002, 215, 213, 203],
-    [9003, 236, 236, 231], [9004, 43, 43, 44], [9005, 14, 14, 16], [9006, 241, 236, 225],
-    [9007, 56, 62, 66], [9010, 241, 236, 225], [9011, 39, 41, 43], [9016, 241, 242, 236],
-    [9017, 42, 41, 42], [9018, 215, 215, 192]
+    [7043, 79, 82, 80], [7044, 202, 196, 176], [7045, 144, 144, 144], [7046, 130, 137, 143],
+    [7047, 208, 208, 208], [7048, 137, 129, 118],
+
+    // --- RAL 8xxx (Bruns) ---
+    [8000, 130, 108, 71], [8001, 149, 95, 53], [8002, 108, 59, 36], [8003, 94, 58, 34],
+    [8004, 141, 73, 49], [8007, 112, 69, 42], [8008, 114, 74, 37], [8011, 90, 56, 38],
+    [8012, 102, 51, 43], [8014, 74, 53, 38], [8015, 94, 47, 43], [8016, 76, 43, 32],
+    [8017, 68, 47, 41], [8019, 61, 54, 53], [8022, 26, 23, 24], [8023, 164, 87, 41],
+    [8024, 121, 80, 56], [8025, 117, 88, 71], [8028, 81, 58, 42], [8029, 118, 60, 40],
+
+    // --- RAL 9xxx (Blancs et Noirs) ---
+    [9001, 250, 244, 227], [9002, 231, 235, 218], [9003, 244, 244, 244], [9004, 40, 40, 40],
+    [9005, 10, 10, 10], [9006, 165, 165, 165], [9007, 143, 143, 143], [9010, 247, 249, 239],
+    [9011, 28, 28, 28], [9016, 241, 242, 236], [9017, 30, 30, 30], [9018, 215, 215, 192],
+    [9022, 139, 137, 137], [9023, 121, 123, 122]
 ];
 
 function illuRgbToNearestRal(r, g, b) {
@@ -524,10 +974,10 @@ window.illuRefreshEyedropperColorPanel = function () {
         typeof EditorManager.rgbToHex === 'function'
             ? EditorManager.rgbToHex(r, g, b).toUpperCase()
             : '#' +
-              [r, g, b]
-                  .map((v) => v.toString(16).padStart(2, '0'))
-                  .join('')
-                  .toUpperCase();
+            [r, g, b]
+                .map((v) => v.toString(16).padStart(2, '0'))
+                .join('')
+                .toUpperCase();
     const swatch = document.getElementById('eyedropper-swatch');
     const hexEl = document.getElementById('eyedropper-hex');
     const rgbEl = document.getElementById('eyedropper-rgb');
@@ -659,6 +1109,13 @@ let selectionWarpThrottleTimeout = null;
 
 
 
+/** Met à jour l’état actif/désactivé des boutons centrage / alignement (après tout changement de sélection). */
+window.illuSyncSelectionAdjustToolbar = function () {
+    if (typeof window.updateToolOptionsBar === 'function') {
+        window.updateToolOptionsBar();
+    }
+};
+
 window.updateToolOptionsBar = function () {
     const t = window.activeTool || 'select';
     const cfg = TOOL_OPTIONS_UI[t] || { label: t, actionGroups: [], paramGroups: [] };
@@ -709,18 +1166,24 @@ window.updateToolOptionsBar = function () {
     const selActsPin = document.getElementById('tool-pinned-select-actions');
     if (selActsPin) selActsPin.hidden = !SELECT_ACTION_TOOLS.has(t);
 
-    const hasSel =
-        typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
-    const canCenter =
+    const hasLayoutSel =
         typeof EditorManager.canCenterSelectionLayout === 'function' &&
         EditorManager.canCenterSelectionLayout();
-    document.querySelectorAll('.illu-sel-center-item').forEach((el) => {
-        el.hidden = !canCenter;
-        el.setAttribute('aria-hidden', canCenter ? 'false' : 'true');
-    });
-    document.querySelectorAll('.illu-sel-layout-item:not(.illu-sel-center-item) .illu-icon-toggle').forEach((btn) => {
-        btn.disabled = !hasSel;
-        btn.setAttribute('aria-disabled', btn.disabled ? 'true' : 'false');
+    const skipAdjustBtnIds = new Set(['opt-sel-clear-ribbon', 'illu-tb-zoom-fit']);
+    document.querySelectorAll('.illu-sel-actions-layout').forEach((selLayout) => {
+        selLayout.querySelectorAll('.illu-mode-toggle-item').forEach((item) => {
+            if (item.hidden || item.id === 'illu-desktop-clear-sel-wrap' || item.id === 'illu-layout-zoom-fit-wrap') {
+                return;
+            }
+            const btn = item.querySelector('.illu-icon-toggle');
+            if (!btn || skipAdjustBtnIds.has(btn.id)) return;
+            const enabled = hasLayoutSel;
+            item.hidden = false;
+            item.removeAttribute('aria-hidden');
+            btn.disabled = !enabled;
+            btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+            btn.tabIndex = enabled ? 0 : -1;
+        });
     });
     document.querySelectorAll('.illu-sel-nudge-item').forEach((el) => {
         el.hidden = true;
@@ -762,13 +1225,15 @@ window.updateToolOptionsBar = function () {
 
     // Handle tool-specific visibility tweaks
     const pencilRow = document.getElementById('pencil-close-row');
-    if (pencilRow) pencilRow.hidden = (t !== 'pencil' && t !== 'brush');
+    if (pencilRow) pencilRow.hidden = true;
 
     const wandFullLayer = document.getElementById('wand-fullscreen-row');
     if (wandFullLayer) wandFullLayer.hidden = (t !== 'wand' && t !== 'fill');
 
-    const shapeCornerRow = document.getElementById('tool-shape-corner-row');
-    if (shapeCornerRow) shapeCornerRow.hidden = (t !== 'round-3' && t !== 'rect');
+    if (typeof window.illuSyncShapeExtraGaugeVisibility === 'function') {
+        const shapePids = cfg.paramGroups ? new Set(cfg.paramGroups) : new Set();
+        window.illuSyncShapeExtraGaugeVisibility(t, shapePids);
+    }
 
     // Vector Context Management
     const vActions = document.getElementById('opt-grp-vector-context-actions');
@@ -881,19 +1346,49 @@ window.updateToolOptionsBar = function () {
             window.syncIlluGaugeForRange(sz);
         }
     }
+    const sizeLbl = document.querySelector('label[for="tool-size"]');
+    if (sizeLbl) {
+        const sizeKey = t === 'line' || t === 'cubic-3' ? 'tools.lineTrace' : 'tools.size';
+        sizeLbl.setAttribute('data-i18n', sizeKey);
+        if (window.IlluI18n && typeof window.IlluI18n.t === 'function') {
+            const tr = window.IlluI18n.t(sizeKey);
+            if (tr && tr !== sizeKey) sizeLbl.textContent = tr;
+        } else {
+            sizeLbl.textContent = sizeKey === 'tools.lineTrace' ? 'Trace' : 'Taille';
+        }
+    }
+    const lineContourRow = document.getElementById('tool-line-contour-row');
+    const lineContourSl = document.getElementById('tool-line-contour');
+    const lineContourVal = document.getElementById('tool-line-contour-val');
+    const isLineOrCubicTool = t === 'line' || t === 'cubic-3';
+    if (lineContourRow) lineContourRow.hidden = !isLineOrCubicTool;
+    if (lineContourSl) {
+        const lc = EditorManager.toolProps.lineContourWidth ?? 0;
+        lineContourSl.value = String(Math.max(0, Math.min(128, lc)));
+        if (lineContourVal) lineContourVal.textContent = lineContourSl.value;
+        if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(lineContourSl);
+    }
     const pat = document.getElementById('tool-brush-pattern');
     if (pat) pat.value = EditorManager.toolProps.brushPattern || 'round';
     const brushPat = EditorManager.toolProps.brushPattern || 'round';
-    const hardnessGrp = document.getElementById('opt-grp-brush-hardness');
     const hardnessRow = document.getElementById('tool-brush-hardness-row');
     const showHard =
         t !== 'pencil' &&
         ((t === 'brush' && brushPat !== 'soft' && brushPat !== 'spray') ||
             (t === 'eraser' && brushPat !== 'spray'));
-    if (hardnessGrp && cfg.paramGroups && cfg.paramGroups.includes('opt-grp-brush-hardness')) {
-        hardnessGrp.hidden = !showHard;
-    }
     if (hardnessRow) hardnessRow.hidden = !showHard;
+    const sizePack = document.getElementById('opt-grp-size-params');
+    if (sizePack) {
+        sizePack.classList.toggle('illu-size-pack--brush-only', showHard);
+    }
+    if (typeof window.illuSyncMergedShapeParamGauges === 'function') {
+        const cfg = window.illuActiveToolCfg || (typeof TOOL_OPTIONS_UI !== 'undefined' ? TOOL_OPTIONS_UI[t] : null);
+        const pids = cfg && cfg.paramGroups ? new Set(cfg.paramGroups) : new Set();
+        window.illuSyncMergedShapeParamGauges(t, pids);
+    }
+    if (typeof window.syncRibbonParamPackGaugeLayout === 'function') {
+        window.syncRibbonParamPackGaugeLayout();
+    }
     const bhSl = document.getElementById('tool-brush-hardness');
     const bhV = document.getElementById('tool-brush-hardness-val');
     if (bhSl) {
@@ -928,8 +1423,13 @@ window.updateToolOptionsBar = function () {
         document.getElementById('select-free-corners-row');
     const showFreeCornersBtn = ['select', 'wand', 'direct-select', 'deform', 'warp-4'].includes(t);
     if (freeCornersRow) freeCornersRow.hidden = !showFreeCornersBtn;
+    const shapeFreeCornersWrap = document.getElementById('tool-shape-free-corners-wrap');
+    if (shapeFreeCornersWrap) shapeFreeCornersWrap.hidden = t !== 'rect' && t !== 'round-3';
     if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
         window.syncSelectionRectFreeCornersArmUI();
+    }
+    if (typeof window.syncShapeRectFreeCornersArmUI === 'function') {
+        window.syncShapeRectFreeCornersArmUI();
     }
     if (pencilRow) pencilRow.hidden = (t !== 'pencil' && t !== 'brush' && t !== 'line' && t !== 'cubic-3' && t !== 'pen');
     const pencilCloseCb = document.getElementById('tool-pencil-close');
@@ -940,8 +1440,15 @@ window.updateToolOptionsBar = function () {
 
     const gradMethodHidden = document.getElementById('tool-gradient-method');
     if (gradMethodHidden) gradMethodHidden.value = EditorManager.toolProps.gradientMethod || 'simple';
-    const cornerRow = document.getElementById('tool-shape-corner-row');
-    if (cornerRow) cornerRow.hidden = t !== 'round-3';
+    const triBranchesRow = document.getElementById('tool-triangle-branches-row');
+    const triBranchesSl = document.getElementById('tool-triangle-branches');
+    const triBranchesV = document.getElementById('tool-triangle-branches-val');
+    if (triBranchesSl) {
+        const tb = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+        triBranchesSl.value = String(tb);
+        if (triBranchesV) triBranchesV.textContent = triBranchesSl.value;
+        if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(triBranchesSl);
+    }
     const cornerSl = document.getElementById('tool-shape-corner-radius');
     const cornerV = document.getElementById('tool-shape-corner-radius-val');
     if (cornerSl) {
@@ -990,19 +1497,24 @@ window.updateToolOptionsBar = function () {
 
     if (shapeModeRow) shapeModeRow.hidden = !isShapeRectLike;
     if (shapeFillTypeRow) {
-        if (isLineOrCubic) shapeFillTypeRow.hidden = true;
+        if (isLineOrCubic) shapeFillTypeRow.hidden = mode === 'stroke';
         else if (isLineLike) shapeFillTypeRow.hidden = false;
         else shapeFillTypeRow.hidden = mode === 'stroke';
     }
-    const showGradTypeRow = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke';
+    const showGradTypeRow =
+        (isShapeRectLike && fillType === 'gradient' && mode !== 'stroke') ||
+        (isLineOrCubic && fillType === 'gradient' && mode !== 'stroke');
     if (shapeGradTypeActions) shapeGradTypeActions.hidden = !showGradTypeRow;
     const showGradMethodRow =
         (isShapeRectLike && fillType === 'gradient' && mode !== 'stroke') ||
+        (isLineOrCubic && fillType === 'gradient' && mode !== 'stroke') ||
         (t === 'pen' && fillType === 'gradient');
     const shapeGradMethodActions = document.getElementById('tool-shape-grad-method-actions');
     if (shapeGradMethodActions) shapeGradMethodActions.hidden = !showGradMethodRow;
     const showGradAngleRect = isShapeRectLike && fillType === 'gradient' && mode !== 'stroke' && gradType !== 'radial';
-    const showGradAngleLineLike = t === 'pen' && fillType === 'gradient';
+    const showGradAngleLineLike =
+        (t === 'pen' && fillType === 'gradient') ||
+        (isLineOrCubic && fillType === 'gradient' && mode !== 'stroke' && gradType !== 'radial');
     if (shapeGradAngleRow) shapeGradAngleRow.hidden = !showGradAngleRect && !showGradAngleLineLike;
 
     if (quadBulgeRow) quadBulgeRow.hidden = t !== 'cubic-3';
@@ -1042,7 +1554,7 @@ window.updateToolOptionsBar = function () {
     const toWarpWrap = document.getElementById('opt-select-quad-to-warp-wrap');
     if (resampleWrap) resampleWrap.hidden = !showWarpDeformOpts;
     if (resampleSep) resampleSep.hidden = !showWarpDeformOpts;
-    if (rectLockWrap) rectLockWrap.hidden = !(showWarpDeformOpts && hasFreeWarpQuad);
+    if (rectLockWrap) rectLockWrap.hidden = true;
     if (snapWrap) {
         snapWrap.hidden = !(showWarpDeformOpts && hasFreeWarpQuad && !quadIsAxisRect);
     }
@@ -1120,6 +1632,9 @@ window.updateToolOptionsBar = function () {
     if (textItalicCb) textItalicCb.checked = !!EditorManager.toolProps.textItalic;
     const textStrokeCb = document.getElementById('tool-text-stroke');
     if (textStrokeCb) textStrokeCb.checked = !!EditorManager.toolProps.textStroke;
+    if (typeof window.syncTextStrokeWidthControlState === 'function') {
+        window.syncTextStrokeWidthControlState();
+    }
     const textFillSel = document.getElementById('tool-text-fill');
     const textFillType = EditorManager.toolProps.textFillType || 'solid';
     if (textFillSel) textFillSel.value = textFillType;
@@ -1230,6 +1745,7 @@ window.updateToolboxModeState = function () {
         window._quadBezierPreviewDoc = null;
     }
     if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+    if (typeof window.illuSyncToolsDockAutoWidth === 'function') window.illuSyncToolsDockAutoWidth();
 };
 
 /**
@@ -1497,7 +2013,7 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
             for (let y = startY; y <= endY; y += stride) {
                 const rowOffset = (y < h) ? y * w : -1;
                 const prevRowOffset = (y >= stride) ? (y - stride) * w : -1;
-                
+
                 if (stride === 1) {
                     for (let x = startX; x < endX; x++) {
                         const a = prevRowOffset >= 0 ? maskData[prevRowOffset + x] : 0;
@@ -1547,7 +2063,7 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
                 pOutline.setAttribute('fill', 'none');
                 pOutline.setAttribute('stroke', '#000');
                 pOutline.setAttribute('stroke-width', String(outlineW));
-                
+
                 const pDash = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 pDash.setAttribute('x', String(x));
                 pDash.setAttribute('y', String(y));
@@ -1557,7 +2073,7 @@ function appendBinaryMaskOutlineSvg(parent, maskData, w, h, docLx, docLy, bounds
                 pDash.setAttribute('stroke', '#fff');
                 pDash.setAttribute('stroke-width', String(strokeW));
                 pDash.setAttribute('stroke-dasharray', `${5 / z} ${4 / z}`);
-                
+
                 svg.appendChild(pOutline);
                 svg.appendChild(pDash);
                 parent.appendChild(svg);
@@ -1622,7 +2138,7 @@ window.tightenColorSelectionBoundsFromMask = function () {
     const w = m.w | 0;
     const h = m.h | 0;
     const d = m.data;
-    
+
     let minX = w, minY = h, maxX = -1, maxY = -1;
 
     // Fast scan
@@ -1751,6 +2267,14 @@ window.illuNudgeSelectionPixelsDelta = function (dx, dy) {
             q.br.y = R.ry + R.rh;
             q.bl.x = R.rx;
             q.bl.y = R.ry + R.rh;
+
+            const prevH = selectionWarpHandleId;
+            selectionWarpHandleId = 'c';
+            try {
+                window.runSelectionWarpPreview({ immediate: true });
+            } finally {
+                selectionWarpHandleId = prevH;
+            }
         } else if (typeof window.illuTranslateSelectionGeometry === 'function') {
             window.illuTranslateSelectionGeometry(dx, dy);
         }
@@ -1992,6 +2516,15 @@ window.nudgeSelectionWarpSessionDelta = function (dx, dy) {
 
     if (illuIsFloatingImportPending()) {
         illuSyncFloatingImportStagingFromDeformRect();
+        if (window.selectionPixelWarpActive) {
+            const prevH = selectionWarpHandleId;
+            selectionWarpHandleId = 'c';
+            try {
+                window.runSelectionWarpPreview({ immediate: true });
+            } finally {
+                selectionWarpHandleId = prevH;
+            }
+        }
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
         EditorManager.render({ skipUiThumbnails: true });
         return true;
@@ -2065,6 +2598,15 @@ window.illuWireSelectionLayoutToolbarButtons = function () {
 function magicWandAt(pos, ev) {
     const ctx = EditorManager.activeCtx;
     if (!ctx || !EditorManager.isPixelMode) return;
+    if (window._illuWandWorker) {
+        try {
+            window._illuWandWorker.terminate();
+        } catch (e) {
+            /* ignore */
+        }
+        window._illuWandWorker = null;
+    }
+    const wandOpId = ++window._illuWandOpGeneration;
     const al = EditorManager.activeLayer;
     const lx = al.x;
     const ly = al.y;
@@ -2098,6 +2640,7 @@ function magicWandAt(pos, ev) {
 
     console.log('DrawingTools: Initializing Magic Wand worker (js/tools/wand-worker.js)');
     const worker = new Worker('js/tools/wand-worker.js');
+    window._illuWandWorker = worker;
     worker.onerror = (e) => console.error('Magic Wand worker error:', e);
     worker.postMessage({
         data: imageData.data,
@@ -2107,14 +2650,16 @@ function magicWandAt(pos, ev) {
         startY: py,
         tolerance: tolUi,
         mode: mode,
-        requestId: Date.now(),
+        requestId: wandOpId,
         wasmEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('settings-wasm-enabled') !== '0')
     }, [imageData.data.buffer]);
 
     worker.onmessage = (e) => {
         if (busy) busy.done();
-        const { mask, error } = e.data;
+        const { mask, error, requestId } = e.data || {};
+        if (window._illuWandWorker === worker) window._illuWandWorker = null;
         worker.terminate();
+        if ((requestId | 0) !== (window._illuWandOpGeneration | 0)) return;
 
         if (error || !mask) return;
 
@@ -2137,14 +2682,18 @@ function magicWandAt(pos, ev) {
         }
 
         window.refreshSelectionVisual({ forceFull: true });
-        EditorManager.render({ skipLayerComposite: true, skipUiThumbnails: true });
+        EditorManager.render({ flushUiThumbnails: true });
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') {
             window.disarmSelectionRectFreeCornersArm();
+        }
+        if (typeof window.illuSyncSelectionAdjustToolbar === 'function') {
+            window.illuSyncSelectionAdjustToolbar();
         }
     };
 
     worker.onerror = (err) => {
         if (busy) busy.done();
+        if (window._illuWandWorker === worker) window._illuWandWorker = null;
         worker.terminate();
         console.error('Wand worker error:', err);
     };
@@ -2355,7 +2904,7 @@ function stampBrushSquare(ctx, cx, cy, side, hardnessPct, rgb, isEraser) {
 function stampBrushAt(ctx, tool, lx, ly) {
     const lw = Math.max(1, EditorManager.toolProps.size || 5);
     const pat = EditorManager.toolProps.brushPattern || 'round';
-    
+
     // CUSTOM BRUSH TIP SUPPORT
     if (tool !== 'eraser' && window._illuCustomBrushTip && pat === 'custom') {
         stampBrushCustom(ctx, lx, ly, lw, window._illuCustomBrushTip);
@@ -2382,22 +2931,22 @@ function stampBrushCustom(ctx, x, y, size, tipCanvas) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(s / tipCanvas.width, s / tipCanvas.height);
-    
+
     // TINTING logic: draw the cached tip.
     // The tip is stored pre-tinted or as alpha. 
     // For simplicity, we draw the tip as is if it's already generated for the active color,
     // or we use a temporary staging canvas to tint it.
-    
+
     // Check if we need to rotate? Patterns usually rotate with direction in pro apps.
     // For now, fixed orientation like basic Illu brushes.
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // If we want to tint it dynamically to active color:
     // 1. Draw tip to temp canvas
     // 2. destination-in with original tip alpha
     // 3. source-atop with active color
-    
+
     // PERFORMANCE optimization: reuse tinted version if color hasn't changed.
     if (!window._illuCustomBrushTinted || window._illuCustomBrushTintedColor !== EditorManager.activeColor) {
         const tinted = document.createElement('canvas');
@@ -2411,13 +2960,13 @@ function stampBrushCustom(ctx, x, y, size, tipCanvas) {
         window._illuCustomBrushTinted = tinted;
         window._illuCustomBrushTintedColor = EditorManager.activeColor;
     }
-    
-    ctx.drawImage(window._illuCustomBrushTinted, -tipCanvas.width/2, -tipCanvas.height/2);
+
+    ctx.drawImage(window._illuCustomBrushTinted, -tipCanvas.width / 2, -tipCanvas.height / 2);
     ctx.restore();
 }
 
 /** Capture the current selection (pixels) into a custom brush tip. */
-window.captureSelectionAsBrushTip = function() {
+window.captureSelectionAsBrushTip = function () {
     if (!window.selectionBounds || typeof EditorManager === 'undefined' || !EditorManager.activeLayer) {
         alert("Veuillez d'abord faire une sélection dans un calque pixel.");
         return;
@@ -2425,22 +2974,22 @@ window.captureSelectionAsBrushTip = function() {
     const sb = window.selectionBounds;
     const l = EditorManager.activeLayer;
     const sCanvas = l.buffer;
-    
+
     const cw = Math.min(256, Math.ceil(sb.w));
     const ch = Math.min(256, Math.ceil(sb.h));
-    
+
     const tip = document.createElement('canvas');
     tip.width = cw;
     tip.height = ch;
     const tctx = tip.getContext('2d');
-    
+
     // Draw the selection onto the tip canvas
     // Needs to handle coordinate conversion (doc to layer)
     const lx = Math.floor(sb.x - l.x);
     const ly = Math.floor(sb.y - l.y);
-    
+
     tctx.drawImage(sCanvas, lx, ly, Math.ceil(sb.w), Math.ceil(sb.h), 0, 0, cw, ch);
-    
+
     // Convert to "Alpha Tip" (PS style: darker = more opaque, or just use original alpha)
     // We'll keep original alpha but make everything "Solid" so tinting works best.
     const idat = tctx.getImageData(0, 0, cw, ch);
@@ -2448,22 +2997,22 @@ window.captureSelectionAsBrushTip = function() {
     for (let i = 0; i < d.length; i += 4) {
         // Simple heuristic: the luminance becomes the alpha (inverse) OR just keep alpha.
         // If the selection has alpha, use it. If not (fully opaque), use lightness as alpha.
-        const avg = (d[i] + d[i+1] + d[i+2]) / 3;
-        const alpha = d[i+3];
+        const avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
+        const alpha = d[i + 3];
         if (alpha > 5) {
             // Keep alpha, but make RGB black for tinting
-            d[i] = 0; d[i+1] = 0; d[i+2] = 0;
+            d[i] = 0; d[i + 1] = 0; d[i + 2] = 0;
         } else {
             // Use luminosity as alpha mask
-            d[i+3] = 255 - avg;
-            d[i] = 0; d[i+1] = 0; d[i+2] = 0;
+            d[i + 3] = 255 - avg;
+            d[i] = 0; d[i + 1] = 0; d[i + 2] = 0;
         }
     }
     tctx.putImageData(idat, 0, 0);
-    
+
     window._illuCustomBrushTip = tip;
     window._illuCustomBrushTinted = null; // reset cache
-    
+
     // Update preview in panel
     const pPrev = document.getElementById('props-brush-preview');
     if (pPrev) {
@@ -2472,13 +3021,13 @@ window.captureSelectionAsBrushTip = function() {
         pPrev.getContext('2d').drawImage(tip, 0, 0);
         document.getElementById('props-brush-preview-row').hidden = false;
     }
-    
+
     // Auto-switch brush pattern to 'custom'
     EditorManager.toolProps.brushPattern = 'custom';
     if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
 };
 
-window.clearCustomBrushTip = function() {
+window.clearCustomBrushTip = function () {
     window._illuCustomBrushTip = null;
     window._illuCustomBrushTinted = null;
     document.getElementById('props-brush-preview-row').hidden = true;
@@ -2487,7 +3036,7 @@ window.clearCustomBrushTip = function() {
 };
 
 /** Capture selection as a pattern for fill tool. */
-window.captureSelectionAsFillPattern = function() {
+window.captureSelectionAsFillPattern = function () {
     if (!window.selectionBounds || !EditorManager.activeLayer) {
         alert("Veuillez d'abord faire une sélection dans un calque pixel.");
         return;
@@ -2496,23 +3045,23 @@ window.captureSelectionAsFillPattern = function() {
     const sb = window.selectionBounds;
     const cw = Math.ceil(sb.w);
     const ch = Math.ceil(sb.h);
-    
+
     if (cw > 256 || ch > 256) {
         if (!confirm("Le motif est très grand. Voulez-vous continuer ?")) return;
     }
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = cw;
     canvas.height = ch;
     const tctx = canvas.getContext('2d');
-    
+
     const lx = Math.floor(sb.x - l.x);
     const ly = Math.floor(sb.y - l.y);
     tctx.drawImage(l.buffer, lx, ly, cw, ch, 0, 0, cw, ch);
-    
+
     window._illuFillPattern = canvas;
     window._illuFillPatternData = tctx.getImageData(0, 0, cw, ch).data;
-    
+
     // VECTOR PATTERN SUPPORT
     if (EditorManager.mode === 'vector' && window._activeVectorShapeEl) {
         const defs = document.getElementById('vector-doc-defs');
@@ -2523,14 +3072,14 @@ window.captureSelectionAsFillPattern = function() {
             patEl.setAttribute('patternUnits', 'userSpaceOnUse');
             patEl.setAttribute('width', String(cw));
             patEl.setAttribute('height', String(ch));
-            
+
             const imgEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
             imgEl.setAttribute('href', canvas.toDataURL());
             imgEl.setAttribute('width', String(cw));
             imgEl.setAttribute('height', String(ch));
             patEl.appendChild(imgEl);
             defs.appendChild(patEl);
-            
+
             window._activeVectorShapeEl.setAttribute('fill', `url(#${patId})`);
             EditorManager.saveHistory('Motif vecteur', { type: 'vector-full', svg: EditorManager.activeProject.svgData });
             EditorManager.render();
@@ -2545,7 +3094,7 @@ window.captureSelectionAsFillPattern = function() {
         pPrev.getContext('2d').drawImage(canvas, 0, 0, cw, ch, 0, 0, pPrev.width, pPrev.height);
         document.getElementById('props-fill-pattern-preview-row').hidden = false;
     }
-    
+
     EditorManager.toolProps.fillType = 'pattern';
     if (typeof window.activeTool !== 'fill') {
         window.activateIlluToolButtonById('tool-fill');
@@ -2671,6 +3220,9 @@ function illuNoUsableSelectionForDeformNewRect() {
 
 /** Démarre un tracé rectangulaire de sélection (combine add/sub si Maj/Ctrl). */
 function illuBeginNewSelectionRectDrag(e) {
+    if (typeof window.illuInvalidatePendingWandWorker === 'function') {
+        window.illuInvalidatePendingWandWorker();
+    }
     const combineOp =
         typeof window.illuLockSelectionCombineOp === 'function'
             ? window.illuLockSelectionCombineOp(e)
@@ -3261,12 +3813,12 @@ function isPixelInActiveSelection(px, py, layerX, layerY) {
         // Global document coordinates for the pixel being checked
         const docX = px + layerX;
         const docY = py + layerY;
-        
+
         // Translate document coordinates back to the mask's local coordinates
         // using its original creation position (origX, origY)
         const mx = Math.round(docX - (m.origX || 0));
         const my = Math.round(docY - (m.origY || 0));
-        
+
         if (mx >= 0 && mx < m.w && my >= 0 && my < m.h) {
             inside = m.data[my * m.w + mx] === 1;
         } else {
@@ -3528,6 +4080,7 @@ window.commitLayerMaskAsSelection = function (data, w, h, opts) {
         window.selectionPreviewAngleRad = 0;
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
+        if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
         return true;
     }
     window.selectionColorMask = { w, h, data: copy, layerId: l.id, origX: l.x, origY: l.y };
@@ -3549,6 +4102,7 @@ window.commitLayerMaskAsSelection = function (data, w, h, opts) {
         });
     }
     if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
+    if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
     return true;
 };
 
@@ -3615,7 +4169,7 @@ function initTools() {
                 btn.classList.add('active');
             }
             window.activeTool = btn.id.startsWith('tool-') ? btn.id.replace('tool-', '') : btn.id;
-            
+
             // Reset selection mode if switching away from selection tools
             if (!['select', 'wand', 'direct-select'].includes(window.activeTool)) {
                 window.selectionMode = 'new';
@@ -3719,6 +4273,9 @@ function initTools() {
     if (typeof window.illuWireSelectRectFreeCornersButtons === 'function') {
         window.illuWireSelectRectFreeCornersButtons();
     }
+    if (typeof window.illuWireShapeRectFreeCornersButtons === 'function') {
+        window.illuWireShapeRectFreeCornersButtons();
+    }
     if (typeof window.illuWireSelectionLayoutToolbarButtons === 'function') {
         window.illuWireSelectionLayoutToolbarButtons();
     }
@@ -3730,7 +4287,7 @@ function initTools() {
 
     // Mouse Events (ignorer mousedown/mouseup « compatibilité » après un touch : sinon double handleMouseDown = tracé en points)
 
-  
+
 
     /* Touch / stylet : Pointer Events (évite le double tir avec souris) */
     const trackClient = (e) => {
@@ -3816,9 +4373,9 @@ function initTools() {
         handleMouseUp(e);
     };
 
-        if (canvasHost) {
-            canvasHost.addEventListener('pointerdown', onPointerDown, { passive: false });
-        }
+    if (canvasHost) {
+        canvasHost.addEventListener('pointerdown', onPointerDown, { passive: false });
+    }
     window.addEventListener('pointermove', onPointerMoveWin, { passive: false });
     window.addEventListener('pointerup', onPointerUpWin);
     window.addEventListener('pointercancel', onPointerUpWin);
@@ -4211,6 +4768,7 @@ function onGlobalMouseMove(e) {
         p.canvasPanX = window.panDragOrigin.x + (e.clientX - window.panStart.x);
         p.canvasPanY = window.panDragOrigin.y + (e.clientY - window.panStart.y);
         EditorManager.applyCanvasViewportOnly();
+        return;
     }
     /* Glisser depuis le bouton central Déformation : pointermove porte le tracé ; mousemove seul est peu fiable (foreignObject SVG). Sans PointerEvent, on garde mousemove. Idem session warp (poignée centre / capture). */
     if (
@@ -4379,17 +4937,95 @@ function clearAnchors() {
     window._activeVectorShapeEl = null;
 }
 
+/** Poignées type bitmap (blanc / noir) plutôt que cadre bleu VectorEngine. */
+window.illuVectorPreferBitmapSelectionUI = function () {
+    const t = window.activeTool || 'select';
+    return t !== 'direct-select' && t !== 'node-select';
+};
+
+window.illuSyncVectorSelectionAnchors = function () {
+    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
+    const sel = EditorManager.activeVectorSelection;
+    if (!sel || !sel.length) {
+        if (typeof clearAnchors === 'function') clearAnchors();
+        return;
+    }
+    const primary = sel[sel.length - 1];
+    activeVectorShape = primary;
+    window._activeVectorShapeEl = primary;
+    const svgUI = document.getElementById('svg-ui');
+    const anchorsG = svgUI && svgUI.querySelector('#svg-ui-anchors');
+    const hasAnchors = anchorsG && anchorsG.querySelector('.svg-anchor');
+    if (!hasAnchors && typeof generateAnchors === 'function') {
+        generateAnchors(primary);
+    } else if (typeof syncAnchors === 'function') {
+        syncAnchors();
+    }
+};
+
+window.illuSyncVectorSelectionUI = function () {
+    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
+    if (window.illuVectorPreferBitmapSelectionUI()) {
+        if (window.VectorEngine && typeof window.VectorEngine.clearUI === 'function') {
+            window.VectorEngine.clearUI();
+        }
+        window.illuSyncVectorSelectionAnchors();
+        return;
+    }
+    if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+        window.VectorEngine.refreshSelectionUI();
+    }
+};
+
+let _illuVectorLiveDrawRaf = 0;
+window._illuVectorLiveDraw = false;
+
+function illuScheduleVectorLiveDrawVisual() {
+    if (_illuVectorLiveDrawRaf) return;
+    _illuVectorLiveDrawRaf = requestAnimationFrame(() => {
+        _illuVectorLiveDrawRaf = 0;
+        if (typeof EditorManager !== 'undefined' && EditorManager.render) {
+            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
+        }
+    });
+}
+
+function illuSyncVectorLineOutlineGeometry(el) {
+    if (!el) return;
+    const key = el.getAttribute('data-illu-outline-key');
+    if (!key) return;
+    const parent = el.parentNode;
+    if (!parent) return;
+    const ol = parent.querySelector(`[data-illu-line-outline-for="${key}"]`);
+    if (!ol) return;
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag === 'path') {
+        const d = el.getAttribute('d');
+        if (d != null) ol.setAttribute('d', d);
+        const tr = el.getAttribute('transform');
+        if (tr) ol.setAttribute('transform', tr);
+        else ol.removeAttribute('transform');
+    } else if (tag === 'line') {
+        ['x1', 'y1', 'x2', 'y2'].forEach((a) => {
+            const v = el.getAttribute(a);
+            if (v != null) ol.setAttribute(a, v);
+        });
+    }
+}
+window.illuSyncVectorLineOutlineGeometry = illuSyncVectorLineOutlineGeometry;
+
 function createSvgAnchor(x, y, index, cursor) {
     const sz = EditorManager.svgUiHandleSizeDoc();
     const h = sz / 2;
+    const z = EditorManager.getCanvasZoomLevel() || 1;
     const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     r.setAttribute('x', String(x - h));
     r.setAttribute('y', String(y - h));
     r.setAttribute('width', String(sz));
     r.setAttribute('height', String(sz));
     r.setAttribute('fill', '#ffffff');
-    r.setAttribute('stroke', '#0066cc');
-    r.setAttribute('stroke-width', '1');
+    r.setAttribute('stroke', '#000000');
+    r.setAttribute('stroke-width', String(1 / z));
     r.setAttribute('vector-effect', 'non-scaling-stroke');
     r.setAttribute('class', 'svg-anchor');
     r.setAttribute('pointer-events', 'all');
@@ -4663,9 +5299,19 @@ window.syncVectorSelectionAfterUiRedraw = function () {
 };
 
 function syncAnchors() {
-    if (!EditorManager.activeVectorSelection.length) return;
     const svgUI = document.getElementById('svg-ui');
     if (!svgUI) return;
+
+    if (currentElement && isDrawing && EditorManager.mode === 'vector') {
+        let boxesG = svgUI.querySelector('#svg-ui-boxes');
+        if (boxesG) boxesG.innerHTML = '';
+        if (typeof window.regenerateVectorAnchorsOnly === 'function') {
+            window.regenerateVectorAnchorsOnly(currentElement);
+        }
+        return;
+    }
+
+    if (!EditorManager.activeVectorSelection.length) return;
     let boxesG = svgUI.querySelector('#svg-ui-boxes');
     let anchorsG = svgUI.querySelector('#svg-ui-anchors');
     if (!boxesG) {
@@ -4678,12 +5324,12 @@ function syncAnchors() {
         anchorsG.setAttribute('id', 'svg-ui-anchors');
         svgUI.appendChild(anchorsG);
     }
-    
+
     // We only show interactive handles for the "primary" active shape (the last one selected)
     // for deep editing, but we should highlight all selected shapes.
     const primary = EditorManager.activeVectorSelection[EditorManager.activeVectorSelection.length - 1];
-    const sh = primary; 
-    
+    const sh = primary;
+
     // Draw dashed boxes for all selected elements (clear previous first)
     boxesG.innerHTML = '';
     const z = EditorManager.activeProject.zoom || 1;
@@ -4696,14 +5342,14 @@ function syncAnchors() {
             rect.setAttribute('width', String(r.width));
             rect.setAttribute('height', String(r.height));
             rect.setAttribute('fill', 'none');
-            rect.setAttribute('stroke', '#0a5ebd');
+            rect.setAttribute('stroke', '#000000');
             rect.setAttribute('stroke-width', String(1 / z));
-            rect.setAttribute('stroke-dasharray', '4 4');
+            rect.setAttribute('stroke-dasharray', `${4 / z} ${3 / z}`);
             rect.setAttribute('vector-effect', 'non-scaling-stroke');
             rect.setAttribute('pointer-events', 'none');
             rect.classList.add('svg-selection-box');
             boxesG.appendChild(rect);
-        } catch(e) {}
+        } catch (e) { }
     });
 
     const hz = EditorManager.svgUiHandleSizeDoc() / 2;
@@ -4737,17 +5383,17 @@ function syncAnchors() {
         });
         if (tag === 'rect') syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'line') {
-        const x1 = parseFloat(activeVectorShape.getAttribute('x1')) || 0;
-        const y1 = parseFloat(activeVectorShape.getAttribute('y1')) || 0;
-        const x2 = parseFloat(activeVectorShape.getAttribute('x2')) || 0;
-        const y2 = parseFloat(activeVectorShape.getAttribute('y2')) || 0;
+        const x1 = parseFloat(sh.getAttribute('x1')) || 0;
+        const y1 = parseFloat(sh.getAttribute('y1')) || 0;
+        const x2 = parseFloat(sh.getAttribute('x2')) || 0;
+        const y2 = parseFloat(sh.getAttribute('y2')) || 0;
         if (anchors[0]) vectorPlaceAnchorRoot(sh, anchors[0], x1, y1, hz);
         if (anchors[1]) vectorPlaceAnchorRoot(sh, anchors[1], x2, y2, hz);
     } else if (tag === 'ellipse' || tag === 'circle') {
-        const cx = parseFloat(activeVectorShape.getAttribute('cx')) || 0;
-        const cy = parseFloat(activeVectorShape.getAttribute('cy')) || 0;
-        const rx = tag === 'circle' ? parseFloat(activeVectorShape.getAttribute('r')) || 0 : parseFloat(activeVectorShape.getAttribute('rx')) || 0;
-        const ry = tag === 'circle' ? rx : parseFloat(activeVectorShape.getAttribute('ry')) || 0;
+        const cx = parseFloat(sh.getAttribute('cx')) || 0;
+        const cy = parseFloat(sh.getAttribute('cy')) || 0;
+        const rx = tag === 'circle' ? parseFloat(sh.getAttribute('r')) || 0 : parseFloat(sh.getAttribute('rx')) || 0;
+        const ry = tag === 'circle' ? rx : parseFloat(sh.getAttribute('ry')) || 0;
         const x = cx - rx;
         const y = cy - ry;
         const w = rx * 2;
@@ -4789,8 +5435,9 @@ function syncAnchors() {
             if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
         });
     } else if (tag === 'path') {
-        if (activeVectorShape.getAttribute('data-illu-quad-3') === '1') {
-            const pq = parseIlluQuadPath(activeVectorShape.getAttribute('d') || '');
+        const dAttr = sh.getAttribute('d') || '';
+        if (sh.getAttribute('data-illu-quad-3') === '1') {
+            const pq = parseIlluQuadPath(dAttr);
             if (pq && anchors.length >= 3) {
                 const pts = [
                     [pq.x0, pq.y0],
@@ -4801,8 +5448,15 @@ function syncAnchors() {
                     if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
                 });
             }
-        } else if (activeVectorShape.getAttribute('data-illu-line-cubic') === '1') {
-            const p = parseIlluLinePath(activeVectorShape.getAttribute('d') || '');
+        } else if (sh.getAttribute('data-illu-line-straight') === '1') {
+            const p = parseIlluStraightLinePath(dAttr);
+            if (p) {
+                [[p.x1, p.y1], [p.x2, p.y2]].forEach((pt, i) => {
+                    if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+                });
+            }
+        } else if (sh.getAttribute('data-illu-line-cubic') === '1') {
+            const p = parseIlluLinePath(dAttr);
             if (p && anchors.length >= 4) {
                 const pts = [
                     [p.x1, p.y1],
@@ -4815,7 +5469,7 @@ function syncAnchors() {
                 });
             }
         } else {
-            const pathPts = collectSvgPathAnchorPoints(activeVectorShape.getAttribute('d') || '');
+            const pathPts = collectSvgPathAnchorPoints(dAttr);
             pathPts.forEach((pt, i) => {
                 if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
             });
@@ -5089,11 +5743,7 @@ window.requestQuadBezierDraftRefresh = function () {
 };
 
 function lineCapInsetPx(cap, strokeW) {
-    const W = Math.max(4, strokeW * 2.5);
-    const r = Math.max(1.2, strokeW * 0.55);
-    if (cap === 'arrow' || cap === 'diamond') return W;
-    if (cap === 'round') return r;
-    return 0;
+    return lineCapDecorExtent(cap, strokeW);
 }
 
 function quadBezierPointAt(x0, y0, qx, qy, x1, y1, t) {
@@ -5147,10 +5797,12 @@ function findQuadTForChordInsetFromStart(x0, y0, qx, qy, x1, y1, inset) {
     return hi;
 }
 
-function trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, strokeW, startCap, endCap) {
+function trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, fillW, startCap, endCap, contourW) {
     let c = { x0, y0, qx, qy, x1, y1 };
-    const inset0 = lineCapInsetPx(startCap, strokeW);
-    const inset1 = lineCapInsetPx(endCap, strokeW);
+    const cw = Math.max(0, contourW != null ? contourW : EditorManager.toolProps.lineContourWidth ?? 0);
+    const outerW = Math.max(1, fillW + 2 * cw);
+    const inset0 = lineCapDecorExtent(startCap, outerW);
+    const inset1 = lineCapDecorExtent(endCap, outerW);
     if (inset0 > 0) {
         const t0 = findQuadTForChordInsetFromStart(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, inset0);
         if (t0 > 1e-5 && t0 < 1 - 1e-5) c = splitQuadBezierAt(c.x0, c.y0, c.qx, c.qy, c.x1, c.y1, t0).right;
@@ -5219,34 +5871,48 @@ window.illuStrokeQuadraticWithLineCaps = function (
     strokeW,
     strokeStyle,
     cap0,
-    cap1
+    cap1,
+    opts
 ) {
+    opts = opts || {};
     const c0 = cap0 || 'none';
     const c1 = cap1 || 'none';
-    const bothRound = c0 === 'round' && c1 === 'round';
-    const trimmed = trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, strokeW, c0, c1);
+    const hasArrowDecor = c0 === 'arrow' || c0 === 'diamond' || c1 === 'arrow' || c1 === 'diamond';
+    const fillW = opts.fillW != null ? opts.fillW : strokeW;
+    const contourW = opts.contourW != null ? opts.contourW : 0;
+    const trimCw = opts.trimContourCw != null ? opts.trimContourCw : contourW;
+    const trim = opts.trim !== false;
+    const drawDecor = opts.drawDecor !== false;
+    const curve =
+        trim && hasArrowDecor
+            ? trimQuadBezierForLineCaps(x0, y0, qx, qy, x1, y1, fillW, c0, c1, trimCw)
+            : { x0, y0, qx, qy, x1, y1 };
+    let lineCap = opts.lineCap;
+    if (!lineCap) {
+        lineCap = illuLineBodyStrokeCap(c0, c1, hasArrowDecor);
+    }
     ctx.beginPath();
-    ctx.moveTo(trimmed.x0, trimmed.y0);
-    ctx.quadraticCurveTo(trimmed.qx, trimmed.qy, trimmed.x1, trimmed.y1);
+    ctx.moveTo(curve.x0, curve.y0);
+    ctx.quadraticCurveTo(curve.qx, curve.qy, curve.x1, curve.y1);
     ctx.lineWidth = strokeW;
-    ctx.lineCap = bothRound ? 'round' : 'butt';
+    ctx.lineCap = lineCap;
     ctx.lineJoin = 'round';
     ctx.strokeStyle = strokeStyle;
     ctx.stroke();
-    drawPixelQuadCurveEndpointDecor(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeStyle, c0, c1);
+    if (drawDecor) {
+        drawPixelQuadCurveEndpointDecor(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeStyle, c0, c1);
+    }
 };
 
-function strokePixelQuadCurve(ctx, x0, y0, qx, qy, x1, y1, strokeW) {
-    const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
-    const fillType = EditorManager.toolProps.fillType || 'solid';
-    if (mode === 'fill') return;
-    const cap0 = EditorManager.toolProps.lineCapStart || 'none';
-    const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
-    const strokeCss =
-        fillType === 'gradient'
-            ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x0, y0, 0, 0, x1, y1)
-            : shapeLineStrokeCss();
-    window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeCss, cap0, cap1);
+function strokePixelQuadCurve(ctx, x0, y0, qx, qy, x1, y1, strokeW, o) {
+    const opts = o || {
+        strokeWidth: strokeW,
+        strokeMode: EditorManager.toolProps.shapeStrokeMode || 'both',
+        fillType: EditorManager.toolProps.fillType || 'solid',
+        lineContourWidth: EditorManager.toolProps.lineContourWidth ?? 0
+    };
+    if (opts.strokeWidth == null) opts.strokeWidth = strokeW;
+    illuDrawPixelQuadCurveWithBorder(ctx, x0, y0, qx, qy, x1, y1, opts);
 }
 
 let _quadDraftRaf = 0;
@@ -5311,12 +5977,25 @@ window.drawQuadBezierDraftInSvgUi = function (svgUI) {
         );
         const d = `M ${st.p0.x} ${st.p0.y} Q ${adj.qx} ${adj.qy} ${end.x} ${end.y}`;
         const path = document.createElementNS(NS, 'path');
-        const draftSw = Math.max(1, EditorManager.toolProps.size || 2);
+        const draftW = illuLineLikeWidths();
         const draftStroke = shapeLineStrokeCss();
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', draftStroke);
-        path.setAttribute('stroke-width', String(draftSw));
+        path.setAttribute('stroke-width', String(draftW.fillW));
+        if (draftW.contourW > 0) {
+            const outline = document.createElementNS(NS, 'path');
+            outline.setAttribute('d', d);
+            outline.setAttribute('fill', 'none');
+            outline.setAttribute('stroke', shapeSecondaryStrokeCss());
+            outline.setAttribute('stroke-width', String(draftW.outerW));
+            outline.setAttribute('stroke-linecap', 'butt');
+            outline.setAttribute('stroke-dasharray', '5 4');
+            outline.setAttribute('vector-effect', 'non-scaling-stroke');
+            outline.setAttribute('pointer-events', 'none');
+            outline.setAttribute('data-illu-quad-3-outline', '1');
+            svgUI.appendChild(outline);
+        }
         path.setAttribute('stroke-linecap', 'butt');
         path.setAttribute('data-illu-quad-3', '1');
         path.setAttribute('stroke-dasharray', '5 4');
@@ -5453,7 +6132,9 @@ function illuVectorPathHasLineEndpoints(el) {
     if (tag === 'line') return true;
     if (tag !== 'path') return false;
     return (
-        el.getAttribute('data-illu-line-cubic') === '1' || el.getAttribute('data-illu-quad-3') === '1'
+        el.getAttribute('data-illu-line-cubic') === '1' ||
+        el.getAttribute('data-illu-line-straight') === '1' ||
+        el.getAttribute('data-illu-quad-3') === '1'
     );
 }
 
@@ -5461,33 +6142,63 @@ window.illuVectorPathHasLineEndpoints = illuVectorPathHasLineEndpoints;
 
 window.vectorApplyLineEndpointMarkers = function (el) {
     if (!illuVectorPathHasLineEndpoints(el)) return;
-    const tag = (el.tagName || '').toLowerCase();
-    el.removeAttribute('marker-start');
-    el.removeAttribute('marker-end');
-    const tp = EditorManager.toolProps;
-    const startCap = tp.lineCapStart || 'none';
-    const endCap = tp.lineCapEnd || 'none';
-    const sw = Math.max(1, parseFloat(el.getAttribute('stroke-width') || '2'));
-    const bothRound = startCap === 'round' && endCap === 'round';
-    el.setAttribute('stroke-linecap', bothRound ? 'round' : 'butt');
-    const color = vectorStrokeColorForMarkers(el);
-    if (!color) return;
-    const defs = document.getElementById('vector-doc-defs');
-    if (!defs) return;
-    const safeCol = color.replace(/[^#a-z0-9]/gi, '');
-    const mk = (kind, pos) => {
-        const id = `illu-cap-${kind}-${pos}-${safeCol}-${Math.round(sw * 10)}`;
-        if (kind === 'arrow') return ensureLineArrowMarker(defs, id, color, sw, pos === 'e');
-        if (kind === 'diamond') return ensureLineDiamondMarker(defs, id, color, sw, pos === 'e');
-        return ensureLineRoundMarker(defs, id, color, sw, pos === 'e');
-    };
-    if (startCap === 'arrow') el.setAttribute('marker-start', `url(#${mk('arrow', 's')})`);
-    else if (startCap === 'diamond') el.setAttribute('marker-start', `url(#${mk('diamond', 's')})`);
-    else if (startCap === 'round' && !bothRound) el.setAttribute('marker-start', `url(#${mk('round', 's')})`);
+    const applyMarkersOn = (target, sw, color) => {
+        if (!target) return;
+        target.removeAttribute('marker-start');
+        target.removeAttribute('marker-end');
+        const tp = EditorManager.toolProps;
+        const startCap = tp.lineCapStart || 'none';
+        const endCap = tp.lineCapEnd || 'none';
+        const hasDecor =
+            startCap === 'arrow' ||
+            startCap === 'diamond' ||
+            endCap === 'arrow' ||
+            endCap === 'diamond';
+        const bothRound = startCap === 'round' && endCap === 'round';
+        target.setAttribute('stroke-linecap', illuLineBodyStrokeCap(startCap, endCap, hasDecor));
+        if (!color) return;
+        const defs = document.getElementById('vector-doc-defs');
+        if (!defs) return;
+        const safeCol = color.replace(/[^#a-z0-9]/gi, '');
+        const mk = (kind, pos) => {
+            const id = `illu-cap-${kind}-${pos}-${safeCol}-${Math.round(sw * 10)}`;
+            if (kind === 'arrow') return ensureLineArrowMarker(defs, id, color, sw, pos === 'e');
+            if (kind === 'diamond') return ensureLineDiamondMarker(defs, id, color, sw, pos === 'e');
+            return ensureLineRoundMarker(defs, id, color, sw, pos === 'e');
+        };
+        if (startCap === 'arrow') target.setAttribute('marker-start', `url(#${mk('arrow', 's')})`);
+        else if (startCap === 'diamond') target.setAttribute('marker-start', `url(#${mk('diamond', 's')})`);
+        else if (startCap === 'round' && !bothRound) target.setAttribute('marker-start', `url(#${mk('round', 's')})`);
 
-    if (endCap === 'arrow') el.setAttribute('marker-end', `url(#${mk('arrow', 'e')})`);
-    else if (endCap === 'diamond') el.setAttribute('marker-end', `url(#${mk('diamond', 'e')})`);
-    else if (endCap === 'round' && !bothRound) el.setAttribute('marker-end', `url(#${mk('round', 'e')})`);
+        if (endCap === 'arrow') target.setAttribute('marker-end', `url(#${mk('arrow', 'e')})`);
+        else if (endCap === 'diamond') target.setAttribute('marker-end', `url(#${mk('diamond', 'e')})`);
+        else if (endCap === 'round' && !bothRound) target.setAttribute('marker-end', `url(#${mk('round', 'e')})`);
+    };
+
+    const fillW = Math.max(1, parseFloat(el.getAttribute('stroke-width') || EditorManager.toolProps.size || 2));
+    const lw =
+        typeof illuLineLikeWidthsFromOpts === 'function'
+            ? illuLineLikeWidthsFromOpts({ strokeWidth: fillW, lineContourWidth: EditorManager.toolProps.lineContourWidth ?? 0 })
+            : { fillW, contourW: 0, outerW: fillW };
+    const fillColor = vectorStrokeColorForMarkers(el) || shapePrimaryFillCss();
+    const outlineKey = el.getAttribute('data-illu-outline-key');
+    const parent = el.parentNode;
+    const outline =
+        outlineKey && parent
+            ? parent.querySelector(`[data-illu-line-outline-for="${outlineKey}"]`)
+            : null;
+
+    const tp = EditorManager.toolProps;
+    const c0 = tp.lineCapStart || 'none';
+    const c1 = tp.lineCapEnd || 'none';
+    const hasDecor = c0 === 'arrow' || c0 === 'diamond' || c1 === 'arrow' || c1 === 'diamond';
+    const bodyCap = illuLineBodyStrokeCap(c0, c1, hasDecor);
+    if (outline && lw.contourW > 0) {
+        outline.setAttribute('stroke-linecap', bodyCap);
+        const contourCss = shapeSecondaryStrokeCss();
+        if (contourCss) applyMarkersOn(outline, lw.outerW, contourCss);
+    }
+    applyMarkersOn(el, lw.fillW, fillColor);
 };
 
 function vectorEnsureGradientForHit(el) {
@@ -5570,22 +6281,71 @@ function applyVectorShapePaint(el, kind) {
     el.removeAttribute('data-vgrad');
 
     if (kind === 'line') {
+        const lw =
+            typeof window.illuLineLikeWidths === 'function'
+                ? window.illuLineLikeWidths()
+                : { fillW: sw, contourW: 0, outerW: sw };
+        const parent = el.parentNode;
+        const outlineKey = el.getAttribute('data-illu-outline-key');
+        const removeOutline = () => {
+            if (!parent || !outlineKey) return;
+            const ol = parent.querySelector(`[data-illu-line-outline-for="${outlineKey}"]`);
+            if (ol) ol.remove();
+        };
         el.setAttribute('fill', 'none');
-        if (doStroke) {
-            el.setAttribute('stroke-width', String(sw));
-            if (fillType === 'gradient') {
+        const drawContour = doStroke && (lw.contourW > 0 || mode === 'stroke');
+        const drawTrace = doFill;
+        const tp = EditorManager.toolProps;
+        const cap0 = tp.lineCapStart || 'none';
+        const cap1 = tp.lineCapEnd || 'none';
+        const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+        const pathLineCap = illuLineBodyStrokeCap(cap0, cap1, hasArrowDecor);
+        let lineOutline = null;
+        if (drawContour && lw.contourW > 0 && parent) {
+            let key = outlineKey;
+            if (!key) {
+                key = `lo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                el.setAttribute('data-illu-outline-key', key);
+            }
+            lineOutline = parent.querySelector(`[data-illu-line-outline-for="${key}"]`);
+            if (!lineOutline) {
+                lineOutline = el.cloneNode(true);
+                lineOutline.removeAttribute('id');
+                lineOutline.removeAttribute('data-illu-outline-key');
+                lineOutline.setAttribute('data-illu-line-outline-for', key);
+                parent.insertBefore(lineOutline, el);
+            }
+            lineOutline.setAttribute('fill', 'none');
+            lineOutline.setAttribute('stroke', shapeSecondaryStrokeCss());
+            lineOutline.setAttribute('stroke-width', String(lw.outerW));
+            lineOutline.setAttribute('stroke-linecap', pathLineCap);
+            lineOutline.removeAttribute('data-vgrad');
+        } else {
+            removeOutline();
+        }
+        if (drawTrace || (drawContour && lw.contourW === 0)) {
+            const traceW = drawTrace ? lw.fillW : lw.fillW;
+            el.setAttribute('stroke-width', String(traceW));
+            if (fillType === 'gradient' && drawTrace) {
                 const gid = `vgrad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                 el.setAttribute('data-vgrad', gid);
                 el.setAttribute('stroke', `url(#${gid})`);
+            } else if (drawTrace) {
+                el.setAttribute('stroke', primary);
             } else {
-                el.setAttribute('stroke', strokeCol);
+                el.setAttribute('stroke', shapeSecondaryStrokeCss());
             }
+        } else if (drawContour && lw.contourW > 0) {
+            el.removeAttribute('stroke');
+            el.removeAttribute('stroke-width');
+            el.removeAttribute('data-vgrad');
         } else {
             el.removeAttribute('stroke');
             el.removeAttribute('stroke-width');
+            removeOutline();
         }
-        const tln = (el.tagName || '').toLowerCase();
-        if (tln === 'line' || (tln === 'path' && el.getAttribute('data-illu-line-cubic') === '1')) {
+        el.setAttribute('stroke-linecap', pathLineCap);
+        if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
             window.vectorApplyLineEndpointMarkers(el);
         }
         return;
@@ -5613,11 +6373,72 @@ function applyVectorShapePaint(el, kind) {
 }
 window.applyVectorShapePaint = applyVectorShapePaint;
 
-window.syncVectorGradientBoundsForEl = function(el) {
+/** Réapplique remplissage / contour (toolProps) sur une forme SVG en cours d’édition. */
+function illuRefreshVectorElementPaint(el) {
+    if (!el || typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
+    const t = (el.tagName || '').toLowerCase();
+    if (t === 'foreignobject') return;
+    let kind = null;
+    if (t === 'rect') kind = 'rect';
+    else if (t === 'ellipse' || t === 'circle') kind = 'ellipse';
+    else if (t === 'polygon' || t === 'polyline') kind = 'polygon';
+    else if (
+        t === 'line' ||
+        (t === 'path' &&
+            (el.getAttribute('data-illu-line-cubic') === '1' ||
+                el.getAttribute('data-illu-line-straight') === '1' ||
+                el.getAttribute('data-illu-quad-3') === '1' ||
+                el.getAttribute('data-illu-stroke-only') === '1'))
+    ) {
+        kind = 'line';
+    }
+    if (!kind) return;
+    applyVectorShapePaint(el, kind);
+    if (!el.getAttribute('data-vgrad')) return;
+    if (kind === 'line') {
+        if (t === 'line') {
+            const x1 = parseFloat(el.getAttribute('x1') || '0');
+            const y1 = parseFloat(el.getAttribute('y1') || '0');
+            const x2 = parseFloat(el.getAttribute('x2') || '0');
+            const y2 = parseFloat(el.getAttribute('y2') || '0');
+            syncVectorGradientOnShape(el, 'line', x1, y1, x2, y2);
+            return;
+        }
+        const d = el.getAttribute('d') || '';
+        const cubic = parseIlluLinePath(d);
+        const quad = parseIlluQuadPath(d);
+        const straight = parseIlluStraightLinePath(d);
+        if (cubic) syncVectorGradientOnShape(el, 'line', cubic.x1, cubic.y1, cubic.x2, cubic.y2);
+        else if (quad) syncVectorGradientOnShape(el, 'line', quad.x0, quad.y0, quad.x1, quad.y1);
+        else if (straight) syncVectorGradientOnShape(el, 'line', straight.x1, straight.y1, straight.x2, straight.y2);
+        return;
+    }
+    if (kind === 'rect') {
+        const x = parseFloat(el.getAttribute('x') || '0');
+        const y = parseFloat(el.getAttribute('y') || '0');
+        const w = parseFloat(el.getAttribute('width') || '0');
+        const h = parseFloat(el.getAttribute('height') || '0');
+        syncVectorGradientOnShape(el, 'rect', x, y, x + w, y + h);
+        return;
+    }
+    if (kind === 'ellipse') {
+        const cx = parseFloat(el.getAttribute('cx') || '0');
+        const cy = parseFloat(el.getAttribute('cy') || '0');
+        const rx =
+            t === 'circle'
+                ? parseFloat(el.getAttribute('r') || '0')
+                : parseFloat(el.getAttribute('rx') || '0');
+        const ry = t === 'circle' ? rx : parseFloat(el.getAttribute('ry') || '0');
+        syncVectorGradientOnShape(el, 'rect', cx - rx, cy - ry, cx + rx, cy + ry);
+    }
+}
+window.illuRefreshVectorElementPaint = illuRefreshVectorElementPaint;
+
+window.syncVectorGradientBoundsForEl = function (el) {
     if (!el) return;
     const defs = document.getElementById('vector-doc-defs');
     if (!defs) return;
-    
+
     let gid = el.getAttribute('data-vgrad');
     if (!gid) return;
 
@@ -5626,13 +6447,13 @@ window.syncVectorGradientBoundsForEl = function(el) {
         const gradType = EditorManager.toolProps.gradientType || 'linear';
         gradEl = document.createElementNS('http://www.w3.org/2000/svg', gradType === 'radial' ? 'radialGradient' : 'linearGradient');
         gradEl.setAttribute('id', gid);
-        
+
         const angleEl = document.getElementById('vector-prop-grad-angle');
         const angle = angleEl ? parseFloat(angleEl.value || '0') : 0;
-        
+
         if (gradType === 'linear') {
             const rad = (angle) * Math.PI / 180;
-            const r = 50; 
+            const r = 50;
             const cx = 50, cy = 50;
             const x1 = cx - r * Math.cos(rad), y1 = cy - r * Math.sin(rad);
             const x2 = cx + r * Math.cos(rad), y2 = cy + r * Math.sin(rad);
@@ -5641,17 +6462,17 @@ window.syncVectorGradientBoundsForEl = function(el) {
             gradEl.setAttribute('x2', `$${x2}%`);
             gradEl.setAttribute('y2', `$${y2}%`);
         }
-        
+
         const c1 = shapePrimaryFillCss() || '#000000';
         const c2 = typeof EditorManager !== 'undefined' ? (EditorManager.secondaryColor || '#ffffff') : '#ffffff';
-        
+
         const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         s1.setAttribute('offset', '0%');
         s1.setAttribute('stop-color', c1);
         const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         s2.setAttribute('offset', '100%');
         s2.setAttribute('stop-color', c2);
-        
+
         gradEl.appendChild(s1);
         gradEl.appendChild(s2);
         defs.appendChild(gradEl);
@@ -5873,84 +6694,10 @@ function refreshVectorDraftFromEditor() {
         div.style.color = typeof primary === 'string' ? primary : `rgb(${primary.r},${primary.g},${primary.b})`;
         return;
     }
-    if (t === 'path') {
-        const sw = Math.max(1, EditorManager.toolProps.size || 5);
-        el.setAttribute('stroke-width', String(sw));
-        const ft = EditorManager.toolProps.fillType || 'solid';
-        const primary = EditorManager.activeColor || '#000000';
-        const strokeStr = typeof primary === 'string' ? primary : `rgb(${primary.r},${primary.g},${primary.b})`;
-        if (ft === 'gradient') {
-            if (!el.getAttribute('data-vgrad')) {
-                const gid = `vgrad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-                el.setAttribute('data-vgrad', gid);
-                el.setAttribute('stroke', `url(#${gid})`);
-            }
-            const d = el.getAttribute('d') || '';
-            const cubic = parseIlluLinePath(d);
-            const quad = parseIlluQuadPath(d);
-            let x1 = 0;
-            let y1 = 0;
-            let x2 = 0;
-            let y2 = 0;
-            if (cubic) {
-                x1 = cubic.x1;
-                y1 = cubic.y1;
-                x2 = cubic.x2;
-                y2 = cubic.y2;
-            } else if (quad) {
-                x1 = quad.x0;
-                y1 = quad.y0;
-                x2 = quad.x1;
-                y2 = quad.y1;
-            } else {
-                const first = d.match(/M\s*([\d.-]+)\s*([\d.-]+)/);
-                const last = [...d.matchAll(/\bL\s*([\d.-]+)\s*([\d.-]+)/g)];
-                if (first) {
-                    x1 = parseFloat(first[1]);
-                    y1 = parseFloat(first[2]);
-                }
-                if (last.length) {
-                    x2 = parseFloat(last[last.length - 1][1]);
-                    y2 = parseFloat(last[last.length - 1][2]);
-                } else if (first) {
-                    x2 = x1;
-                    y2 = y1;
-                }
-            }
-            syncVectorGradientOnShape(el, 'line', x1, y1, x2, y2);
-        } else {
-            el.removeAttribute('data-vgrad');
-            el.setAttribute('stroke', strokeStr);
-        }
-        if (illuVectorPathHasLineEndpoints(el)) window.vectorApplyLineEndpointMarkers(el);
-        return;
+    illuRefreshVectorElementPaint(el);
+    if (illuVectorPathHasLineEndpoints(el) && typeof window.vectorApplyLineEndpointMarkers === 'function') {
+        window.vectorApplyLineEndpointMarkers(el);
     }
-    const kind =
-        t === 'line' ? 'line' : t === 'ellipse' || t === 'circle' ? 'ellipse' : t === 'rect' ? 'rect' : null;
-    if (!kind) return;
-    applyVectorShapePaint(el, kind);
-    if (!el.getAttribute('data-vgrad')) return;
-    if (kind === 'line') {
-        const x1 = parseFloat(el.getAttribute('x1') || '0');
-        const y1 = parseFloat(el.getAttribute('y1') || '0');
-        const x2 = parseFloat(el.getAttribute('x2') || '0');
-        const y2 = parseFloat(el.getAttribute('y2') || '0');
-        syncVectorGradientOnShape(el, 'line', x1, y1, x2, y2);
-        return;
-    }
-    if (kind === 'rect') {
-        const x = parseFloat(el.getAttribute('x') || '0');
-        const y = parseFloat(el.getAttribute('y') || '0');
-        const w = parseFloat(el.getAttribute('width') || '0');
-        const h = parseFloat(el.getAttribute('height') || '0');
-        syncVectorGradientOnShape(el, 'rect', x, y, x + w, y + h);
-        return;
-    }
-    const cx = parseFloat(el.getAttribute('cx') || '0');
-    const cy = parseFloat(el.getAttribute('cy') || '0');
-    const rx = parseFloat(el.getAttribute('rx') || '0');
-    const ry = parseFloat(el.getAttribute('ry') || '0');
-    syncVectorGradientOnShape(el, 'rect', cx - rx, cy - ry, cx + rx, cy + ry);
 }
 
 window.refreshVectorDraftFromEditor = refreshVectorDraftFromEditor;
@@ -6035,8 +6782,8 @@ window.syncVectorTextEditorStyles = function () {
     const targets = EditorManager.activeVectorSelection.length
         ? EditorManager.activeVectorSelection
         : currentElement
-          ? [currentElement]
-          : [];
+            ? [currentElement]
+            : [];
     const primary = illuVectorTextPrimaryCss();
     targets.forEach((el) => {
         const tag = (el.tagName || '').toLowerCase();
@@ -6061,14 +6808,14 @@ window.syncVectorTextEditorStyles = function () {
 };
 
 window.illuCancelActiveVectorTextDraft = function () {
+    if (!currentElement) return false;
+    const t = (currentElement.tagName || '').toLowerCase();
+    if (t !== 'foreignobject' && t !== 'text') return false;
     const VE = window.VectorEngine;
-    if (currentElement) {
-        const t = (currentElement.tagName || '').toLowerCase();
-        if (t === 'foreignobject') {
-            illuRemoveVectorTextIfEmpty(currentElement);
-        }
-        currentElement = null;
+    if (t === 'foreignobject') {
+        illuRemoveVectorTextIfEmpty(currentElement);
     }
+    currentElement = null;
     EditorManager.activeVectorSelection = [];
     window._activeVectorShapeEl = null;
     activeVectorShape = null;
@@ -6076,6 +6823,32 @@ window.illuCancelActiveVectorTextDraft = function () {
     if (VE && typeof VE.clearUI === 'function') VE.clearUI();
     if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
     if (typeof EditorManager.render === 'function') EditorManager.render();
+    return true;
+};
+
+/** Sélection active sur le document (pixel ou vecteur), hors brouillon texte vide. */
+window.illuHasActiveCanvasSelection = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.activeProject) return false;
+    if (EditorManager.mode === 'vector') {
+        return !!(EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length);
+    }
+    if (typeof window.illuPixelSelectionPresent === 'function' && window.illuPixelSelectionPresent()) {
+        return true;
+    }
+    return false;
+};
+
+/** Même logique que Ctrl+D : clôturer l’édition en cours puis désélectionner. */
+window.illuDeselectLikeCtrlD = function () {
+    if (
+        typeof window.finalizePendingPixelLiveEdits === 'function' &&
+        window.finalizePendingPixelLiveEdits()
+    ) {
+        return true;
+    }
+    if (typeof EditorManager !== 'undefined' && typeof EditorManager.deselectAll === 'function') {
+        EditorManager.deselectAll();
+    }
     return true;
 };
 
@@ -6157,7 +6930,11 @@ function illuVectorResumeExistingShape(hit, pos, e, opts) {
     activeVectorShape = hit;
     clearAnchors();
     generateAnchors(hit);
-    if (VE && typeof VE.refreshSelectionUI === 'function') VE.refreshSelectionUI();
+    if (typeof window.illuSyncVectorSelectionUI === 'function') {
+        window.illuSyncVectorSelectionUI();
+    } else if (VE && typeof VE.refreshSelectionUI === 'function') {
+        VE.refreshSelectionUI();
+    }
     if (opts && opts.beginDrag && VE && typeof VE.beginDrag === 'function') {
         VE.beginDrag([hit], pos, e);
     }
@@ -6274,7 +7051,9 @@ window.illuMoveVectorSelectionByDelta = function (dx, dy) {
         const base = snapshotVectorElementGeometry(el);
         applyVectorDragFromSnapshot(el, base, dx, dy);
     }
-    if (typeof syncAnchors === 'function' && window._activeVectorShapeEl) {
+    if (typeof window.illuSyncVectorSelectionUI === 'function') {
+        window.illuSyncVectorSelectionUI();
+    } else if (typeof syncAnchors === 'function' && window._activeVectorShapeEl) {
         syncAnchors();
     }
     EditorManager.syncActiveVectorSvg();
@@ -6580,7 +7359,8 @@ function handleMouseDown(e) {
                 gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
                 gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
                 gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
-                strokeWidth: sw
+                strokeWidth: sw,
+                lineContourWidth: EditorManager.toolProps.lineContourWidth ?? 0
             };
             if (typeof window.captureShapeEditAfterDraw === 'function') {
                 window.captureShapeEditAfterDraw(
@@ -6863,7 +7643,7 @@ function startVector(pos, e) {
             // On va laisser VE gérer les resize handles plus tard si nécessaire, 
             // mais les ancres de TRACÉ (svg-anchor) sont prioritaires ici.
         }
-    } catch(err) {}
+    } catch (err) { }
 
     const color = typeof EditorManager.activeColor === 'string' ? EditorManager.activeColor
         : `rgb(${EditorManager.activeColor.r},${EditorManager.activeColor.g},${EditorManager.activeColor.b})`;
@@ -6939,18 +7719,22 @@ function startVector(pos, e) {
             }
             window._activeVectorShapeEl = EditorManager.activeVectorSelection[EditorManager.activeVectorSelection.length - 1] || null;
             activeVectorShape = window._activeVectorShapeEl;
-            
+
             // Si outil de déformation, on active un mode spécial dans VE
             if (window.activeTool === 'deform' || window.activeTool === 'warp-4') {
                 VE.beginTransform(EditorManager.activeVectorSelection, pos, window.activeTool);
             } else {
                 VE.beginDrag(EditorManager.activeVectorSelection, pos, e);
             }
-            
+
             // Anchors de forme pour l'élément primaire
             clearAnchors();
             if (window._activeVectorShapeEl) generateAnchors(window._activeVectorShapeEl);
-            VE.refreshSelectionUI();
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            } else {
+                VE.refreshSelectionUI();
+            }
         } else {
             // Aucune forme touchée => rubber-band sauf si additive
             const additive = e && (e.shiftKey || e.ctrlKey || e.metaKey);
@@ -7064,21 +7848,36 @@ function startVector(pos, e) {
             layer.appendChild(currentElement);
             applyVectorShapePaint(currentElement, 'rect');
             break;
-        case 'triangle':
-            currentElement = createSVG('polygon', {
+        case 'triangle': {
+            const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+            const triAttrs = {
                 points: `${pos.x},${pos.y} ${pos.x},${pos.y} ${pos.x},${pos.y}`,
-                fill: color,
-                'data-illu-triangle': '1',
-                'data-illu-triangle-adj': '0.5',
-                'data-illu-triangle-vf': '0'
-            });
+                fill: color
+            };
+            if (branches === 3) {
+                triAttrs['data-illu-triangle'] = '1';
+                triAttrs['data-illu-triangle-adj'] = '0.5';
+                triAttrs['data-illu-triangle-vf'] = '0';
+            } else {
+                triAttrs['data-illu-star-branches'] = String(branches);
+            }
+            currentElement = createSVG('polygon', triAttrs);
             layer.appendChild(currentElement);
             applyVectorShapePaint(currentElement, 'polygon');
+            if (branches > 3) {
+                illuStarWritePoints(currentElement, pos.x, pos.y, 2, 2, branches);
+            } else {
+                illuTriangleWritePoints(currentElement, pos.x, pos.y, 2, 2, 0.5, 0);
+            }
             break;
+        }
         case 'text': {
             /* Création gérée dans handleMouseDown (zone compacte, pas de drag 280×140). */
             break;
         }
+    }
+    if (currentElement) {
+        window._illuVectorLiveDraw = true;
     }
 }
 
@@ -7098,8 +7897,13 @@ function updateVector(pos) {
     }
     if (activeAdjustDrag && activeVectorShape) {
         illuUpdateVectorAdjustFromPointer(activeVectorShape, activeAdjustDrag, pos);
-        if (!window._illuVectorDragActive && typeof syncAnchors === 'function') syncAnchors();
-        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+        if (!window._illuVectorDragActive) {
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            } else if (typeof syncAnchors === 'function') {
+                syncAnchors();
+            }
+        }
         return;
     }
     if (activeVectorRotationDrag && activeVectorShape) {
@@ -7111,8 +7915,13 @@ function updateVector(pos) {
             let ang = vectorRotationStartAngle + da;
             ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
             illuWriteVectorShapeRotation(activeVectorShape, ang);
-            if (!window._illuVectorDragActive && typeof syncAnchors === 'function') syncAnchors();
-            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+            if (!window._illuVectorDragActive) {
+                if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                    window.illuSyncVectorSelectionUI();
+                } else if (typeof syncAnchors === 'function') {
+                    syncAnchors();
+                }
+            }
         }
         return;
     }
@@ -7481,6 +8290,7 @@ function updateVector(pos) {
             activeVectorShape.setAttribute('y', String(lp.y));
         }
 
+        illuRefreshVectorElementPaint(activeVectorShape);
         const ahz = EditorManager.svgUiHandleSizeDoc() / 2;
         activeAnchor.setAttribute('x', pos.x - ahz);
         activeAnchor.setAttribute('y', pos.y - ahz);
@@ -7528,7 +8338,7 @@ function updateVector(pos) {
     if (vectorMoveTarget && vectorMoveStartPointer && vectorMoveInitial) {
         const tdx = pos.x - vectorMoveStartPointer.x;
         const tdy = pos.y - vectorMoveStartPointer.y;
-        
+
         // If the dragged target is part of a multi-selection, drag all of them
         if (window._activeVectorSelectionSnapshots && window._activeVectorSelectionSnapshots.some(s => s.el === vectorMoveTarget)) {
             window._activeVectorSelectionSnapshots.forEach(snap => {
@@ -7537,7 +8347,7 @@ function updateVector(pos) {
         } else {
             applyVectorDragFromSnapshot(vectorMoveTarget, vectorMoveInitial, tdx, tdy);
         }
-        
+
         vectorDidMove = true;
         if (!window._illuVectorDragActive && typeof syncAnchors === 'function') syncAnchors();
         return;
@@ -7605,8 +8415,13 @@ function updateVector(pos) {
                 w = Math.abs(pos.x - startX);
                 h = Math.abs(pos.y - startY);
             }
-            const stTri = illuTriangleReadState(currentElement);
-            illuTriangleWritePoints(currentElement, x, y, w, h, stTri.adj, stTri.vf);
+            const branches = illuShapeReadBranches(currentElement);
+            if (branches === 3) {
+                const stTri = illuTriangleReadState(currentElement);
+                illuTriangleWritePoints(currentElement, x, y, w, h, stTri.adj, stTri.vf);
+            } else {
+                illuStarWritePoints(currentElement, x, y, w, h, branches);
+            }
             if (currentElement.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(currentElement, 'rect', x, y, x + w, y + h);
             }
@@ -7652,7 +8467,9 @@ function updateVector(pos) {
             if (currentElement.getAttribute('data-vgrad')) {
                 syncVectorGradientOnShape(currentElement, 'line', startX, startY, ep.x, ep.y);
             }
-            window.vectorApplyLineEndpointMarkers(currentElement);
+            if (!window._illuVectorLiveDraw && typeof window.vectorApplyLineEndpointMarkers === 'function') {
+                window.vectorApplyLineEndpointMarkers(currentElement);
+            }
             break;
         }
         case 'brush':
@@ -7678,8 +8495,22 @@ function updateVector(pos) {
             break;
         }
     }
+    if (currentElement) {
+        if (window._illuVectorLiveDraw) {
+            illuSyncVectorLineOutlineGeometry(currentElement);
+        } else {
+            illuRefreshVectorElementPaint(currentElement);
+            if (isDrawing && typeof window.regenerateVectorAnchorsOnly === 'function') {
+                window.regenerateVectorAnchorsOnly(currentElement);
+            }
+        }
+    }
     if (['rect', 'circle', 'line', 'round-3', 'triangle', 'pen', 'polygon'].includes(window.activeTool)) {
-        EditorManager.render();
+        if (window._illuVectorLiveDraw) {
+            illuScheduleVectorLiveDrawVisual();
+        } else {
+            EditorManager.render();
+        }
     }
 }
 
@@ -8760,6 +9591,149 @@ window.syncSelectionRectFreeCornersArmUI = function () {
     });
 };
 
+window.syncShapeRectFreeCornersArmUI = function () {
+    if (typeof EditorManager === 'undefined') return;
+    const on = !!EditorManager.toolProps.shapeRectFreeCornersArm;
+    const btn = document.getElementById('tool-shape-free-corners');
+    if (!btn) return;
+    btn.classList.toggle('illu-icon-toggle--on', on);
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+};
+
+window.illuEnterShapeQuadCornerEditIfArmed = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.toolProps.shapeRectFreeCornersArm) return false;
+    const ed = window.pixelShapeEdit;
+    if (!ed || (ed.kind !== 'rect' && ed.kind !== 'roundrect')) return false;
+    if (ed.w < 4 || ed.h < 4) return false;
+    const tool = window.activeTool;
+    if (tool !== 'rect' && tool !== 'round-3') return false;
+    ed.quadBase = ed.kind === 'roundrect' ? 'roundrect' : 'rect';
+    ed.pts = illuShapeQuadPtsFromRect(ed.lx, ed.ly, ed.w, ed.h);
+    if (ed.quadBase === 'roundrect') {
+        const want = ed.r != null ? ed.r : EditorManager.toolProps.shapeCornerRadius ?? 12;
+        ed.r = illuClampQuadCornerRadius(want, ed.pts);
+    }
+    ed.kind = 'quad';
+    ed._quadCornerEdit = true;
+    EditorManager.toolProps.shapeRectFreeCornersArm = false;
+    if (typeof window.syncShapeRectFreeCornersArmUI === 'function') window.syncShapeRectFreeCornersArmUI();
+    if (typeof window.redrawShapeFromEditLive === 'function') {
+        window.redrawShapeFromEditLive();
+    }
+    if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+        window.refreshPixelShapeEditOverlay({ forceFull: true });
+    }
+    if (typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+    return true;
+};
+
+window.illuConvertVectorShapeToFreeQuad = function (shape) {
+    if (!shape || typeof EditorManager === 'undefined') return shape;
+    if (!EditorManager.toolProps.shapeRectFreeCornersArm) return shape;
+    const tag = (shape.tagName || '').toLowerCase();
+    if (tag !== 'rect') return shape;
+    const x = parseFloat(shape.getAttribute('x')) || 0;
+    const y = parseFloat(shape.getAttribute('y')) || 0;
+    const w = parseFloat(shape.getAttribute('width')) || 0;
+    const h = parseFloat(shape.getAttribute('height')) || 0;
+    if (w < 4 || h < 4) return shape;
+    const isRound = shape.getAttribute('data-illu-round') === '1';
+    const ptsStr = `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
+    const poly = createSVG('polygon', { points: ptsStr, fill: shape.getAttribute('fill') || 'none' });
+    const stroke = shape.getAttribute('stroke');
+    if (stroke) poly.setAttribute('stroke', stroke);
+    const sw = shape.getAttribute('stroke-width');
+    if (sw) poly.setAttribute('stroke-width', sw);
+    if (isRound) {
+        const r =
+            parseFloat(shape.getAttribute('rx')) ||
+            EditorManager.toolProps.shapeCornerRadius ||
+            12;
+        poly.setAttribute('data-illu-round-quad', '1');
+        poly.setAttribute('data-illu-round-r', String(r));
+    }
+    poly.setAttribute('data-illu-free-quad', '1');
+    Array.from(shape.attributes).forEach((attr) => {
+        const n = attr.name;
+        if (n.startsWith('data-') && n !== 'data-illu-round') {
+            poly.setAttribute(n, attr.value);
+        }
+    });
+    const parent = shape.parentNode;
+    if (!parent) return shape;
+    parent.replaceChild(poly, shape);
+    applyVectorShapePaint(poly, 'polygon');
+    EditorManager.toolProps.shapeRectFreeCornersArm = false;
+    if (typeof window.syncShapeRectFreeCornersArmUI === 'function') window.syncShapeRectFreeCornersArmUI();
+    return poly;
+};
+
+window.illuHandleShapeRectFreeCornersClick = function () {
+    if (typeof EditorManager === 'undefined') return;
+    const tool = window.activeTool;
+
+    const ed = window.pixelShapeEdit;
+    if (
+        ed &&
+        (ed.kind === 'rect' || ed.kind === 'roundrect') &&
+        ed.w >= 4 &&
+        ed.h >= 4 &&
+        (tool === 'rect' || tool === 'round-3')
+    ) {
+        EditorManager.toolProps.shapeRectFreeCornersArm = true;
+        if (typeof window.illuEnterShapeQuadCornerEditIfArmed === 'function' && window.illuEnterShapeQuadCornerEditIfArmed()) {
+            if (typeof window.syncShapeRectFreeCornersArmUI === 'function') window.syncShapeRectFreeCornersArmUI();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            return;
+        }
+    }
+
+    if (EditorManager.mode === 'vector' && (tool === 'rect' || tool === 'round-3')) {
+        const sel = EditorManager.activeVectorSelection;
+        if (sel && sel.length === 1) {
+            const shape = sel[0];
+            if ((shape.tagName || '').toLowerCase() === 'rect') {
+                EditorManager.toolProps.shapeRectFreeCornersArm = true;
+                if (typeof window.illuConvertVectorShapeToFreeQuad === 'function') {
+                    const poly = window.illuConvertVectorShapeToFreeQuad(shape);
+                    if (poly && poly !== shape) {
+                        activeVectorShape = poly;
+                        EditorManager.activeVectorSelection = [poly];
+                        window._activeVectorShapeEl = poly;
+                        if (typeof generateAnchors === 'function') generateAnchors(poly);
+                        if (typeof EditorManager.syncActiveVectorSvg === 'function') {
+                            EditorManager.syncActiveVectorSvg();
+                        }
+                        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+                        EditorManager.render({ flushUiThumbnails: true });
+                        if (typeof window.syncShapeRectFreeCornersArmUI === 'function') {
+                            window.syncShapeRectFreeCornersArmUI();
+                        }
+                        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    EditorManager.toolProps.shapeRectFreeCornersArm = !EditorManager.toolProps.shapeRectFreeCornersArm;
+    if (typeof window.syncShapeRectFreeCornersArmUI === 'function') window.syncShapeRectFreeCornersArmUI();
+    if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+};
+
+window.illuWireShapeRectFreeCornersButtons = function () {
+    const btn = document.getElementById('tool-shape-free-corners');
+    if (!btn || btn.dataset.illuShapeFreeCornersWired === '1') return;
+    btn.dataset.illuShapeFreeCornersWired = '1';
+    btn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        window.illuHandleShapeRectFreeCornersClick();
+    });
+};
+
 window.syncWarpQuadRectLockUI = function () {
     if (typeof EditorManager === 'undefined') return;
     const on = !!EditorManager.toolProps.warpQuadRectLock;
@@ -8784,6 +9758,7 @@ window.illuSyncWarpQuadPointsFromBounds = function (sb) {
     window.selectionKind = 'lasso';
     window.selectionIsWarpQuad = true;
     window.selectionPreviewAngleRad = 0;
+    if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
 };
 
 /** Quad {tl,tr,br,bl} déjà axis-aligné ? */
@@ -9143,21 +10118,22 @@ window.startSelectionPixelWarp = function (e, handleId) {
     illuRemoveWarpPreviewOverlay();
     const lx = warpOrigin.x;
     const ly = warpOrigin.y;
+    const clonedBuf = cloneCanvasForWarp(buf);
     selectionWarpDragLayerSnapshot = selectionWarpImportStagingMode
         ? {
             importStaging: true,
-            buffer: cloneCanvasForWarp(buf),
+            buffer: clonedBuf,
             x: lx,
             y: ly
         }
         : {
-            buffer: cloneCanvasForWarp(l.buffer),
+            buffer: clonedBuf,
             x: l.x,
             y: l.y
         };
     illuSelectionInteractionOwner = 'warp';
     selectionWarpHandlePointerDown = true;
-    selectionWarpFullLayerCanvas = cloneCanvasForWarp(buf);
+    selectionWarpFullLayerCanvas = clonedBuf;
     selectionWarpBackupCanvas = document.createElement('canvas');
     const pts =
         window.selectionIsWarpQuad &&
@@ -9214,11 +10190,11 @@ window.startSelectionPixelWarp = function (e, handleId) {
         w: selectionWarpSw,
         h: selectionWarpSh
     };
-selectionWarpSourceClearLocalPoints =
+    selectionWarpSourceClearLocalPoints =
         window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3
             ? window.selectionLassoPoints.map((p) => ({ x: p.x - lx, y: p.y - ly }))
             : null;
-            
+
     selectionWarpBackupCanvas.width = selectionWarpSw;
     selectionWarpBackupCanvas.height = selectionWarpSh;
     const bctx = selectionWarpBackupCanvas.getContext('2d', { willReadFrequently: true });
@@ -9235,7 +10211,7 @@ selectionWarpSourceClearLocalPoints =
                 const lpy = selectionWarpOy + yy;
                 // Si on est hors du masque, on rend le pixel transparent
                 if (lpx < 0 || lpx >= m.w || lpy < 0 || lpy >= m.h || m.data[lpy * m.w + lpx] === 0) {
-                    d[(yy * selectionWarpSw + xx) * 4 + 3] = 0; 
+                    d[(yy * selectionWarpSw + xx) * 4 + 3] = 0;
                 }
             }
         }
@@ -9247,7 +10223,7 @@ selectionWarpSourceClearLocalPoints =
 
     /* Performance: On cache les données de pixel initiales pour éviter getImageData à chaque mousemove. */
     window.selectionWarpBackupImageData = bctx.getImageData(0, 0, selectionWarpSw, selectionWarpSh);
-    
+
     illuInitWarpWorkerSession();
     selectionWarpDeformRect = null;
     selectionWarpDeformRectAtStart = null;
@@ -9661,12 +10637,12 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     const isFinal = !!(opts.isFinal || opts.forceCommit);
     const defer = !isFinal;
     const l = EditorManager.activeLayer;
-    const warpOrigin = illuWarpPixelOrigin(l);
-    const warpBuf = warpOrigin.buffer;
-    if (!warpBuf) return null;
     if (isFinal && !selectionWarpImportStagingMode) {
         illuExpandActiveLayerBufferForWarpDestQuad(l, window.selectionWarpQuad, { allowExpand: true });
     }
+    const warpOrigin = illuWarpPixelOrigin(l);
+    const warpBuf = warpOrigin.buffer;
+    if (!warpBuf) return null;
     const ctx = isFinal ? warpBuf.getContext('2d', { willReadFrequently: true }) : null;
     if (isFinal && !ctx) return null;
 
@@ -9701,10 +10677,10 @@ function illuPrepareSelectionWarpPreviewState(opts) {
     const sourceData = (window.selectionWarpBackupImageData || backupData).data;
     const polyLocal = window._selectionWarpInitialPolyLocal || selectionLassoLocalFromDoc(); const xs = dstQuad.map((p) => p[0]);
     const ys = dstQuad.map((p) => p[1]);
-    const minX = Math.max(0, Math.floor(Math.min(...xs)));
-    const maxX = Math.min(warpBuf.width - 1, Math.ceil(Math.max(...xs)));
-    const minY = Math.max(0, Math.floor(Math.min(...ys)));
-    const maxY = Math.min(warpBuf.height - 1, Math.ceil(Math.max(...ys)));
+    const minX = Math.max(-5000, Math.floor(Math.min(...xs)));
+    const maxX = Math.min(warpBuf.width - 1 + 5000, Math.ceil(Math.max(...xs)));
+    const minY = Math.max(-5000, Math.floor(Math.min(...ys)));
+    const maxY = Math.min(warpBuf.height - 1 + 5000, Math.ceil(Math.max(...ys)));
     const bw = maxX - minX + 1;
     const bh = maxY - minY + 1;
     if (!sourceData || bw < 1 || bh < 1) {
@@ -9788,7 +10764,7 @@ function illuRunSelectionWarpPreviewSync(state) {
             patchY: state.patchY,
             polyLocal: state.polyLocal,
             smooth: state.smooth,
-            stride: state.stride || 4
+            stride: state.stride != null ? state.stride : 1
         });
 
         if (result && result.data) {
@@ -9874,18 +10850,7 @@ window.runSelectionWarpPreview = function (opts) {
     const state = illuPrepareSelectionWarpPreviewState(opts || {});
     if (!state) return Promise.resolve();
 
-    if (!isFinal) {
-        const area = state.patchWidth * state.patchHeight;
-        const maxDim = Math.max(state.patchWidth, state.patchHeight, state.sourceWidth, state.sourceHeight);
-        let stride = 2;
-        if (area > 8000000 || maxDim > 2000) stride = 8;
-        else if (area > 2000000 || maxDim > 1200) stride = 6;
-        else if (area > 800000 || maxDim > 800) stride = 4;
-        else if (area > 200000 || maxDim > 500) stride = 3;
-        state.stride = stride;
-    } else {
-        state.stride = 1;
-    }
+    state.stride = 1;
     const canUseWorkerPreview =
         isFinal && !state.invalid && selectionWarpWorkerSessionId && illuWarpWorkerSupported() && !!illuEnsureWarpWorker();
 
@@ -9911,22 +10876,27 @@ window.runSelectionWarpPreview = function (opts) {
             previewLayerY: state.previewLayerY,
             baseBuffer: state.baseData ? state.baseData.buffer : null,
             onComplete: (err, resultData) => {
-                if (!state.defer) {
-                    if (!err && resultData && !state.invalid) {
-                        const resObj = {
-                            data: resultData,
-                            width: state.stride <= 1 ? state.patchWidth : Math.ceil(state.patchWidth / state.stride),
-                            height: state.stride <= 1 ? state.patchHeight : Math.ceil(state.patchHeight / state.stride),
-                            x: state.patchX,
-                            y: state.patchY,
-                            stride: state.stride
-                        };
-                        illuPaintWarpResultToContext(state.ctx, resObj, state.patchX, state.patchY, state.patchWidth, state.patchHeight);
+                try {
+                    if (!state.defer) {
+                        if (!err && resultData && !state.invalid) {
+                            const resObj = {
+                                data: resultData,
+                                width: state.stride <= 1 ? state.patchWidth : Math.ceil(state.patchWidth / state.stride),
+                                height: state.stride <= 1 ? state.patchHeight : Math.ceil(state.patchHeight / state.stride),
+                                x: state.patchX,
+                                y: state.patchY,
+                                stride: state.stride
+                            };
+                            illuPaintWarpResultToContext(state.ctx, resObj, state.patchX, state.patchY, state.patchWidth, state.patchHeight);
+                        }
+                        EditorManager.render();
+                        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
                     }
-                    EditorManager.render();
-                    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+                } catch (ex) {
+                    console.error('runSelectionWarpPreview onComplete rendering error:', ex);
+                } finally {
+                    resolve();
                 }
-                resolve();
             }
         };
         if (illuQueueWarpWorkerJob(job)) {
@@ -9945,11 +10915,12 @@ window.finishSelectionPixelWarp = async function () {
     isDrawing = false;
     selectionWarpDeformMoveOffset = null;
 
-    illuRemoveWarpPreviewOverlay();
     illuRestoreWarpDragSnapshotLayer();
     selectionWarpHandlePointerDown = false;
 
     const l = EditorManager.activeLayer;
+    if (l) delete l._warpSrcHoleCleared; // Prevent overwriting baked result in illuRemoveWarpPreviewOverlay()
+
     const wasImportFloating = !!(l && l.importPlacementPending);
     if (l && !selectionWarpImportStagingMode && l.buffer) {
         const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
@@ -9960,6 +10931,19 @@ window.finishSelectionPixelWarp = async function () {
         }
     }
 
+    if (l) {
+        if (l._ghostDragHide) delete l._ghostDragHide;
+        const map = EditorManager._pixelLayerViewEls;
+        const cv = map && map.get(l.id);
+        if (cv) {
+            cv.style.display = l.visible ? 'block' : 'none';
+        }
+        if (selectionWarpImportStagingMode && EditorManager._pixelLayerStagingViewEls) {
+            const stv = EditorManager._pixelLayerStagingViewEls.get(l.id);
+            if (stv) stv.style.display = l.visible ? 'block' : 'none';
+        }
+        EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
+    }
 
     const P = window.IlluProgress;
     const busy = P && typeof P.createDelayedInstantEffect === 'function'
@@ -9973,6 +10957,7 @@ window.finishSelectionPixelWarp = async function () {
         warpFailed = true;
         console.error('finishSelectionPixelWarp:', err);
     } finally {
+        illuRemoveWarpPreviewOverlay(); // Clean up overlay after final render finishes!
         if (busy) busy.done();
         if (P && typeof P.statusDone === 'function') {
             P.statusDone();
@@ -10053,8 +11038,6 @@ window.finishSelectionPixelWarp = async function () {
     }
 
     // Réinitialisation complète des états internes de déformation (Purge TOTALE immédiate)
-    const activeToolBtn = document.querySelector('#win-tools .tool-btn.active');
-    const activeToolId = activeToolBtn ? activeToolBtn.id : null;
     const finalBounds = window.selectionBounds ? { ...window.selectionBounds } : null;
     const finalPts = window.selectionLassoPoints ? [...window.selectionLassoPoints] : null;
     const wasIsWarpQuad = window.selectionIsWarpQuad;
@@ -10082,63 +11065,152 @@ window.finishSelectionPixelWarp = async function () {
 
     purgeState();
 
-    // --- ÉTAPE 1 : EFFACEMENT COMPLET (Désélection pour forcer le flush du DOM) ---
-    if (typeof EditorManager.deselectAll === 'function') {
-        EditorManager.deselectAll(wasImportFloating ? { skipImportCommit: true } : undefined);
-    }
-    EditorManager.render();
+    if (finalBounds) {
+        const rx = Math.round(finalBounds.x);
+        const ry = Math.round(finalBounds.y);
+        const rw = Math.round(finalBounds.w);
+        const rh = Math.round(finalBounds.h);
 
-    // --- ÉTAPE 2 : RECONSTRUCTION (après 150ms pour laisser le navigateur souffler) ---
-    setTimeout(() => {
-        if (finalBounds) {
-            const rx = Math.round(finalBounds.x);
-            const ry = Math.round(finalBounds.y);
-            const rw = Math.round(finalBounds.w);
-            const rh = Math.round(finalBounds.h);
-
-            const l = EditorManager.activeLayer;
-
-            // Restauration de la sélection
-            if (typeof window.illuSetRectSelectionDocBounds === 'function') {
-                window.illuSetRectSelectionDocBounds(rx, ry, rw, rh);
-            } else {
-                window.selectionBounds = { x: rx, y: ry, w: rw, h: rh };
-            }
-            if (finalPts) {
-                window.selectionKind = 'lasso';
-                window.selectionLassoPoints = finalPts.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
-            }
-            window.selectionIsWarpQuad = wasIsWarpQuad;
-
-            if (typeof EditorManager.applyProjectToUI === 'function') {
-                EditorManager.applyProjectToUI();
-            }
-            if (typeof window.refreshSelectionVisual === 'function') {
-                window.refreshSelectionVisual();
-            }
-            EditorManager.render();
-
-            // --- ÉTAPE 3 : RELANCE DE L'OUTIL (après encore 150ms) ---
-            setTimeout(() => {
-                // On s'assure que rien n'est resté pollué
-                purgeState();
-
-                if (activeToolId) {
-                    const btn = document.getElementById(activeToolId);
-                    if (btn && typeof btn.click === 'function') {
-                        btn.click();
-                    }
-                }
-                window._illuFinishingWarp = false;
-                EditorManager.render();
-            }, 150);
+        // Restauration de la sélection
+        if (typeof window.illuSetRectSelectionDocBounds === 'function') {
+            window.illuSetRectSelectionDocBounds(rx, ry, rw, rh);
         } else {
-            window._illuFinishingWarp = false;
+            window.selectionBounds = { x: rx, y: ry, w: rw, h: rh };
         }
-    }, 150);
+        if (finalPts) {
+            window.selectionKind = 'lasso';
+            window.selectionLassoPoints = finalPts.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+        }
+        window.selectionIsWarpQuad = wasIsWarpQuad;
 
-    EditorManager.render();
-    if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        if (typeof EditorManager.applyProjectToUI === 'function') {
+            EditorManager.applyProjectToUI();
+        }
+
+        // On réinitialise et démarre immédiatement la nouvelle session de déformation in-place
+        purgeState();
+        window.startSelectionPixelWarp(null, null);
+
+        if (typeof window.refreshSelectionVisual === 'function') {
+            window.refreshSelectionVisual();
+        }
+        window._illuFinishingWarp = false;
+        EditorManager.render();
+        if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
+    } else {
+        window._illuFinishingWarp = false;
+        EditorManager.render();
+        if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
+    }
+};
+
+/**
+ * Valide et fusionne de manière synchrone toute interaction pixel en cours (déplacement ou déformation).
+ * Utilisé principalement lors des changements de calque pour éviter les fuites de pixels d'un calque à un autre.
+ */
+window.illuCommitAnyActiveInteractionSynchronously = function () {
+    const l = EditorManager.activeLayer;
+    if (!l || !l.buffer) return;
+
+    // 1. Commit de l'outil de déplacement de pixels (isMovingSelection)
+    if (typeof isMovingSelection !== 'undefined' && isMovingSelection && typeof moveBufferCanvas !== 'undefined' && moveBufferCanvas) {
+        const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
+        if (ctx && window.selectionBounds) {
+            const sb = window.selectionBounds;
+            const lx = l.x;
+            const ly = l.y;
+            ctx.save();
+            ctx.beginPath();
+            if (
+                window.selectionKind === 'color' &&
+                window.selectionColorMask &&
+                EditorManager.colorMaskMatchesActiveLayer(window.selectionColorMask)
+            ) {
+                EditorManager.appendColorMaskRectsToPath(ctx, window.selectionColorMask);
+            } else if (window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length >= 3) {
+                window.selectionLassoPoints.forEach((p, i) => {
+                    const px = p.x - lx;
+                    const py = p.y - ly;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+            } else {
+                ctx.rect(sb.x - lx, sb.y - ly, sb.w, sb.h);
+            }
+            ctx.clip();
+            const placeX = Math.round(sb.x - lx);
+            const placeY = Math.round(sb.y - ly);
+            const useSmooth = document.getElementById('tool-warp-resampling')?.value !== 'nearest';
+            ctx.imageSmoothingEnabled = useSmooth;
+            ctx.drawImage(moveBufferCanvas, placeX, placeY);
+            ctx.restore();
+        }
+        moveSelectionLayerSnapshot = null;
+        if (l._movePixelsHoleCleared) {
+            delete l._movePixelsHoleCleared;
+        }
+        illuSelectionInteractionOwner = null;
+        isMovingSelection = false;
+        moveDragBoundsStart = null;
+        moveDragLassoBaseline = null;
+        window._illuDeformMoveFromButtonActive = false;
+        if (moveGhostLayer) {
+            try { moveGhostLayer.remove(); } catch (e) {}
+            moveGhostLayer = null;
+        }
+        EditorManager.saveHistory('Déplacement pixel', { patchActiveLayer: true });
+    }
+
+    // 2. Commit de la déformation / warp active
+    if (window.selectionPixelWarpActive && !window._illuFinishingWarp) {
+        window._illuFinishingWarp = true;
+
+        // Restaurer le calque à son état propre pré-déformation avant d'appliquer les modifs
+        illuRestoreWarpDragSnapshotLayer();
+
+        if (l) delete l._warpSrcHoleCleared;
+
+        const state = illuPrepareSelectionWarpPreviewState({ isFinal: true, forceCommit: true });
+        if (state) {
+            state.stride = 1;
+            if (!selectionWarpImportStagingMode && l.buffer) {
+                const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.save();
+                    illuClearSelectionWarpSourceRegion(ctx);
+                    ctx.restore();
+                }
+            }
+            illuRunSelectionWarpPreviewSync(state);
+        }
+
+        // Nettoyer les overlays de prévisualisation et réinitialiser complètement
+        illuRemoveWarpPreviewOverlay();
+
+        window.selectionPixelWarpActive = false;
+        window.selectionWarpQuad = null;
+        window.selectionWarpBackupImageData = null;
+        selectionWarpBackupCanvas = null;
+        selectionWarpFullLayerCanvas = null;
+        selectionWarpHandleId = null;
+        selectionWarpQuadAtStart = null;
+        selectionWarpSrcQuad = null;
+        selectionWarpSourceClearBounds = null;
+        selectionWarpSourceClearLocalPoints = null;
+        selectionWarpDeformRect = null;
+        selectionWarpDeformRectAtStart = null;
+        selectionWarpDeformMoveOffset = null;
+        illuCloseWarpWorkerSession();
+        if (typeof lassoDrawingPoints !== 'undefined') lassoDrawingPoints = null;
+        window._selectionWarpInitialPolyLocal = null;
+        selectionWarpDragLayerSnapshot = null;
+        illuSelectionInteractionOwner = null;
+
+        window._illuFinishingWarp = false;
+        EditorManager.saveHistory('Déformation', { patchActiveLayer: true });
+    }
 };
 
 /** Coins document d’un rectangle aligné après rotation autour de son centre (y vers le bas). */
@@ -10544,6 +11616,17 @@ window.illuDeformSelectionMoveButtonMouseDown = function (e) {
     if (e.button != null && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+
+    // Désactiver la session de déformation temporairement pour le déplacement des pixels
+    if (window.selectionPixelWarpActive) {
+        illuRemoveWarpPreviewOverlay();
+        window.selectionPixelWarpActive = false;
+        selectionWarpBackupCanvas = null;
+        window.selectionWarpBackupImageData = null;
+        selectionWarpFullLayerCanvas = null;
+        illuCloseWarpWorkerSession();
+    }
+
     /* Même comportement que l’outil Déplacer : fantôme + suivi jusqu’au relâchement (pas la poignée warp « c »). */
     const ctx = EditorManager.activeCtx;
     if (!ctx) return;
@@ -10612,6 +11695,9 @@ function startPixel(pos, e) {
     }
 
     if (isLassoSelectionTool()) {
+        if (typeof window.illuInvalidatePendingWandWorker === 'function') {
+            window.illuInvalidatePendingWandWorker();
+        }
         const combineOp =
             typeof window.illuLockSelectionCombineOp === 'function'
                 ? window.illuLockSelectionCombineOp(e)
@@ -10677,6 +11763,9 @@ function startPixel(pos, e) {
         EditorManager.saveHistory('Remplissage', { patchActiveLayer: true });
         EditorManager.render({ flushUiThumbnails: true });
     } else if (isRectSelectionTool()) {
+        if (typeof window.illuInvalidatePendingWandWorker === 'function') {
+            window.illuInvalidatePendingWandWorker();
+        }
         const combineOp =
             typeof window.illuLockSelectionCombineOp === 'function'
                 ? window.illuLockSelectionCombineOp(e)
@@ -11506,25 +12595,46 @@ function handleMouseUp(e) {
             currentElement &&
             ['rect', 'circle', 'line', 'round-3', 'triangle', 'text'].includes(tool)
         ) {
-            activeVectorShape = currentElement;
-            EditorManager.activeVectorSelection = [currentElement];
-            window._activeVectorShapeEl = currentElement;
-            generateAnchors(currentElement);
-            VE.refreshSelectionUI();
+            let created = currentElement;
+            if (
+                (tool === 'rect' || tool === 'round-3') &&
+                typeof window.illuConvertVectorShapeToFreeQuad === 'function'
+            ) {
+                const converted = window.illuConvertVectorShapeToFreeQuad(created);
+                if (converted) created = converted;
+            }
+            activeVectorShape = created;
+            EditorManager.activeVectorSelection = [created];
+            window._activeVectorShapeEl = created;
+            window._illuVectorLiveDraw = false;
+            if (typeof illuRefreshVectorElementPaint === 'function') {
+                illuRefreshVectorElementPaint(created);
+            }
             if (
                 typeof window.vectorApplyLineEndpointMarkers === 'function' &&
                 typeof window.illuVectorPathHasLineEndpoints === 'function' &&
-                window.illuVectorPathHasLineEndpoints(currentElement)
+                window.illuVectorPathHasLineEndpoints(created)
             ) {
-                window.vectorApplyLineEndpointMarkers(currentElement);
+                window.vectorApplyLineEndpointMarkers(created);
+            }
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            } else {
+                generateAnchors(created);
+                if (VE) VE.refreshSelectionUI();
             }
         }
         if (hadNewShape || hadVectorAnchorDrag) {
             currentElement = null;
+            window._illuVectorLiveDraw = false;
             window._illuVectorDragActive = false;
             if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
             EditorManager.saveHistory('Dessin vecteur', { patchActiveLayer: true });
-            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            } else if (window.VectorEngine) {
+                window.VectorEngine.refreshSelectionUI();
+            }
         }
         EditorManager.render();
     } else {
@@ -11548,6 +12658,7 @@ function handleMouseUp(e) {
                 window.selectionCombineGhost = null;
                 if (typeof window.illuClearSelectionCombineOp === 'function') window.illuClearSelectionCombineOp();
                 window.refreshSelectionVisual();
+                if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
             } else {
                 const pts = lassoDrawingPoints.slice();
                 let minX = Infinity;
@@ -11600,6 +12711,7 @@ function handleMouseUp(e) {
                     if (typeof window.illuClearSelectionCombineOp === 'function') window.illuClearSelectionCombineOp();
                     window.refreshSelectionVisual();
                     EditorManager.render();
+                    if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
                 } else {
                     if (typeof window.illuClearSelectionCombineOp === 'function') window.illuClearSelectionCombineOp();
                     window.selectionBounds = {
@@ -11620,6 +12732,7 @@ function handleMouseUp(e) {
                     window.refreshSelectionVisual();
                     // Removed saveHistory for selection action
                     EditorManager.render();
+                    if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
                 }
             }
             if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
@@ -11643,6 +12756,7 @@ function handleMouseUp(e) {
                 window.intersectColorMaskWithSelectionBounds();
             }
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+            if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
             const appliedLayerResize =
                 typeof window.applyMoveToolLayerResizeIfNeeded === 'function' &&
                 window.applyMoveToolLayerResizeIfNeeded(obResize, sbResize);
@@ -11814,6 +12928,10 @@ function handleMouseUp(e) {
             EditorManager.render({ flushUiThumbnails: true });
             if (moveGhostLayer) moveGhostLayer.remove();
             moveGhostLayer = null;
+
+            if (window.activeTool === 'deform') {
+                window.startSelectionPixelWarp(null, null);
+            }
         } else if (deformWarpNewRectDrag || isRectSelectionTool()) {
             const wasDeformWarpNewRectDrag = deformWarpNewRectDrag;
             if (isRectSelectionTool()) {
@@ -11863,10 +12981,15 @@ function handleMouseUp(e) {
                 }
             } else {
                 if (typeof window.illuClearSelectionCombineOp === 'function') window.illuClearSelectionCombineOp();
+                if (illuSelectionBigEnough(sbr)) {
+                    window.selectionKind = 'rect';
+                    window.selectionColorMask = null;
+                    window.selectionLassoPoints = null;
+                }
             }
             selectionCombineBackup = null;
             window.selectionCombineGhost = null;
-            
+
             // Quad 4 coins : mode armé (sélection rect.) ou nouveau cadre avec l’outil warp-4
             if (opOnUp === 'new' && illuSelectionBigEnough(sbr)) {
                 const toQuadFromArm =
@@ -11885,7 +13008,7 @@ function handleMouseUp(e) {
 
             deformWarpNewRectDrag = false;
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
             EditorManager.render();
         } else if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool)) {
             drawFinalShapeOnCanvas(pos, e.shiftKey);
@@ -11983,7 +13106,11 @@ window.clearSelectionContent = function () {
         if (actx && (window.selectionBounds || window.selectionColorMask || window.selectionLassoPoints)) {
             clearActiveSelectionPixelsOnLayer(actx);
             EditorManager.saveHistory('Effacer sélection', { patchActiveLayer: true });
-            EditorManager.render();
+            if (typeof window.illuFlushActiveLayerDisplay === 'function') {
+                window.illuFlushActiveLayerDisplay();
+            } else {
+                EditorManager.render({ flushUiThumbnails: true });
+            }
         }
     }
     if (typeof EditorManager.deselectAll === 'function') {
@@ -12029,16 +13156,35 @@ window.deleteActiveVectorOrPixelSelection = function () {
  * Raccourcit le segment de trait pour laisser la place aux flèches / losanges
  * (même échelle W que drawPixelLineEndpointDecor).
  */
-function trimLineSegmentForPixelCaps(x1, y1, x2, y2, strokeW, startCap, endCap) {
+/** lineCap du segment (butt = contour rectangulaire ; round = bouts arrondis). */
+function illuLineBodyStrokeCap(cap0, cap1, hasArrowDecor) {
+    const c0 = cap0 || 'none';
+    const c1 = cap1 || 'none';
+    if (hasArrowDecor) return 'butt';
+    if (c0 === 'round' && c1 === 'round') return 'round';
+    return 'butt';
+}
+window.illuLineBodyStrokeCap = illuLineBodyStrokeCap;
+
+/** Longueur réservée à une décoration (flèche / losange / rond) selon l’épaisseur du trait. */
+function lineCapDecorExtent(cap, strokeW) {
+    const sw = Math.max(1, strokeW || 1);
+    if (cap === 'arrow' || cap === 'diamond') return Math.max(4, sw * 2.5);
+    if (cap === 'round') return Math.max(1.2, sw * 0.55);
+    return 0;
+}
+
+function trimLineSegmentForPixelCaps(x1, y1, x2, y2, fillW, startCap, endCap, contourW) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const L = Math.hypot(dx, dy);
     if (L < 1e-6) return { x1, y1, x2, y2 };
     const ux = dx / L;
     const uy = dy / L;
-    const W = Math.max(4, strokeW * 2.5);
-    let inset1 = startCap === 'arrow' || startCap === 'diamond' ? W : 0;
-    let inset2 = endCap === 'arrow' || endCap === 'diamond' ? W : 0;
+    const cw = Math.max(0, contourW != null ? contourW : EditorManager.toolProps.lineContourWidth ?? 0);
+    const outerW = Math.max(1, fillW + 2 * cw);
+    let inset1 = lineCapDecorExtent(startCap, outerW);
+    let inset2 = lineCapDecorExtent(endCap, outerW);
     const maxTrim = L * 0.48;
     if (inset1 + inset2 > maxTrim) {
         const s = maxTrim / (inset1 + inset2);
@@ -12054,45 +13200,291 @@ function trimLineSegmentForPixelCaps(x1, y1, x2, y2, strokeW, startCap, endCap) 
 }
 
 window.illuTrimLineSegmentForPixelCaps = trimLineSegmentForPixelCaps;
+window.lineCapDecorExtent = lineCapDecorExtent;
 
-function drawPixelLineEndpointDecor(ctx, x1, y1, x2, y2, strokeW, color, startCap, endCap) {
-    const ang = Math.atan2(y2 - y1, x2 - x1);
-    const W = Math.max(4, strokeW * 2.5);
-    const drawPoly = (x, y, rot, cap) => {
+/** Épaisseurs trace (primaire) + contour (secondaire) pour ligne / courbe 3 pts. */
+function illuLineLikeWidthsFromOpts(opts) {
+    const fillW = Math.max(
+        1,
+        opts && opts.strokeWidth != null ? opts.strokeWidth : EditorManager.toolProps.size || 2
+    );
+    const contourW = Math.max(
+        0,
+        opts && opts.lineContourWidth != null
+            ? opts.lineContourWidth
+            : EditorManager.toolProps.lineContourWidth ?? 0
+    );
+    const outerW = contourW > 0 ? fillW + 2 * contourW : fillW;
+    return { fillW, contourW, outerW };
+}
+
+function illuLineLikeWidths(opts) {
+    return illuLineLikeWidthsFromOpts(opts);
+}
+window.illuLineLikeWidths = illuLineLikeWidths;
+window.illuLineLikeWidthsFromOpts = illuLineLikeWidthsFromOpts;
+
+/**
+ * Trace pixel d’un segment : contour (secondaire) puis trace (primaire).
+ * @param {object} [o] strokeMode, fillType, strokeWidth, lineContourWidth, cap0, cap1
+ */
+function illuDrawPixelLineSegment(ctx, x1, y1, x2, y2, o) {
+    if (!ctx) return;
+    o = o || {};
+    const mode = o.strokeMode || EditorManager.toolProps.shapeStrokeMode || 'both';
+    const fillType = o.fillType || EditorManager.toolProps.fillType || 'solid';
+    const { fillW, contourW, outerW } = illuLineLikeWidthsFromOpts(o);
+    const doFill = mode !== 'stroke';
+    const doStroke = mode !== 'fill';
+    const cap0 = o.cap0 != null ? o.cap0 : EditorManager.toolProps.lineCapStart || 'none';
+    const cap1 = o.cap1 != null ? o.cap1 : EditorManager.toolProps.lineCapEnd || 'none';
+    const bothRound = cap0 === 'round' && cap1 === 'round';
+    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+    const fillCss =
+        fillType === 'gradient'
+            ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x1, y1, 0, 0, x2, y2)
+            : shapePrimaryFillCss();
+    const contourCss = shapeSecondaryStrokeCss();
+
+    const fillTrim = hasArrowDecor
+        ? trimLineSegmentForPixelCaps(x1, y1, x2, y2, fillW, cap0, cap1, 0)
+        : { x1, y1, x2, y2 };
+    const contourTrim =
+        hasArrowDecor && contourW > 0
+            ? trimLineSegmentForPixelCaps(x1, y1, x2, y2, fillW, cap0, cap1, contourW)
+            : fillTrim;
+
+    const strokeOnSegment = (trim, sw, color, lineCap) => {
+        if (sw < 1) return;
+        ctx.beginPath();
+        ctx.moveTo(trim.x1, trim.y1);
+        ctx.lineTo(trim.x2, trim.y2);
+        ctx.lineWidth = sw;
+        ctx.lineCap = lineCap;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+    };
+
+    const drawContourLayer = doStroke && (contourW > 0 || mode === 'stroke');
+    const drawFillLayer = doFill;
+    const contourSw = contourW > 0 ? outerW : fillW;
+    const bodyCap = illuLineBodyStrokeCap(cap0, cap1, hasArrowDecor);
+
+    if (drawContourLayer) {
+        strokeOnSegment(contourTrim, contourSw, contourCss, bodyCap);
+    }
+    if (drawFillLayer) {
+        strokeOnSegment(fillTrim, fillW, fillCss, bodyCap);
+    }
+
+    const decorFill = fillType === 'gradient' ? shapePrimaryFillCss() : fillCss;
+    if (hasArrowDecor && (drawContourLayer || drawFillLayer)) {
+        drawPixelLineEndpointDecorLayered(
+            ctx,
+            x1,
+            y1,
+            x2,
+            y2,
+            fillW,
+            drawContourLayer ? contourW : 0,
+            decorFill,
+            contourCss,
+            cap0,
+            cap1
+        );
+    } else if (!hasArrowDecor && (cap0 === 'round' || cap1 === 'round') && !bothRound) {
+        drawPixelLineEndpointDecorLayered(
+            ctx,
+            x1,
+            y1,
+            x2,
+            y2,
+            drawFillLayer ? fillW : contourSw,
+            drawContourLayer && contourW > 0 ? contourW : 0,
+            decorFill,
+            contourCss,
+            cap0,
+            cap1
+        );
+    }
+}
+window.illuDrawPixelLineSegment = illuDrawPixelLineSegment;
+
+function illuDrawPixelQuadCurveWithBorder(ctx, x0, y0, qx, qy, x1, y1, o) {
+    if (!ctx || typeof window.illuStrokeQuadraticWithLineCaps !== 'function') return;
+    o = o || {};
+    const mode = o.strokeMode || EditorManager.toolProps.shapeStrokeMode || 'both';
+    const fillType = o.fillType || EditorManager.toolProps.fillType || 'solid';
+    const { fillW, contourW, outerW } = illuLineLikeWidthsFromOpts(o);
+    const doFill = mode !== 'stroke';
+    const doStroke = mode !== 'fill';
+    const cap0 = o.cap0 != null ? o.cap0 : EditorManager.toolProps.lineCapStart || 'none';
+    const cap1 = o.cap1 != null ? o.cap1 : EditorManager.toolProps.lineCapEnd || 'none';
+    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+    const strokeCss =
+        fillType === 'gradient'
+            ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x0, y0, 0, 0, x1, y1)
+            : shapePrimaryFillCss();
+    const contourCss = shapeSecondaryStrokeCss();
+    const contourSw = contourW > 0 ? outerW : fillW;
+    const drawContour = doStroke && (contourW > 0 || mode === 'stroke');
+    const drawFill = doFill;
+
+    if (drawContour) {
+        window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, contourSw, contourCss, cap0, cap1, {
+            fillW,
+            contourW,
+            trim: hasArrowDecor,
+            trimContourCw: contourW,
+            drawDecor: false
+        });
+    }
+    if (drawFill) {
+        window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, fillW, strokeCss, cap0, cap1, {
+            fillW,
+            contourW,
+            trim: hasArrowDecor,
+            trimContourCw: 0,
+            drawDecor: false
+        });
+    }
+    if (hasArrowDecor && (drawContour || drawFill)) {
+        drawPixelQuadCurveEndpointDecorLayered(
+            ctx,
+            x0,
+            y0,
+            qx,
+            qy,
+            x1,
+            y1,
+            fillW,
+            drawContour ? contourW : 0,
+            strokeCss,
+            contourCss,
+            cap0,
+            cap1
+        );
+    }
+}
+window.illuDrawPixelQuadCurveWithBorder = illuDrawPixelQuadCurveWithBorder;
+
+/** Contour fermé d’une flèche / losange (3 ou 4 arêtes visibles). */
+function illuStrokeLineCapOutlineEdges(ctx, cap, W, lineW, color) {
+    if (!lineW || lineW < 0.5 || !color) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineW;
+    ctx.lineJoin = 'miter';
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    if (cap === 'arrow') {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-W, -W * 0.42);
+        ctx.lineTo(-W, W * 0.42);
+        ctx.closePath();
+    } else if (cap === 'diamond') {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-W * 0.5, -W * 0.38);
+        ctx.lineTo(-W, 0);
+        ctx.lineTo(-W * 0.5, W * 0.38);
+        ctx.closePath();
+    } else {
+        return;
+    }
+    ctx.stroke();
+}
+
+/** Flèche / losange / rond : remplissage + contour sur les arêtes visibles (pas la jonction trait). */
+function drawPixelLineCapShape(ctx, x, y, angleRad, cap, fillW, fillColor, contourW, contourColor) {
+    const fw = Math.max(1, fillW || 1);
+    const cw = Math.max(0, contourW || 0);
+    if (cap === 'round') {
+        const r0 = Math.max(1.2, fw * 0.55);
         ctx.save();
-        ctx.fillStyle = color;
         ctx.translate(x, y);
-        ctx.rotate(rot);
-        if (cap === 'arrow') {
+        if (cw > 0 && contourColor) {
+            ctx.fillStyle = contourColor;
             ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-W, -W * 0.42);
-            ctx.lineTo(-W, W * 0.42);
-            ctx.closePath();
-            ctx.fill();
-        } else if (cap === 'diamond') {
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-W * 0.5, -W * 0.38);
-            ctx.lineTo(-W, 0);
-            ctx.lineTo(-W * 0.5, W * 0.38);
-            ctx.closePath();
-            ctx.fill();
-        } else if (cap === 'round') {
-            ctx.beginPath();
-            ctx.arc(0, 0, Math.max(1.2, strokeW * 0.55), 0, Math.PI * 2);
+            ctx.arc(0, 0, r0 + cw, 0, Math.PI * 2);
             ctx.fill();
         }
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, r0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
-    };
+        return;
+    }
+    if (cap !== 'arrow' && cap !== 'diamond') return;
+    const W = Math.max(4, fw * 2.5);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angleRad);
+    if (cw > 0 && contourColor) {
+        illuStrokeLineCapOutlineEdges(ctx, cap, W, cw * 2, contourColor);
+    }
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    if (cap === 'arrow') {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-W, -W * 0.42);
+        ctx.lineTo(-W, W * 0.42);
+    } else {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-W * 0.5, -W * 0.38);
+        ctx.lineTo(-W, 0);
+        ctx.lineTo(-W * 0.5, W * 0.38);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+/** Décorations d’extrémité : contour sur les arêtes puis remplissage. */
+function drawPixelLineEndpointDecorLayered(ctx, x1, y1, x2, y2, fillW, contourW, fillColor, contourColor, startCap, endCap) {
+    const ang = Math.atan2(y2 - y1, x2 - x1);
     const s0 = startCap || 'none';
     const s1 = endCap || 'none';
     const bothRound = s0 === 'round' && s1 === 'round';
-    if (s0 === 'arrow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) drawPoly(x1, y1, ang + Math.PI, s0);
-    if (s1 === 'arrow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) drawPoly(x2, y2, ang, s1);
+    if (s0 === 'arrow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) {
+        drawPixelLineCapShape(ctx, x1, y1, ang + Math.PI, s0, fillW, fillColor, contourW, contourColor);
+    }
+    if (s1 === 'arrow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) {
+        drawPixelLineCapShape(ctx, x2, y2, ang, s1, fillW, fillColor, contourW, contourColor);
+    }
+}
+window.illuDrawPixelLineEndpointDecorLayered = drawPixelLineEndpointDecorLayered;
+
+function drawPixelLineEndpointDecor(ctx, x1, y1, x2, y2, strokeW, color, startCap, endCap) {
+    drawPixelLineEndpointDecorLayered(ctx, x1, y1, x2, y2, strokeW, 0, color, null, startCap, endCap);
 }
 
 window.illuDrawPixelLineEndpointDecor = drawPixelLineEndpointDecor;
+
+function drawPixelQuadCurveEndpointDecorLayered(ctx, x0, y0, qx, qy, x1, y1, fillW, contourW, fillColor, contourColor, startCap, endCap) {
+    if (typeof drawPixelLineCapShape !== 'function') return;
+    const cap0 = startCap || 'none';
+    const cap1 = endCap || 'none';
+    const d = 1;
+    const ts = quadBezierTangentUnitAt(x0, y0, qx, qy, x1, y1, 0);
+    const te = quadBezierTangentUnitAt(x0, y0, qx, qy, x1, y1, 1);
+    if (cap0 !== 'none') {
+        drawPixelLineCapShape(
+            ctx,
+            x0,
+            y0,
+            Math.atan2(ts.y, ts.x) + Math.PI,
+            cap0,
+            fillW,
+            fillColor,
+            contourW,
+            contourColor
+        );
+    }
+    if (cap1 !== 'none') {
+        drawPixelLineCapShape(ctx, x1, y1, Math.atan2(te.y, te.x), cap1, fillW, fillColor, contourW, contourColor);
+    }
+}
+window.illuDrawPixelQuadCurveEndpointDecorLayered = drawPixelQuadCurveEndpointDecorLayered;
 
 function makeShapeSecondaryColor() {
     return EditorManager.secondaryColor
@@ -12400,7 +13792,7 @@ function startShapePreviewRotationDrag(pos, mode) {
 function tryStartShapePreviewRotationFromPointer(e, pos) {
     const ph = readPixelHandleAttr(e);
     if (ph === 'shape-rot') {
-        if (window.pixelShapeEdit && ['rect', 'roundrect', 'triangle', 'ellipse'].includes(window.pixelShapeEdit.kind)) {
+        if (window.pixelShapeEdit && ['rect', 'roundrect', 'triangle', 'star', 'ellipse'].includes(window.pixelShapeEdit.kind)) {
             e.preventDefault();
             e.stopPropagation();
             return startShapePreviewRotationDrag(pos, 'edit');
@@ -12435,6 +13827,7 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
     const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
     const fillType = EditorManager.toolProps.fillType || 'solid';
     const strokeW = Math.max(1, EditorManager.toolProps.size || 2);
+    const lineContourW = Math.max(0, EditorManager.toolProps.lineContourWidth ?? 0);
     const fillCss = shapePrimaryFillCss();
     const strokeCss =
         window.activeTool === 'line' ? shapeLineStrokeCss() : shapeSecondaryStrokeCss();
@@ -12498,7 +13891,8 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
         gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
         gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
         gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
-        strokeWidth: strokeW
+        strokeWidth: strokeW,
+        lineContourWidth: lineContourW
     };
 
     if (window.activeTool === 'rect') {
@@ -12551,22 +13945,7 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
         return { kind: 'ellipse', params: { cx: ecx, cy: ecy, rx: rw, ry: rh }, opts };
     }
     if (window.activeTool === 'line') {
-        const cap0 = EditorManager.toolProps.lineCapStart || 'none';
-        const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
-        const bothRound = cap0 === 'round' && cap1 === 'round';
-        ctx.lineCap = bothRound ? 'round' : 'butt';
-        const tr = trimLineSegmentForPixelCaps(lsx, lsy, lpx, lpy, strokeW, cap0, cap1);
-        ctx.beginPath();
-        ctx.moveTo(tr.x1, tr.y1);
-        ctx.lineTo(tr.x2, tr.y2);
-        if (doStroke) {
-            ctx.strokeStyle = fillType === 'gradient'
-                ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, lsx, lsy, 0, 0, lpx, lpy)
-                : strokeCss;
-            if (fillType !== 'gradient') applyShapeStrokeStyle();
-            ctx.stroke();
-            drawPixelLineEndpointDecor(ctx, lsx, lsy, lpx, lpy, strokeW, strokeCss, cap0, cap1);
-        }
+        illuDrawPixelLineSegment(ctx, lsx, lsy, lpx, lpy, opts);
         return { kind: 'line', params: { x1: lsx, y1: lsy, x2: lpx, y2: lpy }, opts };
     }
     if (window.activeTool === 'round-3') {
@@ -12593,28 +13972,32 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
         return { kind: 'roundrect', params: { lx, ly, w, h, r: rInt }, opts };
     }
     if (window.activeTool === 'triangle') {
-        const adj = 0.5;
-        const vf = 0;
-        const ax = lx + w * adj;
-        const ay = ly + h * vf;
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(lx, ly + h);
-        ctx.lineTo(lx + w, ly + h);
-        ctx.closePath();
+        const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 3);
+        const starPts = illuStarCanvasPoints(lx, ly, w, h, branches);
+        const drawShapePath = () => {
+            ctx.beginPath();
+            ctx.moveTo(starPts[0].x, starPts[0].y);
+            for (let i = 1; i < starPts.length; i++) ctx.lineTo(starPts[i].x, starPts[i].y);
+            ctx.closePath();
+        };
         if (doFill) {
             if (fillType === 'gradient') {
                 ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
             } else {
                 applyShapeFillStyle();
             }
+            drawShapePath();
             ctx.fill();
         }
         if (doStroke) {
             applyShapeStrokeStyle();
+            drawShapePath();
             ctx.stroke();
         }
-        return { kind: 'triangle', params: { lx, ly, w, h, adj, vf: 0 }, opts };
+        if (branches === 3) {
+            return { kind: 'triangle', params: { lx, ly, w, h, adj: 0.5, vf: 0 }, opts };
+        }
+        return { kind: 'star', params: { lx, ly, w, h, branches }, opts };
     }
     return null;
 }
@@ -12630,6 +14013,9 @@ function drawFinalShapeOnCanvas(pos, shiftKey) {
     const meta = paintPixelShapeAt(ctx, pos, startX, startY, shiftKey, window._shapeLivePreviewAngleRad || 0);
     if (meta && typeof window.captureShapeEditAfterDraw === 'function') {
         window.captureShapeEditAfterDraw(meta.kind, meta.params, meta.opts, window._shapeLivePreviewAngleRad || 0);
+        if (typeof window.illuEnterShapeQuadCornerEditIfArmed === 'function') {
+            window.illuEnterShapeQuadCornerEditIfArmed();
+        }
     }
     window._shapeLivePreviewAngleRad = 0;
     window._shapeRotDragActive = false;
@@ -12928,15 +14314,15 @@ function floodFill(startX, startY) {
     }
     const visited = window._floodFillVisited;
     const stack = [[startX, startY]];
-    
+
     const isMatch = (px, py) => {
         if (px < minX || px > maxX || py < minY || py > maxY) return false;
         const vidx = py * w + px;
         if (visited[vidx]) return false;
-        
+
         const didx = vidx * 4;
         if (!matchSample(didx)) return false;
-        
+
         if (selectionActive) {
             // Check the selection mask regardless of kind (Magic Wand, Rect, Lasso, etc.)
             if (!isPixelInActiveSelection(px, py, layerX, layerY)) return false;
@@ -12946,13 +14332,13 @@ function floodFill(startX, startY) {
 
     while (stack.length > 0) {
         const [currX, currY] = stack.pop();
-        
+
         // Find left limit
         let lx = currX;
         while (lx > minX && isMatch(lx - 1, currY)) {
             lx--;
         }
-        
+
         // Find right limit
         let rx = currX;
         while (rx < maxX && isMatch(rx + 1, currY)) {
@@ -12985,7 +14371,7 @@ function floodFill(startX, startY) {
         scanSeeds(currY - 1);
         scanSeeds(currY + 1);
     }
-    
+
     ctx.putImageData(imageData, 0, 0);
     EditorManager.render();
 }
@@ -13039,10 +14425,10 @@ window.illuProcessFileImport = function (file, opts) {
                                     : '';
                             window.showIlluAlert(
                                 'Projet Paint.NET converti et ouvert.' +
-                                    wtxt +
-                                    '\n\nUne copie « ' +
-                                    baseName +
-                                    '-illu.pdn » a été téléchargée pour une réouverture plus fiable dans Illu.'
+                                wtxt +
+                                '\n\nUne copie « ' +
+                                baseName +
+                                '-illu.pdn » a été téléchargée pour une réouverture plus fiable dans Illu.'
                             );
                         }
                     } catch (convErr) {
@@ -13071,19 +14457,38 @@ window.illuProcessFileImport = function (file, opts) {
     const maybeProject =
         lower.endsWith('.illu') ||
         (lower.endsWith('.json') && (file.type === 'application/json' || file.type === ''));
-    
+
     if (maybeProject && typeof window.WorkspaceIO !== 'undefined') {
+        let openBusy = null;
+        if (window.IlluProgress && typeof window.IlluProgress.createDelayedInstantEffect === 'function') {
+            openBusy = window.IlluProgress.createDelayedInstantEffect(
+                window.IlluI18n?.t('dlg.loadProject') || 'Chargement du projet',
+                60
+            );
+            openBusy.showNow();
+        }
         const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
+                if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
                 const text = ev.target.result;
-                const data = JSON.parse(text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    throw parseErr;
+                }
                 if (data.format === 'illu-workspace') {
-                    await WorkspaceIO.applyWorkspaceFromJsonText(text);
+                    await WorkspaceIO.applyWorkspaceFromJsonText(data, { busy: openBusy });
+                    openBusy = null;
                     if (inputEl) inputEl.value = '';
                     return;
                 }
             } catch (err) {
+                if (openBusy) {
+                    openBusy.done();
+                    openBusy = null;
+                }
                 console.warn(err);
                 if (window.showIlluAlert) {
                     window.showIlluAlert(
@@ -13095,10 +14500,17 @@ window.illuProcessFileImport = function (file, opts) {
                 if (inputEl) inputEl.value = '';
                 return;
             }
+            if (openBusy) {
+                openBusy.done();
+                openBusy = null;
+            }
             if (window.showIlluAlert) {
                 window.showIlluAlert('Ce fichier n’est pas un projet Illu valide (.illu).');
             }
             if (inputEl) inputEl.value = '';
+        };
+        reader.onerror = () => {
+            if (openBusy) openBusy.done();
         };
         reader.readAsText(file);
         return;

@@ -73,6 +73,18 @@
                 y1: ed.y1
             };
         }
+        if (ed.kind === 'quad' && ed.pts && ed.pts.length >= 4) {
+            return {
+                kind: 'quad',
+                pts: ed.pts.map((p) => ({ x: p.x, y: p.y })),
+                quadBase: ed.quadBase,
+                r: ed.r,
+                lx: ed.lx,
+                ly: ed.ly,
+                w: ed.w,
+                h: ed.h
+            };
+        }
         return { kind: ed.kind, lx: ed.lx, ly: ed.ly };
     };
 
@@ -93,6 +105,13 @@
             ed.qy = snap.qy + dy;
             ed.x1 = snap.x1 + dx;
             ed.y1 = snap.y1 + dy;
+        } else if (ed.kind === 'quad' && snap.pts && snap.pts.length >= 4) {
+            ed.pts = snap.pts.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+            if (snap.quadBase) ed.quadBase = snap.quadBase;
+            if (snap.r != null) ed.r = snap.r;
+            if (typeof window.illuSyncShapeEditBBoxFromQuadPts === 'function') {
+                window.illuSyncShapeEditBBoxFromQuadPts(ed);
+            }
         } else if (snap.lx != null) {
             ed.lx = snap.lx + dx;
             ed.ly = snap.ly + dy;
@@ -138,7 +157,7 @@
         return null;
     }
 
-    const SHAPE_ROTATABLE_KINDS = new Set(['rect', 'roundrect', 'triangle', 'ellipse']);
+    const SHAPE_ROTATABLE_KINDS = new Set(['rect', 'roundrect', 'triangle', 'star', 'ellipse']);
 
     window._pixelGradientState = null;
     window._gradientHandleDrag = null;
@@ -246,6 +265,38 @@
                 d: `M ${x + w * adj} ${y + h * vf} L ${x} ${y + h} L ${x + w} ${y + h} Z`,
                 closed: true
             };
+        }
+        if (ed.kind === 'star') {
+            const branches = ed.branches != null ? ed.branches : 5;
+            const d =
+                typeof window.illuStarPathD === 'function'
+                    ? window.illuStarPathD(ed.lx + lx, ed.ly + ly, ed.w, ed.h, branches)
+                    : '';
+            return { d, closed: true };
+        }
+        if (ed.kind === 'quad' && ed.pts && ed.pts.length >= 4) {
+            const r = ed.r != null ? ed.r : 0;
+            if (ed.quadBase === 'roundrect' && r > 0) {
+                if (
+                    typeof window.illuQuadPtsMatchAxisRect === 'function' &&
+                    window.illuQuadPtsMatchAxisRect(ed.pts, ed.lx, ed.ly, ed.w, ed.h)
+                ) {
+                    return {
+                        d: illuRoundRectOutlinePathD(ed.lx + lx, ed.ly + ly, ed.w, ed.h, r),
+                        closed: true
+                    };
+                }
+                const d =
+                    typeof window.illuShapeRoundedQuadPathD === 'function'
+                        ? window.illuShapeRoundedQuadPathD(ed.pts, r, lx, ly)
+                        : '';
+                return { d, closed: true };
+            }
+            const d =
+                typeof window.illuShapeQuadPathD === 'function'
+                    ? window.illuShapeQuadPathD(ed.pts, lx, ly)
+                    : '';
+            return { d, closed: true };
         }
         if (ed.kind === 'line') {
             return {
@@ -581,7 +632,10 @@
         const lx = EditorManager.activeLayer.x;
         const ly = EditorManager.activeLayer.y;
         let pts = null;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+        if (ed.kind === 'quad' && ed._quadCornerEdit) {
+            return null;
+        }
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle' || ed.kind === 'star') {
             const x = ed.lx + lx, y = ed.ly + ly, w = ed.w, h = ed.h;
             pts = [
                 { x, y }, { x: x + w / 2, y }, { x: x + w, y },
@@ -669,6 +723,7 @@
         ctx.drawImage(ed.backup, 0, 0);
         const o = ed.opts || {};
         const strokeW = o.strokeWidth != null ? o.strokeWidth : 2;
+        const lineContourW = o.lineContourWidth != null ? o.lineContourWidth : 0;
         const mode = o.strokeMode || 'both';
         const fillType = o.fillType || 'solid';
         const gradType = o.gradType || 'linear';
@@ -761,32 +816,71 @@
                 mode,
                 fillType
             );
-        } else if (ed.kind === 'triangle') {
+        } else if (ed.kind === 'triangle' || ed.kind === 'star') {
             const { lx, ly, w, h } = ed;
-            const adj = ed.adj != null ? Math.max(0, Math.min(1, ed.adj)) : 0.5;
-            const vf = ed.vf != null ? Math.max(0, Math.min(0.92, ed.vf)) : 0;
-            const ax = lx + w * adj;
-            const ay = ly + h * vf;
+            const branches =
+                ed.kind === 'star'
+                    ? ed.branches != null
+                        ? ed.branches
+                        : 5
+                    : 3;
+            const starPts =
+                typeof window.illuStarCanvasPoints === 'function'
+                    ? window.illuStarCanvasPoints(lx, ly, w, h, branches)
+                    : [];
             const fillGrad = fillType === 'gradient'
                 ? mkGradientFill(lx, ly, lx + w, ly + h, lx + w / 2, ly + h / 2, w / 2, h / 2)
                 : null;
-            const drawTri = () => {
+            const drawPoly = () => {
+                if (!starPts.length) return;
                 ctx.beginPath();
-                ctx.moveTo(ax, ay);
-                ctx.lineTo(lx, ly + h);
-                ctx.lineTo(lx + w, ly + h);
+                ctx.moveTo(starPts[0].x, starPts[0].y);
+                for (let i = 1; i < starPts.length; i++) ctx.lineTo(starPts[i].x, starPts[i].y);
                 ctx.closePath();
             };
             applyShapeStrokeFill(
                 ctx,
                 () => {
                     if (fillType === 'none') return;
-                    drawTri();
+                    drawPoly();
                     ctx.fillStyle = fillType === 'gradient' ? fillGrad : fillCss;
                     ctx.fill();
                 },
                 () => {
-                    drawTri();
+                    drawPoly();
+                    ctx.stroke();
+                },
+                strokeW,
+                mode,
+                fillType
+            );
+        } else if (ed.kind === 'quad' && ed.pts && ed.pts.length >= 4) {
+            const { lx, ly, w, h } = ed;
+            const fillGrad = fillType === 'gradient'
+                ? mkGradientFill(lx, ly, lx + w, ly + h, lx + w / 2, ly + h / 2, w / 2, h / 2)
+                : null;
+            const drawQuad = () => {
+                if (typeof window.illuDrawCanvasQuadPath === 'function') {
+                    window.illuDrawCanvasQuadPath(ctx, ed.pts, {
+                        quadBase: ed.quadBase,
+                        r: ed.r,
+                        lx: ed.lx,
+                        ly: ed.ly,
+                        w: ed.w,
+                        h: ed.h
+                    });
+                }
+            };
+            applyShapeStrokeFill(
+                ctx,
+                () => {
+                    if (fillType === 'none') return;
+                    drawQuad();
+                    ctx.fillStyle = fillType === 'gradient' ? fillGrad : fillCss;
+                    ctx.fill();
+                },
+                () => {
+                    drawQuad();
                     ctx.stroke();
                 },
                 strokeW,
@@ -794,58 +888,25 @@
                 fillType
             );
         } else if (ed.kind === 'line') {
-            if (mode !== 'fill') {
-                const lineCss = lineLikeStrokeCss();
-                const cap0 = EditorManager.toolProps.lineCapStart || 'none';
-                const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
-                const bothRound = cap0 === 'round' && cap1 === 'round';
-                ctx.lineCap = bothRound ? 'round' : 'butt';
-                const x1 = ed.x1;
-                const y1 = ed.y1;
-                const x2 = ed.x2;
-                const y2 = ed.y2;
-                let tx1 = x1;
-                let ty1 = y1;
-                let tx2 = x2;
-                let ty2 = y2;
-                if (typeof window.illuTrimLineSegmentForPixelCaps === 'function') {
-                    const tr = window.illuTrimLineSegmentForPixelCaps(x1, y1, x2, y2, strokeW, cap0, cap1);
-                    tx1 = tr.x1;
-                    ty1 = tr.y1;
-                    tx2 = tr.x2;
-                    ty2 = tr.y2;
-                }
-                ctx.beginPath();
-                ctx.moveTo(tx1, ty1);
-                ctx.lineTo(tx2, ty2);
-                ctx.lineWidth = strokeW;
-                if (fillType === 'gradient') {
-                    const g = ctx.createLinearGradient(x1, y1, x2, y2);
-                    g.addColorStop(0, lineCss);
-                    g.addColorStop(1, lineCss);
-                    ctx.strokeStyle = g;
-                } else {
-                    ctx.strokeStyle = lineCss;
-                }
-                ctx.stroke();
-                if (typeof window.illuDrawPixelLineEndpointDecor === 'function') {
-                    window.illuDrawPixelLineEndpointDecor(ctx, x1, y1, x2, y2, strokeW, lineCss, cap0, cap1);
-                }
+            const lineOpts = {
+                strokeWidth: strokeW,
+                lineContourWidth: lineContourW,
+                strokeMode: mode,
+                fillType
+            };
+            if (typeof window.illuDrawPixelLineSegment === 'function') {
+                window.illuDrawPixelLineSegment(ctx, ed.x1, ed.y1, ed.x2, ed.y2, lineOpts);
             }
         } else if (ed.kind === 'quadcurve') {
-            const lineCss = lineLikeStrokeCss();
             const { x0, y0, qx, qy, x1, y1 } = ed;
-            const cap0 = EditorManager.toolProps.lineCapStart || 'none';
-            const cap1 = EditorManager.toolProps.lineCapEnd || 'none';
-            let strokeStyle = lineCss;
-            if (fillType === 'gradient') {
-                const g = ctx.createLinearGradient(x0, y0, x1, y1);
-                g.addColorStop(0, lineCss);
-                g.addColorStop(1, lineCss);
-                strokeStyle = g;
-            }
-            if (typeof window.illuStrokeQuadraticWithLineCaps === 'function') {
-                window.illuStrokeQuadraticWithLineCaps(ctx, x0, y0, qx, qy, x1, y1, strokeW, strokeStyle, cap0, cap1);
+            const curveOpts = {
+                strokeWidth: strokeW,
+                lineContourWidth: lineContourW,
+                strokeMode: mode,
+                fillType
+            };
+            if (typeof window.illuDrawPixelQuadCurveWithBorder === 'function') {
+                window.illuDrawPixelQuadCurveWithBorder(ctx, x0, y0, qx, qy, x1, y1, curveOpts);
             }
         } else if (ed.kind === 'ellipse') {
             const { cx, cy, rx, ry } = ed;
@@ -898,7 +959,10 @@
         const ly = EditorManager.activeLayer.y;
         const wx = worldX - lx;
         const wy = worldY - ly;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+        if (ed.kind === 'quad' && ed._quadCornerEdit) {
+            return;
+        }
+        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle' || ed.kind === 'star') {
             let { lx: rx, ly: ry, w, h } = ed;
             switch (handleIndex) {
                 case 0: w += rx - wx; h += ry - wy; rx = wx; ry = wy; break;
@@ -1090,6 +1154,10 @@
                           : { x: ed.lx + ed.w * 0.25, y: ed.ly + ed.h * 0.28 };
                 out.push(shapeAdjustHandleToWorld(ed, local, side === 'r' ? 'adj-tri-r' : 'adj-tri-l'));
             });
+        } else if (ed.kind === 'quad' && ed.pts && ed._quadCornerEdit) {
+            for (let i = 0; i < 4; i++) {
+                out.push(shapeAdjustHandleToWorld(ed, ed.pts[i], 'adj-quad-' + i));
+            }
         }
         return out;
     };
@@ -1140,6 +1208,14 @@
             ed.adj = ed.w > 0 ? Math.max(0, Math.min(1, (wx - ed.lx) / ed.w)) : 0.5;
         } else if (adjustType === 'adj-tri-r' && ed.kind === 'triangle') {
             ed.vf = ed.h > 0 ? Math.max(0, Math.min(0.92, (wy - ed.ly) / ed.h)) : 0;
+        } else if (adjustType.startsWith('adj-quad-') && ed.kind === 'quad' && ed.pts) {
+            const idx = parseInt(adjustType.slice('adj-quad-'.length), 10);
+            if (idx >= 0 && idx < 4) {
+                ed.pts[idx] = { x: wx, y: wy };
+                if (typeof window.illuSyncShapeEditBBoxFromQuadPts === 'function') {
+                    window.illuSyncShapeEditBBoxFromQuadPts(ed);
+                }
+            }
         }
         window.redrawShapeFromEditLive();
     };
@@ -1148,7 +1224,15 @@
         const ed = window.pixelShapeEdit;
         const layer = EditorManager.activeLayer;
         if (!ed || !layer || ed.layerId !== layer.id || (dx === 0 && dy === 0)) return false;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+        if (ed.kind === 'quad' && ed.pts) {
+            ed.pts.forEach((p) => {
+                p.x += dx;
+                p.y += dy;
+            });
+            if (typeof window.illuSyncShapeEditBBoxFromQuadPts === 'function') {
+                window.illuSyncShapeEditBBoxFromQuadPts(ed);
+            }
+        } else if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle' || ed.kind === 'star') {
             ed.lx += dx;
             ed.ly += dy;
         } else if (ed.kind === 'line') {
@@ -1191,7 +1275,28 @@
     };
 
     window.drawPixelOverlayHandles = function (svgUI) {
-        if (!svgUI || EditorManager.mode !== 'pixel') return;
+        if (!svgUI) return;
+        const isPixel = EditorManager.mode !== 'vector';
+        if (!isPixel && typeof window.vectorQuadBezierClickState !== 'undefined' && window.vectorQuadBezierClickState) {
+            const z = EditorManager.getCanvasZoomLevel();
+            const inv = 1 / z;
+            const st = window.vectorQuadBezierClickState;
+            const mkDot = (x, y, fill) => {
+                const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                c.setAttribute('cx', String(x));
+                c.setAttribute('cy', String(y));
+                c.setAttribute('r', String(5 * inv));
+                c.setAttribute('fill', fill);
+                c.setAttribute('stroke', '#003d7a');
+                c.setAttribute('stroke-width', String(inv));
+                c.setAttribute('vector-effect', 'non-scaling-stroke');
+                c.setAttribute('pointer-events', 'none');
+                svgUI.appendChild(c);
+            };
+            if (st.p0) mkDot(st.p0.x, st.p0.y, '#ffe08a');
+            if (st.p1) mkDot(st.p1.x, st.p1.y, '#ffb84d');
+        }
+        if (!isPixel) return;
 
         const z = EditorManager.getCanvasZoomLevel();
         const inv = 1 / z;

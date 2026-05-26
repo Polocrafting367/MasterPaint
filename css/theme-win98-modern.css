@@ -533,6 +533,7 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window {
 /* Ne pas utiliser display:none au boot : le layout / centrage workspace se calcule dès le chargement. */
 #app-window.illu-boot-hidden {
     visibility: hidden;
+    opacity: 0;
     pointer-events: none;
 }
 
@@ -1018,9 +1019,16 @@ body.illu-instant-effect-busy-active {
     box-sizing: border-box;
 }
 
-/* ——— Splash : fond bureau Windows 95 (teal #008080), barre + texte sur l’image ——— */
+/* ——— Splash : fond bureau, disparition en fondu (écran entier) ——— */
 body.illu-splash-active {
-    background: #008080;
+    background-color: var(--illu-splash-desk, #008080);
+    transition: background-color 0.48s ease-out;
+}
+
+/* illu-splash-fading : retrait du fond body uniquement après le fondu (voir IlluProgress.js) */
+body.illu-splash-active.illu-splash-fading {
+    background-color: transparent;
+    transition: background-color 0.48s ease-out;
 }
 
 .illu-splash {
@@ -1031,10 +1039,23 @@ body.illu-splash-active {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background-color: var(--illu-splash-desk, #008080);
     box-sizing: border-box;
     padding: 24px 16px 20px;
     pointer-events: auto;
+    opacity: 1;
+    /* transition CSS en secours ; le fondu boot utilise element.animate() */
+    transition: opacity 0.48s ease-out;
+}
+
+.illu-splash.illu-splash--hiding {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.illu-splash.illu-splash--gone {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .illu-splash__frame {
@@ -1071,7 +1092,17 @@ body.illu-splash-active {
     top: 10px;
     text-align: center;
     pointer-events: none;
-    text-shadow: 0 0 6px rgba(255, 255, 255, 0.95), 0 1px 0 rgba(255, 255, 255, 0.8);
+    filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.95))
+        drop-shadow(0 0 14px rgba(255, 255, 255, 0.75));
+}
+
+.illu-splash__brand .illu-splash__title,
+.illu-splash__brand .illu-splash__sub {
+    text-shadow:
+        0 0 2px #fff,
+        0 0 6px rgba(255, 255, 255, 0.98),
+        0 0 12px rgba(255, 255, 255, 0.85),
+        0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .illu-splash__title {
@@ -1087,6 +1118,37 @@ body.illu-splash-active {
     font-size: clamp(0.95rem, 2.6vw, 1.15rem);
     color: #333;
     font-weight: 600;
+}
+
+.illu-splash__sub.illu-splash__sub--boot {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+.illu-splash__sub.illu-splash__sub--boot.illu-splash__sub--ready {
+    animation: illu-splash-sub-in 0.5s ease-out forwards;
+}
+
+@keyframes illu-splash-sub-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.illu-splash__overlay-bottom--boot {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.illu-splash__overlay-bottom--boot.illu-splash__overlay-bottom--ready {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.22s ease-out;
 }
 
 /* Texte + barre de chargement superposés en bas de l’image (pas sur gris sous la carte). */

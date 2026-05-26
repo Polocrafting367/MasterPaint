@@ -176,6 +176,21 @@ window.VectorEngine = (() => {
         const ui = getUI();
         if (!ui) return;
 
+        if (
+            typeof window.illuVectorPreferBitmapSelectionUI === 'function' &&
+            window.illuVectorPreferBitmapSelectionUI()
+        ) {
+            const penDots = [...ui.querySelectorAll('.ve-pen-dot')];
+            const polyDots = [...ui.querySelectorAll('.ve-poly-dot')];
+            ui.innerHTML = '';
+            penDots.forEach((n) => ui.appendChild(n));
+            polyDots.forEach((n) => ui.appendChild(n));
+            if (typeof window.illuSyncVectorSelectionAnchors === 'function') {
+                window.illuSyncVectorSelectionAnchors();
+            }
+            return;
+        }
+
         const penDots = [...ui.querySelectorAll('.ve-pen-dot')];
         const polyDots = [...ui.querySelectorAll('.ve-poly-dot')];
 
@@ -264,6 +279,15 @@ window.VectorEngine = (() => {
         if (_uiRefreshRaf) return;
         _uiRefreshRaf = requestAnimationFrame(() => {
             _uiRefreshRaf = 0;
+            if (
+                typeof window.illuVectorPreferBitmapSelectionUI === 'function' &&
+                window.illuVectorPreferBitmapSelectionUI()
+            ) {
+                if (typeof window.illuSyncVectorSelectionAnchors === 'function') {
+                    window.illuSyncVectorSelectionAnchors();
+                }
+                return;
+            }
             const sel = EditorManager.activeVectorSelection;
             if (_dragging && _uiBuiltForDrag && sel && sel.length && _updateSelectionUIPositions(sel)) {
                 return;

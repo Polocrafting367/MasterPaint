@@ -425,6 +425,8 @@
         return new Blob([bytes], { type: mime ? mime[1] : 'image/png' });
     }
 
+    window.illuDataUrlToBlob = dataUrlToBlob;
+
     function blobToDataUrl(blob) {
         return new Promise((resolve, reject) => {
             const fr = new FileReader();
@@ -571,6 +573,7 @@
                 const pk = pl.pixelBlobKey;
                 if (pk && !pl.dataUrl) {
                     if (P && totalL > 5) P.splash(10 + Math.floor(i / totalP * 20), `Extraction calque ${j + 1}/${totalL} (${pl.name || '…'})…`);
+                    if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
                     const blob = await idbGet(pk);
                     pl.dataUrl = blob ? await blobToDataUrl(blob) : EMPTY_PNG_DATAURL;
                     delete pl.pixelBlobKey;
@@ -809,17 +812,57 @@
         }
     }
 
-    async function applyWorkspaceFromJsonText(text) {
-        let busy = null;
-        if (window.IlluProgress && typeof window.IlluProgress.createDelayedInstantEffect === 'function') {
-            busy = window.IlluProgress.createDelayedInstantEffect(window.IlluI18n?.t('dlg.loadProject') || 'Chargement', 180);
+    async function applyWorkspaceFromJsonText(textOrData, opts) {
+        opts = opts || {};
+        let busy = opts.busy || null;
+        const ownBusy =
+            !busy &&
+            window.IlluProgress &&
+            typeof window.IlluProgress.createDelayedInstantEffect === 'function';
+        if (ownBusy) {
+            busy = window.IlluProgress.createDelayedInstantEffect(
+                window.IlluI18n?.t('dlg.loadProject') || 'Chargement',
+                80
+            );
+            busy.showNow();
+        } else if (busy && typeof busy.showNow === 'function') {
+            busy.showNow();
         }
+
+        const progress = (pct, detail) => {
+            if (!busy) return;
+            busy.progress(pct);
+            if (detail && window.IlluProgress && typeof window.IlluProgress.status === 'function') {
+                window.IlluProgress.status(pct, detail);
+            }
+        };
+
         try {
-            const data = JSON.parse(text);
-            if (busy) busy.progress(20);
+            progress(4);
+            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
+
+            let data;
+            if (
+                textOrData &&
+                typeof textOrData === 'object' &&
+                textOrData.format === 'illu-workspace'
+            ) {
+                data = textOrData;
+            } else if (typeof textOrData === 'string') {
+                progress(8, window.IlluI18n?.t('dlg.loadProjectParse') || 'Analyse du fichier…');
+                if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
+                data = JSON.parse(textOrData);
+                if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+            } else {
+                throw new Error('Format de projet non reconnu');
+            }
+
+            progress(18);
             await hydrateIfNeeded(data);
-            if (busy) busy.progress(60);
-            await window.EditorManager.replaceWorkspaceFromPayload(data, true);
+            progress(22);
+            await window.EditorManager.replaceWorkspaceFromPayload(data, opts.append !== false, {
+                loadProgress: (pct, detail) => progress(Math.min(98, 22 + pct * 0.76), detail)
+            });
             if (getAutoSaveMode() !== 'off') {
                 queuePersistForced();
             }
@@ -1429,6 +1472,7 @@ if (fmt === 'png' || fmt === 'gif') {
         wireCanvasInteractionGate,
         tryRestoreOnInit,
         applyWorkspaceFromJsonText,
+        applyWorkspaceFromParsed: applyWorkspaceFromJsonText,
         clearAllIlluIdbBlobs,
         attachIdbBlobsToExportBundle,
         importIdbBlobsFromBundle,

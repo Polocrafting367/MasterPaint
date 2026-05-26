@@ -65,6 +65,8 @@ const EditorManager = {
         shapeStrokeMode: 'both',
         shapeGradAngle: 0,
         shapeCornerRadius: 12,
+        /** Triangle : 3 = triangle ; 4+ = étoile à n branches. */
+        triangleBranches: 3,
         textSize: 18,
         textFont: 'Arial, sans-serif',
         textBold: false,
@@ -76,11 +78,15 @@ const EditorManager = {
         textGradAngle: 0,
         /** Prochaine sélection rect. → quadrilatère 4 coins (usage unique ; bouton « 4 coins »). */
         selectionRectFreeCornersArm: false,
+        /** Prochain rectangle / rect. arrondi → quadrilatère 4 coins ajustables après le tracé. */
+        shapeRectFreeCornersArm: false,
         /** Poignées 4 coins : déplacement en rectangle axis-aligné (pas quad libre). */
         warpQuadRectLock: false,
         pencilAutoClose: false,
         lineCapStart: 'none',
         lineCapEnd: 'none',
+        /** Ligne / courbe 3 pts : épaisseur du contour (couleur secondaire), en plus de `size` (trace). */
+        lineContourWidth: 0,
         /** Courbe 3 pts : 0 = quasi droite, 100 = selon les clics, 200 = courbure renforcée. */
         quadCurveBulge: 100,
         gradientType: 'linear',
@@ -287,6 +293,9 @@ setup8BitMode() {
     /** Canvas DOM par calque (#pixel-layer-stack) quand le mode « pile » est actif. */
     _pixelLayerViewEls: null,
     _domPixelStackActive: false,
+    /** Ouverture .illu : pas de filtres dynamiques ni worker tant que le chargement n’est pas terminé. */
+    _workspaceLoading: false,
+    _deferDynamicFilterRender: false,
     /** Pinceau / crayon : tracé en cours → rendu pixel allégé si option activée. */
     _strokeLightPixelRender: false,
     /**
@@ -481,27 +490,33 @@ setup8BitMode() {
                     window.VectorEngine.applyStyleToSelection();
                 }
             }
-            if (
-                !window.pixelShapeEdit ||
-                !['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3'].includes(window.activeTool)
-            ) {
+            if (!window.pixelShapeEdit) {
+                if (
+                    window.activeTool === 'triangle' &&
+                    typeof window.syncTriangleBranchesLivePreview === 'function'
+                ) {
+                    window.syncTriangleBranchesLivePreview();
+                }
                 return;
             }
             const ed = window.pixelShapeEdit;
             ed.opts = ed.opts || {};
             ed.opts.strokeWidth = this.toolProps.size || 2;
-            if (ed.kind !== 'quadcurve') {
-                ed.opts.strokeMode = this.toolProps.shapeStrokeMode;
-                ed.opts.fillType = this.toolProps.fillType;
-                ed.opts.gradAngle = this.toolProps.shapeGradAngle;
-                ed.opts.gradType = document.getElementById('tool-shape-grad-type')?.value || 'linear';
-                ed.opts.gradMethod =
-                    typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple';
-            }
-            if (ed.kind === 'roundrect') {
-                const cap = Math.min(ed.w / 2, ed.h / 2);
+            ed.opts.lineContourWidth = this.toolProps.lineContourWidth ?? 0;
+            ed.opts.strokeMode = this.toolProps.shapeStrokeMode;
+            ed.opts.fillType = this.toolProps.fillType;
+            ed.opts.gradAngle = this.toolProps.shapeGradAngle;
+            ed.opts.gradType = document.getElementById('tool-shape-grad-type')?.value || 'linear';
+            ed.opts.gradMethod =
+                typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple';
+            if (ed.kind === 'roundrect' || (ed.kind === 'quad' && ed.quadBase === 'roundrect')) {
                 const want = this.toolProps.shapeCornerRadius ?? 12;
-                ed.r = Math.max(0, Math.min(want, cap));
+                if (ed.kind === 'quad' && ed.pts && typeof window.illuClampQuadCornerRadius === 'function') {
+                    ed.r = window.illuClampQuadCornerRadius(want, ed.pts);
+                } else {
+                    const cap = Math.min(ed.w / 2, ed.h / 2);
+                    ed.r = Math.max(0, Math.min(want, cap));
+                }
             }
             if (typeof window.redrawShapeFromEditLive === 'function') window.redrawShapeFromEditLive();
             else if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
@@ -513,6 +528,25 @@ setup8BitMode() {
             }
             syncLiveShapeEdit();
         }, { live: true });
+        const lineContourSl = document.getElementById('tool-line-contour');
+        const lineContourVal = document.getElementById('tool-line-contour-val');
+        if (lineContourSl) {
+            const syncLineContour = () => {
+                let v = parseInt(lineContourSl.value, 10);
+                if (!Number.isFinite(v)) v = 0;
+                this.toolProps.lineContourWidth = Math.max(0, Math.min(128, v));
+                if (lineContourVal) lineContourVal.textContent = String(this.toolProps.lineContourWidth);
+                if (typeof window.syncIlluGaugeForRange === 'function') {
+                    window.syncIlluGaugeForRange(lineContourSl);
+                }
+                syncLiveShapeEdit();
+            };
+            lineContourSl.addEventListener('input', syncLineContour);
+            lineContourSl.addEventListener('change', syncLineContour);
+            if (typeof window.syncIlluGaugeForRange === 'function') {
+                window.syncIlluGaugeForRange(lineContourSl);
+            }
+        }
         bind('tool-fill-type', (e) => {
             let fv = e.target.value || 'solid';
             if (fv !== 'solid' && fv !== 'gradient') fv = 'solid';
@@ -522,6 +556,9 @@ setup8BitMode() {
         });
         if (typeof window.illuWireSelectRectFreeCornersButtons === 'function') {
             window.illuWireSelectRectFreeCornersButtons();
+        }
+        if (typeof window.illuWireShapeRectFreeCornersButtons === 'function') {
+            window.illuWireShapeRectFreeCornersButtons();
         }
         if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
             window.syncSelectionRectFreeCornersArmUI();
@@ -648,6 +685,27 @@ setup8BitMode() {
                 if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             });
         }
+        const triBr = document.getElementById('tool-triangle-branches');
+        const triBrV = document.getElementById('tool-triangle-branches-val');
+        if (triBr) {
+            const syncTriBranches = () => {
+                let v = parseInt(triBr.value, 10);
+                if (!Number.isFinite(v)) v = 3;
+                this.toolProps.triangleBranches =
+                    typeof window.illuClampTriangleBranches === 'function'
+                        ? window.illuClampTriangleBranches(v)
+                        : Math.max(3, Math.min(24, v));
+                if (triBrV) triBrV.textContent = String(this.toolProps.triangleBranches);
+                if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(triBr);
+                if (typeof window.syncTriangleBranchesLivePreview === 'function') {
+                    window.syncTriangleBranchesLivePreview();
+                }
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            };
+            triBr.addEventListener('input', syncTriBranches);
+            triBr.addEventListener('change', syncTriBranches);
+            if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(triBr);
+        }
         const scr = document.getElementById('tool-shape-corner-radius');
         const scrv = document.getElementById('tool-shape-corner-radius-val');
         if (scr) {
@@ -766,7 +824,15 @@ setup8BitMode() {
         };
         if (tb) tb.addEventListener('change', (e) => { this.toolProps.textBold = e.target.checked; syncTextStyleUi(); });
         if (ti) ti.addEventListener('change', (e) => { this.toolProps.textItalic = e.target.checked; syncTextStyleUi(); });
-        if (tst) tst.addEventListener('change', (e) => { this.toolProps.textStroke = e.target.checked; if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles(); });
+        if (tst) {
+            tst.addEventListener('change', (e) => {
+                this.toolProps.textStroke = e.target.checked;
+                if (typeof window.syncTextStrokeWidthControlState === 'function') {
+                    window.syncTextStrokeWidthControlState();
+                }
+                if (typeof window.syncPixelTextEditorStyles === 'function') window.syncPixelTextEditorStyles();
+            });
+        }
         const tsw = document.getElementById('tool-text-stroke-w');
         const tswv = document.getElementById('tool-text-stroke-w-val');
         if (tsw) {
@@ -1169,8 +1235,17 @@ setup8BitMode() {
     get activeLayerIndex() { return this.activeProject ? this.activeProject.activeLayerIndex : 0; },
     /** Écrit l’index du calque actif (le getter seul ne permet pas d’assigner this.activeLayerIndex). */
     setActiveLayerIndex(i) {
-        if (!this.activeProject || !this.layers.length) return;
+        if (!this.activeProject || !this.layers.length || window._illuFinishingWarp) return;
         const n = Math.max(0, Math.min(i, this.layers.length - 1));
+
+        // Valider et fusionner de manière synchrone toute interaction pixel (déplacement ou déformation)
+        // sur l'ancien calque actif avant d'effectuer le changement de calque.
+        if (this.activeProject.activeLayerIndex !== n) {
+            if (typeof window.illuCommitAnyActiveInteractionSynchronously === 'function') {
+                window.illuCommitAnyActiveInteractionSynchronously();
+            }
+        }
+
         this.activeProject.activeLayerIndex = n;
         /*
         const m = typeof window !== 'undefined' ? window.selectionColorMask : null;
@@ -1910,6 +1985,10 @@ setup8BitMode() {
         return stack.length > 0;
     },
 
+    _pixelRenderSkipDynamicFilters() {
+        return !!(this._deferDynamicFilterRender || this._workspaceLoading);
+    },
+
     _dynamicRenderWorkerAvailable() {
         return !this._dynamicRenderWorkerBroken && typeof Worker !== 'undefined';
     },
@@ -2010,6 +2089,7 @@ setup8BitMode() {
     },
 
 _scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
+        if (this._pixelRenderSkipDynamicFilters()) return false;
         if (!this._dynamicRenderWorkerAvailable()) return false;
         let layerData;
         try {
@@ -2069,6 +2149,7 @@ _scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
     },
 
     _scheduleAsyncAlphaMaskRender(layer, maskFlat, docW, docH) {
+        if (this._pixelRenderSkipDynamicFilters()) return false;
         if (!this._dynamicRenderWorkerAvailable()) return false;
         let layerData;
         let maskData;
@@ -2550,7 +2631,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     _renderPixelLayersStackToContext(ctx, layers, withLayerMasks = true, opts) {
         const docW = ctx.canvas.width;
         const docH = ctx.canvas.height;
-        const strokeLight = !!(opts && opts.strokeLightRender);
+        const strokeLight = !!(opts && opts.strokeLightRender) || this._pixelRenderSkipDynamicFilters();
         const useMasks = withLayerMasks && !strokeLight;
         for (let li = 0; li < layers.length; li++) {
             const layer = layers[li];
@@ -2682,12 +2763,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     scheduleUiThumbnailsRefresh(delayMs) {
         if (!this._uiThumbsVisible()) return;
         const delay = delayMs != null ? delayMs : this.THUMB_IDLE_MS;
+        const now = performance.now();
         if (this._thumbIdleTimer != null) {
+            // Si le premier rendez-vous date de plus de 1200 ms, on laisse s'exécuter
+            // pour garantir une mise à jour périodique même pendant un dessin continu.
+            if (this._thumbFirstScheduledTime != null && (now - this._thumbFirstScheduledTime) > 1200) {
+                return;
+            }
             clearTimeout(this._thumbIdleTimer);
             this._thumbIdleTimer = null;
+        } else {
+            this._thumbFirstScheduledTime = now;
         }
         this._thumbIdleTimer = window.setTimeout(() => {
             this._thumbIdleTimer = null;
+            this._thumbFirstScheduledTime = null;
             this._startThumbnailIdlePass();
         }, delay);
     },
@@ -2698,6 +2788,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     cancelDeferredThumbnails() {
         this._thumbPassGeneration = (this._thumbPassGeneration | 0) + 1;
         this._thumbPassSingleLayerIndex = null;
+        this._thumbFirstScheduledTime = null;
         if (this._thumbIdleTimer != null) {
             clearTimeout(this._thumbIdleTimer);
             this._thumbIdleTimer = null;
@@ -2789,7 +2880,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     const img = item.querySelector('img.layer-thumb');
                     if (img && layer) {
                         this._getVectorLayerThumbnailDataUrl(layer).then((u) => {
-                            if (gen === this._thumbPassGeneration && u) img.src = u;
+                            if (gen === this._thumbPassGeneration && u) {
+                                layer._cachedThumbUrl = u;
+                                img.src = u;
+                            }
                         }).catch(() => {});
                     }
                 }
@@ -2814,7 +2908,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         const img = item.querySelector('img.layer-thumb');
                         if (img && layer) {
                             const u = this.getLayerThumbnailDataUrl(layer, lowSize, true);
-                            if (u) img.src = u;
+                            if (u) {
+                                layer._cachedThumbUrl = u;
+                                img.src = u;
+                            }
                         }
                     }
                 }
@@ -2832,7 +2929,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const img = item.querySelector('img.layer-thumb');
                 if (img && layer) {
                     const u = this.getLayerThumbnailDataUrl(layer, lowSize, true);
-                    if (u) img.src = u;
+                    if (u) {
+                        layer._cachedThumbUrl = u;
+                        img.src = u;
+                    }
                 }
             }
             this._queueThumbSeqStep(gen, 'layers', index + 1, gap);
@@ -4081,7 +4181,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const tool = window.activeTool;
         if (tool !== 'move' && tool !== 'deform') return;
         const mc = document.getElementById('main-canvas-container');
-        if (mc && mc.querySelector('canvas:not(#drawing-canvas):not(.illu-pixel-layer-view)')) return;
+        if (mc && mc.querySelector('canvas:not(#drawing-canvas):not(.illu-pixel-layer-view):not(.illu-warp-preview-overlay):not(.illu-warp-base-preview-overlay):not(.illu-stack-preview-overlay):not(.illu-move-layer-whole-ghost)')) return;
 
         const al = this.activeLayer;
         if (!al) return;
@@ -4821,7 +4921,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         let y0;
         let x1;
         let y1;
-        if (ed.kind === 'rect' || ed.kind === 'roundrect' || ed.kind === 'triangle') {
+        if (
+            ed.kind === 'rect' ||
+            ed.kind === 'roundrect' ||
+            ed.kind === 'triangle' ||
+            ed.kind === 'star' ||
+            ed.kind === 'quad'
+        ) {
             x0 = ed.lx + lx;
             y0 = ed.ly + ly;
             x1 = x0 + ed.w;
@@ -5131,6 +5237,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             this.render();
             return;
         }
+        if (typeof window.illuInvalidatePendingWandWorker === 'function') {
+            window.illuInvalidatePendingWandWorker();
+        }
         if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
             window.illuPurgeSelectionOverlayAndGhostDom();
         } else if (typeof window.cancelSelectionInteractionState === 'function') {
@@ -5152,6 +5261,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         window.clearAnchors && window.clearAnchors();
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
         this.render();
     },
 
@@ -5186,6 +5296,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
             if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+            if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
             this.render();
             return;
         }
@@ -5211,6 +5322,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 if (typeof window.commitLayerMaskAsSelection === 'function') {
                     window.commitLayerMaskAsSelection(mask, lw, lh);
                 }
+                if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
                 this.render();
                 return;
             }
@@ -5226,6 +5338,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         window.selectionInverted = !window.selectionInverted;
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        if (typeof window.illuSyncSelectionAdjustToolbar === 'function') window.illuSyncSelectionAdjustToolbar();
         this.render();
     },
 
@@ -5836,6 +5949,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     /** Barre calques : dupliquer le calque actif (mode Pixel, tampon présent). */
     duplicateActiveLayer() {
+        if (window._illuFinishingWarp) return;
         if (!this.activeProject || !Array.isArray(this.layers)) return;
         if (!this.isPixelMode) {
             window.showIlluAlert(
@@ -6656,6 +6770,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     // --- LAYERS ---
     addLayer(name) {
+        if (window._illuFinishingWarp) return;
         const id = Date.now();
         const layer = { 
             id, 
@@ -6822,6 +6937,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     deleteLayer() {
+        if (window._illuFinishingWarp) return;
         if (this.layers.length > 1) {
             const victim = this.layers[this.activeLayerIndex];
             const id = victim.id;
@@ -7663,14 +7779,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 thumb.height = layerSz.height || 28;
                 thumb.draggable = false;
                 const emptyGif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                
+                // Utiliser la miniature cachée pour éviter le clignotement
+                const cachedUrl = layer._cachedThumbUrl || emptyGif;
+                thumb.src = cachedUrl;
+                
                 // Mode vecteur : prévisualiser le contenu SVG de ce calque
                 if (!this.isPixelMode) {
-                    thumb.src = emptyGif;
                     this._getVectorLayerThumbnailDataUrl(layer, idx).then(url => {
-                        if (url) thumb.src = url;
+                        if (url) {
+                            layer._cachedThumbUrl = url;
+                            thumb.src = url;
+                        }
                     }).catch(() => {});
-                } else {
-                    thumb.src = emptyGif;
                 }
                 item.appendChild(thumb);
             }
@@ -8472,22 +8593,63 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return null;
     },
 
-    _canvasFromDataUrl(dataUrl) {
+    async _canvasFromDataUrl(dataUrl) {
+        if (!dataUrl || typeof dataUrl !== 'string') {
+            throw new Error('dataUrl');
+        }
+        const heavy = dataUrl.length > 120000;
+        if (heavy && typeof window.illuYieldToMain === 'function') {
+            await window.illuYieldToMain(2);
+        }
+        const blob =
+            typeof window.illuDataUrlToBlob === 'function'
+                ? window.illuDataUrlToBlob(dataUrl)
+                : null;
+        if (blob && typeof createImageBitmap === 'function') {
+            try {
+                const bitmap = await createImageBitmap(blob);
+                const c = document.createElement('canvas');
+                c.width = bitmap.width;
+                c.height = bitmap.height;
+                c.getContext('2d', { willReadFrequently: true }).drawImage(bitmap, 0, 0);
+                if (typeof bitmap.close === 'function') bitmap.close();
+                if (heavy && typeof window.illuYieldToMain === 'function') {
+                    await window.illuYieldToMain(1);
+                }
+                return c;
+            } catch (e) {
+                /* fallback Image */
+            }
+        }
+        if (heavy && typeof window.illuYieldToMain === 'function') {
+            await window.illuYieldToMain(1);
+        }
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => {
-                const c = document.createElement('canvas');
-                c.width = img.naturalWidth || img.width;
-                c.height = img.naturalHeight || img.height;
-                c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
-                resolve(c);
+            img.onload = async () => {
+                try {
+                    if (typeof img.decode === 'function') {
+                        try {
+                            await img.decode();
+                        } catch (e2) {
+                            /* ignore */
+                        }
+                    }
+                    const c = document.createElement('canvas');
+                    c.width = img.naturalWidth || img.width;
+                    c.height = img.naturalHeight || img.height;
+                    c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
+                    resolve(c);
+                } catch (e3) {
+                    reject(e3);
+                }
             };
             img.onerror = () => reject(new Error('dataUrl'));
             img.src = dataUrl;
         });
     },
 
-    async _deserializeHistoryDataFromPayload(obj) {
+    async _deserializeHistoryDataFromPayload(obj, loadOpts) {
         if (obj == null) return null;
         if (typeof obj === 'object' && obj.__hdr === 'str') return obj.v;
         if (typeof obj !== 'object' || !obj.type) return null;
@@ -8499,6 +8661,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             let buffer = null;
             if (patch.bufferDataUrl) {
                 try {
+                    if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
                     buffer = await this._canvasFromDataUrl(patch.bufferDataUrl);
                 } catch (e) {
                     return null;
@@ -8535,9 +8698,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         if (obj.type === 'pixel-full' || obj.type === 'pixel-layers') {
             const layers = [];
-            for (const s of obj.layers || []) {
+            const srcLayers = obj.layers || [];
+            for (let li = 0; li < srcLayers.length; li++) {
+                const s = srcLayers[li];
                 if (!s || !s.bufferDataUrl) continue;
                 try {
+                    if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
                     const buf = await this._canvasFromDataUrl(s.bufferDataUrl);
                     layers.push({
                         id: s.id,
@@ -8564,7 +8730,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return null;
     },
 
-    async _loadProjectHistoryFromPayload(p, sp) {
+    async _loadProjectHistoryFromPayload(p, sp, loadOpts) {
+        loadOpts = loadOpts || {};
         const entries = sp.historySerialized;
         if (!Array.isArray(entries) || !entries.length) {
             p.history = [];
@@ -8572,10 +8739,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             return;
         }
         const out = [];
-        for (const he of entries) {
+        const total = entries.length;
+        for (let hi = 0; hi < total; hi++) {
+            const he = entries[hi];
             if (!he || typeof he.name !== 'string') continue;
+            if (loadOpts.loadProgress && total > 2) {
+                loadOpts.loadProgress(
+                    0.72 + (hi / total) * 0.22,
+                    `Historique ${hi + 1}/${total}…`
+                );
+            }
+            if (typeof window.illuYieldToMain === 'function') {
+                await window.illuYieldToMain(1);
+            }
             const mode = he.mode === 'vector' ? 'vector' : 'pixel';
-            const data = await this._deserializeHistoryDataFromPayload(he.data);
+            const data = await this._deserializeHistoryDataFromPayload(he.data, loadOpts);
             out.push({
                 name: he.name,
                 mode,
@@ -9759,25 +9937,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         });
     },
 
-    async replaceWorkspaceFromPayload(payload, append = false) {
+    async replaceWorkspaceFromPayload(payload, append = false, loadOpts) {
+        loadOpts = loadOpts || {};
+        const report = (frac, detail) => {
+            if (typeof loadOpts.loadProgress === 'function') {
+                loadOpts.loadProgress(Math.max(0, Math.min(1, frac)), detail);
+            }
+        };
         if (!payload || payload.format !== 'illu-workspace' || !Array.isArray(payload.projects)) {
             throw new Error('Format de projet non reconnu');
         }
         if (typeof window.deselectAll === 'function') window.deselectAll();
-
-        const dataUrlToCanvas = (dataUrl) =>
-            new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    c.width = img.naturalWidth || img.width;
-                    c.height = img.naturalHeight || img.height;
-                    c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
-                    resolve(c);
-                };
-                img.onerror = () => reject(new Error('Image calque invalide'));
-                img.src = dataUrl;
-            });
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
 
         const projects = [];
         const totalP = payload.projects.length;
@@ -9786,7 +9957,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         for (let i = 0; i < totalP; i++) {
             const sp = payload.projects[i];
             const pName = sp.name || 'Sans titre';
+            const projFrac = totalP ? i / totalP : 0;
+            report(projFrac * 0.12, `Projet ${i + 1}/${totalP} : ${pName}`);
             if (P) P.splash(30 + Math.floor(i / totalP * 55), `Restauration : ${pName} (${i + 1}/${totalP})…`);
+            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
 
             const p = {
                 id: sp.id != null ? sp.id : Date.now() + Math.floor(Math.random() * 1000000),
@@ -9821,13 +9995,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (p.mode === 'pixel' || p.mode === 'pixel-dither') {
                 const list = sp.pixelLayers || [];
                 const totalL = list.length;
+                const loadedLayers = [];
                 for (let j = 0; j < totalL; j++) {
                     const pl = list[j];
                     if (!pl || !pl.dataUrl) continue;
                     try {
-                        if (P && totalL > 3) P.splash(30 + Math.floor(i / totalP * 55), `Chargement calque ${j + 1}/${totalL} (${pName})…`);
-                        const buf = await dataUrlToCanvas(pl.dataUrl);
-                        p.layers.push({
+                        const layerDetail = `Calque ${j + 1}/${totalL} : ${pl.name || '…'}`;
+                        report(0.12 + (projFrac + (j + 1) / Math.max(1, totalL) / totalP) * 0.55, layerDetail);
+                        if (P && totalL > 1) {
+                            P.splash(30 + Math.floor(i / totalP * 55), `Chargement ${layerDetail} (${pName})…`);
+                        }
+                        if (typeof window.illuYieldToMain === 'function') {
+                            await window.illuYieldToMain(pl.dataUrl.length > 120000 ? 2 : 1);
+                        }
+                        const buf = await this._canvasFromDataUrl(pl.dataUrl);
+                        loadedLayers.push({
                             id: pl.id != null ? pl.id : Date.now() + Math.floor(Math.random() * 1000000) + j,
                             name: pl.name || 'Calque',
                             visible: pl.visible !== false,
@@ -9844,14 +10026,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         console.warn(e);
                     }
                 }
-                if (!p.layers.length) {
+                if (!loadedLayers.length) {
                     const buffer = document.createElement('canvas');
                     buffer.width = p.width;
                     buffer.height = p.height;
                     const bx = buffer.getContext('2d', { willReadFrequently: true });
                     bx.fillStyle = '#ffffff';
                     bx.fillRect(0, 0, p.width, p.height);
-                    p.layers.push({
+                    loadedLayers.push({
                         id: Date.now(),
                         name: 'Arrière-plan',
                         visible: true,
@@ -9864,11 +10046,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         buffer
                     });
                 }
+                p._pendingLayersLoad = loadedLayers;
+                p.layers = [];
                 p.activeLayerIndex = Math.min(
                     Math.max(0, sp.activeLayerIndex || 0),
-                    p.layers.length - 1
+                    loadedLayers.length - 1
                 );
-                await this._loadProjectHistoryFromPayload(p, sp);
+                await this._loadProjectHistoryFromPayload(p, sp, loadOpts);
             } else {
                 p.svgData = sp.svgData != null ? sp.svgData : '';
                 let vLayers = Array.isArray(sp.vectorLayers) ? sp.vectorLayers : [];
@@ -9902,10 +10086,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     Math.max(0, sp.activeLayerIndex || 0),
                     p.layers.length - 1
                 );
-                await this._loadProjectHistoryFromPayload(p, sp);
+                await this._loadProjectHistoryFromPayload(p, sp, loadOpts);
             }
             projects.push(p);
         }
+
+        report(0.96, null);
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
 
         const oldLen = this.projects.length;
         if (append) {
@@ -9931,8 +10118,27 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             this.handleNewProject();
             return;
         }
-        this.applyProjectToUI();
-        this.updateTabUI();
+
+        this._workspaceLoading = true;
+        this._deferDynamicFilterRender = true;
+        window._illuWorkspaceLoading = true;
+
+        for (const pr of this.projects) {
+            if (pr._pendingLayersLoad && pr !== this.activeProject) {
+                pr.layers = pr._pendingLayersLoad;
+                delete pr._pendingLayersLoad;
+            }
+        }
+
+        try {
+            await this._mountActiveProjectLayersProgressive(report);
+            await this._completeWorkspaceLoad(loadOpts);
+        } finally {
+            this._workspaceLoading = false;
+            this._deferDynamicFilterRender = false;
+            window._illuWorkspaceLoading = false;
+        }
+
         if (this.isPixelMode && typeof window.syncSelectionToActiveLayer === 'function') {
             window.syncSelectionToActiveLayer();
         }
@@ -9941,6 +10147,102 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         } else if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
             window.fitActiveProjectZoomToWorkspace(this, { force: true });
         }
+    },
+
+    async _mountActiveProjectLayersProgressive(report) {
+        const p = this.activeProject;
+        if (!p || !p._pendingLayersLoad || !p._pendingLayersLoad.length) {
+            this.applyProjectToUI();
+            this.updateTabUI();
+            return;
+        }
+        const pending = p._pendingLayersLoad;
+        delete p._pendingLayersLoad;
+        p.layers = [];
+        p.activeLayerIndex = Math.min(
+            Math.max(0, p.activeLayerIndex || 0),
+            Math.max(0, pending.length - 1)
+        );
+        this.applyProjectToUI();
+        this.updateTabUI();
+        const total = pending.length;
+        for (let j = 0; j < total; j++) {
+            p.layers.push(pending[j]);
+            if (report) {
+                report(0.68 + ((j + 1) / total) * 0.18, `Affichage calque ${j + 1}/${total}…`);
+            }
+            this.updateLayerUI();
+            this.render({ skipUiThumbnails: true });
+            if (typeof window.illuYieldToMain === 'function') {
+                await window.illuYieldToMain(2);
+            }
+        }
+    },
+
+    _waitDynamicFilterLayerReady(layer, timeoutMs) {
+        return new Promise((resolve) => {
+            if (!layer || !this._isLiveDynamicFilterLayer(layer)) {
+                resolve();
+                return;
+            }
+            const deadline = Date.now() + (Number(timeoutMs) > 0 ? Number(timeoutMs) : 12000);
+            const tick = () => {
+                if (layer._dynAsyncKey && !layer._dynAsyncPendingKey) {
+                    resolve();
+                    return;
+                }
+                if (!this._isLiveDynamicFilterLayer(layer)) {
+                    resolve();
+                    return;
+                }
+                if (Date.now() >= deadline) {
+                    resolve();
+                    return;
+                }
+                requestAnimationFrame(tick);
+            };
+            tick();
+        });
+    },
+
+    async _completeWorkspaceLoad(loadOpts) {
+        const report =
+            loadOpts && typeof loadOpts.loadProgress === 'function' ? loadOpts.loadProgress : null;
+        const dynLayers = [];
+        if (this.isPixelMode && Array.isArray(this.layers)) {
+            this.layers.forEach((layer, index) => {
+                this._normalizeDynamicFilterProps(layer);
+                if (this._isLiveDynamicFilterLayer(layer)) {
+                    dynLayers.push({ layer, index });
+                }
+            });
+        }
+
+        this.render({ skipUiThumbnails: true });
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
+
+        if (!dynLayers.length) {
+            this.render({ flushUiThumbnails: true });
+            return;
+        }
+
+        this._deferDynamicFilterRender = false;
+        const total = dynLayers.length;
+        for (let k = 0; k < total; k++) {
+            const { layer, index } = dynLayers[k];
+            const label = layer.name || `Calque ${index + 1}`;
+            if (report) {
+                report(0.88 + ((k + 1) / total) * 0.1, `Filtre dynamique : ${label}…`);
+            }
+            layer._dynAsyncKey = null;
+            layer._dynAsyncPendingKey = null;
+            layer._dynAsyncCanvas = null;
+            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
+            this.render({ skipUiThumbnails: true, layerIndex: index });
+            await this._waitDynamicFilterLayerReady(layer, 15000);
+            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+        }
+        this.render({ flushUiThumbnails: true });
     },
 
     _applyCtxImageSmoothing(ctx, mode) {
