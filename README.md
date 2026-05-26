@@ -10,11 +10,11 @@
 <h1 align="center">MasterPaint 98</h1>
 
 <p align="center">
-  <img src="IMG/Paint.jpeg" height="300" alt="Mise en page type Paint.NET" />
-  &nbsp;
-  <img src="IMG/Photo.jpeg" height="300" alt="Colonnes ancrées : type Photoshop" />
-  &nbsp;
-  <img src="IMG/Phone.jpeg" height="300" alt="Menu ☰, ajusté pour téléphone" />
+  <img src="IMG/Paint.jpeg" width="38%" alt="Mise en page type Paint.NET" />
+  &nbsp;&nbsp;
+  <img src="IMG/Photo.jpeg" width="38%" alt="Colonnes ancrées : type Photoshop" />
+  &nbsp;&nbsp;
+  <img src="IMG/Phone.jpeg" width="19%" alt="Menu ☰, ajusté pour téléphone" />
 </p>
 
 <p align="center">
