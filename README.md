@@ -10,11 +10,11 @@
 <h1 align="center">MasterPaint 98</h1>
 
 <p align="center">
-  <img src="IMG/Paint.jpeg" height="180" alt="Mise en page type Paint.NET" />
+  <img src="IMG/Paint.jpeg" height="210" alt="Mise en page type Paint.NET" />
   &nbsp;
-  <img src="IMG/Photo.jpeg" height="180" alt="Colonnes ancrées : type Photoshop" />
+  <img src="IMG/Photo.jpeg" height="210" alt="Colonnes ancrées : type Photoshop" />
   &nbsp;
-  <img src="IMG/Phone.jpeg" height="180" alt="Menu ☰, ajusté pour téléphone" />
+  <img src="IMG/Phone.jpeg" height="210" alt="Menu ☰, ajusté pour téléphone" />
 </p>
 
 <p align="center">
@@ -38,16 +38,13 @@ Choisissez la mise en page dans **Paramètres → Disposition de l’interface**
 - **Paint.NET** — palettes flottantes (outils, couleurs, calques, historique).
 - **Photoshop** — colonnes ancrées : outils à gauche, couleurs et calques à droite, rail curseurs / historique.
 - **Téléphone** — menu ☰, barre d’outils compacte, panneaux adaptés au petit écran.
-
-Le passage entre mode **téléphone** et modes **bureau** (Paint.NET / Photoshop) recharge la page pour réinitialiser l’interface.
-
+- 
 ## Fonctionnalités
 
 - **Formes et calques** — Bitmap et vectoriel, calques et formes modifiables
 - **Dessin** — Pinceau, crayon, gomme, pot de peinture, dégradé
 - **Effets** — Filtres, effets dynamiques sur calques, accélération WebGL / WebAssembly
 - **Outils** — Déformation, perspective, sélection et alignement
-- **Interface** — Trois dispositions (voir captures ci-dessus)
 
 ## Démarrage
 
