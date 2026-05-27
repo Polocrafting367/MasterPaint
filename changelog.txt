@@ -1,5 +1,16 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.7.73 (27/05/26)
+- Fin implementation de bordure sur les trais/trais arrondie
+- Continuer mise en place du ruabn type office
+- Ajout d'une obtion pour garder ou non le contenu des pixel quand on sort des bordure du canvas  
+       > par défaut désactivé
+- Réglage divers sur l'importation entre mode svg et bitmat...
+- Correction de bug fenetre traitement qui s'ouvrait de manière intepestive
+- Correction problème sur l'outil déformation, racourcit...
+- correction d'un bug ou un calc blanc apparaisait dans certains cas en plus en bas
+- Nouveau projet pixel : premier calque à nouveau entièrement blanc (plus de dépendance au libellé « Arrière-plan ») ; taille document forcée ≥ 1 px si champs invalides
+
 2.7.66 (26/05/26)
 - Réduit la selection d'importation au fichiers supporté
 - Modifier les outil de selection/déofrmation/déplacement pour plus de performance

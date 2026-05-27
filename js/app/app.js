@@ -251,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const ILLU_RESIZE_SCOPE_KEY = 'illu_resize_scope';
 const ILLU_RESAMPLE_KEY = 'illu_resample';
+const ILLU_ALLOW_OUTSIDE_CANVAS_KEY = 'illu_allow_outside_canvas';
 
 function illuReadResampleMode() {
     try {
@@ -259,7 +260,150 @@ function illuReadResampleMode() {
     } catch (e) { /* ignore */ }
     return 'smooth';
 }
+
+function illuReadAllowOutsideCanvas() {
+    try {
+        const v = localStorage.getItem(ILLU_ALLOW_OUTSIDE_CANVAS_KEY);
+        if (v === '1') return true;
+        if (v === '0') return false;
+    } catch (e) {
+        /* ignore */
+    }
+    return false;
+}
+
 window.illuInterpolationMode = illuReadResampleMode();
+if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+    EditorManager.toolProps.allowOutsideCanvas = illuReadAllowOutsideCanvas();
+}
+
+// ==========================================
+// Hors toile (contenu hors document)
+// ==========================================
+window.syncIlluAllowOutsideCanvasUI = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.toolProps) return;
+    const on = !!EditorManager.toolProps.allowOutsideCanvas;
+
+    const menuCheck = document.getElementById('menu-win-outside-canvas-check');
+    if (menuCheck) menuCheck.style.visibility = on ? 'visible' : 'hidden';
+
+    const outsideCb = document.getElementById('tool-allow-outside-canvas');
+    if (outsideCb) outsideCb.checked = on;
+
+    if (typeof window.syncAllToolbarToggles === 'function') {
+        window.syncAllToolbarToggles();
+    }
+};
+
+window.illuHasOutsideCanvasContent = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.activeProject) return false;
+    if (!EditorManager.isPixelMode) return false;
+    const W = EditorManager.width;
+    const H = EditorManager.height;
+    if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) return false;
+
+    const hasOutsideInProject = (p) => {
+        if (!p || !Array.isArray(p.layers)) return false;
+        for (const l of p.layers) {
+            if (!l || !l.buffer) continue;
+            const x = l.x | 0;
+            const y = l.y | 0;
+            const bw = l.buffer.width | 0;
+            const bh = l.buffer.height | 0;
+            if (x < 0 || y < 0 || x + bw > W || y + bh > H) return true;
+        }
+        return false;
+    };
+
+    const p0 = EditorManager.activeProject;
+    if (hasOutsideInProject(p0)) return true;
+
+    // Vérifier aussi les projets de masques alpha si référencés
+    const maskIds = new Set();
+    if (Array.isArray(p0.layers)) {
+        p0.layers.forEach((l) => {
+            if (l && l.alphaMaskProjectId) maskIds.add(l.alphaMaskProjectId);
+        });
+    }
+    for (const mid of maskIds) {
+        const mp = EditorManager.projects ? EditorManager.projects.find((pr) => pr.id === mid) : null;
+        if (hasOutsideInProject(mp)) return true;
+    }
+    return false;
+};
+
+window.requestIlluAllowOutsideCanvasChange = function (nextOn) {
+    if (typeof EditorManager === 'undefined' || !EditorManager.toolProps) return;
+    const prevOn = !!EditorManager.toolProps.allowOutsideCanvas;
+    const desired = !!nextOn;
+    if (desired === prevOn) return;
+
+    const getShortLabel = () =>
+        window.IlluI18n && typeof window.IlluI18n.t === 'function'
+            ? window.IlluI18n.t('tools.allowOutsideCanvasShort', 'Hors toile')
+            : 'Hors toile';
+
+    const setFlagOnly = (on) => {
+        EditorManager.toolProps.allowOutsideCanvas = !!on;
+        try {
+            localStorage.setItem(ILLU_ALLOW_OUTSIDE_CANVAS_KEY, on ? '1' : '0');
+        } catch (e) {
+            /* ignore */
+        }
+    };
+
+    if (desired) {
+        setFlagOnly(true);
+        // Le toggle doit être undo/redo : on crée une entrée légère
+        if (EditorManager.isPixelMode) {
+            EditorManager.saveHistory(`${getShortLabel()} : activé`, { patchActiveLayer: true });
+        }
+        window.syncIlluAllowOutsideCanvasUI();
+        return;
+    }
+
+    // desired === false : on confirme puis on purgera
+    const label = getShortLabel();
+    const message =
+        `Si vous désactivez "${label}", le contenu dessiné en dehors du canvas sera supprimé.\n\n` +
+        `OK pour supprimer (rogner) tout ce qui dépasse du document ?`;
+
+    window.showIlluConfirm({
+        title: label,
+        message,
+        confirmText: window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t('dlg.apply', 'OK') : 'OK',
+        cancelText: window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t('dlg.cancel', 'Annuler') : 'Annuler',
+        onConfirm: () => {
+            // Coupure logique d’abord : la purge travaille en mode "clamp"
+            setFlagOnly(false);
+            const W = EditorManager.width;
+            const H = EditorManager.height;
+            if (window.illuHasOutsideCanvasContent && window.illuHasOutsideCanvasContent()) {
+                EditorManager.cropPixelWorkspace(0, 0, W, H, {
+                    actionName: `${label} : contenu hors toile supprimé`,
+                    normalizeLayersToDocument: true
+                });
+            } else {
+                EditorManager.saveHistory(`${label} : désactivé`, { patchActiveLayer: true });
+            }
+            window.syncIlluAllowOutsideCanvasUI();
+        },
+        onCancel: () => {
+            setFlagOnly(true);
+            window.syncIlluAllowOutsideCanvasUI();
+        }
+    });
+};
+
+window.toggleIlluAllowOutsideCanvas = function () {
+    if (typeof EditorManager === 'undefined' || !EditorManager.toolProps) return;
+    window.requestIlluAllowOutsideCanvasChange(!EditorManager.toolProps.allowOutsideCanvas);
+};
+
+// Best-effort initial sync (elements can be added/removed during init).
+setTimeout(() => {
+    if (typeof window.syncIlluAllowOutsideCanvasUI === 'function') window.syncIlluAllowOutsideCanvasUI();
+}, 0);
 
 function illuSetEffectDialogFooterMode(mode) {
     const raz = document.getElementById('effect-dialog-btn-raz');

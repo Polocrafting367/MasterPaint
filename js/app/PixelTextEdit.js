@@ -174,10 +174,24 @@
         return parts.join(', ');
     }
 
+    /** Origine de dessin en coords calque : coin visible du texte (aligné sur l’aperçu DOM). */
+    function layerPaintOriginFromSession(s) {
+        const layer = EditorManager.activeLayer;
+        if (!s || !s.el || !layer || typeof EditorManager.logicalPointerFromClientXY !== 'function') {
+            return { x: s ? s.layerX : 0, y: s ? s.layerY : 0 };
+        }
+        const elR = s.el.getBoundingClientRect();
+        const doc = EditorManager.logicalPointerFromClientXY(elR.left, elR.top);
+        return {
+            x: Math.round(doc.x - layer.x),
+            y: Math.round(doc.y - layer.y)
+        };
+    }
+
     function drawTextToLayer(layerX, layerY, text) {
         const l = EditorManager.activeLayer;
         if (!l || !l.buffer) return;
-        const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
+        let ctx = l.buffer.getContext('2d', { willReadFrequently: true });
         const tp = EditorManager.toolProps;
         const size = tp.textSize || 18;
         const fam = quoteCanvasFontStack(tp.textFont || 'Arial, sans-serif');
@@ -198,8 +212,43 @@
             maxW = Math.max(maxW, ctx.measureText(line || ' ').width);
         });
 
-        const drawX = Math.round(layerX);
-        const drawY = Math.round(layerY);
+        const offset = Math.round((lineHeight - size) / 2) + Math.round(size * 0.04);
+        let drawX = Math.round(layerX);
+        let drawY = Math.round(layerY) + offset;
+
+        // "Hors toile" : agrandir le calque pour conserver le contenu qui dépasse
+        // le document (sinon, le canvas est rogné et les pixels perdus).
+        if (
+            typeof window !== 'undefined' &&
+            window.illuAllowsOutsideCanvasContent &&
+            window.illuAllowsOutsideCanvasContent() &&
+            typeof EditorManager._expandLayerBufferToIncludeLocalRect === 'function'
+        ) {
+            const prevX = l.x | 0;
+            const prevY = l.y | 0;
+            const pad = Math.max(16, Math.round(size * 2), sw * 4);
+            const rectX = Math.floor(drawX - pad);
+            const rectY = Math.floor(drawY - pad);
+            const rectW = Math.ceil(maxW + pad * 2);
+            const rectH = Math.ceil(lines.length * lineHeight + pad * 2);
+
+            EditorManager._expandLayerBufferToIncludeLocalRect(l, rectX, rectY, rectW, rectH);
+
+            const dx = prevX - l.x;
+            const dy = prevY - l.y;
+            layerX += dx;
+            layerY += dy;
+
+            // Canvas resized: re-acquire context & reset font.
+            ctx = l.buffer.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+                ctx.font = `${style} ${weight} ${size}px ${fam}`;
+                ctx.textBaseline = 'top';
+            }
+            drawX = Math.round(layerX);
+            drawY = Math.round(layerY) + offset;
+        }
+
         lines.forEach((line, i) => {
             const yy = drawY + i * lineHeight;
             if (stroke) {
@@ -244,8 +293,9 @@
         const el = session.el;
         const raw = el.innerText.replace(/\u00a0/g, ' ');
         const text = raw.replace(/\n+$/, '');
-        const lx = session.layerX;
-        const ly = session.layerY;
+        const origin = layerPaintOriginFromSession(session);
+        const lx = origin.x;
+        const ly = origin.y;
         removeSessionEl();
         if (text.length > 0) {
             drawTextToLayer(lx, ly, text);
@@ -299,7 +349,6 @@
             `top:${worldY}px`,
             'z-index:25',
             'display:block',
-            'max-width:90%',
             'pointer-events:none'
         ].join(';');
 
@@ -328,8 +377,7 @@
             'outline:1px dashed #0066cc',
             'background:rgba(255,255,255,0.02)',
             'pointer-events:auto',
-            'white-space:pre-wrap',
-            'word-break:break-word',
+            'white-space:pre',
             'width:100%',
             'display:block',
             'padding:0',

@@ -653,6 +653,9 @@
         'settings.resampleRibbonShort': 'Interp.',
         'settings.resampleSmooth': 'Lissé',
         'settings.resampleNearest': 'Pixel',
+        'tools.allowOutsideCanvas':
+            'Autoriser le contenu hors de la toile (agrandit le calque si besoin). Désactivé : rogné au cadre du document.',
+        'tools.allowOutsideCanvasShort': 'Hors toile',
         'accent.navy': 'Marine',
         'accent.teal': 'Sarcelle',
         'accent.violet': 'Violet',
@@ -1819,6 +1822,9 @@
         'settings.resampleRibbonShort': 'Resamp.',
         'settings.resampleSmooth': 'Smooth',
         'settings.resampleNearest': 'Nearest',
+        'tools.allowOutsideCanvas':
+            'Allow content outside the canvas (may expand the layer). Off: clip to the document bounds.',
+        'tools.allowOutsideCanvasShort': 'Off canvas',
         'accent.navy': 'Navy',
         'accent.teal': 'Teal',
         'accent.violet': 'Purple',

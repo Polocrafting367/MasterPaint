@@ -398,6 +398,15 @@
     <path fill="#000000" stroke="#ffffff" stroke-width="1" stroke-linejoin="round" d="M5 10 V5 H10 Z M19 14 V19 H14 Z"/>
   </symbol>
 
+  
+<symbol id="illu-icon-outside-canvas" viewBox="0 0 16 16">
+    <rect x="1" y="1" width="11" height="11" rx="1.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" />
 
+    <path d="M 12 4 H 5.5 A 1.5 1.5 0 0 0 4 5.5 V 12 H 12 Z" fill="var(--illu-icon-accent, #3b82f6)" />
+
+    <path d="M 12 4 H 5.5 A 1.5 1.5 0 0 0 4 5.5 V 12" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round" />
+
+    <path d="M 12 4 H 13.5 A 1.5 1.5 0 0 1 15 5.5 V 13.5 A 1.5 1.5 0 0 1 13.5 15 H 5.5 A 1.5 1.5 0 0 1 4 13.5 V 12" fill="none" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.25" stroke-dasharray="2 2" stroke-linejoin="round" />
+  </symbol>
 
 </svg>

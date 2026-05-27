@@ -90,7 +90,10 @@ const EditorManager = {
         /** Courbe 3 pts : 0 = quasi droite, 100 = selon les clics, 200 = courbure renforcée. */
         quadCurveBulge: 100,
         gradientType: 'linear',
-        gradientMethod: 'simple'
+        gradientMethod: 'simple',
+        /** Déformation / déplacement / sélection : autoriser contenu hors toile (agrandit le calque). Défaut : false = rogné à la toile. */
+        allowOutsideCanvas: false,
+        warpResampling: 'smooth'
     },
     _bayer8x8: [
         [ 0, 32,  8, 40,  2, 34, 10, 42],
@@ -1308,6 +1311,9 @@ setup8BitMode() {
     beginStrokeIntermediate(tool) {
         const l = this.activeLayer;
         if (!l || !l.buffer) return false;
+        // When "Hors toile" is enabled, we may need to resize/expand the layer during the stroke.
+        // The intermediate stroke canvas would not resize correctly, so we bypass it.
+        if (this.toolProps && this.toolProps.allowOutsideCanvas) return false;
         if (l.alphaMaskProjectId) return false;
         if (this._isLiveDynamicFilterLayer(l)) return false;
         const w = l.buffer.width | 0;
@@ -3452,8 +3458,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             id: Date.now(),
             name: `Sans titre ${this.projects.length + 1}` + (pMode === 'pixel-dither' ? ' (N&B)' : ''),
             mode: pMode,
-            width: pWidth,
-            height: pHeight,
+            width: Math.max(1, Number.isFinite(pWidth) && pWidth > 0 ? pWidth : dw),
+            height: Math.max(1, Number.isFinite(pHeight) && pHeight > 0 ? pHeight : dh),
             ditherEffectSize: (pMode === 'pixel-dither') ? parseInt(document.getElementById('p-dither-size-slider')?.value || '1', 10) : 1,
             layers: [],
             activeLayerIndex: 0,
@@ -3473,10 +3479,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         this.projects.push(project);
         this.activeProjectIndex = this.projects.length - 1;
-        
-        // Initial setup for the new project
-        this.addLayer('Arrière-plan');
-        if (project.mode === 'vector') {
+
+        if (project.mode === 'pixel' || project.mode === 'pixel-dither') {
+            this.addLayer('Arrière-plan');
+        } else if (project.mode === 'vector') {
+            this.addLayer('Arrière-plan');
             const sl = document.getElementById('svg-layers');
             if (sl) project.svgData = sl.innerHTML;
         }
@@ -3489,8 +3496,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         } else if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
             window.fitActiveProjectZoomToWorkspace(this, { force: true });
         }
-        if (this.isPixelMode && typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
         }
         document.getElementById('dialog-overlay').style.display = 'none';
         return project;
@@ -3608,7 +3615,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     promptImport(img, importOpts) {
         importOpts = this._mergeInternalPasteImportOpts(importOpts || {});
         if (!this.isPixelMode) {
-            window.showIlluAlert('Import image : passez en mode Pixel ou utilisez Fichier pour le mode Vecteur.');
+            this.handleNewProjectFromImage(img);
             return;
         }
         const fromInternalClipboard = importOpts.pasteProjectId != null;
@@ -3708,6 +3715,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     _expandLayerBufferToIncludeLocalRect(layer, x, y, w, h) {
         if (!layer || !layer.buffer) return;
+        if (typeof window.illuAllowsOutsideCanvasContent === 'function' && !window.illuAllowsOutsideCanvasContent()) {
+            return;
+        }
         const bw = layer.buffer.width;
         const bh = layer.buffer.height;
         const x1 = x + w;
@@ -4002,8 +4012,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         } else if (iw >= 1 && ih >= 1 && typeof window.illuSetRectSelectionDocBounds === 'function') {
             window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
             if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
-        } else if (typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        } else if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
         }
         this.render({ flushUiThumbnails: true });
     },
@@ -4099,12 +4109,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             alphaMaskProjectId: null,
             ...this._defaultDynamicFilterLayerProps()
         });
+        project.activeLayerIndex = project.layers.length - 1;
 
         this.saveHistory('Nouveau Document (Import)');
         this.updateTabUI();
         this.applyProjectToUI();
-        if (typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
         }
         if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
             window.scheduleFitActiveProjectZoomOnDocumentOpen();
@@ -4112,7 +4123,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window.fitActiveProjectZoomToPageWidth();
         }
         if (typeof window.illuAfterImportActivateDeformTool === 'function') {
-            window.illuAfterImportActivateDeformTool();
+            window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
         }
         return project;
     },
@@ -4167,8 +4178,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 localStorage.setItem('illu_last_project_id', String(nextProj.id));
             } catch (e) { /* ignore */ }
         }
-        if (this.isPixelMode && typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
         }
     },
 
@@ -4370,11 +4381,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (p.pixelSnapshot) {
                 this.thawPixelProject(p);
             }
-            if (!p.layers || p.layers.length === 0) {
-                p.layers = [];
-                p.activeLayerIndex = 0;
-                this.addLayer('Arrière-plan');
-            }
+            if (!p.layers) p.layers = [];
             this._normalizeAllPixelLayersToDocumentSize();
         } else {
             if (p.illuSpriteSheet && p.illuSpriteDefsData) {
@@ -5412,7 +5419,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const matchesActiveLayer =
                 typeof window.selectionMatchesActiveLayer === 'function' &&
                 window.selectionMatchesActiveLayer();
-            const canDeformWarp = strictSubset || warpQuadContinues || matchesActiveLayer;
+            const canDeformWarp = true;
             const warp4Tool = this.isPixelMode && window.activeTool === 'warp-4' && canDeformWarp;
             const deformTool = this.isPixelMode && window.activeTool === 'deform' && canDeformWarp;
             const selectFreeQuad =
@@ -6790,6 +6797,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             buffer.width = this.width;
             buffer.height = this.height;
             const bCtx = buffer.getContext('2d', { willReadFrequently: true });
+            /* Premier calque du document : fond blanc (nouveau projet). Les calques suivants restent transparents. */
             if (this.layers.length === 0) {
                 bCtx.fillStyle = '#ffffff';
                 bCtx.fillRect(0, 0, this.width, this.height);
@@ -8507,7 +8515,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             data, 
             mode: this.mode,
             docW: this.width,
-            docH: this.height
+            docH: this.height,
+            extra: {
+                allowOutsideCanvas:
+                    this.toolProps && typeof this.toolProps.allowOutsideCanvas === 'boolean'
+                        ? !!this.toolProps.allowOutsideCanvas
+                        : undefined
+            }
         });
         const maxH = this.getHistoryMaxEntries();
         while (this.history.length > maxH) {
@@ -8976,6 +8990,24 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const sl = document.getElementById('svg-layers');
             if (html && sl) sl.innerHTML = html;
             this.render();
+        }
+
+        // Restore UI-level options that must be undo/redo aware.
+        if (
+            state.extra &&
+            state.extra.allowOutsideCanvas !== undefined &&
+            this.toolProps &&
+            typeof state.extra.allowOutsideCanvas === 'boolean'
+        ) {
+            this.toolProps.allowOutsideCanvas = state.extra.allowOutsideCanvas;
+            try {
+                localStorage.setItem('illu_allow_outside_canvas', state.extra.allowOutsideCanvas ? '1' : '0');
+            } catch (e) {
+                /* ignore */
+            }
+            if (typeof window.syncIlluAllowOutsideCanvasUI === 'function') {
+                window.syncIlluAllowOutsideCanvasUI();
+            }
         }
         this.updateHistoryUI();
     },
@@ -10026,32 +10058,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         console.warn(e);
                     }
                 }
-                if (!loadedLayers.length) {
-                    const buffer = document.createElement('canvas');
-                    buffer.width = p.width;
-                    buffer.height = p.height;
-                    const bx = buffer.getContext('2d', { willReadFrequently: true });
-                    bx.fillStyle = '#ffffff';
-                    bx.fillRect(0, 0, p.width, p.height);
-                    loadedLayers.push({
-                        id: Date.now(),
-                        name: 'Arrière-plan',
-                        visible: true,
-                        x: 0,
-                        y: 0,
-                        opacity: 1,
-                        blendMode: 'source-over',
-                        alphaMaskProjectId: null,
-                        ...this._defaultDynamicFilterLayerProps(),
-                        buffer
-                    });
-                }
                 p._pendingLayersLoad = loadedLayers;
                 p.layers = [];
-                p.activeLayerIndex = Math.min(
-                    Math.max(0, sp.activeLayerIndex || 0),
-                    loadedLayers.length - 1
-                );
+                p.activeLayerIndex =
+                    loadedLayers.length > 0
+                        ? Math.min(
+                              Math.max(
+                                  0,
+                                  sp.activeLayerIndex != null ? sp.activeLayerIndex : loadedLayers.length - 1
+                              ),
+                              loadedLayers.length - 1
+                          )
+                        : 0;
                 await this._loadProjectHistoryFromPayload(p, sp, loadOpts);
             } else {
                 p.svgData = sp.svgData != null ? sp.svgData : '';
@@ -10139,8 +10157,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window._illuWorkspaceLoading = false;
         }
 
-        if (this.isPixelMode && typeof window.syncSelectionToActiveLayer === 'function') {
-            window.syncSelectionToActiveLayer();
+        if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
         }
         if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
             window.scheduleFitActiveProjectZoomOnDocumentOpen(this);
@@ -10176,6 +10194,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (typeof window.illuYieldToMain === 'function') {
                 await window.illuYieldToMain(2);
             }
+        }
+        if (p.layers.length > 0) {
+            this.setActiveLayerIndex(p.layers.length - 1);
         }
     },
 
@@ -10362,7 +10383,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * Recadre le document pixel : nouvelle taille = rectangle (rx, ry, rw, rh) en coordonnées document.
      * Tous les calques sont découpés et repositionnés ; masques α liés traités pareil.
      */
-    cropPixelWorkspace(rx, ry, rw, rh) {
+    cropPixelWorkspace(rx, ry, rw, rh, opts = {}) {
         if (window.PhotoModeManager && window.PhotoModeManager.isOpen()) {
             window.PhotoModeManager.cropActivePhoto(rx, ry, rw, rh);
             return;
@@ -10424,6 +10445,32 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         p.width = rw;
         p.height = rh;
 
+        // Option : forcer les calques à repasser exactement en taille doc (utile
+        // pour « Hors toile » désactivé : on garde le contenu dans le rectangle doc
+        // mais on supprime les buffers agrandis au-delà des bords).
+        if (opts.normalizeLayersToDocument === true) {
+            p.layers.forEach((layer) => {
+                if (!layer || !layer.buffer) return;
+                const needs =
+                    (layer.x | 0) !== 0 ||
+                    (layer.y | 0) !== 0 ||
+                    (layer.buffer.width | 0) !== rw ||
+                    (layer.buffer.height | 0) !== rh;
+                if (!needs) return;
+                const nc = document.createElement('canvas');
+                nc.width = rw;
+                nc.height = rh;
+                const nctx = nc.getContext('2d', { willReadFrequently: true });
+                if (nctx) {
+                    nctx.imageSmoothingEnabled = false;
+                    nctx.drawImage(layer.buffer, layer.x | 0, layer.y | 0);
+                }
+                layer.buffer = nc;
+                layer.x = 0;
+                layer.y = 0;
+            });
+        }
+
         const maskIds = new Set();
         p.layers.forEach((l) => {
             if (l.alphaMaskProjectId) maskIds.add(l.alphaMaskProjectId);
@@ -10434,6 +10481,29 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             mp.layers.forEach(cropOneLayer);
             mp.width = rw;
             mp.height = rh;
+
+            if (opts.normalizeLayersToDocument === true) {
+                mp.layers.forEach((layer) => {
+                    if (!layer || !layer.buffer) return;
+                    const needs =
+                        (layer.x | 0) !== 0 ||
+                        (layer.y | 0) !== 0 ||
+                        (layer.buffer.width | 0) !== rw ||
+                        (layer.buffer.height | 0) !== rh;
+                    if (!needs) return;
+                    const nc = document.createElement('canvas');
+                    nc.width = rw;
+                    nc.height = rh;
+                    const nctx = nc.getContext('2d', { willReadFrequently: true });
+                    if (nctx) {
+                        nctx.imageSmoothingEnabled = false;
+                        nctx.drawImage(layer.buffer, layer.x | 0, layer.y | 0);
+                    }
+                    layer.buffer = nc;
+                    layer.x = 0;
+                    layer.y = 0;
+                });
+            }
         });
 
         if (window.pixelShapeEdit) window.pixelShapeEdit = null;
@@ -10464,10 +10534,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
 
         const histLabel =
-            window.IlluI18n && typeof window.IlluI18n.t === 'function' && window.IlluI18n.t('history.crop') !== 'history.crop'
+            opts.actionName ||
+            (window.IlluI18n &&
+            typeof window.IlluI18n.t === 'function' &&
+            window.IlluI18n.t('history.crop') !== 'history.crop'
                 ? window.IlluI18n.t('history.crop')
-                : 'Recadrage';
-        this.saveHistory(`${histLabel} (${W}x${H} → ${rw}x${rh})`, { documentGeometry: true });
+                : 'Recadrage');
+        this.saveHistory(`${histLabel} (${W}x${H} → ${rw}x${rh})`, {
+            documentGeometry: true
+        });
         return true;
     },
 

@@ -67,10 +67,27 @@
             return false;
         },
 
-        /** Sélection pixel exploitable (effacement, déplacement pixels) — exclut l’inversion seule. */
+        /**
+         * Sélection pixel exploitable (effacement, déplacement pixels).
+         * Inclut la sélection inversée (complément du cadre) ; exclut uniquement l’inversion du cadre plein écran (= vide).
+         */
         hasActivePixelSelection() {
-            if (window.selectionInverted) return false;
-            return SelectionModel.pixelSelectionPresent();
+            if (!SelectionModel.pixelSelectionPresent()) return false;
+            if (!window.selectionInverted) return true;
+            const sb = window.selectionBounds;
+            if (!sb || sb.w < 1 || sb.h < 1) {
+                return !!(
+                    window.selectionKind === 'lasso' &&
+                    window.selectionLassoPoints &&
+                    window.selectionLassoPoints.length >= 3
+                );
+            }
+            const em = window.EditorManager;
+            if (!em || !em.activeProject) return true;
+            const W = em.width | 0;
+            const H = em.height | 0;
+            if (sb.x <= 0 && sb.y <= 0 && sb.w >= W && sb.h >= H) return false;
+            return true;
         }
     };
 

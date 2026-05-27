@@ -347,20 +347,36 @@
         }
     };
 
-    window.illuSyncMobileViewActions = function () {
-        const isMobile =
-            typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();
+    /**
+     * Masque le groupe ruban « Affichage » hors mode pixel (SVG / vecteur)
+     * ou sur layout ruban mobile (réglages Fenêtre).
+     * Ne force pas l’affichage en mode pixel bureau : la visibilité selon l’outil reste à illuApplyRibbonGroupsForTool.
+     */
+    window.illuSyncRibbonViewGroupForDocumentMode = function () {
         const viewGrp = document.querySelector('.illu-sel-actions-view');
-        if (viewGrp) {
-            viewGrp.hidden = !!isMobile;
-            viewGrp.setAttribute('aria-hidden', isMobile ? 'true' : 'false');
-        }
         const viewRibbon = document.querySelector(
             '.illu-ribbon-group[data-illu-ribbon-group="view"]'
         );
-        if (viewRibbon && isMobile) {
-            setGroupHidden(viewRibbon, true);
+        const isMobile =
+            typeof window.illuIsRibbonMobileLayout === 'function' &&
+            window.illuIsRibbonMobileLayout();
+        const isPixel =
+            typeof EditorManager !== 'undefined' && EditorManager && EditorManager.isPixelMode;
+        const hideForDocMode = isMobile || !isPixel;
+        if (hideForDocMode) {
+            if (viewRibbon) setGroupHidden(viewRibbon, true);
+            if (viewGrp) {
+                viewGrp.hidden = true;
+                viewGrp.setAttribute('aria-hidden', 'true');
+            }
+        } else if (viewGrp) {
+            viewGrp.hidden = false;
+            viewGrp.setAttribute('aria-hidden', 'false');
         }
+    };
+
+    window.illuSyncMobileViewActions = function () {
+        window.illuSyncRibbonViewGroupForDocumentMode();
         if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
             window.illuSyncFreeCornersRibbonPlacement();
         }
@@ -543,8 +559,24 @@
                 } else if (id === 'adjustments') {
                     active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
                 } else if (id === 'view') {
-                    /* Mobile : masque (comme 4 coins) - Grille / Regles restent dans le menu Fenetre. */
-                    active = !isVectorSelect && SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                    /* Alvéole Affichage : uniquement en mode document pixel (pas SVG / vecteur).
+                     * Mobile : masqué (Grille / Règles via menu Fenêtre). */
+                    const isPixelDoc =
+                        typeof EditorManager !== 'undefined' &&
+                        EditorManager &&
+                        EditorManager.isPixelMode;
+                    const isShapeTool = [
+                        'rect',
+                        'circle',
+                        'line',
+                        'round-3',
+                        'triangle',
+                        'cubic-3',
+                        'pen',
+                        'polygon'
+                    ].includes(tool);
+                    active =
+                        isPixelDoc && !isVectorSelect && !isShapeTool && !isMobileRibbon;
                 } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
                 else if (id === 'shape-style-fill') {
                     active = shapesActionsActive(actionIds);
@@ -847,7 +879,16 @@
         }
 
         if (tg.classList.contains('illu-sel-actions-view')) {
-            tg.classList.add('illu-toggle-group--compact-grid', 'illu-toggle-group--compact-cols-1');
+            tg.classList.add(
+                'illu-toggle-group--compact-grid',
+                'illu-ribbon-icon-only-group',
+                'illu-toggle-group--compact-cols-2'
+            );
+            tg.classList.remove(
+                'illu-ribbon-icon-grid2',
+                'illu-toggle-group--compact-cols-4',
+                'illu-toggle-group--compact-one-row'
+            );
             return;
         }
 
@@ -931,7 +972,7 @@
                 return;
             }
             if (isViewActions) {
-                tg.classList.add('illu-toggle-group--one-row', 'illu-toggle-group--stack-cells');
+                tg.classList.add('illu-toggle-group--two-rows', 'illu-toggle-group--stack-cells');
             } else if ((inBrushActions || inGradientActions) && visible >= 2 && visible <= 4) {
                 tg.classList.add('illu-toggle-group--one-row');
             } else if (isShapeFillGroup && visible === 2) {
@@ -954,10 +995,9 @@
 
             if (compact) {
                 if (!item.closest('.illu-tool-picker, #tool-main-header')) {
-                    if (
-                        item.closest('.illu-sel-actions-view') ||
-                        item.closest('.illu-ribbon-selection-stack')
-                    ) {
+                    if (item.closest('.illu-sel-actions-view')) {
+                        item.classList.add('illu-toggle-layout--stack');
+                    } else if (item.closest('.illu-ribbon-selection-stack')) {
                         item.classList.add('illu-toggle-layout--inline');
                     } else if (item.closest('.illu-text-style-fill-group')) {
                         item.classList.add('illu-toggle-layout--inline');

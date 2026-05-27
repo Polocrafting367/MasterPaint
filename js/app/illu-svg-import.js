@@ -47,11 +47,12 @@
         const layerSplit = ov.querySelector('input[name="svg-import-layers"][value="split"]');
         const layerSprite = ov.querySelector('input[name="svg-import-layers"][value="sprite"]');
 
-        if (targetNew) targetNew.checked = true;
+        const curOk = vectorProjectActive();
+        if (targetNew) targetNew.checked = !curOk;
+        if (targetCur && curOk) targetCur.checked = true;
         if (layerSplit && !showSprite) layerSplit.checked = true;
         if (layerSprite && showSprite) layerSprite.checked = true;
 
-        const curOk = vectorProjectActive();
         if (targetCur) {
             targetCur.disabled = !curOk;
             if (!curOk && targetNew) targetNew.checked = true;

@@ -130,17 +130,9 @@ body.illu-toolbar-ribbon .illu-ribbon-group[hidden] {
     display: none !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-group-body {
-    display: flex;
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    align-content: flex-start;
-    justify-content: flex-start;
-    gap: 4px;
-    padding: 2px 0 2px;
-    min-width: 0;
-    overflow: visible;
+body.illu-toolbar-ribbon {
+    --illu-ribbon-btn-gap: 0;
+    --illu-ribbon-grid-col-min: 52px;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group-body {
@@ -150,23 +142,26 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body {
     align-items: flex-start;
     align-content: flex-start;
     justify-content: flex-start;
-    gap: 4px;
-    padding: 2px 0 2px;
+    gap: var(--illu-ribbon-btn-gap);
+    padding: 0;
     min-width: 0;
     overflow: visible;
 }
 
-/* Groupes une ligne (hors grilles compactes configurées) */
-body.illu-toolbar-ribbon .illu-ribbon-group-body>.illu-icon-toggle-group:not(.illu-toggle-group--compact-grid),
-body.illu-toolbar-ribbon .illu-ribbon-group-body>.illu-mode-toggle-group:not(.illu-toggle-group--compact-grid),
-body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp>.illu-icon-toggle-group:not(.illu-toggle-group--compact-grid),
-body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp>.illu-mode-toggle-group:not(.illu-toggle-group--compact-grid),
+/* Groupes une ligne (hors grilles compactes) : boutons même largeur dans le groupe */
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-icon-toggle-group:not(.illu-toggle-group--compact-grid),
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-mode-toggle-group:not(.illu-toggle-group--compact-grid),
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-icon-toggle-group:not(.illu-toggle-group--compact-grid),
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-mode-toggle-group:not(.illu-toggle-group--compact-grid),
 body.illu-toolbar-ribbon .illu-sel-actions-layout:not(.illu-toggle-group--compact-grid) {
-    display: inline-flex;
+    display: flex !important;
+    flex: 1 1 auto;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: flex-start;
-    gap: 4px;
+    align-items: stretch;
+    gap: var(--illu-ribbon-btn-gap);
+    width: auto;
+    min-width: 0;
     height: auto !important;
     max-height: none !important;
     min-height: 0 !important;
@@ -175,7 +170,19 @@ body.illu-toolbar-ribbon .illu-sel-actions-layout:not(.illu-toggle-group--compac
     white-space: nowrap;
 }
 
-/* Stack : cellule étroite, icône au-dessus */
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-icon-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item--unified:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-mode-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item--unified:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-icon-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item--unified:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp > .illu-mode-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item--unified:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-icon-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .illu-mode-toggle-group:not(.illu-toggle-group--compact-grid) > .illu-mode-toggle-item:not([hidden]) {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto !important;
+    max-width: none !important;
+}
+
+/* Stack : cellule étroite, icône au-dessus (largeur fixe hors ruban group-body flex) */
 body.illu-toolbar-ribbon .illu-mode-toggle-item--unified.illu-toggle-layout--stack {
     display: block;
     flex: 0 0 auto;
@@ -183,6 +190,13 @@ body.illu-toolbar-ribbon .illu-mode-toggle-item--unified.illu-toggle-layout--sta
     min-width: 44px;
     max-width: 44px;
     overflow: visible;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group-body .illu-mode-toggle-item--unified.illu-toggle-layout--stack {
+    flex: 1 1 0;
+    width: auto !important;
+    min-width: 40px;
+    max-width: none !important;
 }
 
 body.illu-toolbar-ribbon .illu-toggle-layout--stack>.illu-mode-toggle-btn {
@@ -207,6 +221,13 @@ body.illu-toolbar-ribbon .illu-mode-toggle-item--unified.illu-toggle-layout--inl
     min-width: 0;
     max-width: none;
     overflow: visible;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group-body .illu-mode-toggle-item--unified.illu-toggle-layout--inline {
+    flex: 1 1 0;
+    width: auto !important;
+    min-width: 0;
+    max-width: none !important;
 }
 
 body.illu-toolbar-ribbon .illu-toggle-layout--inline>.illu-mode-toggle-btn {
@@ -284,12 +305,12 @@ body.illu-toolbar-ribbon.illu-mobile-ui
 /* Style/Remplissage texte : grille unifiée 3×2 (6 boutons à plat) */
 body.illu-toolbar-ribbon .illu-text-style-fill-group.illu-ribbon-grid-3x2 {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(72px, max-content)) !important;
+    grid-template-columns: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr)) !important;
     grid-template-rows: repeat(2, auto) !important;
     grid-auto-flow: row !important;
     justify-items: stretch !important;
     align-items: start !important;
-    gap: 2px 4px !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
     width: max-content !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -311,12 +332,12 @@ body.illu-toolbar-ribbon .illu-text-style-fill-group.illu-ribbon-grid-3x2 > .ill
 /* Formes : Contour + Remplissage + 4 coins — grille 3×2 (ligne 1 : mode, ligne 2 : rempl. + 4 coins) */
 body.illu-toolbar-ribbon .illu-shape-style-fill-group.illu-ribbon-grid-3x2 {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(72px, max-content)) !important;
+    grid-template-columns: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr)) !important;
     grid-template-rows: repeat(2, auto) !important;
     grid-auto-flow: row !important;
     justify-items: stretch !important;
     align-items: start !important;
-    gap: 2px 4px !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
     width: max-content !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -405,12 +426,12 @@ body.illu-toolbar-ribbon .illu-ribbon-selection-stack.illu-ribbon-grid-3x2 > .il
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack.illu-ribbon-grid-3x2 > .illu-mode-toggle-group,
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack.illu-ribbon-grid-3x2 > .illu-toggle-group--compact-grid {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(72px, max-content)) !important;
+    grid-template-columns: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr)) !important;
     grid-template-rows: repeat(2, auto) !important;
     grid-auto-flow: row !important;
     justify-items: stretch !important;
     align-items: stretch !important;
-    gap: 2px 4px !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -428,10 +449,10 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
 /* Secours si les 3 sous-groupes sont encore enfants directs du body (sans stack) */
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] .illu-ribbon-group-body:not(:has(> .illu-ribbon-selection-stack)) {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(72px, max-content)) !important;
+    grid-template-columns: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr)) !important;
     grid-template-rows: repeat(2, auto) !important;
     grid-auto-flow: row !important;
-    gap: 2px 4px !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
     width: max-content !important;
 }
 
@@ -486,25 +507,7 @@ body.illu-toolbar-ribbon.illu-mobile-ui #tool-pinned-select-actions .illu-sel-ac
     display: none !important;
 }
 
-/* Affichage (Grille / Règles) : 1 colonne × 2 lignes */
-body.illu-toolbar-ribbon .illu-sel-actions-view.illu-toggle-group--compact-grid {
-    display: grid !important;
-    grid-template-columns: minmax(52px, max-content) !important;
-    grid-template-rows: none !important;
-    grid-auto-rows: auto !important;
-    grid-auto-flow: row !important;
-    gap: 2px 6px !important;
-    width: max-content !important;
-    min-width: 0 !important;
-    flex-wrap: unset !important;
-}
-
-body.illu-toolbar-ribbon .illu-sel-actions-view .illu-mode-toggle-item--unified {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-}
+/* Affichage : grille compacte gérée par [data-illu-ribbon-group="view"] (2 × 2, 28 px) */
 
 body.illu-toolbar-ribbon.theme-dark .illu-ribbon-group-label {
     color: rgba(255, 255, 255, 0.55);
@@ -560,7 +563,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp:not(.illu-ribbon-param
     flex: 0 0 auto;
     flex-wrap: nowrap;
     align-items: flex-start;
-    gap: 4px;
+    gap: var(--illu-ribbon-btn-gap);
     border: none;
     padding: 0;
     background: transparent;
@@ -575,7 +578,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp.illu-ribbon-param-pack
     align-items: stretch !important;
     width: 100%;
     min-width: 0;
-    gap: 4px;
+    gap: var(--illu-ribbon-btn-gap);
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp.illu-ribbon-param-pack:not(.illu-ribbon-param-pack--stacked) {
@@ -808,6 +811,10 @@ body.illu-toolbar-ribbon .illu-ribbon-icon-grid2 .illu-mode-toggle-item {
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-icon-grid2 .illu-mode-toggle-item[hidden] {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-icon-grid2 .illu-mode-toggle-lbl {
     display: none !important;
 }
 
@@ -1188,19 +1195,22 @@ body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group {
     min-width: 0 !important;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group.illu-toggle-group--one-row .illu-mode-toggle-item--unified {
-    flex: 0 0 auto;
+body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group.illu-toggle-group--one-row .illu-mode-toggle-item--unified {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto !important;
+    max-width: none !important;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline {
-    width: auto;
+body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group .illu-mode-toggle-item--unified.illu-toggle-layout--inline {
+    width: auto !important;
     min-width: 0;
     max-width: none;
 }
 
-body.illu-toolbar-ribbon #opt-grp-brush-actions>.illu-icon-toggle-group .illu-toggle-layout--inline>.illu-mode-toggle-btn {
-    width: auto !important;
-    min-width: 48px;
+body.illu-toolbar-ribbon #opt-grp-brush-actions > .illu-icon-toggle-group .illu-toggle-layout--inline > .illu-mode-toggle-btn {
+    width: 100% !important;
+    min-width: 0;
     justify-content: flex-start !important;
 }
 
@@ -1351,13 +1361,13 @@ body.illu-toolbar-ribbon #tool-options-container .illu-toggle-group--compact-gri
 body.illu-toolbar-ribbon .illu-ribbon-group .illu-toggle-group--compact-grid,
 body.illu-toolbar-ribbon .illu-ribbon-group .illu-sel-actions-layout.illu-toggle-group--compact-grid {
     display: grid !important;
-    grid-template-columns: var(--group-grid-cols, repeat(2, minmax(52px, max-content))) !important;
+    grid-template-columns: var(--group-grid-cols, repeat(2, minmax(var(--illu-ribbon-grid-col-min), 1fr))) !important;
     grid-template-rows: var(--group-grid-rows, repeat(2, auto)) !important;
     grid-auto-flow: var(--group-grid-flow, row) !important;
     grid-auto-columns: unset !important;
     align-items: stretch !important;
     justify-items: stretch !important;
-    gap: var(--group-grid-gap, 2px 6px) !important;
+    gap: var(--group-grid-gap, var(--illu-ribbon-btn-gap)) !important;
     width: max-content !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -1368,19 +1378,19 @@ body.illu-toolbar-ribbon .illu-ribbon-group .illu-sel-actions-layout.illu-toggle
 
 /* Valeurs par défaut selon classes JS (surchargeables par [data-illu-ribbon-group] …) */
 body.illu-toolbar-ribbon .illu-toggle-group--compact-cols-1 {
-    --group-grid-cols: minmax(52px, max-content);
+    --group-grid-cols: minmax(var(--illu-ribbon-grid-col-min), 1fr);
 }
 
 body.illu-toolbar-ribbon .illu-toggle-group--compact-cols-2 {
-    --group-grid-cols: repeat(2, minmax(52px, max-content));
+    --group-grid-cols: repeat(2, minmax(var(--illu-ribbon-grid-col-min), 1fr));
 }
 
 body.illu-toolbar-ribbon .illu-toggle-group--compact-cols-3 {
-    --group-grid-cols: repeat(3, minmax(52px, max-content));
+    --group-grid-cols: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr));
 }
 
 body.illu-toolbar-ribbon .illu-toggle-group--compact-cols-4 {
-    --group-grid-cols: repeat(4, minmax(52px, max-content));
+    --group-grid-cols: repeat(4, minmax(var(--illu-ribbon-grid-col-min), 1fr));
 }
 
 body.illu-toolbar-ribbon .illu-toggle-group--compact-one-row {
@@ -1509,7 +1519,7 @@ body.illu-toolbar-ribbon #opt-grp-wand-params .illu-toggle-group--compact-inline
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: stretch !important;
-    gap: 2px 4px !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
     width: 100% !important;
     min-width: 0 !important;
 }
@@ -1614,12 +1624,12 @@ body.illu-toolbar-ribbon #tool-options-container .illu-mode-toggle-btn.illu-icon
 body.illu-toolbar-ribbon .illu-ribbon-selection-stack .illu-sel-actions-layout,
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] .illu-sel-actions-primary {
     display: grid !important;
-    grid-template-columns: var(--group-grid-cols, repeat(4, minmax(52px, max-content))) !important;
+    grid-template-columns: var(--group-grid-cols, repeat(4, minmax(var(--illu-ribbon-grid-col-min), 1fr))) !important;
     grid-template-rows: var(--group-grid-rows, repeat(2, auto)) !important;
     grid-auto-flow: var(--group-grid-flow, row) !important;
     justify-items: stretch !important;
     align-items: start !important;
-    gap: var(--group-grid-gap, 2px 6px) !important;
+    gap: var(--group-grid-gap, var(--illu-ribbon-btn-gap)) !important;
     width: max-content !important;
     height: auto !important;
     flex-wrap: unset !important;
@@ -2007,9 +2017,9 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
     --lbl-margin-top: 0;
     --lbl-white-space: nowrap;
 
-    --group-grid-cols: repeat(3, minmax(72px, max-content));
+    --group-grid-cols: repeat(3, minmax(var(--illu-ribbon-grid-col-min), 1fr));
     --group-grid-rows: repeat(2, auto);
-    --group-grid-gap: 2px 4px;
+    --group-grid-gap: var(--illu-ribbon-btn-gap);
 }
 
 /* ── Ajustements : icône seule, grille 2 × 4 (28 px) ─────────────────────── */
@@ -2023,10 +2033,87 @@ body.illu-toolbar-ribbon:not(.illu-mobile-ui)
     .illu-sel-actions-layout.illu-toggle-group--compact-grid {
     --group-grid-cols: repeat(4, 28px);
     --group-grid-rows: repeat(2, 28px);
-    --group-grid-gap: 4px;
+    --group-grid-gap: var(--illu-ribbon-btn-gap);
     grid-template-columns: repeat(4, 28px) !important;
     grid-template-rows: repeat(2, 28px) !important;
+    gap: var(--illu-ribbon-btn-gap) !important;
+}
+
+/* ── Affichage : icône seule, grille 2 colonnes × 2 rangées (28 px) ───────── */
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"] {
+    --lbl-display: none;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view.illu-ribbon-icon-only-group,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view.illu-toggle-group--compact-grid {
+    --group-grid-cols: repeat(2, 28px);
+    --group-grid-rows: repeat(2, 28px);
+    --group-grid-gap: 4px;
+    grid-template-columns: repeat(2, 28px) !important;
+    grid-template-rows: repeat(2, 28px) !important;
     gap: 4px !important;
+    width: max-content !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-lbl {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-btn {
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 28px !important;
+    max-width: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 2px !important;
+    gap: 0 !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-item,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-item--unified {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    flex: 0 0 28px !important;
+}
+
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-btn
+    .illu-shape-ico,
+body.illu-toolbar-ribbon:not(.illu-mobile-ui)
+    .illu-ribbon-group[data-illu-ribbon-group="view"]
+    .illu-sel-actions-view
+    .illu-mode-toggle-btn
+    i.fa-solid {
+    margin: 0 auto !important;
 }
 
 /* ── Style/Remplissage texte : grille 2 × 3 unifiée (.illu-ribbon-grid-3x2) ─ */

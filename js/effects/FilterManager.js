@@ -1444,23 +1444,9 @@ window.FilterManager = {
                 break;
             }
             default: {
-                const label = EFFECT_HISTORY_LABELS[this.currentEffect] || this.currentEffect;
-                const P = window.IlluProgress;
-                if (P && typeof P.instantEffectStart === 'function') {
-                    P.instantEffectStart(label);
-                }
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(async () => {
-                        try {
-                            await this.apply(true);
-                        } finally {
-                            if (P && typeof P.instantEffectProgress === 'function') {
-                                P.instantEffectProgress(100);
-                            }
-                            if (P && typeof P.instantEffectDone === 'function') {
-                                requestAnimationFrame(() => P.instantEffectDone());
-                            }
-                        }
+                    requestAnimationFrame(() => {
+                        this.apply(true);
                     });
                 });
                 break;
@@ -1677,6 +1663,27 @@ window.FilterManager = {
     /**
      * @param {boolean} [instantChain] si true (menu effet sans modale : esquisse, médiane…), application synchrone — la chaîne appelante gère l’overlay et le finally.
      */
+    async _runPreviewSafe() {
+        const timeoutMs = this._effectPreviewIsFinal ? 120000 : 45000;
+        let timer = null;
+        try {
+            await Promise.race([
+                this._runPreview(),
+                new Promise((_, reject) => {
+                    timer = setTimeout(
+                        () => reject(new Error('FilterManager: délai de rendu dépassé')),
+                        timeoutMs
+                    );
+                })
+            ]);
+        } catch (err) {
+            console.warn(err);
+            this._cancelActiveWorkerPreview();
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    },
+
     async apply(instantChain) {
         if (this._previewRaf != null) {
             cancelAnimationFrame(this._previewRaf);
@@ -1689,6 +1696,10 @@ window.FilterManager = {
         const P = window.IlluProgress;
         const hasWork = this._effectTargets && this._effectTargets.length && eff;
         const instant = instantChain === true;
+
+        if (!instant && P && P.instantEffectBusy && typeof P.resetInstantEffect === 'function') {
+            P.resetInstantEffect();
+        }
 
         if (eff === 'gallery' && hasWork) {
             const preset = this._galleryPresetId || 'none';
@@ -1734,83 +1745,93 @@ window.FilterManager = {
 
         if (hasWork && instant) {
             const busyToken = this._beginHeavyBusyToken(label);
-            const wasLow = this._vhsUseLowResPreview;
+            const runInstant = async ({ progress }) => {
+                const wasLow = this._vhsUseLowResPreview;
+                try {
+                    if (progress) progress(8);
+                    if (eff === 'vhs') {
+                        this._vhsUseLowResPreview = false;
+                        this._vhsSkipCanvasWrite = false;
+                    }
+                    this._restoreAllLayersFromFrozen();
+                    this._setupEffectTargets();
+                    this._effectPreviewIsFinal = true;
+                    await this._runPreviewSafe();
+                    this._effectPreviewIsFinal = false;
+                    this._vhsUseLowResPreview = wasLow;
+                    this._tearDownVhsEffectDialogUI();
+                    document.getElementById('effect-dialog').style.display = 'none';
+                    this._effectDialogDidClose();
+                    await new Promise((resolve) => setTimeout(resolve, 30));
+                    const isPM = this._effectTargets && this._effectTargets[0] && this._effectTargets[0].isPhotoMode;
+                    if (isPM) {
+                        window.PhotoModeManager.updateActivePhotoData(this._effectTargets[0].backup);
+                    } else {
+                        this._commitEffectHistory(`Effet : ${label}`);
+                    }
+                    this._frozenSnapshots = null;
+                    this._effectTargets = null;
+                    this._effectSessionScopeAll = false;
+                    this.originalImageData = null;
+                    this.currentEffect = null;
+                    if (progress) progress(100);
+                } finally {
+                    this._effectPreviewIsFinal = false;
+                    this._vhsUseLowResPreview = wasLow;
+                }
+            };
             try {
-                if (eff === 'vhs') {
-                    this._vhsUseLowResPreview = false;
-                    this._vhsSkipCanvasWrite = false;
-                }
-                this._restoreAllLayersFromFrozen();
-                this._setupEffectTargets();
-                this._effectPreviewIsFinal = true;
-                await this._runPreview();
-                this._effectPreviewIsFinal = false;
-                this._vhsUseLowResPreview = wasLow;
-                this._tearDownVhsEffectDialogUI();
-                document.getElementById('effect-dialog').style.display = 'none';
-                this._effectDialogDidClose();
-
-                // Yield control to let the browser paint the new pixels to the screen
-                // before we freeze the CPU taking a heavy history snapshot.
-                await new Promise(resolve => setTimeout(resolve, 30));
-                
-                const isPM = this._effectTargets && this._effectTargets[0] && this._effectTargets[0].isPhotoMode;
-                
-                if (isPM) {
-                    window.PhotoModeManager.updateActivePhotoData(this._effectTargets[0].backup);
+                if (P && typeof P.runAsyncEffect === 'function') {
+                    await P.runAsyncEffect(label, runInstant, { delayMs: 180 });
                 } else {
-                    this._commitEffectHistory(`Effet : ${label}`);
+                    await runInstant({});
                 }
-                this._frozenSnapshots = null;
-                this._effectTargets = null;
-                this._effectSessionScopeAll = false;
-                this.originalImageData = null;
-                this.currentEffect = null;
             } finally {
-                this._effectPreviewIsFinal = false;
-                this._vhsUseLowResPreview = wasLow;
                 this._endHeavyBusyToken(busyToken);
             }
             return;
         }
 
         if (hasWork && !instant) {
-            const busyOverlay = P && P.instantEffectBusy;
             const busyToken = this._beginHeavyBusyToken(label);
-            if (P && typeof P.instantEffectStart === 'function' && !busyOverlay) {
-                P.instantEffectStart(label);
-            }
-            this._tearDownVhsEffectDialogUI();
-            const shell = document.getElementById('effect-dialog');
-            if (shell) shell.style.display = 'none';
-            this._effectDialogDidClose();
-            await this._waitForDoubleRaf();
-            try {
+            const runApply = async ({ progress }) => {
+                if (progress) progress(8);
+                this._tearDownVhsEffectDialogUI();
+                const shell = document.getElementById('effect-dialog');
+                if (shell) shell.style.display = 'none';
+                this._effectDialogDidClose();
+                await this._waitForDoubleRaf();
                 const wasLow = this._vhsUseLowResPreview;
-                if (eff === 'vhs') {
-                    this._vhsUseLowResPreview = false;
-                    this._vhsSkipCanvasWrite = false;
+                try {
+                    if (eff === 'vhs') {
+                        this._vhsUseLowResPreview = false;
+                        this._vhsSkipCanvasWrite = false;
+                    }
+                    this._restoreAllLayersFromFrozen();
+                    this._setupEffectTargets();
+                    this._effectPreviewIsFinal = true;
+                    await this._runPreviewSafe();
+                    this._effectPreviewIsFinal = false;
+                    this._vhsUseLowResPreview = wasLow;
+                    this._commitEffectHistory(`Effet : ${label}`);
+                } finally {
+                    this._effectPreviewIsFinal = false;
+                    this._frozenSnapshots = null;
+                    this._effectTargets = null;
+                    this._effectSessionScopeAll = false;
+                    this.originalImageData = null;
+                    this.currentEffect = null;
                 }
-                /* Repartir des pixels d’origine (pas de l’aperçu 480 px déjà injecté dans les calques). */
-                this._restoreAllLayersFromFrozen();
-                this._setupEffectTargets();
-                this._effectPreviewIsFinal = true;
-                await this._runPreview();
-                this._effectPreviewIsFinal = false;
-                this._vhsUseLowResPreview = wasLow;
-
-                this._commitEffectHistory(`Effet : ${label}`);
+                if (progress) progress(100);
+            };
+            try {
+                if (P && typeof P.runAsyncEffect === 'function') {
+                    await P.runAsyncEffect(label, runApply, { delayMs: 220 });
+                } else {
+                    await runApply({});
+                }
             } finally {
-                this._effectPreviewIsFinal = false;
-                this._frozenSnapshots = null;
-                this._effectTargets = null;
-                this._effectSessionScopeAll = false;
-                this.originalImageData = null;
-                this.currentEffect = null;
                 this._endHeavyBusyToken(busyToken);
-                if (P && typeof P.instantEffectDone === 'function') {
-                    requestAnimationFrame(() => P.instantEffectDone());
-                }
             }
             return;
         }
@@ -2067,11 +2088,21 @@ window.FilterManager = {
             const results = [];
             const srcBuffer = new Uint8ClampedArray(srcOrig).buffer;
             let settled = false;
+            let watchdog = null;
             const finish = (value) => {
                 if (settled) return;
                 settled = true;
+                if (watchdog) clearTimeout(watchdog);
                 resolve(value);
             };
+
+            const timeoutMs = Math.max(15000, Math.min(90000, Math.round((w * h) / 12000)));
+            watchdog = setTimeout(() => {
+                if (settled) return;
+                console.warn('FilterManager: worker preview timeout, annulation du lot');
+                this._destroyFilterWorkerPool({ cancelled: true });
+                finish(null);
+            }, timeoutMs);
 
             const passes = (effect === 'gaussian') ? 3 : 1;
             for (let i = 0; i < chunkCount; i++) {
@@ -2133,7 +2164,8 @@ window.FilterManager = {
                 try {
                     wks[i].postMessage(payload);
                 } catch (err) {
-                    this._filterWorkerPending.delete(jobId);
+                    console.warn('FilterManager: postMessage worker échoué', err);
+                    this._destroyFilterWorkerPool({ cancelled: true });
                     finish(null);
                     return;
                 }

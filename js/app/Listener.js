@@ -1055,5 +1055,5 @@ if (workspaceEl) {
         }
         handleMouseDown(e);
     };
-    workspaceEl.addEventListener('pointerdown', onWorkspacePointerDown, { passive: false });
+    // workspaceEl.addEventListener('pointerdown', onWorkspacePointerDown, { passive: false });
 }

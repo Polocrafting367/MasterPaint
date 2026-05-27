@@ -570,6 +570,15 @@
                                     class="fa-solid fa-check" id="menu-win-show-all-ribbon-options-check" style="visibility: hidden;"></i></span><i
                                     class="fa-solid fa-eye" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winShowAllRibbonOptions">Toutes les options du ruban</span></li>
+                        <li role="menuitem" class="menu-row-icon"
+                            onclick="window.toggleIlluAllowOutsideCanvas && window.toggleIlluAllowOutsideCanvas()">
+                            <span class="menu-icon" aria-hidden="true"><i
+                                    class="fa-solid fa-check" id="menu-win-outside-canvas-check" style="visibility: hidden;"></i></span><svg
+                                class="illu-shape-ico" width="14" height="14" style="margin-right: 6px; vertical-align: middle;" aria-hidden="true">
+                                <use href="#illu-icon-outside-canvas" />
+                            </svg><span
+                                data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
+                        </li>
                         <li role="menuitem" class="divider"></li>
                         <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
                                 aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
@@ -913,7 +922,7 @@
                                 <span class="illu-mode-toggle-lbl" data-i18n="tools.selCenterBothShort">Centrer</span>
                             </span>
                         </span>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-view">
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-sel-actions-view illu-ribbon-icon-only-group">
                             <span class="illu-mode-toggle-item">
                                 <button type="button" id="opt-sel-pixelgrid" class="illu-icon-toggle opt-toggle-pixelgrid"
                                     data-i18n-title="menu.winPixelGrid" onclick="window.toggleIlluPixelGrid()"><i
@@ -926,7 +935,21 @@
                                         class="fa-solid fa-ruler"></i></button>
                                 <span class="illu-mode-toggle-lbl" data-i18n="menu.winRulersShort">Règles</span>
                             </span>
-
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle"
+                                    data-illu-toggle-check="tool-allow-outside-canvas"
+                                    data-i18n-title="tools.allowOutsideCanvas" title="Hors toile"><svg
+                                        class="illu-shape-ico" width="16" height="16" aria-hidden="true">
+                                        <use href="#illu-icon-outside-canvas" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle"
+                                    data-i18n-title="menu.imageTransform" onclick="window.showPixelTransformDialog()"><i
+                                        class="fa-solid fa-rotate"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="menu.imageTransform">Rotation</span>
+                            </span>
                         </span>
                         </div>
 
@@ -1684,6 +1707,13 @@
                             <option value="smooth" data-i18n="settings.resampleSmooth">Lissage</option>
                             <option value="nearest" data-i18n="settings.resampleNearest">Plus proche</option>
                         </select>
+                        </span>
+                        <span id="opt-warp-outside-canvas-wrap" class="illu-opt-inline illu-opt-check-row" style="display: none !important;">
+                            <label class="illu-opt-check" for="tool-allow-outside-canvas">
+                                <input type="checkbox" id="tool-allow-outside-canvas" value="1">
+                                <span class="illu-opt-lbl" data-i18n="tools.allowOutsideCanvasShort"
+                                    data-i18n-title="tools.allowOutsideCanvas">Hors toile</span>
+                            </label>
                         </span>
                         <div id="opt-warp-resample-sep" class="opt-sep"></div>
                         <span class="illu-icon-toggle-group illu-mode-toggle-group illu-warp-bar-toggles">
@@ -3409,7 +3439,7 @@
             <div class="title-bar">
                 <div class="title-bar-text" id="illu-instant-effect-busy-title">Traitement</div>
                 <div class="title-bar-controls">
-                    <button type="button" aria-label="Close" onclick="if (window.IlluProgress) window.IlluProgress.instantEffectDone();"></button>
+                    <button type="button" aria-label="Close" onclick="if (window.IlluProgress) window.IlluProgress.forceDismissInstantEffect();"></button>
                 </div>
             </div>
             <div class="window-body illu-instant-effect-busy__body" style="display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
@@ -3420,7 +3450,7 @@
                         id="illu-instant-effect-busy-fill"></span>
                 </div>
                 <div style="text-align: right; margin-top: 4px;">
-                    <button type="button" style="padding: 2px 12px; font-size: 11px;" onclick="if (window.IlluProgress) window.IlluProgress.instantEffectDone();">Forcer la fermeture</button>
+                    <button type="button" style="padding: 2px 12px; font-size: 11px;" onclick="if (window.IlluProgress) window.IlluProgress.forceDismissInstantEffect();">Forcer la fermeture</button>
                 </div>
             </div>
         </div>
