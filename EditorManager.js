@@ -299,6 +299,8 @@ setup8BitMode() {
     /** Ouverture .illu : pas de filtres dynamiques ni worker tant que le chargement n’est pas terminé. */
     _workspaceLoading: false,
     _deferDynamicFilterRender: false,
+    /** Phase finale chargement .illu : calcul des filtres dynamiques (worker autorisé). */
+    _dynamicFilterWarmupActive: false,
     /** Pinceau / crayon : tracé en cours → rendu pixel allégé si option activée. */
     _strokeLightPixelRender: false,
     /**
@@ -396,6 +398,13 @@ setup8BitMode() {
         this.initHistory();
         this.setupShortcuts();
         this._installThumbnailIdleGuards();
+        if (this._dynamicRenderWorkerAvailable()) {
+            try {
+                this._ensureDynamicRenderWorker();
+            } catch (e) {
+                /* ignore */
+            }
+        }
 
         window.illuFillNewProjectDialogDimensionsFromSelection = function () {
             const sb = window.selectionBounds;
@@ -1992,6 +2001,7 @@ setup8BitMode() {
     },
 
     _pixelRenderSkipDynamicFilters() {
+        if (this._dynamicFilterWarmupActive) return false;
         return !!(this._deferDynamicFilterRender || this._workspaceLoading);
     },
 
@@ -2094,37 +2104,44 @@ setup8BitMode() {
         layer[`${propPrefix}Key`] = key;
     },
 
-_scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
-        if (this._pixelRenderSkipDynamicFilters()) return false;
-        if (!this._dynamicRenderWorkerAvailable()) return false;
-        let layerData;
-        try {
-            layerData = layer.buffer
-                .getContext('2d', { willReadFrequently: true })
-                .getImageData(0, 0, layer.buffer.width, layer.buffer.height);
-        } catch (e) {
-            return false;
-        }
-        const stack = this._cloneDynamicFilterStack(this._getNormalizedDynamicFilterStack(layer));
+    _dynamicFilterComputeKey(layer, base, docW, docH, layerData) {
+        const stack = this._getNormalizedDynamicFilterStack(layer);
         const mode = layer.dynamicFilterMode | 0;
-
-        const key = [
+        return [
             docW,
             docH,
             layer.x | 0,
             layer.y | 0,
             Number.isFinite(layer.opacity) ? Number(layer.opacity).toFixed(4) : '1',
             layer.dynamicFilterAlphaPreview ? 'ap' : 'fx',
-            mode === 1 ? 'self' : this._sampleBufferSignature(base.data),
+            mode === 1 ? 'self' : this._sampleBufferSignature(base && base.data ? base.data : null),
             this._sampleBufferSignature(layerData.data),
             JSON.stringify(stack),
             mode
         ].join('|');
-        if (layer._dynAsyncPendingKey === key || layer._dynAsyncKey === key) return true;
+    },
+
+    _beginDynamicFilterWorkerJob(layer, base, docW, docH) {
+        if (!this._dynamicRenderWorkerAvailable()) return null;
+        let layerData;
+        try {
+            layerData = layer.buffer
+                .getContext('2d', { willReadFrequently: true })
+                .getImageData(0, 0, layer.buffer.width, layer.buffer.height);
+        } catch (e) {
+            return null;
+        }
+        const stack = this._cloneDynamicFilterStack(this._getNormalizedDynamicFilterStack(layer));
+        const mode = layer.dynamicFilterMode | 0;
+        const key = this._dynamicFilterComputeKey(layer, base, docW, docH, layerData);
+        if (layer._dynAsyncKey === key) return { cached: true, key };
+        if (layer._dynAsyncPendingKey === key && layer._dynAsyncPrefetchPromise) {
+            return { promise: layer._dynAsyncPrefetchPromise, key };
+        }
         layer._dynAsyncPendingKey = key;
-        const baseTransfer = (mode === 1) ? new Uint8ClampedArray(0) : new Uint8ClampedArray(base.data);
+        const baseTransfer = mode === 1 ? new Uint8ClampedArray(0) : new Uint8ClampedArray(base.data);
         const layerTransfer = new Uint8ClampedArray(layerData.data);
-        this._requestDynamicRenderWorker(
+        const promise = this._requestDynamicRenderWorker(
             {
                 type: 'dynamicFilterLayer',
                 docWidth: docW,
@@ -2143,15 +2160,186 @@ _scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
             [baseTransfer.buffer, layerTransfer.buffer]
         )
             .then((msg) => {
-                if (layer._dynAsyncPendingKey !== key) return;
+                if (layer._dynAsyncPendingKey !== key) return msg;
                 layer._dynAsyncPendingKey = null;
-                this._storeAsyncDocBufferOnLayer(layer, '_dynAsync', msg.width | 0, msg.height | 0, msg.buffer, key);
-                this.render();
+                layer._dynAsyncPrefetchPromise = null;
+                const buf = msg.buffer || (msg.data && msg.data.buffer);
+                if (buf) {
+                    this._storeAsyncDocBufferOnLayer(
+                        layer,
+                        '_dynAsync',
+                        msg.width | 0,
+                        msg.height | 0,
+                        buf,
+                        key
+                    );
+                }
+                return msg;
             })
-            .catch(() => {
+            .catch((err) => {
                 if (layer._dynAsyncPendingKey === key) layer._dynAsyncPendingKey = null;
+                layer._dynAsyncPrefetchPromise = null;
+                throw err;
             });
-        return true;
+        layer._dynAsyncPrefetchPromise = promise;
+        return { promise, key };
+    },
+
+    _scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
+        if (this._pixelRenderSkipDynamicFilters()) return false;
+        const req = this._beginDynamicFilterWorkerJob(layer, base, docW, docH);
+        if (!req) return false;
+        if (req.cached) return true;
+        if (req.promise) {
+            req.promise
+                .then(() => {
+                    if (!this._dynamicFilterWarmupActive) this.render();
+                })
+                .catch(() => {
+                    /* ignore */
+                });
+            return true;
+        }
+        return false;
+    },
+
+    _composePixelStackBaseBelowIndex(belowIndex, docW, docH) {
+        const can = document.createElement('canvas');
+        can.width = docW;
+        can.height = docH;
+        const ctx = can.getContext('2d', { willReadFrequently: true });
+        const below = this.layers.slice(0, Math.max(0, belowIndex | 0));
+        this._renderPixelLayersStackToContext(ctx, below, true, undefined);
+        return ctx.getImageData(0, 0, docW, docH);
+    },
+
+    _storeDynamicFilterSyncResult(layer, key, imageData) {
+        const copy = new Uint8ClampedArray(imageData.data);
+        this._storeAsyncDocBufferOnLayer(
+            layer,
+            '_dynAsync',
+            imageData.width | 0,
+            imageData.height | 0,
+            copy.buffer,
+            key
+        );
+    },
+
+    async _prefetchDynamicFilterLayerSync(layer, base, docW, docH, key) {
+        const mode = layer.dynamicFilterMode | 0;
+        if (mode === 1) {
+            const lw = layer.buffer.width;
+            const lh = layer.buffer.height;
+            let layerIm;
+            try {
+                layerIm = layer.buffer
+                    .getContext('2d', { willReadFrequently: true })
+                    .getImageData(0, 0, lw, lh);
+            } catch (e) {
+                return;
+            }
+            const selfFullCan = document.createElement('canvas');
+            selfFullCan.width = docW;
+            selfFullCan.height = docH;
+            const sctx = selfFullCan.getContext('2d', { willReadFrequently: true });
+            sctx.putImageData(layerIm, layer.x | 0, layer.y | 0);
+            const fullIm = sctx.getImageData(0, 0, docW, docH);
+            const filtered = this._applyDynamicFilterToImageDataCopy(fullIm, layer);
+            this._storeDynamicFilterSyncResult(layer, key, filtered);
+            return;
+        }
+        if (!base) return;
+        const maskIm = this._buildDynamicFilterMaskImageData(layer, docW, docH);
+        if (layer.dynamicFilterAlphaPreview) {
+            let out;
+            try {
+                out = new ImageData(docW, docH);
+            } catch (e) {
+                return;
+            }
+            const od = out.data;
+            const md = maskIm.data;
+            for (let i = 0; i < md.length; i += 4) {
+                const m = md[i + 3];
+                od[i] = m;
+                od[i + 1] = m;
+                od[i + 2] = m;
+                od[i + 3] = 255;
+            }
+            this._storeDynamicFilterSyncResult(layer, key, out);
+            return;
+        }
+        const blurred = this._applyDynamicFilterToImageDataCopy(base, layer);
+        let out = null;
+        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
+            out = this._blendRgbByDynamicMask(base, blurred, maskIm);
+        } else if (
+            typeof window.IlluWebGLMaskBlend !== 'undefined' &&
+            window.IlluWebGLMaskBlend &&
+            typeof window.IlluWebGLMaskBlend.blend === 'function'
+        ) {
+            try {
+                out = window.IlluWebGLMaskBlend.blend(base, blurred, maskIm);
+            } catch (e) {
+                out = null;
+            }
+        }
+        if (!out) out = this._blendRgbByDynamicMask(base, blurred, maskIm);
+        this._storeDynamicFilterSyncResult(layer, key, out);
+    },
+
+    _startDynamicFilterLoadHeartbeat(report, basePct, span, detail) {
+        let step = 0;
+        const t0 = Date.now();
+        const id = setInterval(() => {
+            step++;
+            const elapsed = Math.min(1, (Date.now() - t0) / 90000);
+            const pulse = ((step % 5) / 5) * 0.04;
+            const pct = basePct + Math.min(span * 0.96, elapsed * span * 0.92 + pulse);
+            report(pct, `${detail}…`);
+        }, 280);
+        return {
+            stop() {
+                clearInterval(id);
+            }
+        };
+    },
+
+    async _prefetchDynamicFilterLayer(layer, layerIndex, docW, docH) {
+        if (!layer || !this._isLiveDynamicFilterLayer(layer)) return;
+        const mode = layer.dynamicFilterMode | 0;
+        let base = null;
+        if (mode !== 1) {
+            base = this._composePixelStackBaseBelowIndex(layerIndex, docW, docH);
+            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+        }
+        layer._dynAsyncKey = null;
+        layer._dynAsyncPendingKey = null;
+        layer._dynAsyncCanvas = null;
+        layer._dynAsyncPrefetchPromise = null;
+
+        let layerData;
+        try {
+            layerData = layer.buffer
+                .getContext('2d', { willReadFrequently: true })
+                .getImageData(0, 0, layer.buffer.width, layer.buffer.height);
+        } catch (e) {
+            return;
+        }
+        const key = this._dynamicFilterComputeKey(layer, base, docW, docH, layerData);
+
+        const req = this._beginDynamicFilterWorkerJob(layer, base, docW, docH);
+        if (req && req.cached) return;
+        if (req && req.promise) {
+            try {
+                await req.promise;
+            } catch (e) {
+                await this._prefetchDynamicFilterLayerSync(layer, base, docW, docH, key);
+            }
+            return;
+        }
+        await this._prefetchDynamicFilterLayerSync(layer, base, docW, docH, key);
+        if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
     },
 
     _scheduleAsyncAlphaMaskRender(layer, maskFlat, docW, docH) {
@@ -10247,23 +10435,49 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             return;
         }
 
-        this._deferDynamicFilterRender = false;
+        dynLayers.sort((a, b) => a.index - b.index);
+        const p = this.activeProject;
+        const docW = Math.max(1, ((p && p.width) | 0) || 1);
+        const docH = Math.max(1, ((p && p.height) | 0) || 1);
         const total = dynLayers.length;
-        for (let k = 0; k < total; k++) {
-            const { layer, index } = dynLayers[k];
-            const label = layer.name || `Calque ${index + 1}`;
-            if (report) {
-                report(0.88 + ((k + 1) / total) * 0.1, `Filtre dynamique : ${label}…`);
+        const span = 0.1;
+
+        this._deferDynamicFilterRender = false;
+        this._dynamicFilterWarmupActive = true;
+        try {
+            for (let k = 0; k < total; k++) {
+                const { layer, index } = dynLayers[k];
+                const label = layer.name || `Calque ${index + 1}`;
+                const basePct = 0.88 + (k / total) * span;
+                const detail = `Filtre dynamique (${k + 1}/${total}) : ${label}`;
+                if (report) report(basePct, `${detail}…`);
+                let heartbeat = null;
+                if (report) {
+                    heartbeat = this._startDynamicFilterLoadHeartbeat(
+                        report,
+                        basePct,
+                        span / total,
+                        detail
+                    );
+                }
+                try {
+                    if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+                    await this._prefetchDynamicFilterLayer(layer, index, docW, docH);
+                    if (report) {
+                        report(
+                            basePct + span / total,
+                            `${detail} — terminé`
+                        );
+                    }
+                } finally {
+                    if (heartbeat) heartbeat.stop();
+                }
+                if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
             }
-            layer._dynAsyncKey = null;
-            layer._dynAsyncPendingKey = null;
-            layer._dynAsyncCanvas = null;
-            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(2);
-            this.render({ skipUiThumbnails: true, layerIndex: index });
-            await this._waitDynamicFilterLayerReady(layer, 15000);
-            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+            this.render({ flushUiThumbnails: true });
+        } finally {
+            this._dynamicFilterWarmupActive = false;
         }
-        this.render({ flushUiThumbnails: true });
     },
 
     _applyCtxImageSmoothing(ctx, mode) {
