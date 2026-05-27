@@ -728,6 +728,16 @@ window.illuRepaintShapeLiveDrawPreview = function () {
     const buf = layer?.buffer;
     if (!ctx || !buf || !window._shapeBackupCanvas) return false;
     const pos = window._illuLastPointerDoc || { x: startX, y: startY };
+    illuExpandActiveLayerForShapeDraw(pos, startX, startY);
+    const buf2 = layer.buffer;
+    const backupDx =
+        window._shapeBackupOriginX != null
+            ? (window._shapeBackupOriginX | 0) - (layer.x | 0)
+            : 0;
+    const backupDy =
+        window._shapeBackupOriginY != null
+            ? (window._shapeBackupOriginY | 0) - (layer.y | 0)
+            : 0;
     const useShapePreview =
         typeof EditorManager._canUseShapePreviewOverlay === 'function' &&
         EditorManager._canUseShapePreviewOverlay();
@@ -738,7 +748,7 @@ window.illuRepaintShapeLiveDrawPreview = function () {
         const pc = EditorManager._shapePreviewCanvas;
         if (!pc) return false;
         const pctx = pc.getContext('2d', { willReadFrequently: true });
-        pctx.clearRect(0, 0, buf.width, buf.height);
+        pctx.clearRect(0, 0, buf2.width, buf2.height);
         pctx.save();
         if (
             window.selectionBounds &&
@@ -752,9 +762,11 @@ window.illuRepaintShapeLiveDrawPreview = function () {
         paintPixelShapeAt(pctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
         pctx.restore();
     } else {
-        ctx.clearRect(0, 0, buf.width, buf.height);
-        ctx.drawImage(window._shapeBackupCanvas, 0, 0);
-        paintPixelShapeAt(ctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
+        const actx = layer.buffer.getContext('2d', { willReadFrequently: true });
+        if (!actx) return false;
+        actx.clearRect(0, 0, buf2.width, buf2.height);
+        actx.drawImage(window._shapeBackupCanvas, backupDx, backupDy);
+        paintPixelShapeAt(actx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
     }
     if (typeof illuScheduleInteractiveVisualRefresh === 'function') {
         illuScheduleInteractiveVisualRefresh({ render: true });
@@ -4755,6 +4767,63 @@ window.illuAllowsOutsideCanvasContent = illuAllowsOutsideCanvasContent;
  * Pré-agrandit le calque actif pour "absorber" les dessins autour des bords de la toile.
  * But : éviter un resize pendant un drag (qui casserait souvent l'état de clip du canvas).
  */
+const ILLU_SHAPE_DRAW_TOOLS = ['rect', 'circle', 'line', 'round-3', 'triangle'];
+
+/** Décale le tampon de sauvegarde de forme après agrandissement du calque (origine x/y du calque). */
+function illuRealignShapeBackupCanvasAfterLayerExpand() {
+    const l = EditorManager.activeLayer;
+    if (!l || !l.buffer || !window._shapeBackupCanvas) return;
+    if (window._shapeBackupOriginX == null || window._shapeBackupOriginY == null) return;
+    const backupDx = (window._shapeBackupOriginX | 0) - (l.x | 0);
+    const backupDy = (window._shapeBackupOriginY | 0) - (l.y | 0);
+    const ob = window._shapeBackupCanvas;
+    const nc = document.createElement('canvas');
+    nc.width = l.buffer.width | 0;
+    nc.height = l.buffer.height | 0;
+    const nctx = nc.getContext('2d', { willReadFrequently: true });
+    if (nctx) {
+        nctx.imageSmoothingEnabled = false;
+        nctx.drawImage(ob, backupDx, backupDy);
+    }
+    window._shapeBackupCanvas = nc;
+    if (
+        typeof EditorManager.clearShapePreviewOverlay === 'function' &&
+        EditorManager._shapePreviewActive
+    ) {
+        EditorManager.clearShapePreviewOverlay();
+        if (typeof EditorManager.beginShapePreviewIfNeeded === 'function') {
+            EditorManager.beginShapePreviewIfNeeded();
+        }
+    }
+}
+
+/** Agrandit le calque actif pour englober le tracé de forme en cours (coords document). */
+function illuExpandActiveLayerForShapeDraw(pos, startXp, startYp) {
+    if (!illuAllowsOutsideCanvasContent()) return;
+    const l = EditorManager.activeLayer;
+    if (!l || !l.buffer || typeof EditorManager._expandLayerBufferToIncludeLocalRect !== 'function') return;
+    const tp = EditorManager.toolProps || {};
+    const size = tp.size != null ? Number(tp.size) : 2;
+    const contour = tp.lineContourWidth != null ? Number(tp.lineContourWidth) : 0;
+    const pad = Math.max(8, Math.round((size + contour) * 3) + 4);
+    const minX = Math.min(startXp, pos.x) - pad;
+    const minY = Math.min(startYp, pos.y) - pad;
+    const maxX = Math.max(startXp, pos.x) + pad;
+    const maxY = Math.max(startYp, pos.y) + pad;
+    const lx0 = l.x | 0;
+    const ly0 = l.y | 0;
+    const localX = Math.floor(minX - lx0);
+    const localY = Math.floor(minY - ly0);
+    const w = Math.ceil(maxX - minX);
+    const h = Math.ceil(maxY - minY);
+    const prevX = lx0;
+    const prevY = ly0;
+    EditorManager._expandLayerBufferToIncludeLocalRect(l, localX, localY, w, h);
+    if ((l.x | 0) !== prevX || (l.y | 0) !== prevY) {
+        illuRealignShapeBackupCanvasAfterLayerExpand();
+    }
+}
+
 function illuPreExpandActiveLayerBufferForOutsideCanvas(padPx) {
     if (!illuAllowsOutsideCanvasContent()) return false;
     const l = EditorManager.activeLayer;
@@ -12237,9 +12306,13 @@ function startPixel(pos, e) {
     let ctx = EditorManager.activeCtx;
     if (!ctx) return;
 
-    /* Déplacer : sans sélection → faire une sélection complète de la taille du canvas et déplacer les pixels. */
+    /* Déplacer : sans sélection → tout le calque (hors toile) ou sélection document + pixels. */
     if (EditorManager.isPixelMode && window.activeTool === 'move') {
         if (illuNoUsableSelectionForDeformNewRect()) {
+            if (illuAllowsOutsideCanvasContent()) {
+                illuPixelMoveWholeLayerStartDrag(pos);
+                return;
+            }
             EditorManager.selectAll();
         }
         illuPixelMoveToolStartDrag(pos, e);
@@ -12261,10 +12334,15 @@ function startPixel(pos, e) {
         return;
     }
 
-    if (['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) && typeof window.cloneLayerBuffer === 'function') {
+    if (ILLU_SHAPE_DRAW_TOOLS.includes(window.activeTool) && typeof window.cloneLayerBuffer === 'function') {
         if (typeof EditorManager.pushHistoryCheckpoint === 'function') {
             EditorManager.pushHistoryCheckpoint('Avant forme');
         }
+        if (illuAllowsOutsideCanvasContent()) {
+            illuPreExpandActiveLayerBufferForOutsideCanvas();
+        }
+        window._shapeBackupOriginX = EditorManager.activeLayer.x | 0;
+        window._shapeBackupOriginY = EditorManager.activeLayer.y | 0;
         window._shapeBackupCanvas = window.cloneLayerBuffer(EditorManager.activeLayer.buffer);
         window._shapeLivePreviewAngleRad = 0;
         window._shapeRotDragActive = false;
@@ -12857,12 +12935,21 @@ function updatePixel(pos, pointerEv) {
     if (
         EditorManager.isPixelMode &&
         isDrawing &&
-        ['rect', 'circle', 'line', 'round-3', 'triangle'].includes(window.activeTool) &&
+        ILLU_SHAPE_DRAW_TOOLS.includes(window.activeTool) &&
         window._shapeBackupCanvas &&
         EditorManager.activeLayer &&
         EditorManager.activeLayer.buffer
     ) {
+        illuExpandActiveLayerForShapeDraw(pos, startX, startY);
         const buf = EditorManager.activeLayer.buffer;
+        const backupDx =
+            window._shapeBackupOriginX != null
+                ? (window._shapeBackupOriginX | 0) - (EditorManager.activeLayer.x | 0)
+                : 0;
+        const backupDy =
+            window._shapeBackupOriginY != null
+                ? (window._shapeBackupOriginY | 0) - (EditorManager.activeLayer.y | 0)
+                : 0;
         const useShapePreview =
             typeof EditorManager._canUseShapePreviewOverlay === 'function' &&
             EditorManager._canUseShapePreviewOverlay();
@@ -12889,7 +12976,7 @@ function updatePixel(pos, pointerEv) {
             }
         } else {
             ctx.clearRect(0, 0, buf.width, buf.height);
-            ctx.drawImage(window._shapeBackupCanvas, 0, 0);
+            ctx.drawImage(window._shapeBackupCanvas, backupDx, backupDy);
             paintPixelShapeAt(ctx, pos, startX, startY, window._shiftConstraintProportions, window._shapeLivePreviewAngleRad || 0);
         }
         illuScheduleInteractiveVisualRefresh({ render: true });
@@ -14801,20 +14888,15 @@ function drawFinalShapeOnCanvas(pos, shiftKey) {
     let backupDy = 0;
 
     if (illuAllowsOutsideCanvasContent() && l && l.buffer) {
-        const prevX = l.x | 0;
-        const prevY = l.y | 0;
-        const tp = EditorManager.toolProps || {};
-        const size = tp.size != null ? Number(tp.size) : 5;
-        const contour = tp.lineContourWidth != null ? Number(tp.lineContourWidth) : 0;
-        const pad = Math.max(16, Math.round((size + contour) * 4));
-        illuPreExpandActiveLayerBufferForOutsideCanvas(pad);
-        backupDx = prevX - l.x;
-        backupDy = prevY - l.y;
+        illuExpandActiveLayerForShapeDraw(pos, startX, startY);
+        if (window._shapeBackupOriginX != null && window._shapeBackupOriginY != null) {
+            backupDx = (window._shapeBackupOriginX | 0) - (l.x | 0);
+            backupDy = (window._shapeBackupOriginY | 0) - (l.y | 0);
+        }
         ctx = l.buffer.getContext('2d', { willReadFrequently: true });
         buf = l.buffer;
         if (!ctx || !buf) return;
     }
-
     if (window._shapeBackupCanvas) {
         ctx.clearRect(0, 0, buf.width, buf.height);
         ctx.drawImage(window._shapeBackupCanvas, backupDx, backupDy);

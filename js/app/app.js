@@ -290,8 +290,14 @@ window.syncIlluAllowOutsideCanvasUI = function () {
     const outsideCb = document.getElementById('tool-allow-outside-canvas');
     if (outsideCb) outsideCb.checked = on;
 
+    const mcc = document.getElementById('main-canvas-container');
+    if (mcc) mcc.classList.toggle('illu-allow-outside-canvas-active', on);
+
     if (typeof window.syncAllToolbarToggles === 'function') {
         window.syncAllToolbarToggles();
+    }
+    if (typeof EditorManager !== 'undefined' && typeof EditorManager.render === 'function') {
+        EditorManager.render();
     }
 };
 

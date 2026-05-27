@@ -1365,6 +1365,66 @@ setup8BitMode() {
         this._strokeIntermediateTool = null;
     },
 
+    /** Opacité d’affichage des pixels hors rectangle document quand « Hors toile » est actif. */
+    _outsideCanvasPreviewOpacity() {
+        return 0.45;
+    },
+
+    _layerExtendsOutsideDocument(layer) {
+        if (!layer || !layer.buffer) return false;
+        const W = this.width;
+        const H = this.height;
+        if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) return false;
+        const lx = Number(layer.x) || 0;
+        const ly = Number(layer.y) || 0;
+        const bw = layer.buffer.width | 0;
+        const bh = layer.buffer.height | 0;
+        // Ne pas arrondir x/y avec |0 : ex. layer.x=-0.2 donne lx=0 alors que des pixels hors document existent déjà.
+        return lx < 0 || ly < 0 || lx + bw > W || ly + bh > H;
+    },
+
+    _shouldDimOutsideCanvasLayer(layer) {
+        return !!(this.toolProps && this.toolProps.allowOutsideCanvas) && this._layerExtendsOutsideDocument(layer);
+    },
+
+    /**
+     * Dessine le tampon calque sur un contexte 2D (coords locales 0,0 = coin tampon).
+     * Si « Hors toile » : partie hors document en semi-transparence, intérieur à pleine opacité.
+     */
+    _paintLayerBufferLocalWithOutsideDim(vctx, layer, paintFn) {
+        const op = layer.opacity != null ? layer.opacity : 1;
+        const dim = this._shouldDimOutsideCanvasLayer(layer);
+        if (!dim) {
+            vctx.save();
+            vctx.globalAlpha = 1;
+            vctx.globalCompositeOperation = 'source-over';
+            if (typeof paintFn === 'function') paintFn(vctx, 1);
+            vctx.restore();
+            return;
+        }
+        const lx = Number(layer.x) || 0;
+        const ly = Number(layer.y) || 0;
+        const W = this.width;
+        const H = this.height;
+        const docX0 = -lx;
+        const docY0 = -ly;
+        const outsideOp = Math.max(0, Math.min(1, op * this._outsideCanvasPreviewOpacity()));
+        const innerOp = Math.max(0, Math.min(1, op));
+        vctx.save();
+        vctx.globalCompositeOperation = 'source-over';
+        vctx.globalAlpha = outsideOp;
+        if (typeof paintFn === 'function') paintFn(vctx, outsideOp);
+        vctx.restore();
+        vctx.save();
+        vctx.globalCompositeOperation = 'source-over';
+        vctx.globalAlpha = innerOp;
+        vctx.beginPath();
+        vctx.rect(docX0, docY0, W, H);
+        vctx.clip();
+        if (typeof paintFn === 'function') paintFn(vctx, innerOp);
+        vctx.restore();
+    },
+
     _canUseShapePreviewOverlay() {
         const l = this.activeLayer;
         if (!l || !l.buffer || l.alphaMaskProjectId) return false;
@@ -1409,6 +1469,8 @@ setup8BitMode() {
             window._gradientNewDrag = false;
             window._gradientBackup = null;
             window._shapeBackupCanvas = null;
+            window._shapeBackupOriginX = null;
+            window._shapeBackupOriginY = null;
             window._shapeLivePreviewAngleRad = 0;
             window._shapeRotDragActive = false;
             window._shapeRotDragMode = null;
@@ -1658,24 +1720,28 @@ setup8BitMode() {
             cv.style.display = l.visible ? 'block' : 'none';
             cv.style.left = `${l.x}px`;
             cv.style.top = `${l.y}px`;
-            cv.style.opacity = String(l.opacity != null ? l.opacity : 1);
+            cv.style.opacity = this._shouldDimOutsideCanvasLayer(l)
+                ? '1'
+                : String(l.opacity != null ? l.opacity : 1);
             cv.style.mixBlendMode = this._blendModeToCssMix(l);
             cv.style.zIndex = String(i + 1);
             const vctx = cv.getContext('2d', { willReadFrequently: true });
             vctx.clearRect(0, 0, bw, bh);
             const hasStrokeIntermediate =
                 this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === l.id;
-            if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
-                vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
-            } else {
-                vctx.drawImage(l.buffer, 0, 0);
-                if (hasStrokeIntermediate) {
-                    vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
+            this._paintLayerBufferLocalWithOutsideDim(vctx, l, (ctx2d) => {
+                if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
+                    ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+                } else {
+                    ctx2d.drawImage(l.buffer, 0, 0);
+                    if (hasStrokeIntermediate) {
+                        ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+                    }
                 }
-            }
-            if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === l.id) {
-                vctx.drawImage(this._shapePreviewCanvas, 0, 0);
-            }
+                if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === l.id) {
+                    ctx2d.drawImage(this._shapePreviewCanvas, 0, 0);
+                }
+            });
             stackEl.appendChild(cv);
             this._syncImportStagingDomView(stackEl, l, (i + 1) * 10 + 1);
         }
@@ -1775,24 +1841,28 @@ setup8BitMode() {
         cv.style.display = layer.visible ? 'block' : 'none';
         cv.style.left = `${layer.x}px`;
         cv.style.top = `${layer.y}px`;
-        cv.style.opacity = String(layer.opacity != null ? layer.opacity : 1);
+        cv.style.opacity = this._shouldDimOutsideCanvasLayer(layer)
+            ? '1'
+            : String(layer.opacity != null ? layer.opacity : 1);
         cv.style.mixBlendMode = this._blendModeToCssMix(layer);
         cv.style.zIndex = String(i + 1);
         const vctx = cv.getContext('2d', { willReadFrequently: true });
         vctx.clearRect(0, 0, bw, bh);
         const hasStrokeIntermediate =
             this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id;
-        if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
-            vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
-        } else {
-            vctx.drawImage(layer.buffer, 0, 0);
-            if (hasStrokeIntermediate) {
-                vctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
+        this._paintLayerBufferLocalWithOutsideDim(vctx, layer, (ctx2d) => {
+            if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
+                ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+            } else {
+                ctx2d.drawImage(layer.buffer, 0, 0);
+                if (hasStrokeIntermediate) {
+                    ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+                }
             }
-        }
-        if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
-            vctx.drawImage(this._shapePreviewCanvas, 0, 0);
-        }
+            if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
+                ctx2d.drawImage(this._shapePreviewCanvas, 0, 0);
+            }
+        });
         stackEl.appendChild(cv);
         this._syncImportStagingDomView(stackEl, layer, (i + 1) * 10 + 1);
         this._restackStackPreviewOverlays(stackEl);
@@ -2801,17 +2871,69 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 ctx.drawImage(layer.buffer, layer.x, layer.y);
             }
         } else if (useEraserIntermediateOnly) {
-            ctx.drawImage(this._strokeIntermediateCanvas, layer.x, layer.y);
+            if (this._shouldDimOutsideCanvasLayer(layer)) {
+                const lx = Number(layer.x) || 0;
+                const ly = Number(layer.y) || 0;
+                const paintEraser = (c2d) => {
+                    c2d.save();
+                    c2d.translate(lx, ly);
+                    c2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+                    c2d.restore();
+                };
+                const op = Math.max(0, Math.min(1, layer.opacity != null ? layer.opacity : 1));
+                const outsideOp = op * this._outsideCanvasPreviewOpacity();
+                ctx.globalAlpha = Math.max(0, Math.min(1, outsideOp));
+                paintEraser(ctx);
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.beginPath();
+                ctx.rect(0, 0, docW, docH);
+                ctx.clip();
+                paintEraser(ctx);
+                ctx.restore();
+            } else {
+                ctx.drawImage(this._strokeIntermediateCanvas, layer.x, layer.y);
+            }
+        } else if (this._shouldDimOutsideCanvasLayer(layer)) {
+            const lx = Number(layer.x) || 0;
+            const ly = Number(layer.y) || 0;
+            const paintStack = (c2d) => {
+                c2d.save();
+                c2d.translate(lx, ly);
+                c2d.drawImage(layer.buffer, 0, 0);
+                if (this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id) {
+                    if (this._strokeIntermediateTool !== 'eraser') {
+                        c2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
+                    }
+                }
+                if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
+                    c2d.drawImage(this._shapePreviewCanvas, 0, 0);
+                }
+                c2d.restore();
+            };
+            const op = Math.max(0, Math.min(1, layer.opacity != null ? layer.opacity : 1));
+            const outsideOp = op * this._outsideCanvasPreviewOpacity();
+            ctx.globalAlpha = Math.max(0, Math.min(1, outsideOp));
+            paintStack(ctx);
+            ctx.save();
+            ctx.globalAlpha = op;
+            ctx.beginPath();
+            ctx.rect(0, 0, docW, docH);
+            ctx.clip();
+            paintStack(ctx);
+            ctx.restore();
         } else {
             ctx.drawImage(layer.buffer, layer.x, layer.y);
         }
-        if (this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id) {
-            if (this._strokeIntermediateTool !== 'eraser') {
-                ctx.drawImage(this._strokeIntermediateCanvas, layer.x, layer.y);
+        if (!this._shouldDimOutsideCanvasLayer(layer)) {
+            if (this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id) {
+                if (this._strokeIntermediateTool !== 'eraser') {
+                    ctx.drawImage(this._strokeIntermediateCanvas, layer.x, layer.y);
+                }
             }
-        }
-        if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
-            ctx.drawImage(this._shapePreviewCanvas, layer.x, layer.y);
+            if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
+                ctx.drawImage(this._shapePreviewCanvas, layer.x, layer.y);
+            }
         }
         /* Collage volant : aperçu uniquement via .illu-pixel-layer-staging-view (DOM), pas dans le tampon composite. */
         ctx.restore();

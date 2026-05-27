@@ -1807,7 +1807,9 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 }
 
 /* Collage volant : l’aperçu peut dépasser la zone de dessin jusqu’à validation. */
-#main-canvas-container.illu-import-placement-active {
+#main-canvas-container.illu-import-placement-active,
+/* Hors toile : afficher le contenu hors document (semi-transparence côté rendu). */
+#main-canvas-container.illu-allow-outside-canvas-active {
     overflow: visible;
 }
 

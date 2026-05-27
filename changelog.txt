@@ -1,10 +1,11 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.7.74 (27/05/26)
+2.7.75 (27/05/26)
 - Fin implementation de bordure sur les trais/trais arrondie
 - Continuer mise en place du ruabn type office
 - Ajout d'une obtion pour garder ou non le contenu des pixel quand on sort des bordure du canvas  
        > par défaut désactivé
+- Mise a jours des outil pour prendre en compte cette obtion, aussi affichage du depassement a 0.45 op
 - Réglage divers sur l'importation entre mode svg et bitmat...
 - Correction de bug fenetre traitement qui s'ouvrait de manière intepestive
 - Correction problème sur l'outil déformation, racourcit...
