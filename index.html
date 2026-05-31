@@ -801,18 +801,15 @@
 
                         <div id="illu-shape-picker-wrap" class="illu-shape-picker-wrap" hidden>
                             <div id="illu-shape-picker-header" class="illu-tool-header illu-shape-picker-header"
-                                tabindex="0" role="combobox" aria-haspopup="listbox"
-                                aria-controls="illu-shape-list-select" data-i18n-aria-label="shapePicker.ariaLabel">
-                                <select id="illu-shape-list-select"
-                                    class="illu-select-mini illu-tool-picker-select opt-tool-name illu-shape-picker-select"
-                                    data-i18n-title="shapePicker.ariaLabel" tabindex="-1">
-                                </select>
-                                <label class="illu-tool-picker" for="illu-shape-list-select" aria-hidden="true">
+                                tabindex="0" role="button" aria-haspopup="menu"
+                                aria-controls="illu-shape-picker-popup" aria-expanded="false"
+                                data-i18n-aria-label="shapePicker.ariaLabel">
+                                <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
                                     <span id="illu-shape-picker-icon" class="illu-tool-header-icon"
                                         aria-hidden="true"></span>
                                     <span id="illu-shape-picker-label" class="illu-tool-picker-label">Rectangle</span>
                                     <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
-                                </label>
+                                </span>
                             </div>
                             <div id="illu-shape-picker-popup" class="illu-shape-picker-popup" hidden role="menu"></div>
                         </div>

@@ -292,42 +292,9 @@
         return ok;
     };
 
-    function buildShapeListSelect() {
-        const sel = document.getElementById('illu-shape-list-select');
-        if (!sel || sel.dataset.built === '1') return;
-        sel.dataset.built = '1';
-        sel.innerHTML = '';
-        CATEGORIES.forEach((cat) => {
-            const og = document.createElement('optgroup');
-            og.label = t(cat.labelKey, cat.fallback);
-            cat.variants.forEach((variantId) => {
-                const opt = document.createElement('option');
-                opt.value = variantId;
-                opt.textContent = variantLabel(variantId);
-                og.appendChild(opt);
-            });
-            sel.appendChild(og);
-        });
-    }
-
-    function illuOpenShapeListSelect(sel) {
-        if (!sel) return;
-        if (typeof sel.showPicker === 'function') {
-            try {
-                sel.showPicker();
-                return;
-            } catch (err) {
-                /* showPicker peut échouer hors geste utilisateur */
-            }
-        }
-        sel.focus({ preventScroll: true });
-        sel.click();
-    }
-
     window.illuSyncShapePickerUI = function (variantId) {
         variantId = variantId || window.illuActiveShapeVariant || window.activeTool;
         if (!window.illuShouldShowShapePickerRibbon()) return;
-        buildShapeListSelect();
         const iconEl = document.getElementById('illu-shape-picker-icon');
         const lblEl = document.getElementById('illu-shape-picker-label');
         const label = variantLabel(variantId);
@@ -340,11 +307,6 @@
         if (header) {
             header.setAttribute('aria-label', label);
             header.title = label;
-        }
-        const sel = document.getElementById('illu-shape-list-select');
-        if (sel && PICKER_ENTRIES[variantId]) {
-            sel.value = variantId;
-            sel.setAttribute('aria-label', label);
         }
         document.querySelectorAll('#illu-shape-picker-popup .illu-shape-picker-item').forEach((item) => {
             const id = item.getAttribute('data-shape-variant');
@@ -415,43 +377,31 @@
 
     window.illuInitShapePicker = function () {
         buildShapePickerPopup();
-        buildShapeListSelect();
         const wrap = document.getElementById('illu-shape-picker-wrap');
         const header = document.getElementById('illu-shape-picker-header');
-        const sel = document.getElementById('illu-shape-list-select');
         if (!wrap || !header || wrap.dataset.bound === '1') return;
         wrap.dataset.bound = '1';
-        header.addEventListener('click', (e) => {
-            e.preventDefault();
+
+        function toggleShapePickerPopup() {
             const pop = document.getElementById('illu-shape-picker-popup');
             if (pop && !pop.hidden) {
                 window.illuCloseShapePickerPopup();
             } else {
                 window.illuOpenShapePickerPopup();
             }
+        }
+
+        header.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleShapePickerPopup();
         });
         header.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
                 e.preventDefault();
-                const pop = document.getElementById('illu-shape-picker-popup');
-                if (pop && !pop.hidden) {
-                    window.illuCloseShapePickerPopup();
-                } else {
-                    window.illuOpenShapePickerPopup();
-                }
+                toggleShapePickerPopup();
             }
         });
-        if (sel && sel.dataset.changeBound !== '1') {
-            sel.dataset.changeBound = '1';
-            sel.addEventListener('change', () => {
-                const variantId = sel.value;
-                if (!variantId || !PICKER_ENTRIES[variantId]) return;
-                const isLineTool = ['line', 'cubic-3', 'pen', 'polygon'].includes(
-                    PICKER_ENTRIES[variantId].tool
-                );
-                window.illuActivateShapeTool(variantId, { familyMode: !isLineTool });
-            });
-        }
         document.addEventListener('mousedown', (e) => {
             const pop = document.getElementById('illu-shape-picker-popup');
             if (!pop || pop.hidden) return;

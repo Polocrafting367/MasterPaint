@@ -2441,7 +2441,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-picker
     padding-right: 6px;
 }
 
-/* Même présentation que #tool-main-header (liste native + étiquette) */
+/* Même présentation que #tool-main-header (déclencheur visuel + popup) */
 body.illu-toolbar-ribbon #illu-shape-picker-header.illu-shape-picker-header {
     position: relative;
     display: block;
@@ -2458,32 +2458,7 @@ body.illu-toolbar-ribbon #illu-shape-picker-header.illu-shape-picker-header {
     overflow: visible;
 }
 
-body.illu-toolbar-ribbon #illu-shape-picker-header .illu-tool-picker-select,
-body.illu-toolbar-ribbon #illu-shape-picker-header .illu-shape-picker-select {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 2;
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    opacity: 0;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    line-height: 1;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
+body.illu-toolbar-ribbon #illu-shape-picker-header .illu-shape-picker-trigger,
 body.illu-toolbar-ribbon #illu-shape-picker-header .illu-tool-picker {
     position: absolute;
     top: 0;
