@@ -946,10 +946,7 @@ body:not(.ui-layout-floating) #color-sliders-panel .color-sliders-columns {
     text-transform: uppercase;
 }
 
-.window illu-new-project-window {
-    width: 250px !important;
-
-}
+/* Nouveau projet : largeur gérée dans theme-win98-modern.css (.illu-new-project-window) */
 
 /* Custom Sliders for color tracking */
 .trk-wrapper {

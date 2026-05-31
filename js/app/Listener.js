@@ -83,6 +83,11 @@ document.addEventListener(
 // Advanced Paste for Images (tampon interne prioritaire + repli OS)
 document.addEventListener('paste', async (e) => {
     if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
+    if (window._illuSkipNextPasteEvent) {
+        window._illuSkipNextPasteEvent = false;
+        e.preventDefault();
+        return;
+    }
 
     const dt = e.clipboardData || e.originalEvent?.clipboardData;
     if (!dt) return;
@@ -109,10 +114,6 @@ document.addEventListener('paste', async (e) => {
         } catch (err) {
             /* ignore */
         }
-    }
-    if (!importOpts.pasteDocBounds && window.ctxClipboardDocBounds) {
-        importOpts.pasteDocBounds = window.ctxClipboardDocBounds;
-        importOpts.pasteProjectId = window.ctxClipboardProjectId;
     }
 
     // 1. Try files collection
@@ -175,6 +176,16 @@ document.addEventListener('paste', async (e) => {
     }
 
     if (!blob || blob.size === 0) {
+        if (
+            window.ctxClipboard &&
+            typeof window.ctxPaste === 'function' &&
+            EditorManager?.isPixelMode &&
+            EditorManager.mode !== 'vector'
+        ) {
+            e.preventDefault();
+            window.ctxPaste();
+            return;
+        }
         if (blob) {
             console.error('Paste: Still 0 bytes. Access denied by OS/Browser.');
             if (window.showIlluAlert) {
@@ -192,7 +203,20 @@ document.addEventListener('paste', async (e) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
         const img = new Image();
-        img.onload = () => EditorManager.promptImport(img, importOpts);
+        img.onload = () => {
+            if (importOpts.pasteProjectId != null) {
+                EditorManager.promptImport(img, importOpts);
+            } else if (typeof EditorManager.importImageAsNewLayer === 'function') {
+                EditorManager.importImageAsNewLayer(img, 'Image collée');
+            } else {
+                EditorManager.promptImport(img, importOpts);
+            }
+        };
+        img.onerror = () => {
+            if (window.showIlluAlert) {
+                window.showIlluAlert('Impossible de lire l’image du presse-papiers.');
+            }
+        };
         img.src = ev.target.result;
     };
     reader.readAsDataURL(blob);
@@ -200,6 +224,11 @@ document.addEventListener('paste', async (e) => {
 
 document.addEventListener('copy', (e) => {
     if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
+    if (window._illuSkipNextCopyEvent) {
+        window._illuSkipNextCopyEvent = false;
+        e.preventDefault();
+        return;
+    }
     if (typeof window.ctxCopy === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
         e.preventDefault();
         window.ctxCopy();
@@ -446,23 +475,8 @@ window.addEventListener('keydown', (e) => {
 
     if (isFormFieldTarget(e.target)) return;
 
-    if (
-        (window.activeTool === 'move' || window.activeTool === 'deform') &&
-        EditorManager.activeProject
-    ) {
-        const ak = e.key;
-        if (ak === 'ArrowUp' || ak === 'ArrowDown' || ak === 'ArrowLeft' || ak === 'ArrowRight') {
-            e.preventDefault();
-            const step = e.ctrlKey || e.metaKey ? 10 : 1;
-            let dx = 0;
-            let dy = 0;
-            if (ak === 'ArrowLeft') dx = -step;
-            else if (ak === 'ArrowRight') dx = step;
-            else if (ak === 'ArrowUp') dy = -step;
-            else if (ak === 'ArrowDown') dy = step;
-            EditorManager.applyMoveToolNudge(dx, dy);
-            return;
-        }
+    if (typeof window.illuHandleArrowKeyDown === 'function' && window.illuHandleArrowKeyDown(e)) {
+        return;
     }
 
     if (!e.ctrlKey && !e.metaKey) {
@@ -559,9 +573,34 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // v, c : événements copy/paste natifs ; x : cut + repli keydown ci-dessous
-    if (k === 'v' && !e.shiftKey) return;
-    if (k === 'c' && !e.shiftKey) return;
+    // v, c : repli keydown (le canvas ne déclenche pas toujours copy/paste natifs)
+    if (k === 'c' && !e.shiftKey) {
+        if (
+            !(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) &&
+            EditorManager?.isPixelMode &&
+            EditorManager.mode !== 'vector' &&
+            typeof window.ctxCopy === 'function'
+        ) {
+            e.preventDefault();
+            window._illuSkipNextCopyEvent = true;
+            window.ctxCopy();
+        }
+        return;
+    }
+    if (k === 'v' && !e.shiftKey) {
+        if (
+            !(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) &&
+            EditorManager?.isPixelMode &&
+            EditorManager.mode !== 'vector' &&
+            window.ctxClipboard &&
+            typeof window.ctxPaste === 'function'
+        ) {
+            e.preventDefault();
+            window._illuSkipNextPasteEvent = true;
+            window.ctxPaste();
+        }
+        return;
+    }
     if (k === 'x' && !e.shiftKey) {
         if (!(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) && typeof window.ctxCut === 'function') {
             e.preventDefault();
@@ -579,6 +618,12 @@ window.addEventListener('keydown', (e) => {
         e.preventDefault();
         EditorManager.zoom(-0.1);
         return;
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (typeof window.illuHandleArrowKeyUp === 'function') {
+        window.illuHandleArrowKeyUp(e);
     }
 });
 

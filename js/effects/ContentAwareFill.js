@@ -219,7 +219,7 @@
 
         const em = window.EditorManager;
         const l = em && em.activeLayer;
-        if (!l || !l.buffer || em.mode !== 'pixel') return false;
+        if (!l || !l.buffer || !em.isPixelMode) return false;
 
         const ov = document.getElementById('selection-overlay');
         if (!ov || ov.style.display === 'none') return false;

@@ -79,6 +79,9 @@ chroma: {
         'ef-ral-category': 'all',
         'ef-ral-dither': '0'
     },
+    cmjn: {
+        'ef-cmjn-dither': '0'
+    },
     contour: {
         'ef-contour-width': '3',
         'ef-contour-color': '#ff0000',
@@ -91,6 +94,21 @@ const EFFECT_SCOPE_STORAGE_KEY = 'illu_effect_scope';
 
 /** Aperçu des effets avec modale : traitement sur une image réduite ; le rendu plein calque n’a lieu qu’au clic sur OK. */
 const EFFECT_PREVIEW_MAX_EDGE = 480;
+
+function illuFxT(key, fb) {
+    if (window.IlluI18n && typeof window.IlluI18n.t === 'function') {
+        const v = window.IlluI18n.t(key);
+        if (v != null && v !== '' && v !== key) return v;
+    }
+    return fb;
+}
+function illuEffectTitle(id, fb) {
+    return illuFxT('effect.title.' + id, fb);
+}
+function illuEffectHistoryLabel(id) {
+    const fb = EFFECT_HISTORY_LABELS[id] || id;
+    return illuFxT('effect.title.' + id, fb);
+}
 
 const EFFECT_HISTORY_LABELS = {
     chroma: 'Incrustation (couleur → transparence)',
@@ -120,6 +138,7 @@ const EFFECT_HISTORY_LABELS = {
     median: 'Réduction du bruit (médian)',
     temperature: 'Température de couleur',
     ral: 'Conversion de couleur RAL',
+    cmjn: 'Conversion de couleur CMJN',
     contour: 'Contour (Transparence)'
 };
 
@@ -259,7 +278,7 @@ window.FilterManager = {
             return true;
         }
 
-        if (!EditorManager.activeProject || (EditorManager.mode !== 'pixel' && EditorManager.mode !== 'pixel-dither' && EditorManager.mode !== 'vector')) return false;
+        if (!EditorManager.activeProject || (!EditorManager.isPixelMode && EditorManager.mode !== 'vector')) return false;
         
         if (EditorManager.mode === 'vector') {
             if (!EditorManager.activeVectorSelection || !EditorManager.activeVectorSelection.length) {
@@ -875,7 +894,7 @@ window.FilterManager = {
     },
 
     async initEffect(effect) {
-        if (EditorManager.mode !== 'pixel' && EditorManager.mode !== 'pixel-dither') {
+        if (!EditorManager.isPixelMode) {
             window.showIlluAlert("Les effets ne sont disponibles qu'en mode Pixel.");
             return;
         }
@@ -915,9 +934,9 @@ window.FilterManager = {
 
         switch (effect) {
             case 'brightness':
-                this.showModal('Luminosité / Contraste', `
+                this.showModal(illuEffectTitle('brightness', 'Luminosité / Contraste'), `
                     <div class="effect-slider-block">
-                        <span class="effect-param-label">Luminosité</span>
+                        <span class="effect-param-label" data-i18n="effect.param.brightness">Luminosité</span>
                         <div class="effect-track-row">
                             <div class="effect-track effect-track--luma">
                                 <input type="range" id="ef-b" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-b-val').innerText=this.value; FilterManager.preview()">
@@ -926,7 +945,7 @@ window.FilterManager = {
                         </div>
                     </div>
                     <div class="effect-slider-block">
-                        <span class="effect-param-label">Contraste</span>
+                        <span class="effect-param-label" data-i18n="effect.param.contrast">Contraste</span>
                         <div class="effect-track-row">
                             <div class="effect-track effect-track--contrast">
                                 <input type="range" id="ef-c" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-c-val').innerText=this.value; FilterManager.preview()">
@@ -937,10 +956,10 @@ window.FilterManager = {
                 `);
                 break;
             case 'hsv':
-                this.showModal('Teinte / Saturation (TSL)', `
+                this.showModal(illuEffectTitle('hsv', 'Teinte / Saturation (TSL)'), `
                     <div id="ef-hsv-panel">
                         <div class="effect-slider-block">
-                            <span class="effect-param-label">Teinte</span>
+                            <span class="effect-param-label" data-i18n="effect.param.hue">Teinte</span>
                             <div class="effect-track-row">
                                 <div class="effect-track effect-track--hue">
                                     <input type="range" id="ef-h" class="effect-range" min="-180" max="180" value="0" oninput="FilterManager._onHsvHueSliderInput(this)">
@@ -954,7 +973,7 @@ window.FilterManager = {
                             </div>
                         </div>
                         <div class="effect-slider-block">
-                            <span class="effect-param-label">Saturation</span>
+                            <span class="effect-param-label" data-i18n="effect.param.saturation">Saturation</span>
                             <div class="effect-track-row">
                                 <div class="effect-track effect-track--sat">
                                     <input type="range" id="ef-s" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-s-val').innerText=this.value; FilterManager.preview()">
@@ -963,7 +982,7 @@ window.FilterManager = {
                             </div>
                         </div>
                         <div class="effect-slider-block">
-                            <span class="effect-param-label">Luminance</span>
+                            <span class="effect-param-label" data-i18n="effect.param.luminance">Luminance</span>
                             <div class="effect-track-row">
                                 <div class="effect-track effect-track--lum">
                                     <input type="range" id="ef-l" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-l-val').innerText=this.value; FilterManager.preview()">
@@ -972,7 +991,7 @@ window.FilterManager = {
                             </div>
                         </div>
                         <details class="illu-advanced-section" ontoggle="if(this.open && window.IlluImageAdjustCore) { FilterManager._syncHsvMixUI(); }">
-                            <summary class="illu-advanced-section-summary">Avancé : Mélangeur TSL</summary>
+                            <summary class="illu-advanced-section-summary" data-i18n="effect.advanced.hsvMixer">Avancé : Mélangeur TSL</summary>
                             <div class="illu-advanced-section-body">
                                 ${window.IlluImageAdjustCore.HSLManager.createHtml('ef-hsv-mix')}
                             </div>
@@ -988,9 +1007,9 @@ window.FilterManager = {
                 }
                 break;
             case 'temperature':
-                this.showModal('Température de couleur', `
+                this.showModal(illuEffectTitle('temperature', 'Température de couleur'), `
                     <div class="effect-slider-block">
-                        <span class="effect-param-label">Chaleur</span>
+                        <span class="effect-param-label" data-i18n="effect.param.warmth">Chaleur</span>
                         <div class="effect-track-row">
                             <div class="effect-track effect-track--temp">
                                 <input type="range" id="ef-temp" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-temp-val').innerText=this.value; FilterManager.preview()">
@@ -1002,37 +1021,37 @@ window.FilterManager = {
                 break;
             case 'blur':
             case 'gaussian':
-                this.showModal(effect === 'blur' ? 'Flou simple' : 'Flou gaussien', `
-                    <div class="field-row"><label style="width: 60px;">Rayon:</label><input type="range" id="ef-rad" min="1" max="100" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rad-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rad-val" style="width:30px; text-align:right;">2</span></div>
+                this.showModal(effect === 'blur' ? illuEffectTitle('blur', 'Flou simple') : illuEffectTitle('gaussian', 'Flou gaussien'), `
+                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.radius">Rayon:</label><input type="range" id="ef-rad" min="1" max="100" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rad-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rad-val" style="width:30px; text-align:right;">2</span></div>
                     <div class="field-row" style="margin-top:6px; padding-left:60px;">
                         <input type="checkbox" id="ef-blur-edge" onchange="FilterManager.preview()" checked>
-                        <label for="ef-blur-edge">Prendre en compte les bords</label>
+                        <label for="ef-blur-edge" data-i18n="effect.param.respectEdges">Prendre en compte les bords</label>
                     </div>
                 `);
                 break;
             case 'argenticgrain':
-                this.showModal('Grain Argentique', `
-                    <div class="field-row"><label style="width: 80px;">Intensité:</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:25px; text-align:right;">40</span></div>
+                this.showModal(illuEffectTitle('argenticgrain', 'Grain Argentique'), `
+                    <div class="field-row"><label style="width: 80px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:25px; text-align:right;">40</span></div>
                 `);
                 break;
             case 'digitalpattern':
-                this.showModal('Tramage numérique', `
-                    <div class="field-row"><label style="width: 80px;">Intensité:</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:25px; text-align:right;">40</span></div>
-                    <div class="field-row"><label style="width: 80px;">Cellule:</label><input type="range" id="ef-grain-fine" min="2" max="30" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-grain-fine-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-fine-val" style="width:25px; text-align:right;">15</span></div>
+                this.showModal(illuEffectTitle('digitalpattern', 'Tramage numérique'), `
+                    <div class="field-row"><label style="width: 80px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:25px; text-align:right;">40</span></div>
+                    <div class="field-row"><label style="width: 80px;" data-i18n="effect.param.cell">Cellule:</label><input type="range" id="ef-grain-fine" min="2" max="30" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-grain-fine-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-fine-val" style="width:25px; text-align:right;">15</span></div>
                 `);
                 break;
             case 'pixelate':
-                this.showModal('Pixéliser', `
-                    <div class="field-row"><label style="width: 60px;">Taille:</label><input type="range" id="ef-size" min="2" max="50" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-size-val').innerText=this.value; FilterManager.preview()"> <span id="ef-size-val" style="width:25px; text-align:right;">10</span></div>
+                this.showModal(illuEffectTitle('pixelate', 'Pixéliser'), `
+                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.size">Taille:</label><input type="range" id="ef-size" min="2" max="50" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-size-val').innerText=this.value; FilterManager.preview()"> <span id="ef-size-val" style="width:25px; text-align:right;">10</span></div>
                 `);
                 break;
             case 'posterize':
-                this.showModal('Postériser', `
-                    <div class="field-row"><label style="width: 60px;">Niveaux:</label><input type="range" id="ef-lvl" min="2" max="16" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-lvl-val').innerText=this.value; FilterManager.preview()"> <span id="ef-lvl-val" style="width:25px; text-align:right;">4</span></div>
+                this.showModal(illuEffectTitle('posterize', 'Postériser'), `
+                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.levels">Niveaux:</label><input type="range" id="ef-lvl" min="2" max="16" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-lvl-val').innerText=this.value; FilterManager.preview()"> <span id="ef-lvl-val" style="width:25px; text-align:right;">4</span></div>
                 `);
                 break;
             case 'halftone':
-                this.showModal(IlluI18n.t('effect.halftoneTitle'), `
+                this.showModal(illuEffectTitle('halftone', 'Trame (Demi-teinte)'), `
                     <div class="field-row">
                         <label style="width: 110px;" data-i18n="effect.halftoneRadius">Taille des points:</label>
                         <input type="range" id="ef-half-rad" min="1" max="50" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-half-rad-val').innerText=this.value; FilterManager.preview()">
@@ -1041,210 +1060,210 @@ window.FilterManager = {
                 `);
                 break;
             case 'addnoise':
-                this.showModal('Ajouter du bruit', `
-                    <div class="field-row"><label style="width: 60px;">Intensité:</label><input type="range" id="ef-int" min="1" max="100" value="20" style="flex-grow:1;" oninput="document.getElementById('ef-int-val').innerText=this.value; FilterManager.preview()"> <span id="ef-int-val" style="width:25px; text-align:right;">20</span></div>
+                this.showModal(illuEffectTitle('addnoise', 'Ajouter du bruit'), `
+                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-int" min="1" max="100" value="20" style="flex-grow:1;" oninput="document.getElementById('ef-int-val').innerText=this.value; FilterManager.preview()"> <span id="ef-int-val" style="width:25px; text-align:right;">20</span></div>
                 `);
                 break;
             case 'bulge':
-                this.showModal('Bosse', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-bulge" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-bulge-val').innerText=this.value; FilterManager.preview()"> <span id="ef-bulge-val" style="width:25px; text-align:right;">40</span></div>
+                this.showModal(illuEffectTitle('bulge', 'Bosse'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-bulge" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-bulge-val').innerText=this.value; FilterManager.preview()"> <span id="ef-bulge-val" style="width:25px; text-align:right;">40</span></div>
                 `);
                 break;
             case 'pinch':
-                this.showModal('Pincement', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-pinch" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-pinch-val').innerText=this.value; FilterManager.preview()"> <span id="ef-pinch-val" style="width:25px; text-align:right;">40</span></div>
+                this.showModal(illuEffectTitle('pinch', 'Pincement'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-pinch" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-pinch-val').innerText=this.value; FilterManager.preview()"> <span id="ef-pinch-val" style="width:25px; text-align:right;">40</span></div>
                 `);
                 break;
             case 'cabossage':
-                this.showModal('Cabossage', `
+                this.showModal(illuEffectTitle('cabossage', 'Cabossage'), `
                     <div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Échelle</label><input type="range" id="ef-cab-scale" min="1" max="100" value="25" style="flex:1;" oninput="document.getElementById('ef-cab-scale-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-scale-v" style="width:48px;text-align:right;">25.00</span></div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Réfraction</label><input type="range" id="ef-cab-refr" min="0" max="100" value="50" style="flex:1;" oninput="document.getElementById('ef-cab-refr-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-refr-v" style="width:48px;text-align:right;">50.00</span></div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Rugosité</label><input type="range" id="ef-cab-rough" min="0" max="100" value="10" style="flex:1;" oninput="document.getElementById('ef-cab-rough-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-rough-v" style="width:48px;text-align:right;">10.00</span></div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Tension</label><input type="range" id="ef-cab-tension" min="0" max="100" value="10" style="flex:1;" oninput="document.getElementById('ef-cab-tension-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-tension-v" style="width:48px;text-align:right;">10.00</span></div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Qualité</label><input type="range" id="ef-cab-q" min="1" max="4" value="2" step="1" style="flex:1;" oninput="document.getElementById('ef-cab-q-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-q-v" style="width:48px;text-align:right;">2</span></div>
-                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Lumière</label><input type="range" id="ef-cab-light" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-cab-light-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-light-v" style="width:48px;text-align:right;">0</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.scale">Échelle</label><input type="range" id="ef-cab-scale" min="1" max="100" value="25" style="flex:1;" oninput="document.getElementById('ef-cab-scale-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-scale-v" style="width:48px;text-align:right;">25.00</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.refraction">Réfraction</label><input type="range" id="ef-cab-refr" min="0" max="100" value="50" style="flex:1;" oninput="document.getElementById('ef-cab-refr-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-refr-v" style="width:48px;text-align:right;">50.00</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.roughness">Rugosité</label><input type="range" id="ef-cab-rough" min="0" max="100" value="10" style="flex:1;" oninput="document.getElementById('ef-cab-rough-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-rough-v" style="width:48px;text-align:right;">10.00</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.tension">Tension</label><input type="range" id="ef-cab-tension" min="0" max="100" value="10" style="flex:1;" oninput="document.getElementById('ef-cab-tension-v').textContent=Number(this.value).toFixed(2); FilterManager.preview();"><span id="ef-cab-tension-v" style="width:48px;text-align:right;">10.00</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.quality">Qualité</label><input type="range" id="ef-cab-q" min="1" max="4" value="2" step="1" style="flex:1;" oninput="document.getElementById('ef-cab-q-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-q-v" style="width:48px;text-align:right;">2</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;" data-i18n="effect.param.highlight">Lumière</label><input type="range" id="ef-cab-light" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-cab-light-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-light-v" style="width:48px;text-align:right;">0</span></div>
                         <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Angle</label><input type="range" id="ef-cab-angle" min="0" max="360" value="135" style="flex:1;" oninput="document.getElementById('ef-cab-angle-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-angle-v" style="width:48px;text-align:right;">135</span></div>
-                        <div class="field-row" style="margin-bottom:10px;"><label style="width:96px;cursor:pointer;" for="ef-cab-invert">Inverser</label><input type="checkbox" id="ef-cab-invert" onchange="FilterManager.preview()"></div>
-                        <div class="field-row" style="align-items:center;gap:8px;"><span style="min-width:96px;">Bruit aléatoire</span><button type="button" id="ef-cab-reset-noise" style="font-size:11px;">Réinitialiser</button></div>
+                        <div class="field-row" style="margin-bottom:10px;"><label style="width:96px;cursor:pointer;" for="ef-cab-invert" data-i18n="effect.param.invert">Inverser</label><input type="checkbox" id="ef-cab-invert" onchange="FilterManager.preview()"></div>
+                        <div class="field-row" style="align-items:center;gap:8px;"><span style="min-width:96px;" data-i18n="effect.param.randomNoise">Bruit aléatoire</span><button type="button" id="ef-cab-reset-noise" style="font-size:11px;" data-i18n="effect.param.reset">Réinitialiser</button></div>
                     </div>
                 `);
                 break;
             case 'twist':
-                this.showModal('Torsion', `
-                    <div class="field-row"><label style="width: 70px;">Angle:</label><input type="range" id="ef-twist" min="-90" max="90" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-twist-val').innerText=this.value; FilterManager.preview()"> <span id="ef-twist-val" style="width:30px; text-align:right;">30</span></div>
+                this.showModal(illuEffectTitle('twist', 'Torsion'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.angle">Angle:</label><input type="range" id="ef-twist" min="-90" max="90" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-twist-val').innerText=this.value; FilterManager.preview()"> <span id="ef-twist-val" style="width:30px; text-align:right;">30</span></div>
                 `);
                 break;
             case 'crystallize':
-                this.showModal('Cristallisation', `
-                    <div class="field-row"><label style="width: 70px;">Cellules:</label><input type="range" id="ef-cry" min="4" max="48" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-cry-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cry-val" style="width:25px; text-align:right;">12</span></div>
+                this.showModal(illuEffectTitle('crystallize', 'Cristallisation'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.cells">Cellules:</label><input type="range" id="ef-cry" min="4" max="48" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-cry-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cry-val" style="width:25px; text-align:right;">12</span></div>
                 `);
                 break;
             case 'polarInvert':
-                this.showModal('Inversion polaire', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-polar" min="0" max="100" value="80" style="flex-grow:1;" oninput="document.getElementById('ef-polar-val').innerText=this.value; FilterManager.preview()"> <span id="ef-polar-val" style="width:25px; text-align:right;">80</span></div>
+                this.showModal(illuEffectTitle('polarInvert', 'Inversion polaire'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-polar" min="0" max="100" value="80" style="flex-grow:1;" oninput="document.getElementById('ef-polar-val').innerText=this.value; FilterManager.preview()"> <span id="ef-polar-val" style="width:25px; text-align:right;">80</span></div>
                 `);
                 break;
             case 'tileReflect':
-                this.showModal('Réflexion mosaïque', `
-                    <div class="field-row"><label style="width: 70px;">Taille tuile:</label><input type="range" id="ef-tile" min="8" max="128" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-tile-val').innerText=this.value; FilterManager.preview()"> <span id="ef-tile-val" style="width:25px; text-align:right;">24</span></div>
+                this.showModal(illuEffectTitle('tileReflect', 'Réflexion mosaïque'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.tileSize">Taille tuile:</label><input type="range" id="ef-tile" min="8" max="128" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-tile-val').innerText=this.value; FilterManager.preview()"> <span id="ef-tile-val" style="width:25px; text-align:right;">24</span></div>
                 `);
                 break;
             case 'frosted':
-                this.showModal('Verre dépoli', `
-                    <div class="field-row"><label style="width: 70px;">Grain:</label><input type="range" id="ef-frost" min="1" max="24" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frost-val').innerText=this.value; FilterManager.preview()"> <span id="ef-frost-val" style="width:25px; text-align:right;">8</span></div>
+                this.showModal(illuEffectTitle('frosted', 'Verre dépoli'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.grain">Grain:</label><input type="range" id="ef-frost" min="1" max="24" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frost-val').innerText=this.value; FilterManager.preview()"> <span id="ef-frost-val" style="width:25px; text-align:right;">8</span></div>
                 `);
                 break;
             case 'vignette':
-                this.showModal('Vignettage', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-vig" min="0" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vig-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vig-val" style="width:25px; text-align:right;">50</span></div>
+                this.showModal(illuEffectTitle('vignette', 'Vignettage'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-vig" min="0" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vig-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vig-val" style="width:25px; text-align:right;">50</span></div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
-                        <label style="width:70px;">Couleur</label>
+                        <label style="width:70px;" data-i18n="effect.param.color">Couleur</label>
                         <input type="color" id="ef-vig-color" value="#000000" oninput="FilterManager.preview()">
                     </div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
-                        <label style="width:70px;">Fusion</label>
+                        <label style="width:70px;" data-i18n="effect.param.blend">Fusion</label>
                         <select id="ef-vig-blend" onchange="FilterManager.preview()" style="flex-grow:1;">
-                            <option value="0">Normal</option>
-                            <option value="1">Produit</option>
-                            <option value="2">Superposition</option>
-                            <option value="3">Incrustation</option>
+                            <option value="0" data-i18n="effect.blend.normal">Normal</option>
+                            <option value="1" data-i18n="effect.blend.multiply">Produit</option>
+                            <option value="2" data-i18n="effect.blend.overlay">Superposition</option>
+                            <option value="3" data-i18n="effect.blend.screen">Incrustation</option>
                         </select>
                     </div>
                 `);
                 break;
             case 'redeyeremove':
-                this.showModal('Supprimer les yeux rouges', `
-                    <div class="field-row"><label style="width: 70px;">Tolérance:</label><input type="range" id="ef-redeye-tol" min="0" max="100" value="70" style="flex-grow:1;" oninput="document.getElementById('ef-redeye-tol-val').innerText=this.value; FilterManager.preview()"> <span id="ef-redeye-tol-val" style="width:25px; text-align:right;">70</span></div>
+                this.showModal(illuEffectTitle('redeyeremove', 'Supprimer les yeux rouges'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.tolerance">Tolérance:</label><input type="range" id="ef-redeye-tol" min="0" max="100" value="70" style="flex-grow:1;" oninput="document.getElementById('ef-redeye-tol-val').innerText=this.value; FilterManager.preview()"> <span id="ef-redeye-tol-val" style="width:25px; text-align:right;">70</span></div>
                     <div class="field-row" style="margin-top:8px;"><label style="width: 70px;">Saturation:</label><input type="range" id="ef-redeye-sat" min="0" max="100" value="90" style="flex-grow:1;" oninput="document.getElementById('ef-redeye-sat-val').innerText=this.value; FilterManager.preview()"> <span id="ef-redeye-sat-val" style="width:25px; text-align:right;">90</span></div>
                 `);
                 break;
             case 'softglow':
-                this.showModal('Lueur douce', `
-                    <div class="field-row"><label style="width: 70px;">Rayon:</label><input type="range" id="ef-glow-r" min="1" max="15" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-glow-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-glow-r-val" style="width:25px; text-align:right;">6</span></div>
-                    <div class="field-row" style="margin-top:8px;"><label style="width: 70px;">Force:</label><input type="range" id="ef-glow-a" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-glow-a-val').innerText=this.value; FilterManager.preview()"> <span id="ef-glow-a-val" style="width:25px; text-align:right;">40</span></div>
+                this.showModal(illuEffectTitle('softglow', 'Lueur douce'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.radius">Rayon:</label><input type="range" id="ef-glow-r" min="1" max="15" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-glow-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-glow-r-val" style="width:25px; text-align:right;">6</span></div>
+                    <div class="field-row" style="margin-top:8px;"><label style="width: 70px;" data-i18n="effect.param.force">Force:</label><input type="range" id="ef-glow-a" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-glow-a-val').innerText=this.value; FilterManager.preview()"> <span id="ef-glow-a-val" style="width:25px; text-align:right;">40</span></div>
                 `);
                 break;
             case 'dropshadow':
-                this.showModal('Ombre portée', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Ajoute une ombre décalée derrière les pixels visibles du calque (aperçu sur la portée choisie).</p>
-                    <div class="field-row"><label style="width: 92px;">Décalage X</label><input type="range" id="ef-ds-ox" min="-32" max="32" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-ds-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-ox-val" style="width:28px;text-align:right;">4</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Décalage Y</label><input type="range" id="ef-ds-oy" min="-32" max="32" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-ds-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-oy-val" style="width:28px;text-align:right;">6</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Flou</label><input type="range" id="ef-ds-blur" min="0" max="40" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-ds-blur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-blur-val" style="width:28px;text-align:right;">10</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Opacité</label><input type="range" id="ef-ds-op" min="5" max="100" value="45" style="flex-grow:1;" oninput="document.getElementById('ef-ds-op-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-op-val" style="width:28px;text-align:right;">45</span></div>
+                this.showModal(illuEffectTitle('dropshadow', 'Ombre portée'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.dropshadow">Ajoute une ombre décalée derrière les pixels visibles du calque (aperçu sur la portée choisie).</p>
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.offsetX">Décalage X</label><input type="range" id="ef-ds-ox" min="-32" max="32" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-ds-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-ox-val" style="width:28px;text-align:right;">4</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.offsetY">Décalage Y</label><input type="range" id="ef-ds-oy" min="-32" max="32" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-ds-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-oy-val" style="width:28px;text-align:right;">6</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.blur">Flou</label><input type="range" id="ef-ds-blur" min="0" max="40" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-ds-blur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-blur-val" style="width:28px;text-align:right;">10</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.opacity">Opacité</label><input type="range" id="ef-ds-op" min="5" max="100" value="45" style="flex-grow:1;" oninput="document.getElementById('ef-ds-op-val').innerText=this.value; FilterManager.preview()"> <span id="ef-ds-op-val" style="width:28px;text-align:right;">45</span></div>
                 `);
                 break;
             case 'edges':
-                this.showModal('Contours', `
-                    <div class="field-row"><label style="width: 70px;">Sensibilité:</label><input type="range" id="ef-edge" min="1" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-edge-val').innerText=this.value; FilterManager.preview()"> <span id="ef-edge-val" style="width:25px; text-align:right;">40</span></div>
+                this.showModal(illuEffectTitle('edges', 'Contours'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.sensitivity">Sensibilité:</label><input type="range" id="ef-edge" min="1" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-edge-val').innerText=this.value; FilterManager.preview()"> <span id="ef-edge-val" style="width:25px; text-align:right;">40</span></div>
                 `);
                 break;
             case 'emboss':
-                this.showModal('Relief', `
-                    <div class="field-row"><label style="width: 70px;">Intensité:</label><input type="range" id="ef-emb" min="1" max="30" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-emb-val').innerText=this.value; FilterManager.preview()"> <span id="ef-emb-val" style="width:25px; text-align:right;">12</span></div>
+                this.showModal(illuEffectTitle('emboss', 'Relief'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-emb" min="1" max="30" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-emb-val').innerText=this.value; FilterManager.preview()"> <span id="ef-emb-val" style="width:25px; text-align:right;">12</span></div>
                 `);
                 break;
             case 'solarize':
-                this.showModal('Solariser', `
-                    <div class="field-row"><label style="width: 70px;">Seuil:</label><input type="range" id="ef-sol" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-sol-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sol-val" style="width:30px; text-align:right;">128</span></div>
+                this.showModal(illuEffectTitle('solarize', 'Solariser'), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.threshold">Seuil:</label><input type="range" id="ef-sol" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-sol-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sol-val" style="width:30px; text-align:right;">128</span></div>
                 `);
                 break;
             case 'radialblur':
-                this.showModal('Flou radial', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Zone nette au centre, puis flou tangential progressif (rotation).</p>
-                    <div class="field-row"><label style="width: 92px;">Centre net %</label><input type="range" id="ef-rblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Début flou %</label><input type="range" id="ef-rblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-start-val" style="width:28px;text-align:right;">30</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Intensité</label><input type="range" id="ef-rblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-val" style="width:28px;text-align:right;">24</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Angle °</label><input type="range" id="ef-rblur-angle" min="-180" max="180" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:28px;text-align:right;">0</span></div>
+                this.showModal(illuEffectTitle('radialblur', 'Flou radial'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.radialblur">Zone nette au centre, puis flou tangential progressif (rotation).</p>
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.sharpCenter">Centre net %</label><input type="range" id="ef-rblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.blurStart">Début flou %</label><input type="range" id="ef-rblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-start-val" style="width:28px;text-align:right;">30</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-rblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-val" style="width:28px;text-align:right;">24</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.angle">Angle °</label><input type="range" id="ef-rblur-angle" min="-180" max="180" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:28px;text-align:right;">0</span></div>
                 `);
                 break;
             case 'zoomblur':
-                this.showModal('Flou de zoom', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Zone nette au centre, flou radial progressif depuis le point focal.</p>
-                    <div class="field-row"><label style="width: 92px;">Centre net %</label><input type="range" id="ef-zblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Début flou %</label><input type="range" id="ef-zblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-start-val" style="width:28px;text-align:right;">30</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Intensité</label><input type="range" id="ef-zblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-val" style="width:28px;text-align:right;">24</span></div>
+                this.showModal(illuEffectTitle('zoomblur', 'Flou de zoom'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.zoomblur">Zone nette au centre, flou radial progressif depuis le point focal.</p>
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.sharpCenter">Centre net %</label><input type="range" id="ef-zblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.blurStart">Début flou %</label><input type="range" id="ef-zblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-start-val" style="width:28px;text-align:right;">30</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-zblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-val" style="width:28px;text-align:right;">24</span></div>
                 `);
                 break;
             case 'motionblur':
-                this.showModal('Flou de mouvement', `
-                    <div class="field-row"><label style="width: 88px;">Angle °</label><input type="range" id="ef-mblur-angle" min="-180" max="180" value="25" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-angle-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-angle-v" style="width:32px;text-align:right;">25</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;">Distance</label><input type="range" id="ef-mblur-dist" min="1" max="200" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-dist-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-dist-v" style="width:32px;text-align:right;">10</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;">Centré</label><input type="checkbox" id="ef-mblur-center" checked onchange="FilterManager.preview()"></div>
+                this.showModal(illuEffectTitle('motionblur', 'Flou de mouvement'), `
+                    <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.angle">Angle °</label><input type="range" id="ef-mblur-angle" min="-180" max="180" value="25" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-angle-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-angle-v" style="width:32px;text-align:right;">25</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.distance">Distance</label><input type="range" id="ef-mblur-dist" min="1" max="200" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-dist-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-dist-v" style="width:32px;text-align:right;">10</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.centered">Centré</label><input type="checkbox" id="ef-mblur-center" checked onchange="FilterManager.preview()"></div>
                 `);
                 break;
             case 'surfaceblur':
-                this.showModal('Flou de surface', `
-                    <div class="field-row"><label style="width: 88px;">Rayon</label><input type="range" id="ef-sblur-r" min="1" max="50" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-r-v" style="width:32px;text-align:right;">6</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;">Seuil</label><input type="range" id="ef-sblur-t" min="1" max="100" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-t-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-t-v" style="width:32px;text-align:right;">15</span></div>
+                this.showModal(illuEffectTitle('surfaceblur', 'Flou de surface'), `
+                    <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.radius">Rayon</label><input type="range" id="ef-sblur-r" min="1" max="50" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-r-v" style="width:32px;text-align:right;">6</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.threshold">Seuil</label><input type="range" id="ef-sblur-t" min="1" max="100" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-t-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-t-v" style="width:32px;text-align:right;">15</span></div>
                 `);
                 break;
             case 'fragment':
-                this.showModal('Fragment', `
-                    <div class="field-row"><label style="width: 88px;">Fragments</label><input type="range" id="ef-frag-n" min="2" max="50" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-frag-n-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-n-v" style="width:32px;text-align:right;">4</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;">Distance</label><input type="range" id="ef-frag-d" min="0" max="100" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frag-d-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-d-v" style="width:32px;text-align:right;">8</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;">Rotation °</label><input type="range" id="ef-frag-r" min="0" max="360" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-frag-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-r-v" style="width:32px;text-align:right;">0</span></div>
+                this.showModal(illuEffectTitle('fragment', 'Fragment'), `
+                    <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.fragments">Fragments</label><input type="range" id="ef-frag-n" min="2" max="50" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-frag-n-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-n-v" style="width:32px;text-align:right;">4</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.distance">Distance</label><input type="range" id="ef-frag-d" min="0" max="100" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frag-d-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-d-v" style="width:32px;text-align:right;">8</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.rotation">Rotation °</label><input type="range" id="ef-frag-r" min="0" max="360" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-frag-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-r-v" style="width:32px;text-align:right;">0</span></div>
                 `);
                 break;
             case 'oil':
-                this.showModal("Peinture à l'huile", `
-                    <div class="field-row"><label style="width: 70px;">Rayon:</label><input type="range" id="ef-oil" min="2" max="8" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-oil-val').innerText=this.value; FilterManager.preview()"> <span id="ef-oil-val" style="width:25px; text-align:right;">4</span></div>
+                this.showModal(illuEffectTitle('oil', "Peinture à l'huile"), `
+                    <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.radius">Rayon:</label><input type="range" id="ef-oil" min="2" max="8" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-oil-val').innerText=this.value; FilterManager.preview()"> <span id="ef-oil-val" style="width:25px; text-align:right;">4</span></div>
                 `);
                 break;
             case 'projection3d':
-                this.showModal('Projection 3D…', `
+                this.showModal(illuEffectTitle('projection3d', 'Projection 3D…'), `
                     <div style="max-width:440px;font-size:11px;line-height:1.35;">
                         <p style="margin:0 0 6px;color:#333;">Rotation du plan image (perspective) puis déformation optionnelle des quatre coins vers le centre.</p>
-                        <div class="field-row"><label style="width:120px;">Axe horizontal °</label><input type="range" id="ef-3d-rx" min="-60" max="60" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-rx-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-rx-v" style="width:28px;text-align:right;">0</span></div>
-                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;">Axe vertical °</label><input type="range" id="ef-3d-ry" min="-60" max="60" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-ry-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-ry-v" style="width:28px;text-align:right;">0</span></div>
-                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;">Distance caméra</label><input type="range" id="ef-3d-f" min="80" max="800" value="280" style="flex:1;" oninput="document.getElementById('ef-3d-f-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-f-v" style="width:36px;text-align:right;">280</span></div>
-                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;">Zoom %</label><input type="range" id="ef-3d-z" min="20" max="400" value="100" style="flex:1;" oninput="document.getElementById('ef-3d-z-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-z-v" style="width:36px;text-align:right;">100</span></div>
-                        <div style="border-top:1px solid #aaa;margin:8px 0 4px;padding-top:6px;">Coins → centre (perspective type « trapèze »)</div>
-                        <div class="field-row"><label style="width:120px;">Haut gauche</label><input type="range" id="ef-3d-tl" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-tl-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-tl-v" style="width:28px;">0</span></div>
-                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;">Haut droite</label><input type="range" id="ef-3d-tr" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-tr-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-tr-v" style="width:28px;">0</span></div>
-                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;">Bas droite</label><input type="range" id="ef-3d-br" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-br-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-br-v" style="width:28px;">0</span></div>
-                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;">Bas gauche</label><input type="range" id="ef-3d-bl" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-bl-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-bl-v" style="width:28px;">0</span></div>
+                        <div class="field-row"><label style="width:120px;" data-i18n="effect.param.hAxis">Axe horizontal °</label><input type="range" id="ef-3d-rx" min="-60" max="60" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-rx-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-rx-v" style="width:28px;text-align:right;">0</span></div>
+                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;" data-i18n="effect.param.vAxis">Axe vertical °</label><input type="range" id="ef-3d-ry" min="-60" max="60" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-ry-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-ry-v" style="width:28px;text-align:right;">0</span></div>
+                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;" data-i18n="effect.param.cameraDist">Distance caméra</label><input type="range" id="ef-3d-f" min="80" max="800" value="280" style="flex:1;" oninput="document.getElementById('ef-3d-f-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-f-v" style="width:36px;text-align:right;">280</span></div>
+                        <div class="field-row" style="margin-top:4px;"><label style="width:120px;" data-i18n="effect.param.zoom">Zoom %</label><input type="range" id="ef-3d-z" min="20" max="400" value="100" style="flex:1;" oninput="document.getElementById('ef-3d-z-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-z-v" style="width:36px;text-align:right;">100</span></div>
+                        <div style="border-top:1px solid #aaa;margin:8px 0 4px;padding-top:6px;" data-i18n="effect.desc.projection3dCorners">Coins → centre (perspective type « trapèze »)</div>
+                        <div class="field-row"><label style="width:120px;" data-i18n="effect.param.cornerTL">Haut gauche</label><input type="range" id="ef-3d-tl" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-tl-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-tl-v" style="width:28px;">0</span></div>
+                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;" data-i18n="effect.param.cornerTR">Haut droite</label><input type="range" id="ef-3d-tr" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-tr-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-tr-v" style="width:28px;">0</span></div>
+                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;" data-i18n="effect.param.cornerBR">Bas droite</label><input type="range" id="ef-3d-br" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-br-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-br-v" style="width:28px;">0</span></div>
+                        <div class="field-row" style="margin-top:2px;"><label style="width:120px;" data-i18n="effect.param.cornerBL">Bas gauche</label><input type="range" id="ef-3d-bl" min="0" max="100" value="0" style="flex:1;" oninput="document.getElementById('ef-3d-bl-v').innerText=this.value; FilterManager.preview()"><span id="ef-3d-bl-v" style="width:28px;">0</span></div>
                     </div>
                 `);
                 break;
             case 'filmgrain':
-                this.showModal('Grain cinéma', `
-                    <div class="field-row"><label style="width: 92px;">Intensité</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:28px;text-align:right;">40</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Taille du grain</label><input type="range" id="ef-grain-fine" min="4" max="40" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-grain-fine-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-fine-val" style="width:28px;text-align:right;">15</span></div>
+                this.showModal(illuEffectTitle('filmgrain', 'Grain cinéma'), `
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-grain" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-grain-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-val" style="width:28px;text-align:right;">40</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.grainSize">Taille du grain</label><input type="range" id="ef-grain-fine" min="4" max="40" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-grain-fine-val').innerText=this.value; FilterManager.preview()"> <span id="ef-grain-fine-val" style="width:28px;text-align:right;">15</span></div>
                 `);
                 break;
             case 'chromatic':
-                this.showModal('Aberration chromatique', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Décalage du rouge et du bleu (effet prismatique).</p>
-                    <div class="field-row"><label style="width: 92px;">Décalage (px)</label><input type="range" id="ef-chr" min="0" max="24" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-chr-val').innerText=this.value; FilterManager.preview()"> <span id="ef-chr-val" style="width:28px;text-align:right;">6</span></div>
+                this.showModal(illuEffectTitle('chromatic', 'Aberration chromatique'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.chromatic">Décalage du rouge et du bleu (effet prismatique).</p>
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.shift">Décalage (px)</label><input type="range" id="ef-chr" min="0" max="24" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-chr-val').innerText=this.value; FilterManager.preview()"> <span id="ef-chr-val" style="width:28px;text-align:right;">6</span></div>
                 `);
                 break;
             case 'sharpen':
-                this.showModal('Netteté (masque flou)', `
-                    <div class="field-row"><label style="width: 92px;">Intensité</label><input type="range" id="ef-sharp" min="0" max="150" value="45" style="flex-grow:1;" oninput="document.getElementById('ef-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sharp-val" style="width:28px;text-align:right;">45</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Rayon</label><input type="range" id="ef-sharp-r" min="1" max="3" value="1" style="flex-grow:1;" oninput="document.getElementById('ef-sharp-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sharp-r-val" style="width:28px;text-align:right;">1</span></div>
+                this.showModal(illuEffectTitle('sharpen', 'Netteté (masque flou)'), `
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-sharp" min="0" max="150" value="45" style="flex-grow:1;" oninput="document.getElementById('ef-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sharp-val" style="width:28px;text-align:right;">45</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.radius">Rayon</label><input type="range" id="ef-sharp-r" min="1" max="3" value="1" style="flex-grow:1;" oninput="document.getElementById('ef-sharp-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-sharp-r-val" style="width:28px;text-align:right;">1</span></div>
                 `);
                 break;
             case 'exposure':
-                this.showModal('Exposition / gamma', `
-                    <div class="field-row"><label style="width: 92px;">Exposition %</label><input type="range" id="ef-exp" min="25" max="400" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-exp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-exp-val" style="width:36px;text-align:right;">100</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Gamma %</label><input type="range" id="ef-gamma" min="40" max="220" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-gamma-val').innerText=this.value; FilterManager.preview()"> <span id="ef-gamma-val" style="width:36px;text-align:right;">100</span></div>
+                this.showModal(illuEffectTitle('exposure', 'Exposition / gamma'), `
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.exposure">Exposition %</label><input type="range" id="ef-exp" min="25" max="400" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-exp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-exp-val" style="width:36px;text-align:right;">100</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.gamma">Gamma %</label><input type="range" id="ef-gamma" min="40" max="220" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-gamma-val').innerText=this.value; FilterManager.preview()"> <span id="ef-gamma-val" style="width:36px;text-align:right;">100</span></div>
                 `);
                 break;
             case 'wave':
-                this.showModal('Déformation en vague', `
-                    <div class="field-row"><label style="width: 92px;">Amplitude</label><input type="range" id="ef-wave-a" min="0" max="80" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-wave-a-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-a-val" style="width:28px;text-align:right;">12</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Fréquence</label><input type="range" id="ef-wave-f" min="4" max="48" value="14" style="flex-grow:1;" oninput="document.getElementById('ef-wave-f-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-f-val" style="width:28px;text-align:right;">14</span></div>
+                this.showModal(illuEffectTitle('wave', 'Déformation en vague'), `
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.amplitude">Amplitude</label><input type="range" id="ef-wave-a" min="0" max="80" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-wave-a-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-a-val" style="width:28px;text-align:right;">12</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.frequency">Fréquence</label><input type="range" id="ef-wave-f" min="4" max="48" value="14" style="flex-grow:1;" oninput="document.getElementById('ef-wave-f-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-f-val" style="width:28px;text-align:right;">14</span></div>
                 `);
                 break;
             case 'colorbal':
-                this.showModal('Courbes des tonalités', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Ajustez l'équilibre colorimétrique (RVB) ou utilisez les courbes avancées.</p>
-                    <div class="field-row"><label style="width: 92px;">Rouge</label><input type="range" id="ef-cb-r" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-r-val" style="width:28px;text-align:right;">0</span></div>
-                    <div class="field-row" style="margin-top:4px;"><label style="width: 92px;">Vert</label><input type="range" id="ef-cb-g" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-g-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-g-val" style="width:28px;text-align:right;">0</span></div>
-                    <div class="field-row" style="margin-top:4px;"><label style="width: 92px;">Bleu</label><input type="range" id="ef-cb-b" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-b-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-b-val" style="width:28px;text-align:right;">0</span></div>
+                this.showModal(illuEffectTitle('colorbal', 'Courbes des tonalités'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.colorbal">Ajustez l'équilibre colorimétrique (RVB) ou utilisez les courbes avancées.</p>
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.red">Rouge</label><input type="range" id="ef-cb-r" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-r-val" style="width:28px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:4px;"><label style="width: 92px;" data-i18n="effect.param.green">Vert</label><input type="range" id="ef-cb-g" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-g-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-g-val" style="width:28px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:4px;"><label style="width: 92px;" data-i18n="effect.param.blue">Bleu</label><input type="range" id="ef-cb-b" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-b-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-b-val" style="width:28px;text-align:right;">0</span></div>
                     <details class="illu-advanced-section" ontoggle="if(this.open && window.IlluImageAdjustCore) { FilterManager._forceRedrawCurves(); }">
-                        <summary class="illu-advanced-section-summary">Avancé : Courbes des tonalités</summary>
+                        <summary class="illu-advanced-section-summary" data-i18n="effect.advanced.toneCurves">Avancé : Courbes des tonalités</summary>
                         <div class="illu-advanced-section-body">
                             ${window.IlluImageAdjustCore.CurveEditor.createHtml('ef-cb')}
                         </div>
@@ -1261,76 +1280,81 @@ window.FilterManager = {
                 }
                 break;
             case 'mirrorquad':
-                this.showModal('Miroir 4 secteurs', `
-                    <p style="margin:0;font-size:11px;color:#333;">Le quadrant haut-gauche est répété par symétrie dans les 4 quarts (effet « kaleïdoscope carré »).</p>
+                this.showModal(illuEffectTitle('mirrorquad', 'Miroir 4 secteurs'), `
+                    <p style="margin:0;font-size:11px;color:#333;" data-i18n="effect.desc.mirrorquad">Le quadrant haut-gauche est répété par symétrie dans les 4 quarts (effet « kaleïdoscope carré »).</p>
                 `);
                 break;
             case 'ral':
-                this.showModal('Conversion RAL', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Convertit l'image aux teintes industrielles standard de la palette RAL Classic.</p>
+                this.showModal(illuEffectTitle('ral', 'Conversion RAL'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.ral">Convertit l'image aux teintes industrielles standard de la palette RAL Classic.</p>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
-                        <label style="width:92px;">Nuancier RAL</label>
+                        <label style="width:92px;" data-i18n="effect.param.ralSwatch">Nuancier RAL</label>
                         <select id="ef-ral-category" onchange="FilterManager.preview()" style="flex-grow:1;">
-                            <option value="all">Tous (216 couleurs)</option>
-                            <option value="yellow">Jaunes (RAL 1000 - 1037)</option>
-                            <option value="orange">Oranges (RAL 2000 - 2017)</option>
-                            <option value="red">Rouges (RAL 3000 - 3033)</option>
-                            <option value="violet">Violets (RAL 4001 - 4012)</option>
-                            <option value="blue">Bleus (RAL 5000 - 5026)</option>
-                            <option value="green">Verts (RAL 6000 - 6038)</option>
-                            <option value="grey">Gris (RAL 7000 - 7048)</option>
-                            <option value="brown">Bruns (RAL 8000 - 8029)</option>
-                            <option value="white-black">Blancs et Noirs (RAL 9001 - 9023)</option>
+                            <option value="all" data-i18n="effect.ral.all">Tous (216 couleurs)</option>
+                            <option value="yellow" data-i18n="effect.ral.yellow">Jaunes (RAL 1000 - 1037)</option>
+                            <option value="orange" data-i18n="effect.ral.orange">Oranges (RAL 2000 - 2017)</option>
+                            <option value="red" data-i18n="effect.ral.red">Rouges (RAL 3000 - 3033)</option>
+                            <option value="violet" data-i18n="effect.ral.violet">Violets (RAL 4001 - 4012)</option>
+                            <option value="blue" data-i18n="effect.ral.blue">Bleus (RAL 5000 - 5026)</option>
+                            <option value="green" data-i18n="effect.ral.green">Verts (RAL 6000 - 6038)</option>
+                            <option value="grey" data-i18n="effect.ral.grey">Gris (RAL 7000 - 7048)</option>
+                            <option value="brown" data-i18n="effect.ral.brown">Bruns (RAL 8000 - 8029)</option>
+                            <option value="white-black" data-i18n="effect.ral.whiteBlack">Blancs et Noirs (RAL 9001 - 9023)</option>
                         </select>
                     </div>
                     <div class="field-row" style="margin-top:6px;">
-                        <label style="width:92px;">Tramage %</label>
+                        <label style="width:92px;" data-i18n="effect.param.dither">Tramage %</label>
                         <input type="range" id="ef-ral-dither" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-ral-dither-val').innerText=this.value; FilterManager.preview()">
                         <span id="ef-ral-dither-val" style="width:28px;text-align:right;">0</span>
                     </div>
                     <div id="ral-stats-container" style="margin-top:12px;padding:8px;border:1px solid #ccc;background:#f5f5f5;border-radius:4px;display:none;">
-                        <div style="font-weight:bold;font-size:11px;margin-bottom:6px;color:#333;">Couleurs RAL principales détectées :</div>
+                        <div style="font-weight:bold;font-size:11px;margin-bottom:6px;color:#333;" data-i18n="effect.ral.statsTitle">Couleurs RAL principales détectées :</div>
                         <div id="ral-stats-list" style="display:flex;flex-direction:column;gap:4px;font-size:10px;"></div>
                     </div>
                 `);
                 break;
+            case 'cmjn':
+                this.showModal(illuEffectTitle('cmjn', 'Conversion CMJN'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.cmjn">Simule l'espace colorimétrique d'une imprimante par synthèse soustractive (CMJN) et restitue les couleurs reproductibles.</p>
+                `);
+                break;
             case 'contour':
-                this.showModal('Contour (Transparence)', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Dessine un contour de couleur autour des éléments basé sur la transparence.</p>
+                this.showModal(illuEffectTitle('contour', 'Contour (Transparence)'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.contour">Dessine un contour de couleur autour des éléments basé sur la transparence.</p>
                     <div class="field-row" style="margin-top:6px;">
-                        <label style="width:92px;">Largeur (px)</label>
+                        <label style="width:92px;" data-i18n="effect.param.width">Largeur (px)</label>
                         <input type="range" id="ef-contour-width" min="1" max="20" value="3" style="flex-grow:1;" oninput="document.getElementById('ef-contour-width-val').innerText=this.value; FilterManager.preview()">
                         <span id="ef-contour-width-val" style="width:28px;text-align:right;">3</span>
                     </div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
-                        <label style="width:92px;">Couleur</label>
+                        <label style="width:92px;" data-i18n="effect.param.color">Couleur</label>
                         <input type="color" id="ef-contour-color" value="#ff0000" oninput="FilterManager.preview()">
                     </div>
                     <div class="field-row" style="margin-top:6px;">
-                        <label style="width:92px;">Opacité %</label>
+                        <label style="width:92px;" data-i18n="effect.param.opacity">Opacité %</label>
                         <input type="range" id="ef-contour-opacity" min="0" max="100" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-contour-opacity-val').innerText=this.value; FilterManager.preview()">
                         <span id="ef-contour-opacity-val" style="width:28px;text-align:right;">100</span>
                     </div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
-                        <label style="width:92px;">Position</label>
+                        <label style="width:92px;" data-i18n="effect.param.position">Position</label>
                         <select id="ef-contour-mode" onchange="FilterManager.preview()" style="flex-grow:1;">
-                            <option value="outside">Extérieur</option>
-                            <option value="inside">Intérieur</option>
-                            <option value="both">Double (Centré)</option>
+                            <option value="outside" data-i18n="effect.contour.outside">Extérieur</option>
+                            <option value="inside" data-i18n="effect.contour.inside">Intérieur</option>
+                            <option value="both" data-i18n="effect.contour.both">Double (Centré)</option>
                         </select>
                     </div>
                 `);
                 break;
             case 'duotone':
-                this.showModal('Duo-tone', `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Teinte du dégradé selon la luminance du calque.</p>
-                    <div class="field-row" style="align-items:center;gap:8px;"><label style="width:72px;">Ombre</label><input type="color" id="ef-duo-c1" value="#1a0533" oninput="FilterManager.preview()"></div>
-                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;"><label style="width:72px;">Lumière</label><input type="color" id="ef-duo-c2" value="#fff5e0" oninput="FilterManager.preview()"></div>
-                    <div class="field-row" style="margin-top:8px;"><label style="width: 92px;">Mi-ton</label><input type="range" id="ef-duo-mid" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-duo-mid-val').innerText=this.value; FilterManager.preview()"> <span id="ef-duo-mid-val" style="width:28px;text-align:right;">128</span></div>
+                this.showModal(illuEffectTitle('duotone', 'Duo-tone'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.duotone">Teinte du dégradé selon la luminance du calque.</p>
+                    <div class="field-row" style="align-items:center;gap:8px;"><label style="width:72px;" data-i18n="effect.param.shadow">Ombre</label><input type="color" id="ef-duo-c1" value="#1a0533" oninput="FilterManager.preview()"></div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;"><label style="width:72px;" data-i18n="effect.param.highlight">Lumière</label><input type="color" id="ef-duo-c2" value="#fff5e0" oninput="FilterManager.preview()"></div>
+                    <div class="field-row" style="margin-top:8px;"><label style="width: 92px;" data-i18n="effect.param.midtone">Mi-ton</label><input type="range" id="ef-duo-mid" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-duo-mid-val').innerText=this.value; FilterManager.preview()"> <span id="ef-duo-mid-val" style="width:28px;text-align:right;">128</span></div>
                 `);
                 break;
             case 'chroma':
-                this.showModal('Incrustation Pro (CIELAB)', window.ChromaKeyer.getUI(window.IlluI18n, {
+                this.showModal(illuEffectTitle('chroma', 'Incrustation Pro (CIELAB)'), window.ChromaKeyer.getUI(window.IlluI18n, {
                     r: parseInt(document.getElementById('ef-ch-r')?.value || 0, 10),
                     g: parseInt(document.getElementById('ef-ch-g')?.value || 255, 10),
                     b: parseInt(document.getElementById('ef-ch-b')?.value || 0, 10)
@@ -1338,17 +1362,13 @@ window.FilterManager = {
                 if (window.ChromaKeyer && window.ChromaKeyer.syncUI) window.ChromaKeyer.syncUI();
                 break;
             case 'median':
-                this.showModal('Réduction du bruit', `
-                    <div class="field-row"><label style="width: 92px;">Densité (rayon)</label><input type="range" id="ef-med-rad" min="1" max="4" value="1" style="flex-grow:1;" oninput="document.getElementById('ef-med-rad-val').innerText=this.value; FilterManager.preview()"> <span id="ef-med-rad-val" style="width:28px;text-align:right;">1</span></div>
+                this.showModal(illuEffectTitle('median', 'Réduction du bruit'), `
+                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.density">Densité (rayon)</label><input type="range" id="ef-med-rad" min="1" max="4" value="1" style="flex-grow:1;" oninput="document.getElementById('ef-med-rad-val').innerText=this.value; FilterManager.preview()"> <span id="ef-med-rad-val" style="width:28px;text-align:right;">1</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 92px;">Intensité %</label><input type="range" id="ef-med-str" min="0" max="100" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-med-str-val').innerText=this.value; FilterManager.preview()"> <span id="ef-med-str-val" style="width:28px;text-align:right;">100</span></div>
                 `);
                 break;
             case 'vhs': {
-                const vhsTitle =
-                    window.IlluI18n && typeof window.IlluI18n.t === 'function'
-                        ? window.IlluI18n.t('effect.vhsTitle')
-                        : 'Effet VHS';
-                this.showModal(vhsTitle, `
+                this.showModal(illuEffectTitle('vhs', 'Effet VHS'), `
                     <div class="illu-vhs-split">
                         <div class="illu-vhs-preview-col" aria-label="Aperçu VHS">
                             <canvas id="illu-vhs-preview-canvas" class="illu-vhs-preview-canvas" width="1" height="1"></canvas>
@@ -1692,7 +1712,7 @@ window.FilterManager = {
         this._abortLivePreviewRuns();
         await this._waitForPreviewIdle();
         const eff = this.currentEffect;
-        const label = eff ? EFFECT_HISTORY_LABELS[eff] || eff : '';
+        const label = eff ? illuEffectHistoryLabel(eff) : '';
         const P = window.IlluProgress;
         const hasWork = this._effectTargets && this._effectTargets.length && eff;
         const instant = instantChain === true;
@@ -1852,7 +1872,7 @@ window.FilterManager = {
             this._previewRaf = null;
         }
         if (this.currentEffect !== 'chroma' || !this._effectTargets || !this._effectTargets.length) return;
-        if (!EditorManager.activeProject || (EditorManager.mode !== 'pixel' && EditorManager.mode !== 'pixel-dither')) return;
+        if (!EditorManager.activeProject || !EditorManager.isPixelMode) return;
         const val = (id) => parseFloat(document.getElementById(id) ? document.getElementById(id).value : '0') || 0;
         const kr = Math.max(0, Math.min(255, val('ef-ch-r')));
         const kg = Math.max(0, Math.min(255, val('ef-ch-g')));
@@ -1966,7 +1986,7 @@ window.FilterManager = {
         this._effectDialogDidClose();
         window._chromaKeyPickActive = false;
         document.body.style.cursor = '';
-        const base = EFFECT_HISTORY_LABELS.chromaAlphaMask || 'Incrustation (masque alpha)';
+        const base = illuEffectTitle('chromaAlphaMask', 'Incrustation (masque alpha)');
         this._commitEffectHistory(base);
         this._frozenSnapshots = null;
         this._effectTargets = null;
@@ -2487,11 +2507,14 @@ window.FilterManager = {
                 this._previewOneTarget(val, pw, ph); // Synchronous fallback
             }
             
-            // Auto-re-dither if in dither mode
-            if (EditorManager.mode === 'pixel-dither') {
+            const pm = EditorManager.activeProject && EditorManager.activeProject.mode;
+            if (
+                pm &&
+                pm !== 'pixel' &&
+                EditorManager.constrainImageDataToProjectMode
+            ) {
                 const idata = this.ctx.getImageData(0, 0, pw, ph);
-                const inv = EditorManager.activeProject?.ditherInvert || false;
-                EditorManager._ditherImageData(idata, EditorManager.ditherEffectSize, { invert: inv });
+                EditorManager.constrainImageDataToProjectMode(idata, pm);
                 this.ctx.putImageData(idata, 0, 0);
             }
 
@@ -2557,7 +2580,10 @@ window.FilterManager = {
             this._refreshLayerBufferFromWorkCanvas(layer, backup, fw, fh, pw, ph, useLowResModal);
             if (this._effectPreviewIsFinal && layer && layer.id && EditorManager._pixelLayerViewEls) {
                 const v = EditorManager._pixelLayerViewEls.get(layer.id);
-                if (v) EditorManager._pixelLayerViewEls.delete(layer.id);
+                if (v) {
+                    if (v.parentNode) v.remove();
+                    EditorManager._pixelLayerViewEls.delete(layer.id);
+                }
             }
         }
 
@@ -2652,7 +2678,7 @@ window.FilterManager = {
         statsList.innerHTML = '';
 
         const top5 = sorted.slice(0, 5);
-        const isFrench = (window.IlluI18n && window.IlluI18n.getLanguage && window.IlluI18n.getLanguage() === 'fr') || true;
+        const isFrench = window.IlluI18n && typeof window.IlluI18n.getLang === 'function' && window.IlluI18n.getLang() === 'fr';
 
         for (const item of top5) {
             const pct = Math.round((item.count / totalCounted) * 100);

@@ -24,6 +24,7 @@ body.illu-mobile-shell-active.effect-dialog-open #effect-dialog {
 }
 
 body.illu-mobile-shell-active #settings-overlay,
+body.illu-mobile-shell-active #welcome-overlay,
 body.illu-mobile-shell-active #dialog-overlay,
 body.illu-mobile-shell-active #illu-alert-overlay,
 body.illu-mobile-shell-active #close-tab-overlay,
@@ -102,7 +103,7 @@ body.illu-mobile-shell-active #illu-mobile-top-bar {
     padding: 6px 8px;
     padding-top: max(6px, env(safe-area-inset-top, 0px));
     box-sizing: border-box;
-    background: linear-gradient(180deg, var(--mp-title-light, #4a7ab8) 0%, var(--mp-title, #0f2d5c) 100%);
+    background: linear-gradient(180deg, var(--mp-title-light, #6aadad) 0%, var(--mp-title, #065a5a) 100%);
     border-bottom: 1px solid var(--mp-dock-border, #404040);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
@@ -200,6 +201,12 @@ body.illu-mobile-shell-active #tool-pinned-toggles > #tool-main-header {
     box-sizing: border-box;
 }
 
+body.illu-mobile-shell-active #illu-mobile-sheet-tools-body #main-toolbox.tool-grid--pdn .tool-btn.tool-btn--span-2 {
+    grid-column: span 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+}
+
 /* Ruban : ne pas aplatir les groupes (sinon les boutons débordent sous les alvéoles voisines) */
 body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-icon-toggle-group,
 body.illu-mobile-shell-active:not(.illu-toolbar-ribbon) #tool-pinned-toggles .illu-mode-toggle-group {
@@ -265,7 +272,7 @@ body.illu-mobile-shell-active #tool-options-bar-row1 .illu-menubar-icon-btn {
 }
 
 .illu-mobile-top-bar__btn i {
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
 }
 
 .illu-mobile-top-bar__btn:active,
@@ -541,11 +548,11 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
 .illu-mobile-dock-btn i {
     font-size: 24px;
     line-height: 1;
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
 }
 
 .illu-mobile-dock-btn[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--mp-accent, #0f2d5c) 18%, transparent);
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 18%, transparent);
 }
 
 .illu-mobile-dock-btn:active {
@@ -628,7 +635,7 @@ body.illu-mobile-shell-active #app-status-bar {
     flex: 0 0 auto;
     padding: 8px 10px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.15);
-    background: linear-gradient(180deg, var(--mp-title-light, #4a7ab8) 0%, var(--mp-title, #0f2d5c) 100%);
+    background: linear-gradient(180deg, var(--mp-title-light, #6aadad) 0%, var(--mp-title, #065a5a) 100%);
     color: #fff;
 }
 
@@ -674,8 +681,8 @@ body.illu-mobile-shell-active #app-status-bar {
     font-weight: 600;
     line-height: 1.25;
     text-align: center;
-    color: var(--mp-accent, #0f2d5c);
-    background: color-mix(in srgb, var(--mp-accent, #0f2d5c) 8%, var(--mp-surface, #ece9d8));
+    color: var(--mp-accent, #0d7a7a);
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 8%, var(--mp-surface, #ece9d8));
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
 }
@@ -772,7 +779,7 @@ body.illu-mobile-shell-active .illu-mobile-sheet__body .palette-panel .window-bo
 .illu-mobile-drawer__tab-row--active {
     border-color: var(--mp-inset-top, #a0a0a0) var(--mp-inset-bot, #404040) var(--mp-raised-bot, #808080)
         var(--mp-raised-top, #fff);
-    background: color-mix(in srgb, var(--mp-accent, #0f2d5c) 12%, var(--mp-surface, #ece9d8));
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 12%, var(--mp-surface, #ece9d8));
     font-weight: 600;
 }
 
@@ -828,7 +835,7 @@ body.illu-mobile-shell-active .illu-mobile-sheet__body .palette-panel .window-bo
 
 .illu-mobile-drawer__history-btn i {
     font-size: 18px;
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
 }
 
 body.illu-mobile-shell-active .illu-mobile-opt-strip button,
@@ -892,7 +899,7 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip select {
 
 .illu-mobile-color-quick__btn i {
     font-size: 20px;
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
 }
 
 .illu-mobile-color-quick__btn:active {
@@ -916,7 +923,7 @@ body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #color-target-sel {
 }
 
 body.illu-mobile-ui #btn-col-expand,
-body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #btn-toggle-8bit,
+body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #btn-toggle-color-grid,
 body.illu-mobile-shell-active #illu-mobile-sheet-colors-body #btn-col-expand {
     display: none !important;
 }
@@ -1012,7 +1019,7 @@ body.illu-mobile-shell-active #illu-mobile-sheet-colors-body .palette-swatch {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
     opacity: 0.85;
 }
 
@@ -1046,7 +1053,7 @@ body.illu-mobile-shell-active #illu-mobile-sheet-colors-body .palette-swatch {
     flex: 0 0 24px;
     font-size: 20px;
     text-align: center;
-    color: var(--mp-accent, #0f2d5c);
+    color: var(--mp-accent, #0d7a7a);
 }
 
 .illu-mobile-effect-list__item:active {

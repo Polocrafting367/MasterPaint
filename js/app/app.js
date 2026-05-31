@@ -293,8 +293,17 @@ window.syncIlluAllowOutsideCanvasUI = function () {
     const mcc = document.getElementById('main-canvas-container');
     if (mcc) mcc.classList.toggle('illu-allow-outside-canvas-active', on);
 
+    const ws = document.getElementById('workspace');
+    if (ws) ws.classList.toggle('illu-allow-outside-canvas-active', on);
+
+    const wsw = document.getElementById('workspace-wrapper');
+    if (wsw) wsw.classList.toggle('illu-allow-outside-canvas-active', on);
+
     if (typeof window.syncAllToolbarToggles === 'function') {
         window.syncAllToolbarToggles();
+    }
+    if (typeof window.updateMainCanvasCursor === 'function') {
+        window.updateMainCanvasCursor();
     }
     if (typeof EditorManager !== 'undefined' && typeof EditorManager.render === 'function') {
         EditorManager.render();
@@ -1619,19 +1628,17 @@ window.hideFloatingPalette = function (id) {
 
 window.refreshFloatingPaletteMenuLabels = function () {
     const map = readFloatingPaletteVisibilityMap();
-    const t = (key, fb) =>
-        window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t(key) : fb;
     const rows = [
-        { id: 'win-tools', el: 'menu-win-palette-lbl-win-tools', show: 'menu.floatPalShowTools', hide: 'menu.floatPalHideTools' },
-        { id: 'win-colors', el: 'menu-win-palette-lbl-win-colors', show: 'menu.floatPalShowColors', hide: 'menu.floatPalHideColors' },
-        { id: 'win-layers', el: 'menu-win-palette-lbl-win-layers', show: 'menu.floatPalShowLayers', hide: 'menu.floatPalHideLayers' },
-        { id: 'win-history', el: 'menu-win-palette-lbl-win-history', show: 'menu.floatPalShowHistory', hide: 'menu.floatPalHideHistory' }
+        { id: 'win-tools', el: 'menu-win-tools-check' },
+        { id: 'win-colors', el: 'menu-win-colors-check' },
+        { id: 'win-layers', el: 'menu-win-layers-check' },
+        { id: 'win-history', el: 'menu-win-history-check' }
     ];
     rows.forEach((r) => {
-        const span = document.getElementById(r.el);
-        if (!span) return;
+        const check = document.getElementById(r.el);
+        if (!check) return;
         const vis = map[r.id] !== false;
-        span.textContent = vis ? t(r.hide, 'Masquer') : t(r.show, 'Afficher');
+        check.style.visibility = vis ? 'visible' : 'hidden';
     });
 };
 
@@ -1733,6 +1740,8 @@ window.loadExampleProject = async function () {
         ov.style.display = 'none';
         document.body.classList.remove('no-scroll');
     }
+    const welcome = document.getElementById('welcome-overlay');
+    if (welcome) welcome.style.display = 'none';
 
     try {
         if (window.IlluProgress) window.IlluProgress.splash(20, 'Récupération du projet exemple…');
@@ -2164,23 +2173,77 @@ window.refreshPaletteGridLayout = function () {
     const grid = document.getElementById('palette-grid');
     const winColors = document.getElementById('win-colors');
     if (!grid || !winColors) return;
+    const em = window.EditorManager;
+    const p = em && em.activeProject;
+
+    if (p && p.mode === 'pixel-dither') {
+        grid.classList.add('illu-palette-disabled');
+        grid.style.display = 'none';
+        return;
+    }
+    grid.classList.remove('illu-palette-disabled');
+    
     const expanded = winColors.classList.contains('color-window-expanded');
     const flow = illuPaletteUsesFlowLayout();
     const cell = window.ILLU_PALETTE_CELL_PX || 13;
 
-    if (expanded) {
-        window._illuExpandedPaletteSwatches = window.buildIlluExpandedPaletteSwatches();
-        if (flow) {
-            illuApplyPaletteGridFlow(grid, window._illuExpandedPaletteSwatches, cell);
+    let baseSwatches = null;
+    let isCmjn = p && em.isCmjnSimulationMode && em.isCmjnSimulationMode(p.mode) && em.applyCmjnFilter;
+    let isRestricted = p && em.isPaletteRestrictedMode && em.isPaletteRestrictedMode(p.mode) && em.buildModePaletteGridSwatches;
+
+    const mapCmjnSwatch = (item) => {
+        let r, g, b;
+        if (typeof item === 'string') {
+            const hex = item.startsWith('#') ? item : '#' + item;
+            const rgb = em.hexToRgb(hex);
+            r = rgb.r; g = rgb.g; b = rgb.b;
         } else {
-            illuApplyPaletteGridFixed(grid, 37, 4, window._illuExpandedPaletteSwatches, cell);
+            r = item.r; g = item.g; b = item.b;
         }
-    } else {
-        window._illuCompactPaletteSwatches = window.buildIlluCompactPaletteSwatches();
-        if (flow) {
-            illuApplyPaletteGridFlow(grid, window._illuCompactPaletteSwatches, cell);
+        const out = em.applyCmjnFilter(r, g, b);
+        return { r: out.r, g: out.g, b: out.b, a: item.a != null ? item.a : 255 };
+    };
+
+    const mapRestrictedSwatch = (item) => {
+        let r, g, b;
+        if (typeof item === 'string') {
+            const hex = item.startsWith('#') ? item : '#' + item;
+            const rgb = em.hexToRgb(hex);
+            r = rgb.r; g = rgb.g; b = rgb.b;
         } else {
-            illuApplyPaletteGridFixed(grid, 14, 4, window._illuCompactPaletteSwatches, cell);
+            r = item.r; g = item.g; b = item.b;
+        }
+        const out = em._quantizeOpaquePixelRgb ? em._quantizeOpaquePixelRgb(r, g, b, p.mode) : {r, g, b};
+        return { r: out.r, g: out.g, b: out.b, a: item.a != null ? item.a : 255 };
+    };
+
+    if (isCmjn || (isRestricted && !expanded)) {
+        if (expanded) {
+            baseSwatches = window.buildIlluExpandedPaletteSwatches().map(isCmjn ? mapCmjnSwatch : mapRestrictedSwatch);
+        } else {
+            baseSwatches = window.buildIlluCompactPaletteSwatches().map(isCmjn ? mapCmjnSwatch : mapRestrictedSwatch);
+        }
+    } else if (isRestricted && expanded) {
+        baseSwatches = em.buildModePaletteGridSwatches(p.mode);
+    } else {
+        if (expanded) {
+            window._illuExpandedPaletteSwatches = window.buildIlluExpandedPaletteSwatches();
+            baseSwatches = window._illuExpandedPaletteSwatches;
+        } else {
+            window._illuCompactPaletteSwatches = window.buildIlluCompactPaletteSwatches();
+            baseSwatches = window._illuCompactPaletteSwatches;
+        }
+    }
+
+    if (!baseSwatches || !baseSwatches.length) return;
+
+    if (flow) {
+        illuApplyPaletteGridFlow(grid, baseSwatches, cell);
+    } else {
+        if (expanded) {
+            illuApplyPaletteGridFixed(grid, 37, Math.ceil(baseSwatches.length / 37), baseSwatches, cell);
+        } else {
+            illuApplyPaletteGridFixed(grid, 14, 4, baseSwatches, cell);
         }
     }
 };
@@ -2952,7 +3015,7 @@ function syncSettingsFormFromStorage() {
         const hex =
             window.IlluTheme && typeof window.IlluTheme.normalizeAccent === 'function'
                 ? window.IlluTheme.normalizeAccent(s)
-                : '#0f2d5c';
+                : '#0d7a7a';
         document.querySelectorAll('input[name="settings-accent"]').forEach((r) => {
             r.checked = (r.value || '').toLowerCase() === hex.toLowerCase();
         });
@@ -2962,14 +3025,6 @@ function syncSettingsFormFromStorage() {
         try {
             dark.checked = localStorage.getItem('illu_theme_dark') === '1';
         } catch (e) { /* ignore */ }
-    }
-    const startup = document.getElementById('settings-hide-startup');
-    if (startup) {
-        try {
-            startup.checked = localStorage.getItem('illu_hide_about') === '1';
-        } catch (e) {
-            startup.checked = false;
-        }
     }
     syncSettingsLangScopeFromStorage();
     syncSettingsThemeVariantScopeFromStorage();
@@ -3073,18 +3128,129 @@ window.clearIlluLocalStorage = async function () {
 };
 
 window.showAboutIfNeeded = function () {
+    if (typeof window.illuShouldAutoShowWelcome === 'function' && !window.illuShouldAutoShowWelcome()) return;
+    window.showWelcomeDialog();
+};
+
+/** Jamais au démarrage automatique sur téléphone / shell mobile / fenêtre trop petite. */
+window.illuIsWelcomeDialogSuppressed = function () {
+    if (typeof window.illuIsPhoneLikeClient === 'function' && window.illuIsPhoneLikeClient()) return true;
     try {
-        if (localStorage.getItem('illu_hide_about') === '1') return;
+        if (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'phone') return true;
     } catch (e) { /* ignore */ }
-    /* Téléphone / petit appareil tactile : pas de fenêtre paramètres au premier lancement (réglages via menu ☰). */
-    if (typeof window.illuIsPhoneLikeClient === 'function' && window.illuIsPhoneLikeClient()) return;
-    /* Démarrage uniquement : pas de dialogue paramètres si la fenêtre est trop petite (menu Paramètres force toujours l’ouverture). */
+    if (
+        document.body &&
+        (document.body.classList.contains('illu-mobile-ui') ||
+            document.body.classList.contains('illu-mobile-shell-active'))
+    ) {
+        return true;
+    }
+    /* Garde-fou : viewport type téléphone (complète Client Hints / tactile). */
     try {
         const w = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const h = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
-        if (w > 0 && h > 0 && (w < 900 || h < 500)) return;
+        if (w > 0 && h > 0 && (w < 900 || h < 500)) return true;
     } catch (e) { /* ignore */ }
-    window.showSettingsDialog(false);
+    return false;
+};
+
+/** Afficher la fenêtre Bienvenue au boot : 1re visite OU « Voir au démarrage » = Oui (pas sur téléphone). */
+window.illuMigrateWelcomeSeenKey = function () {
+    try {
+        if (localStorage.getItem('illu_welcome_seen') === '1') return;
+        if (localStorage.getItem('illu_hide_about') === '1') {
+            localStorage.setItem('illu_welcome_seen', '1');
+            return;
+        }
+        if (localStorage.getItem('illu_ui_layout') != null) {
+            localStorage.setItem('illu_welcome_seen', '1');
+        }
+    } catch (e) { /* ignore */ }
+};
+
+window.illuShouldAutoShowWelcome = function () {
+    if (typeof window.illuMigrateWelcomeSeenKey === 'function') window.illuMigrateWelcomeSeenKey();
+    if (window.illuIsWelcomeDialogSuppressed()) return false;
+    try {
+        const hideStartup = localStorage.getItem('illu_hide_about') === '1';
+        const firstVisit = localStorage.getItem('illu_welcome_seen') !== '1';
+        return firstVisit || !hideStartup;
+    } catch (e) {
+        return true;
+    }
+};
+
+window.markWelcomeDialogSeen = function () {
+    try {
+        localStorage.setItem('illu_welcome_seen', '1');
+    } catch (e) { /* ignore */ }
+};
+
+window.showWelcomeDialog = function (force) {
+    const ov = document.getElementById('welcome-overlay');
+    if (!ov) return;
+    if (!force && document.body && document.body.classList.contains('illu-splash-active')) return;
+    if (!force && typeof window.illuShouldAutoShowWelcome === 'function' && !window.illuShouldAutoShowWelcome()) {
+        return;
+    }
+    if (window.IlluI18n) window.IlluI18n.apply();
+
+    // Sync UI with storage values for the welcome window elements
+    syncSettingsThemeVariantScopeFromStorage();
+    syncSettingsLayoutScopeFromStorage();
+    syncSettingsLangScopeFromStorage();
+    const welcomeLang = document.getElementById('welcome-lang-scope-row');
+    if (welcomeLang && window.IlluI18n && typeof window.IlluI18n.getLang === 'function') {
+        illuSettingsScopeSetActive(welcomeLang, window.IlluI18n.getLang() === 'en' ? 'en' : 'fr');
+    }
+    const welcomeLayout = document.getElementById('welcome-layout-scope-row');
+    if (welcomeLayout && typeof window.getUILayoutMode === 'function') {
+        const mode = window.getUILayoutMode();
+        illuSettingsScopeSetActive(
+            welcomeLayout,
+            mode === 'photoshop' || mode === 'phone' ? mode : 'floating'
+        );
+    }
+    try {
+        const hex =
+            window.IlluTheme && typeof window.IlluTheme.normalizeAccent === 'function'
+                ? window.IlluTheme.normalizeAccent(localStorage.getItem('illu_accent'))
+                : '#0d7a7a';
+        ov.querySelectorAll('input[name="welcome-accent"]').forEach((r) => {
+            r.checked = (r.value || '').toLowerCase() === String(hex).toLowerCase();
+        });
+    } catch (e) { /* ignore */ }
+    const welcomeDark = document.getElementById('welcome-theme-dark');
+    if (welcomeDark) {
+        try {
+            welcomeDark.checked = localStorage.getItem('illu_theme_dark') === '1';
+        } catch (e) {
+            welcomeDark.checked = false;
+        }
+        const themeRow = ov.querySelector('[data-illu-toggle-for="welcome-theme-dark"]');
+        if (themeRow) illuSettingsToggleSetActive(themeRow, !!welcomeDark.checked);
+    }
+    const welcomeStartup = document.getElementById('welcome-hide-startup');
+    if (welcomeStartup) {
+        try {
+            welcomeStartup.checked = localStorage.getItem('illu_hide_about') === '1';
+        } catch (e) {
+            welcomeStartup.checked = false;
+        }
+        const startupRow = ov.querySelector('[data-illu-toggle-for="welcome-hide-startup"]');
+        if (startupRow) illuSettingsToggleSetActive(startupRow, !!welcomeStartup.checked);
+    }
+
+    ov.style.display = 'flex';
+    document.body.classList.add('no-scroll');
+};
+
+window.closeWelcomeDialog = function () {
+    const ov = document.getElementById('welcome-overlay');
+    if (!ov) return;
+    if (typeof window.markWelcomeDialogSeen === 'function') window.markWelcomeDialogSeen();
+    ov.style.display = 'none';
+    document.body.classList.remove('no-scroll');
 };
 
 /** @param {boolean} [force] si true, affiche même si « ne plus afficher » a été coché. */
@@ -3123,14 +3289,10 @@ window.showSettingsDialog = function (force) {
     const ov = document.getElementById('settings-overlay');
     if (!ov) return;
     if (!force && document.body && document.body.classList.contains('illu-splash-active')) return;
-    if (!force) {
-        try {
-            if (localStorage.getItem('illu_hide_about') === '1') return;
-        } catch (e) { /* ignore */ }
-    }
     syncSettingsFormFromStorage();
     if (window.IlluI18n) window.IlluI18n.apply();
     ov.style.display = 'flex';
+    document.body.classList.add('no-scroll');
 };
 
 /** @deprecated Utiliser showSettingsDialog */
@@ -3873,7 +4035,10 @@ window.IlluTheme = {
         '#166534',
         '#059669',
         '#0d7a7a',
+        '#0891b2',
+        '#2563eb',
         '#0f2d5c',
+        '#4338ca',
         '#5b21b6',
         '#c026d3',
         '#db2777'
@@ -3885,7 +4050,7 @@ window.IlluTheme = {
     normalizeAccent(hex) {
         const h = String(hex || '').trim().toLowerCase();
         if (/^#[0-9a-f]{6}$/.test(h) && this.ACCENT_PRESETS.includes(h)) return h;
-        return '#0f2d5c';
+        return '#0d7a7a';
     },
     /** Texte lisible sur fond accent (menus, listes) : noir ou blanc selon luminance WCAG. */
     menuHoverForegroundForAccent(hex) {
@@ -3916,7 +4081,7 @@ window.IlluTheme = {
         if (typeof illuEnforceLockedAppearanceStorage === 'function') {
             illuEnforceLockedAppearanceStorage();
         }
-        let hex = '#0f2d5c';
+        let hex = '#0d7a7a';
         try {
             const s = localStorage.getItem('illu_accent');
             hex = this.normalizeAccent(s);
@@ -4020,6 +4185,7 @@ function initSettingsLiveApply() {
     });
 
     illuBindSettingsScopeRows();
+    window.illuBindWelcomeWindow();
     const langRow = document.getElementById('settings-lang-scope-row');
     if (langRow) langRow.addEventListener('click', applyLangFromForm);
     const variantRow = document.getElementById('settings-ui-base-row');
@@ -4255,13 +4421,13 @@ window.illuUpdateRulers = function () {
     
     rTop.style.background = rulerBg;
     rTop.style.borderBottom = `1px solid ${rulerBorder}`;
-    rTop.style.width = `${wsW}px`;
+
     rTop.width = wsW;
     rTop.height = 18;
     
     rLeft.style.background = rulerBg;
     rLeft.style.borderRight = `1px solid ${rulerBorder}`;
-    rLeft.style.height = `${wsH}px`;
+
     rLeft.width = 18;
     rLeft.height = wsH;
     
@@ -4381,5 +4547,135 @@ window.illuUpdateRulers = function () {
         typeof window.illuClampAllFloatingPalettes === 'function'
     ) {
         requestAnimationFrame(() => window.illuClampAllFloatingPalettes());
+    }
+};
+
+window.illuBindWelcomeWindow = function () {
+    const welcome = document.getElementById('welcome-overlay');
+    if (!welcome) return;
+
+    if (welcome.dataset.illuWelcomeBound !== '1') {
+        welcome.dataset.illuWelcomeBound = '1';
+        welcome.addEventListener('click', (e) => {
+            if (e.target === welcome && typeof window.closeWelcomeDialog === 'function') {
+                window.closeWelcomeDialog();
+            }
+        });
+    }
+    
+    // Bind scopes manually since we renamed IDs
+    welcome.querySelectorAll('.illu-settings-scope-btn-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+            const btn = e.target.closest('.illu-scope-btn');
+            if (!btn || !row.contains(btn)) return;
+            const value = btn.getAttribute('data-value');
+            if (value == null || value === '') return;
+            illuSettingsScopeSetActive(row, value);
+            
+            // Sync with actual settings
+            if (row.id === 'welcome-lang-scope-row') {
+                const sr = document.getElementById('settings-lang-scope-row');
+                if (sr) illuSettingsScopeSetActive(sr, value);
+                if (window.IlluI18n && typeof window.IlluI18n.setLang === 'function') {
+                    window.IlluI18n.setLang(value === 'en' ? 'en' : 'fr');
+                    if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
+                    if (typeof window.EditorManager !== 'undefined' && window.EditorManager) {
+                        if (typeof window.EditorManager.updateTabUI === 'function') window.EditorManager.updateTabUI();
+                        if (typeof window.EditorManager.updateLayerUI === 'function') window.EditorManager.updateLayerUI();
+                    }
+                }
+            } else if (row.id === 'welcome-layout-scope-row') {
+                const sr = document.getElementById('settings-layout-scope-row');
+                if (sr) illuSettingsScopeSetActive(sr, value);
+                try {
+                    localStorage.setItem('illu_ui_layout', value);
+                } catch(e){}
+            }
+        });
+    });
+
+    // Theme dark toggle
+    const themeRow = welcome.querySelector('[data-illu-toggle-for="welcome-theme-dark"]');
+    const themeInput = document.getElementById('welcome-theme-dark');
+    if (themeRow && themeInput) {
+        themeRow.addEventListener('click', (e) => {
+            const btn = e.target.closest('.illu-scope-btn');
+            if (!btn || !themeRow.contains(btn)) return;
+            const want = (btn.getAttribute('data-value') || '0') === '1';
+            themeInput.checked = want;
+            illuSettingsToggleSetActive(themeRow, want);
+            themeInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        themeInput.addEventListener('change', () => {
+            illuSettingsToggleSetActive(themeRow, !!themeInput.checked);
+            try {
+                localStorage.setItem('illu_theme_dark', themeInput.checked ? '1' : '0');
+            } catch (e) { /* ignore */ }
+            if (window.IlluTheme && typeof window.IlluTheme.applyFromStorage === 'function') {
+                window.IlluTheme.applyFromStorage();
+            }
+            // Sync settings form checkbox
+            const dk = document.getElementById('settings-theme-dark');
+            if (dk) {
+                dk.checked = themeInput.checked;
+                const sr = document.querySelector('[data-illu-toggle-for="settings-theme-dark"]');
+                if (sr) illuSettingsToggleSetActive(sr, dk.checked);
+            }
+        });
+    }
+
+    // Accents
+    welcome.querySelectorAll('input[name="welcome-accent"]').forEach((r) => {
+        r.addEventListener('change', () => {
+            if (!r.checked) return;
+            const hex = r.value;
+            try {
+                localStorage.setItem('illu_accent', hex);
+            } catch (e) {}
+            if (window.IlluTheme && typeof window.IlluTheme.applyFromStorage === 'function') {
+                window.IlluTheme.applyFromStorage();
+            }
+            // Sync settings form
+            document.querySelectorAll('input[name="settings-accent"]').forEach((sr) => {
+                sr.checked = (sr.value || '').toLowerCase() === hex.toLowerCase();
+            });
+        });
+    });
+
+    // Startup checkbox
+    const startupRow = welcome.querySelector('[data-illu-toggle-for="welcome-hide-startup"]');
+    const startupInput = document.getElementById('welcome-hide-startup');
+    if (startupRow && startupInput) {
+        startupRow.addEventListener('click', (e) => {
+            const btn = e.target.closest('.illu-scope-btn');
+            if (!btn || !startupRow.contains(btn)) return;
+            const want = (btn.getAttribute('data-value') || '0') === '1';
+            startupInput.checked = want;
+            illuSettingsToggleSetActive(startupRow, want);
+            try {
+                if (want) localStorage.setItem('illu_hide_about', '1');
+                else localStorage.removeItem('illu_hide_about');
+            } catch (e) {}
+        });
+    }
+
+    // Commencer a dessiner button
+    const startBtn = welcome.querySelector('.welcome-dialog-start-btn');
+    if (startBtn) {
+        startBtn.onclick = () => {
+            if (typeof window.closeWelcomeDialog === 'function') window.closeWelcomeDialog();
+            else welcome.style.display = 'none';
+            // Save layout on close just in case
+            try {
+                const row = document.getElementById('welcome-layout-scope-row');
+                const layout = window.illuSettingsScopeGetValue ? window.illuSettingsScopeGetValue(row, 'floating') : 'floating';
+                if (layout === 'photoshop' || layout === 'floating' || layout === 'phone') {
+                    localStorage.setItem('illu_ui_layout', layout);
+                    if (window.EditorManager && typeof window.EditorManager.applyProjectToUI === 'function') {
+                        window.EditorManager.applyProjectToUI();
+                    }
+                }
+            } catch (e) {}
+        };
     }
 };

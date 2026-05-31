@@ -328,7 +328,7 @@
 
     window.illuRemoveBackgroundIntelligent = function () {
         const em = window.EditorManager;
-        if (!em || em.mode !== 'pixel' || !em.activeLayer || !em.activeLayer.buffer) {
+        if (!em || !em.isPixelMode || !em.activeLayer || !em.activeLayer.buffer) {
             window.showIlluAlert(tKey('msg.removeBgPixel', 'Disponible en mode Pixel sur un calque bitmap.'));
             return;
         }

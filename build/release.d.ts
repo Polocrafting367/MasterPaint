@@ -415,6 +415,62 @@ export declare function isPointOnSegment(px: number, py: number, x1: number, y1:
  */
 export declare function getCubicBezierPoint(t: number, x1: number, y1: number, cp1x: number, cp1y: number, cp2x: number, cp2y: number, x2: number, y2: number): number;
 /**
+ * assembly/vectorize/labelColorRegions
+ * @param dataPtr `usize`
+ * @param labelsPtr `usize`
+ * @param queuePtr `usize`
+ * @param palettePtr `usize`
+ * @param countsPtr `usize`
+ * @param w `i32`
+ * @param h `i32`
+ * @param tolerance `i32`
+ * @param minAlpha `i32`
+ * @param maxLabels `i32`
+ * @returns `i32`
+ */
+export declare function labelColorRegions(dataPtr: number, labelsPtr: number, queuePtr: number, palettePtr: number, countsPtr: number, w: number, h: number, tolerance: number, minAlpha: number, maxLabels: number): number;
+/**
+ * assembly/vectorize/detectGridCellSize
+ * @param dataPtr `usize`
+ * @param w `i32`
+ * @param h `i32`
+ * @param outPtr `usize`
+ * @param minAlpha `i32`
+ * @returns `bool`
+ */
+export declare function detectGridCellSize(dataPtr: number, w: number, h: number, outPtr: number, minAlpha: number): boolean;
+/**
+ * assembly/vectorize/extractLabelMask
+ * @param labelsPtr `usize`
+ * @param labelId `i32`
+ * @param maskPtr `usize`
+ * @param w `i32`
+ * @param h `i32`
+ */
+export declare function extractLabelMask(labelsPtr: number, labelId: number, maskPtr: number, w: number, h: number): void;
+/**
+ * assembly/vectorize/computeLabelBounds
+ * @param labelsPtr `usize`
+ * @param labelId `i32`
+ * @param w `i32`
+ * @param h `i32`
+ * @param outPtr `usize`
+ * @returns `i32`
+ */
+export declare function computeLabelBounds(labelsPtr: number, labelId: number, w: number, h: number, outPtr: number): number;
+/**
+ * assembly/vectorize/sampleCellAverageColor
+ * @param dataPtr `usize`
+ * @param w `i32`
+ * @param h `i32`
+ * @param x0 `i32`
+ * @param y0 `i32`
+ * @param cw `i32`
+ * @param ch `i32`
+ * @param outPtr `usize`
+ */
+export declare function sampleCellAverageColor(dataPtr: number, w: number, h: number, x0: number, y0: number, cw: number, ch: number, outPtr: number): void;
+/**
  * assembly/pdn_effects/oilPainting
  * @param srcPtr `usize`
  * @param dstPtr `usize`

@@ -494,6 +494,44 @@ const FilterManager = {
                 this.ctx.putImageData(img, 0, 0);
                 return;
             }
+            case 'cmjn': {
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
+                const d_ = img.data;
+
+                const ic = { r: 0.0, g: 0.6, b: 0.86 };
+                const im = { r: 0.88, g: 0.0, b: 0.47 };
+                const iy = { r: 1.0, g: 0.94, b: 0.0 };
+                const ik = { r: 0.1, g: 0.1, b: 0.1 };
+
+                for (let i = sy * w * 4; i < ey * w * 4; i += 4) {
+                    if (d_[i + 3] < 128) continue;
+                    
+                    const r = d_[i], g = d_[i + 1], b = d_[i + 2];
+                    
+                    const r_prime = r / 255;
+                    const g_prime = g / 255;
+                    const b_prime = b / 255;
+                    
+                    let k = 1 - Math.max(r_prime, g_prime, b_prime);
+                    let c = 0, m = 0, y = 0;
+                    if (k < 1) {
+                        c = (1 - r_prime - k) / (1 - k);
+                        m = (1 - g_prime - k) / (1 - k);
+                        y = (1 - b_prime - k) / (1 - k);
+                    }
+                    
+                    const rf = (1 - c * (1 - ic.r)) * (1 - m * (1 - im.r)) * (1 - y * (1 - iy.r)) * (1 - k * (1 - ik.r));
+                    const gf = (1 - c * (1 - ic.g)) * (1 - m * (1 - im.g)) * (1 - y * (1 - iy.g)) * (1 - k * (1 - ik.g));
+                    const bf = (1 - c * (1 - ic.b)) * (1 - m * (1 - im.b)) * (1 - y * (1 - iy.b)) * (1 - k * (1 - ik.b));
+                    
+                    d_[i] = Math.max(0, Math.min(255, Math.round(rf * 255)));
+                    d_[i + 1] = Math.max(0, Math.min(255, Math.round(gf * 255)));
+                    d_[i + 2] = Math.max(0, Math.min(255, Math.round(bf * 255)));
+                }
+                
+                this.ctx.putImageData(img, 0, 0);
+                return;
+            }
             case 'contour': {
                 const width = pxInt(val('ef-contour-width') || 3);
                 const colorHex = vals['ef-contour-color'] || '#ff0000';

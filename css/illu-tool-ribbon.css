@@ -2424,3 +2424,188 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
 }
 
 #warp-quad-rect-lock {display: none !important;}
+
+/* Sélecteur de formes (style Paint.NET, même présentation que #tool-main-header) */
+.illu-shape-picker-wrap {
+    position: relative;
+    display: block;
+    align-self: stretch;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-picker"] {
+    align-self: stretch;
+    padding-left: 4px;
+    padding-right: 6px;
+}
+
+/* Même présentation que #tool-main-header (liste native + étiquette) */
+body.illu-toolbar-ribbon #illu-shape-picker-header.illu-shape-picker-header {
+    position: relative;
+    display: block;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    min-width: 72px;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    cursor: pointer;
+    overflow: visible;
+}
+
+body.illu-toolbar-ribbon #illu-shape-picker-header .illu-tool-picker-select,
+body.illu-toolbar-ribbon #illu-shape-picker-header .illu-shape-picker-select {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    line-height: 1;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+body.illu-toolbar-ribbon #illu-shape-picker-header .illu-tool-picker {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    padding: 2px 3px;
+    margin: 0;
+    box-sizing: border-box;
+    border: 2px dashed color-mix(in srgb, var(--mp-accent, #806020) 55%, transparent);
+    border-radius: var(--mp-radius, 2px);
+    background: color-mix(in srgb, var(--mp-accent, #806020) 6%, transparent);
+    overflow: hidden;
+}
+
+body.illu-toolbar-ribbon #illu-shape-picker-icon.illu-tool-header-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+body.illu-toolbar-ribbon #illu-shape-picker-header:focus {
+    outline: 1px dotted var(--mp-accent, #806020);
+    outline-offset: 1px;
+}
+
+body.illu-toolbar-ribbon #illu-shape-picker-header:focus .illu-tool-picker {
+    border-color: var(--mp-accent, #806020);
+}
+
+.illu-shape-picker-popup {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 12000;
+    min-width: 300px;
+    max-width: min(92vw, 400px);
+    padding: 6px 8px 8px;
+    border: 1px solid #808080;
+    background: #fff;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.illu-shape-picker-section + .illu-shape-picker-section {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.illu-shape-picker-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #444;
+    margin: 0 0 4px 2px;
+}
+
+.illu-shape-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 40px);
+    gap: 2px;
+}
+
+.illu-shape-picker-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: default;
+    color: inherit;
+}
+
+.illu-shape-picker-item:hover {
+    border-color: #316ac5;
+    background: rgba(49, 106, 197, 0.08);
+}
+
+.illu-shape-picker-item.active {
+    border-color: #316ac5;
+    box-shadow: inset 0 0 0 1px #316ac5;
+    background: rgba(49, 106, 197, 0.12);
+}
+
+.illu-shape-picker-item i,
+.illu-shape-picker-item svg {
+    width: 22px;
+    height: 22px;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+.illu-shape-picker-item .illu-shape-picker-fa {
+    font-size: 17px;
+    line-height: 1;
+    color: inherit;
+}
+
+.illu-shape-picker-item .illu-shape-ico--outline {
+    color: currentColor;
+}
+
+.tool-btn--shape-family .illu-tool-shape-family-ico {
+    color: inherit;
+}
+
+body.theme-dark .illu-shape-picker-popup {
+    background: #2d2d2d;
+    border-color: #555;
+    color: #eee;
+}
+
+body.theme-dark .illu-shape-picker-section-title {
+    color: #ccc;
+}

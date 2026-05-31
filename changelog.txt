@@ -1,5 +1,34 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.96 (31/05/26)
+- Ajout d'un mode de travail CMJN et RAL
+- Modification du mode tramé et des effets lisibilité
+- Modification de la fenetre nouveau projet pour inclur eles nouveau mode de travail
+- Ajout d'une vrai fenetre de bienvenue
+- Correction minime sur le menu fenetre avec les toggle d'affichage des fenetre
+- Ajout de couleur d'accuentation - #0d7a7a passe par défaut!
+- Ajouter bouton nouveau dans barre d'outil sur téléphone
+- Correction dans la barre d'outil sur téléphone
+- Correction bug sur la fenetre des outil en mode téléphone
+
+2.8.87 (30/05/26) :'( 
+- Mise a jours des police d'écriture de l'outil text pas tous fonctionnel
+- Importation de fichier bitmap en mode svg possible avec la création d'un outil de vectrisation
+- Correction bug avec le pause de forme sur le canvas qui déplaçait le contenu du calc
+- Correction de bug avec les outil de dessin crayon et pinceau
+- ajout d'autre formes.
+- Correction bug incrustation
+
+2.7.81 (29/05/26) :'( 
+- Correction visuel des menus
+- Correction des régles poussant les bordure du logitel en dehors de la fenetre 
+
+2.7.79 (28/05/26)
+- Le contenu en dehos du canvas et maintenant affiché en semi transparence
+- SVG : Correction bug d'affichage des obtion d'outil dans la barre d'outils en mode création de forme 
+- amélioration des outil général de selection, uniformisation a travers tout les outils
+- Correction de bug multiples
+
 2.7.75 (27/05/26)
 - Fin implementation de bordure sur les trais/trais arrondie
 - Continuer mise en place du ruabn type office

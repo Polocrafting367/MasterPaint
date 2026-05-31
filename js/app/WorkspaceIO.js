@@ -970,6 +970,7 @@
         const jpegRow = document.getElementById('export-jpeg-options');
         const webpRow = document.getElementById('export-webp-options');
         const pngNote = document.getElementById('export-png-note');
+        const vectorPngScaleRow = document.getElementById('export-vector-png-scale-row');
         const scopeRow = document.getElementById('export-scope-row');
         const illuRow = document.getElementById('export-illu-options');
         const icoRow = document.getElementById('export-ico-options');
@@ -988,6 +989,7 @@
             };
             if (isVec) {
                 add('svg', 'SVG (.svg)');
+                add('png', 'PNG haute résolution (.png)');
                 add('illu', 'Projet Illu (.illu)');
             } else {
                 add('png', 'PNG (.png)');
@@ -1012,6 +1014,7 @@
             setHidden(jpegRow, v !== 'jpeg');
             setHidden(webpRow, v !== 'webp');
             setHidden(pngNote, v !== 'png');
+            setHidden(vectorPngScaleRow, !(isVec && v === 'png'));
             setHidden(icoRow, v !== 'ico');
             setHidden(scopeRow, v !== 'illu');
             setHidden(illuRow, v !== 'illu');
@@ -1185,7 +1188,48 @@ function applyBitDepthReduction(ctx, width, height, bits) {
             return;
         }
 
-        if (em.mode !== 'pixel') {
+        if (em.mode === 'vector' && fmt === 'png') {
+            const scaleEl = document.getElementById('export-vector-png-scale');
+            const scale =
+                overrides.scale != null
+                    ? Number(overrides.scale)
+                    : scaleEl
+                      ? parseFloat(scaleEl.value)
+                      : 2;
+            const base = sanitizeFilename(em.activeProject?.name || 'image');
+            const runVectorPng = (canvas) => {
+                const bitsEl = document.getElementById('export-colors-bits');
+                const bitsValue =
+                    overrides.bits != null ? String(overrides.bits) : bitsEl ? bitsEl.value : '8';
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tCtx = tempCanvas.getContext('2d');
+                if (tCtx) {
+                    tCtx.drawImage(canvas, 0, 0);
+                    if (bitsValue !== '8') {
+                        applyBitDepthReduction(tCtx, tempCanvas.width, tempCanvas.height, bitsValue);
+                    }
+                }
+                tempCanvas.toBlob((blob) => {
+                    if (blob) downloadBlob(blob, `${base}.png`);
+                    hideExportDialog();
+                }, 'image/png');
+            };
+            if (typeof em.flattenActiveVectorDocument === 'function') {
+                em.flattenActiveVectorDocument(scale).then(runVectorPng).catch((err) => {
+                    console.warn(err);
+                    window.showIlluAlert?.('Export PNG vecteur impossible.');
+                    hideExportDialog();
+                });
+            } else {
+                window.showIlluAlert?.('Export PNG vecteur non disponible.');
+                hideExportDialog();
+            }
+            return;
+        }
+
+        if (em.mode && em.mode.startsWith('pixel')) {
             window.showIlluAlert('Export image raster : passez sur un onglet mode Pixel, ou choisissez SVG / projet.');
             return;
         }

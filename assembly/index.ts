@@ -2,6 +2,7 @@
 export * from "./camera_raw";
 export * from "./filters";
 export * from "./vector";
+export * from "./vectorize";
 export * from "./pdn_effects";
 
 /**

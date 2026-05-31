@@ -167,10 +167,15 @@
     function quoteCanvasFontStack(stack) {
         const parts = String(stack || 'sans-serif')
             .split(',')
-            .map((s) => s.trim())
+            .map((s) => {
+                const t = s.trim();
+                if (t.includes(' ') && !t.startsWith('"') && !t.startsWith("'")) {
+                    return `"${t}"`;
+                }
+                return t;
+            })
             .filter(Boolean);
         if (parts.length === 0) return 'sans-serif';
-        if (/\s/.test(parts[0])) parts[0] = `"${parts[0].replace(/"/g, '')}"`;
         return parts.join(', ');
     }
 

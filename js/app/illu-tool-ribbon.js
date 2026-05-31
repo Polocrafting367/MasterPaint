@@ -10,6 +10,11 @@
     const ACTION_RIBBON_GROUPS = [
         { id: 'tool', labelKey: 'ribbon.groupTool', selectors: ['#tool-main-header'] },
         {
+            id: 'shape-picker',
+            labelKey: 'ribbon.groupShapePicker',
+            selectors: ['#illu-shape-picker-wrap']
+        },
+        {
             id: 'selection',
             labelKey: 'ribbon.groupSelection',
             selectors: [
@@ -531,6 +536,7 @@
         const actionIds = new Set((cfg && cfg.actionGroups) || []);
         const paramIds = new Set((cfg && cfg.paramGroups) || []);
         const isVectorSelect = !!(ctx && ctx.isVectorSelect);
+        const suppressVectorContext = !!(ctx && ctx.suppressVectorContext);
         const showHard = !!(ctx && ctx.showHard);
         const warpActive = !!(ctx && ctx.warpActive);
         const gradTypeEl = document.getElementById('tool-shape-grad-type-actions');
@@ -549,7 +555,11 @@
                 active = true;
             } else {
                 if (id === 'tool') active = true;
-                else if (id === 'selection') {
+                else if (id === 'shape-picker') {
+                    active =
+                        typeof window.illuShouldShowShapePickerRibbon === 'function' &&
+                        window.illuShouldShowShapePickerRibbon();
+                } else if (id === 'selection') {
                     active = !isVectorSelect && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
                 } else if (id === 'clipboard') {
                     active = !isVectorSelect && !isMobileRibbon && SELECT_ACTION_TOOLS.has(tool);
@@ -565,16 +575,26 @@
                         typeof EditorManager !== 'undefined' &&
                         EditorManager &&
                         EditorManager.isPixelMode;
-                    const isShapeTool = [
-                        'rect',
-                        'circle',
-                        'line',
-                        'round-3',
-                        'triangle',
-                        'cubic-3',
-                        'pen',
-                        'polygon'
-                    ].includes(tool);
+                    const isShapeTool =
+                        window.ILLU_DRAG_SHAPE_TOOLS && window.ILLU_DRAG_SHAPE_TOOLS.includes(tool)
+                            ? true
+                            : [
+                                  'rect',
+                                  'circle',
+                                  'line',
+                                  'round-3',
+                                  'triangle',
+                                  'star',
+                                  'reg-poly',
+                                  'diamond',
+                                  'trapezoid',
+                                  'parallelogram',
+                                  'triangle-right',
+                                  'callout',
+                                  'cubic-3',
+                                  'pen',
+                                  'polygon'
+                              ].includes(tool);
                     active =
                         isPixelDoc && !isVectorSelect && !isShapeTool && !isMobileRibbon;
                 } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
@@ -595,7 +615,7 @@
                 } else if (id === 'gradient-type' || id === 'gradient-method') {
                     active = actionIds.has('opt-grp-gradient-actions');
                 } else if (id === 'vector-fill' || id === 'vector' || id === 'vector-grad') {
-                    active = isVectorSelect;
+                    active = isVectorSelect && !suppressVectorContext;
                 }
             }
             setGroupHidden(group, !active);
@@ -633,7 +653,7 @@
                 } else if (id === 'text-grad-angle') {
                     active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
                 } else if (id === 'warp') active = paramIds.has('opt-grp-warp-params') || warpActive;
-                else if (id === 'vector-params') active = isVectorSelect;
+                else if (id === 'vector-params') active = isVectorSelect && !suppressVectorContext;
             }
             setGroupHidden(group, !active);
         });
@@ -653,7 +673,9 @@
     window.illuShapeExtraGaugeFlags = function (tool, shapesOn) {
         const on = !!shapesOn;
         return {
-            showBranches: on && tool === 'triangle',
+            showBranches: on && tool === 'star',
+            showPolygonSides: on && tool === 'reg-poly',
+            showCalloutStyle: on && tool === 'callout',
             showCorner: on && tool === 'round-3'
         };
     };
@@ -665,6 +687,10 @@
         const cornerRow = document.getElementById('tool-shape-corner-row');
         const branchesRow = document.getElementById('tool-triangle-branches-row');
         const triSep = document.getElementById('tool-triangle-branches-sep');
+        const polySidesRow = document.getElementById('tool-polygon-sides-row');
+        const polySep = document.getElementById('tool-polygon-sides-sep');
+        const calloutRow = document.getElementById('tool-callout-style-row');
+        const calloutSep = document.getElementById('tool-callout-style-sep');
 
         if (cornerRow) {
             cornerRow.hidden = !flags.showCorner;
@@ -677,6 +703,18 @@
             else branchesRow.setAttribute('aria-hidden', 'true');
         }
         if (triSep) triSep.hidden = !flags.showBranches;
+        if (polySidesRow) {
+            polySidesRow.hidden = !flags.showPolygonSides;
+            if (flags.showPolygonSides) polySidesRow.removeAttribute('aria-hidden');
+            else polySidesRow.setAttribute('aria-hidden', 'true');
+        }
+        if (polySep) polySep.hidden = !flags.showPolygonSides;
+        if (calloutRow) {
+            calloutRow.hidden = !flags.showCalloutStyle;
+            if (flags.showCalloutStyle) calloutRow.removeAttribute('aria-hidden');
+            else calloutRow.setAttribute('aria-hidden', 'true');
+        }
+        if (calloutSep) calloutSep.hidden = !flags.showCalloutStyle;
 
         return flags;
     };

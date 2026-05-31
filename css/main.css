@@ -744,6 +744,41 @@ body:not(.ui-layout-floating) #win-tools .tool-grid.tool-grid--pdn {
     padding-bottom: 1px;
 }
 
+#main-toolbox .tool-group--grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, 28px);
+    gap: 1px;
+    justify-content: center;
+}
+
+#main-toolbox.tool-grid--pdn .tool-btn.tool-btn--span-2 {
+    grid-column: span 2;
+    width: calc(28px * 2 + 1px) !important;
+    min-width: calc(28px * 2 + 1px) !important;
+}
+
+body.ui-layout-docked #main-toolbox.tool-grid--pdn .tool-btn.tool-btn--span-2 {
+    grid-column: span 1;
+    width: 28px !important;
+    min-width: 28px !important;
+}
+
+.illu-tool-shape-family-ico {
+    display: block;
+    margin: 0 auto;
+    width: 22px;
+    height: 22px;
+}
+
+.illu-tool-hidden-shelf {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* Styles outils : bords 3D / actif alignés calques — theme-win98-modern.css (fin de fichier) */
 #win-tools .tool-grid--pdn .tool-btn:disabled {
     opacity: 0.45;
@@ -887,7 +922,6 @@ body.ui-layout-docked #win-colors .color-picker-main {
 .color-picker-left {
     flex: 0 0 auto;
     min-width: 0;
-    padding-right: 6px;
     border-right: 1px solid transparent;
 }
 
@@ -942,7 +976,6 @@ body.ui-layout-floating #win-colors.color-window-expanded #color-sliders-panel {
     flex-direction: row;
     align-items: center;
     gap: 6px;
-    margin-bottom: 5px;
 }
 
 .color-top-row {
@@ -1057,13 +1090,15 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     max-width: 100%;
 }
 
-/* Paramètres : gauche description + langue + raccourcis, droite options — fenêtre compacte */
-#settings-overlay .window {
+/* Paramètres / Bienvenue : gauche description + langue + raccourcis, droite options — fenêtre compacte */
+#settings-overlay .window,
+#welcome-overlay .window {
     width: min(96vw, 700px) !important;
     max-width: 96vw;
 }
 
-#settings-overlay .settings-dialog-window-body {
+#settings-overlay .settings-dialog-window-body,
+#welcome-overlay .welcome-dialog-body {
     padding: 8px 10px !important;
     font-size: 11px;
     line-height: 1.4;
@@ -1073,70 +1108,233 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     box-sizing: border-box;
 }
 
-#settings-overlay .settings-dialog-layout {
+#settings-overlay .settings-dialog-layout,
+#welcome-overlay .welcome-dialog-layout {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     gap: 12px;
     flex: 1;
     min-height: 0;
+    overflow: auto;
+}
+
+#welcome-overlay .welcome-dialog-body {
+    padding: 8px 10px 10px !important;
+}
+
+#welcome-overlay .welcome-dialog-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+#welcome-overlay .welcome-dialog-logo {
+    display: block;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+#welcome-overlay .welcome-dialog-brand {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--mp-text);
+}
+
+#welcome-overlay .welcome-dialog-footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--mp-dock-border, #808080);
+    flex-shrink: 0;
+}
+
+#welcome-overlay .welcome-dialog-footer-end {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+#welcome-overlay .welcome-dialog-startup {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+#welcome-overlay .welcome-dialog-startup-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--mp-text);
+    opacity: 0.92;
+    white-space: nowrap;
+}
+
+#welcome-overlay .welcome-dialog-startup-toggle {
+    min-width: 0;
+}
+
+#welcome-overlay .welcome-dialog-startup-toggle .illu-scope-btn {
+    min-width: 46px;
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+#welcome-overlay .welcome-dialog-start-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 172px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    color: #fff !important;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(
+        180deg,
+        var(--mp-title-light, #4a7ab8) 0%,
+        var(--mp-accent, #0d7a7a) 52%,
+        color-mix(in srgb, var(--mp-accent, #0d7a7a) 78%, #000) 100%
+    ) !important;
+    border: 2px solid !important;
+    border-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff)
+        color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000)
+        color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000)
+        color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff) !important;
+    border-radius: var(--mp-radius, 2px) !important;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.38),
+        0 1px 4px rgba(0, 0, 0, 0.22) !important;
+    cursor: pointer;
+    transition: filter 0.12s ease, box-shadow 0.12s ease;
+}
+
+#welcome-overlay .welcome-dialog-start-btn i {
+    font-size: 13px;
+    opacity: 0.95;
+}
+
+#welcome-overlay .welcome-dialog-start-btn:hover {
+    filter: brightness(1.1);
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.42),
+        0 2px 6px rgba(0, 0, 0, 0.28) !important;
+}
+
+#welcome-overlay .welcome-dialog-start-btn:active {
+    filter: brightness(0.96);
+    border-color: var(--mp-inset-top, #404040) var(--mp-inset-bot, #dfdfdf)
+        var(--mp-inset-bot, #dfdfdf) var(--mp-inset-top, #404040) !important;
+    padding: 9px 17px 7px 19px !important;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.28) !important;
+}
+
+body.theme-dark #welcome-overlay .welcome-dialog-start-btn {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 5px rgba(0, 0, 0, 0.45) !important;
+}
+
+#welcome-overlay .welcome-shortcuts-list {
+    max-height: 140px;
+    overflow-y: auto;
 }
 
 #settings-overlay .settings-dialog-aside {
     flex: 0 0 38%;
-    max-width: 280px;
     min-width: 0;
     overflow: auto;
     padding-right: 4px;
     border-right: 1px solid #b0b0b0;
 }
 
-#settings-overlay .settings-dialog-main {
+#welcome-overlay .settings-dialog-aside {
+    flex: 0 0 60%;
+    min-width: 0;
+    overflow: auto;
+    padding-right: 4px;
+    border-right: 1px solid #b0b0b0;
+}
+
+#settings-overlay .settings-dialog-main,
+#welcome-overlay .welcome-dialog-main {
     flex: 1 1 auto;
     min-width: 0;
     overflow: auto;
     padding-left: 2px;
 }
 
-#settings-overlay .settings-dialog-aside p {
+#settings-overlay .settings-dialog-aside p,
+#welcome-overlay .settings-dialog-aside p {
     margin: 0 0 0.45em;
     font-size: 11px;
 }
 
-#settings-overlay .settings-about-lead {
+#settings-overlay .settings-about-lead,
+#welcome-overlay .settings-about-lead {
     font-weight: 600;
 }
 
-#settings-overlay .settings-ai-note {
+#settings-overlay .settings-ai-note,
+#welcome-overlay .settings-ai-note {
     font-size: 10px;
     color: #555;
     font-style: italic;
     margin-bottom: 0;
 }
 
-#settings-overlay .settings-aside-block--about {
+#settings-overlay .settings-aside-block--about,
+#welcome-overlay .settings-aside-block--about {
     margin-bottom: 10px;
 }
 
-#settings-overlay .settings-aside-lang {
+#settings-overlay .settings-aside-lang,
+#welcome-overlay .settings-aside-lang {
     margin-bottom: 10px;
 }
 
-#settings-overlay .settings-aside-lang legend {
+#settings-overlay .settings-aside-lang legend,
+#welcome-overlay .settings-aside-lang legend {
     font-size: 11px;
 }
 
-#settings-overlay .settings-aside-block--shortcuts {
+#settings-overlay .settings-aside-block--shortcuts,
+#welcome-overlay .settings-aside-block--shortcuts {
     margin-top: 2px;
 }
 
-#settings-overlay .settings-shortcuts-heading {
+#settings-overlay .settings-shortcuts-heading,
+#welcome-overlay .settings-shortcuts-heading {
     font-weight: bold;
     margin: 0 0 0.35em;
     font-size: 11px;
+    cursor: pointer;
+    user-select: none;
 }
 
-#settings-overlay .settings-shortcuts-list {
+#settings-overlay .settings-shortcuts-list,
+#welcome-overlay .settings-shortcuts-list {
     margin: 0 0 0.5em;
     padding-left: 16px;
     line-height: 1.45;
@@ -1156,11 +1354,18 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 #settings-overlay .settings-dialog-actions-group {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-end;
-    gap: 10px 14px;
-    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#settings-overlay .settings-dialog-actions .settings-github-link {
+    flex-shrink: 0;
+    margin: 0;
+    white-space: nowrap;
 }
 
 #settings-overlay .settings-dialog-actions .settings-startup-row {
@@ -1169,25 +1374,29 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     max-width: min(100%, 52ch);
 }
 
-#settings-overlay .settings-fieldset-compact {
+#settings-overlay .settings-fieldset-compact,
+#welcome-overlay .settings-fieldset-compact {
     margin: 0 0 8px;
     padding: 6px 8px;
     border: 1px solid #aaa;
 }
 
-#settings-overlay .settings-fieldset-compact legend {
+#settings-overlay .settings-fieldset-compact legend,
+#welcome-overlay .settings-fieldset-compact legend {
     font-weight: 600;
     font-size: 11px;
     padding: 0 4px;
 }
 
-#settings-overlay .settings-table {
+#settings-overlay .settings-table,
+#welcome-overlay .settings-table {
     display: flex;
     flex-direction: column;
     gap: 0;
 }
 
-#settings-overlay .settings-table-row {
+#settings-overlay .settings-table-row,
+#welcome-overlay .settings-table-row {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -1201,11 +1410,13 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     padding-top: 0;
 }
 
-#settings-overlay .settings-table-main {
+#settings-overlay .settings-table-main,
+#welcome-overlay .settings-table-main {
     min-width: 0;
 }
 
-#settings-overlay .settings-table-title {
+#settings-overlay .settings-table-title,
+#welcome-overlay .settings-table-title {
     font-size: 11px;
     font-weight: 600;
     line-height: 1.35;
@@ -1218,7 +1429,8 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     line-height: 1.35;
 }
 
-#settings-overlay .settings-table-control {
+#settings-overlay .settings-table-control,
+#welcome-overlay .settings-table-control {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -1272,39 +1484,47 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     margin: 0 0 8px;
 }
 
-#settings-overlay .settings-sublegend {
+#settings-overlay .settings-sublegend,
+#welcome-overlay .settings-sublegend {
     margin: 0 0 4px;
     font-weight: 600;
     font-size: 11px;
 }
 
-#settings-overlay .settings-hint-micro {
+#settings-overlay .settings-hint-micro,
+#welcome-overlay .settings-hint-micro {
     margin: 4px 0 0;
     font-size: 9px;
     opacity: 0.88;
     line-height: 1.35;
 }
 
-#settings-overlay .settings-accent-swatches {
-    display: flex;
-    flex-wrap: wrap;
+#settings-overlay .settings-accent-swatches,
+#welcome-overlay .settings-accent-swatches {
+    display: grid;
+    grid-template-columns: repeat(7, 24px);
+    grid-template-rows: repeat(2, 24px);
     gap: 8px;
     align-items: center;
+    justify-content: start;
+    width: fit-content;
+    max-width: 100%;
     margin: 2px 0 0;
 }
 
-#settings-overlay .settings-accent-swatch {
+#settings-overlay .settings-accent-swatch,
+#welcome-overlay .settings-accent-swatch {
     position: relative;
     width: 24px;
     height: 24px;
-    flex-shrink: 0;
     cursor: pointer;
     margin: 0;
     padding: 0;
     display: block;
 }
 
-#settings-overlay .settings-accent-swatch input[type="radio"] {
+#settings-overlay .settings-accent-swatch input[type="radio"],
+#welcome-overlay .settings-accent-swatch input[type="radio"] {
     position: absolute;
     opacity: 0;
     width: 100%;
@@ -1314,7 +1534,8 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     z-index: 2;
 }
 
-#settings-overlay .settings-accent-face {
+#settings-overlay .settings-accent-face,
+#welcome-overlay .settings-accent-face {
     display: block;
     width: 100%;
     height: 100%;
@@ -1324,12 +1545,14 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     pointer-events: none;
 }
 
-#settings-overlay .settings-accent-swatch input:checked+.settings-accent-face {
+#settings-overlay .settings-accent-swatch input:checked+.settings-accent-face,
+#welcome-overlay .settings-accent-swatch input:checked+.settings-accent-face {
     box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a1a1a;
     border-color: #111;
 }
 
-#settings-overlay .settings-accent-swatch input:focus-visible+.settings-accent-face {
+#settings-overlay .settings-accent-swatch input:focus-visible+.settings-accent-face,
+#welcome-overlay .settings-accent-swatch input:focus-visible+.settings-accent-face {
     outline: 2px solid var(--mp-focus, #1e4a8c);
     outline-offset: 2px;
 }
@@ -1369,7 +1592,8 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     min-width: 0;
 }
 
-#settings-overlay .settings-layout-desc {
+#settings-overlay .settings-layout-desc,
+#welcome-overlay .settings-layout-desc {
     margin: 0 0 6px;
     color: #444;
     font-size: 10px;
@@ -1418,18 +1642,19 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 #settings-overlay .settings-dialog-actions {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-end;
-    gap: 8px 12px;
+    justify-content: flex-start;
+    gap: 8px;
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid #ccc;
     flex-shrink: 0;
 }
 
-#settings-overlay .illu-settings-example-btn {
-    margin-right: auto;
+#welcome-overlay .illu-settings-example-btn {
+    margin-right: 0;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1437,7 +1662,8 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     cursor: pointer;
 }
 
-#btn-open-example {
+#btn-open-example,
+#welcome-btn-open-example {
     background: linear-gradient(180deg, #fef3c7 0%, #fbd34d 100%) !important;
     border: 2px solid !important;
     border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
@@ -1448,29 +1674,63 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-#btn-open-example:hover {
+#btn-open-example:hover,
+#welcome-btn-open-example:hover {
     filter: brightness(1.05);
 }
 
-#btn-open-example:active {
+#btn-open-example:active,
+#welcome-btn-open-example:active {
     border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
     padding: 5px 11px 3px 13px !important;
 }
 
-#btn-open-example i {
+#btn-open-example i,
+#welcome-btn-open-example i {
     color: #b45309;
 }
 
+#settings-overlay .illu-settings-example-btn {
+    margin-right: 0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
 @media (max-width: 640px) {
+    #settings-overlay .settings-dialog-actions {
+        flex-wrap: wrap;
+    }
+
+    #settings-overlay .settings-dialog-actions-group {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
     #settings-overlay .illu-settings-example-btn {
         margin-right: 0;
         width: 100%;
         justify-content: center;
     }
+
+    #settings-overlay .settings-dialog-actions .settings-github-link {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #settings-overlay .settings-dialog-actions #settings-ok-btn {
+        margin-left: 0;
+        width: 100%;
+    }
 }
 
 #settings-overlay .settings-dialog-actions #settings-ok-btn {
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 @media (max-width: 860px) {
@@ -1813,6 +2073,12 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     overflow: visible;
 }
 
+/* Hors toile : le workspace ne doit pas rogner le débordement des calques hors document. */
+#workspace.illu-allow-outside-canvas-active,
+#workspace-wrapper.illu-allow-outside-canvas-active {
+    overflow: visible !important;
+}
+
 #canvas-checker-underlay {
     position: absolute;
     left: 0;
@@ -1844,19 +2110,24 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 /* Color Wheel */
 #color-wheel-container {
     flex: 0 0 auto;
-    width: 128px;
-    height: 128px;
+    width: 135px;
+    height: 135px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #c0c0c0;
     border: 1px inset #fff;
     box-sizing: border-box;
+    overflow: hidden;
+    padding: 0;
 }
 
 #color-wheel {
     cursor: crosshair;
     display: block;
+    width: 135px;
+    height: 135px;
+    flex-shrink: 0;
 }
 
 /* Layer/History Lists */
@@ -1895,6 +2166,7 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 
 /* Mode téléphone : modales et alertes pleine largeur, ancrées en bas (centrage horizontal) */
 body.illu-mobile-ui #settings-overlay,
+body.illu-mobile-ui #welcome-overlay,
 body.illu-mobile-ui #dialog-overlay,
 body.illu-mobile-ui #illu-alert-overlay,
 body.illu-mobile-ui #close-tab-overlay,
@@ -1917,6 +2189,7 @@ body.illu-mobile-ui #illu-alert-overlay {
 }
 
 body.illu-mobile-ui #settings-overlay .window,
+body.illu-mobile-ui #welcome-overlay .window,
 body.illu-mobile-ui #dialog-overlay>.window,
 body.illu-mobile-ui #close-tab-overlay>.window,
 body.illu-mobile-ui #import-choice-overlay>.window,
@@ -1959,8 +2232,7 @@ body.illu-mobile-ui #illu-alert-overlay .illu-alert-window {
     min-height: 92px;
     padding: 12px 8px;
     border: 2px solid;
-    border-color: var(--mp-inset-top, #dfdfdf) var(--mp-inset-bot, #808080) var(--mp-inset-bot, #808080)
-        var(--mp-inset-top, #dfdfdf);
+    border-color: var(--mp-inset-top, #dfdfdf) var(--mp-inset-bot, #808080) var(--mp-inset-bot, #808080) var(--mp-inset-top, #dfdfdf);
     background: linear-gradient(180deg, #fff 0%, #ece9d8 100%);
     cursor: pointer;
     text-align: center;
@@ -1974,8 +2246,7 @@ body.illu-mobile-ui #illu-alert-overlay .illu-alert-window {
 }
 
 .illu-export-quick-btn:active {
-    border-color: var(--mp-inset-bot, #808080) var(--mp-inset-top, #dfdfdf) var(--mp-inset-top, #dfdfdf)
-        var(--mp-inset-bot, #808080);
+    border-color: var(--mp-inset-bot, #808080) var(--mp-inset-top, #dfdfdf) var(--mp-inset-top, #dfdfdf) var(--mp-inset-bot, #808080);
     padding-top: 13px;
     padding-bottom: 11px;
 }
@@ -2243,6 +2514,13 @@ body.illu-mobile-ui.effect-dialog-open #effect-dialog-window {
     display: none !important;
 }
 
+/* Mode tramé : roue, toggle grille et palette RVB masqués (motifs tramé uniquement) */
+#win-colors.color-window--dither #color-wheel-container,
+#win-colors.color-window--dither #btn-toggle-color-grid,
+#win-colors.color-window--dither #palette-grid {
+    display: none !important;
+}
+
 /* --- PHOTO MODE PRO --- */
 body.illu-photo-mode-active #palette-dock-left,
 body.illu-photo-mode-active #palette-dock-right,
@@ -2491,7 +2769,7 @@ body.theme-dark .status-bar-credit-link:hover {
     justify-content: center;
     gap: 7px;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     transition: all 0.12s ease;
     text-shadow: 0 1px 0 #fff;
     min-height: 28px;
@@ -2555,7 +2833,7 @@ body.theme-dark .status-bar-credit-link:hover {
     background: #e9ecef;
     border-bottom-width: 1px;
     transform: translateY(1px);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .settings-action-btn--danger {
@@ -2628,15 +2906,18 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     background: #ffffff !important;
     color: #0f172a !important;
 }
+
 #iview-scroll.iview-light-preview .iview-grid-item {
     background: #f8fafc !important;
     border-color: #e2e8f0 !important;
     color: #1e293b !important;
 }
+
 #iview-scroll.iview-light-preview .iview-grid-item:hover {
     background: #f1f5f9 !important;
     border-color: #cbd5e1 !important;
 }
+
 #iview-scroll.iview-light-preview .iview-grid-item i {
     color: #1e293b !important;
 }
@@ -2646,15 +2927,18 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     background: #0f172a !important;
     color: #f8fafc !important;
 }
+
 #iview-scroll.iview-dark-preview .iview-grid-item {
     background: #1e293b !important;
     border-color: #334155 !important;
     color: #cbd5e1 !important;
 }
+
 #iview-scroll.iview-dark-preview .iview-grid-item:hover {
     background: #334155 !important;
     border-color: #475569 !important;
 }
+
 #iview-scroll.iview-dark-preview .iview-grid-item i {
     color: #f8fafc !important;
 }
@@ -2679,6 +2963,7 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     border-color: #ffffff #404040 #404040 #ffffff !important;
     box-shadow: none !important;
 }
+
 .iview-window .title-bar-controls .title-bar-close-btn::before {
     content: "" !important;
     position: absolute !important;
@@ -2689,6 +2974,7 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     background: #000000 !important;
     transform: translate(-50%, -50%) rotate(45deg) !important;
 }
+
 .iview-window .title-bar-controls .title-bar-close-btn::after {
     content: "" !important;
     position: absolute !important;
@@ -2699,9 +2985,11 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     background: #000000 !important;
     transform: translate(-50%, -50%) rotate(-45deg) !important;
 }
+
 body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::before {
     background: #ffffff !important;
 }
+
 body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::after {
     background: #ffffff !important;
 }
@@ -3377,7 +3665,7 @@ body.illu-colored-icons #win-layers .layer-palette-toolbar .fa-object-group::bef
 /* Custom Gradient Icon Colored Mode Accent */
 body.illu-colored-icons #tool-gradient svg,
 body.illu-colored-icons #tool-deform svg {
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15)) !important;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15)) !important;
 }
 
 /* Disable inversion filter on active icons when colored icons mode is active */
@@ -3409,7 +3697,7 @@ body.illu-colored-icons.theme-dark .fa-solid::before {
 }
 
 /* ——— Boîte à outils : padding minimal, retour à la ligne, redimensionnement ——— */
-#win-tools > .window-body {
+#win-tools>.window-body {
     padding: 0 1px 1px;
     box-sizing: border-box;
 }
@@ -3424,7 +3712,7 @@ body.ui-layout-floating #win-tools.window.palette-panel.floating-window {
     box-sizing: border-box;
 }
 
-body.ui-layout-floating #win-tools > .window-body {
+body.ui-layout-floating #win-tools>.window-body {
     padding: 0 1px 1px;
     overflow: visible;
     flex: 0 1 auto;

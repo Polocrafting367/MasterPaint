@@ -5,6 +5,52 @@
 (function () {
     const PRESETS = [
         {
+            key: 'fonts.groupWebFonts',
+            fb: 'Polices Web (Mobiles & PC)',
+            items: [
+                // Sans-serif
+                ['Roboto, sans-serif', 'Roboto'],
+                ['"Open Sans", sans-serif', 'Open Sans'],
+                ['Montserrat, sans-serif', 'Montserrat'],
+                ['Lato, sans-serif', 'Lato'],
+                ['Poppins, sans-serif', 'Poppins'],
+                ['Inter, sans-serif', 'Inter'],
+                ['Nunito, sans-serif', 'Nunito'],
+                ['Ubuntu, sans-serif', 'Ubuntu'],
+                // Serif
+                ['"Playfair Display", serif', 'Playfair Display'],
+                ['Merriweather, serif', 'Merriweather'],
+                ['Lora, serif', 'Lora'],
+                ['"PT Serif", serif', 'PT Serif'],
+                ['"Crimson Text", serif', 'Crimson Text'],
+                ['"EB Garamond", serif', 'EB Garamond'],
+                // Monospace/Pixel
+                ['"Press Start 2P", monospace', 'Press Start 2P'],
+                ['VT323, monospace', 'VT323'],
+                ['"Fira Code", monospace', 'Fira Code'],
+                ['Inconsolata, monospace', 'Inconsolata'],
+                ['"Source Code Pro", monospace', 'Source Code Pro'],
+                // Cursive/Handwriting
+                ['Pacifico, cursive', 'Pacifico'],
+                ['Caveat, cursive', 'Caveat'],
+                ['"Dancing Script", cursive', 'Dancing Script'],
+                ['Satisfy, cursive', 'Satisfy'],
+                ['"Great Vibes", cursive', 'Great Vibes'],
+                ['"Amatic SC", cursive', 'Amatic SC'],
+                ['"Indie Flower", cursive', 'Indie Flower'],
+                ['"Permanent Marker", cursive', 'Permanent Marker'],
+                // Display/Fantasy
+                ['Oswald, sans-serif', 'Oswald'],
+                ['Righteous, cursive', 'Righteous'],
+                ['Creepster, fantasy', 'Creepster'],
+                ['"Bebas Neue", sans-serif', 'Bebas Neue'],
+                ['Lobster, cursive', 'Lobster'],
+                ['Cinzel, serif', 'Cinzel'],
+                ['Bangers, cursive', 'Bangers'],
+                ['Anton, sans-serif', 'Anton']
+            ]
+        },
+        {
             key: 'fonts.groupSans',
             fb: 'Sans-serif',
             items: [
@@ -135,6 +181,7 @@
                 const o = document.createElement('option');
                 o.value = value;
                 o.textContent = label;
+                o.style.fontFamily = value;
                 og.appendChild(o);
             });
             sel.appendChild(og);
@@ -148,6 +195,7 @@
                 const o = document.createElement('option');
                 o.value = v;
                 o.textContent = t;
+                o.style.fontFamily = v;
                 og.appendChild(o);
             });
             sel.appendChild(og);
@@ -161,6 +209,7 @@
             const o = document.createElement('option');
             o.value = prev;
             o.textContent = (prev.split(',')[0] || 'Police').replace(/^["']|["']$/g, '').trim() || 'Police';
+            o.style.fontFamily = prev;
             cog.appendChild(o);
             sel.value = prev;
         } else {
@@ -181,6 +230,7 @@
             const o = document.createElement('option');
             o.value = v;
             o.textContent = (v.split(',')[0] || 'Police').replace(/^["']|["']$/g, '').trim() || 'Police';
+            o.style.fontFamily = v;
             cog.appendChild(o);
         }
         sel.value = v;
@@ -232,6 +282,7 @@
             const o = document.createElement('option');
             o.value = cssStackForFamilyName(fam);
             o.textContent = fam;
+            o.style.fontFamily = o.value;
             og.appendChild(o);
         });
         sel.appendChild(og);

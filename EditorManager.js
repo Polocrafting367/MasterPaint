@@ -9,6 +9,8 @@ const EditorManager = {
     activeColor: '#000000',
     /** @type {SVGElement[]} */
     activeVectorSelection: [],
+    primaryDitherPatternId: 'black',
+    secondaryDitherPatternId: 'white',
     activeDitherPatternId: 'black',
     _ditherPatternCanvases: {},
     /** Modes de fusion Canvas autorisés (globalCompositeOperation). */
@@ -66,7 +68,14 @@ const EditorManager = {
         shapeGradAngle: 0,
         shapeCornerRadius: 12,
         /** Triangle : 3 = triangle ; 4+ = étoile à n branches. */
-        triangleBranches: 3,
+        triangleBranches: 5,
+        /** Polygone régulier (outil reg-poly) : nombre de faces. */
+        polygonSides: 6,
+        /** Légende / bulle : rect | round | oval | cloud */
+        calloutStyle: 'rect',
+        /** Position horizontale de la tige (0–1, centre = 0.5). */
+        calloutTailX: 0.5,
+        calloutTailT: null,
         textSize: 18,
         textFont: 'Arial, sans-serif',
         textBold: false,
@@ -129,55 +138,104 @@ const EditorManager = {
     },
 
 
-setup8BitMode() {
-        const container = document.getElementById('palette-8bit');
-        const wheelContainer = document.getElementById('color-wheel-container');
-        const bitContainer = document.getElementById('color-8bit-container');
-        const toggleBtn = document.getElementById('btn-toggle-8bit');
-
-        if (!container || !toggleBtn) return;
-
-        // Génération d'une palette 256 couleurs standard (Format 8-bit: RRRGGGBB)
-        // 3 bits pour Rouge (0-7), 3 bits pour Vert (0-7), 2 bits pour Bleu (0-3)
-        for (let i = 0; i < 256; i++) {
-            const r3 = (i >> 5) & 7; // 0 à 7
-            const g3 = (i >> 2) & 7; // 0 à 7
-            const b2 = i & 3;        // 0 à 3
-
-            // Conversion des bits en valeurs RGB (0-255)
-            const r = Math.round((r3 / 7) * 255);
-            const g = Math.round((g3 / 7) * 255);
-            const b = Math.round((b2 / 3) * 255);
-
-            const swatch = document.createElement('div');
-            swatch.style.backgroundColor = `rgb(${r},${g},${b})`;
-            swatch.style.cursor = 'crosshair';
-            swatch.title = `Index: ${i} | RGB: ${r},${g},${b}`;
-            
-            // Au clic, on définit la couleur active
-            swatch.addEventListener('pointerdown', (e) => {
-                e.preventDefault();
-                this.setColorFromRGB(r, g, b, 255);
-            });
-
-            container.appendChild(swatch);
+    isColorPickerGridMode() {
+        try {
+            return localStorage.getItem('illu_color_picker_grid') === '1'
+                || localStorage.getItem('illu_color_wheel_black_rim') === '1';
+        } catch (e) {
+            return false;
         }
+    },
 
-        // Logique du bouton pour basculer entre la roue et le 8-bit
-        toggleBtn.addEventListener('click', () => {
-            const is8BitActive = bitContainer.style.display !== 'none';
-            if (is8BitActive) {
-                bitContainer.style.display = 'none';
-                wheelContainer.style.display = 'block';
-                toggleBtn.style.backgroundColor = ''; // Style inactif
-                toggleBtn.style.color = '';
-            } else {
-                bitContainer.style.display = 'block';
-                wheelContainer.style.display = 'none';
-                toggleBtn.style.backgroundColor = '#333';
-                toggleBtn.style.color = '#fff';
+    setColorPickerGridMode(on) {
+        try {
+            localStorage.setItem('illu_color_picker_grid', on ? '1' : '0');
+            localStorage.removeItem('illu_color_wheel_black_rim');
+        } catch (e) {
+            /* ignore */
+        }
+        this.rebuildColorPickerBase();
+        this.syncColorPickerLayoutButton();
+    },
+
+    buildColorWheelDiscImageData(width, height) {
+        const cx = width / 2;
+        const cy = height / 2;
+        const r = width / 2;
+        const img = new ImageData(width, height);
+        const d = img.data;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                const dx = x + 0.5 - cx;
+                const dy = y + 0.5 - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy) / r;
+                if (dist > 1) {
+                    d[i + 3] = 0;
+                    continue;
+                }
+                const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+                const sat = Math.min(100, dist * 100);
+                const rgb = this.hsvToRgb(hue, sat, 100);
+                d[i] = rgb.r;
+                d[i + 1] = rgb.g;
+                d[i + 2] = rgb.b;
+                d[i + 3] = 255;
             }
+        }
+        return img;
+    },
+
+    buildColorGridImageData(width, height) {
+        const img = new ImageData(width, height);
+        const d = img.data;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                const hue = ((x + 0.5) / width) * 360;
+                const lightness = ((y + 0.5) / height) * 100;
+                const rgb = this.hslToRgb(hue, 100, lightness);
+                d[i] = rgb.r;
+                d[i + 1] = rgb.g;
+                d[i + 2] = rgb.b;
+                d[i + 3] = 255;
+            }
+        }
+        return img;
+    },
+
+    rebuildColorPickerBase() {
+        const canvas = document.getElementById('color-wheel');
+        if (!canvas) return;
+        const grid = this.isColorPickerGridMode();
+        this._originalColorWheelImageData = grid
+            ? this.buildColorGridImageData(canvas.width, canvas.height)
+            : this.buildColorWheelDiscImageData(canvas.width, canvas.height);
+        if (this.updateColorWheelForMode) this.updateColorWheelForMode();
+    },
+
+    syncColorPickerLayoutButton() {
+        const btn = document.getElementById('btn-toggle-color-grid');
+        const canvas = document.getElementById('color-wheel');
+        const grid = this.isColorPickerGridMode();
+        if (btn) {
+            btn.setAttribute('aria-pressed', grid ? 'true' : 'false');
+            btn.style.backgroundColor = grid ? '#333' : '';
+            btn.style.color = grid ? '#fff' : '';
+        }
+        if (canvas) {
+            canvas.style.borderRadius = grid ? '0' : '50%';
+        }
+    },
+
+    setupColorPickerLayoutToggle() {
+        const btn = document.getElementById('btn-toggle-color-grid');
+        if (!btn || btn.dataset.illuPickerLayoutWired) return;
+        btn.dataset.illuPickerLayoutWired = '1';
+        btn.addEventListener('click', () => {
+            this.setColorPickerGridMode(!this.isColorPickerGridMode());
         });
+        this.syncColorPickerLayoutButton();
     },
 
     setupDitherPalette() {
@@ -243,6 +301,342 @@ setup8BitMode() {
         this.setDitherPattern('black');
     },
 
+    setupRalPalette() {
+        const container = document.getElementById('palette-ral-grid');
+        if (!container || container.children.length > 0) return;
+        
+        if (typeof RAL_COLORS !== 'undefined') {
+            RAL_COLORS.forEach(c => {
+                const swatch = document.createElement('div');
+                swatch.className = 'dither-pattern-swatch';
+                swatch.style.width = '20px';
+                swatch.style.height = '20px';
+                swatch.style.backgroundColor = c.hex;
+                swatch.style.border = '1px solid #777';
+                swatch.style.cursor = 'pointer';
+                swatch.title = `${c.code} - ${c.fr}`;
+                
+                swatch.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    if (e.button === 2) {
+                        window.illuSetSecondaryColor(c.hex);
+                    } else {
+                        window.illuSetPrimaryColor(c.hex);
+                    }
+                });
+                swatch.addEventListener('contextmenu', e => e.preventDefault());
+                
+                container.appendChild(swatch);
+            });
+        }
+    },
+
+    setupCmjnPalette() {
+        const container = document.getElementById('palette-cmjn-grid');
+        if (!container || container.children.length > 0) return;
+        
+        const colors = [
+            { hex: '#ffff00', name: 'Yellow (Jaune)' },
+            { hex: '#ff00ff', name: 'Magenta' },
+            { hex: '#000080', name: 'Navy (Bleu marine)' },
+            { hex: '#000000', name: 'Black (Noir)' },
+            { hex: '#ffffff', name: 'White (Blanc)' }
+        ];
+        
+        colors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.className = 'dither-pattern-swatch';
+            swatch.style.width = '30px';
+            swatch.style.height = '30px';
+            swatch.style.backgroundColor = c.hex;
+            swatch.style.border = '1px solid #777';
+            swatch.style.cursor = 'pointer';
+            swatch.title = c.name;
+            
+            swatch.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (e.button === 2) {
+                    window.illuSetSecondaryColor(c.hex);
+                } else {
+                    window.illuSetPrimaryColor(c.hex);
+                }
+            });
+            swatch.addEventListener('contextmenu', e => e.preventDefault());
+            
+            container.appendChild(swatch);
+        });
+    },
+
+    
+    
+    applyCmjnFilter(r, g, b) {
+        const r_prime = r / 255;
+        const g_prime = g / 255;
+        const b_prime = b / 255;
+        
+        let k = 1 - Math.max(r_prime, g_prime, b_prime);
+        let c = 0, m = 0, y = 0;
+        if (k < 1) {
+            c = (1 - r_prime - k) / (1 - k);
+            m = (1 - g_prime - k) / (1 - k);
+            y = (1 - b_prime - k) / (1 - k);
+        }
+        
+        const ic = { r: 0.0, g: 0.6, b: 0.86 };
+        const im = { r: 0.88, g: 0.0, b: 0.47 };
+        const iy = { r: 1.0, g: 0.94, b: 0.0 };
+        const ik = { r: 0.1, g: 0.1, b: 0.1 };
+        
+        const rf = (1 - c * (1 - ic.r)) * (1 - m * (1 - im.r)) * (1 - y * (1 - iy.r)) * (1 - k * (1 - ik.r));
+        const gf = (1 - c * (1 - ic.g)) * (1 - m * (1 - im.g)) * (1 - y * (1 - iy.g)) * (1 - k * (1 - ik.g));
+        const bf = (1 - c * (1 - ic.b)) * (1 - m * (1 - im.b)) * (1 - y * (1 - iy.b)) * (1 - k * (1 - ik.b));
+        
+        return {
+            r: Math.max(0, Math.min(255, Math.round(rf * 255))),
+            g: Math.max(0, Math.min(255, Math.round(gf * 255))),
+            b: Math.max(0, Math.min(255, Math.round(bf * 255)))
+        };
+    },
+
+    snapColorToPalette(col, mode) {
+        if (mode === 'pixel-cmjn') {
+            const out = this.applyCmjnFilter(col.r, col.g, col.b);
+            col.r = out.r;
+            col.g = out.g;
+            col.b = out.b;
+            return;
+        }
+        if (!mode || !this.isPaletteRestrictedMode(mode)) return;
+
+        if (mode === 'pixel-dither') {
+            const out = this._quantizeOpaquePixelRgb(col.r, col.g, col.b, mode);
+            col.r = out.r;
+            col.g = out.g;
+            col.b = out.b;
+            return;
+        }
+
+        let colors = [];
+        if (mode === 'pixel-ral') {
+            colors = typeof RAL_COLORS !== 'undefined' ? RAL_COLORS : [];
+        }
+        if (colors.length === 0) return;
+
+        let bestDist = Infinity;
+        let best = colors[0];
+        for (let c of colors) {
+            const dr = col.r - c.r;
+            const dg = col.g - c.g;
+            const db = col.b - c.b;
+            const dist = dr * dr + dg * dg + db * db;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = c;
+            }
+        }
+        col.r = best.r;
+        col.g = best.g;
+        col.b = best.b;
+    },
+
+    /** Encres de référence (UI) — pas une limite du nombre de couleurs en mode CMJN. */
+    getCmjnPaletteColors() {
+        return [
+            { r: 255, g: 255, b: 0 },
+            { r: 255, g: 0, b: 255 },
+            { r: 0, g: 0, b: 128 },
+            { r: 0, g: 0, b: 0 },
+            { r: 255, g: 255, b: 255 }
+        ];
+    },
+
+    /** Modes à nuancier discret (pas le CMJN : simulation continue). */
+    isPaletteRestrictedMode(mode) {
+        const m = mode || (this.activeProject && this.activeProject.mode);
+        return m === 'pixel-dither' || m === 'pixel-ral';
+    },
+
+    isCmjnSimulationMode(mode) {
+        const m = mode || (this.activeProject && this.activeProject.mode);
+        return m === 'pixel-cmjn';
+    },
+
+    /** Nuancier discret pour palette-grid (tramé / RAL uniquement). */
+    buildModePaletteGridSwatches(mode) {
+        mode = mode || (this.activeProject && this.activeProject.mode);
+        if (mode === 'pixel-dither') {
+            return [{ r: 0, g: 0, b: 0 }, { r: 255, g: 255, b: 255 }];
+        }
+        if (mode === 'pixel-ral' && typeof RAL_COLORS !== 'undefined') {
+            const seen = new Set();
+            const out = [];
+            RAL_COLORS.forEach((c) => {
+                const key = `${c.r},${c.g},${c.b}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                out.push({ r: c.r, g: c.g, b: c.b });
+            });
+            return out;
+        }
+        return null;
+    },
+
+    _simulateCmjnImageData(imageData) {
+        if (!imageData || !imageData.data) return imageData;
+        const d = imageData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            if (d[i + 3] < 128) continue;
+            const out = this.applyCmjnFilter(d[i], d[i + 1], d[i + 2]);
+            d[i] = out.r;
+            d[i + 1] = out.g;
+            d[i + 2] = out.b;
+        }
+        return imageData;
+    },
+
+    _quantizeOpaquePixelRgb(r, g, b, mode, opts) {
+        opts = opts || {};
+        if (mode === 'pixel-dither') {
+            const inv = opts.invert != null ? opts.invert : !!(this.activeProject && this.activeProject.ditherInvert);
+            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            let v = luma >= 128 ? 255 : 0;
+            if (inv) v = 255 - v;
+            return { r: v, g: v, b: v };
+        }
+        if (mode === 'pixel-ral' && typeof RAL_COLORS !== 'undefined' && RAL_COLORS.length) {
+            let bestDist = Infinity;
+            let best = RAL_COLORS[0];
+            for (let i = 0; i < RAL_COLORS.length; i++) {
+                const c = RAL_COLORS[i];
+                const dr = r - c.r;
+                const dg = g - c.g;
+                const db = b - c.b;
+                const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = c;
+                }
+            }
+            return { r: best.r, g: best.g, b: best.b };
+        }
+        return { r, g, b };
+    },
+
+    _quantizeImageDataToPalette(imageData, mode, opts) {
+        if (!imageData || !imageData.data) return imageData;
+        const d = imageData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            if (d[i + 3] < 128) {
+                d[i] = d[i + 1] = d[i + 2] = d[i + 3] = 0;
+                continue;
+            }
+            const q = this._quantizeOpaquePixelRgb(d[i], d[i + 1], d[i + 2], mode, opts);
+            d[i] = q.r;
+            d[i + 1] = q.g;
+            d[i + 2] = q.b;
+            d[i + 3] = 255;
+        }
+        return imageData;
+    },
+
+    /** Simulation CMJN ou nuancier discret selon le mode (effets, import, post-traitement). */
+    constrainImageDataToProjectMode(imageData, mode, opts) {
+        mode = mode || (this.activeProject && this.activeProject.mode);
+        if (!imageData) return imageData;
+        if (mode === 'pixel-cmjn') {
+            return this._simulateCmjnImageData(imageData);
+        }
+        if (!this.isPaletteRestrictedMode(mode)) return imageData;
+        opts = opts || {};
+        if (mode === 'pixel-dither') {
+            const inv = opts.invert != null ? opts.invert : !!(this.activeProject && this.activeProject.ditherInvert);
+            const size = opts.size != null ? opts.size : this.ditherEffectSize;
+            return this._ditherImageData(imageData, size, { invert: inv });
+        }
+        return this._quantizeImageDataToPalette(imageData, mode, opts);
+    },
+
+    applyProjectColorModeToLayer(layer, mode) {
+        if (!layer || !layer.buffer) return;
+        mode = mode || (this.activeProject && this.activeProject.mode);
+        if (!mode || mode === 'pixel') return;
+        const ctx = layer.buffer.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
+        const idata = ctx.getImageData(0, 0, layer.buffer.width, layer.buffer.height);
+        this.constrainImageDataToProjectMode(idata, mode);
+        ctx.putImageData(idata, 0, 0);
+        layer._thumbDirty = true;
+    },
+
+    quantizeLayerBuffer(layer, mode) {
+        this.applyProjectColorModeToLayer(layer, mode);
+    },
+
+    quantizeActiveLayerBuffer() {
+        const l = this.activeLayer;
+        if (!l) return;
+        this.applyProjectColorModeToLayer(l);
+    },
+
+    updateColorWheelForMode() {
+        const canvas = document.getElementById('color-wheel');
+        if (!canvas || !this._originalColorWheelImageData) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        const p = this.activeProject;
+        if (!p || p.mode === 'pixel') {
+            ctx.putImageData(this._originalColorWheelImageData, 0, 0);
+            return;
+        }
+
+        const img = new ImageData(new Uint8ClampedArray(this._originalColorWheelImageData.data), canvas.width, canvas.height);
+        const d_ = img.data;
+
+        if (p.mode === 'pixel-cmjn') {
+            for (let i = 0; i < d_.length; i += 4) {
+                if (d_[i + 3] > 0) {
+                    const out = this.applyCmjnFilter(d_[i], d_[i + 1], d_[i + 2]);
+                    d_[i] = out.r;
+                    d_[i + 1] = out.g;
+                    d_[i + 2] = out.b;
+                }
+            }
+        } else if (p.mode === 'pixel-dither') {
+            for (let i = 0; i < d_.length; i += 4) {
+                if (d_[i + 3] > 0) {
+                    const q = this._quantizeOpaquePixelRgb(d_[i], d_[i + 1], d_[i + 2], 'pixel-dither');
+                    d_[i] = q.r;
+                    d_[i + 1] = q.g;
+                    d_[i + 2] = q.b;
+                }
+            }
+        } else if (p.mode === 'pixel-ral') {
+            const colors = typeof RAL_COLORS !== 'undefined' ? RAL_COLORS : [];
+            if (colors.length > 0) {
+                for (let i = 0; i < d_.length; i += 4) {
+                    if (d_[i+3] > 0) {
+                        let bestDist = Infinity;
+                        let best = colors[0];
+                        for (let c of colors) {
+                            const dr = d_[i] - c.r;
+                            const dg = d_[i+1] - c.g;
+                            const db = d_[i+2] - c.b;
+                            const dist = dr*dr + dg*dg + db*db;
+                            if (dist < bestDist) {
+                                bestDist = dist;
+                                best = c;
+                            }
+                        }
+                        d_[i] = best.r;
+                        d_[i+1] = best.g;
+                        d_[i+2] = best.b;
+                    }
+                }
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+    },
+
     setDitherPattern(id) {
         this.activeDitherPatternId = id;
         const canvases = this._ditherPatternCanvases;
@@ -270,7 +664,7 @@ setup8BitMode() {
      */
     applyActiveStyle(ctx) {
         if (this.activeProject && this.activeProject.mode === 'pixel-dither') {
-            const canv = this._ditherPatternCanvases[this.activeDitherPatternId];
+            const canv = this._ditherPatternCanvases[this.primaryDitherPatternId || 'black'];
             if (canv) {
                 const pat = ctx.createPattern(canv, 'repeat');
                 ctx.fillStyle = pat;
@@ -393,7 +787,7 @@ setup8BitMode() {
         if (typeof window.syncIlluTextFontSelectFromToolProps === 'function') window.syncIlluTextFontSelectFromToolProps();
         this.setupColorWheel();
         this.setupPalette();
-        this.setup8BitMode(); // <-- AJOUTEZ CETTE LIGNE
+        this.setupColorPickerLayoutToggle();
         this.setupSliders();
         this.initHistory();
         this.setupShortcuts();
@@ -406,29 +800,116 @@ setup8BitMode() {
             }
         }
 
-        window.illuFillNewProjectDialogDimensionsFromSelection = function () {
-            const sb = window.selectionBounds;
-            const ov = document.getElementById('selection-overlay');
+        window.illuApplyNewProjectDialogDimensions = function (w, h) {
             const iw = document.getElementById('p-width');
             const ih = document.getElementById('p-height');
             if (!iw || !ih) return false;
+            const cw = Math.max(1, Math.min(16384, Math.round(Number(w) || 0)));
+            const ch = Math.max(1, Math.min(16384, Math.round(Number(h) || 0)));
+            if (cw < 1 || ch < 1) return false;
+            iw.value = String(cw);
+            ih.value = String(ch);
+            return true;
+        };
+
+        /** Dimensions suggérées depuis le presse-papiers interne (Ctrl+C). */
+        window.illuSuggestedNewProjectDimensionsFromClipboard = function () {
+            const clamp = (n) => Math.max(1, Math.min(16384, Math.round(n)));
+            if (window.ctxClipboard && window.ctxClipboard.width >= 1 && window.ctxClipboard.height >= 1) {
+                if (
+                    typeof window.illuImageDataHasVisiblePixels === 'function' &&
+                    !window.illuImageDataHasVisiblePixels(window.ctxClipboard)
+                ) {
+                    /* presse-papiers pixel vide */
+                } else {
+                    const b = window.ctxClipboardDocBounds;
+                    const w =
+                        b && Number.isFinite(b.w) && b.w >= 1 ? b.w : window.ctxClipboard.width | 0;
+                    const h =
+                        b && Number.isFinite(b.h) && b.h >= 1 ? b.h : window.ctxClipboard.height | 0;
+                    return { w: clamp(w), h: clamp(h) };
+                }
+            }
+            const vc = window.ctxVectorClipboard;
+            if (vc && vc.length) {
+                const sb = window.selectionBounds;
+                if (
+                    sb &&
+                    Number.isFinite(sb.w) &&
+                    Number.isFinite(sb.h) &&
+                    sb.w >= 1 &&
+                    sb.h >= 1
+                ) {
+                    return { w: clamp(sb.w), h: clamp(sb.h) };
+                }
+                const NS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(NS, 'svg');
+                svg.setAttribute('width', '1');
+                svg.setAttribute('height', '1');
+                svg.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;';
+                const g = document.createElementNS(NS, 'g');
+                vc.forEach((el) => {
+                    try {
+                        g.appendChild(el.cloneNode(true));
+                    } catch (e) {
+                        /* ignore */
+                    }
+                });
+                svg.appendChild(g);
+                document.body.appendChild(svg);
+                let bb = null;
+                try {
+                    bb = g.getBBox();
+                } catch (e) {
+                    bb = null;
+                }
+                svg.remove();
+                if (bb && bb.width >= 0.5 && bb.height >= 0.5) {
+                    return { w: clamp(bb.width), h: clamp(bb.height) };
+                }
+            }
+            return null;
+        };
+
+        window.illuFillNewProjectDialogDimensionsFromSelection = function () {
+            const sb = window.selectionBounds;
+            const iw = document.getElementById('p-width');
+            const ih = document.getElementById('p-height');
+            if (!iw || !ih) return false;
+            const hasSel =
+                typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
             if (
-                ov &&
-                ov.style.display !== 'none' &&
                 sb &&
+                hasSel &&
                 !window.selectionInverted &&
                 Number.isFinite(sb.w) &&
                 Number.isFinite(sb.h) &&
                 sb.w >= 1 &&
                 sb.h >= 1
             ) {
-                iw.value = String(Math.max(1, Math.min(16384, Math.round(sb.w))));
-                ih.value = String(Math.max(1, Math.min(16384, Math.round(sb.h))));
-                return true;
+                return window.illuApplyNewProjectDialogDimensions(sb.w, sb.h);
+            }
+            if (
+                sb &&
+                EditorManager.mode === 'vector' &&
+                !window.selectionInverted &&
+                Number.isFinite(sb.w) &&
+                Number.isFinite(sb.h) &&
+                sb.w >= 1 &&
+                sb.h >= 1
+            ) {
+                return window.illuApplyNewProjectDialogDimensions(sb.w, sb.h);
             }
             return false;
         };
         window.illuPrepareNewProjectDialogInputs = function () {
+            const clipDims =
+                typeof window.illuSuggestedNewProjectDimensionsFromClipboard === 'function'
+                    ? window.illuSuggestedNewProjectDimensionsFromClipboard()
+                    : null;
+            if (clipDims && window.illuApplyNewProjectDialogDimensions(clipDims.w, clipDims.h)) {
+                return;
+            }
             if (
                 typeof window.illuFillNewProjectDialogDimensionsFromSelection === 'function' &&
                 window.illuFillNewProjectDialogDimensionsFromSelection()
@@ -503,6 +984,12 @@ setup8BitMode() {
                 }
             }
             if (!window.pixelShapeEdit) {
+                if (
+                    typeof window.illuRepaintShapeLiveDrawPreview === 'function' &&
+                    window.illuRepaintShapeLiveDrawPreview()
+                ) {
+                    return;
+                }
                 if (
                     window.activeTool === 'triangle' &&
                     typeof window.syncTriangleBranchesLivePreview === 'function'
@@ -702,11 +1189,11 @@ setup8BitMode() {
         if (triBr) {
             const syncTriBranches = () => {
                 let v = parseInt(triBr.value, 10);
-                if (!Number.isFinite(v)) v = 3;
+                if (!Number.isFinite(v)) v = 5;
                 this.toolProps.triangleBranches =
                     typeof window.illuClampTriangleBranches === 'function'
-                        ? window.illuClampTriangleBranches(v)
-                        : Math.max(3, Math.min(24, v));
+                        ? window.illuClampTriangleBranches(Math.max(4, v))
+                        : Math.max(4, Math.min(24, v));
                 if (triBrV) triBrV.textContent = String(this.toolProps.triangleBranches);
                 if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(triBr);
                 if (typeof window.syncTriangleBranchesLivePreview === 'function') {
@@ -718,6 +1205,44 @@ setup8BitMode() {
             triBr.addEventListener('change', syncTriBranches);
             if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(triBr);
         }
+        const polySides = document.getElementById('tool-polygon-sides');
+        const polySidesV = document.getElementById('tool-polygon-sides-val');
+        if (polySides) {
+            const syncPolySides = () => {
+                let v = parseInt(polySides.value, 10);
+                if (!Number.isFinite(v)) v = 6;
+                this.toolProps.polygonSides =
+                    typeof window.illuClampPolygonSides === 'function'
+                        ? window.illuClampPolygonSides(v)
+                        : Math.max(3, Math.min(24, v));
+                if (polySidesV) polySidesV.textContent = String(this.toolProps.polygonSides);
+                if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(polySides);
+                if (typeof window.syncPolygonSidesLivePreview === 'function') {
+                    window.syncPolygonSidesLivePreview();
+                }
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            };
+            polySides.addEventListener('input', syncPolySides);
+            polySides.addEventListener('change', syncPolySides);
+            if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(polySides);
+        }
+        document.querySelectorAll('[data-illu-callout-style]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const style = btn.getAttribute('data-illu-callout-style') || 'rect';
+                this.toolProps.calloutStyle = style;
+                document.querySelectorAll('[data-illu-callout-style]').forEach((b) => {
+                    const on = b === btn;
+                    b.classList.toggle('active', on);
+                    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                });
+                const hid = document.getElementById('tool-callout-style');
+                if (hid) hid.value = style;
+                if (typeof window.syncCalloutStyleLivePreview === 'function') {
+                    window.syncCalloutStyleLivePreview();
+                }
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            });
+        });
         const scr = document.getElementById('tool-shape-corner-radius');
         const scrv = document.getElementById('tool-shape-corner-radius-val');
         if (scr) {
@@ -884,11 +1409,6 @@ setup8BitMode() {
                 const prevLayout =
                     typeof window.getUILayoutMode === 'function' ? window.getUILayoutMode() : 'floating';
                 let nextLayout = prevLayout;
-                const cb = document.getElementById('settings-hide-startup');
-                try {
-                    if (cb && cb.checked) localStorage.setItem('illu_hide_about', '1');
-                    else localStorage.removeItem('illu_hide_about');
-                } catch (err) { /* ignore */ }
                 try {
                     const row = document.getElementById('settings-layout-scope-row');
                     const layout =
@@ -1017,11 +1537,15 @@ setup8BitMode() {
                 if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
                 this.render();
                 settingsOv.style.display = 'none';
+                document.body.classList.remove('no-scroll');
             };
         }
         if (settingsOv) {
             settingsOv.addEventListener('click', (e) => {
-                if (e.target === settingsOv) settingsOv.style.display = 'none';
+                if (e.target === settingsOv) {
+                    settingsOv.style.display = 'none';
+                    document.body.classList.remove('no-scroll');
+                }
             });
         }
         const settingsClear = document.getElementById('settings-clear-local-btn');
@@ -1213,9 +1737,9 @@ setup8BitMode() {
 
     get mode() { return this.activeProject ? this.activeProject.mode : 'pixel'; },
     get isPixelMode() {
-        if (!this.activeProject) return true; // Défaut pixel
+        if (!this.activeProject) return true;
         const m = this.activeProject.mode;
-        return m === 'pixel' || m === 'pixel-dither';
+        return m === 'pixel' || m === 'pixel-dither' || m === 'pixel-ral' || m === 'pixel-cmjn';
     },
 
     /** 
@@ -1322,7 +1846,10 @@ setup8BitMode() {
         if (!l || !l.buffer) return false;
         // When "Hors toile" is enabled, we may need to resize/expand the layer during the stroke.
         // The intermediate stroke canvas would not resize correctly, so we bypass it.
-        if (this.toolProps && this.toolProps.allowOutsideCanvas) return false;
+        if (typeof window.illuAllowsOutsideCanvasContent === 'function' && window.illuAllowsOutsideCanvasContent()) {
+            this.disposeStrokeIntermediate();
+            return false;
+        }
         if (l.alphaMaskProjectId) return false;
         if (this._isLiveDynamicFilterLayer(l)) return false;
         const w = l.buffer.width | 0;
@@ -1357,6 +1884,9 @@ setup8BitMode() {
             lctx.drawImage(this._strokeIntermediateCanvas, 0, 0);
         }
         this.disposeStrokeIntermediate();
+        if (this.activeProject && this.activeProject.mode !== 'pixel') {
+            this.applyProjectColorModeToLayer(l, this.activeProject.mode);
+        }
     },
 
     disposeStrokeIntermediate() {
@@ -1384,6 +1914,10 @@ setup8BitMode() {
     },
 
     _shouldDimOutsideCanvasLayer(layer) {
+        const isDrawingGlobal = window.isDrawing || (typeof isDrawing !== 'undefined' && isDrawing);
+        if (isDrawingGlobal || window.selectionPixelWarpActive || window.selectionBoundsResizeActive) {
+            return false;
+        }
         return !!(this.toolProps && this.toolProps.allowOutsideCanvas) && this._layerExtendsOutsideDocument(layer);
     },
 
@@ -1549,8 +2083,10 @@ setup8BitMode() {
             const l = this.layers[i];
             if (!l) continue;
             this._normalizeDynamicFilterProps(l);
+            // Les masques alpha et filtres dynamiques nécessitent le chemin de rendu composite,
+            // pas la pile DOM des calques (sinon ces effets sont ignorés).
             if (l.alphaMaskProjectId) return false;
-            if (this._isLiveDynamicFilterLayer(l)) return false;
+            if (this._isLiveDynamicFilterLayer(l) && !this._dynamicFilterLayerDomCssEligible(l)) return false;
         }
         return true;
     },
@@ -1664,7 +2200,7 @@ setup8BitMode() {
      */
     sampleDocCompositeRgb(pos) {
         const p = this.activeProject;
-        if (!p || !(p.mode === 'pixel' || p.mode === 'pixel-dither' || p.mode === 'pixel-dither')) return null;
+        if (!p || !p.mode.startsWith('pixel')) return null;
         const x = Math.min(p.width - 1, Math.max(0, Math.floor(pos.x)));
         const y = Math.min(p.height - 1, Math.max(0, Math.floor(pos.y)));
         if (
@@ -1725,6 +2261,11 @@ setup8BitMode() {
                 : String(l.opacity != null ? l.opacity : 1);
             cv.style.mixBlendMode = this._blendModeToCssMix(l);
             cv.style.zIndex = String(i + 1);
+            if (this._dynamicFilterLayerDomCssEligible(l)) {
+                cv.style.filter = this._dynamicFilterCssFilterStringForStack(l);
+            } else {
+                cv.style.filter = 'none';
+            }
             const vctx = cv.getContext('2d', { willReadFrequently: true });
             vctx.clearRect(0, 0, bw, bh);
             const hasStrokeIntermediate =
@@ -1745,6 +2286,11 @@ setup8BitMode() {
             stackEl.appendChild(cv);
             this._syncImportStagingDomView(stackEl, l, (i + 1) * 10 + 1);
         }
+        stackEl.querySelectorAll('canvas.illu-pixel-layer-view[data-layer-id]').forEach((domCv) => {
+            const lid = parseInt(domCv.dataset.layerId, 10);
+            if (!Number.isFinite(lid)) return;
+            if (map.get(lid) !== domCv) domCv.remove();
+        });
         for (const [id, el] of [...map.entries()]) {
             if (!seen.has(id)) {
                 el.remove();
@@ -1797,7 +2343,9 @@ setup8BitMode() {
         cv.style.display = 'block';
         cv.style.left = `${layer.importStagingX | 0}px`;
         cv.style.top = `${layer.importStagingY | 0}px`;
-        cv.style.opacity = String(layer.opacity != null ? layer.opacity : 1);
+        cv.style.opacity = this._shouldDimOutsideCanvasLayer(Object.assign({}, layer, { buffer: st, x: layer.importStagingX, y: layer.importStagingY }))
+            ? '1'
+            : String(layer.opacity != null ? layer.opacity : 1);
         cv.style.mixBlendMode = this._blendModeToCssMix(layer);
         cv.style.zIndex = String(zIndex);
         cv.style.imageRendering = 'pixelated';
@@ -1806,7 +2354,10 @@ setup8BitMode() {
         if (vctx) {
             vctx.imageSmoothingEnabled = false;
             vctx.clearRect(0, 0, iw, ih);
-            vctx.drawImage(st, 0, 0);
+            const tempLayer = Object.assign({}, layer, { x: layer.importStagingX, y: layer.importStagingY, buffer: st });
+            this._paintLayerBufferLocalWithOutsideDim(vctx, tempLayer, (ctx2d) => {
+                ctx2d.drawImage(st, 0, 0);
+            });
         }
         stackEl.appendChild(cv);
     },
@@ -1871,7 +2422,7 @@ setup8BitMode() {
     /** Composition pixel : calques du projet `p` sur canevas W×H (masques α intégrés si `withLayerMasks`). */
     flattenPixelProjectToCanvas(p, withLayerMasks = true) {
         const out = document.createElement('canvas');
-        if (!p || !(p.mode === 'pixel' || p.mode === 'pixel-dither')) return out;
+        if (!p || !p.mode.startsWith('pixel')) return out;
         out.width = Math.max(1, p.width);
         out.height = Math.max(1, p.height);
         const ctx = out.getContext('2d', { willReadFrequently: true });
@@ -2070,6 +2621,44 @@ setup8BitMode() {
         return stack.length > 0;
     },
 
+    /**
+     * Filtres dynamiques calque : pas de Wasm en direct (trop lourd, bloque l’aperçu).
+     * `localStorage illu_dyn_filter_wasm=1` pour réactiver Wasm sur ce pipeline uniquement.
+     */
+    _dynamicFilterSkipWasmEngine() {
+        if (this._dynamicFilterWarmupActive) return false;
+        try {
+            return localStorage.getItem('illu_dyn_filter_wasm') !== '1';
+        } catch (e) {
+            return true;
+        }
+    },
+
+    /** Chaîne CSS filter() pour toute la pile d’effets (aperçu GPU sur canvas DOM). */
+    _dynamicFilterCssFilterStringForStack(layer) {
+        const stack = this._getNormalizedDynamicFilterStack(layer);
+        const parts = [];
+        for (let i = 0; i < stack.length; i++) {
+            const css = this._dynamicFilterCssFilterString(stack[i].type, stack[i].radius);
+            if (css) parts.push(css);
+        }
+        return parts.length ? parts.join(' ') : 'none';
+    },
+
+    /** Mode 1 + effets compatibles ctx.filter : aperçu via pile DOM + filter CSS (pas de composite Wasm). */
+    _dynamicFilterLayerDomCssEligible(layer) {
+        if (!this._isLiveDynamicFilterLayer(layer)) return true;
+        if ((layer.dynamicFilterMode | 0) !== 1) return false;
+        if (layer.dynamicFilterAlphaPreview) return false;
+        const stack = this._getNormalizedDynamicFilterStack(layer);
+        for (let i = 0; i < stack.length; i++) {
+            const fx = stack[i];
+            if (fx.type === 'pixelate' || fx.type === 'halftone' || fx.type === 'sharpen') return false;
+            if (!this._dynamicFilterCssFilterString(fx.type, fx.radius)) return false;
+        }
+        return true;
+    },
+
     _pixelRenderSkipDynamicFilters() {
         if (this._dynamicFilterWarmupActive) return false;
         return !!(this._deferDynamicFilterRender || this._workspaceLoading);
@@ -2174,7 +2763,22 @@ setup8BitMode() {
         layer[`${propPrefix}Key`] = key;
     },
 
-    _dynamicFilterComputeKey(layer, base, docW, docH, layerData) {
+    _getLayersBelowMutationSum(layer) {
+        let sum = 0;
+        for (let i = 0; i < this.layers.length; i++) {
+            const l = this.layers[i];
+            if (l === layer) break;
+            if (!l.visible) continue;
+            sum += (l.buffer ? l.buffer._illuMutationCount || 0 : 0);
+            sum += (l.x || 0) + (l.y || 0);
+            sum += (l.opacity || 1) * 1000;
+            const stack = this._getNormalizedDynamicFilterStack(l);
+            if (stack) sum += stack.length;
+        }
+        return Math.floor(sum);
+    },
+
+    _dynamicFilterComputeKey(layer, docW, docH, belowMutationSum) {
         const stack = this._getNormalizedDynamicFilterStack(layer);
         const mode = layer.dynamicFilterMode | 0;
         return [
@@ -2182,17 +2786,23 @@ setup8BitMode() {
             docH,
             layer.x | 0,
             layer.y | 0,
+            layer.buffer ? layer.buffer._illuMutationCount || 0 : 0,
             Number.isFinite(layer.opacity) ? Number(layer.opacity).toFixed(4) : '1',
             layer.dynamicFilterAlphaPreview ? 'ap' : 'fx',
-            mode === 1 ? 'self' : this._sampleBufferSignature(base && base.data ? base.data : null),
-            this._sampleBufferSignature(layerData.data),
+            mode === 1 ? 'self' : belowMutationSum,
             JSON.stringify(stack),
             mode
         ].join('|');
     },
 
-    _beginDynamicFilterWorkerJob(layer, base, docW, docH) {
+    _beginDynamicFilterWorkerJob(layer, docW, docH, belowMutationSum, extractBaseFn) {
         if (!this._dynamicRenderWorkerAvailable()) return null;
+        const key = this._dynamicFilterComputeKey(layer, docW, docH, belowMutationSum);
+        if (layer._dynAsyncKey === key) return { cached: true, key };
+        if (layer._dynAsyncPendingKey === key && layer._dynAsyncPrefetchPromise) {
+            return { promise: layer._dynAsyncPrefetchPromise, key };
+        }
+        
         let layerData;
         try {
             layerData = layer.buffer
@@ -2203,13 +2813,9 @@ setup8BitMode() {
         }
         const stack = this._cloneDynamicFilterStack(this._getNormalizedDynamicFilterStack(layer));
         const mode = layer.dynamicFilterMode | 0;
-        const key = this._dynamicFilterComputeKey(layer, base, docW, docH, layerData);
-        if (layer._dynAsyncKey === key) return { cached: true, key };
-        if (layer._dynAsyncPendingKey === key && layer._dynAsyncPrefetchPromise) {
-            return { promise: layer._dynAsyncPrefetchPromise, key };
-        }
         layer._dynAsyncPendingKey = key;
-        const baseTransfer = mode === 1 ? new Uint8ClampedArray(0) : new Uint8ClampedArray(base.data);
+        const base = mode === 1 ? null : (extractBaseFn ? extractBaseFn() : null);
+        const baseTransfer = mode === 1 || !base ? new Uint8ClampedArray(0) : new Uint8ClampedArray(base.data);
         const layerTransfer = new Uint8ClampedArray(layerData.data);
         const promise = this._requestDynamicRenderWorker(
             {
@@ -2255,9 +2861,15 @@ setup8BitMode() {
         return { promise, key };
     },
 
-    _scheduleAsyncDynamicFilterRender(layer, base, docW, docH) {
-        if (this._pixelRenderSkipDynamicFilters()) return false;
-        const req = this._beginDynamicFilterWorkerJob(layer, base, docW, docH);
+    _scheduleAsyncDynamicFilterRender(layer, docW, docH, belowMutationSum, extractBaseFn) {
+        if (
+            this._pixelRenderSkipDynamicFilters() ||
+            this._dynamicFilterSkipWasmEngine() ||
+            this._dynamicFilterLivePreviewActive
+        ) {
+            return false;
+        }
+        const req = this._beginDynamicFilterWorkerJob(layer, docW, docH, belowMutationSum, extractBaseFn);
         if (!req) return false;
         if (req.cached) return true;
         if (req.promise) {
@@ -2298,6 +2910,28 @@ setup8BitMode() {
     async _prefetchDynamicFilterLayerSync(layer, base, docW, docH, key) {
         const mode = layer.dynamicFilterMode | 0;
         if (mode === 1) {
+            const cssF = this._dynamicFilterCssFilterStringForStack(layer);
+            if (this._dynamicFilterLayerDomCssEligible(layer) && cssF && cssF !== 'none') {
+                const lw = layer.buffer.width;
+                const lh = layer.buffer.height;
+                let layerIm;
+                try {
+                    layerIm = layer.buffer
+                        .getContext('2d', { willReadFrequently: true })
+                        .getImageData(0, 0, lw, lh);
+                } catch (e) {
+                    return;
+                }
+                const selfFullCan = document.createElement('canvas');
+                selfFullCan.width = docW;
+                selfFullCan.height = docH;
+                const sctx = selfFullCan.getContext('2d', { willReadFrequently: true });
+                sctx.putImageData(layerIm, layer.x | 0, layer.y | 0);
+                const fullIm = sctx.getImageData(0, 0, docW, docH);
+                const filtered = this._applyDynamicFilterWithCtxFilter(fullIm, cssF, docW, docH);
+                this._storeDynamicFilterSyncResult(layer, key, filtered);
+                return;
+            }
             const lw = layer.buffer.width;
             const lh = layer.buffer.height;
             let layerIm;
@@ -2341,9 +2975,8 @@ setup8BitMode() {
         }
         const blurred = this._applyDynamicFilterToImageDataCopy(base, layer);
         let out = null;
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-            out = this._blendRgbByDynamicMask(base, blurred, maskIm);
-        } else if (
+        if (
+            !this._dynamicFilterSkipWasmEngine() &&
             typeof window.IlluWebGLMaskBlend !== 'undefined' &&
             window.IlluWebGLMaskBlend &&
             typeof window.IlluWebGLMaskBlend.blend === 'function'
@@ -2412,9 +3045,22 @@ setup8BitMode() {
         if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
     },
 
-    _scheduleAsyncAlphaMaskRender(layer, maskFlat, docW, docH) {
+    _scheduleAsyncAlphaMaskRender(layer, mp, docW, docH) {
         if (this._pixelRenderSkipDynamicFilters()) return false;
         if (!this._dynamicRenderWorkerAvailable()) return false;
+        
+        const key = [
+            docW,
+            docH,
+            layer.x | 0,
+            layer.y | 0,
+            layer.buffer ? layer.buffer._illuMutationCount || 0 : 0,
+            mp._illuMutationCount || 0
+        ].join('|');
+        if (layer._alphaAsyncPendingKey === key || layer._alphaAsyncKey === key) return true;
+        layer._alphaAsyncPendingKey = key;
+        
+        const maskFlat = this.flattenPixelProjectToCanvas(mp, false);
         let layerData;
         let maskData;
         try {
@@ -2425,17 +3071,9 @@ setup8BitMode() {
                 .getContext('2d', { willReadFrequently: true })
                 .getImageData(0, 0, maskFlat.width, maskFlat.height);
         } catch (e) {
+            layer._alphaAsyncPendingKey = null;
             return false;
         }
-        const key = [
-            docW,
-            docH,
-            layer.x | 0,
-            layer.y | 0,
-            this._sampleBufferSignature(layerData.data),
-            this._sampleBufferSignature(maskData.data)
-        ].join('|');
-        if (layer._alphaAsyncPendingKey === key || layer._alphaAsyncKey === key) return true;
         layer._alphaAsyncPendingKey = key;
         const layerTransfer = new Uint8ClampedArray(layerData.data);
         const maskTransfer = new Uint8ClampedArray(maskData.data);
@@ -2710,7 +3348,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             return copyUnchanged();
         }
 
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(typ)) {
+        if (
+            !this._dynamicFilterSkipWasmEngine() &&
+            typeof MasterPaintWasm !== 'undefined' &&
+            MasterPaintWasm.isLoaded &&
+            MasterPaintWasm.isEffectSupported(typ)
+        ) {
             const res = MasterPaintWasm.applyFilter(typ, copyUnchanged(), { radius: rad, size: rad, dotSize: rad });
             if (res) return res;
         }
@@ -2784,12 +3427,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const docH = maskIm.height;
         
         let out;
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
+        if (
+            !this._dynamicFilterSkipWasmEngine() &&
+            typeof MasterPaintWasm !== 'undefined' &&
+            MasterPaintWasm.isLoaded
+        ) {
             out = MasterPaintWasm.grayscaleAlpha(maskIm);
         }
-        
+
         if (!out) {
-            // JS Fallback
             try {
                 out = ctx.createImageData(docW, docH);
             } catch (e) {
@@ -2816,7 +3462,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     _blendRgbByDynamicMask(base, blurred, maskIm) {
         const w = base.width;
         const h = base.height;
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
+        if (
+            !this._dynamicFilterSkipWasmEngine() &&
+            typeof MasterPaintWasm !== 'undefined' &&
+            MasterPaintWasm.isLoaded
+        ) {
             const res = MasterPaintWasm.blendMask(base, blurred, maskIm);
             if (res) return res;
         }
@@ -2849,6 +3499,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return out;
     },
 
+    _drawImportStagingToContext(ctx, layer) {
+        if (!layer || !layer.importPlacementPending || !layer.importStagingBuffer || layer._ghostDragHide) return;
+        const st = layer.importStagingBuffer;
+        const sx = layer.importStagingX | 0;
+        const sy = layer.importStagingY | 0;
+        ctx.save();
+        ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
+        ctx.globalCompositeOperation = this.getLayerBlendMode(layer);
+        ctx.drawImage(st, sx, sy);
+        ctx.restore();
+    },
+
     _drawNormalPixelLayerToContext(ctx, layer, docW, docH, withLayerMasks = true) {
         if (!layer.visible || !layer.buffer || layer._ghostDragHide) return;
         ctx.save();
@@ -2860,11 +3522,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             this._strokeIntermediateTool === 'eraser';
         if (withLayerMasks && layer.alphaMaskProjectId) {
             const mp = this.projects.find((pr) => pr.id === layer.alphaMaskProjectId);
-            if (mp && (mp.mode === 'pixel' || mp.mode === 'pixel-dither')) {
-                const maskFlat = this.flattenPixelProjectToCanvas(mp, false);
-                if (!this._scheduleAsyncAlphaMaskRender(layer, maskFlat, docW, docH)) {
+            if (mp && mp.mode.startsWith('pixel')) {
+                if (!this._scheduleAsyncAlphaMaskRender(layer, mp, docW, docH)) {
+                    const maskFlat = this.flattenPixelProjectToCanvas(mp, false);
                     this._drawLayerWithLuminanceMask(ctx, layer, maskFlat, docW, docH);
                 } else if (!this._drawAsyncDocCanvasToContext(ctx, layer._alphaAsyncCanvas)) {
+                    const maskFlat = this.flattenPixelProjectToCanvas(mp, false);
                     this._drawLayerWithLuminanceMask(ctx, layer, maskFlat, docW, docH);
                 }
             } else {
@@ -2935,7 +3598,47 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 ctx.drawImage(this._shapePreviewCanvas, layer.x, layer.y);
             }
         }
-        /* Collage volant : aperçu uniquement via .illu-pixel-layer-staging-view (DOM), pas dans le tampon composite. */
+        this._drawImportStagingToContext(ctx, layer);
+        ctx.restore();
+    },
+
+    /** Mode 1 (effet sur ce calque) : ctx.filter CSS si possible, sinon ImageData + JS. */
+    _drawDynamicFilterMode1ToContext(ctx, layer, docW, docH) {
+        const cssF = this._dynamicFilterCssFilterStringForStack(layer);
+        if (this._dynamicFilterLayerDomCssEligible(layer) && cssF && cssF !== 'none') {
+            ctx.save();
+            ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
+            ctx.globalCompositeOperation = this.getLayerBlendMode(layer);
+            ctx.filter = cssF;
+            ctx.drawImage(layer.buffer, layer.x | 0, layer.y | 0);
+            ctx.filter = 'none';
+            ctx.restore();
+            return;
+        }
+        const lw = layer.buffer.width;
+        const lh = layer.buffer.height;
+        let layerIm;
+        try {
+            layerIm = layer.buffer.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, lw, lh);
+        } catch (e) {
+            this._drawNormalPixelLayerToContext(ctx, layer, docW, docH, true);
+            return;
+        }
+        const selfFullCan = document.createElement('canvas');
+        selfFullCan.width = docW;
+        selfFullCan.height = docH;
+        const sctx = selfFullCan.getContext('2d', { willReadFrequently: true });
+        sctx.putImageData(layerIm, layer.x, layer.y);
+        const fullIm = sctx.getImageData(0, 0, docW, docH);
+        const filtered = this._applyDynamicFilterToImageDataCopy(fullIm, layer);
+        ctx.save();
+        ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
+        ctx.globalCompositeOperation = this.getLayerBlendMode(layer);
+        const resCan = document.createElement('canvas');
+        resCan.width = docW;
+        resCan.height = docH;
+        resCan.getContext('2d', { willReadFrequently: true }).putImageData(filtered, 0, 0);
+        ctx.drawImage(resCan, 0, 0);
         ctx.restore();
     },
 
@@ -2964,39 +3667,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 }
 
                 if (mode === 1) {
-                    // Mode 1: Effect on Self (Active Layer)
-                    // No mask needed, apply filters to THIS layer then draw normally
+                    // Mode 1: effet sur ce calque — CSS filter en direct si possible (pas de worker/Wasm)
                     if (!this._scheduleAsyncDynamicFilterRender(layer, null, docW, docH)) {
-                        // Sync fallback
-                        const lw = layer.buffer.width;
-                        const lh = layer.buffer.height;
-                        let layerIm;
-                        try {
-                            layerIm = layer.buffer.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, lw, lh);
-                        } catch (e) {
-                            this._drawNormalPixelLayerToContext(ctx, layer, docW, docH, true);
-                            continue;
-                        }
-
-                        // We create a doc-sized buffer to allow filters to expand
-                        const selfFullCan = document.createElement('canvas');
-                        selfFullCan.width = docW;
-                        selfFullCan.height = docH;
-                        const sctx = selfFullCan.getContext('2d', { willReadFrequently: true });
-                        sctx.putImageData(layerIm, layer.x, layer.y);
-                        
-                        const fullIm = sctx.getImageData(0, 0, docW, docH);
-                        const filtered = this._applyDynamicFilterToImageDataCopy(fullIm, layer);
-                        
-                        ctx.save();
-                        ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
-                        ctx.globalCompositeOperation = this.getLayerBlendMode(layer);
-                        const resCan = document.createElement('canvas');
-                        resCan.width = docW;
-                        resCan.height = docH;
-                        resCan.getContext('2d', { willReadFrequently: true }).putImageData(filtered, 0, 0);
-                        ctx.drawImage(resCan, 0, 0);
-                        ctx.restore();
+                        this._drawDynamicFilterMode1ToContext(ctx, layer, docW, docH);
                     } else if (layer._dynAsyncCanvas) {
                         ctx.save();
                         ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
@@ -3008,23 +3681,30 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 }
 
                 // Mode 0: Effect on Below (Adjustment-like)
-                let base;
-                try {
-                    base = ctx.getImageData(0, 0, docW, docH);
-                } catch (e) {
-                    continue;
-                }
-                if (!this._scheduleAsyncDynamicFilterRender(layer, base, docW, docH)) {
+                let base = null;
+                const extractBaseFn = () => {
+                    if (!base) {
+                        try {
+                            base = ctx.getImageData(0, 0, docW, docH);
+                        } catch (e) {
+                            base = null;
+                        }
+                    }
+                    return base;
+                };
+                const belowMutationSum = this._getLayersBelowMutationSum(layer);
+                if (!this._scheduleAsyncDynamicFilterRender(layer, docW, docH, belowMutationSum, extractBaseFn)) {
+                    extractBaseFn(); // Ensure base is extracted for sync fallback
+                    if (!base) continue;
                     const maskIm = this._buildDynamicFilterMaskImageData(layer, docW, docH);
                     if (layer.dynamicFilterAlphaPreview) {
                         this._overlayDynamicFilterAlphaPreview(ctx, maskIm);
                         continue;
                     }
                     const blurred = this._applyDynamicFilterToImageDataCopy(base, layer);
-                    if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-                        const out = this._blendRgbByDynamicMask(base, blurred, maskIm);
-                        ctx.putImageData(out, 0, 0);
-                    } else if (
+                    let gpuCan = null;
+                    if (
+                        !this._dynamicFilterSkipWasmEngine() &&
                         typeof window.IlluWebGLMaskBlend !== 'undefined' &&
                         window.IlluWebGLMaskBlend &&
                         typeof window.IlluWebGLMaskBlend.drawBlendedCanvas === 'function'
@@ -3034,12 +3714,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         } catch (e) {
                             gpuCan = null;
                         }
-                        if (gpuCan) ctx.drawImage(gpuCan, 0, 0);
-                        else {
-                            const out = this._blendRgbByDynamicMask(base, blurred, maskIm);
-                            ctx.putImageData(out, 0, 0);
-                        }
-                    } else {
+                    }
+                    if (gpuCan) ctx.drawImage(gpuCan, 0, 0);
+                    else {
                         const out = this._blendRgbByDynamicMask(base, blurred, maskIm);
                         ctx.putImageData(out, 0, 0);
                     }
@@ -3270,12 +3947,127 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
                 return;
             }
-            if (proj.mode === 'pixel' || proj.mode === 'pixel-dither') {
+            if (proj.mode.startsWith('pixel')) {
                 const u = this.getProjectTabThumbnailDataUrl(proj);
                 if (u) img.src = u;
             }
             this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
         }
+    },
+
+    _getLayerCroppedRectFast(srcCanvas, projW, projH) {
+        const cw = srcCanvas.width;
+        const ch = srcCanvas.height;
+        if (cw <= 0 || ch <= 0) return null;
+
+        const maxD = 256;
+        let scale = 1;
+        let tCan = srcCanvas;
+        
+        if (cw > maxD || ch > maxD) {
+            scale = Math.min(maxD / cw, maxD / ch);
+            tCan = document.createElement('canvas');
+            tCan.width = Math.max(1, Math.ceil(cw * scale));
+            tCan.height = Math.max(1, Math.ceil(ch * scale));
+            const tc = tCan.getContext('2d', { willReadFrequently: true });
+            tc.imageSmoothingEnabled = true;
+            tc.drawImage(srcCanvas, 0, 0, tCan.width, tCan.height);
+        }
+
+        const tw = tCan.width;
+        const th = tCan.height;
+        let imgData;
+        try {
+            imgData = tCan.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, tw, th);
+        } catch(e) {
+            return null;
+        }
+        
+        const d32 = new Uint32Array(imgData.data.buffer);
+        const bg32 = d32[0];
+        const tr32 = d32[tw - 1];
+        const bl32 = d32[(th - 1) * tw];
+        const br32 = d32[(th - 1) * tw + tw - 1];
+        const cornersMatch = (bg32 === tr32) && (bg32 === bl32) && (bg32 === br32);
+        
+        let minX = tw, minY = th, maxX = -1, maxY = -1;
+        let found = false;
+        
+        for (let y = 0; y < th; y++) {
+            const offset = y * tw;
+            for (let x = 0; x < tw; x++) {
+                const p = d32[offset + x];
+                let active = false;
+                if (cornersMatch) {
+                    if (p !== bg32) {
+                        const r1 = p & 0xff, g1 = (p >> 8) & 0xff, b1 = (p >> 16) & 0xff, a1 = (p >>> 24);
+                        const r2 = bg32 & 0xff, g2 = (bg32 >> 8) & 0xff, b2 = (bg32 >> 16) & 0xff, a2 = (bg32 >>> 24);
+                        if (Math.abs(r1-r2)>3 || Math.abs(g1-g2)>3 || Math.abs(b1-b2)>3 || Math.abs(a1-a2)>3) {
+                            active = true;
+                        }
+                    }
+                } else {
+                    active = (p >>> 24) > 3; 
+                }
+                
+                if (active) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) return null;
+
+        const bx = minX / scale;
+        const by = minY / scale;
+        const bw = (maxX - minX + 1) / scale;
+        const bh = (maxY - minY + 1) / scale;
+
+        const R = projW / projH;
+        const padding = 1.0;
+        let cw2 = bw * padding;
+        let ch2 = bh * padding;
+        
+        // La zone croppée ne doit JAMAIS dépasser la taille du projet.
+        // Cela évite de rajouter des marges ou de donner l'impression que le calque a été agrandi.
+        if (cw2 > projW) cw2 = projW;
+        if (ch2 > projH) ch2 = projH;
+
+        const minW = projW * 0.05;
+        const minH = projH * 0.05;
+        if (cw2 < minW) cw2 = minW;
+        if (ch2 < minH) ch2 = minH;
+
+        if (cw2 / ch2 > R) {
+            ch2 = cw2 / R;
+        } else {
+            cw2 = ch2 * R;
+        }
+
+        // Sécurité finale pour être certain que la box ne dépasse pas les dimensions max
+        if (cw2 > projW || ch2 > projH) {
+            if (cw2 / projW > ch2 / projH) {
+                cw2 = projW;
+                ch2 = cw2 / R;
+            } else {
+                ch2 = projH;
+                cw2 = ch2 * R;
+            }
+        }
+
+        const cx = bx + bw / 2;
+        const cy = by + bh / 2;
+
+        return {
+            sx: Math.floor(cx - cw2 / 2),
+            sy: Math.floor(cy - ch2 / 2),
+            sw: Math.ceil(cw2),
+            sh: Math.ceil(ch2)
+        };
     },
 
     getLayerThumbnailDataUrl(layer, maxDim = 28, useLowQualityJpeg = false) {
@@ -3285,29 +4077,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const cw = layer.buffer.width;
         const ch = layer.buffer.height;
         if (cw < 1 || ch < 1) return empty;
-        const { width: tw, height: th } = this._thumbFitSize(cw, ch, maxDim);
+        let sx = 0, sy = 0, sw = cw, sh = ch;
+        const proj = this.activeProject;
+        const projW = Math.max(1, proj ? proj.width : cw);
+        const projH = Math.max(1, proj ? proj.height : ch);
+        const { width: tw, height: th } = this._thumbFitSize(projW, projH, maxDim);
 
-        // --- WASM Engine for Thumbnails ---
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-            const ctx = layer.buffer.getContext('2d', { willReadFrequently: true });
-            const srcData = ctx.getImageData(0, 0, cw, ch);
-
-            const thumbData = MasterPaintWasm.generateThumbnail(srcData, tw, th);
-            if (thumbData) {
-                const sc = document.createElement('canvas');
-                sc.width = tw;
-                sc.height = th;
-                const sctx = sc.getContext('2d');
-                sctx.putImageData(thumbData, 0, 0);
-                return sc.toDataURL('image/png');
-            }
-        }
-
-        const sc = document.createElement('canvas');
-        sc.width = tw;
-        sc.height = th;
-        const sctx = sc.getContext('2d', { willReadFrequently: true });
-        sctx.imageSmoothingEnabled = true;
         let src = layer.buffer;
         if (this._isLiveDynamicFilterLayer(layer)) {
             try {
@@ -3337,7 +4112,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 src = layer.buffer;
             }
         }
-        sctx.drawImage(src, 0, 0, cw, ch, 0, 0, tw, th);
+
+        const crop = this._getLayerCroppedRectFast(src, projW, projH);
+        if (!crop) return empty;
+
+        const sc = document.createElement('canvas');
+        sc.width = tw;
+        sc.height = th;
+        const sctx = sc.getContext('2d', { willReadFrequently: true });
+        sctx.imageSmoothingEnabled = true;
+        sctx.drawImage(src, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, tw, th);
         try {
             // For thumbnails with transparency, we MUST use PNG
             return sc.toDataURL('image/png');
@@ -3398,8 +4182,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     sc.width = tw;
                     sc.height = th;
                     const sctx = sc.getContext('2d');
-                    sctx.fillStyle = '#808080';
-                    sctx.fillRect(0, 0, tw, th);
                     sctx.imageSmoothingEnabled = true;
                     sctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
                     resolve(sc.toDataURL('image/png'));
@@ -3450,41 +4232,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             `</svg>`
         ].join('');
 
-        // --- Helpers couleur (inline, pas de dépendance externe) ---
-        const rgbToHsl = (r, g, b) => {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h = 0, s = 0;
-            const l = (max + min) / 2;
-            if (max !== min) {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                    case g: h = ((b - r) / d + 2) / 6; break;
-                    case b: h = ((r - g) / d + 4) / 6; break;
-                }
-            }
-            return { h, s, l };
-        };
-        const hslToRgb = (h, s, l) => {
-            const hue2rgb = (p, q, t) => {
-                if (t < 0) t += 1; if (t > 1) t -= 1;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                return p;
-            };
-            if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const pp = 2 * l - q;
-            return {
-                r: Math.round(hue2rgb(pp, q, h + 1/3) * 255),
-                g: Math.round(hue2rgb(pp, q, h) * 255),
-                b: Math.round(hue2rgb(pp, q, h - 1/3) * 255)
-            };
-        };
-
         return new Promise((resolve) => {
             const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(blob);
@@ -3492,67 +4239,35 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             img.onload = () => {
                 URL.revokeObjectURL(url);
                 try {
-                    // Étape 1 : rendre le SVG dans un canvas temporaire
+                    const tmpMax = 256;
+                    const tRatio = Math.min(tmpMax / W, tmpMax / H, 1);
+                    const tW = Math.max(1, Math.round(W * tRatio));
+                    const tH = Math.max(1, Math.round(H * tRatio));
+                    
                     const tmp = document.createElement('canvas');
-                    tmp.width = tw; tmp.height = th;
+                    tmp.width = tW; tmp.height = tH;
                     const tctx = tmp.getContext('2d', { willReadFrequently: true });
                     tctx.imageSmoothingEnabled = true;
-                    tctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
+                    tctx.drawImage(img, 0, 0, W, H, 0, 0, tW, tH);
 
-                    // Étape 2 : échantillonner la couleur dominante (pixels visibles, α-pondérés)
-                    const imgData = tctx.getImageData(0, 0, tw, th);
-                    const d = imgData.data;
-                    let rSum = 0, gSum = 0, bSum = 0, aSum = 0;
-                    const step = 2; // 1 pixel sur {step} pour la vitesse
-                    for (let i = 0; i < d.length; i += 4 * step) {
-                        const a = d[i + 3];
-                        if (a > 12) {
-                            rSum += d[i]     * a;
-                            gSum += d[i + 1] * a;
-                            bSum += d[i + 2] * a;
-                            aSum += a;
-                        }
+                    // Crop detection on the temporary canvas
+                    const crop = window.EditorManager._getLayerCroppedRectFast(tmp, W, H);
+                    if (!crop) {
+                        resolve(empty);
+                        return;
                     }
+                    
+                    // crop.sx, sy etc. are relative to `tmp` canvas. We map them back to original W, H
+                    const realSx = (crop.sx / tW) * W;
+                    const realSy = (crop.sy / tH) * H;
+                    const realSw = (crop.sw / tW) * W;
+                    const realSh = (crop.sh / tH) * H;
 
-                    // Étape 3 : calculer la couleur de fond contrastante
-                    let bgA, bgB;
-                    if (aSum < 1) {
-                        // Calque vide → damier gris neutre
-                        bgA = '#aaaaaa'; bgB = '#777777';
-                    } else {
-                        const avgR = rSum / aSum;
-                        const avgG = gSum / aSum;
-                        const avgB = bSum / aSum;
-
-                        const hsl = rgbToHsl(avgR, avgG, avgB);
-
-                        // Teinte complémentaire (180°)
-                        const ch = (hsl.h + 0.5) % 1;
-                        // Saturation élevée pour que le fond reste coloré
-                        const cs = Math.min(1, Math.max(0.45, hsl.s));
-                        // Luminosité inverse : fond sombre si contenu clair, clair si sombre
-                        const cl1 = hsl.l > 0.45 ? 0.18 : 0.80;
-                        const cl2 = hsl.l > 0.45 ? 0.30 : 0.65;
-
-                        const c1 = hslToRgb(ch, cs, cl1);
-                        const c2 = hslToRgb(ch, cs, cl2);
-                        bgA = `rgb(${c1.r},${c1.g},${c1.b})`;
-                        bgB = `rgb(${c2.r},${c2.g},${c2.b})`;
-                    }
-
-                    // Étape 4 : dessiner le damier contrasté puis le SVG par-dessus
                     const sc = document.createElement('canvas');
                     sc.width = tw; sc.height = th;
                     const sctx = sc.getContext('2d');
-                    const cs = 3; // taille des cases en px
-                    for (let y = 0; y < th; y += cs) {
-                        for (let x = 0; x < tw; x += cs) {
-                            sctx.fillStyle = ((Math.floor(x / cs) + Math.floor(y / cs)) % 2 === 0) ? bgA : bgB;
-                            sctx.fillRect(x, y, cs, cs);
-                        }
-                    }
                     sctx.imageSmoothingEnabled = true;
-                    sctx.drawImage(img, 0, 0, W, H, 0, 0, tw, th);
+                    sctx.drawImage(img, realSx, realSy, realSw, realSh, 0, 0, tw, th);
                     resolve(sc.toDataURL('image/png'));
                 } catch (e) {
                     resolve(empty);
@@ -3569,7 +4284,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     getProjectTabThumbnailDataUrl(p) {
         const empty =
             'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        if (!p || !(p.mode === 'pixel' || p.mode === 'pixel-dither' || p.mode === 'pixel-dither')) return null;
+        if (!p || !p.mode.startsWith('pixel')) return null;
         const active = this.activeProject;
         const editingThisParentMask =
             active &&
@@ -3606,10 +4321,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     _addLinkedAlphaMaskProject(layer) {
         const parent = this.activeProject;
-        if (!parent || !(parent.mode === 'pixel' || parent.mode === 'pixel-dither') || parent.role === 'layerAlphaMask' || !layer?.buffer) return null;
+        if (!parent || !parent.mode.startsWith('pixel') || parent.role === 'layerAlphaMask' || !layer?.buffer) return null;
         const lw = Math.max(1, layer.buffer.width);
         const lh = Math.max(1, layer.buffer.height);
-        const maskId = Date.now();
+        const maskId = Date.now() + Math.floor(Math.random() * 1e7);
         const white = document.createElement('canvas');
         white.width = lw;
         white.height = lh;
@@ -3662,7 +4377,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     ensureAlphaMaskBufferForLayer(layer) {
         const parent = this.activeProject;
-        if (!parent || !(parent.mode === 'pixel' || parent.mode === 'pixel-dither') || parent.role === 'layerAlphaMask' || !layer?.buffer) return null;
+        if (!parent || !parent.mode.startsWith('pixel') || parent.role === 'layerAlphaMask' || !layer?.buffer) return null;
         const lw = Math.max(1, layer.buffer.width);
         const lh = Math.max(1, layer.buffer.height);
         if (layer.alphaMaskProjectId) {
@@ -3685,7 +4400,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     openLayerAlphaMask(layerIndex) {
         const parent = this.activeProject;
-        if (!parent || !(parent.mode === 'pixel' || parent.mode === 'pixel-dither') || parent.role === 'layerAlphaMask') return;
+        if (!parent || !parent.mode.startsWith('pixel') || parent.role === 'layerAlphaMask') return;
         const idx = Math.max(0, Math.min(layerIndex, this.layers.length - 1));
         const layer = this.layers[idx];
         if (!layer) return;
@@ -3711,7 +4426,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     removeLayerAlphaMaskAtIndex(layerIndex) {
         const parent = this.activeProject;
-        if (!parent || !(parent.mode === 'pixel' || parent.mode === 'pixel-dither') || parent.role === 'layerAlphaMask') return;
+        if (!parent || !parent.mode.startsWith('pixel') || parent.role === 'layerAlphaMask') return;
         const idx = Math.max(0, Math.min(layerIndex, this.layers.length - 1));
         const layer = this.layers[idx];
         if (!layer || !layer.alphaMaskProjectId) return;
@@ -3758,7 +4473,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     handleNewProject() {
         const pMode = document.querySelector('input[name="proj-mode"]:checked')?.value || 'pixel';
-        const isPixel = (pMode === 'pixel' || pMode === 'pixel-dither');
+        const isPixel = pMode.startsWith('pixel');
         const dw = window.ILLU_DEFAULT_DOC_WIDTH || 1280;
         const dh = window.ILLU_DEFAULT_DOC_HEIGHT || 720;
         const pWidth = parseInt(document.getElementById('p-width')?.value || dw, 10);
@@ -3766,11 +4481,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         const project = {
             id: Date.now(),
-            name: `Sans titre ${this.projects.length + 1}` + (pMode === 'pixel-dither' ? ' (N&B)' : ''),
+            name: `Sans titre ${this.projects.length + 1}` + (pMode === 'pixel-dither' ? ' (N&B)' : pMode === 'pixel-ral' ? ' (RAL)' : pMode === 'pixel-cmjn' ? ' (CMJN)' : ''),
             mode: pMode,
             width: Math.max(1, Number.isFinite(pWidth) && pWidth > 0 ? pWidth : dw),
             height: Math.max(1, Number.isFinite(pHeight) && pHeight > 0 ? pHeight : dh),
-            ditherEffectSize: (pMode === 'pixel-dither') ? parseInt(document.getElementById('p-dither-size-slider')?.value || '1', 10) : 1,
+            ditherEffectSize: pMode === 'pixel-dither' ? (this.toolProps.ditherEffectSize || 1) : 1,
             layers: [],
             activeLayerIndex: 0,
             history: [],
@@ -3784,13 +4499,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             parentProjectId: null,
             parentLayerId: null,
             autoSaveLocal: false,
-            ditherInvert: (pMode === 'pixel-dither') ? (document.getElementById('p-dither-invert')?.checked || false) : false
+            ditherInvert: false
         };
 
         this.projects.push(project);
         this.activeProjectIndex = this.projects.length - 1;
 
-        if (project.mode === 'pixel' || project.mode === 'pixel-dither') {
+        if (project.mode.startsWith('pixel')) {
             this.addLayer('Arrière-plan');
         } else if (project.mode === 'vector') {
             this.addLayer('Arrière-plan');
@@ -3813,6 +4528,24 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return project;
     },
 
+    /** Copie fiable d'une source d'import (Image, canvas…) en tampon canvas. */
+    _bitmapFromImportSource(img) {
+        if (!img) return null;
+        const iw = Math.max(0, (img.naturalWidth || img.width) | 0);
+        const ih = Math.max(0, (img.naturalHeight || img.height) | 0);
+        if (iw < 1 || ih < 1) return null;
+        if (img instanceof HTMLCanvasElement && img.width === iw && img.height === ih) return img;
+        const c = document.createElement('canvas');
+        c.width = iw;
+        c.height = ih;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(img, 0, 0);
+        }
+        return c;
+    },
+
     /**
      * Coin supérieur gauche document pour une image importée : reprise de la copie interne (même projet, mêmes dimensions), sinon centré sur la toile.
      * @param {{ pasteDocBounds?: { x: number; y: number; w: number; h: number }; pasteProjectId?: number | null }} [importOpts]
@@ -3832,7 +4565,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             pid != null &&
             String(importOpts.pasteProjectId) === String(pid);
         if (sameProject) {
-            return { docX: Math.round(pb.x), docY: Math.round(pb.y) };
+            return {
+                docX: Math.round(pb.x),
+                docY: Math.round(pb.y)
+            };
         }
         if (iw < 1 || ih < 1) return { docX: 0, docY: 0 };
         return { docX: Math.round((W - iw) / 2), docY: Math.round((H - ih) / 2) };
@@ -3846,11 +4582,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     _mergeInternalPasteImportOpts(importOpts) {
         importOpts = importOpts || {};
+        const isInternalPaste = importOpts.pasteProjectId != null;
+        if (!isInternalPaste) return importOpts;
         if (!importOpts.pasteDocBounds && window.ctxClipboardDocBounds) {
             importOpts.pasteDocBounds = window.ctxClipboardDocBounds;
-        }
-        if (importOpts.pasteProjectId == null && window.ctxClipboardProjectId != null) {
-            importOpts.pasteProjectId = window.ctxClipboardProjectId;
         }
         return importOpts;
     },
@@ -3866,17 +4601,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const W = Math.max(1, this.width | 0);
         const H = Math.max(1, this.height | 0);
         const finish = (placement) => {
-            if (typeof onReady === 'function') onReady(placement || 'staging');
+            if (typeof onReady === 'function') onReady(placement || 'commit');
         };
         if (iw <= W && ih <= H) {
-            finish('staging');
+            finish('commit');
             return;
         }
         const overlay = document.getElementById('import-choice-overlay');
         const overlayOversize = document.getElementById('import-oversize-overlay');
         if (overlay) overlay.style.display = 'none';
         if (!overlayOversize) {
-            finish('staging');
+            finish('commit');
             return;
         }
         overlayOversize.style.display = 'flex';
@@ -3889,7 +4624,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const mr = Math.max(0, iw - W);
                 const mb = Math.max(0, ih - H);
                 this.extendDocumentMargins(0, 0, mr, mb, { silent: true });
-                finish('staging');
+                finish('commit');
             };
         }
         if (btnKeep) {
@@ -3908,10 +4643,42 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
+    /** Import direct : nouveau calque avec pixels posés (sans tampon volant). */
+    importImageAsNewLayer(img, name, importOpts) {
+        importOpts = importOpts || {};
+        if (!this.isPixelMode) {
+            if (typeof window.illuPromptVectorBitmapImport === 'function') {
+                window.illuPromptVectorBitmapImport(img);
+            } else if (typeof this.embedBitmapInVectorProject === 'function') {
+                this.embedBitmapInVectorProject(img);
+            }
+            return;
+        }
+        this._runImportOversizeGate(img, () => {
+            this.addImageLayerFromBitmap(img, name || 'Image importée', {
+                ...importOpts,
+                placement: 'commit'
+            });
+            this.saveHistory('Import calque', { patchActiveLayer: true });
+            this.render({ flushUiThumbnails: true });
+            if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+                window.scheduleFitActiveProjectZoomOnDocumentOpen();
+            } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
+                window.fitActiveProjectZoomToPageWidth();
+            }
+            if (typeof window.illuAfterImportActivateDeformTool === 'function') {
+                window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
+            }
+        });
+    },
+
     _finishFloatingPaste(img, importOpts, placement, historyLabel) {
-        this.addImageLayerFromBitmap(img, 'Collage', { ...importOpts, placement: placement || 'staging' });
-        /* Historique enregistré au « poser » (Entrée / changement d’outil), pas tant que le collage est volant. */
-        this.render();
+        this.addImageLayerFromBitmap(img, 'Collage', {
+            ...importOpts,
+            placement: 'commit'
+        });
+        this.saveHistory(historyLabel || 'Coller', { patchActiveLayer: true });
+        this.render({ flushUiThumbnails: true });
         if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
             window.scheduleFitActiveProjectZoomOnDocumentOpen();
         } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
@@ -3922,35 +4689,76 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
     },
 
+    /** Coller depuis le tampon interne (Ctrl+V) sans passer par le presse-papiers OS. */
+    pasteInternalClipboard() {
+        if (!window.ctxClipboard || !this.isPixelMode) return false;
+        if (
+            typeof window.illuImageDataHasVisiblePixels === 'function' &&
+            !window.illuImageDataHasVisiblePixels(window.ctxClipboard)
+        ) {
+            return false;
+        }
+        const c =
+            typeof window.illuCanvasFromImageData === 'function'
+                ? window.illuCanvasFromImageData(window.ctxClipboard)
+                : null;
+        if (!c) return false;
+        const importOpts = {
+            pasteDocBounds: window.ctxClipboardDocBounds,
+            pasteProjectId: window.ctxClipboardProjectId
+        };
+        if (!this._isSamePasteProject(importOpts.pasteProjectId)) {
+            importOpts.ignorePastePosition = true;
+            delete importOpts.pasteDocBounds;
+        }
+        this._runImportOversizeGate(c, () => {
+            this._finishFloatingPaste(c, importOpts, 'commit', 'Coller');
+        });
+        return true;
+    },
+
     promptImport(img, importOpts) {
         importOpts = this._mergeInternalPasteImportOpts(importOpts || {});
+        img = this._bitmapFromImportSource(img);
+        if (!img) {
+            if (window.showIlluAlert) window.showIlluAlert('Image invalide ou vide.');
+            return;
+        }
         if (!this.isPixelMode) {
-            this.handleNewProjectFromImage(img);
+            if (typeof window.illuPromptVectorBitmapImport === 'function') {
+                window.illuPromptVectorBitmapImport(img);
+            } else {
+                this.embedBitmapInVectorProject(img);
+            }
             return;
         }
         const fromInternalClipboard = importOpts.pasteProjectId != null;
-        const sameProject = fromInternalClipboard && this._isSamePasteProject(importOpts.pasteProjectId);
 
-        // Collage interne, même projet : calque volant (staging), position d'origine, outil Déformation.
-        if (fromInternalClipboard && sameProject) {
-            this._runImportOversizeGate(img, (placement) => {
-                this._finishFloatingPaste(img, importOpts, placement, 'Coller');
+        // Collage presse-papiers interne (même projet ou autre onglet).
+        if (fromInternalClipboard) {
+            const sameProject = this._isSamePasteProject(importOpts.pasteProjectId);
+            if (!sameProject) {
+                importOpts = { ...importOpts, ignorePastePosition: true };
+                delete importOpts.pasteDocBounds;
+            }
+            this._runImportOversizeGate(img, () => {
+                this._finishFloatingPaste(img, importOpts, 'commit', 'Coller');
             });
             return;
         }
 
-        // Collage interne, autre projet : collage volant centré (pas de dialogue import).
-        if (fromInternalClipboard && !sameProject) {
-            importOpts = { ...importOpts, ignorePastePosition: true };
-            delete importOpts.pasteDocBounds;
-            this._runImportOversizeGate(img, (placement) => {
-                this._finishFloatingPaste(img, importOpts, placement, 'Coller');
-            });
+        // Glisser-déposer / import fichier sans dialogue.
+        if (importOpts.autoNewLayer) {
+            this.importImageAsNewLayer(img, importOpts.layerName || 'Image importée', importOpts);
             return;
         }
 
         const overlay = document.getElementById('import-choice-overlay');
         const overlayOversize = document.getElementById('import-oversize-overlay');
+        if (!overlay) {
+            this.importImageAsNewLayer(img, 'Image importée', importOpts);
+            return;
+        }
         overlay.style.display = 'flex';
 
         const afterImport = (opts) => {
@@ -3959,27 +4767,35 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         };
 
-        const finishNewLayerImport = (placement) => {
+        const finishNewLayerImport = () => {
             const layerName = fromInternalClipboard ? 'Image collée' : 'Image importée';
             const hist = fromInternalClipboard ? 'Coller (nouveau calque)' : 'Import calque';
-            const place = placement || 'staging';
             overlay.style.display = 'none';
             if (overlayOversize) overlayOversize.style.display = 'none';
-            this.addImageLayerFromBitmap(img, layerName, { ...importOpts, placement: place });
-            if (place !== 'staging') this.saveHistory(hist);
-            this.render();
-            if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
-                window.scheduleFitActiveProjectZoomOnDocumentOpen();
-            } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
-                window.fitActiveProjectZoomToPageWidth();
-            }
-            afterImport({ skipFullLayerSync: true });
+            this._runImportOversizeGate(img, (placement) => {
+                const pl = fromInternalClipboard
+                    ? 'commit'
+                    : placement === 'staging'
+                      ? 'staging'
+                      : 'commit';
+                this.addImageLayerFromBitmap(img, layerName, { ...importOpts, placement: pl });
+                this.saveHistory(hist, { patchActiveLayer: true });
+                this.render({ flushUiThumbnails: true });
+                if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+                    window.scheduleFitActiveProjectZoomOnDocumentOpen();
+                } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
+                    window.fitActiveProjectZoomToPageWidth();
+                }
+                afterImport({ skipFullLayerSync: true });
+            });
         };
 
-        document.getElementById('btn-import-layer').onclick = () => {
-            overlay.style.display = 'none';
-            this._runImportOversizeGate(img, (placement) => finishNewLayerImport(placement));
-        };
+        const btnLayer = document.getElementById('btn-import-layer');
+        if (btnLayer) {
+            btnLayer.onclick = () => {
+                finishNewLayerImport();
+            };
+        }
 
         const btnCur = document.getElementById('btn-import-current');
         if (btnCur) {
@@ -3988,21 +4804,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 if (overlayOversize) overlayOversize.style.display = 'none';
                 const hist = fromInternalClipboard ? 'Coller (calque actif)' : 'Import sur calque actif';
                 this._runImportOversizeGate(img, (placement) => {
-                    if (typeof window.illuSetRectSelectionDocBounds === 'function') {
-                        const iw = img.naturalWidth || img.width;
-                        const ih = img.naturalHeight || img.height;
-                        const W = Math.max(1, this.width | 0);
-                        const H = Math.max(1, this.height | 0);
-                        const { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, importOpts);
-                        window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
+                    const pl = fromInternalClipboard
+                        ? 'commit'
+                        : placement === 'staging'
+                          ? 'staging'
+                          : 'commit';
+                    if (typeof window.clearSelectionContent === 'function') {
+                        window.clearSelectionContent();
                     }
-                    const place = placement || 'staging';
-                    this.drawImportedImageOnActiveLayer(img, { ...importOpts, placement: place });
-                    const al = this.activeLayer;
-                    if (!al || !al.importPlacementPending) {
-                        this.saveHistory(hist, { patchActiveLayer: true });
-                    }
-                    this.render();
+                    this.drawImportedImageOnActiveLayer(img, { ...importOpts, placement: pl });
+                    this.saveHistory(hist, { patchActiveLayer: true });
+                    this.render({ flushUiThumbnails: true });
                     if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
                         window.scheduleFitActiveProjectZoomOnDocumentOpen();
                     } else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') {
@@ -4013,11 +4825,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             };
         }
 
-        document.getElementById('btn-import-tab').onclick = () => {
-            overlay.style.display = 'none';
-            if (overlayOversize) overlayOversize.style.display = 'none';
-            this.handleNewProjectFromImage(img);
-        };
+        const btnTab = document.getElementById('btn-import-tab');
+        if (btnTab) {
+            btnTab.onclick = () => {
+                overlay.style.display = 'none';
+                if (overlayOversize) overlayOversize.style.display = 'none';
+                this.handleNewProjectFromImage(img);
+            };
+        }
     },
 
     /**
@@ -4134,33 +4949,64 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             l.buffer = buf;
         }
 
-        const iw = img.naturalWidth || img.width;
-        const ih = img.naturalHeight || img.height;
+        const iw = Math.max(0, (img && (img.naturalWidth || img.width)) | 0);
+        const ih = Math.max(0, (img && (img.naturalHeight || img.height)) | 0);
         if (iw < 1 || ih < 1) return;
 
         const scratch = document.createElement('canvas');
         scratch.width = iw;
         scratch.height = ih;
         const sctx = scratch.getContext('2d', { willReadFrequently: true });
-        sctx.drawImage(img, 0, 0);
+        if (sctx) sctx.drawImage(img, 0, 0);
 
-        // --- Auto-Dither for pixel-dither mode ---
-        if (this.activeProject && this.activeProject.mode === 'pixel-dither') {
+        if (this.activeProject && this.activeProject.mode !== 'pixel') {
             const idata = sctx.getImageData(0, 0, iw, ih);
-            const inv = this.activeProject.ditherInvert || false;
-            this._ditherImageData(idata, this.ditherEffectSize, { invert: inv });
+            this.constrainImageDataToProjectMode(idata, this.activeProject.mode);
             sctx.putImageData(idata, 0, 0);
         }
 
         const W = this.width;
         const H = this.height;
-        const { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, importOpts);
+        let { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, importOpts);
+        const useStaging = importOpts.placement === 'staging';
 
-        if (typeof window.illuSetRectSelectionDocBounds === 'function') {
-            window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
+        if (typeof window.illuTightenPasteCanvas === 'function') {
+            const tightened = window.illuTightenPasteCanvas(scratch, docX, docY);
+            if (tightened && tightened.canvas && tightened.canvas !== scratch) {
+                docX = tightened.docX;
+                docY = tightened.docY;
+                scratch.width = tightened.iw;
+                scratch.height = tightened.ih;
+                scratch.getContext('2d', { willReadFrequently: true }).drawImage(tightened.canvas, 0, 0);
+            } else if (tightened) {
+                docX = tightened.docX;
+                docY = tightened.docY;
+            }
         }
-        if (typeof window.illuSetImportStaging === 'function') {
-            window.illuSetImportStaging(scratch);
+
+        if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
+        }
+
+        if (useStaging && typeof window.illuSetImportStaging === 'function') {
+            window.illuSetImportStaging(scratch, { docX, docY });
+            return;
+        }
+
+        if (typeof this._fitLayerBufferToDocumentSize === 'function') {
+            this._fitLayerBufferToDocumentSize(l);
+        }
+        const bctx = l.buffer.getContext('2d', { willReadFrequently: true });
+        if (bctx) {
+            bctx.imageSmoothingEnabled = false;
+            bctx.drawImage(scratch, docX, docY);
+        }
+        l.importPlacementPending = false;
+        delete l.importStagingBuffer;
+        delete l.importStagingX;
+        delete l.importStagingY;
+        if (typeof illuSetImportPlacementChromeActive === 'function') {
+            illuSetImportPlacementChromeActive(false);
         }
     },
 
@@ -4250,20 +5096,26 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     addImageLayerFromBitmap(img, name, opts) {
         opts = opts || {};
-        const placement = opts.placement === 'fitCanvas' ? 'fitCanvas' : 'staging';
+        const placement =
+            opts.placement === 'staging' ? 'staging' : opts.placement === 'fitCanvas' ? 'fitCanvas' : 'commit';
         const id = Date.now();
         const W = Math.max(1, this.width | 0);
         const H = Math.max(1, this.height | 0);
-        const iw = img.naturalWidth || img.width;
-        const ih = img.naturalHeight || img.height;
-        const { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, opts);
+        const iw = Math.max(0, (img && (img.naturalWidth || img.width)) | 0);
+        const ih = Math.max(0, (img && (img.naturalHeight || img.height)) | 0);
+        const isInternalPaste = opts.pasteProjectId != null;
+        if (isInternalPaste && typeof window.clearSelectionAfterDocumentOpen === 'function') {
+            window.clearSelectionAfterDocumentOpen();
+        }
+        let { docX, docY } = this._computeImportPasteDocXY(W, H, iw, ih, opts);
 
-        // --- Auto-Dither for pixel-dither mode ---
         const scratch = document.createElement('canvas');
-        scratch.width = iw;
-        scratch.height = ih;
+        scratch.width = Math.max(1, iw);
+        scratch.height = Math.max(1, ih);
         const sctx = scratch.getContext('2d', { willReadFrequently: true });
-        sctx.drawImage(img, 0, 0);
+        if (sctx && iw >= 1 && ih >= 1) {
+            sctx.drawImage(img, 0, 0);
+        }
 
         if (this.activeProject && this.activeProject.mode === 'pixel-dither' && iw >= 1 && ih >= 1) {
             const idata = sctx.getImageData(0, 0, iw, ih);
@@ -4272,14 +5124,38 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             sctx.putImageData(idata, 0, 0);
         }
 
+        let pasteIw = iw;
+        let pasteIh = ih;
+        if (typeof window.illuTightenPasteCanvas === 'function') {
+            const tightened = window.illuTightenPasteCanvas(scratch, docX, docY);
+            if (tightened && tightened.canvas) {
+                docX = tightened.docX;
+                docY = tightened.docY;
+                pasteIw = tightened.iw;
+                pasteIh = tightened.ih;
+                if (tightened.canvas !== scratch) {
+                    scratch.width = pasteIw;
+                    scratch.height = pasteIh;
+                    scratch.getContext('2d', { willReadFrequently: true }).drawImage(tightened.canvas, 0, 0);
+                }
+            }
+        }
+
         let importPlacementPending = false;
         let importStagingBuffer = null;
         let importStagingX = 0;
         let importStagingY = 0;
+        const useStaging = placement === 'staging' && pasteIw >= 1 && pasteIh >= 1;
+        const useTightCommitLayer = placement === 'commit' && pasteIw >= 1 && pasteIh >= 1;
         const buffer = document.createElement('canvas');
-        buffer.width = W;
-        buffer.height = H;
-        if (placement === 'staging' && iw >= 1 && ih >= 1) {
+        if (useTightCommitLayer) {
+            buffer.width = pasteIw;
+            buffer.height = pasteIh;
+        } else {
+            buffer.width = W;
+            buffer.height = H;
+        }
+        if (useStaging) {
             importStagingBuffer = this.cloneCanvas(scratch);
             importStagingX = docX;
             importStagingY = docY;
@@ -4288,8 +5164,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const bctx = buffer.getContext('2d', { willReadFrequently: true });
             if (bctx) {
                 bctx.imageSmoothingEnabled = false;
-                if (iw >= 1 && ih >= 1) {
-                    bctx.drawImage(scratch, docX, docY);
+                if (pasteIw >= 1 && pasteIh >= 1) {
+                    if (useTightCommitLayer) {
+                        bctx.drawImage(scratch, 0, 0);
+                    } else {
+                        bctx.drawImage(scratch, docX, docY);
+                    }
                 }
             }
         }
@@ -4297,8 +5177,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             id,
             name: name || 'Image',
             visible: true,
-            x: 0,
-            y: 0,
+            x: useTightCommitLayer ? docX : 0,
+            y: useTightCommitLayer ? docY : 0,
             opacity: 1,
             blendMode: 'source-over',
             buffer,
@@ -4319,9 +5199,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (typeof window.syncSelectionToImportPlacementLayer === 'function') {
                 window.syncSelectionToImportPlacementLayer();
             }
-        } else if (iw >= 1 && ih >= 1 && typeof window.illuSetRectSelectionDocBounds === 'function') {
-            window.illuSetRectSelectionDocBounds(docX, docY, iw, ih);
-            if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
+        } else if (
+            isInternalPaste &&
+            typeof window.syncSelectionToCommittedImportBounds === 'function'
+        ) {
+            window.syncSelectionToCommittedImportBounds({
+                x: docX,
+                y: docY,
+                w: pasteIw,
+                h: pasteIh
+            });
         } else if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
             window.clearSelectionAfterDocumentOpen();
         }
@@ -4329,7 +5216,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     freezePixelProject(p) {
-        if (!p || !(p.mode === 'pixel' || p.mode === 'pixel-dither') || !p.layers) return;
+        if (!p || !p.mode.startsWith('pixel') || !p.layers) return;
         p.pixelSnapshot = {
             activeLayerIndex: p.activeLayerIndex,
             layers: p.layers.map((l) => ({
@@ -4378,12 +5265,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     handleNewProjectFromImage(img) {
+        img = this._bitmapFromImportSource(img);
+        if (!img) {
+            if (window.showIlluAlert) window.showIlluAlert('Image invalide ou vide.');
+            return null;
+        }
+        const iw = img.width | 0;
+        const ih = img.height | 0;
         const project = {
             id: Date.now(),
             name: `Image ${this.projects.length + 1}`,
             mode: 'pixel',
-            width: img.naturalWidth || img.width,
-            height: img.naturalHeight || img.height,
+            width: iw,
+            height: ih,
             layers: [],
             activeLayerIndex: 0,
             history: [],
@@ -4400,11 +5294,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         };
 
         this.projects.push(project);
-        this.activeProjectIndex = this.projects.length - 1;
-        
+        const newIdx = this.projects.length - 1;
+
         const buffer = document.createElement('canvas');
-        buffer.width = img.naturalWidth || img.width;
-        buffer.height = img.naturalHeight || img.height;
+        buffer.width = iw;
+        buffer.height = ih;
         buffer.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
         
         project.layers.push({
@@ -4421,9 +5315,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         });
         project.activeLayerIndex = project.layers.length - 1;
 
+        this.switchProject(newIdx);
         this.saveHistory('Nouveau Document (Import)');
-        this.updateTabUI();
-        this.applyProjectToUI();
         if (typeof window.clearSelectionAfterDocumentOpen === 'function') {
             window.clearSelectionAfterDocumentOpen();
         }
@@ -4436,6 +5329,136 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
         }
         return project;
+    },
+
+    /** Intègre un bitmap comme élément SVG `<image>` sur le calque vectoriel actif. */
+    embedBitmapInVectorProject(img, opts) {
+        opts = opts || {};
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+
+        if (!this.activeProject || this.isPixelMode) {
+            this.handleNewProjectFromImage(img);
+            return;
+        }
+
+        const NS = 'http://www.w3.org/2000/svg';
+        let layer = this.activeLayer;
+        if (!layer) {
+            const id = Date.now();
+            this.activeProject.layers.push({
+                id,
+                name: 'Image bitmap',
+                visible: true,
+                x: 0,
+                y: 0,
+                opacity: 1,
+                blendMode: 'source-over',
+                buffer: null
+            });
+            this.activeProject.activeLayerIndex = this.activeProject.layers.length - 1;
+            layer = this.activeLayer;
+            const layersRoot = document.getElementById('svg-layers');
+            const g = document.createElementNS(NS, 'g');
+            g.setAttribute('id', `layer-${id}`);
+            if (layersRoot) layersRoot.appendChild(g);
+        }
+
+        const g = document.getElementById(`layer-${layer.id}`);
+        if (!g) return;
+
+        const c = document.createElement('canvas');
+        c.width = iw;
+        c.height = ih;
+        c.getContext('2d').drawImage(img, 0, 0);
+        const href = c.toDataURL('image/png');
+
+        const el = document.createElementNS(NS, 'image');
+        el.setAttribute('href', href);
+        el.setAttribute('xlink:href', href);
+        el.setAttribute('x', String(opts.x != null ? opts.x : 0));
+        el.setAttribute('y', String(opts.y != null ? opts.y : 0));
+        el.setAttribute('width', String(iw));
+        el.setAttribute('height', String(ih));
+        el.setAttribute('data-illu-bitmap-embed', '1');
+        el.setAttribute('pointer-events', 'all');
+        g.appendChild(el);
+
+        EditorManager.activeVectorSelection = [el];
+        if (typeof window !== 'undefined') {
+            window._activeVectorShapeEl = el;
+        }
+        if (typeof window.illuSyncVectorSelectionUI === 'function') {
+            window.illuSyncVectorSelectionUI();
+        }
+
+        if (this.expandActiveProjectToVectorContentBounds(24)) {
+            this._applyVectorCanvasDimensionsOnly();
+        }
+        this.syncActiveVectorSvg();
+        this.saveHistory(opts.historyLabel || 'Import bitmap SVG');
+        this.render();
+        if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+            window.scheduleFitActiveProjectZoomOnDocumentOpen();
+        }
+    },
+
+    /** Injecte le résultat de IlluVectorize dans le projet vectoriel actif. */
+    injectVectorizedFragment(result, opts) {
+        opts = opts || {};
+        if (!result || !result.fragment || !this.activeProject || this.isPixelMode) return;
+
+        const NS = 'http://www.w3.org/2000/svg';
+        if (opts.newLayer) {
+            this.addLayer(opts.layerName || 'Vectorisé');
+        }
+        let layer = this.activeLayer;
+        if (!layer) {
+            const id = Date.now();
+            this.activeProject.layers.push({
+                id,
+                name: opts.layerName || 'Vectorisé',
+                visible: true,
+                x: 0,
+                y: 0,
+                opacity: 1,
+                blendMode: 'source-over',
+                buffer: null
+            });
+            this.activeProject.activeLayerIndex = this.activeProject.layers.length - 1;
+            layer = this.activeLayer;
+            const layersRoot = document.getElementById('svg-layers');
+            const g = document.createElementNS(NS, 'g');
+            g.setAttribute('id', `layer-${id}`);
+            if (layersRoot) layersRoot.appendChild(g);
+        }
+
+        const g = document.getElementById(`layer-${layer.id}`);
+        if (!g) return;
+
+        const wrap = document.createElementNS(NS, 'g');
+        wrap.setAttribute('data-illu-vectorize-root', '1');
+        wrap.appendChild(result.fragment);
+        g.appendChild(wrap);
+
+        const sw = opts.sourceWidth || result.width;
+        const sh = opts.sourceHeight || result.height;
+        if (sw !== result.width || sh !== result.height) {
+            const sx = sw / result.width;
+            const sy = sh / result.height;
+            wrap.setAttribute('transform', `scale(${sx},${sy})`);
+        }
+
+        if (this.expandActiveProjectToVectorContentBounds(24)) {
+            this._applyVectorCanvasDimensionsOnly();
+        }
+        this.syncActiveVectorSvg();
+        this.saveHistory(opts.historyLabel || 'Vectoriser bitmap');
+        this.render();
+        if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') {
+            window.scheduleFitActiveProjectZoomOnDocumentOpen();
+        }
     },
 
     switchProject(index) {
@@ -4465,12 +5488,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             nextProj &&
             nextProj.role !== 'layerAlphaMask' &&
             prevProj.parentProjectId === nextProj.id;
-        const px = nextProj && (nextProj.mode === 'pixel' || nextProj.mode === 'pixel-dither') ? nextProj.width * nextProj.height : 0;
+        const px = nextProj && nextProj.mode.startsWith('pixel') ? nextProj.width * nextProj.height : 0;
         const heavyComposite = maskToParent && px >= 800000;
 
         if (nextProj && nextProj.mode === 'vector') {
             if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
                 window.illuPurgeSelectionOverlayAndGhostDom();
+            }
+            if (typeof window.illuVectorEndSelectionPreviews === 'function') {
+                window.illuVectorEndSelectionPreviews();
             }
             this.activeVectorSelection = [];
             window._activeVectorShapeEl = null;
@@ -4494,10 +5520,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     /**
-     * Outils Déplacer et Déformation : flèches 1 px, Ctrl + flèche 10 px (calque ou sélection rect. dans le calque).
+     * Outils Déplacer / Déformation / Sélection : flèches 1 px, Ctrl + flèche 10 px ;
+     * deux flèches en même temps = déplacement diagonal.
      * Avec Déformation + session warp (cadre rect), délègue au déplacement type poignée centre.
      */
-    applyMoveToolNudge(dx, dy) {
+    applyMoveToolNudge(dx, dy, opts) {
+        opts = opts || {};
         if (!this.activeProject || (dx === 0 && dy === 0)) return;
         const tool = window.activeTool;
         if (tool !== 'move' && tool !== 'deform') return;
@@ -4508,7 +5536,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (!al) return;
 
         if (tool === 'deform' && window.selectionPixelWarpActive) {
-            if (typeof window.nudgeDeformWarpDelta === 'function' && window.nudgeDeformWarpDelta(dx, dy)) {
+            if (typeof window.nudgeDeformWarpDelta === 'function' && window.nudgeDeformWarpDelta(dx, dy, opts)) {
                 return;
             }
             return;
@@ -4529,7 +5557,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 }
             });
             if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
-            this.saveHistory('Déplacement vecteur', { patchActiveLayer: true });
+            if (opts.deferHistory) {
+                window._illuArrowNudgeHistoryPending = true;
+            } else {
+                this.saveHistory('Déplacement vecteur', { patchActiveLayer: true });
+            }
             this.render();
             return;
         }
@@ -4538,7 +5570,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             al.x = (al.x || 0) + dx;
             al.y = (al.y || 0) + dy;
             if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
-            this.saveHistory('Déplacement calque', { patchActiveLayer: true });
+            if (opts.deferHistory) {
+                window._illuArrowNudgeHistoryPending = true;
+            } else {
+                this.saveHistory('Déplacement calque', { patchActiveLayer: true });
+            }
             this.render();
             return;
         }
@@ -4547,7 +5583,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         if (typeof window.illuNudgeSelectionPixelsDelta === 'function') {
             if (window.illuNudgeSelectionPixelsDelta(dx, dy)) {
-                this.saveHistory('Déplacement', { patchActiveLayer: true });
+                if (opts.deferHistory) {
+                    window._illuArrowNudgeHistoryPending = true;
+                } else {
+                    this.saveHistory('Déplacement', { patchActiveLayer: true });
+                }
                 this.render();
             }
         }
@@ -4620,72 +5660,88 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         // --- Handle Dither Palette Visibility and Grisé UI ---
         const isDither = p.mode === 'pixel-dither';
-        const bitBtn = document.getElementById('btn-toggle-8bit');
+        
         const ditherContainer = document.getElementById('color-dither-container');
         const wheelContainer = document.getElementById('color-wheel-container');
-        const bitContainer = document.getElementById('color-8bit-container');
+        const gridBtn = document.getElementById('btn-toggle-color-grid');
+        const swatchBox = document.querySelector('.color-swatch-box');
         const sliderPanel = document.getElementById('color-sliders-panel');
         const palGrid = document.getElementById('palette-grid');
-        const wheelIco = bitBtn ? bitBtn.parentElement : null; // color-top-row
-        const swatchBox = document.querySelector('.color-swatch-box');
+        const wheelIco = document.querySelector('.color-top-row');
+        const winColors = document.getElementById('win-colors');
+        if (winColors) winColors.classList.toggle('color-window--dither', isDither);
 
         if (isDither) {
-            if (bitBtn) bitBtn.style.display = 'none';
             if (ditherContainer) ditherContainer.style.display = 'block';
-            if (wheelContainer) wheelContainer.style.display = 'none';
-            if (bitContainer) bitContainer.style.display = 'none';
-            
+            [wheelContainer, gridBtn, palGrid].forEach((el) => {
+                if (!el) return;
+                el.classList.add('illu-palette-disabled');
+                el.style.display = 'none';
+            });
+
             this.setupDitherPalette();
-            // Sync current dither size slider
             const slider = document.getElementById('dither-size-slider');
             if (slider) {
                 slider.value = this.ditherEffectSize;
-                const gaugeWrap = slider.closest('.illu-gauge-wrap');
+            }
+            if (!this._ditherPaletteInitialized) {
+                this._ditherPaletteInitialized = true;
             }
         } else {
-            if (bitBtn) bitBtn.style.display = 'block';
             if (ditherContainer) ditherContainer.style.display = 'none';
+            if (wheelContainer) {
+                wheelContainer.classList.remove('illu-palette-disabled');
+                wheelContainer.style.display = 'block';
+            }
+            if (gridBtn) {
+                gridBtn.classList.remove('illu-palette-disabled');
+                gridBtn.style.display = '';
+            }
+            if (palGrid) {
+                palGrid.classList.remove('illu-palette-disabled');
+                palGrid.style.display = '';
+            }
+            if (swatchBox) swatchBox.style.display = 'flex';
+        }
+
+        if (this.updateColorWheelForMode) this.updateColorWheelForMode();
+
+        if (this.snapColorToPalette && (this.isCmjnSimulationMode(p.mode) || this.isPaletteRestrictedMode(p.mode))) {
+            this.snapColorToPalette(this.primaryColor, p.mode);
+            this.snapColorToPalette(this.secondaryColor, p.mode);
+            this.syncUItoState();
+        }
+
+        if (typeof window.refreshPaletteGridLayout === 'function') {
+            window.refreshPaletteGridLayout();
         }
 
         // --- Contextual Conversion Menu ---
         const convPixelBtn = document.getElementById('menu-convert-pixel');
         const convDitherBtn = document.getElementById('menu-convert-dither');
+        const convRalBtn = document.getElementById('menu-convert-ral');
+        const convCmjnBtn = document.getElementById('menu-convert-cmjn');
         if (convPixelBtn) convPixelBtn.style.display = (p.mode === 'pixel') ? 'none' : 'flex';
         if (convDitherBtn) convDitherBtn.style.display = (p.mode === 'pixel-dither') ? 'none' : 'flex';
+        if (convRalBtn) convRalBtn.style.display = (p.mode === 'pixel-ral') ? 'none' : 'flex';
+        if (convCmjnBtn) convCmjnBtn.style.display = (p.mode === 'pixel-cmjn') ? 'none' : 'flex';
 
-        // Apply "grisé" (disabled) look to incompatible panels
-        [palGrid, sliderPanel, wheelContainer, wheelIco].forEach(el => {
+        if (typeof window.illuSyncVectorizeMenuState === 'function') {
+            window.illuSyncVectorizeMenuState();
+        }
+
+        // Roue / curseurs / grille : actifs en RAL/CMJN (pas en tramé — palette motifs uniquement).
+        [palGrid, sliderPanel, wheelIco].forEach((el) => {
+            if (!el || (isDither && el === palGrid)) return;
             if (el) {
-                if (isDither) {
-                    el.classList.add('illu-palette-disabled');
-                    el.style.pointerEvents = 'none';
-                    el.style.opacity = '0.4';
-                    el.style.filter = 'grayscale(100%)';
-                } else {
-                    el.classList.remove('illu-palette-disabled');
-                    el.style.pointerEvents = 'auto';
-                    el.style.opacity = '1';
-                    el.style.filter = 'none';
-                }
+                el.classList.remove('illu-palette-disabled');
+                el.style.pointerEvents = 'auto';
+                el.style.opacity = '1';
+                el.style.filter = 'none';
             }
         });
 
-        if (isDither) {
-            if (!this._ditherPaletteInitialized) {
-                this.setupDitherPalette();
-                this._ditherPaletteInitialized = true;
-            }
-        } else {
-            if (bitBtn) bitBtn.style.display = 'inline-block';
-            if (ditherContainer) ditherContainer.style.display = 'none';
-            // standard mode logic (let the standard toggles handle it)
-            if (wheelContainer && bitContainer && bitContainer.style.display === 'none') {
-                 wheelContainer.style.display = 'block';
-            }
-            if (swatchBox) swatchBox.style.display = 'flex';
-        }
-
-        if (p.mode === 'pixel' || p.mode === 'pixel-dither' || p.mode === 'pixel-dither') {
+        if (p.mode.startsWith('pixel')) {
             const svgLayersClear = document.getElementById('svg-layers');
             if (svgLayersClear) svgLayersClear.innerHTML = '';
             if (p.pixelSnapshot) {
@@ -4753,6 +5809,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             } else if (p.mode === 'pixel-dither') {
                 modeName = 'Pixel (Tramé)';
                 i18nKey = 'status.modeDither';
+            } else if (p.mode === 'pixel-cmjn') {
+                modeName = 'Pixel (CMJN)';
+                i18nKey = 'status.modeCmjn';
+            } else if (p.mode === 'pixel-ral') {
+                modeName = 'Pixel (RAL)';
+                i18nKey = 'status.modeRal';
             }
             const s = t(i18nKey);
             stMode.textContent = s || `Mode : ${modeName}`;
@@ -5084,7 +6146,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (window.pixelShapeEdit) {
             const ed = window.pixelShapeEdit;
             parts.push('psedit' + (ed.kind || ''));
-            if (ed.lx != null) parts.push('r' + ed.lx + ',' + ed.ly + ',' + (ed.w || 0) + ',' + (ed.h || 0));
+            if (ed.docX != null) parts.push('d' + ed.docX + ',' + ed.docY + ',' + (ed.docW || 0) + ',' + (ed.docH || 0));
+            else if (ed.lx != null) parts.push('r' + ed.lx + ',' + ed.ly + ',' + (ed.w || 0) + ',' + (ed.h || 0));
             if (ed.cx != null) parts.push('e' + ed.cx + ',' + ed.cy + ',' + (ed.rx || 0) + ',' + (ed.ry || 0));
             if (ed.x1 != null) parts.push('l' + ed.x1 + ',' + ed.y1 + ',' + ed.x2 + ',' + ed.y2);
             if (ed.r != null) parts.push('cr' + ed.r);
@@ -5498,7 +6561,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * Déplace la zone sélectionnée selon l’outil actif (marquee, pixels, warp…).
      * @param {number} dx
      * @param {number} dy
-     * @param {{ step?: number }} [opts] — step : multiplicateur (Maj = 10 px)
+     * @param {{ step?: number; deferHistory?: boolean }} [opts] — step : pas en px ; deferHistory : une entrée historique à la fin (flèches clavier)
      */
     nudgeSelectionZone(dx, dy, opts) {
         opts = opts || {};
@@ -5514,12 +6577,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             (tool === 'deform' || tool === 'warp-4') &&
             window.selectionPixelWarpActive &&
             typeof window.nudgeSelectionWarpSessionDelta === 'function' &&
-            window.nudgeSelectionWarpSessionDelta(dx, dy)
+            window.nudgeSelectionWarpSessionDelta(dx, dy, opts)
         ) {
             return true;
         }
         if (tool === 'move' || tool === 'deform' || tool === 'warp-4') {
-            this.applyMoveToolNudge(dx, dy);
+            this.applyMoveToolNudge(dx, dy, opts);
             return true;
         }
         if (
@@ -6438,7 +7501,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         );
         tab.addEventListener('click', () => this.switchProject(i));
         if (
-            (p.mode === 'pixel' || p.mode === 'pixel-dither' || p.mode === 'vector') &&
+            (p.mode.startsWith('pixel') || p.mode === 'vector') &&
             this._uiThumbsVisible()
         ) {
             const thumb = document.createElement('img');
@@ -6765,24 +7828,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this.activeColorTarget = 'primary';
         this.activeColor = '#000000';
         
-        // Draw physical wheel
         const canvas = document.getElementById('color-wheel');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const radius = canvas.width / 2;
-        for (let angle = 0; angle < 360; angle++) {
-            ctx.beginPath();
-            ctx.moveTo(radius, radius);
-            ctx.arc(radius, radius, radius, (angle * Math.PI) / 180, ((angle + 2) * Math.PI) / 180);
-            ctx.fillStyle = `hsl(${angle}, 100%, 50%)`;
-            ctx.fill();
-        }
-        ctx.beginPath();
-        ctx.arc(radius, radius, radius * 0.7, 0, Math.PI * 2);
-        const grad = ctx.createRadialGradient(radius, radius, radius * 0.1, radius, radius, radius * 0.7);
-        grad.addColorStop(0, 'rgba(255,255,255,1)');
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = grad;
-        ctx.fill();
+        this.rebuildColorPickerBase();
 
         if (canvas) {
             canvas.style.touchAction = 'none';
@@ -6839,6 +7886,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const temp = {...this.primaryColor};
             this.primaryColor = {...this.secondaryColor};
             this.secondaryColor = temp;
+            
+            const tempDither = this.primaryDitherPatternId;
+            this.primaryDitherPatternId = this.secondaryDitherPatternId;
+            this.secondaryDitherPatternId = tempDither;
+            
             this.syncUItoState();
         });
 
@@ -6875,19 +7927,23 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const bindSlider = (id, type) => {
             const sl = document.getElementById(`col-${id}`);
             const val = document.getElementById(`col-${id}-val`);
-            const update = (v) => {
-                if(sl) sl.value = v; if(val) val.value = v;
-                this.updateFromSlider(id, v, type);
+            const update = (v, snap) => {
+                if(sl && type !== 'alpha') sl.value = v; // don't fight native thumb on input
+                if(val) val.value = v;
+                this.updateFromSlider(id, v, type, snap);
             };
-            if(sl) sl.addEventListener('input', (e) => update(e.target.value));
-            if(val) val.addEventListener('input', (e) => update(e.target.value));
+            if(sl) {
+                sl.addEventListener('input', (e) => update(e.target.value, false));
+                sl.addEventListener('change', (e) => update(e.target.value, true));
+            }
+            if(val) val.addEventListener('change', (e) => update(e.target.value, true));
         };
         ['r', 'g', 'b'].forEach(id => bindSlider(id, 'rgb'));
         ['h', 's', 'v'].forEach(id => bindSlider(id, 'hsv'));
         bindSlider('a', 'alpha');
     },
 
-    updateFromSlider(id, value, type) {
+    updateFromSlider(id, value, type, snap = false) {
         value = parseInt(value) || 0;
         const col = this.activeColorTarget === 'primary' ? this.primaryColor : this.secondaryColor;
         let hsv = this.rgbToHsv(col.r, col.g, col.b);
@@ -6902,6 +7958,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             col.r = rgb.r; col.g = rgb.g; col.b = rgb.b;
         } else if (type === 'alpha') {
             col.a = Math.max(0, Math.min(255, value));
+        }
+        if (snap && this.activeProject) {
+            this.snapColorToPalette(col, this.activeProject.mode);
         }
         this.syncUItoState();
     },
@@ -6929,6 +7988,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const col = this.activeColorTarget === 'primary' ? this.primaryColor : this.secondaryColor;
         col.r = r; col.g = g; col.b = b;
         if (a !== null) col.a = a;
+        if (this.activeProject) this.snapColorToPalette(col, this.activeProject.mode);
         this.syncUItoState();
         if (window.activeTool === 'eyedropper' && typeof window.illuRefreshEyedropperColorPanel === 'function') {
             window.illuRefreshEyedropperColorPanel();
@@ -6941,8 +8001,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     },
 
     /**
-     * Applique la couleur primaire (remplissage) ou secondaire (contour) sans réinitialiser
-     * stroke-width ni écraser l’autre attribut via applyVectorShapePaint.
+     * Applique la couleur primaire (contour / remplissage seul) ou secondaire (remplissage en mode mixte).
      */
     applyVectorColorFromPicker() {
         if (!this.activeVectorSelection || !this.activeVectorSelection.length) return;
@@ -6957,18 +8016,34 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
 
         const target = this.activeColorTarget === 'secondary' ? 'secondary' : 'primary';
+        const mode = this.toolProps.shapeStrokeMode || 'both';
+
         if (target === 'secondary') {
-            const strokeCss =
-                typeof window.shapeSecondaryStrokeCss === 'function'
-                    ? window.shapeSecondaryStrokeCss()
-                    : this.cssRgbaFromPart(this.secondaryColor);
-            this.applyVectorProperty('stroke', strokeCss, { skipRenderHistory: false });
+            if (mode === 'both') {
+                const fillCss =
+                    typeof window.shapeSecondaryStrokeCss === 'function'
+                        ? window.shapeSecondaryStrokeCss()
+                        : this.cssRgbaFromPart(this.secondaryColor);
+                this.applyVectorProperty('fill', fillCss, { skipRenderHistory: false });
+            }
             return;
         }
 
-        const fmEl = document.getElementById('vector-prop-fill-model');
-        const model = fmEl && fmEl.value ? fmEl.value : 'solid';
-        this.applyVectorProperty('fill-model', model, { skipRenderHistory: false });
+        if (mode === 'fill') {
+            const fmEl = document.getElementById('vector-prop-fill-model');
+            const model = fmEl && fmEl.value ? fmEl.value : 'solid';
+            this.applyVectorProperty('fill-model', model, { skipRenderHistory: false });
+            return;
+        }
+
+        const strokeCss =
+            typeof window.shapePrimaryFillCss === 'function'
+                ? window.shapePrimaryFillCss()
+                : this.cssRgbaFromPart(this.primaryColor);
+        this.applyVectorProperty('stroke', strokeCss, { skipRenderHistory: false });
+        if (mode === 'both' && typeof window.VectorEngine?.applyStyleToSelection === 'function') {
+            window.VectorEngine.applyStyleToSelection();
+        }
     },
 
     setColorFromHex(hex) {
@@ -7005,19 +8080,39 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         // Update Primary/Secondary UI Boxes
         const uiPri = document.getElementById('ui-col-primary');
         const uiSec = document.getElementById('ui-col-secondary');
+        const isDither = this.activeProject && this.activeProject.mode === 'pixel-dither';
         if (uiPri) {
             uiPri.style.backgroundColor = `rgba(${this.primaryColor.r}, ${this.primaryColor.g}, ${this.primaryColor.b}, ${this.primaryColor.a/255})`;
-            // If we were previously in dither mode, the UI may still have a pattern preview.
-            if (this.activeProject && this.activeProject.mode !== 'pixel-dither') {
+            if (!isDither) {
                 uiPri.style.backgroundImage = 'none';
+            } else {
+                const canv = this._ditherPatternCanvases[this.primaryDitherPatternId || 'black'];
+                if (canv) {
+                    uiPri.style.backgroundImage = `url(${canv.toDataURL()})`;
+                    uiPri.style.backgroundRepeat = 'repeat';
+                    uiPri.style.backgroundSize = 'auto';
+                }
             }
         }
         if (uiSec) {
             uiSec.style.backgroundColor = `rgba(${this.secondaryColor.r}, ${this.secondaryColor.g}, ${this.secondaryColor.b}, ${this.secondaryColor.a/255})`;
-            // Secondary can also be affected indirectly by generic CSS background usage.
-            if (this.activeProject && this.activeProject.mode !== 'pixel-dither') {
+            if (!isDither) {
                 uiSec.style.backgroundImage = 'none';
+            } else {
+                const canv = this._ditherPatternCanvases[this.secondaryDitherPatternId || 'white'];
+                if (canv) {
+                    uiSec.style.backgroundImage = `url(${canv.toDataURL()})`;
+                    uiSec.style.backgroundRepeat = 'repeat';
+                    uiSec.style.backgroundSize = 'auto';
+                }
             }
+        }
+
+        if (isDither) {
+            const targetId = this.activeColorTarget === 'secondary' ? this.secondaryDitherPatternId : this.primaryDitherPatternId;
+            document.querySelectorAll('.dither-pattern-swatch').forEach(s => {
+                s.style.outline = s.title === targetId ? '2px solid #00f' : '';
+            });
         }
         
         // Update Gradients of Sliders
@@ -7067,6 +8162,27 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             h /= 6;
         }
         return { h: Math.round(h * 360), s: Math.round(s * 100), v: Math.round(v * 100) };
+    },
+
+    hslToRgb(h, s, l) {
+        h = ((h % 360) + 360) % 360;
+        s /= 100;
+        l /= 100;
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        const m = l - c / 2;
+        let r, g, b;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        return {
+            r: Math.round((r + m) * 255),
+            g: Math.round((g + m) * 255),
+            b: Math.round((b + m) * 255)
+        };
     },
 
     hsvToRgb(h, s, v) {
@@ -7573,8 +8689,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const bounds =
             (al && committedBounds.find((b) => b.layerId === al.id)) ||
             committedBounds[committedBounds.length - 1];
-        if (bounds && typeof window.syncSelectionToCommittedImportBounds === 'function') {
-            window.syncSelectionToCommittedImportBounds(bounds);
+        if (typeof window.clearSelectionContent === 'function') {
+            window.clearSelectionContent();
         } else if (typeof window.refreshSelectionVisual === 'function') {
             window.refreshSelectionVisual();
         }
@@ -7927,12 +9043,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const delEl = row.querySelector('.illu-df-remove');
                 typEl.value = fx.type;
                 typEl.onchange = () => {
+                    this._dynamicFilterLivePreviewActive = false;
                     stack[index].type = typEl.value;
                     layer.dynamicFilterStack = this._cloneDynamicFilterStack(stack);
                     refreshAll(true);
                     renderStackRows();
                 };
                 radEl.oninput = () => {
+                    this._dynamicFilterLivePreviewActive = true;
                     const nextRadius = Math.max(1, Math.min(32, parseInt(radEl.value, 10) || 6));
                     radValEl.textContent = String(nextRadius);
                     stack[index].radius = nextRadius;
@@ -7941,6 +9059,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     this.render();
                 };
                 radEl.onchange = () => {
+                    this._dynamicFilterLivePreviewActive = false;
                     const nextRadius = Math.max(1, Math.min(32, parseInt(radEl.value, 10) || 6));
                     stack[index].radius = nextRadius;
                     layer.dynamicFilterStack = this._cloneDynamicFilterStack(stack);
@@ -8656,7 +9775,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             p.history = [];
         }
         p.historyIndex = -1;
-        if ((p.mode === 'pixel' || p.mode === 'pixel-dither') && Array.isArray(p.layers)) {
+        if (p.mode.startsWith('pixel') && Array.isArray(p.layers)) {
             p.layers.forEach((l) => {
                 if (l && l.buffer) {
                     this._disposeCanvasBuffer(l.buffer);
@@ -8745,6 +9864,33 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this._scheduleWorkspacePersist();
     },
 
+    normalizeAllLayersToDocument() {
+        const p = this.activeProject;
+        if (!p || !this.isPixelMode || p.role === 'layerAlphaMask') return;
+        const W = this.width;
+        const H = this.height;
+        p.layers.forEach((layer) => {
+            if (!layer || !layer.buffer) return;
+            const needs =
+                (layer.x | 0) !== 0 ||
+                (layer.y | 0) !== 0 ||
+                (layer.buffer.width | 0) !== W ||
+                (layer.buffer.height | 0) !== H;
+            if (!needs) return;
+            const nc = document.createElement('canvas');
+            nc.width = W;
+            nc.height = H;
+            const nctx = nc.getContext('2d', { willReadFrequently: true });
+            if (nctx) {
+                nctx.imageSmoothingEnabled = false;
+                nctx.drawImage(layer.buffer, layer.x | 0, layer.y | 0);
+            }
+            layer.buffer = nc;
+            layer.x = 0;
+            layer.y = 0;
+        });
+    },
+
     /**
      * @param {string} actionName
      * @param {{ patchActiveLayer?: boolean, documentGeometry?: boolean }} [opts]
@@ -8753,6 +9899,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     saveHistory(actionName, opts = {}) {
         if (!this.activeProject) return;
+        if (this.isPixelMode && (!this.toolProps || !this.toolProps.allowOutsideCanvas)) {
+            this.normalizeAllLayersToDocument();
+        }
         const usePatch =
             !opts.documentGeometry &&
             opts.patchActiveLayer === true &&
@@ -9195,7 +10344,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         this._restoreHistoryDocumentDimensions(docW, docH);
         
-        if (state.mode === 'pixel' || state.mode === 'pixel-dither') {
+        if (state.mode.startsWith('pixel')) {
             const d = state.data;
             if (d && d.type === 'pixel-patch' && d.patch) {
                 let li = this.layers.findIndex((l) => l.id === d.layerId);
@@ -9206,6 +10355,14 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     const p = d.patch;
                     this.layers[li] = {
                         ...this.layers[li],
+                        _dynamicFilterCacheCanvas: null,
+                        _dynamicFilterCacheKey: null,
+                        _dynAsyncCanvas: null,
+                        _dynAsyncKey: null,
+                        _dynAsyncPendingKey: null,
+                        _alphaAsyncCanvas: null,
+                        _alphaAsyncKey: null,
+                        _alphaAsyncPendingKey: null,
                         buffer: this.cloneCanvas(p.buffer),
                         x: p.x,
                         y: p.y,
@@ -9350,7 +10507,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     /** Calques pixel à sérialiser (onglet actif = layers ; autres = snapshot gelé). */
     getPixelLayersForPersist(p) {
-        if (!p || !(p.mode === 'pixel' || p.mode === 'pixel-dither')) return [];
+        if (!p || !p.mode.startsWith('pixel')) return [];
         if (p.pixelSnapshot && p.pixelSnapshot.layers && p.pixelSnapshot.layers.length) {
             return p.pixelSnapshot.layers
                 .filter((s) => s.bufferCanvas)
@@ -9444,6 +10601,56 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             console.warn('getStandaloneSvgMarkup', e);
             return '';
         }
+    },
+
+    /**
+     * Rasterise le document vecteur actif en canvas bitmap (export PNG haute résolution).
+     * @param {number} scale Facteur d’échelle (1 = taille document, 4 = 4× en pixels).
+     * @returns {Promise<HTMLCanvasElement>}
+     */
+    flattenActiveVectorDocument(scale) {
+        this.syncActiveVectorSvg();
+        const svgData = this.getStandaloneSvgMarkup();
+        const w = Math.max(1, this.width | 0);
+        const h = Math.max(1, this.height | 0);
+        const s = Math.max(1, Math.min(16, Number(scale) || 1));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * s);
+        canvas.height = Math.round(h * s);
+
+        if (!svgData || !svgData.includes('<svg')) {
+            return Promise.resolve(canvas);
+        }
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            img.onload = () => {
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(
+                        img,
+                        0,
+                        0,
+                        img.naturalWidth || w,
+                        img.naturalHeight || h,
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    );
+                }
+                URL.revokeObjectURL(url);
+                resolve(canvas);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve(canvas);
+            };
+            img.src = url;
+        });
     },
 
     importSvgFromFileContent(text, filename, importOpts) {
@@ -10307,7 +11514,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const p = {
                 id: sp.id != null ? sp.id : Date.now() + Math.floor(Math.random() * 1000000),
                 name: pName,
-                mode: sp.mode === 'vector' ? 'vector' : (sp.mode === 'pixel-dither' ? 'pixel-dither' : 'pixel'),
+                mode: sp.mode === 'vector' ? 'vector' : (sp.mode && sp.mode.startsWith('pixel') ? sp.mode : 'pixel'),
                 width: Math.max(1, parseInt(sp.width, 10) || window.ILLU_DEFAULT_DOC_WIDTH || 1280),
                 height: Math.max(1, parseInt(sp.height, 10) || window.ILLU_DEFAULT_DOC_HEIGHT || 720),
                 ditherEffectSize: sp.ditherEffectSize || 1,
@@ -10334,7 +11541,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 p.alphaMaskUiHidden = true;
             }
 
-            if (p.mode === 'pixel' || p.mode === 'pixel-dither') {
+            if (p.mode.startsWith('pixel')) {
                 const list = sp.pixelLayers || [];
                 const totalL = list.length;
                 const loadedLayers = [];
@@ -11340,7 +12547,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             p.svgData = this.getStandaloneSvgMarkup() || p.svgData || '';
             await this._rasterizeProjectLayers(p);
             p.mode = 'pixel';
-        } else if (p.mode === 'pixel-dither') {
+        } else if (p.mode === 'pixel-dither' || p.mode === 'pixel-ral' || p.mode === 'pixel-cmjn') {
             p.mode = 'pixel';
         }
         this.saveHistory('Conversion en Bitmap');
@@ -11396,6 +12603,81 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         
         this.saveHistory('Conversion en Tramé N&B');
+        this.applyProjectToUI();
+    },
+
+    async convertActiveProjectToRal() {
+        const p = this.activeProject;
+        if (!p) return;
+
+        if (p.mode === 'vector') {
+            p.svgData = this.getStandaloneSvgMarkup();
+            await this._rasterizeProjectLayers(p);
+        }
+        
+        p.mode = 'pixel-ral';
+        
+        if (typeof RAL_COLORS !== 'undefined') {
+            for (const layer of p.layers) {
+                if (layer.buffer) {
+                    const ctx = layer.buffer.getContext('2d', { willReadFrequently: true });
+                    const idata = ctx.getImageData(0, 0, layer.buffer.width, layer.buffer.height);
+                    const d_ = idata.data;
+                    
+                    for (let i = 0; i < d_.length; i += 4) {
+                        const a = d_[i + 3];
+                        if (a < 128) continue;
+                        
+                        const r = d_[i], g = d_[i + 1], b = d_[i + 2];
+                        let bestDist = Infinity;
+                        let bestColor = RAL_COLORS[0] || { r: 0, g: 0, b: 0 };
+                        
+                        for (let c = 0; c < RAL_COLORS.length; c++) {
+                            const col = RAL_COLORS[c];
+                            const dist = 2 * (r - col.r)**2 + 4 * (g - col.g)**2 + 3 * (b - col.b)**2;
+                            if (dist < bestDist) {
+                                bestDist = dist;
+                                bestColor = col;
+                            }
+                        }
+                        
+                        d_[i] = bestColor.r; 
+                        d_[i + 1] = bestColor.g; 
+                        d_[i + 2] = bestColor.b;
+                    }
+                    
+                    ctx.putImageData(idata, 0, 0);
+                    layer._thumbDirty = true;
+                }
+            }
+        }
+        
+        this.saveHistory('Conversion en Couleurs RAL');
+        this.applyProjectToUI();
+    },
+
+    async convertActiveProjectToCmjn() {
+        const p = this.activeProject;
+        if (!p) return;
+
+        if (p.mode === 'vector') {
+            p.svgData = this.getStandaloneSvgMarkup();
+            await this._rasterizeProjectLayers(p);
+        }
+        
+        p.mode = 'pixel-cmjn';
+
+        for (const layer of p.layers) {
+            if (layer.buffer) {
+                const ctx = layer.buffer.getContext('2d', { willReadFrequently: true });
+                const idata = ctx.getImageData(0, 0, layer.buffer.width, layer.buffer.height);
+                this.constrainImageDataToProjectMode(idata, 'pixel-cmjn');
+                ctx.putImageData(idata, 0, 0);
+                layer._thumbDirty = true;
+            }
+        }
+        
+        this.saveHistory('Conversion en CMJN');
         this.applyProjectToUI();
     },
 
@@ -12105,14 +13387,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         gradEl.setAttribute('y2', `${y2}%`);
                     }
                     
+                    const mode = this.toolProps.shapeStrokeMode || 'both';
                     const c1 =
+                        typeof window.shapeEffectiveFillCss === 'function'
+                            ? window.shapeEffectiveFillCss(mode)
+                            : typeof window.shapePrimaryFillCss === 'function'
+                              ? window.shapePrimaryFillCss()
+                              : this.cssRgbaFromPart(this.primaryColor);
+                    const c2 =
                         typeof window.shapePrimaryFillCss === 'function'
                             ? window.shapePrimaryFillCss()
                             : this.cssRgbaFromPart(this.primaryColor);
-                    const c2 =
-                        typeof window.makeShapeSecondaryColor === 'function'
-                            ? window.makeShapeSecondaryColor()
-                            : this.cssRgbaFromPart(this.secondaryColor);
                     
                     const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
                     s1.setAttribute('offset', '0%');
@@ -12169,9 +13454,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     const cur = el.getAttribute('stroke');
                     if (!cur || cur === 'none') {
                         const strokeCss =
-                            typeof window.shapeSecondaryStrokeCss === 'function'
-                                ? window.shapeSecondaryStrokeCss()
-                                : this.cssRgbaFromPart(this.secondaryColor);
+                            typeof window.shapePrimaryFillCss === 'function'
+                                ? window.shapePrimaryFillCss()
+                                : this.cssRgbaFromPart(this.primaryColor);
                         el.setAttribute('stroke', strokeCss);
                     }
                 }

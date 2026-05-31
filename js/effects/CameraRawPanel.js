@@ -765,7 +765,7 @@
 
     window.openCameraRawForActiveLayer = function () {
         const em = window.EditorManager;
-        if (!em || em.mode !== 'pixel' || !em.activeLayer || !em.activeLayer.buffer) {
+        if (!em || !em.isPixelMode || !em.activeLayer || !em.activeLayer.buffer) {
             window.showIlluAlert(tKey('msg.cameraRawPixel', 'Disponible en mode Pixel avec un calque bitmap.'));
             return;
         }
@@ -809,7 +809,7 @@
 
     window.openCameraRawAfterRawImport = async function (file, fileInputEl) {
         const em = window.EditorManager;
-        if (!em || em.mode !== 'pixel') {
+        if (!em || !em.isPixelMode) {
             window.showIlluAlert(tKey('msg.cameraRawPixel', 'Disponible en mode Pixel avec un calque bitmap.'));
             if (fileInputEl) fileInputEl.value = '';
             return;

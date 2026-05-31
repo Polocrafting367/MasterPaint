@@ -718,7 +718,7 @@
 
     window.openLevelsForActiveLayer = function () {
         const em = window.EditorManager;
-        if (!em || em.mode !== 'pixel' || !em.activeLayer || !em.activeLayer.buffer) {
+        if (!em || !em.isPixelMode || !em.activeLayer || !em.activeLayer.buffer) {
             window.showIlluAlert(tKey('msg.levelsPixel', 'Disponible en mode Pixel avec un calque bitmap.'));
             return;
         }

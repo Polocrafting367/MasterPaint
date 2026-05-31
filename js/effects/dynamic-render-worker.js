@@ -237,8 +237,74 @@ function applyPerPixelFilter(src, w, h, typ, rad) {
     return out;
 }
 
+function dynamicFilterSkipWasm() {
+    try {
+        return localStorage.getItem('illu_dyn_filter_wasm') !== '1';
+    } catch (e) {
+        return true;
+    }
+}
+
+function dynamicFilterCssFilterString(typ, rad) {
+    const r = Math.max(1, Math.min(32, rad | 0));
+    switch (typ) {
+        case 'blur':
+            return `blur(${Math.min(50, r * 0.9)}px)`;
+        case 'gaussian':
+            return `blur(${Math.min(64, r * 1.5)}px)`;
+        case 'sharpen':
+            return `contrast(${Math.min(200, 100 + r * 7)}%) saturate(108%)`;
+        case 'grayscale':
+            return `grayscale(${Math.min(100, 5 + r * 8)}%)`;
+        case 'sepia':
+            return `sepia(${Math.min(100, 8 + r * 6)}%)`;
+        case 'invert':
+            return `invert(${Math.min(100, 12 + r * 7)}%)`;
+        case 'saturate':
+            return `saturate(${Math.max(0, Math.min(400, 30 + r * 20))}%)`;
+        case 'brightness':
+            return `brightness(${Math.max(0.4, Math.min(2.2, 0.65 + r * 0.055))})`;
+        case 'contrast':
+            return `contrast(${Math.max(0.5, Math.min(2.2, 0.55 + r * 0.065))})`;
+        case 'hue':
+            return `hue-rotate(${r * 14}deg)`;
+        case 'shadow':
+            return `drop-shadow(0px ${Math.round(r * 0.25)}px ${Math.round(r * 0.2)}px rgba(0,0,0,${Math.min(0.9, 0.4 + r * 0.015)}))`;
+        default:
+            return null;
+    }
+}
+
+function applyCssFilterStage(src, w, h, cssFilter) {
+    if (typeof OffscreenCanvas === 'undefined') return null;
+    try {
+        const srcC = new OffscreenCanvas(w, h);
+        const dstC = new OffscreenCanvas(w, h);
+        const sctx = srcC.getContext('2d');
+        const dctx = dstC.getContext('2d');
+        if (!sctx || !dctx) return null;
+        sctx.putImageData(new ImageData(src, w, h), 0, 0);
+        dctx.filter = cssFilter;
+        dctx.drawImage(srcC, 0, 0);
+        dctx.filter = 'none';
+        return new Uint8ClampedArray(dctx.getImageData(0, 0, w, h).data);
+    } catch (e) {
+        return null;
+    }
+}
+
 function applyDynamicFilterStage(src, w, h, typ, rad) {
-    if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(typ)) {
+    const css = dynamicFilterCssFilterString(typ, rad);
+    if (css) {
+        const cssOut = applyCssFilterStage(src, w, h, css);
+        if (cssOut) return cssOut;
+    }
+    if (
+        !dynamicFilterSkipWasm() &&
+        typeof MasterPaintWasm !== 'undefined' &&
+        MasterPaintWasm.isLoaded &&
+        MasterPaintWasm.isEffectSupported(typ)
+    ) {
         const res = MasterPaintWasm.applyFilter(typ, new ImageData(src, w, h), { radius: rad, size: rad, dotSize: rad });
         if (res) return res.data || res;
     }
@@ -453,8 +519,11 @@ self.onmessage = async function (ev) {
             const lx = msg.layerX | 0;
             const ly = msg.layerY | 0;
 
-            const wasm = typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded;
-            
+            const wasm =
+                !dynamicFilterSkipWasm() &&
+                typeof MasterPaintWasm !== 'undefined' &&
+                MasterPaintWasm.isLoaded;
+
             let mask;
             if (wasm) {
                 mask = MasterPaintWasm.buildDynamicMask(

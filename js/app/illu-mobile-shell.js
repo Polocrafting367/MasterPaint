@@ -15,12 +15,13 @@
         'tool-deform',
         'tool-wand',
         'tool-text',
-        'tool-rect',
+        'tool-shapes-family',
         'tool-circle',
         /* 4e rangée : sélection avancée */
         'tool-direct-select',
         'tool-warp-4',
         'tool-pencil',
+        'tool-round-3',
         'tool-line'
     ]);
 
@@ -672,7 +673,7 @@
             row.setAttribute('aria-selected', i === em.activeProjectIndex ? 'true' : 'false');
             if (i === em.activeProjectIndex) row.classList.add('illu-mobile-drawer__tab-row--active');
 
-            if ((p.mode === 'pixel' || p.mode === 'pixel-dither') && typeof em._uiThumbsVisible === 'function' && em._uiThumbsVisible()) {
+            if ((p.mode.startsWith('pixel')) && typeof em._uiThumbsVisible === 'function' && em._uiThumbsVisible()) {
                 const thumb = document.createElement('img');
                 thumb.className = 'illu-mobile-drawer__tab-thumb';
                 thumb.alt = '';
@@ -726,6 +727,11 @@
         document.querySelectorAll('[data-illu-mobile-dock], [data-illu-mobile-dock-action]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const action = btn.getAttribute('data-illu-mobile-dock-action');
+                if (action === 'new') {
+                    closeMobileSheet();
+                    if (typeof window.showNewProjectDialog === 'function') window.showNewProjectDialog();
+                    return;
+                }
                 if (action === 'open') {
                     closeMobileSheet();
                     if (typeof window.illuTriggerFileImport === 'function') window.illuTriggerFileImport();

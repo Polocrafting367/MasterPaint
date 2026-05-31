@@ -12,6 +12,7 @@
         { id: 'tool-line-contour', step: 1 },
         { id: 'tool-shape-corner-radius', step: 1 },
         { id: 'tool-triangle-branches', step: 1 },
+        { id: 'tool-polygon-sides', step: 1 },
         { id: 'vector-prop-stroke-width', step: 1 },
         { id: 'vector-prop-grad-angle', step: 1 },
         { id: 'vector-prop-corner-radius', step: 1 },

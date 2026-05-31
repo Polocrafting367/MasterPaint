@@ -560,6 +560,109 @@ class WasmManager {
         const resultView = new Uint8ClampedArray(this.memory.buffer, this.outputPtr, dstW * dstH * 4);
         return new ImageData(new Uint8ClampedArray(resultView), dstW, dstH);
     }
+
+    /** Charge RGBA dans inputPtr (vectorisation). */
+    uploadImageData(imageData) {
+        if (!this.isLoaded) return false;
+        const { width: w, height: h } = imageData;
+        this._prepareBuffers(w, h);
+        const view = new Uint8Array(this.memory.buffer, this.inputPtr, w * h * 4);
+        view.set(imageData.data);
+        this._lastUploadW = w;
+        this._lastUploadH = h;
+        return true;
+    }
+
+    _ensureScratch(minBytes) {
+        if (!this.scratchBase) {
+            this.scratchBase = (this.lutPtr || this.inputPtr) + 131072;
+            this.scratchEnd = this.scratchBase;
+            this.scratchLimit = this.scratchBase + 4194304;
+        }
+        if (this.scratchEnd + minBytes > this.scratchLimit) {
+            this.scratchEnd = this.scratchBase;
+        }
+        const need = this.scratchEnd + minBytes;
+        const pages = Math.ceil(need / 65536);
+        const cur = this.memory.buffer.byteLength / 65536;
+        if (pages > cur) this.memory.grow(pages - cur);
+        return true;
+    }
+
+    _allocScratch(bytes) {
+        const size = Math.max(4, bytes | 0);
+        this._ensureScratch(size);
+        const ptr = this.scratchEnd;
+        this.scratchEnd += size + (4 - (size % 4 || 4));
+        return ptr;
+    }
+
+    _freeScratch(_ptr) {
+        /* bump allocator — rien à libérer */
+    }
+
+    _readI32(ptr, count) {
+        return Array.from(new Int32Array(this.memory.buffer, ptr, count));
+    }
+
+    _readU8(ptr, count) {
+        return Array.from(new Uint8Array(this.memory.buffer, ptr, count));
+    }
+
+    _readMask(ptr, len) {
+        return new Uint8Array(this.memory.buffer.slice(ptr, ptr + len));
+    }
+
+    /**
+     * Quantifie l'image chargée via uploadImageData en régions couleur.
+     */
+    labelColorRegions(w, h, tolerance, minAlpha, maxLabels) {
+        if (!this.isLoaded || !this.exports.labelColorRegions) return null;
+        const n = w * h;
+        const cap = Math.min(Math.max(1, maxLabels | 0), 4096);
+        if (!this.scratchBase) {
+            this.scratchBase = (this.lutPtr || this.inputPtr) + 131072;
+        }
+        this.scratchEnd = this.scratchBase;
+        const labelsPtr = this._allocScratch(n * 4);
+        const queuePtr = this._allocScratch(n * 4);
+        const palettePtr = this._allocScratch(cap * 4);
+        const countsPtr = this._allocScratch(cap * 4);
+
+        const numLabels = this.exports.labelColorRegions(
+            this.inputPtr,
+            labelsPtr,
+            queuePtr,
+            palettePtr,
+            countsPtr,
+            w,
+            h,
+            tolerance | 0,
+            minAlpha | 0,
+            cap
+        );
+
+        const labels = new Int32Array(this.memory.buffer.slice(labelsPtr, labelsPtr + n * 4));
+        const palette = new Uint8Array(this.memory.buffer.slice(palettePtr, palettePtr + cap * 4));
+        const counts = new Int32Array(this.memory.buffer.slice(countsPtr, countsPtr + cap * 4));
+
+        return {
+            numLabels,
+            labelsPtr,
+            palettePtr,
+            countsPtr,
+            labels,
+            palette,
+            counts,
+            _n: n,
+            _w: w,
+            _h: h
+        };
+    }
+
+    freeLabelBuffers(_labeled) {
+        /* buffers WASM réutilisés */
+    }
 }
 
 const MasterPaintWasm = new WasmManager();
