@@ -26,6 +26,82 @@ function illuReleaseDeformMoveButtonPointerCapture() {
     window._illuDeformMoveFromButtonPointerId = null;
 }
 window.illuReleaseDeformMoveButtonPointerCapture = illuReleaseDeformMoveButtonPointerCapture;
+
+
+
+window.illuGetSymmetryAxes = function illuGetSymmetryAxes(layer) {
+    const symX = document.getElementById('tool-sym-x') && document.getElementById('tool-sym-x').checked;
+    const symY = document.getElementById('tool-sym-y') && document.getElementById('tool-sym-y').checked;
+    if (!symX && !symY) return null;
+    let cx = (window._illuSymCenterX != null) ? window._illuSymCenterX
+           : layer ? layer.width / 2 : EditorManager.width / 2;
+    let cy = (window._illuSymCenterY != null) ? window._illuSymCenterY
+           : layer ? layer.height / 2 : EditorManager.height / 2;
+    return { x: symX, y: symY, cx, cy };
+}
+
+/** Déplace le centre de symétrie (appelé par drag sur les règles). */
+window.illuSetSymmetryCenter = function(cx, cy) {
+    if (cx != null) window._illuSymCenterX = cx;
+    if (cy != null) window._illuSymCenterY = cy;
+};
+
+function illuDrawSymmetrical(lx, ly, cb) {
+    const sym = illuGetSymmetryAxes(EditorManager.activeLayer ? EditorManager.activeLayer.buffer : null);
+    cb(lx, ly);
+    if (!sym) return;
+    
+    if (sym.x) cb(sym.cx + (sym.cx - lx), ly);
+    if (sym.y) cb(lx, sym.cy + (sym.cy - ly));
+    if (sym.x && sym.y) cb(sym.cx + (sym.cx - lx), sym.cy + (sym.cy - ly));
+}
+
+
+
+/** Synchronise l'état visuel des boutons Sym. X / Sym. Y avec les checkboxes cachées. */
+window.illuSyncSymmetryButtonState = function() {
+    [['tool-sym-x-btn', 'tool-sym-x'], ['tool-sym-y-btn', 'tool-sym-y']].forEach(([btnId, cbId]) => {
+        const btn = document.getElementById(btnId);
+        const cb  = document.getElementById(cbId);
+        if (!btn || !cb) return;
+        btn.setAttribute('aria-pressed', cb.checked ? 'true' : 'false');
+        btn.classList.toggle('active', cb.checked);
+        btn.classList.toggle('illu-icon-toggle--on', cb.checked);
+    });
+};
+
+/** Connecte les boutons Sym. X / Sym. Y aux checkboxes cachées. */
+(function illuWireSymmetryButtons() {
+    function wire(btnId, cbId) {
+        const btn = document.getElementById(btnId);
+        const cb  = document.getElementById(cbId);
+        if (!btn || !cb) return;
+        // Sync état initial
+        window.illuSyncSymmetryButtonState();
+        // Clic bouton → toggle checkbox + déclenche le change event
+        btn.addEventListener('click', () => {
+            cb.checked = !cb.checked;
+            window.illuSyncSymmetryButtonState();
+            // Réinitialise le centre personnalisé quand on désactive
+            if (!cb.checked) {
+                if (cbId === 'tool-sym-x') window._illuSymCenterX = null;
+                if (cbId === 'tool-sym-y') window._illuSymCenterY = null;
+            }
+            // Déclenche le change event pour que les handlers existants s'exécutent
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            wire('tool-sym-x-btn', 'tool-sym-x');
+            wire('tool-sym-y-btn', 'tool-sym-y');
+        });
+    } else {
+        wire('tool-sym-x-btn', 'tool-sym-x');
+        wire('tool-sym-y-btn', 'tool-sym-y');
+    }
+})();
+
 let isSprayStroke = false;
 /** Pinceau / gomme : tracé par tampons (bords adoucis) au lieu d’un seul trait. */
 let isStampBrushStroke = false;
@@ -601,28 +677,25 @@ window.illuRoundRectAdjustHandleLocal = illuRoundRectAdjustHandleLocal;
 window.illuRoundRectRadiusFromLocalDrag = illuRoundRectRadiusFromLocalDrag;
 window.clampRoundRectCornerRadius = clampRoundRectCornerRadius;
 
-function illuVectorShapeSupportsRotation(shape) {
-    if (!shape) return false;
+/** Boîte locale (attributs) pour poignées 8 points, rotation et déplacement central. */
+function illuVectorSelectionBoxLocal(shape) {
+    if (!shape) return null;
     const tag = (shape.tagName || '').toLowerCase();
-    if (tag === 'rect') return true;
-    if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') return true;
-    return false;
-}
-
-function illuVectorToolsAllowShapeRotation() {
-    const t = window.activeTool || '';
-    return t === 'select' || t === 'move' || t === 'direct-select';
-}
-
-function illuVectorShapeLocalBbox(shape) {
-    const tag = (shape.tagName || '').toLowerCase();
-    if (tag === 'rect') {
+    if (tag === 'rect' || tag === 'image') {
         return {
             x: parseFloat(shape.getAttribute('x')) || 0,
             y: parseFloat(shape.getAttribute('y')) || 0,
             w: parseFloat(shape.getAttribute('width')) || 0,
             h: parseFloat(shape.getAttribute('height')) || 0
         };
+    }
+    if (tag === 'ellipse' || tag === 'circle') {
+        const cx = parseFloat(shape.getAttribute('cx')) || 0;
+        const cy = parseFloat(shape.getAttribute('cy')) || 0;
+        const rx =
+            tag === 'circle' ? parseFloat(shape.getAttribute('r')) || 0 : parseFloat(shape.getAttribute('rx')) || 0;
+        const ry = tag === 'circle' ? rx : parseFloat(shape.getAttribute('ry')) || 0;
+        return { x: cx - rx, y: cy - ry, w: rx * 2, h: ry * 2 };
     }
     if (tag === 'polygon') {
         const sb = shape.getAttribute('data-illu-star-branches');
@@ -639,12 +712,37 @@ function illuVectorShapeLocalBbox(shape) {
             const st = illuTriangleReadState(shape);
             return { x: st.x, y: st.y, w: st.w, h: st.h };
         }
+        if (shape.getAttribute('data-illu-quad-preset')) {
+            const st =
+                typeof window.illuQuadPresetReadState === 'function'
+                    ? window.illuQuadPresetReadState(shape)
+                    : null;
+            if (st) return { x: st.x, y: st.y, w: st.w, h: st.h };
+        }
+    }
+    const bb = illuGetElementBBox(shape);
+    if (bb && bb.width > 0 && bb.height > 0) {
+        return { x: bb.x, y: bb.y, w: bb.width, h: bb.height };
     }
     return null;
 }
+window.illuVectorSelectionBoxLocal = illuVectorSelectionBoxLocal;
+
+function illuVectorShapeSupportsRotation(shape) {
+    const b = illuVectorSelectionBoxLocal(shape);
+    return !!(b && b.w > 1e-6 && b.h > 1e-6);
+}
+
+function illuVectorToolsAllowShapeRotation() {
+    return typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector';
+}
+
+function illuVectorShapeLocalBbox(shape) {
+    return illuVectorSelectionBoxLocal(shape);
+}
 
 function illuVectorShapePivotLocal(shape) {
-    const b = illuVectorShapeLocalBbox(shape);
+    const b = illuVectorSelectionBoxLocal(shape);
     if (!b) return null;
     return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: b.w, h: b.h };
 }
@@ -692,12 +790,12 @@ function createSvgRotationHandle(rootX, rootY) {
     return c;
 }
 
-function appendVectorRotationHandle(svgUI, shape) {
+function appendVectorRotationHandle(anchorsG, shape) {
     if (!illuVectorShapeSupportsRotation(shape) || !illuVectorToolsAllowShapeRotation()) return;
     const local = illuVectorRotationHandleLocal(shape);
     if (!local) return;
     const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
-    svgUI.appendChild(createSvgRotationHandle(r.x, r.y));
+    anchorsG.appendChild(createSvgRotationHandle(r.x, r.y));
 }
 
 function syncVectorRotationHandlePosition(anchorsG, shape) {
@@ -712,6 +810,119 @@ function syncVectorRotationHandlePosition(anchorsG, shape) {
     el.setAttribute('cy', String(r.y));
     el.setAttribute('r', String(rotR));
 }
+
+function appendVectorCenterMoveHandle(anchorsG, shape) {
+    const box = illuVectorSelectionBoxLocal(shape);
+    if (!box || box.w < 1e-6 || box.h < 1e-6) return;
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    const root = vectorShapeAttrPointToRoot(shape, cx, cy);
+    const z = EditorManager.getCanvasZoomLevel() || 1;
+    const size = EditorManager.svgUiMoveButtonSizeDoc();
+    const half = size / 2;
+    const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    fo.setAttribute('x', String(root.x - half));
+    fo.setAttribute('y', String(root.y - half));
+    fo.setAttribute('width', String(size));
+    fo.setAttribute('height', String(size));
+    fo.setAttribute('class', 'illu-vector-move-fo');
+    fo.setAttribute('data-vector-move-handle', '1');
+    fo.setAttribute('style', 'overflow: visible; pointer-events: all;');
+    const wrap = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+    wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    wrap.style.cssText =
+        'display:flex;align-items:center;justify-content:center;width:100%;height:100%;margin:0;padding:0;box-sizing:border-box;';
+    const btn = document.createElementNS('http://www.w3.org/1999/xhtml', 'button');
+    btn.setAttribute('type', 'button');
+    btn.setAttribute('class', 'illu-pixel-text-move-btn illu-deform-selection-move-btn illu-vector-selection-move-btn');
+    btn.innerHTML =
+        '<i class="fa-solid fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
+    const moveTitle =
+        window.IlluI18n && typeof window.IlluI18n.t === 'function'
+            ? window.IlluI18n.t('tools.deformMoveHandle')
+            : 'Déplacer';
+    btn.setAttribute('title', moveTitle);
+    btn.setAttribute('aria-label', moveTitle);
+    const runMove = (ev) => {
+        if (ev.button != null && ev.button !== 0) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (typeof window.illuVectorSelectionMoveButtonMouseDown === 'function') {
+            window.illuVectorSelectionMoveButtonMouseDown(ev);
+        }
+        if (ev.pointerId != null) {
+            try {
+                window._illuVectorMoveFromButtonEl = btn;
+                window._illuVectorMoveFromButtonPointerId = ev.pointerId;
+                btn.setPointerCapture(ev.pointerId);
+            } catch (err) {
+                /* ignore */
+            }
+        }
+    };
+    const releaseMove = (ev) => {
+        if (ev.button != null && ev.button !== 0) return;
+        if (typeof window.illuHandleMouseUp === 'function') window.illuHandleMouseUp(ev);
+        if (typeof window.illuReleaseVectorMoveButtonPointerCapture === 'function') {
+            window.illuReleaseVectorMoveButtonPointerCapture();
+        }
+    };
+    btn.addEventListener('pointerup', releaseMove, { capture: true });
+    btn.addEventListener('mouseup', releaseMove, { capture: true });
+    btn.addEventListener('pointercancel', releaseMove, { capture: true });
+    btn.addEventListener('lostpointercapture', releaseMove, { capture: true });
+    btn.addEventListener('pointerdown', runMove, { passive: false });
+    wrap.appendChild(btn);
+    fo.appendChild(wrap);
+    anchorsG.appendChild(fo);
+}
+
+function syncVectorCenterMoveHandlePosition(anchorsG, shape) {
+    if (!anchorsG || !shape) return;
+    const fo = anchorsG.querySelector('.illu-vector-move-fo');
+    if (!fo) return;
+    const box = illuVectorSelectionBoxLocal(shape);
+    if (!box) return;
+    const root = vectorShapeAttrPointToRoot(shape, box.x + box.w / 2, box.y + box.h / 2);
+    const size = EditorManager.svgUiMoveButtonSizeDoc();
+    const half = size / 2;
+    fo.setAttribute('x', String(root.x - half));
+    fo.setAttribute('y', String(root.y - half));
+    fo.setAttribute('width', String(size));
+    fo.setAttribute('height', String(size));
+}
+
+window.illuReleaseVectorMoveButtonPointerCapture = function () {
+    const el = window._illuVectorMoveFromButtonEl;
+    const pid = window._illuVectorMoveFromButtonPointerId;
+    if (el && pid != null) {
+        try {
+            el.releasePointerCapture(pid);
+        } catch (err) {
+            /* ignore */
+        }
+    }
+    window._illuVectorMoveFromButtonEl = null;
+    window._illuVectorMoveFromButtonPointerId = null;
+};
+
+window.illuVectorSelectionMoveButtonMouseDown = function (e) {
+    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
+    if (e.button != null && e.button !== 0) return;
+    const sel = EditorManager.activeVectorSelection;
+    if (!sel || !sel.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const VE = window.VectorEngine;
+    if (!VE || typeof VE.beginDrag !== 'function') return;
+    const pos = typeof getPos === 'function' ? getPos(e) : { x: 0, y: 0 };
+    window._illuVectorDragActive = true;
+    window._shiftConstraintProportions = e.shiftKey;
+    isDrawing = true;
+    activeVectorShape = sel[sel.length - 1];
+    window._activeVectorShapeEl = activeVectorShape;
+    VE.beginDrag(sel, pos, e);
+};
 
 /** Brouillon vecteur : applique le rayon des coins de la barre d’options au <rect data-illu-round> en cours. */
 window.applyVectorRoundRectRadiusFromToolProps = function () {
@@ -731,7 +942,9 @@ window.applyVectorRoundRectRadiusFromToolProps = function () {
         el.removeAttribute('rx');
         el.removeAttribute('ry');
     }
-    EditorManager.render();
+    if (typeof window.illuSyncVectorSelectionUI === 'function') {
+        window.illuSyncVectorSelectionUI();
+    }
 };
 
 /** Met à jour un polygone triangle/étoile vecteur selon toolProps.triangleBranches. */
@@ -842,10 +1055,8 @@ window.syncTriangleBranchesLivePreview = function () {
         if (currentElement) tryShape(currentElement);
         const sel = EditorManager.activeVectorSelection;
         if (sel && sel.length) sel.forEach(tryShape);
-        if (changed) {
-            if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
-            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
-            EditorManager.render({ flushUiThumbnails: true });
+        if (changed && typeof window.illuScheduleVectorShapeEditVisual === 'function') {
+            window.illuScheduleVectorShapeEditVisual();
         }
     }
 
@@ -928,7 +1139,7 @@ window.syncCalloutStyleLivePreview = function () {
 let currentElement = null; // For vector mode
 
 /** Désactivés en mode vecteur (réservés au bitmap / sélection pixel). */
-const TOOL_PIXEL_ONLY = new Set(['wand', 'warp-4', 'pencil', 'eraser']);
+const TOOL_PIXEL_ONLY = new Set(['wand', 'warp-4', 'pencil', 'eraser', 'deform']);
 
 function isPixelWarpOrDeformTool() {
     const t = window.activeTool;
@@ -947,14 +1158,15 @@ const TOOL_OPTIONS_UI = {
     brush: {
         label: 'Pinceau',
         actionGroups: ['opt-grp-brush-actions'],
-        paramGroups: ['opt-grp-size-params']
+        paramGroups: ['opt-grp-size-params', 'opt-grp-symmetry-params']
     },
-    pencil: { label: 'Crayon', actionGroups: [], paramGroups: ['opt-grp-size-params'] },
+    pencil: { label: 'Crayon', actionGroups: [], paramGroups: ['opt-grp-size-params', 'opt-grp-symmetry-params'] },
     eraser: {
         label: 'Gomme',
         actionGroups: ['opt-grp-brush-actions'],
-        paramGroups: ['opt-grp-size-params']
+        paramGroups: ['opt-grp-size-params', 'opt-grp-symmetry-params']
     },
+
     gradient: { label: 'Dégradé', actionGroups: ['opt-grp-gradient-actions'], paramGroups: [] },
     rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
@@ -1235,6 +1447,7 @@ window.updateMainCanvasCursor = function () {
         zoom: typeof window.illuZoomToolCursor === 'function' ? window.illuZoomToolCursor() : illuResolveToolCursor('zoomIn', 'zoom-in'),
         brush: illuResolveToolCursor('pencil', 'crosshair'),
         pencil: illuResolveToolCursor('pencil', 'crosshair'),
+
         eraser: illuResolveToolCursor('eraser', 'cell'),
         fill: illuResolveToolCursor('bucket', 'cell'),
         wand: illuResolveToolCursor('wand', 'crosshair'),
@@ -1356,6 +1569,12 @@ window.updateToolOptionsBar = function () {
         typeof window.illuIsMobileShellLayout === 'function' && window.illuIsMobileShellLayout();
 
     // Show action groups (Bar 1)
+    const cloneTxt = document.getElementById('clone-tool-state-text');
+    if (cloneTxt) {
+        if (!window.cloneAnchor) cloneTxt.textContent = 'Cliquez pour définir la zone source.';
+        else cloneTxt.textContent = 'Zone définie. Prêt (dessinez).';
+    }
+
     if (cfg.actionGroups) {
         cfg.actionGroups.forEach((id) => {
             const el = document.getElementById(id);
@@ -1468,31 +1687,32 @@ window.updateToolOptionsBar = function () {
             cr.value = String(Math.round(rx));
         }
 
+        const fmEl = document.getElementById('vector-prop-fill-model');
+        if (fmEl && cnt === 1 && primary && pTag !== 'image') {
+            const f = primary.getAttribute('fill') || '';
+            if (!f || f === 'none') {
+                fmEl.value = 'none';
+            } else if (f.indexOf('url(') === 0) {
+                fmEl.value = 'gradient';
+            } else {
+                fmEl.value = 'solid';
+            }
+        }
+
         // Font controls for text (ruban : tool-text-* ; panneau vecteur optionnel)
         const ffWrap = document.getElementById('vector-prop-font-wrap');
         const ff = document.getElementById('tool-text-font') || document.getElementById('vector-prop-font-family');
         const fs = document.getElementById('tool-text-size') || document.getElementById('vector-prop-font-size');
         const fsVal = document.getElementById('tool-text-size-val');
-        const showFont = cnt === 1 && (pTag === 'text' || pTag === 'foreignobject');
+        const showFont = cnt === 1 && pTag === 'text';
         if (ffWrap) ffWrap.style.display = showFont ? 'flex' : 'none';
         if (showFont && primary) {
-            if (pTag === 'text') {
-                if (ff) ff.value = primary.getAttribute('font-family') || 'Arial, sans-serif';
-                const fsNum = Math.round(parseFloat(primary.getAttribute('font-size')) || 18);
-                if (fs) fs.value = String(fsNum);
-                if (fsVal) fsVal.textContent = String(fsNum);
-            } else {
-                const div = illuGetVectorTextEditableDiv(primary);
-                if (div) {
-                    const st = window.getComputedStyle(div);
-                    if (ff) ff.value = st.fontFamily || 'Arial, sans-serif';
-                    const fsNum = Math.round(parseFloat(st.fontSize) || 18);
-                    if (fs) fs.value = String(fsNum);
-                    if (fsVal) fsVal.textContent = String(fsNum);
-                    if (typeof window.syncIlluGaugeForRange === 'function' && fs) {
-                        window.syncIlluGaugeForRange(fs);
-                    }
-                }
+            if (ff) ff.value = primary.getAttribute('font-family') || 'Arial, sans-serif';
+            const fsNum = Math.round(parseFloat(primary.getAttribute('font-size')) || 18);
+            if (fs) fs.value = String(fsNum);
+            if (fsVal) fsVal.textContent = String(fsNum);
+            if (typeof window.syncIlluGaugeForRange === 'function' && fs) {
+                window.syncIlluGaugeForRange(fs);
             }
         }
 
@@ -1946,6 +2166,9 @@ window.updateToolOptionsBar = function () {
     }
     if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
         window.illuSyncMobileSelectionRibbonActions();
+    }
+    if (typeof window.illuSyncSymmetryButtonState === 'function') {
+        window.illuSyncSymmetryButtonState();
     }
 };
 
@@ -4971,7 +5194,11 @@ window.illuEnsurePinnedToggleBarOrder = function () {
 
 
 function getPos(e) {
-    return EditorManager.logicalPointerFromClientXY(e.clientX, e.clientY);
+    let pos = EditorManager.logicalPointerFromClientXY(e.clientX, e.clientY);
+    if (typeof window.illuSnapRawPoint === 'function') {
+        pos = window.illuSnapRawPoint(pos);
+    }
+    return pos;
 }
 
 const ILLU_MIN_SELECTION_SPAN = 1;
@@ -5153,22 +5380,21 @@ window.illuAllowsOutsideCanvasContent = illuAllowsOutsideCanvasContent;
  * Pré-agrandit le calque actif pour "absorber" les dessins autour des bords de la toile.
  * But : éviter un resize pendant un drag (qui casserait souvent l'état de clip du canvas).
  */
-const ILLU_SHAPE_DRAW_TOOLS =
-    window.ILLU_DRAG_SHAPE_TOOLS ||
-    [
-        'rect',
-        'circle',
-        'line',
-        'round-3',
-        'triangle',
-        'star',
-        'reg-poly',
-        'diamond',
-        'trapezoid',
-        'parallelogram',
-        'triangle-right',
-        'callout'
-    ];
+const ILLU_SHAPE_DRAW_TOOLS = [
+    'rect',
+    'circle',
+    'line',
+    'round-3',
+    'triangle',
+    'star',
+    'reg-poly',
+    'diamond',
+    'trapezoid',
+    'parallelogram',
+    'triangle-right',
+    'callout'
+];
+window.ILLU_DRAG_SHAPE_TOOLS = window.ILLU_DRAG_SHAPE_TOOLS || ILLU_SHAPE_DRAW_TOOLS;
 
 /** Décale un tampon de sauvegarde après agrandissement du calque (origine document x/y). */
 function illuRealignShapeBackupCanvasToLayer(backupCanvas, originDocX, originDocY, layer) {
@@ -5464,6 +5690,67 @@ function sampleVectorCompositeAtPos(pos, cb) {
     img.src = url;
 }
 
+let _illuVectorEyedropperRaf = 0;
+let _illuVectorEyedropperLastKey = '';
+let _illuVectorEyedropperPending = null;
+
+function sampleVectorColorAtPosFast(hit, pos, cb) {
+    if (
+        hit &&
+        typeof illuVectorIsEmbeddedBitmap === 'function' &&
+        illuVectorIsEmbeddedBitmap(hit)
+    ) {
+        const href =
+            hit.getAttribute('href') ||
+            hit.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+        if (!href) {
+            cb(null);
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            try {
+                const ix = parseFloat(hit.getAttribute('x')) || 0;
+                const iy = parseFloat(hit.getAttribute('y')) || 0;
+                const iw = parseFloat(hit.getAttribute('width')) || img.naturalWidth || 1;
+                const ih = parseFloat(hit.getAttribute('height')) || img.naturalHeight || 1;
+                const lx = ((pos.x - ix) / iw) * (img.naturalWidth || 1);
+                const ly = ((pos.y - iy) / ih) * (img.naturalHeight || 1);
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, img.naturalWidth || 1);
+                c.height = Math.max(1, img.naturalHeight || 1);
+                const ctx = c.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0);
+                const px = Math.min(c.width - 1, Math.max(0, Math.floor(lx)));
+                const py = Math.min(c.height - 1, Math.max(0, Math.floor(ly)));
+                const d = ctx.getImageData(px, py, 1, 1).data;
+                cb({ r: d[0], g: d[1], b: d[2], a: d[3] });
+            } catch (err) {
+                cb(null);
+            }
+        };
+        img.onerror = () => cb(null);
+        img.src = href;
+        return;
+    }
+    sampleVectorCompositeAtPos(pos, cb);
+}
+
+function illuScheduleVectorEyedropperSample(pos, hit, cb) {
+    _illuVectorEyedropperPending = { pos, hit, cb };
+    if (_illuVectorEyedropperRaf) return;
+    _illuVectorEyedropperRaf = requestAnimationFrame(() => {
+        _illuVectorEyedropperRaf = 0;
+        const job = _illuVectorEyedropperPending;
+        _illuVectorEyedropperPending = null;
+        if (!job) return;
+        const key = `${Math.floor(job.pos.x)}:${Math.floor(job.pos.y)}`;
+        if (key === _illuVectorEyedropperLastKey) return;
+        _illuVectorEyedropperLastKey = key;
+        sampleVectorColorAtPosFast(job.hit, job.pos, job.cb);
+    });
+}
+
 function removeVectorElementGradientIfAny(el) {
     const gid = el.getAttribute('data-vgrad');
     if (!gid) return;
@@ -5480,9 +5767,7 @@ function vectorShapeAttrPointToRoot(shape, lx, ly) {
         const pt = svg.createSVGPoint();
         pt.x = lx;
         pt.y = ly;
-        const tag = (shape.tagName || '').toLowerCase();
-        const useOwn = tag === 'polygon' || tag === 'polyline' || tag === 'path';
-        const m = useOwn ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
+        const m = vectorShapeUsesOwnCtm(shape) ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
         if (!m) return { x: lx, y: ly };
         const o = pt.matrixTransform(m);
         return { x: o.x, y: o.y };
@@ -5499,9 +5784,7 @@ function vectorDocToShapeAttrPoint(shape, rx, ry) {
         const pt = svg.createSVGPoint();
         pt.x = rx;
         pt.y = ry;
-        const tag = (shape.tagName || '').toLowerCase();
-        const useOwn = tag === 'polygon' || tag === 'polyline' || tag === 'path';
-        const m = useOwn ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
+        const m = vectorShapeUsesOwnCtm(shape) ? shape.getCTM() : shape.parentElement && shape.parentElement.getCTM();
         if (!m) return { x: rx, y: ry };
         const o = pt.matrixTransform(m.inverse());
         return { x: o.x, y: o.y };
@@ -5658,10 +5941,147 @@ function illuVectorRectLikeTag(tag) {
     return tag === 'rect' || tag === 'image';
 }
 
-/** Poignées type bitmap (blanc / noir) plutôt que cadre bleu VectorEngine. */
+/** Utilise le CTM de l’élément (pas seulement le parent) pour placer les poignées. */
+function vectorShapeUsesOwnCtm(shape) {
+    if (!shape || !shape.tagName) return false;
+    const tag = (shape.tagName || '').toLowerCase();
+    if (tag === 'polygon' || tag === 'polyline' || tag === 'path' || tag === 'image') return true;
+    if ((tag === 'rect' || tag === 'foreignobject') && shape.getAttribute('transform')) return true;
+    return false;
+}
+
+/**
+ * Fusionne transform dans x/y/width/height (ou cx/cy) pour aligner ancres et géométrie.
+ * @returns {boolean} true si l’élément a été modifié
+ */
+function illuVectorBakeElementTransform(el) {
+    if (!el || !el.isConnected || typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') {
+        return false;
+    }
+    const tr = (el.getAttribute('transform') || '').trim();
+    if (!tr) return false;
+
+    const tag = (el.tagName || '').toLowerCase();
+    const svg = el.ownerSVGElement;
+    const parent = el.parentElement;
+    if (!svg || !parent) return false;
+
+    try {
+        const bbox = el.getBBox();
+        const ctm = el.getCTM();
+        const ptm = parent.getCTM();
+        if (!ctm || !ptm) return false;
+
+        const invParent = ptm.inverse();
+        const pt = svg.createSVGPoint();
+        const corners = [
+            { x: bbox.x, y: bbox.y },
+            { x: bbox.x + bbox.width, y: bbox.y },
+            { x: bbox.x, y: bbox.y + bbox.height },
+            { x: bbox.x + bbox.width, y: bbox.y + bbox.height }
+        ];
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        corners.forEach((c) => {
+            pt.x = c.x;
+            pt.y = c.y;
+            const p = pt.matrixTransform(ctm).matrixTransform(invParent);
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        });
+        if (!isFinite(minX)) return false;
+
+        const w = Math.max(0.01, maxX - minX);
+        const h = Math.max(0.01, maxY - minY);
+
+        if (tag === 'rect' || tag === 'image') {
+            el.setAttribute('x', String(minX));
+            el.setAttribute('y', String(minY));
+            el.setAttribute('width', String(w));
+            el.setAttribute('height', String(h));
+        } else if (tag === 'foreignobject') {
+            el.setAttribute('x', String(minX));
+            el.setAttribute('y', String(minY));
+            el.setAttribute('width', String(w));
+            el.setAttribute('height', String(h));
+        } else if (tag === 'text') {
+            el.setAttribute('x', String(minX));
+            el.setAttribute('y', String(minY));
+        } else if (tag === 'ellipse' || tag === 'circle') {
+            const cx = minX + w / 2;
+            const cy = minY + h / 2;
+            const rx = w / 2;
+            const ry = h / 2;
+            el.setAttribute('cx', String(cx));
+            el.setAttribute('cy', String(cy));
+            if (tag === 'circle') {
+                el.setAttribute('r', String(Math.max(rx, ry)));
+                el.removeAttribute('rx');
+                el.removeAttribute('ry');
+            } else {
+                el.setAttribute('rx', String(rx));
+                el.setAttribute('ry', String(ry));
+            }
+        } else {
+            return false;
+        }
+
+        el.removeAttribute('transform');
+        delete el._illuBBoxCache;
+        delete el._illuBBoxGen;
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+window.illuVectorBakeElementTransform = illuVectorBakeElementTransform;
+
+window.illuVectorBakeSelectionTransforms = function (sel) {
+    if (!sel || !sel.length) return false;
+    let any = false;
+    for (const el of sel) {
+        if (illuVectorBakeElementTransform(el)) any = true;
+    }
+    return any;
+};
+
+/** En mode vecteur : une seule UI de sélection (poignées blanches), sauf édition de nœuds. */
 window.illuVectorPreferBitmapSelectionUI = function () {
+    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return false;
     const t = window.activeTool || 'select';
     return t !== 'direct-select' && t !== 'node-select';
+};
+
+window.illuVectorSnapshotForDrag = function (el) {
+    if (!el || typeof snapshotVectorElementGeometry !== 'function') return null;
+    const geo = snapshotVectorElementGeometry(el);
+    if (!geo) return null;
+    if (geo.tag === 'pathish' || geo.tag === 'other') return null;
+    return geo;
+};
+
+window.illuVectorApplyDragFromSnapshot = function (el, base, dx, dy) {
+    if (!el || !base || typeof applyVectorDragFromSnapshot !== 'function') return;
+    let ldx = dx;
+    let ldy = dy;
+    try {
+        const p = el.parentElement;
+        const ctm = p ? p.getScreenCTM() : el.ownerSVGElement && el.ownerSVGElement.getScreenCTM();
+        if (ctm) {
+            const inv = ctm.inverse();
+            ldx = dx * inv.a + dy * inv.c;
+            ldy = dx * inv.b + dy * inv.d;
+        }
+    } catch (err) {
+        /* ignore */
+    }
+    applyVectorDragFromSnapshot(el, base, ldx, ldy);
+    delete el._illuBBoxCache;
+    delete el._illuBBoxGen;
 };
 
 window.illuSyncVectorSelectionAnchors = function () {
@@ -5698,18 +6118,150 @@ window.illuSyncVectorSelectionUI = function () {
     }
 };
 
-let _illuVectorLiveDrawRaf = 0;
+/** Rafraîchissement live vecteur : 5 fps max (200 ms), jamais 60 fps. */
+const ILLU_VECTOR_LIVE_INTERVAL_MS = 200;
+window.ILLU_VECTOR_LIVE_INTERVAL_MS = ILLU_VECTOR_LIVE_INTERVAL_MS;
+
+window._illuVectorLiveLast = window._illuVectorLiveLast || {};
+window._illuVectorLivePending = window._illuVectorLivePending || {};
+window._illuVectorLiveTimers = window._illuVectorLiveTimers || {};
+
+function illuScheduleVectorLiveThrottled(slot, fn) {
+    const key = slot || 'default';
+    if (window._illuVectorLivePending[key]) return;
+    window._illuVectorLivePending[key] = true;
+    const now = performance.now();
+    const last = window._illuVectorLiveLast[key] || 0;
+    const elapsed = now - last;
+    const run = () => {
+        window._illuVectorLivePending[key] = false;
+        window._illuVectorLiveLast[key] = performance.now();
+        if (window._illuVectorLiveTimers[key] != null) {
+            clearTimeout(window._illuVectorLiveTimers[key]);
+            window._illuVectorLiveTimers[key] = null;
+        }
+        try {
+            fn();
+        } catch (e) {
+            /* ignore */
+        }
+    };
+    if (elapsed >= ILLU_VECTOR_LIVE_INTERVAL_MS) {
+        run();
+        return;
+    }
+    if (window._illuVectorLiveTimers[key] != null) clearTimeout(window._illuVectorLiveTimers[key]);
+    window._illuVectorLiveTimers[key] = setTimeout(run, ILLU_VECTOR_LIVE_INTERVAL_MS - elapsed);
+}
+
 window._illuVectorLiveDraw = false;
 
 function illuScheduleVectorLiveDrawVisual() {
-    if (_illuVectorLiveDrawRaf) return;
-    _illuVectorLiveDrawRaf = requestAnimationFrame(() => {
-        _illuVectorLiveDrawRaf = 0;
+    illuScheduleVectorLiveThrottled('liveDraw', () => {
         if (typeof EditorManager !== 'undefined' && EditorManager.render) {
-            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
+            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true, skipLayerComposite: true });
         }
     });
 }
+
+/** Édition forme existante : recale les poignées uniquement, sans render ni sync SVG. */
+function illuScheduleVectorShapeEditVisual() {
+    illuScheduleVectorLiveThrottled('shapeEdit', () => {
+        if (typeof syncAnchors === 'function') syncAnchors();
+    });
+}
+window.illuScheduleVectorShapeEditVisual = illuScheduleVectorShapeEditVisual;
+window.illuScheduleVectorLiveThrottled = illuScheduleVectorLiveThrottled;
+
+function illuVectorPaintKindForEl(el) {
+    if (!el) return null;
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag === 'foreignobject') return null;
+    if (tag === 'text') return 'text';
+    if (tag === 'rect') return 'rect';
+    if (tag === 'ellipse' || tag === 'circle') return 'ellipse';
+    if (tag === 'polygon' || tag === 'polyline') return 'polygon';
+    const isLineEl =
+        tag === 'line' ||
+        (tag === 'path' &&
+            (el.getAttribute('data-illu-line-cubic') === '1' ||
+                el.getAttribute('data-illu-line-straight') === '1' ||
+                el.getAttribute('data-illu-stroke-only') === '1' ||
+                el.getAttribute('data-illu-quad-3') === '1' ||
+                el.getAttribute('data-illu-pen')));
+    if (isLineEl) return 'line';
+    if (tag === 'path') {
+        const closed = (el.getAttribute('d') || '').trim().endsWith('Z');
+        return closed ? 'shape' : 'line';
+    }
+    return 'shape';
+}
+
+/** Applique toolProps (mode, fillType, size…) sur la sélection SVG sans render/historique lourds. */
+window.illuApplyVectorToolPropsToSelection = function (opts) {
+    opts = opts || {};
+    const live = !!opts.livePreview;
+    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return false;
+    const targets = EditorManager.activeVectorSelection;
+    if (!targets || !targets.length || typeof window.applyVectorShapePaint !== 'function') return false;
+    let any = false;
+    targets.forEach((el) => {
+        if (!el || !el.isConnected) return;
+        if (typeof window.illuVectorIsEmbeddedBitmap === 'function' && window.illuVectorIsEmbeddedBitmap(el)) {
+            return;
+        }
+        const kind = illuVectorPaintKindForEl(el);
+        if (!kind) return;
+        window.applyVectorShapePaint(el, kind);
+        
+        if (kind === 'text' && EditorManager.toolProps) {
+            const tp = EditorManager.toolProps;
+            if (tp.textFont) el.setAttribute('font-family', tp.textFont);
+            if (tp.textSize) {
+                el.setAttribute('font-size', tp.textSize);
+                // Update tspans dy
+                const lh = Math.round(tp.textSize * 1.25);
+                const tspans = el.querySelectorAll('tspan');
+                tspans.forEach((ts, i) => {
+                    if (i > 0) ts.setAttribute('dy', lh);
+                });
+            }
+            if (tp.textBold !== undefined) el.setAttribute('font-weight', tp.textBold ? 'bold' : 'normal');
+            if (tp.textItalic !== undefined) el.setAttribute('font-style', tp.textItalic ? 'italic' : 'normal');
+        }
+
+        if (el.getAttribute('data-vgrad') && typeof window.syncVectorGradientBoundsForEl === 'function') {
+            window.syncVectorGradientBoundsForEl(el);
+        }
+        any = true;
+    });
+    if (!any) return false;
+    if (live) {
+        if (typeof window.illuScheduleVectorShapeEditVisual === 'function') {
+            window.illuScheduleVectorShapeEditVisual();
+        }
+        if (typeof EditorManager !== 'undefined') {
+            if (EditorManager._illuVectorToolPropsHistoryTimer != null) {
+                clearTimeout(EditorManager._illuVectorToolPropsHistoryTimer);
+            }
+            const em = EditorManager;
+            EditorManager._illuVectorToolPropsHistoryTimer = window.setTimeout(() => {
+                em._illuVectorToolPropsHistoryTimer = null;
+                if (typeof em.saveHistoryVector === 'function') em.saveHistoryVector('Style forme');
+            }, 450);
+        }
+        return true;
+    }
+    if (typeof window.illuSyncVectorSelectionUI === 'function') {
+        window.illuSyncVectorSelectionUI();
+    }
+    if (typeof EditorManager.saveHistoryVector === 'function') {
+        EditorManager.saveHistoryVector('Style forme');
+    } else if (EditorManager.render) {
+        EditorManager.render({ skipUiThumbnails: true });
+    }
+    return true;
+};
 
 function illuSyncVectorLineOutlineGeometry(el) {
     if (!el) return;
@@ -6035,6 +6587,7 @@ function appendAnchorsForShape(svgUI, shape) {
         rootAnchor(x, y, 0);
     }
     appendVectorRotationHandle(svgUI, shape);
+    appendVectorCenterMoveHandle(svgUI, shape);
 }
 
 function generateAnchors(shape) {
@@ -6113,28 +6666,8 @@ function syncAnchors() {
     const primary = EditorManager.activeVectorSelection[EditorManager.activeVectorSelection.length - 1];
     const sh = primary;
 
-    // Draw dashed boxes for all selected elements (clear previous first)
-    boxesG.innerHTML = '';
-    const z = EditorManager.activeProject.zoom || 1;
-    EditorManager.activeVectorSelection.forEach(el => {
-        try {
-            const r = illuGetElementBBox(el);
-            if (!r) return;
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', String(r.x));
-            rect.setAttribute('y', String(r.y));
-            rect.setAttribute('width', String(r.width));
-            rect.setAttribute('height', String(r.height));
-            rect.setAttribute('fill', 'none');
-            rect.setAttribute('stroke', '#000000');
-            rect.setAttribute('stroke-width', String(1 / z));
-            rect.setAttribute('stroke-dasharray', `${4 / z} ${3 / z}`);
-            rect.setAttribute('vector-effect', 'non-scaling-stroke');
-            rect.setAttribute('pointer-events', 'none');
-            rect.classList.add('svg-selection-box');
-            boxesG.appendChild(rect);
-        } catch (e) { }
-    });
+    /* Pas de cadres pointillés : une seule UI (poignées 8 points), comme en mode bitmap. */
+    if (boxesG) boxesG.innerHTML = '';
 
     const hz = EditorManager.svgUiHandleSizeDoc() / 2;
     const tag = primary.tagName.toLowerCase();
@@ -6303,6 +6836,7 @@ function syncAnchors() {
         if (anchors[0]) vectorPlaceAnchorRoot(sh, anchors[0], x, y, hz);
     }
     syncVectorRotationHandlePosition(anchorsG, sh);
+    syncVectorCenterMoveHandlePosition(anchorsG, sh);
 }
 
 window.clearAnchors = clearAnchors;
@@ -7148,6 +7682,7 @@ function vectorEnsureGradientForHit(el) {
 }
 
 function syncVectorGradientOnShape(el, kind, sx, sy, px, py) {
+    if (window._illuVectorShapeEditFast) return;
     const gid = el.getAttribute('data-vgrad');
     if (!gid) return;
     const defs = document.getElementById('vector-doc-defs');
@@ -7210,6 +7745,44 @@ function syncVectorGradientOnShape(el, kind, sx, sy, px, py) {
 }
 
 function applyVectorShapePaint(el, kind) {
+    if (typeof illuVectorIsEmbeddedBitmap === 'function' && illuVectorIsEmbeddedBitmap(el)) {
+        return;
+    }
+    
+    if (kind === 'text') {
+        const tp = EditorManager.toolProps || {};
+        const ft = tp.textFillType || 'solid';
+        const doStroke = !!tp.textStroke;
+        const textSw = Math.max(1, tp.textStrokeWidth || 1);
+        
+        const primObj = EditorManager.activeColor;
+        const primaryFill = typeof primObj === 'string' ? primObj : primObj ? `rgb(${primObj.r},${primObj.g},${primObj.b})` : '#000000';
+        
+        if (ft === 'none') {
+            el.setAttribute('fill', 'none');
+            el.removeAttribute('data-vgrad');
+        } else if (ft === 'gradient') {
+            const gid = `vgrad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            el.setAttribute('data-vgrad', gid);
+            el.setAttribute('fill', `url(#${gid})`);
+        } else {
+            el.setAttribute('fill', primaryFill);
+            el.removeAttribute('data-vgrad');
+        }
+        
+        if (doStroke) {
+            const secObj = EditorManager.secondaryColor;
+            const secondaryStroke = typeof secObj === 'string' ? secObj : secObj ? `rgb(${secObj.r},${secObj.g},${secObj.b})` : '#000000';
+            el.setAttribute('stroke', secondaryStroke);
+            el.setAttribute('stroke-width', String(textSw));
+            el.setAttribute('stroke-linejoin', 'round');
+        } else {
+            el.removeAttribute('stroke');
+            el.removeAttribute('stroke-width');
+        }
+        return;
+    }
+    
     const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
     const fillType = EditorManager.toolProps.fillType || 'solid';
     const sw = Math.max(1, EditorManager.toolProps.size || 2);
@@ -7316,6 +7889,7 @@ window.applyVectorShapePaint = applyVectorShapePaint;
 
 /** Réapplique remplissage / contour (toolProps) sur une forme SVG en cours d’édition. */
 function illuRefreshVectorElementPaint(el) {
+    if (window._illuVectorShapeEditFast) return;
     if (!el || typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
     const t = (el.tagName || '').toLowerCase();
     if (t === 'foreignobject') return;
@@ -7377,56 +7951,6 @@ function illuRefreshVectorElementPaint(el) {
     }
 }
 window.illuRefreshVectorElementPaint = illuRefreshVectorElementPaint;
-
-window.syncVectorGradientBoundsForEl = function (el) {
-    if (!el) return;
-    const defs = document.getElementById('vector-doc-defs');
-    if (!defs) return;
-
-    let gid = el.getAttribute('data-vgrad');
-    if (!gid) return;
-
-    let gradEl = document.getElementById(gid);
-    if (!gradEl) {
-        const gradType = EditorManager.toolProps.gradientType || 'linear';
-        gradEl = document.createElementNS('http://www.w3.org/2000/svg', gradType === 'radial' ? 'radialGradient' : 'linearGradient');
-        gradEl.setAttribute('id', gid);
-
-        const angleEl = document.getElementById('vector-prop-grad-angle');
-        const angle = angleEl ? parseFloat(angleEl.value || '0') : 0;
-
-        if (gradType === 'linear') {
-            const rad = (angle) * Math.PI / 180;
-            const r = 50;
-            const cx = 50, cy = 50;
-            const x1 = cx - r * Math.cos(rad), y1 = cy - r * Math.sin(rad);
-            const x2 = cx + r * Math.cos(rad), y2 = cy + r * Math.sin(rad);
-            gradEl.setAttribute('x1', `$${x1}%`);
-            gradEl.setAttribute('y1', `$${y1}%`);
-            gradEl.setAttribute('x2', `$${x2}%`);
-            gradEl.setAttribute('y2', `$${y2}%`);
-        }
-
-        const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
-        const c1 = shapeEffectiveFillCss(mode) || '#000000';
-        const c2 = shapePrimaryFillCss() || '#000000';
-
-        const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-        s1.setAttribute('offset', '0%');
-        s1.setAttribute('stop-color', c1);
-        const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-        s2.setAttribute('offset', '100%');
-        s2.setAttribute('stop-color', c2);
-
-        gradEl.appendChild(s1);
-        gradEl.appendChild(s2);
-        defs.appendChild(gradEl);
-    } else {
-        // If it exists, update it if needed? (We'll leave it as is for bounds, 
-        // since we use default objectBoundingBox it auto-stretches)
-    }
-};
-
 
 /** Recalcule le dégradé SVG après redimensionnement ou édition de la forme. */
 window.syncVectorGradientBoundsForEl = function (el) {
@@ -7695,66 +8219,46 @@ function illuRemoveVectorTextIfEmpty(fo) {
     return true;
 }
 
-function illuCreateVectorTextForeignObject(layer, pos) {
-    const ns = 'http://www.w3.org/2000/svg';
-    const fo = document.createElementNS(ns, 'foreignObject');
-    const fs = EditorManager.toolProps.textSize || 18;
-    const lh = Math.round(fs * 1.25);
-    const ff = EditorManager.toolProps.textFont || 'Arial, sans-serif';
-    const col = illuVectorTextPrimaryCss();
-    fo.setAttribute('x', String(pos.x));
-    fo.setAttribute('y', String(pos.y));
-    fo.setAttribute('width', '4');
-    fo.setAttribute('height', String(lh));
-    fo.removeAttribute('fill');
-
-    const htmlDoc = document.implementation.createHTMLDocument('illu-vector-text');
-    const body = htmlDoc.createElement('body');
-    body.setAttribute('style', 'margin:0;padding:0;background:transparent');
-    const div = htmlDoc.createElement('div');
-    div.setAttribute('contenteditable', 'true');
-    div.setAttribute('spellcheck', 'false');
-    div.setAttribute(
-        'style',
-        `outline:none;min-height:1em;margin:0;padding:0;cursor:text;font-family:${ff};font-size:${fs}px;line-height:${lh}px;color:${col};font-weight:${EditorManager.toolProps.textBold ? 'bold' : 'normal'};font-style:${EditorManager.toolProps.textItalic ? 'italic' : 'normal'};background:transparent;white-space:pre-wrap;overflow:hidden;`
-    );
-    div.textContent = '\u200b';
-    body.appendChild(div);
-    fo.appendChild(document.importNode(body, true));
-    layer.appendChild(fo);
-    return fo;
-}
-
-window.syncVectorTextEditorStyles = function () {
-    if (EditorManager.mode !== 'vector') return;
+window.commitVectorTextSession = function(lx, ly, text, existingNode) {
+    const layer = getVectorActiveLayerContainer();
+    if (!layer) return;
     const tp = EditorManager.toolProps;
-    const targets = EditorManager.activeVectorSelection.length
-        ? EditorManager.activeVectorSelection
-        : currentElement
-            ? [currentElement]
-            : [];
-    const primary = illuVectorTextPrimaryCss();
-    targets.forEach((el) => {
-        const tag = (el.tagName || '').toLowerCase();
-        if (tag !== 'foreignobject') return;
-        el.removeAttribute('fill');
-        const div = illuGetVectorTextEditableDiv(el);
-        if (!div) return;
-        const fs = tp.textSize || 18;
-        const lh = Math.round(fs * 1.25);
-        div.style.fontFamily = tp.textFont || 'Arial, sans-serif';
-        div.style.fontSize = fs + 'px';
-        div.style.lineHeight = lh + 'px';
-        div.style.fontWeight = tp.textBold ? 'bold' : 'normal';
-        div.style.fontStyle = tp.textItalic ? 'italic' : 'normal';
-        div.style.color = primary;
-        div.style.background = 'transparent';
-        illuFitForeignObjectToText(el);
+    
+    const t = existingNode || document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', String(lx));
+    t.setAttribute('y', String(ly));
+    
+    t.innerHTML = '';
+    const lines = text.split('\n');
+    const size = tp.textSize || 18;
+    const lh = Math.round(size * 1.25);
+    lines.forEach((line, i) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.setAttribute('x', String(lx));
+        if (i > 0) tspan.setAttribute('dy', String(lh));
+        tspan.textContent = line || ' '; 
+        t.appendChild(tspan);
     });
-    if (typeof syncAnchors === 'function' && EditorManager.activeVectorSelection.length) {
-        syncAnchors();
+
+    const fam = tp.textFont || 'Arial, sans-serif';
+    t.setAttribute('font-family', fam);
+    t.setAttribute('font-size', String(size));
+    t.setAttribute('font-weight', tp.textBold ? 'bold' : 'normal');
+    t.setAttribute('font-style', tp.textItalic ? 'italic' : 'normal');
+    
+    if (!existingNode) {
+        layer.appendChild(t);
+        window._activeVectorShapeEl = t;
+        EditorManager.activeVectorSelection = [t];
+        window.applyVectorShapePaint(t, 'text');
+        generateAnchors(t);
+    } else {
+        t.style.display = '';
+        window.applyVectorShapePaint(t, 'text');
+        generateAnchors(t);
     }
 };
+
 
 window.illuCancelActiveVectorTextDraft = function () {
     if (!currentElement) return false;
@@ -7839,16 +8343,25 @@ function illuWireVectorTextEditor(div) {
 }
 
 function illuSyncToolPropsFromVectorTextEl(el) {
-    const div = illuGetVectorTextEditableDiv(el);
-    if (!div || !EditorManager.toolProps) return;
-    const st = window.getComputedStyle(div);
+    if (!el || !EditorManager.toolProps) return;
     const tp = EditorManager.toolProps;
-    const fs = parseFloat(st.fontSize);
-    if (fs > 0) tp.textSize = Math.round(fs);
-    if (st.fontFamily) tp.textFont = st.fontFamily;
-    tp.textBold = st.fontWeight === 'bold' || parseInt(st.fontWeight, 10) >= 600;
-    tp.textItalic = st.fontStyle === 'italic';
-    const col = st.color;
+    
+    const fsAttr = el.getAttribute('font-size');
+    if (fsAttr) {
+        const fs = parseFloat(fsAttr);
+        if (fs > 0) tp.textSize = Math.round(fs);
+    }
+    
+    const ff = el.getAttribute('font-family');
+    if (ff) tp.textFont = ff;
+    
+    const fw = el.getAttribute('font-weight');
+    tp.textBold = fw === 'bold' || parseInt(fw, 10) >= 600;
+    
+    const fsy = el.getAttribute('font-style');
+    tp.textItalic = fsy === 'italic';
+    
+    const col = el.getAttribute('fill');
     if (col && typeof EditorManager.setColorFromRGB === 'function') {
         const m = col.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
         if (m) EditorManager.setColorFromRGB(+m[1], +m[2], +m[3], 255);
@@ -7899,14 +8412,33 @@ function illuVectorResumeExistingShape(hit, pos, e, opts) {
 }
 
 function illuVectorDrawToolResumeHit(hit, tool) {
-    if (!hit) return false;
+    if (!hit || !hit.tagName) return false;
     const tag = (hit.tagName || '').toLowerCase();
+    if (tag === 'g' && !hit.getAttribute('data-illu-group')) return false;
     if (tool === 'text') return tag === 'foreignobject' || tag === 'text';
-    if (tool === 'line') return illuVectorIsEditableStrokeElement(hit);
-    if (tag === 'g' && hit.getAttribute('data-illu-group')) return tool === 'select' || tool === 'move' || tool === 'direct-select';
-    const shapeDrawOnly = new Set(['rect', 'circle', 'round-3', 'triangle', 'cubic-3', 'shadow', 'brush']);
-    if (shapeDrawOnly.has(tool)) return false;
-    return false;
+    if (tool === 'line' || tool === 'cubic-3' || tool === 'brush') {
+        return typeof illuVectorIsEditableStrokeElement === 'function' && illuVectorIsEditableStrokeElement(hit);
+    }
+    const drawList =
+        window.ILLU_DRAG_SHAPE_TOOLS ||
+        (typeof ILLU_SHAPE_DRAW_TOOLS !== 'undefined' ? ILLU_SHAPE_DRAW_TOOLS : []);
+    const shapeTools = new Set([...drawList, 'shadow', 'brush', 'cubic-3']);
+    if (!shapeTools.has(tool)) return false;
+    if (typeof illuVectorIsEmbeddedBitmap === 'function' && illuVectorIsEmbeddedBitmap(hit)) {
+        return true;
+    }
+    return new Set([
+        'rect',
+        'circle',
+        'ellipse',
+        'line',
+        'path',
+        'polygon',
+        'polyline',
+        'image',
+        'text',
+        'foreignobject'
+    ]).has(tag);
 }
 
 function hitTestVectorShapeInActiveLayer(pos, evt) {
@@ -7918,7 +8450,7 @@ function hitTestVectorShapeInActiveLayer(pos, evt) {
     const px = clientX - canvasR.left;
     const py = clientY - canvasR.top;
     const sel =
-        'rect, ellipse, circle, line, path, polygon, polyline, foreignObject, text, g[data-illu-group]';
+        'rect, ellipse, circle, line, path, polygon, polyline, foreignObject, text, image[data-illu-bitmap-embed], g[data-illu-group]';
     const nodes = [...g.querySelectorAll(sel)].reverse();
     for (const el of nodes) {
         try {
@@ -7937,7 +8469,7 @@ function hitTestVectorShapeInActiveLayer(pos, evt) {
 
 function snapshotVectorElementGeometry(el) {
     const tag = (el.tagName || '').toLowerCase();
-    if (tag === 'rect') {
+    if (tag === 'rect' || tag === 'image') {
         return {
             tag,
             x: parseFloat(el.getAttribute('x')) || 0,
@@ -7975,9 +8507,17 @@ function snapshotVectorElementGeometry(el) {
 
 function applyVectorDragFromSnapshot(el, base, tdx, tdy) {
     const tag = base.tag;
-    if (tag === 'rect' || tag === 'foreignobject' || tag === 'text') {
-        el.setAttribute('x', String(base.x + tdx));
-        el.setAttribute('y', String(base.y + tdy));
+    if (tag === 'rect' || tag === 'image' || tag === 'foreignobject' || tag === 'text') {
+        const newX = base.x + tdx;
+        const newY = base.y + tdy;
+        el.setAttribute('x', String(newX));
+        el.setAttribute('y', String(newY));
+        if (tag === 'text') {
+            const tspans = el.querySelectorAll('tspan');
+            tspans.forEach(tspan => {
+                tspan.setAttribute('x', String(newX));
+            });
+        }
         return;
     }
     if (tag === 'ellipse' || tag === 'circle') {
@@ -8054,6 +8594,17 @@ function handleMouseDown(e) {
                     return;
                 }
             }
+            if (
+                t &&
+                (t.classList.contains('illu-vector-selection-move-btn') ||
+                    (t.closest && t.closest('.illu-vector-move-fo')))
+            ) {
+                if (typeof window.illuVectorSelectionMoveButtonMouseDown === 'function') {
+                    window.illuVectorSelectionMoveButtonMouseDown(e);
+                }
+                e.preventDefault();
+                return;
+            }
             if (t && t.classList && t.classList.contains('svg-rotation-handle')) {
                 activeVectorRotationDrag = true;
                 activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
@@ -8124,7 +8675,9 @@ function handleMouseDown(e) {
             const rgb = sampleImageRgbAtMainCanvasPos(pos);
             if (rgb) EditorManager.setColorFromRGB(rgb.r, rgb.g, rgb.b, rgb.a);
         } else if (EditorManager.mode === 'vector') {
-            sampleVectorCompositeAtPos(pos, (rgb) => {
+            const VE = window.VectorEngine;
+            const hit = VE && typeof VE.hitTest === 'function' ? VE.hitTest(pos, e) : null;
+            illuScheduleVectorEyedropperSample(pos, hit, (rgb) => {
                 if (rgb) EditorManager.setColorFromRGB(rgb.r, rgb.g, rgb.b, rgb.a);
             });
         }
@@ -8363,28 +8916,45 @@ function handleMouseDown(e) {
     if (EditorManager.mode === 'vector' && window.activeTool === 'text') {
         e.preventDefault();
         const layer = getVectorActiveLayerContainer();
-        const foHit =
+        const textHit =
             (e.target &&
                 e.target.closest &&
-                (e.target.closest('foreignObject') || e.target.closest('foreignobject'))) ||
+                e.target.closest('text')) ||
             null;
-        if (foHit && layer && layer.contains(foHit)) {
-            foHit.removeAttribute('fill');
-            illuVectorResumeExistingShape(foHit, pos, e, { beginDrag: false });
-            illuSyncToolPropsFromVectorTextEl(foHit);
-            window.illuFocusVectorTextEditor(foHit);
+        
+        if (textHit && layer && layer.contains(textHit)) {
+            if (typeof illuSyncToolPropsFromVectorTextEl === 'function') {
+                illuSyncToolPropsFromVectorTextEl(textHit);
+            }
+            textHit.style.display = 'none';
+            if (typeof window.beginPixelTextSession === 'function') {
+                const docPos = typeof vectorShapeAttrPointToRoot === 'function' 
+                    ? vectorShapeAttrPointToRoot(textHit, parseFloat(textHit.getAttribute('x')||0), parseFloat(textHit.getAttribute('y')||0))
+                    : { x: parseFloat(textHit.getAttribute('x')||0), y: parseFloat(textHit.getAttribute('y')||0) };
+                
+                // Extract multiline text from tspans or raw content
+                let content = '';
+                const tspans = textHit.querySelectorAll('tspan');
+                if (tspans.length > 0) {
+                    content = Array.from(tspans).map(ts => ts.textContent).join('\n');
+                } else {
+                    content = textHit.textContent;
+                }
+                
+                window.beginPixelTextSession(docPos.x, docPos.y, content, textHit);
+            }
             isDrawing = false;
             return;
         }
+        
         EditorManager.deselectAll();
         clearAnchors();
         if (window.VectorEngine) window.VectorEngine.clearUI();
-        const fo = illuCreateVectorTextForeignObject(layer, pos);
-        currentElement = fo;
-        illuWireVectorTextEditor(illuGetVectorTextEditableDiv(fo));
-        EditorManager.activeVectorSelection = [fo];
-        window._activeVectorShapeEl = fo;
-        requestAnimationFrame(() => window.illuFocusVectorTextEditor(fo));
+        
+        if (typeof window.beginPixelTextSession === 'function') {
+            window.beginPixelTextSession(pos.x, pos.y);
+        }
+        
         isDrawing = false;
         return;
     }
@@ -8618,6 +9188,16 @@ function startVector(pos, e) {
         const clientX = e && e.clientX != null ? e.clientX : 0;
         const clientY = e && e.clientY != null ? e.clientY : 0;
         const t = document.elementFromPoint(clientX, clientY);
+        if (
+            t &&
+            (t.classList.contains('illu-vector-selection-move-btn') ||
+                (t.closest && t.closest('.illu-vector-move-fo')))
+        ) {
+            if (typeof window.illuVectorSelectionMoveButtonMouseDown === 'function') {
+                window.illuVectorSelectionMoveButtonMouseDown(e);
+            }
+            return;
+        }
         if (t && t.classList && (t.classList.contains('svg-anchor') || t.classList.contains('svg-resize-handle') || t.classList.contains('svg-adjust-anchor') || t.classList.contains('svg-rotation-handle'))) {
             if (t.classList.contains('svg-adjust-anchor')) {
                 activeAdjustDrag = t.dataset.adjustType || null;
@@ -8741,11 +9321,7 @@ function startVector(pos, e) {
             window._activeVectorShapeEl = EditorManager.activeVectorSelection[EditorManager.activeVectorSelection.length - 1] || null;
             activeVectorShape = window._activeVectorShapeEl;
 
-            const isEmbeddedBitmap =
-                typeof illuVectorIsEmbeddedBitmap === 'function' && illuVectorIsEmbeddedBitmap(hit);
-            if (window.activeTool === 'deform' && isEmbeddedBitmap) {
-                VE.beginDrag(EditorManager.activeVectorSelection, pos, e);
-            } else if (window.activeTool === 'deform' || window.activeTool === 'warp-4') {
+            if (window.activeTool === 'deform' || window.activeTool === 'warp-4') {
                 VE.beginTransform(EditorManager.activeVectorSelection, pos, window.activeTool);
             } else {
                 VE.beginDrag(EditorManager.activeVectorSelection, pos, e);
@@ -8812,6 +9388,49 @@ function startVector(pos, e) {
                 isDrawing = false;
                 return;
             }
+        }
+    }
+
+    const VECTOR_DRAW_RESUME_TOOLS = new Set([
+        'rect',
+        'circle',
+        'line',
+        'brush',
+        'round-3',
+        'triangle',
+        'star',
+        'reg-poly',
+        'diamond',
+        'trapezoid',
+        'parallelogram',
+        'triangle-right',
+        'callout',
+        'cubic-3',
+        'shadow',
+        'text'
+    ]);
+    if (VECTOR_DRAW_RESUME_TOOLS.has(window.activeTool)) {
+        let resumeHit = VE.hitTest(pos, e);
+        if (!resumeHit) resumeHit = hitTestVectorShapeInActiveLayer(pos, e);
+        if (resumeHit && illuVectorDrawToolResumeHit(resumeHit, window.activeTool)) {
+            const additive = e && (e.shiftKey || e.ctrlKey || e.metaKey);
+            if (!additive) {
+                EditorManager.activeVectorSelection = [resumeHit];
+            } else if (!EditorManager.activeVectorSelection.includes(resumeHit)) {
+                EditorManager.activeVectorSelection.push(resumeHit);
+            }
+            if (window.activeTool === 'text') {
+                illuVectorResumeExistingShape(resumeHit, pos, e, { beginDrag: false });
+                if (typeof window.illuFocusVectorTextEditor === 'function') {
+                    window.illuFocusVectorTextEditor(resumeHit);
+                }
+                isDrawing = false;
+                return;
+            }
+            illuVectorResumeExistingShape(resumeHit, pos, e, { beginDrag: true });
+            window._illuVectorDragActive = true;
+            isDrawing = true;
+            return;
         }
     }
 
@@ -8977,20 +9596,17 @@ function startVector(pos, e) {
 
 function updateVector(pos) {
     if (window.activeTool === 'eyedropper') {
-        sampleVectorCompositeAtPos(pos, (rgb) => {
+        const VE = window.VectorEngine;
+        const hit = VE && typeof VE.hitTest === 'function' ? VE.hitTest(pos) : null;
+        illuScheduleVectorEyedropperSample(pos, hit, (rgb) => {
             if (rgb) EditorManager.setColorFromRGB(rgb.r, rgb.g, rgb.b, rgb.a);
         });
         return;
     }
     if (activeAdjustDrag && activeVectorShape) {
+        window._illuVectorShapeEditFast = true;
         illuUpdateVectorAdjustFromPointer(activeVectorShape, activeAdjustDrag, pos);
-        if (!window._illuVectorDragActive) {
-            if (typeof window.illuSyncVectorSelectionUI === 'function') {
-                window.illuSyncVectorSelectionUI();
-            } else if (typeof syncAnchors === 'function') {
-                syncAnchors();
-            }
-        }
+        illuScheduleVectorShapeEditVisual();
         return;
     }
     if (activeVectorRotationDrag && activeVectorShape) {
@@ -9002,17 +9618,12 @@ function updateVector(pos) {
             let ang = vectorRotationStartAngle + da;
             ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
             illuWriteVectorShapeRotation(activeVectorShape, ang);
-            if (!window._illuVectorDragActive) {
-                if (typeof window.illuSyncVectorSelectionUI === 'function') {
-                    window.illuSyncVectorSelectionUI();
-                } else if (typeof syncAnchors === 'function') {
-                    syncAnchors();
-                }
-            }
+            illuScheduleVectorShapeEditVisual();
         }
         return;
     }
     if (activeAnchor && activeVectorShape) {
+        window._illuVectorShapeEditFast = true;
         const lp = vectorDocToShapeAttrPoint(activeVectorShape, pos.x, pos.y);
         const type = (activeVectorShape.tagName || '').toLowerCase();
 
@@ -9463,12 +10074,7 @@ function updateVector(pos) {
             activeVectorShape.setAttribute('y', String(lp.y));
         }
 
-        illuRefreshVectorElementPaint(activeVectorShape);
-        const ahz = EditorManager.svgUiHandleSizeDoc() / 2;
-        activeAnchor.setAttribute('x', pos.x - ahz);
-        activeAnchor.setAttribute('y', pos.y - ahz);
-        if (!window._illuVectorDragActive && typeof syncAnchors === 'function') syncAnchors();
-        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+        illuScheduleVectorShapeEditVisual();
         return;
     }
 
@@ -9522,7 +10128,11 @@ function updateVector(pos) {
         }
 
         vectorDidMove = true;
-        if (!window._illuVectorDragActive && typeof syncAnchors === 'function') syncAnchors();
+        if (typeof window.illuScheduleVectorShapeEditVisual === 'function') {
+            window.illuScheduleVectorShapeEditVisual();
+        } else if (typeof syncAnchors === 'function') {
+            syncAnchors();
+        }
         return;
     }
 
@@ -9810,8 +10420,8 @@ function updateVector(pos) {
     if ([...SHAPE_LIVE_DRAW_TOOLS, 'pen', 'polygon'].includes(window.activeTool)) {
         if (window._illuVectorLiveDraw) {
             illuScheduleVectorLiveDrawVisual();
-        } else {
-            EditorManager.render();
+        } else if (!activeAnchor && !activeAdjustDrag) {
+            EditorManager.render({ skipUiThumbnails: true, skipDrawUI: true });
         }
     }
 }
@@ -10160,7 +10770,7 @@ function illuTryCommitImportPlacementOnOutsideClick(e, pos) {
     if (e.target && e.target.closest) {
         if (
             e.target.closest(
-                '#svg-ui, .illu-deform-move-fo, .tool-btn, #win-tools, #tool-options-container, #layer-panel, .ctx-menu'
+                '#svg-ui, .illu-deform-move-fo, .illu-vector-move-fo, .tool-btn, #win-tools, #tool-options-container, #layer-panel, .ctx-menu'
             )
         ) {
             return false;
@@ -11920,8 +12530,13 @@ window.updateSelectionWarpFromPointer = function (worldX, worldY) {
             /* Même logique que l’outil Déplacer : position absolue (pointeur − offset), pas delta frame-à-frame. */
             const off = selectionWarpDeformMoveOffset;
             if (off) {
-                const nx = Math.round(worldX - off.x);
-                const ny = Math.round(worldY - off.y);
+                let nx = Math.round(worldX - off.x);
+                let ny = Math.round(worldY - off.y);
+                if (typeof window.illuCalculateEdgeSnap === 'function') {
+                    const snap = window.illuCalculateEdgeSnap({ x: nx, y: ny, width: R.rw, height: R.rh }, 0, 0, []);
+                    nx += snap.dx;
+                    ny += snap.dy;
+                }
                 if (illuIsFloatingImportPending()) {
                     R.rx = nx;
                     R.ry = ny;
@@ -13452,7 +14067,8 @@ function startPixel(pos, e) {
         illuPreExpandActiveLayerBufferForOutsideCanvas();
     }
 
-    if (['brush', 'pencil', 'eraser'].includes(window.activeTool)) {
+
+    if (['brush', 'pencil', 'eraser', 'clone'].includes(window.activeTool)) {
         if (typeof EditorManager.beginStrokeIntermediate === 'function') {
             EditorManager.beginStrokeIntermediate(window.activeTool);
         }
@@ -13687,9 +14303,17 @@ function updatePixel(pos, pointerEv) {
             const Hd = EditorManager.height;
             let nx = Math.round(pos.x - moveOffset.x);
             let ny = Math.round(pos.y - moveOffset.y);
-            // On autorise la sortie des limites du canvas pour tool-move
-            // nx = Math.max(0, Math.min(nx, maxX));
-            // ny = Math.max(0, Math.min(ny, maxY));
+            if (typeof window.illuCalculateEdgeSnap === 'function') {
+                // Pass original drag-start position + raw delta to avoid oscillation
+                const rawDx = nx - moveDragBoundsStart.x;
+                const rawDy = ny - moveDragBoundsStart.y;
+                const snap = window.illuCalculateEdgeSnap(
+                    { x: moveDragBoundsStart.x, y: moveDragBoundsStart.y, width: moveDragBoundsStart.w, height: moveDragBoundsStart.h },
+                    rawDx, rawDy, []
+                );
+                nx = moveDragBoundsStart.x + snap.dx;
+                ny = moveDragBoundsStart.y + snap.dy;
+            }
             const dx = nx - moveDragBoundsStart.x;
             const dy = ny - moveDragBoundsStart.y;
             window.selectionBounds = {
@@ -13712,8 +14336,21 @@ function updatePixel(pos, pointerEv) {
             return;
         } else if (EditorManager.activeLayer && moveLayerStartPos) {
             const l = EditorManager.activeLayer;
-            const nx = Math.round(pos.x - moveOffset.x);
-            const ny = Math.round(pos.y - moveOffset.y);
+            let nx = Math.round(pos.x - moveOffset.x);
+            let ny = Math.round(pos.y - moveOffset.y);
+            const lw = l.buffer ? l.buffer.width : EditorManager.width;
+            const lh = l.buffer ? l.buffer.height : EditorManager.height;
+            if (typeof window.illuCalculateEdgeSnap === 'function') {
+                // Pass original drag-start position + raw delta to avoid oscillation
+                const rawDx = nx - moveLayerStartPos.x;
+                const rawDy = ny - moveLayerStartPos.y;
+                const snap = window.illuCalculateEdgeSnap(
+                    { x: moveLayerStartPos.x, y: moveLayerStartPos.y, width: lw, height: lh },
+                    rawDx, rawDy, []
+                );
+                nx = moveLayerStartPos.x + snap.dx;
+                ny = moveLayerStartPos.y + snap.dy;
+            }
             if (moveLayerWholeGhostEl) {
                 moveLayerWholeGhostEl.style.left = `${nx}px`;
                 moveLayerWholeGhostEl.style.top = `${ny}px`;
@@ -13909,8 +14546,32 @@ function updatePixel(pos, pointerEv) {
         const ed = window.pixelShapeEdit;
         const snap = window._illuShapeEditMoveSnapshot;
         const start = window._illuShapeEditMoveStartDoc;
-        const dx = pos.x - start.x;
-        const dy = pos.y - start.y;
+        let dx = pos.x - start.x;
+        let dy = pos.y - start.y;
+        
+        if (typeof window.illuCalculateEdgeSnap === 'function') {
+            let bx = 0, by = 0, bw = 0, bh = 0;
+            if (snap.kind === 'ellipse') {
+                bx = snap.cx - snap.rx; by = snap.cy - snap.ry;
+                bw = snap.rx * 2; bh = snap.ry * 2;
+            } else if (snap.lx != null) {
+                bx = snap.lx; by = snap.ly;
+                bw = ed.w || 0; bh = ed.h || 0;
+            } else if (snap.kind === 'line') {
+                bx = Math.min(snap.x1, snap.x2); by = Math.min(snap.y1, snap.y2);
+                bw = Math.abs(snap.x2 - snap.x1); bh = Math.abs(snap.y2 - snap.y1);
+            } else if (snap.pts) {
+                const xs = snap.pts.map(p => p.x), ys = snap.pts.map(p => p.y);
+                bx = Math.min(...xs); by = Math.min(...ys);
+                bw = Math.max(...xs) - bx; bh = Math.max(...ys) - by;
+            } else {
+                bx = snap.x0 || snap.x1 || 0; by = snap.y0 || snap.y1 || 0;
+            }
+            const snapRes = window.illuCalculateEdgeSnap({ x: bx, y: by, width: bw, height: bh }, dx, dy, []);
+            dx = snapRes.dx;
+            dy = snapRes.dy;
+        }
+
         if (typeof window.illuApplyShapeEditGeomFromSnapshot === 'function') {
             window.illuApplyShapeEditGeomFromSnapshot(ed, snap, dx, dy);
         }
@@ -14069,9 +14730,54 @@ function updatePixel(pos, pointerEv) {
         const lx = pos.x - EditorManager.activeLayer.x;
         const ly = pos.y - EditorManager.activeLayer.y;
         const lw = window.EditorManager.toolProps.size || 5;
+
+        illuDrawSymmetrical(lx, ly, (slx, sly) => {
+            const isPencil = window.activeTool === 'pencil' && isPencilPixelStroke;
+            const isStamp = (window.activeTool === 'brush' || window.activeTool === 'eraser') && isStampBrushStroke;
+            let sLastX = isPencil ? lastPencilX : isStamp ? lastStampX : lastBrushLineX;
+            let sLastY = isPencil ? lastPencilY : isStamp ? lastStampY : lastBrushLineY;
+            const sym = illuGetSymmetryAxes(EditorManager.activeLayer ? EditorManager.activeLayer.buffer : null);
+            if (sym) {
+                if (slx === sym.cx + (sym.cx - lx)) sLastX = sym.cx + (sym.cx - sLastX);
+                if (sly === sym.cy + (sym.cy - ly)) sLastY = sym.cy + (sym.cy - sLastY);
+            }
+
+            if (window.activeTool === 'pencil' && isPencilPixelStroke) {
+                const psz = EditorManager.toolProps.size || 1;
+                illuPencilSegment(ctx, sLastX, sLastY, slx, sly, psz, EditorManager.activeColor);
+            }
+            else if (window.activeTool === 'brush' && isSprayStroke) {
+                const sprayCol = (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') ? '#000' : EditorManager.activeColor;
+                sprayDots(ctx, slx, sly, lw, sprayCol);
+            }
+            else if (window.activeTool === 'eraser' && isSprayStroke) {
+                sprayDotsErase(ctx, slx, sly, lw);
+            }
+            else if ((window.activeTool === 'brush' || window.activeTool === 'eraser') && isStampBrushStroke) {
+                stampBrushSegment(ctx, window.activeTool, sLastX, sLastY, slx, sly);
+            }
+            else {
+                if (window.activeTool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.lineWidth = lw;
+                    ctx.strokeStyle = 'rgba(0,0,0,1)';
+                    ctx.shadowBlur = 0;
+                    ctx.shadowColor = 'transparent';
+                    applyEraserPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    EditorManager.applyActiveStyle(ctx);
+                    ctx.lineWidth = lw;
+                    applyBrushPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
+                }
+                ctx.beginPath();
+                ctx.moveTo(sLastX, sLastY);
+                ctx.lineTo(slx, sly);
+                ctx.stroke();
+            }
+        });
+
         if (window.activeTool === 'pencil' && isPencilPixelStroke) {
-            const psz = EditorManager.toolProps.size || 1;
-            illuPencilSegment(ctx, lastPencilX, lastPencilY, lx, ly, psz, EditorManager.activeColor);
             lastPencilX = lx;
             lastPencilY = ly;
             if (pencilStrokePoints && EditorManager.toolProps.pencilAutoClose) {
@@ -14083,29 +14789,11 @@ function updatePixel(pos, pointerEv) {
             illuScheduleInteractiveVisualRefresh({ render: true });
             return;
         }
-        if (window.activeTool === 'brush' && isSprayStroke) {
-            const sprayCol = (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') ? '#000' : EditorManager.activeColor;
-            sprayDots(ctx, lx, ly, lw, sprayCol);
-            illuScheduleInteractiveVisualRefresh({ render: true });
-            return;
-        }
-        if (window.activeTool === 'eraser' && isSprayStroke) {
-            sprayDotsErase(ctx, lx, ly, lw);
-            illuScheduleInteractiveVisualRefresh({ render: true });
-            return;
-        }
-        if (
-            (window.activeTool === 'brush' || window.activeTool === 'eraser') &&
-            isStampBrushStroke
-        ) {
-            stampBrushSegment(ctx, window.activeTool, lastStampX, lastStampY, lx, ly);
+
+        if ((window.activeTool === 'brush' || window.activeTool === 'eraser') && isStampBrushStroke) {
             lastStampX = lx;
             lastStampY = ly;
-            if (
-                (window.activeTool === 'brush') &&
-                pencilStrokePoints &&
-                EditorManager.toolProps.pencilAutoClose
-            ) {
+            if (window.activeTool === 'brush' && pencilStrokePoints && EditorManager.toolProps.pencilAutoClose) {
                 const last = pencilStrokePoints[pencilStrokePoints.length - 1];
                 if (!last || Math.hypot(lx - last.x, ly - last.y) >= 0.5) {
                     pencilStrokePoints.push({ x: lx, y: ly });
@@ -14114,23 +14802,12 @@ function updatePixel(pos, pointerEv) {
             illuScheduleInteractiveVisualRefresh({ render: true });
             return;
         }
-        if (window.activeTool === 'eraser') {
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.lineWidth = lw;
-            ctx.strokeStyle = 'rgba(0,0,0,1)';
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = 'transparent';
-            applyEraserPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
-        } else {
-            ctx.globalCompositeOperation = 'source-over';
-            EditorManager.applyActiveStyle(ctx);
-            ctx.lineWidth = lw;
-            applyBrushPatternStyle(ctx, EditorManager.toolProps.brushPattern || 'round');
+
+        if (isSprayStroke) {
+            illuScheduleInteractiveVisualRefresh({ render: true });
+            return;
         }
-        ctx.beginPath();
-        ctx.moveTo(lastBrushLineX, lastBrushLineY);
-        ctx.lineTo(lx, ly);
-        ctx.stroke();
+
         lastBrushLineX = lx;
         lastBrushLineY = ly;
         if (
@@ -14148,6 +14825,7 @@ function updatePixel(pos, pointerEv) {
 }
 
 function handleMouseUp(e) {
+    if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
     illuFlushInteractiveVisualRefresh();
     if (typeof EditorManager.setStrokeLightPixelRender === 'function') {
         EditorManager.setStrokeLightPixelRender(false);
@@ -14290,8 +14968,10 @@ function handleMouseUp(e) {
             if (moved) {
                 if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
                 EditorManager.saveHistory('Déplacement vecteur', { patchActiveLayer: true });
-                VE.refreshSelectionUI();
-                EditorManager.render();
+                if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                    window.illuSyncVectorSelectionUI();
+                }
+                EditorManager.render({ skipUiThumbnails: true });
             }
             isDrawing = false;
             return;
@@ -14303,19 +14983,23 @@ function handleMouseUp(e) {
             const moved = VE.endDrag();
             if (moved) {
                 if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
-                EditorManager.saveHistory(tool === 'deform' ? 'Déformation bitmap SVG' : 'Déplacement vecteur', { patchActiveLayer: true });
-                VE.refreshSelectionUI();
-                EditorManager.render();
+                EditorManager.saveHistory('Déplacement vecteur', { patchActiveLayer: true });
+                if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                    window.illuSyncVectorSelectionUI();
+                }
+                EditorManager.render({ skipUiThumbnails: true });
                 return;
             }
             if (tool === 'deform') {
                 if (typeof window.illuSyncVectorSelectionUI === 'function') window.illuSyncVectorSelectionUI();
-                EditorManager.render();
+                EditorManager.render({ skipUiThumbnails: true });
                 return;
             }
             // Pas de drag => c'est un rubber-band
             VE.commitRubberBand(pos, additive);
-            VE.refreshSelectionUI();
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            }
             if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             EditorManager.render();
             return;
@@ -14368,13 +15052,37 @@ function handleMouseUp(e) {
                 window.illuSyncVectorSelectionUI();
             } else {
                 generateAnchors(created);
-                if (VE) VE.refreshSelectionUI();
             }
         }
         if (hadNewShape || hadVectorAnchorDrag) {
             currentElement = null;
             window._illuVectorLiveDraw = false;
             window._illuVectorDragActive = false;
+            const editShape =
+                window._activeVectorShapeEl ||
+                (EditorManager.activeVectorSelection &&
+                    EditorManager.activeVectorSelection[
+                        EditorManager.activeVectorSelection.length - 1
+                    ]);
+            if (hadVectorAnchorDrag) {
+                window._illuVectorShapeEditFast = false;
+                if (editShape && typeof illuVectorBakeElementTransform === 'function') {
+                    illuVectorBakeElementTransform(editShape);
+                }
+                if (editShape && typeof illuRefreshVectorElementPaint === 'function') {
+                    illuRefreshVectorElementPaint(editShape);
+                }
+                if (
+                    editShape &&
+                    editShape.getAttribute('data-vgrad') &&
+                    typeof window.syncVectorGradientBoundsForEl === 'function'
+                ) {
+                    window.syncVectorGradientBoundsForEl(editShape);
+                }
+                if (editShape && typeof illuSyncVectorLineOutlineGeometry === 'function') {
+                    illuSyncVectorLineOutlineGeometry(editShape);
+                }
+            }
             if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
             EditorManager.saveHistory(
                 tool === 'deform' ? 'Déformation bitmap SVG' : 'Dessin vecteur',
@@ -14382,11 +15090,9 @@ function handleMouseUp(e) {
             );
             if (typeof window.illuSyncVectorSelectionUI === 'function') {
                 window.illuSyncVectorSelectionUI();
-            } else if (window.VectorEngine) {
-                window.VectorEngine.refreshSelectionUI();
             }
         }
-        EditorManager.render();
+        EditorManager.render({ skipUiThumbnails: true });
     } else {
         /* Ne pas confondre avec un déplacement (outil Déplacer ou bouton central) : valider le glisser, pas « finir la déformation ». */
         const endingPixelMoveDrag =
@@ -17377,3 +18083,252 @@ window.adjustTextSizeStep = function (delta) {
  * (L’historique Ctrl+Z / Ctrl+Y / Ctrl+Maj+Z est ici pour éviter les conflits avec Ctrl+Maj+Z = rétablir.)
  */
 
+window.illuClearSnapGuides = function() {
+    if (window._illuSnapPreviewActive && typeof window.illuDrawSnapGridPreview === 'function') {
+        window.illuDrawSnapGridPreview();
+        return;
+    }
+    const overlay = document.getElementById('snap-guides-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        const ctx = overlay.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, overlay.width, overlay.height);
+    }
+    // Reset hysteresis state so the next drag starts fresh
+    window._illuSnapState = { lockedX: null, lockedY: null };
+};
+
+window.illuDrawSnapLineOverlay = function(snapLineX, snapLineY, p) {
+    if (snapLineX === null && snapLineY === null) return;
+    if (window._illuSnapGuidesVisible === false) {
+        if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
+        return;
+    }
+    
+    const overlay = document.getElementById('snap-guides-overlay');
+    const mcc = document.getElementById('main-canvas-container');
+    if (overlay && mcc) {
+        // Move overlay inside mcc if not already, to match scale perfectly
+        if (overlay.parentElement !== mcc) {
+            mcc.appendChild(overlay);
+            overlay.style.left = '0';
+            overlay.style.top = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+        }
+        
+        const W = p.width;
+        const H = p.height;
+        const z = p.zoomLevel || 1;
+        
+        if (overlay.width !== W || overlay.height !== H) {
+            overlay.width = W;
+            overlay.height = H;
+        }
+        overlay.style.display = 'block';
+
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        
+        ctx.strokeStyle = '#ff00ff';
+        ctx.lineWidth = Math.max(1.5 / z, 1);
+        ctx.setLineDash([Math.max(4/z, 2), Math.max(4/z, 2)]);
+
+        if (snapLineX !== null) {
+            ctx.beginPath();
+            ctx.moveTo(snapLineX, 0);
+            ctx.lineTo(snapLineX, H);
+            ctx.stroke();
+        }
+        if (snapLineY !== null) {
+            ctx.beginPath();
+            ctx.moveTo(0, snapLineY);
+            ctx.lineTo(W, snapLineY);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+    }
+};
+
+window.illuSnapRawPoint = function(pos) {
+    if (!EditorManager || !EditorManager.snapToEdges || !EditorManager.activeProject) return pos;
+    // Ne pas aimanter les coordonnées brutes si on est en train de déplacer une sélection ou un calque,
+    // car illuCalculateEdgeSnap gère déjà l'aimantation des bords dans ce cas !
+    if (window.isMoveDragging || window.moveDragBoundsStart || window.moveLayerStartPos || window.activeAdjustDrag || window._illuShapeEditMoveActive) return pos;
+    
+    // Outils supportés : création de formes, sélection, déformation de forme (pixelShapeEdit points), texte
+    const t = window.activeTool;
+    const isSnapTool = ['rect', 'ellipse', 'line', 'arrow', 'poly', 'polygon', 'star', 'triangle', 'quad', 'text', 'callout', 'select', 'select-lasso', 'move', 'warp-4', 'deform', 'circle', 'diamond', 'trapezoid', 'parallelogram', 'triangle-right', 'reg-poly', 'round-3', 'pen', 'cubic-3'].includes(t);
+    if (!isSnapTool) return pos;
+    
+    const p = EditorManager.activeProject;
+    var snapDiv = window._illuSnapGridDivisor || 48;
+    const gridX = Math.max(5, Math.round((p.width  || 1280) / snapDiv));
+    const gridY = Math.max(5, Math.round((p.height || 720)  / (snapDiv * (p.height||720) / (p.width||1280))));
+
+    let THRESHOLD = window._illuSnapThreshold || 50;
+    const effThreshX = (gridX / 2) * (THRESHOLD / 100);
+    const effThreshY = (gridY / 2) * (THRESHOLD / 100);
+
+    const nearestX = Math.round(pos.x / gridX) * gridX;
+    const nearestY = Math.round(pos.y / gridY) * gridY;
+
+    const res = { x: pos.x, y: pos.y };
+    const distX = Math.abs(pos.x - nearestX);
+    const distY = Math.abs(pos.y - nearestY);
+
+    if (distX <= effThreshX) res.x = nearestX;
+    if (distY <= effThreshY) res.y = nearestY;
+
+    // Dessiner les repères magentas
+    if (distX <= effThreshX || distY <= effThreshY) {
+        window.illuDrawSnapLineOverlay(distX <= effThreshX ? nearestX : null, distY <= effThreshY ? nearestY : null, p);
+    } else if (typeof window.illuClearSnapGuides === 'function' && !window._illuSnapPreviewActive) {
+        window.illuClearSnapGuides();
+    }
+    
+    return res;
+};
+
+window.illuCalculateEdgeSnap = function (baseRect, dx, dy, ignoreElements) {
+    if (!EditorManager || !EditorManager.snapToEdges || !EditorManager.activeProject) return { dx, dy };
+    const p = EditorManager.activeProject;
+    const z = p.zoomLevel || 1;
+
+    // Grid: divisor comes from the settings panel (default 1/48)
+    var snapDiv = window._illuSnapGridDivisor || 48;
+    const gridX = Math.max(5, Math.round((p.width  || 1280) / snapDiv));
+    const gridY = Math.max(5, Math.round((p.height || 720)  / (snapDiv * (p.height||720) / (p.width||1280))));
+
+    // Attraction zone: in document pixels (from settings panel, default 30px)
+    let THRESHOLD = window._illuSnapThreshold || 50;
+    
+    // Ajustement proportionnel
+    const effThreshX = (gridX / 2) * (THRESHOLD / 100);
+    const effThreshY = (gridY / 2) * (THRESHOLD / 100);
+
+    // baseRect = ORIGINAL position at drag start (not the current snapped position)
+    // dx/dy = raw mouse delta from drag start
+    // Intended (unsnapped) target top-left corner:
+    const rawX = baseRect.x + dx;
+    const rawY = baseRect.y + dy;
+
+    // Snap X (left edge) to nearest grid line
+    const nearestX = Math.round(rawX / gridX) * gridX;
+    const distX = Math.abs(rawX - nearestX);
+    const finalDx = distX <= effThreshX ? nearestX - baseRect.x : dx;
+
+    // Snap Y (top edge) to nearest grid line
+    const nearestY = Math.round(rawY / gridY) * gridY;
+    const distY = Math.abs(rawY - nearestY);
+    const finalDy = distY <= effThreshY ? nearestY - baseRect.y : dy;
+
+    const snapLineX = distX <= effThreshX ? nearestX : null;
+    const snapLineY = distY <= effThreshY ? nearestY : null;
+
+    
+    // Draw guides
+    if (snapLineX !== null || snapLineY !== null) {
+        window.illuDrawSnapLineOverlay(snapLineX, snapLineY, p);
+    } else {
+        if (typeof window.illuClearSnapGuides === 'function') {
+            window.illuClearSnapGuides();
+        }
+    }
+
+    return { dx: finalDx, dy: finalDy };
+};
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['tool-sym-x', 'tool-sym-y'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                if (el.checked && typeof window._illuShowRulers !== 'undefined' && !window._illuShowRulers) {
+                    if (typeof window.toggleIlluRulers === 'function') window.toggleIlluRulers();
+                }
+                if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+                if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
+            });
+        }
+    });
+    
+    let dragSymAxis = null;
+    
+    const rulerTop = document.getElementById('ruler-top');
+    const rulerLeft = document.getElementById('ruler-left');
+    
+    if (rulerTop) {
+        rulerTop.style.pointerEvents = 'auto';
+        rulerTop.style.cursor = 'crosshair';
+        rulerTop.addEventListener('pointerdown', (e) => {
+            const symX = document.getElementById('tool-sym-x');
+            if (symX && symX.checked) {
+                dragSymAxis = 'x';
+                rulerTop.setPointerCapture(e.pointerId);
+                updateSymFromRuler(e, 'x');
+            }
+        });
+    }
+    
+    if (rulerLeft) {
+        rulerLeft.style.pointerEvents = 'auto';
+        rulerLeft.style.cursor = 'crosshair';
+        rulerLeft.addEventListener('pointerdown', (e) => {
+            const symY = document.getElementById('tool-sym-y');
+            if (symY && symY.checked) {
+                dragSymAxis = 'y';
+                rulerLeft.setPointerCapture(e.pointerId);
+                updateSymFromRuler(e, 'y');
+            }
+        });
+    }
+    
+    const updateSymFromRuler = (e, axis) => {
+        const p = window.EditorManager && window.EditorManager.activeProject;
+        if (!p) return;
+        
+        const z = p.zoomLevel || 1.0;
+        const wsRect = document.getElementById('workspace').getBoundingClientRect();
+        const canvasRect = document.getElementById('drawing-canvas').getBoundingClientRect();
+        
+        if (axis === 'x') {
+            const startX = canvasRect.left - wsRect.left;
+            const pxX = (e.clientX - wsRect.left - startX) / z;
+            window.illuSetSymmetryCenter(Math.round(pxX), null);
+            if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
+            if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+        } else if (axis === 'y') {
+            const startY = canvasRect.top - wsRect.top;
+            const pxY = (e.clientY - wsRect.top - startY) / z;
+            window.illuSetSymmetryCenter(null, Math.round(pxY));
+            if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
+            if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
+        }
+    };
+    
+    const handleMove = (e) => {
+        if (!dragSymAxis) return;
+        updateSymFromRuler(e, dragSymAxis);
+    };
+    
+    const handleUp = (e) => {
+        if (!dragSymAxis) return;
+        if (dragSymAxis === 'x' && rulerTop) rulerTop.releasePointerCapture(e.pointerId);
+        if (dragSymAxis === 'y' && rulerLeft) rulerLeft.releasePointerCapture(e.pointerId);
+        dragSymAxis = null;
+    };
+    
+    if (rulerTop) {
+        rulerTop.addEventListener('pointermove', handleMove);
+        rulerTop.addEventListener('pointerup', handleUp);
+        rulerTop.addEventListener('pointercancel', handleUp);
+    }
+    
+    if (rulerLeft) {
+        rulerLeft.addEventListener('pointermove', handleMove);
+        rulerLeft.addEventListener('pointerup', handleUp);
+        rulerLeft.addEventListener('pointercancel', handleUp);
+    }
+});

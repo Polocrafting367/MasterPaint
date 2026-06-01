@@ -784,11 +784,13 @@ window.flipCanvas = function (dir) {
 
 window.showExtendCanvasDialog = function () {
     const em = window.EditorManager;
-    if (!em || !em.activeProject || !em.isPixelMode) {
+    const p = em && em.activeProject;
+    const okMode = p && (p.mode === 'vector' || em.isPixelMode);
+    if (!em || !p || !okMode) {
         const msg =
             window.IlluI18n && typeof window.IlluI18n.t === 'function'
                 ? window.IlluI18n.t('msg.extendCanvasPixel')
-                : 'Disponible sur un document principal en mode Pixel.';
+                : 'Disponible sur un document principal (Pixel ou Vecteur SVG).';
         window.showIlluAlert(msg);
         return;
     }
@@ -4226,6 +4228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialisation de la grille de pixels et des règles
     if (typeof window.syncIlluPixelGridUI === 'function') window.syncIlluPixelGridUI();
     if (typeof window.syncIlluRulersUI === 'function') window.syncIlluRulersUI();
+    if (typeof window.syncIlluSnapToEdgesUI === 'function') window.syncIlluSnapToEdgesUI();
+    if (typeof EditorManager !== 'undefined') {
+        EditorManager.snapToEdges = !!window._illuSnapToEdges;
+    }
 });
 
 // ==========================================
@@ -4260,6 +4266,38 @@ window.toggleIlluRulers = function () {
     if (typeof window.illuClampAllFloatingPalettes === 'function') {
         requestAnimationFrame(() => window.illuClampAllFloatingPalettes());
     }
+};
+
+const ILLU_SNAP_EDGES_KEY = 'illu_snap_edges';
+try {
+    window._illuSnapToEdges = localStorage.getItem(ILLU_SNAP_EDGES_KEY) === 'true';
+} catch (e) {
+    window._illuSnapToEdges = false;
+}
+window.toggleIlluSnapToEdges = function () {
+    window._illuSnapToEdges = !window._illuSnapToEdges;
+    try {
+        localStorage.setItem(ILLU_SNAP_EDGES_KEY, String(window._illuSnapToEdges));
+    } catch (e) {}
+    window.syncIlluSnapToEdgesUI();
+    if (typeof EditorManager !== 'undefined') {
+        EditorManager.snapToEdges = window._illuSnapToEdges;
+    }
+    if (typeof window.illuDrawSnapGridPreview === 'function') {
+        window.illuDrawSnapGridPreview();
+    }
+};
+
+window.syncIlluSnapToEdgesUI = function () {
+    const checkEl = document.getElementById('menu-win-snap-edges-check');
+    if (checkEl) {
+        checkEl.style.visibility = window._illuSnapToEdges ? 'visible' : 'hidden';
+    }
+    document.querySelectorAll('.opt-toggle-snap').forEach(btn => {
+        btn.classList.toggle('active', !!window._illuSnapToEdges);
+        btn.classList.toggle('illu-icon-toggle--on', !!window._illuSnapToEdges);
+        btn.setAttribute('aria-pressed', window._illuSnapToEdges ? 'true' : 'false');
+    });
 };
 
 window.syncIlluPixelGridUI = function () {
@@ -4316,12 +4354,14 @@ window.illuUpdatePixelGrid = function () {
     
     if (!window._illuShowPixelGrid) {
         overlay.style.display = 'none';
+        if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
     
     const p = window.EditorManager && window.EditorManager.activeProject;
     if (!p) {
         overlay.style.display = 'none';
+        if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
     
@@ -4329,6 +4369,7 @@ window.illuUpdatePixelGrid = function () {
     // La grille de pixels s'affiche uniquement au-delà d'un zoom de 400% (zoomLevel >= 4)
     if (z < 4.0) {
         overlay.style.display = 'none';
+        if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
     
@@ -4378,6 +4419,8 @@ window.illuUpdatePixelGrid = function () {
         ctx.lineTo(overlay.width, sy - 0.5);
     }
     ctx.stroke();
+    
+    if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
 };
 
 window.illuUpdateRulers = function () {
@@ -4478,6 +4521,7 @@ window.illuUpdateRulers = function () {
             
             ctx.fillText(String(cx), sx, 10);
             
+            
             const minorStep = step / 5;
             if (minorStep >= 1) {
                 ctx.strokeStyle = minorTickColor;
@@ -4489,6 +4533,22 @@ window.illuUpdateRulers = function () {
                         ctx.lineTo(Math.round(msx) - 0.5, height);
                         ctx.stroke();
                     }
+                }
+            }
+        }
+        
+        // Draw Symmetry X marker
+        if (typeof window.illuGetSymmetryAxes === 'function') {
+            const sym = window.illuGetSymmetryAxes();
+            if (sym && sym.x) {
+                const sx = startX + sym.cx * z;
+                if (sx >= 0 && sx <= width) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.beginPath();
+                    ctx.moveTo(sx, height);
+                    ctx.lineTo(sx - 4, height - 6);
+                    ctx.lineTo(sx + 4, height - 6);
+                    ctx.fill();
                 }
             }
         }
@@ -4535,6 +4595,21 @@ window.illuUpdateRulers = function () {
                         ctx.lineTo(width, Math.round(msy) - 0.5);
                         ctx.stroke();
                     }
+                }
+            }
+        }
+        
+        if (typeof window.illuGetSymmetryAxes === 'function') {
+            const sym = window.illuGetSymmetryAxes();
+            if (sym && sym.y) {
+                const sy = startY + sym.cy * z;
+                if (sy >= 0 && sy <= height) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.beginPath();
+                    ctx.moveTo(width, sy);
+                    ctx.lineTo(width - 6, sy - 4);
+                    ctx.lineTo(width - 6, sy + 4);
+                    ctx.fill();
                 }
             }
         }

@@ -7,6 +7,7 @@ const EditorManager = {
     projects: [],
     activeProjectIndex: -1,
     activeColor: '#000000',
+    snapToEdges: false,
     /** @type {SVGElement[]} */
     activeVectorSelection: [],
     primaryDitherPatternId: 'black',
@@ -977,9 +978,12 @@ const EditorManager = {
             if (opts && opts.live) el.addEventListener('input', fn);
         };
         const syncLiveShapeEdit = () => {
-            if (this.mode === 'vector' && window.VectorEngine) {
-                /* Ne pas écraser contour / épaisseur définis sur la sélection (vector-prop-stroke-width). */
-                if (!this.activeVectorSelection || !this.activeVectorSelection.length) {
+            if (this.mode === 'vector') {
+                if (this.activeVectorSelection && this.activeVectorSelection.length) {
+                    if (typeof window.illuApplyVectorToolPropsToSelection === 'function') {
+                        window.illuApplyVectorToolPropsToSelection({ livePreview: true });
+                    }
+                } else if (window.VectorEngine && typeof window.VectorEngine.applyStyleToSelection === 'function') {
                     window.VectorEngine.applyStyleToSelection();
                 }
             }
@@ -1256,12 +1260,24 @@ const EditorManager = {
                 if (scrv) scrv.textContent = String(this.toolProps.shapeCornerRadius);
                 if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(scr);
                 syncLiveShapeEdit();
-                if (typeof window.applyVectorRoundRectRadiusFromToolProps === 'function') {
+                if (this.mode === 'vector' && this.activeVectorSelection && this.activeVectorSelection.length) {
+                    this.applyVectorProperty('corner-radius', this.toolProps.shapeCornerRadius, {
+                        livePreview: true
+                    });
+                } else if (typeof window.applyVectorRoundRectRadiusFromToolProps === 'function') {
                     window.applyVectorRoundRectRadiusFromToolProps();
                 }
             };
+            const commitCorner = () => {
+                syncCorner();
+                if (this.mode === 'vector' && this.activeVectorSelection && this.activeVectorSelection.length) {
+                    if (typeof this.saveHistoryVector === 'function') {
+                        this.saveHistoryVector('Arrondi forme');
+                    }
+                }
+            };
             scr.addEventListener('input', syncCorner);
-            scr.addEventListener('change', syncCorner);
+            scr.addEventListener('change', commitCorner);
             if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(scr);
         }
         bind('tool-shape-grad-type', () => syncLiveShapeEdit());
@@ -3755,6 +3771,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     scheduleUiThumbnailsRefresh(delayMs) {
         if (!this._uiThumbsVisible()) return;
+        if (this.mode === 'vector' && window._illuVectorDragActive) return;
         const delay = delayMs != null ? delayMs : this.THUMB_IDLE_MS;
         const now = performance.now();
         if (this._thumbIdleTimer != null) {
@@ -4142,10 +4159,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const empty = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         const p = project || this.activeProject;
         if (!p || p.mode !== 'vector') return empty;
-        let groupContent = p.svgData != null ? String(p.svgData) : '';
-        if (!groupContent.trim() && p === this.activeProject) {
+        let groupContent = '';
+        if (p === this.activeProject) {
             const layersRoot = document.getElementById('svg-layers');
             groupContent = layersRoot ? layersRoot.innerHTML : '';
+        } else {
+            groupContent = p.svgData != null ? String(p.svgData) : '';
         }
         if (!groupContent.trim()) return empty;
         const W = Math.max(1, p.width || 1280);
@@ -4214,6 +4233,49 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const layerGroup = document.getElementById(`layer-${layer.id}`);
         const groupContent = layerGroup ? layerGroup.innerHTML : '';
         if (!groupContent || !groupContent.trim()) return empty;
+
+        if (layerGroup) {
+            const embeds = layerGroup.querySelectorAll('image[data-illu-bitmap-embed="1"]');
+            const onlyBitmap =
+                embeds.length === 1 &&
+                layerGroup.querySelectorAll(':scope > *').length === 1;
+            if (onlyBitmap) {
+                const imgEl = embeds[0];
+                const href =
+                    imgEl.getAttribute('href') ||
+                    imgEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+                if (href) {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            try {
+                                const sc = document.createElement('canvas');
+                                sc.width = tw;
+                                sc.height = th;
+                                const sctx = sc.getContext('2d');
+                                sctx.fillStyle = '#ffffff';
+                                sctx.fillRect(0, 0, tw, th);
+                                const scale = Math.min(tw / W, th / H);
+                                const ix = (parseFloat(imgEl.getAttribute('x')) || 0) * scale;
+                                const iy = (parseFloat(imgEl.getAttribute('y')) || 0) * scale;
+                                const iw =
+                                    (parseFloat(imgEl.getAttribute('width')) || img.naturalWidth) *
+                                    scale;
+                                const ih =
+                                    (parseFloat(imgEl.getAttribute('height')) || img.naturalHeight) *
+                                    scale;
+                                sctx.drawImage(img, ix, iy, iw, ih);
+                                resolve(sc.toDataURL('image/png'));
+                            } catch (e) {
+                                resolve(empty);
+                            }
+                        };
+                        img.onerror = () => resolve(empty);
+                        img.src = href;
+                    });
+                }
+            }
+        }
 
         // Defs partagées (gradients, filtres, clips…)
         const defsEl = document.getElementById('vector-doc-defs');
@@ -7161,6 +7223,103 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         }
 
+        if (typeof window.illuGetSymmetryAxes === 'function') {
+            const sym = window.illuGetSymmetryAxes();
+            if (sym && (sym.x || sym.y)) {
+                const z = this.getCanvasZoomLevel();
+                if (sym.x) {
+                    const lX = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    lX.setAttribute('x1', String(sym.cx));
+                    lX.setAttribute('y1', '0');
+                    lX.setAttribute('x2', String(sym.cx));
+                    lX.setAttribute('y2', String(this.height));
+                    lX.setAttribute('stroke', '#00ffff');
+                    lX.setAttribute('stroke-width', String(1 / z));
+                    lX.setAttribute('stroke-dasharray', '5,5');
+                    lX.setAttribute('pointer-events', 'none');
+                    svgUI.appendChild(lX);
+                }
+                if (sym.y) {
+                    const lY = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    lY.setAttribute('x1', '0');
+                    lY.setAttribute('y1', String(sym.cy));
+                    lY.setAttribute('x2', String(this.width));
+                    lY.setAttribute('y2', String(sym.cy));
+                    lY.setAttribute('stroke', '#00ffff');
+                    lY.setAttribute('stroke-width', String(1 / z));
+                    lY.setAttribute('stroke-dasharray', '5,5');
+                    lY.setAttribute('pointer-events', 'none');
+                    svgUI.appendChild(lY);
+                }
+            }
+        }
+        
+        if (window.activeTool === 'clone' && !window.cloneAnchor && window.lastKnownMousePos) {
+            const z = this.zoomLevel || 1.0;
+            const docX = window.lastKnownMousePos.x;
+            const docY = window.lastKnownMousePos.y;
+            const crossSize = 10 / z;
+            const crossG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            crossG.setAttribute('pointer-events', 'none');
+
+            const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l1.setAttribute('x1', String(docX - crossSize)); l1.setAttribute('y1', String(docY));
+            l1.setAttribute('x2', String(docX + crossSize)); l1.setAttribute('y2', String(docY));
+            l1.setAttribute('stroke', '#ff0000'); l1.setAttribute('stroke-width', String(2 / z));
+            
+            const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l2.setAttribute('x1', String(docX)); l2.setAttribute('y1', String(docY - crossSize));
+            l2.setAttribute('x2', String(docX)); l2.setAttribute('y2', String(docY + crossSize));
+            l2.setAttribute('stroke', '#ff0000'); l2.setAttribute('stroke-width', String(2 / z));
+            
+            const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circ.setAttribute('cx', String(docX)); circ.setAttribute('cy', String(docY));
+            circ.setAttribute('r', String(5 / z));
+            circ.setAttribute('fill', 'none'); circ.setAttribute('stroke', '#ff0000'); circ.setAttribute('stroke-width', String(1 / z));
+
+            crossG.appendChild(l1);
+            crossG.appendChild(l2);
+            crossG.appendChild(circ);
+            svgUI.appendChild(crossG);
+        }
+
+        if (window.activeTool === 'clone' && window.cloneAnchor && typeof isDrawing !== 'undefined' && isDrawing && window.lastKnownMousePos) {
+            const z = this.zoomLevel || 1.0;
+            const offset = window.cloneOffset || {x: 0, y: 0};
+            
+            // Mouse doc coords
+            const docX = window.lastKnownMousePos.x;
+            const docY = window.lastKnownMousePos.y;
+            
+            const srcDocX = docX - offset.x * z;
+            const srcDocY = docY - offset.y * z;
+            
+            const crossSize = 10 / z;
+            
+            const crossG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            crossG.setAttribute('pointer-events', 'none');
+            
+            const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l1.setAttribute('x1', String(srcDocX - crossSize));
+            l1.setAttribute('y1', String(srcDocY));
+            l1.setAttribute('x2', String(srcDocX + crossSize));
+            l1.setAttribute('y2', String(srcDocY));
+            l1.setAttribute('stroke', '#000000');
+            l1.setAttribute('stroke-width', String(1 / z));
+            
+            const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l2.setAttribute('x1', String(srcDocX));
+            l2.setAttribute('y1', String(srcDocY - crossSize));
+            l2.setAttribute('x2', String(srcDocX));
+            l2.setAttribute('y2', String(srcDocY + crossSize));
+            l2.setAttribute('stroke', '#000000');
+            l2.setAttribute('stroke-width', String(1 / z));
+            
+            crossG.appendChild(l1);
+            crossG.appendChild(l2);
+            svgUI.appendChild(crossG);
+        }
+
         if (typeof window.drawQuadBezierDraftInSvgUi === 'function') {
             window.drawQuadBezierDraftInSvgUi(svgUI);
         }
@@ -8003,10 +8162,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /**
      * Applique la couleur primaire (contour / remplissage seul) ou secondaire (remplissage en mode mixte).
      */
-    applyVectorColorFromPicker() {
+    applyVectorColorFromPicker(opts) {
+        opts = opts || {};
+        const livePreview = opts.livePreview !== false;
         if (!this.activeVectorSelection || !this.activeVectorSelection.length) return;
 
-        const onlyText = this.activeVectorSelection.every((el) => {
+        const paintable = this.activeVectorSelection.filter(
+            (el) =>
+                !(
+                    typeof window.illuVectorIsEmbeddedBitmap === 'function' &&
+                    window.illuVectorIsEmbeddedBitmap(el)
+                )
+        );
+        if (!paintable.length) return;
+
+        const onlyText = paintable.every((el) => {
             const t = (el.tagName || '').toLowerCase();
             return t === 'foreignobject' || t === 'text';
         });
@@ -8017,32 +8187,68 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         const target = this.activeColorTarget === 'secondary' ? 'secondary' : 'primary';
         const mode = this.toolProps.shapeStrokeMode || 'both';
+        const fillType = this.toolProps.fillType || 'solid';
+
+        const primaryCss =
+            typeof window.shapePrimaryFillCss === 'function'
+                ? window.shapePrimaryFillCss()
+                : this.cssRgbaFromPart(this.primaryColor);
+        const fillCss =
+            typeof window.shapeEffectiveFillCss === 'function'
+                ? window.shapeEffectiveFillCss(mode)
+                : primaryCss;
+        const secondaryCss =
+            typeof window.shapeSecondaryStrokeCss === 'function'
+                ? window.shapeSecondaryStrokeCss()
+                : this.cssRgbaFromPart(this.secondaryColor);
+
+        const propOpts = { livePreview, skipRenderHistory: livePreview };
 
         if (target === 'secondary') {
-            if (mode === 'both') {
-                const fillCss =
-                    typeof window.shapeSecondaryStrokeCss === 'function'
-                        ? window.shapeSecondaryStrokeCss()
-                        : this.cssRgbaFromPart(this.secondaryColor);
-                this.applyVectorProperty('fill', fillCss, { skipRenderHistory: false });
+            if (mode === 'both' || mode === 'fill') {
+                this.applyVectorProperty('fill', secondaryCss, propOpts);
+            } else if (mode === 'stroke') {
+                this.applyVectorProperty('stroke', secondaryCss, propOpts);
             }
             return;
         }
 
         if (mode === 'fill') {
-            const fmEl = document.getElementById('vector-prop-fill-model');
-            const model = fmEl && fmEl.value ? fmEl.value : 'solid';
-            this.applyVectorProperty('fill-model', model, { skipRenderHistory: false });
+            if (fillType === 'gradient') {
+                this.applyVectorProperty('fill-model', 'gradient', propOpts);
+            } else if (fillType === 'none') {
+                this.applyVectorProperty('fill', 'none', propOpts);
+            } else {
+                this.applyVectorProperty('fill', fillCss, propOpts);
+            }
             return;
         }
 
-        const strokeCss =
-            typeof window.shapePrimaryFillCss === 'function'
-                ? window.shapePrimaryFillCss()
-                : this.cssRgbaFromPart(this.primaryColor);
-        this.applyVectorProperty('stroke', strokeCss, { skipRenderHistory: false });
-        if (mode === 'both' && typeof window.VectorEngine?.applyStyleToSelection === 'function') {
-            window.VectorEngine.applyStyleToSelection();
+        if (mode === 'stroke') {
+            this.applyVectorProperty('stroke', primaryCss, propOpts);
+            return;
+        }
+
+        this.applyVectorProperty('stroke', primaryCss, propOpts);
+        if (fillType === 'gradient') {
+            this.applyVectorProperty('fill-model', 'gradient', propOpts);
+        } else if (fillType === 'none') {
+            this.applyVectorProperty('fill', 'none', propOpts);
+        } else {
+            this.applyVectorProperty('fill', fillCss, propOpts);
+        }
+
+        if (livePreview && this.mode === 'vector') {
+            if (this._illuVectorColorHistoryTimer != null) {
+                clearTimeout(this._illuVectorColorHistoryTimer);
+            }
+            const self = this;
+            this._illuVectorColorHistoryTimer = window.setTimeout(() => {
+                self._illuVectorColorHistoryTimer = null;
+                if (typeof self.saveHistoryVector === 'function') {
+                    self.saveHistoryVector('Couleur vecteur');
+                }
+            }, 500);
         }
     },
 
@@ -8515,10 +8721,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         mt = Math.max(0, Math.floor(Number(mt)) || 0);
         mr = Math.max(0, Math.floor(Number(mr)) || 0);
         mb = Math.max(0, Math.floor(Number(mb)) || 0);
-        if (!this.activeProject || !this.isPixelMode) return;
+        if (!this.activeProject) return;
         if (ml + mt + mr + mb === 0) return;
         const p = this.activeProject;
         if (p.role === 'layerAlphaMask') return;
+        if (p.mode === 'vector') {
+            this._extendVectorDocumentMargins(ml, mt, mr, mb, opts);
+            return;
+        }
+        if (!this.isPixelMode) return;
         const silent = !!(opts && opts.silent);
         const oldW = p.width;
         const oldH = p.height;
@@ -8560,6 +8771,46 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (window.pixelShapeEdit) window.pixelShapeEdit = null;
         if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
 
+        if (!silent) {
+            this.saveHistory('Étendre la zone de travail', { documentGeometry: true });
+        }
+        this.applyProjectToUI();
+    },
+
+    /**
+     * Mode vecteur : agrandit la page SVG et décale le contenu comme en pixel (marges haut/gauche).
+     */
+    _extendVectorDocumentMargins(ml, mt, mr, mb, opts) {
+        const p = this.activeProject;
+        if (!p || p.mode !== 'vector') return;
+        const silent = !!(opts && opts.silent);
+        const oldW = Math.max(1, p.width | 0);
+        const oldH = Math.max(1, p.height | 0);
+        p.width = oldW + ml + mr;
+        p.height = oldH + mt + mb;
+
+        this.layers.forEach((layer) => {
+            layer.x = (layer.x | 0) + ml;
+            layer.y = (layer.y | 0) + mt;
+            const g = document.getElementById(`layer-${layer.id}`);
+            if (g) {
+                g.setAttribute('transform', `translate(${layer.x}, ${layer.y})`);
+            }
+        });
+
+        const layersRoot = document.getElementById('svg-layers');
+        if (layersRoot) {
+            layersRoot.querySelectorAll('[data-illu-canvas-cover="1"]').forEach((cover) => {
+                cover.setAttribute('width', String(p.width));
+                cover.setAttribute('height', String(p.height));
+            });
+        }
+
+        this._applyVectorCanvasDimensionsOnly();
+        if (typeof this.syncActiveVectorSvg === 'function') this.syncActiveVectorSvg();
+        if (typeof window.illuSyncVectorSelectionUI === 'function') {
+            window.illuSyncVectorSelectionUI();
+        }
         if (!silent) {
             this.saveHistory('Étendre la zone de travail', { documentGeometry: true });
         }
@@ -9759,6 +10010,96 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             });
         } else if (data.type === 'vector-full' && typeof data.svg === 'string') {
             data.svg = '';
+        } else if (data.type === 'vector-layer-patch') {
+            data.layerHtml = '';
+            data.defsHtml = '';
+        }
+    },
+
+    /** Instantané historique vecteur : calque actif + defs (pas tout svg-layers). */
+    _snapshotVectorHistoryData(opts) {
+        opts = opts || {};
+        const usePatch = !opts.documentGeometry && opts.patchActiveLayer === true;
+        const sl = document.getElementById('svg-layers');
+        
+        const getFallbackSvg = () => sl ? sl.innerHTML : (this.activeProject && this.activeProject.svgData) || '';
+
+        if (!usePatch) {
+            return { type: 'vector-full', svg: getFallbackSvg() };
+        }
+        const al = this.activeLayer;
+        const lg = al && document.getElementById(`layer-${al.id}`);
+        if (!al || !lg) {
+            return { type: 'vector-full', svg: getFallbackSvg() };
+        }
+        const defs = document.getElementById('vector-doc-defs');
+        return {
+            type: 'vector-layer-patch',
+            layerId: al.id,
+            activeLayerIndex: this.activeLayerIndex,
+            layerHtml: lg.innerHTML,
+            layerMeta: {
+                x: al.x,
+                y: al.y,
+                name: al.name,
+                visible: !!al.visible,
+                opacity: al.opacity != null ? al.opacity : 1,
+                blendMode: al.blendMode || 'source-over'
+            },
+            defsHtml: defs ? defs.innerHTML : ''
+        };
+    },
+
+    _vectorHistoryDataEqual(a, b) {
+        if (!a || !b || a.type !== b.type) return false;
+        if (a.type === 'vector-full') return a.svg === b.svg;
+        if (a.type === 'vector-layer-patch') {
+            return (
+                a.layerId === b.layerId &&
+                a.layerHtml === b.layerHtml &&
+                a.defsHtml === b.defsHtml
+            );
+        }
+        return false;
+    },
+
+    _applyVectorLayerPatchHistory(d) {
+        if (!d) return;
+        const g = document.getElementById(`layer-${d.layerId}`);
+        if (g && d.layerHtml != null) g.innerHTML = d.layerHtml;
+        if (d.layerMeta) {
+            const li = this.layers.findIndex((l) => l.id === d.layerId);
+            if (li >= 0) {
+                const m = d.layerMeta;
+                const layer = this.layers[li];
+                layer.x = m.x;
+                layer.y = m.y;
+                if (m.name != null) layer.name = m.name;
+                layer.visible = m.visible;
+                layer.opacity = m.opacity;
+                if (m.blendMode) layer.blendMode = m.blendMode;
+                const domG = document.getElementById(`layer-${layer.id}`);
+                if (domG) {
+                    domG.setAttribute('transform', `translate(${layer.x}, ${layer.y})`);
+                    domG.style.display = layer.visible ? 'inline' : 'none';
+                    domG.style.opacity = layer.opacity;
+                }
+            }
+        }
+        if (d.defsHtml != null) {
+            const defs = document.getElementById('vector-doc-defs');
+            if (defs) defs.innerHTML = d.defsHtml;
+        }
+        if (d.activeLayerIndex != null && this.layers.length) {
+            this.setActiveLayerIndex(
+                Math.min(Math.max(0, d.activeLayerIndex | 0), this.layers.length - 1)
+            );
+        }
+        this.activeVectorSelection = [];
+        window._activeVectorShapeEl = null;
+        if (typeof window.clearAnchors === 'function') window.clearAnchors();
+        if (typeof window.illuVectorEndSelectionPreviews === 'function') {
+            window.illuVectorEndSelectionPreviews();
         }
     },
 
@@ -9961,20 +10302,28 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 };
             }
         } else {
-            const sl = document.getElementById('svg-layers');
-            data = {
-                type: 'vector-full',
-                svg: sl ? sl.innerHTML : (this.activeProject && this.activeProject.svgData) || ''
-            };
+            data = this._snapshotVectorHistoryData(opts);
+        }
+
+        if (this.historyIndex >= 0 && data && data.type) {
+            const prev = this.history[this.historyIndex];
+            if (prev && prev.data && this._vectorHistoryDataEqual(prev.data, data)) {
+                prev.name = actionName;
+                if (opts.coalesceKey) prev._coalesceKey = opts.coalesceKey;
+                this.updateHistoryUI();
+                this._scheduleWorkspacePersist();
+                return;
+            }
         }
 
         this.history = this.history.slice(0, this.historyIndex + 1);
-        this.history.push({ 
-            name: actionName, 
-            data, 
+        this.history.push({
+            name: actionName,
+            data,
             mode: this.mode,
             docW: this.width,
             docH: this.height,
+            _coalesceKey: opts.coalesceKey || null,
             extra: {
                 allowOutsideCanvas:
                     this.toolProps && typeof this.toolProps.allowOutsideCanvas === 'boolean'
@@ -10016,6 +10365,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (typeof data !== 'object') return null;
         if (data.type === 'vector-full') {
             return { type: 'vector-full', svg: data.svg != null ? data.svg : '' };
+        }
+        if (data.type === 'vector-layer-patch') {
+            return {
+                type: 'vector-layer-patch',
+                layerId: data.layerId,
+                activeLayerIndex: data.activeLayerIndex,
+                layerHtml: data.layerHtml != null ? data.layerHtml : '',
+                layerMeta: data.layerMeta || null,
+                defsHtml: data.defsHtml != null ? data.defsHtml : ''
+            };
         }
         if (data.type === 'pixel-patch' && data.patch) {
             const p = data.patch;
@@ -10128,6 +10487,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (typeof obj !== 'object' || !obj.type) return null;
         if (obj.type === 'vector-full') {
             return { type: 'vector-full', svg: obj.svg != null ? obj.svg : '' };
+        }
+        if (obj.type === 'vector-layer-patch') {
+            return {
+                type: 'vector-layer-patch',
+                layerId: obj.layerId,
+                activeLayerIndex: obj.activeLayerIndex != null ? obj.activeLayerIndex : 0,
+                layerHtml: obj.layerHtml != null ? obj.layerHtml : '',
+                layerMeta: obj.layerMeta || null,
+                defsHtml: obj.defsHtml != null ? obj.defsHtml : ''
+            };
         }
         if (obj.type === 'pixel-patch' && obj.patch) {
             const patch = obj.patch;
@@ -10451,12 +10820,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 this.render({ flushUiThumbnails: true, uiThumbnailsAllLayers: true });
             }
         } else {
-            let html = '';
-            if (typeof state.data === 'string') html = state.data;
-            else if (state.data && state.data.type === 'vector-full') html = state.data.svg || '';
-            const sl = document.getElementById('svg-layers');
-            if (html && sl) sl.innerHTML = html;
-            this.render();
+            const d = state.data;
+            if (d && d.type === 'vector-layer-patch') {
+                this._applyVectorLayerPatchHistory(d);
+            } else {
+                let html = '';
+                if (typeof d === 'string') html = d;
+                else if (d && d.type === 'vector-full') html = d.svg || '';
+                const sl = document.getElementById('svg-layers');
+                if (html && sl) sl.innerHTML = html;
+            }
+            if (typeof this.syncActiveVectorSvg === 'function') this.syncActiveVectorSvg();
+            this.render({ skipUiThumbnails: true });
         }
 
         // Restore UI-level options that must be undo/redo aware.
@@ -13334,11 +13709,47 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /**
      * Apply a property (fill, stroke, etc.) to all elements in the active vector selection.
      */
+    saveHistoryVector(label, opts) {
+        if (this.mode !== 'vector') return;
+        opts = opts || {};
+        if (this._illuVectorPropHistoryTimer != null) {
+            clearTimeout(this._illuVectorPropHistoryTimer);
+            this._illuVectorPropHistoryTimer = null;
+        }
+        const styleLabels = new Set([
+            'Style forme',
+            'Propriétés vecteur',
+            'Couleur vecteur',
+            'Arrondi forme'
+        ]);
+        const lbl = label || 'Vecteur';
+        const coalesceKey =
+            opts.coalesceKey ||
+            (opts.coalesce !== false && styleLabels.has(lbl) ? 'vector-style' : null);
+        if (coalesceKey && this.historyIndex >= 0) {
+            const last = this.history[this.historyIndex];
+            if (last && last.mode === 'vector' && last._coalesceKey === coalesceKey) {
+                this.disposeHistoryEntryData(last.data);
+                this.history.pop();
+                this.historyIndex--;
+            }
+        }
+        this.saveHistory(lbl, { patchActiveLayer: true, coalesceKey });
+    },
+
     applyVectorProperty(prop, value, opts) {
         opts = opts || {};
+        const livePreview = !!opts.livePreview;
         if (!this.activeVectorSelection.length) return;
         
         this.activeVectorSelection.forEach(el => {
+            if (
+                typeof window.illuVectorIsEmbeddedBitmap === 'function' &&
+                window.illuVectorIsEmbeddedBitmap(el) &&
+                (prop === 'fill-model' || prop === 'fill' || prop === 'stroke' || prop === 'stroke-width')
+            ) {
+                return;
+            }
             if (prop === 'fill-model') {
                 const tagFill = (el.tagName || '').toLowerCase();
                 if (tagFill === 'foreignobject') {
@@ -13354,7 +13765,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                                 : this.cssRgbaFromPart(this.primaryColor);
                         div.style.color = css;
                     } else if (value === 'gradient') {
-                        /* dégradé texte SVG : couleur primaire en attendant */
                         const css =
                             typeof window.shapePrimaryFillCss === 'function'
                                 ? window.shapePrimaryFillCss()
@@ -13363,58 +13773,22 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     }
                     return;
                 }
-                if (value === 'none') {
-                    el.setAttribute('fill', 'none');
-                } else if (value === 'gradient') {
-                    const defs = document.getElementById('vector-doc-defs');
-                    if (!defs) { el.setAttribute('fill', this.activeColor); return; }
-                    const gradId = 'illu-grad-' + Date.now().toString(36);
-                    const gradType = this.toolProps.gradientType || 'linear';
-                    const gradEl = document.createElementNS('http://www.w3.org/2000/svg', gradType === 'radial' ? 'radialGradient' : 'linearGradient');
-                    gradEl.setAttribute('id', gradId);
-                    
-                    const angleEl = document.getElementById('vector-prop-grad-angle');
-                    const angle = angleEl ? parseFloat(angleEl.value || '0') : 0;
-                    if (gradType === 'linear') {
-                        const rad = (angle) * Math.PI / 180;
-                        const r = 50; 
-                        const cx = 50, cy = 50;
-                        const x1 = cx - r * Math.cos(rad), y1 = cy - r * Math.sin(rad);
-                        const x2 = cx + r * Math.cos(rad), y2 = cy + r * Math.sin(rad);
-                        gradEl.setAttribute('x1', `${x1}%`);
-                        gradEl.setAttribute('y1', `${y1}%`);
-                        gradEl.setAttribute('x2', `${x2}%`);
-                        gradEl.setAttribute('y2', `${y2}%`);
+                if (tagFill === 'text') {
+                    if (value === 'solid' || value === 'gradient' || value === 'none') {
+                        this.toolProps.textFillType = value;
                     }
-                    
-                    const mode = this.toolProps.shapeStrokeMode || 'both';
-                    const c1 =
-                        typeof window.shapeEffectiveFillCss === 'function'
-                            ? window.shapeEffectiveFillCss(mode)
-                            : typeof window.shapePrimaryFillCss === 'function'
-                              ? window.shapePrimaryFillCss()
-                              : this.cssRgbaFromPart(this.primaryColor);
-                    const c2 =
-                        typeof window.shapePrimaryFillCss === 'function'
-                            ? window.shapePrimaryFillCss()
-                            : this.cssRgbaFromPart(this.primaryColor);
-                    
-                    const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                    s1.setAttribute('offset', '0%');
-                    s1.setAttribute('stop-color', c1);
-                    const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                    s2.setAttribute('offset', '100%');
-                    s2.setAttribute('stop-color', c2);
-                    
-                    gradEl.appendChild(s1);
-                    gradEl.appendChild(s2);
-                    defs.appendChild(gradEl);
-                    el.setAttribute('fill', `url(#${gradId})`);
-                } else if (value === 'pattern') {
+                    if (typeof window.illuRefreshVectorElementPaint === 'function') {
+                        window.illuRefreshVectorElementPaint(el);
+                    } else {
+                        if (value === 'none') el.setAttribute('fill', 'none');
+                        else el.setAttribute('fill', this.activeColor);
+                    }
+                    return;
+                }
+                if (value === 'pattern') {
                     const defs = document.getElementById('vector-doc-defs');
                     const patCanv = window._illuFillPattern;
                     if (!defs || !patCanv) {
-                        // Fallback: solid fill if no captured pattern is available.
                         el.setAttribute('fill', this.activeColor);
                         return;
                     }
@@ -13434,30 +13808,70 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     defs.appendChild(patEl);
                     el.setAttribute('fill', `url(#${patId})`);
                 } else {
-                    el.setAttribute('fill', this.activeColor);
+                    if (value === 'solid' || value === 'gradient' || value === 'none') {
+                        this.toolProps.fillType = value;
+                    }
+                    if (typeof window.illuRefreshVectorElementPaint === 'function') {
+                        window.illuRefreshVectorElementPaint(el);
+                    } else if (value === 'none') {
+                        el.setAttribute('fill', 'none');
+                    } else {
+                        el.setAttribute('fill', this.activeColor);
+                    }
                 }
+            } else if (prop === 'fill') {
+                const tagFill = (el.tagName || '').toLowerCase();
+                const v = value == null ? 'none' : String(value);
+                if (tagFill === 'foreignobject') {
+                    const div = el.querySelector('div[contenteditable]');
+                    if (div) {
+                        div.style.color = !v || v === 'none' ? 'transparent' : v;
+                    }
+                    return;
+                }
+                const gid = el.getAttribute('data-vgrad');
+                if (gid) {
+                    const node = document.getElementById(gid);
+                    if (node && node.parentNode) node.remove();
+                    el.removeAttribute('data-vgrad');
+                }
+                el.setAttribute('fill', !v || v === 'none' ? 'none' : v);
             } else if (prop === 'stroke') {
                 const strokeVal = value == null ? '' : String(value);
+                const tagFill = (el.tagName || '').toLowerCase();
                 if (!strokeVal || strokeVal === 'none') {
                     el.setAttribute('stroke', 'none');
+                    if (tagFill === 'text') this.toolProps.textStroke = false;
                 } else {
                     el.setAttribute('stroke', strokeVal);
+                    if (tagFill === 'text') this.toolProps.textStroke = true;
                     const sw0 = parseFloat(el.getAttribute('stroke-width') || '0');
                     if (!(sw0 > 0)) el.setAttribute('stroke-width', '1');
                 }
             } else if (prop === 'stroke-width') {
                 const w = Math.max(0, parseFloat(value) || 0);
-                el.setAttribute('stroke-width', String(w));
-                if (w <= 0) {
-                    el.setAttribute('stroke', 'none');
+                const tagFill = (el.tagName || '').toLowerCase();
+                if (tagFill === 'text') {
+                    this.toolProps.textStrokeWidth = Math.max(1, w || 1);
+                    this.toolProps.textStroke = w > 0;
                 } else {
-                    const cur = el.getAttribute('stroke');
-                    if (!cur || cur === 'none') {
-                        const strokeCss =
-                            typeof window.shapePrimaryFillCss === 'function'
-                                ? window.shapePrimaryFillCss()
-                                : this.cssRgbaFromPart(this.primaryColor);
-                        el.setAttribute('stroke', strokeCss);
+                    this.toolProps.size = Math.max(1, w || 1);
+                }
+                if (typeof window.illuRefreshVectorElementPaint === 'function') {
+                    window.illuRefreshVectorElementPaint(el);
+                } else {
+                    el.setAttribute('stroke-width', String(w));
+                    if (w <= 0) {
+                        el.setAttribute('stroke', 'none');
+                    } else {
+                        const cur = el.getAttribute('stroke');
+                        if (!cur || cur === 'none') {
+                            const strokeCss =
+                                typeof window.shapePrimaryFillCss === 'function'
+                                    ? window.shapePrimaryFillCss()
+                                    : this.cssRgbaFromPart(this.primaryColor);
+                            el.setAttribute('stroke', strokeCss);
+                        }
                     }
                 }
             } else if (prop === 'corner-radius') {
@@ -13505,15 +13919,44 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         });
 
         if (typeof window.syncVectorTextEditorStyles === 'function') window.syncVectorTextEditorStyles();
-        if (typeof this.syncActiveVectorSvg === 'function') this.syncActiveVectorSvg();
-        if (!opts.skipRenderHistory) {
-            this.saveHistory('Propriétés vecteur', {
-                type: 'vector-full',
-                svg: this.activeProject ? this.activeProject.svgData : ''
-            });
+        const skipSync =
+            livePreview ||
+            opts.skipSyncSvg ||
+            (this.mode === 'vector' && window._illuVectorDragActive);
+        if (!skipSync && typeof this.syncActiveVectorSvg === 'function') {
+            this.syncActiveVectorSvg();
         }
-        this.render();
-        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        if (!opts.skipRenderHistory && !livePreview) {
+            if (this.mode === 'vector' && window._illuVectorDragActive) {
+                /* sync + historique au mouseup */
+            } else if (this.mode === 'vector') {
+                if (this._illuVectorPropHistoryTimer != null) {
+                    clearTimeout(this._illuVectorPropHistoryTimer);
+                }
+                const self = this;
+                this._illuVectorPropHistoryTimer = window.setTimeout(() => {
+                    self._illuVectorPropHistoryTimer = null;
+                    self.saveHistoryVector('Propriétés vecteur');
+                }, 400);
+            } else {
+                this.saveHistory('Propriétés vecteur', {
+                    type: 'vector-full',
+                    svg: this.activeProject ? this.activeProject.svgData : ''
+                });
+            }
+        }
+        if (livePreview) {
+            if (typeof window.illuScheduleVectorShapeEditVisual === 'function') {
+                window.illuScheduleVectorShapeEditVisual();
+            } else if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            }
+        } else {
+            this.render({ skipUiThumbnails: this.mode === 'vector' });
+        }
+        if (!livePreview && typeof window.updateToolOptionsBar === 'function') {
+            window.updateToolOptionsBar();
+        }
     },
 
     /** Apply SVG filter to active vector selection (for vector mode Effects) */

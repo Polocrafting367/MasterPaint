@@ -13,7 +13,8 @@ window.VectorEngine = (() => {
     let _rubberBand = null;   // { x0,y0, el }
     let _penState   = null;   // { points:[], previewEl, layer, type: 'quad'|'cubic' }
     let _polyState  = null;   // { points:[], previewEl, layer }
-    let _snapshots  = [];     // [{ el, base }] pour multi-drag
+    let _snapshots  = [];     // [{ el, base, origBBox }] pour multi-drag
+    let _snapshotOrigBBox = null; // combined original bbox for snapping
     let _dragStart  = null;   // {x,y}
     let _dragging   = false;
     let _activeEl   = null;
@@ -202,6 +203,7 @@ window.VectorEngine = (() => {
         if (!ui) return;
 
         if (
+            EditorManager.mode === 'vector' &&
             typeof window.illuVectorPreferBitmapSelectionUI === 'function' &&
             window.illuVectorPreferBitmapSelectionUI()
         ) {
@@ -610,25 +612,37 @@ window.VectorEngine = (() => {
 
     // ─── Multi-drag (snapshots) ──────────────────────────────────────────────
     function _snapshot(el) {
-        return { transform: el.getAttribute('transform') || '' };
+        if (typeof window.illuVectorSnapshotForDrag === 'function') {
+            const geo = window.illuVectorSnapshotForDrag(el);
+            if (geo) return geo;
+        }
+        return { tag: 'transform', transform: el.getAttribute('transform') || '' };
     }
 
     function _applyDrag(el, base, dx, dy) {
+        if (
+            base &&
+            base.tag &&
+            base.tag !== 'transform' &&
+            typeof window.illuVectorApplyDragFromSnapshot === 'function'
+        ) {
+            window.illuVectorApplyDragFromSnapshot(el, base, dx, dy);
+            return;
+        }
         let ldx = dx, ldy = dy;
         try {
             const p = el.parentElement;
-            // On veut le CTM du parent par rapport au SVG racine pour transformer le delta canvas -> local parent
             const ctm = p ? p.getScreenCTM() : el.ownerSVGElement.getScreenCTM();
             if (ctm) {
                 const inv = ctm.inverse();
-                // On transforme le vecteur delta (dx, dy)
                 ldx = dx * inv.a + dy * inv.c;
                 ldy = dx * inv.b + dy * inv.d;
             }
-        } catch(e) {}
-        
-        // Appliquer la translation AU DÉBUT pour qu'elle soit dans le repère du parent
-        const newTr = `translate(${ldx},${ldy}) ${base.transform}`.trim();
+        } catch (e) {
+            /* ignore */
+        }
+        const baseTr = base && base.transform != null ? base.transform : '';
+        const newTr = `translate(${ldx},${ldy}) ${baseTr}`.trim();
         el.setAttribute('transform', newTr);
     }
 
@@ -662,7 +676,23 @@ window.VectorEngine = (() => {
                 beginTransform(sel, pos, cursors[idx]);
                 return;
             }
-            _snapshots = sel.map(el => ({ el, base: _snapshot(el) }));
+            _snapshots = sel.map(el => {
+                let origBBox = null;
+                try { origBBox = el.getBBox(); } catch(e) {}
+                return { el, base: _snapshot(el), origBBox };
+            });
+            // Also store the combined original bbox for snapping
+            let oMinX = Infinity, oMinY = Infinity, oMaxX = -Infinity, oMaxY = -Infinity;
+            _snapshots.forEach(s => {
+                if (!s.origBBox) return;
+                if (s.origBBox.x < oMinX) oMinX = s.origBBox.x;
+                if (s.origBBox.y < oMinY) oMinY = s.origBBox.y;
+                if (s.origBBox.x + s.origBBox.width > oMaxX) oMaxX = s.origBBox.x + s.origBBox.width;
+                if (s.origBBox.y + s.origBBox.height > oMaxY) oMaxY = s.origBBox.y + s.origBBox.height;
+            });
+            _snapshotOrigBBox = (oMinX !== Infinity)
+                ? { x: oMinX, y: oMinY, width: oMaxX - oMinX, height: oMaxY - oMinY }
+                : null;
         }
         _dragStart = { x: pos.x, y: pos.y };
         _dragging  = false;
@@ -734,10 +764,29 @@ window.VectorEngine = (() => {
                 _setPathPoints(targetEl, currentPoints);
             });
         } else if (_snapshots.length) {
-            _snapshots.forEach(s => _applyDrag(s.el, s.base, dx, dy));
+            let snapDx = dx;
+            let snapDy = dy;
+            // Use original bbox + mouse delta so snap never oscillates
+            if (typeof window.illuCalculateEdgeSnap === 'function' && _snapshotOrigBBox) {
+                const snapped = window.illuCalculateEdgeSnap(_snapshotOrigBBox, dx, dy, _snapshots.map(s => s.el));
+                snapDx = snapped.dx;
+                snapDy = snapped.dy;
+            }
+            _snapshots.forEach((s) => _applyDrag(s.el, s.base, snapDx, snapDy));
         }
 
-        refreshSelectionUI();
+        if (
+            typeof window.illuVectorPreferBitmapSelectionUI === 'function' &&
+            window.illuVectorPreferBitmapSelectionUI()
+        ) {
+            if (typeof window.illuScheduleVectorShapeEditVisual === 'function') {
+                window.illuScheduleVectorShapeEditVisual();
+            } else if (typeof window.illuSyncVectorSelectionAnchors === 'function') {
+                window.illuSyncVectorSelectionAnchors();
+            }
+        } else {
+            refreshSelectionUI();
+        }
         return true;
     }
 
@@ -790,8 +839,11 @@ window.VectorEngine = (() => {
     }
 
     function endDrag() {
+        if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
         const moved = _dragging;
+        const draggedEls = _snapshots.map((s) => s.el).filter((el) => el && el.isConnected);
         _snapshots = [];
+        _snapshotOrigBBox = null;
         _nodeSnapshots = [];
         _dragStart = null;
         _dragging = false;
@@ -800,6 +852,16 @@ window.VectorEngine = (() => {
         if (_uiRefreshRaf) {
             cancelAnimationFrame(_uiRefreshRaf);
             _uiRefreshRaf = 0;
+        }
+        if (
+            moved &&
+            draggedEls.length &&
+            typeof window.illuVectorBakeSelectionTransforms === 'function'
+        ) {
+            window.illuVectorBakeSelectionTransforms(draggedEls);
+            if (typeof window.illuSyncVectorSelectionUI === 'function') {
+                window.illuSyncVectorSelectionUI();
+            }
         }
         return moved;
     }
@@ -1035,7 +1097,6 @@ window.VectorEngine = (() => {
         EditorManager.activeVectorSelection = [el];
         window._activeVectorShapeEl = el;
         refreshSelectionUI();
-        if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
         EditorManager.saveHistory(label || 'Vecteur', { patchActiveLayer: true });
         if (typeof illuScheduleInteractiveVisualRefresh === 'function') {
             illuScheduleInteractiveVisualRefresh({ render: true });
@@ -1060,7 +1121,7 @@ window.VectorEngine = (() => {
             el.setAttribute('stroke', color);
         else
             el.setAttribute('fill', color);
-        if (typeof EditorManager.syncActiveVectorSvg === 'function') EditorManager.syncActiveVectorSvg();
+        
         EditorManager.saveHistory('Remplissage vecteur', { patchActiveLayer: true });
         if (typeof illuScheduleInteractiveVisualRefresh === 'function') {
             illuScheduleInteractiveVisualRefresh({ render: true });

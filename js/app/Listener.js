@@ -702,14 +702,19 @@ document.addEventListener('contextmenu', (e) => {
                     const valEl = document.getElementById(id + '-val');
                     if (valEl) valEl.textContent = val;
                     if (typeof EditorManager !== 'undefined') {
-                        if (id === 'vector-prop-stroke-width') EditorManager.applyVectorProperty('stroke-width', val);
-                        else if (id === 'vector-prop-corner-radius') EditorManager.applyVectorProperty('corner-radius', val);
-                        else if (id === 'vector-prop-grad-angle') EditorManager.applyVectorProperty('fill-model', 'gradient');
+                        const live = { livePreview: true };
+                        if (id === 'vector-prop-stroke-width') {
+                            EditorManager.applyVectorProperty('stroke-width', val, live);
+                        } else if (id === 'vector-prop-corner-radius') {
+                            EditorManager.applyVectorProperty('corner-radius', val, live);
+                        } else if (id === 'vector-prop-grad-angle') {
+                            EditorManager.applyVectorProperty('fill-model', 'gradient', live);
+                        }
                     }
                 });
                 el.addEventListener('change', () => {
-                    if (typeof EditorManager !== 'undefined' && EditorManager.saveHistoryVector) {
-                        EditorManager.saveHistoryVector();
+                    if (typeof EditorManager !== 'undefined' && typeof EditorManager.saveHistoryVector === 'function') {
+                        EditorManager.saveHistoryVector('Propriétés vecteur');
                     }
                 });
             }
@@ -722,9 +727,12 @@ document.addEventListener('contextmenu', (e) => {
                     if (id === 'tool-brush-pattern') EditorManager.toolProps.brushPattern = el.value;
                     if (id === 'tool-gradient-type') {
                         EditorManager.toolProps.gradientType = el.value;
-                        if (typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector' && EditorManager.activeVectorSelection.length) {
-                             EditorManager.applyVectorProperty('fill-model', 'gradient');
-                             if (EditorManager.render) EditorManager.render();
+                        if (
+                            typeof EditorManager !== 'undefined' &&
+                            EditorManager.mode === 'vector' &&
+                            EditorManager.activeVectorSelection.length
+                        ) {
+                            EditorManager.applyVectorProperty('fill-model', 'gradient', { livePreview: true });
                         }
                     }
                     if (id === 'tool-gradient-method') {
@@ -751,23 +759,36 @@ document.addEventListener('contextmenu', (e) => {
     }
 
     function refreshShapeToolLivePreview() {
+        if (
+            typeof EditorManager !== 'undefined' &&
+            EditorManager.mode === 'vector' &&
+            EditorManager.activeVectorSelection &&
+            EditorManager.activeVectorSelection.length &&
+            typeof window.illuApplyVectorToolPropsToSelection === 'function'
+        ) {
+            window.illuApplyVectorToolPropsToSelection({ livePreview: true });
+            return;
+        }
         if (window.VectorEngine && typeof window.VectorEngine.refreshLiveDrawPreview === 'function') {
             window.VectorEngine.refreshLiveDrawPreview();
         }
         if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
-        if (typeof EditorManager !== 'undefined' && EditorManager.render) EditorManager.render();
+        if (typeof EditorManager !== 'undefined' && EditorManager.render) {
+            EditorManager.render({ skipUiThumbnails: true });
+        }
     }
 
     const ILLU_ICON_SYNC_TOOL_PROPS = {
         'vector-prop-fill-model': (val) => {
             if (typeof EditorManager !== 'undefined') {
-                EditorManager.applyVectorProperty('fill-model', val);
                 if (val === 'solid' || val === 'gradient' || val === 'none') {
                     EditorManager.toolProps.fillType = val;
                 }
-                if (typeof window.redrawShapeFromEdit === 'function') window.redrawShapeFromEdit();
-                if (EditorManager.render) EditorManager.render();
-                if (EditorManager.saveHistoryVector) EditorManager.saveHistoryVector();
+                if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                    EditorManager.applyVectorProperty('fill-model', val, { livePreview: true });
+                } else if (typeof window.illuApplyVectorToolPropsToSelection === 'function') {
+                    window.illuApplyVectorToolPropsToSelection({ livePreview: true });
+                }
             }
         },
         'tool-shape-mode': (val) => {
@@ -950,6 +971,8 @@ document.addEventListener('contextmenu', (e) => {
                     on = !!window._illuShowRulers;
                 } else if (btn.classList.contains('opt-toggle-pixelgrid')) {
                     on = !!window._illuShowPixelGrid;
+                } else if (btn.classList.contains('opt-toggle-snap')) {
+                    on = !!window._illuSnapToEdges;
                 } else if (sid) {
                     const val = btn.getAttribute('data-illu-value');
                     const sel = document.getElementById(sid);

@@ -602,6 +602,15 @@
                                     id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
                                 class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winRulers">Règles</span></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
+                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                    id="menu-win-snap-edges-check" style="visibility: hidden;"></i></span><i
+                                class="fa-solid fa-magnet" style="margin-right: 6px;"></i><span
+                                data-i18n="menu.winSnapEdges">Aimantation des bords</span></li>
+                        <li role="menuitem" class="menu-row-icon" onclick="window.illuOpenSnapSettings && window.illuOpenSnapSettings()">
+                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span>
+                            <span>Paramètres aimantation…</span>
+                        </li>
                         <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluShowAllRibbonOptions()">
                             <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
                                     id="menu-win-show-all-ribbon-options-check"
@@ -1037,10 +1046,13 @@
                                         toile</span>
                                 </span>
                                 <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle" data-i18n-title="menu.imageTransform"
-                                        onclick="window.showPixelTransformDialog()"><i
-                                            class="fa-solid fa-rotate"></i></button>
-                                    <span class="illu-mode-toggle-lbl" data-i18n="menu.imageTransform">Rotation</span>
+                                    <button type="button" class="illu-icon-toggle opt-toggle-snap" id="ribbon-snap-toggle"
+                                        title="Aimantation (Clic droit pour les paramètres)"
+                                        onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()"
+                                        oncontextmenu="event.preventDefault(); if(window.illuOpenSnapSettings) window.illuOpenSnapSettings();">
+                                        <i class="fa-solid fa-magnet"></i>
+                                    </button>
+                                    <span class="illu-mode-toggle-lbl">Aimantation</span>
                                 </span>
                             </span>
                         </div>
@@ -1636,7 +1648,7 @@
                         </span>
                         <span id="tool-brush-hardness-row" class="field-row illu-gauge-field" hidden>
                             <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
-                                data-i18n-title="tools.brushHardness">Dureté</label>
+                                title="Dureté">Dureté</label>
                             <span class="illu-gauge-wrap">
                                 <span class="illu-gauge-fill" aria-hidden="true"></span>
                                 <span class="illu-gauge-val" id="tool-brush-hardness-val">100</span>
@@ -1652,6 +1664,34 @@
                             </label>
                         </span>
                     </div>
+                    <div id="opt-grp-symmetry-params" class="opt-grp illu-ribbon-group" data-illu-ribbon-group="symmetry" hidden>
+                        <div class="illu-ribbon-group-body">
+                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-1" id="illu-sym-toggle-group">
+                                <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                    <button type="button" id="tool-sym-x-btn" class="illu-icon-toggle illu-mode-toggle-btn" title="Sym. X — Symétrie horizontale" aria-pressed="false">
+                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16" aria-hidden="true"><use href="icons/illu-sprite.svg#illu-icon-sym-x"/></svg>
+                                        <span class="illu-mode-toggle-lbl">Sym. X</span>
+                                    </button>
+                                </span>
+                                <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                    <button type="button" id="tool-sym-y-btn" class="illu-icon-toggle illu-mode-toggle-btn" title="Sym. Y — Symétrie verticale" aria-pressed="false">
+                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16" aria-hidden="true"><use href="icons/illu-sprite.svg#illu-icon-sym-y"/></svg>
+                                        <span class="illu-mode-toggle-lbl">Sym. Y</span>
+                                    </button>
+                                </span>
+                                <!-- Checkboxes cachées pour compatibilité avec le code existant -->
+                                <input type="checkbox" id="tool-sym-x" style="display:none" aria-hidden="true">
+                                <input type="checkbox" id="tool-sym-y" style="display:none" aria-hidden="true">
+                            </span>
+                        </div>
+                        <span class="illu-ribbon-group-label" data-i18n="ribbon.groupSymmetry">Symétrie</span>
+                    </div>
+                    <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
+                        <label class="opt-bar-check">
+                            <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1" disabled>
+                            <span data-i18n="tools.optClosePath">Fermer</span>
+                        </label>
+                    </span>
 
                     <div id="opt-grp-eyedropper-params" class="opt-grp illu-ribbon-param-pack illu-eyedropper-info"
                         hidden>
@@ -2031,6 +2071,7 @@
                                             class="fa-solid fa-paintbrush"></i></button>
                                     <button class="tool-btn" id="tool-pencil" data-i18n-title="title.toolPencil"><i
                                             class="fa-solid fa-pencil"></i></button>
+
                                     <button class="tool-btn" id="tool-gradient"
                                         data-i18n-title="title.toolGradient"><svg class="tool-icon"
                                             style="width: 16px; height: 16px;" viewBox="0 0 16 16" aria-hidden="true">
@@ -2281,6 +2322,7 @@
                         style="grid-column: 2; grid-row: 2; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; background: #808080; width: 100%; height: 100%; min-width: 0; min-height: 0;">
                         <canvas id="pixel-grid-overlay"
                             style="position: absolute; pointer-events: none; z-index: 4; display: none;"></canvas>
+                        <canvas id="snap-guides-overlay" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000; display: none;"></canvas>
 
                         <div id="main-canvas-container"
                             style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 10px rgba(0,0,0,0.5); width: 1280px; height: 720px;">
@@ -4217,7 +4259,221 @@
 
         //window.history.pushState({}, '', '/MasterPaint');
 
+    </script>
+    <script>
+    // Initialisation des réglages d'aimantation
+    (function() {
+        var div = localStorage.getItem('illu_snap_grid_divisor');
+        if (div) window._illuSnapGridDivisor = parseInt(div, 10);
+        var thresh = localStorage.getItem('illu_snap_threshold');
+        if (thresh) window._illuSnapThreshold = parseInt(thresh, 10);
+        var always = localStorage.getItem('illu_snap_always');
+        if (always) window._illuSnapGridAlwaysVisible = (always === '1');
+        var guides = localStorage.getItem('illu_snap_guides');
+        if (guides) window._illuSnapGuidesVisible = (guides === '1');
+        else window._illuSnapGuidesVisible = true; // defaut activé
+    })();
+    
+    if (typeof window.illuDrawSnapGridPreview !== 'function') {
+        window.illuDrawSnapGridPreview = function() {
+            const isActive = window._illuSnapPreviewActive;
+            const isAlwaysOn = window._illuSnapGridAlwaysVisible && window.EditorManager && window.EditorManager.snapToEdges;
+            
+            const mcc = document.getElementById('main-canvas-container');
+            const p = window.EditorManager && window.EditorManager.activeProject;
+            if (!mcc || !p) return;
+            
+            let overlay = document.getElementById('illu-snap-preview-layer');
+            if (!isActive && !isAlwaysOn) {
+                if (overlay) overlay.style.display = 'none';
+                return;
+            }
+            
+            if (!overlay) {
+                overlay = document.createElement('canvas');
+                overlay.id = 'illu-snap-preview-layer';
+                overlay.style.position = 'absolute';
+                overlay.style.left = '0';
+                overlay.style.top = '0';
+                overlay.style.pointerEvents = 'none';
+                overlay.style.zIndex = '9999';
+                mcc.appendChild(overlay);
+            }
+            
+            const W = p.width;
+            const H = p.height;
+            const z = p.zoomLevel || 1;
+            
+            if (overlay.width !== W || overlay.height !== H) {
+                overlay.width = W;
+                overlay.height = H;
+            }
+            
+            // Forcer la taille CSS pour correspondre exactement à l'image interne
+            overlay.style.width = W + 'px';
+            overlay.style.height = H + 'px';
+            overlay.style.display = 'block';
+            
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            
+            const divi = window._illuSnapGridDivisor || 48;
+            const stepX = W / divi;
+            const stepY = H / (divi * H / W);
+            
+            // Styles différenciés si on est en réglages (fort) ou en simple affichage (très discret)
+            ctx.strokeStyle = isActive ? 'rgba(167,139,250,0.8)' : 'rgba(167,139,250,0.15)';
+            ctx.lineWidth = Math.max(1 / z, 0.5);
+            ctx.setLineDash([Math.max(4/z, 2), Math.max(4/z, 2)]);
+            ctx.beginPath();
+            for (let x = 0; x <= W; x += stepX) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, H);
+            }
+            for (let y = 0; y <= H; y += stepY) {
+                ctx.moveTo(0, y); ctx.lineTo(W, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            if (isActive) {
+                // Points d'intersection (carrés)
+                ctx.fillStyle = 'rgba(167,139,250,1.0)';
+                const dotSize = Math.max(3 / z, 1);
+                for (let xi = 0; xi * stepX <= W + 0.1; xi++) {
+                    for (let yi = 0; yi * stepY <= H + 0.1; yi++) {
+                        let px = xi * stepX;
+                        let py = yi * stepY;
+                        ctx.fillRect(px - dotSize/2, py - dotSize/2, dotSize, dotSize);
+                    }
+                }
+                
+                // Zone d'attraction (halo autour du centre)
+                const cx = W / 2;
+                const cy = H / 2;
+                const nearPx = Math.round(cx / stepX) * stepX;
+                const nearPy = Math.round(cy / stepY) * stepY;
+                const thresh = window._illuSnapThreshold || 50;
+                
+                const effThreshX = (stepX / 2) * (thresh / 100);
+                const effThreshY = (stepY / 2) * (thresh / 100);
+                
+                ctx.beginPath();
+                ctx.ellipse(nearPx, nearPy, effThreshX, effThreshY, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(52,211,153,0.9)';
+                ctx.lineWidth = Math.max(1.5 / z, 1);
+                ctx.setLineDash([Math.max(4/z, 2), Math.max(3/z, 1.5)]);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        };
+    }
 
+    window.illuOpenSnapSettings = function() {
+        var div = window._illuSnapGridDivisor || 48;
+        var thresh = window._illuSnapThreshold || 50;
+        
+        var html = `
+            <div class="effect-slider-block">
+                <span class="effect-param-label">Taille des cases (1/N)</span>
+                <div class="effect-track-row">
+                    <input type="range" id="ef-snap-div" min="4" max="128" step="1" value="${div}" style="width: 100%; accent-color: #a78bfa;" oninput="document.getElementById('ef-snap-div-val').innerText='1 / '+this.value; window._illuSnapGridDivisor=parseInt(this.value,10); if (window.illuDrawSnapGridPreview) window.illuDrawSnapGridPreview();">
+                    <span class="effect-val" id="ef-snap-div-val" style="min-width:48px;">1 / ${div}</span>
+                </div>
+            </div>
+            <div class="effect-slider-block" style="margin-top: 15px;">
+                <span class="effect-param-label">Force d'attraction (%)</span>
+                <div class="effect-track-row">
+                    <input type="range" id="ef-snap-thresh" min="1" max="100" step="1" value="${thresh}" style="width: 100%; accent-color: #34d399;" oninput="document.getElementById('ef-snap-thresh-val').innerText=this.value+' %'; window._illuSnapThreshold=parseInt(this.value,10); if (window.illuDrawSnapGridPreview) window.illuDrawSnapGridPreview();">
+                    <span class="effect-val" id="ef-snap-thresh-val" style="min-width:48px;">${thresh} %</span>
+                </div>
+            </div>
+            <div class="effect-slider-block" style="margin-top: 15px;">
+                <label style="display:flex; align-items:center; cursor:pointer; font-size:12px; color:inherit;">
+                    <input type="checkbox" id="ef-snap-always" ${window._illuSnapGridAlwaysVisible ? 'checked' : ''} style="margin-right:8px; accent-color:#a78bfa;" onchange="window._illuSnapGridAlwaysVisible=this.checked; if (window.illuDrawSnapGridPreview) window.illuDrawSnapGridPreview();">
+                    Toujours afficher la grille en arrière-plan
+                </label>
+            </div>
+            <div class="effect-slider-block" style="margin-top: 5px;">
+                <label style="display:flex; align-items:center; cursor:pointer; font-size:12px; color:inherit;">
+                    <input type="checkbox" id="ef-snap-guides" ${window._illuSnapGuidesVisible ? 'checked' : ''} style="margin-right:8px; accent-color:#f0f;" onchange="window._illuSnapGuidesVisible=this.checked;">
+                    Afficher les lignes magenta d'accroche (croix)
+                </label>
+            </div>
+            <p style="margin-top:15px; font-size:11px; opacity:0.8; line-height:1.4;">La grille de prévisualisation s'affiche sur la toile. Validez avec OK pour sauvegarder les paramètres de l'aimantation.</p>
+        `;
+
+        document.getElementById('effect-dialog-title').innerText = 'Paramètres aimantation';
+        document.getElementById('effect-dialog-content').innerHTML = html;
+        
+        var btnRaz = document.getElementById('effect-dialog-btn-raz');
+        if (btnRaz) btnRaz.style.display = 'none';
+        
+        var shell = document.getElementById('effect-dialog');
+        var win = document.getElementById('effect-dialog-window');
+        
+        if (win) {
+            win.style.width = '400px';
+            win.style.maxWidth = 'min(620px, 98vw)';
+            win.classList.add('floating-window');
+            win.style.position = 'fixed';
+            win.classList.remove('effect-dialog--vhs');
+            
+            // Centrer sur le workspace
+            var ws = document.getElementById('workspace');
+            if (ws) {
+                var wsR = ws.getBoundingClientRect();
+                var w = win.offsetWidth || 400;
+                var h = win.offsetHeight || 200;
+                win.style.left = Math.max(wsR.left, Math.round(wsR.left + (wsR.width - w) / 2)) + 'px';
+                win.style.top = Math.max(wsR.top, Math.round(wsR.top + (wsR.height - h) / 2)) + 'px';
+            }
+        }
+        
+        window._illuSnapPreviewActive = true;
+        
+        var closeFn = function() {
+            shell.style.display = 'none';
+            window._illuSnapPreviewActive = false;
+            
+            if (!window._illuSnapGridAlwaysVisible) {
+                var previewLayer = document.getElementById('illu-snap-preview-layer');
+                if (previewLayer) previewLayer.style.display = 'none';
+            } else if (typeof window.illuDrawSnapGridPreview === 'function') {
+                window.illuDrawSnapGridPreview();
+            }
+            
+            if (btnRaz) btnRaz.style.display = ''; 
+            if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
+            
+            // Restore default OK/Cancel
+            document.getElementById('effect-dialog-btn-ok').onclick = window.applyCurrentEffectModal;
+            document.getElementById('effect-dialog-btn-fermer').onclick = window.closeEffectModal;
+            document.getElementById('effect-dialog-btn-annuler').onclick = window.closeEffectModal;
+        };
+        
+        document.getElementById('effect-dialog-btn-ok').onclick = function() {
+            localStorage.setItem('illu_snap_grid_divisor', String(window._illuSnapGridDivisor || 48));
+            localStorage.setItem('illu_snap_threshold', String(window._illuSnapThreshold || 50));
+            localStorage.setItem('illu_snap_always', window._illuSnapGridAlwaysVisible ? '1' : '0');
+            localStorage.setItem('illu_snap_guides', window._illuSnapGuidesVisible ? '1' : '0');
+            closeFn();
+        };
+        
+        document.getElementById('effect-dialog-btn-fermer').onclick = closeFn;
+        document.getElementById('effect-dialog-btn-annuler').onclick = closeFn;
+        
+        // Custom drag handling for this modal so it doesn't need FilterManager
+        if (typeof FilterManager !== 'undefined' && typeof FilterManager.makeDialogDraggable === 'function') {
+            FilterManager.makeDialogDraggable(win, shell.querySelector('.title-bar'));
+        }
+        
+        shell.style.display = 'block';
+        
+        
+        window.illuDrawSnapGridPreview();
+    };
     </script>
     <script src="js/contact.js"></script>
 </body>

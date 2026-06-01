@@ -1,15 +1,15 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.96 (31/05/26)
+2.8.100 (01/06/26)
+- Amélioration de l'outil d'aimantation
+- Ajout d'un outil de symétrie vertical/horizontal
+
+2.8.98 (31/05/26)
 - Ajout d'un mode de travail CMJN et RAL
 - Modification du mode tramé et des effets lisibilité
 - Modification de la fenetre nouveau projet pour inclur eles nouveau mode de travail
-- Ajout d'une vrai fenetre de bienvenue
-- Correction minime sur le menu fenetre avec les toggle d'affichage des fenetre
-- Ajout de couleur d'accuentation - #0d7a7a passe par défaut!
-- Ajouter bouton nouveau dans barre d'outil sur téléphone
-- Correction dans la barre d'outil sur téléphone
-- Correction bug sur la fenetre des outil en mode téléphone
+- Ajout d'une vrai fenetre amélioré
+       > plus de performance général
 
 2.8.87 (30/05/26) :'( 
 - Mise a jours des police d'écriture de l'outil text pas tous fonctionnel

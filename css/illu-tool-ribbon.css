@@ -2584,3 +2584,13 @@ body.theme-dark .illu-shape-picker-popup {
 body.theme-dark .illu-shape-picker-section-title {
     color: #ccc;
 }
+body.illu-toolbar-ribbon .illu-ribbon-group[hidden] {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group-body > .field-row {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}

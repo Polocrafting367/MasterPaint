@@ -440,4 +440,24 @@
     <path d="M 12 4 H 13.5 A 1.5 1.5 0 0 1 15 5.5 V 13.5 A 1.5 1.5 0 0 1 13.5 15 H 5.5 A 1.5 1.5 0 0 1 4 13.5 V 12" fill="none" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.25" stroke-dasharray="2 2" stroke-linejoin="round" />
   </symbol>
 
+
+  <!-- ── Symétrie ─────────────────────────────────────────── -->
+  <symbol id="illu-icon-sym-x" viewBox="0 0 16 16">
+    <!-- Axe vertical (X) -->
+    <line x1="8" y1="1.5" x2="8" y2="14.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 1.5"/>
+    <!-- Moitié gauche : triangle pointant vers la droite -->
+    <path d="M 2.5 5 L 6.5 8 L 2.5 11 Z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/>
+    <!-- Moitié droite : triangle (miroir) pointant vers la gauche -->
+    <path d="M 13.5 5 L 9.5 8 L 13.5 11 Z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none" opacity="0.4"/>
+  </symbol>
+
+  <symbol id="illu-icon-sym-y" viewBox="0 0 16 16">
+    <!-- Axe horizontal (Y) -->
+    <line x1="1.5" y1="8" x2="14.5" y2="8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 1.5"/>
+    <!-- Moitié haute : triangle pointant vers le bas -->
+    <path d="M 5 2.5 L 8 6.5 L 11 2.5 Z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/>
+    <!-- Moitié basse : triangle (miroir) pointant vers le haut -->
+    <path d="M 5 13.5 L 8 9.5 L 11 13.5 Z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none" opacity="0.4"/>
+  </symbol>
+
 </svg>

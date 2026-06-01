@@ -301,10 +301,23 @@
         const origin = layerPaintOriginFromSession(session);
         const lx = origin.x;
         const ly = origin.y;
+        const editedSvgNode = session.editedSvgNode;
         removeSessionEl();
+        
         if (text.length > 0) {
-            drawTextToLayer(lx, ly, text);
+            if (EditorManager.mode === 'vector') {
+                if (typeof window.commitVectorTextSession === 'function') {
+                    window.commitVectorTextSession(lx, ly, text, editedSvgNode);
+                }
+            } else {
+                drawTextToLayer(lx, ly, text);
+            }
             EditorManager.saveHistory('Texte', { patchActiveLayer: true });
+        } else if (editedSvgNode && EditorManager.mode === 'vector') {
+            if (editedSvgNode.parentNode) {
+                editedSvgNode.parentNode.removeChild(editedSvgNode);
+                EditorManager.saveHistory('Suppression texte', { patchActiveLayer: true });
+            }
         }
         EditorManager.render();
     };
@@ -339,7 +352,7 @@
             : 'Déplacer le texte (glisser)';
     }
 
-    window.beginPixelTextSession = function (worldX, worldY) {
+    window.beginPixelTextSession = function (worldX, worldY, initialText, editedSvgNode) {
         window.commitPixelTextSession(true);
         const l = EditorManager.activeLayer;
         if (!l) return;
@@ -390,6 +403,10 @@
             'box-sizing:border-box',
             'line-height:' + initLh + 'px'
         ].join(';');
+        
+        if (initialText) {
+            el.innerText = initialText;
+        }
 
         wrap.appendChild(moveBtn);
         wrap.appendChild(el);
@@ -402,6 +419,7 @@
             wrap,
             layerX: docX - l.x,
             layerY: docY - l.y,
+            editedSvgNode,
             ignoreBlurUntil: performance.now() + 450
         };
         wrap.style.left = `${docX}px`;
@@ -446,8 +464,15 @@
             if (!textDrag || textDrag.pid !== ev.pointerId) return;
             ev.preventDefault();
             const p = EditorManager.logicalPointerFromClientXY(ev.clientX, ev.clientY);
-            const nx = textDrag.ox + (p.x - textDrag.sx);
-            const ny = textDrag.oy + (p.y - textDrag.sy);
+            let nx = textDrag.ox + (p.x - textDrag.sx);
+            let ny = textDrag.oy + (p.y - textDrag.sy);
+            if (typeof window.illuCalculateEdgeSnap === 'function') {
+                const w = el.offsetWidth || 100;
+                const h = el.offsetHeight || 30;
+                const snap = window.illuCalculateEdgeSnap({ x: nx, y: ny, width: w, height: h }, 0, 0, []);
+                nx += snap.dx;
+                ny += snap.dy;
+            }
             setDocPosition(nx, ny);
         });
         const endTextDrag = (ev) => {
@@ -457,6 +482,7 @@
             } catch (err) {
                 /* ignore */
             }
+            if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
             textDrag = null;
             moveBtn.style.cursor = 'grab';
             refocusEditorAfterUiChange();
@@ -466,14 +492,17 @@
 
         window.syncPixelTextEditorStyles();
         const doFocus = () => {
+            if (!el.isConnected) return;
             el.focus();
             if (window.getSelection && document.createRange) {
-                const r = document.createRange();
-                r.selectNodeContents(el);
-                r.collapse(false);
-                const s = window.getSelection();
-                s.removeAllRanges();
-                s.addRange(r);
+                try {
+                    const r = document.createRange();
+                    r.selectNodeContents(el);
+                    r.collapse(false);
+                    const s = window.getSelection();
+                    s.removeAllRanges();
+                    s.addRange(r);
+                } catch (e) {}
             }
         };
         requestAnimationFrame(() => requestAnimationFrame(doFocus));
