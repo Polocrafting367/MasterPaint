@@ -8,12 +8,6 @@
     const SELECTION_TOOLS = new Set(['select', 'wand', 'direct-select']);
 
     const ACTION_RIBBON_GROUPS = [
-        { id: 'tool', labelKey: 'ribbon.groupTool', selectors: ['#tool-main-header'] },
-        {
-            id: 'shape-picker',
-            labelKey: 'ribbon.groupShapePicker',
-            selectors: ['#illu-shape-picker-wrap']
-        },
         {
             id: 'selection',
             labelKey: 'ribbon.groupSelection',
@@ -548,6 +542,19 @@
         const textGradTypeEl = document.getElementById('tool-text-grad-type-actions');
         const textGradMethodEl = document.getElementById('tool-text-grad-method-actions');
         const textGradAngleRow = document.getElementById('tool-text-grad-angle-row');
+
+        if (!paramIds.has('opt-grp-symmetry-params')) {
+            const symX = document.getElementById('tool-sym-x');
+            const symY = document.getElementById('tool-sym-y');
+            let changed = false;
+            if (symX && symX.checked) { symX.checked = false; changed = true; }
+            if (symY && symY.checked) { symY.checked = false; changed = true; }
+            if (changed) {
+                if (typeof window.illuSyncSymmetryButtonState === 'function') window.illuSyncSymmetryButtonState();
+                if (symX) symX.dispatchEvent(new Event('change', { bubbles: true }));
+                else if (symY) symY.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
 
         const isMobileRibbon =
             typeof window.illuIsRibbonMobileLayout === 'function' && window.illuIsRibbonMobileLayout();

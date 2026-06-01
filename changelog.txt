@@ -1,8 +1,11 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.100 (01/06/26)
+2.8.103 (01/06/26)
 - Amélioration de l'outil d'aimantation
 - Ajout d'un outil de symétrie vertical/horizontal
+- Réglage divers dans bandeau d'outils (inversion des outil tool, des outil fixe pour moins de divergence)
+- Ajout de font utilisable avec l'outil text ! 
+- Correction de l'effet Contour et duo-tone pour utiliser les couleur de la palette plustot que html standard
 
 2.8.98 (31/05/26)
 - Ajout d'un mode de travail CMJN et RAL

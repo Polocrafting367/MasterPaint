@@ -14,7 +14,23 @@
         resolveCombineOpFromEvent(ev) {
             if (ev && ev.altKey && !ev.ctrlKey && !ev.metaKey) return 'subtract';
             if (ev && (ev.ctrlKey || ev.metaKey) && !ev.altKey) return 'add';
-            const mode = window.selectionMode || 'new';
+            
+            let mode = window.selectionMode || 'new';
+            
+            if (mode !== 'new' && !this.hasActivePixelSelection()) {
+                mode = 'new';
+                window.selectionMode = 'new';
+                const modeGroup = document.getElementById('selection-mode-group');
+                if (modeGroup) {
+                    modeGroup.querySelectorAll('.illu-icon-toggle').forEach((btn) => {
+                        const on = btn.getAttribute('data-selection-mode') === 'new';
+                        btn.classList.toggle('active', on);
+                        btn.classList.toggle('illu-icon-toggle--on', on);
+                        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    });
+                }
+            }
+            
             if (mode === 'add') return 'add';
             if (mode === 'subtract') return 'subtract';
             return 'new';

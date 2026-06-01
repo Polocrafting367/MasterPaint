@@ -537,6 +537,7 @@ const FilterManager = {
                 const colorHex = vals['ef-contour-color'] || '#ff0000';
                 const opacity = (val('ef-contour-opacity') || 100) / 100;
                 const mode = val('ef-contour-mode') || 'outside';
+                const corner = vals['ef-contour-corner'] || 'round';
                 const color = this._parseHexColor(colorHex);
 
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
@@ -557,7 +558,7 @@ const FilterManager = {
                                 const ny = y + dy;
                                 if (ny < 0 || ny >= h) continue;
                                 for (let dx = -width; dx <= width; dx++) {
-                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    if (corner === 'round' && dx * dx + dy * dy > radiusSq) continue;
                                     const nx = x + dx;
                                     if (nx < 0 || nx >= w) continue;
 
@@ -577,7 +578,7 @@ const FilterManager = {
                                     break;
                                 }
                                 for (let dx = -width; dx <= width; dx++) {
-                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    if (corner === 'round' && dx * dx + dy * dy > radiusSq) continue;
                                     const nx = x + dx;
                                     if (nx < 0 || nx >= w) {
                                         isBoundary = true;
@@ -597,7 +598,7 @@ const FilterManager = {
                                 const ny = y + dy;
                                 const isYOut = ny < 0 || ny >= h;
                                 for (let dx = -width; dx <= width; dx++) {
-                                    if (dx * dx + dy * dy > radiusSq) continue;
+                                    if (corner === 'round' && dx * dx + dy * dy > radiusSq) continue;
                                     const nx = x + dx;
                                     const isXOut = nx < 0 || nx >= w;
 

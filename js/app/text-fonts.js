@@ -1,14 +1,13 @@
 /**
- * Liste de polices pour l’outil texte (stacks CSS + polices locales via queryLocalFonts si disponible).
- * Les navigateurs ne peuvent pas énumérer toutes les polices du système sans permission (API Local Font Access).
+ * Liste de polices pour l’outil texte.
+ * Contient EXCLUSIVEMENT des polices Web (Google Fonts). Plus aucune police locale.
  */
 (function () {
     const PRESETS = [
         {
-            key: 'fonts.groupWebFonts',
-            fb: 'Polices Web (Mobiles & PC)',
+            key: 'fonts.groupSans',
+            fb: 'Sans-serif (Web)',
             items: [
-                // Sans-serif
                 ['Roboto, sans-serif', 'Roboto'],
                 ['"Open Sans", sans-serif', 'Open Sans'],
                 ['Montserrat, sans-serif', 'Montserrat'],
@@ -17,20 +16,61 @@
                 ['Inter, sans-serif', 'Inter'],
                 ['Nunito, sans-serif', 'Nunito'],
                 ['Ubuntu, sans-serif', 'Ubuntu'],
-                // Serif
+                ['Oswald, sans-serif', 'Oswald'],
+                ['"Bebas Neue", sans-serif', 'Bebas Neue'],
+                ['Anton, sans-serif', 'Anton']
+            ]
+        },
+        {
+            key: 'fonts.groupSerif',
+            fb: 'Serif (Web)',
+            items: [
                 ['"Playfair Display", serif', 'Playfair Display'],
                 ['Merriweather, serif', 'Merriweather'],
                 ['Lora, serif', 'Lora'],
                 ['"PT Serif", serif', 'PT Serif'],
                 ['"Crimson Text", serif', 'Crimson Text'],
                 ['"EB Garamond", serif', 'EB Garamond'],
-                // Monospace/Pixel
-                ['"Press Start 2P", monospace', 'Press Start 2P'],
-                ['VT323, monospace', 'VT323'],
+                ['Cinzel, serif', 'Cinzel']
+            ]
+        },
+        {
+            key: 'fonts.groupMono',
+            fb: 'Code & Monospace (Web)',
+            items: [
                 ['"Fira Code", monospace', 'Fira Code'],
                 ['Inconsolata, monospace', 'Inconsolata'],
-                ['"Source Code Pro", monospace', 'Source Code Pro'],
-                // Cursive/Handwriting
+                ['"Source Code Pro", monospace', 'Source Code Pro']
+            ]
+        },
+        {
+            key: 'fonts.groupRetro',
+            fb: 'Rétro & Pixel (Web)',
+            items: [
+                ['"Press Start 2P", monospace', 'Press Start 2P'],
+                ['VT323, monospace', 'VT323'],
+                ['Silkscreen, monospace', 'Silkscreen'],
+                ['"Pixelify Sans", monospace', 'Pixelify Sans'],
+                ['DotGothic16, monospace', 'DotGothic16'],
+                ['"Share Tech Mono", monospace', 'Share Tech Mono']
+            ]
+        },
+        {
+            key: 'fonts.groupSciFi',
+            fb: 'Science-fiction & Tech (Web)',
+            items: [
+                ['Orbitron, sans-serif', 'Orbitron'],
+                ['Audiowide, sans-serif', 'Audiowide'],
+                ['Michroma, sans-serif', 'Michroma'],
+                ['"Russo One", sans-serif', 'Russo One'],
+                ['"Black Ops One", sans-serif', 'Black Ops One'],
+                ['Bungee, sans-serif', 'Bungee']
+            ]
+        },
+        {
+            key: 'fonts.groupCursive',
+            fb: 'Manuscrite & Cursive (Web)',
+            items: [
                 ['Pacifico, cursive', 'Pacifico'],
                 ['Caveat, cursive', 'Caveat'],
                 ['"Dancing Script", cursive', 'Dancing Script'],
@@ -39,92 +79,16 @@
                 ['"Amatic SC", cursive', 'Amatic SC'],
                 ['"Indie Flower", cursive', 'Indie Flower'],
                 ['"Permanent Marker", cursive', 'Permanent Marker'],
-                // Display/Fantasy
-                ['Oswald, sans-serif', 'Oswald'],
-                ['Righteous, cursive', 'Righteous'],
-                ['Creepster, fantasy', 'Creepster'],
-                ['"Bebas Neue", sans-serif', 'Bebas Neue'],
                 ['Lobster, cursive', 'Lobster'],
-                ['Cinzel, serif', 'Cinzel'],
-                ['Bangers, cursive', 'Bangers'],
-                ['Anton, sans-serif', 'Anton']
+                ['Righteous, cursive', 'Righteous']
             ]
         },
         {
-            key: 'fonts.groupSans',
-            fb: 'Sans-serif',
+            key: 'fonts.groupFantasy',
+            fb: 'Fantaisie & Autres (Web)',
             items: [
-                ['Arial, sans-serif', 'Arial'],
-                ['Helvetica, Arial, sans-serif', 'Helvetica'],
-                ['"Arial Black", Gadget, sans-serif', 'Arial Black'],
-                ['Verdana, Geneva, sans-serif', 'Verdana'],
-                ['Tahoma, Geneva, sans-serif', 'Tahoma'],
-                ['Trebuchet MS, Lucida Sans Unicode, sans-serif', 'Trebuchet MS'],
-                ['Segoe UI, Tahoma, Geneva, sans-serif', 'Segoe UI'],
-                ['Calibri, Candara, Verdana, sans-serif', 'Calibri'],
-                ['Candara, Verdana, sans-serif', 'Candara'],
-                ['Corbel, Verdana, sans-serif', 'Corbel'],
-                ['Century Gothic, CenturyGothic, AppleGothic, sans-serif', 'Century Gothic'],
-                ['Franklin Gothic Medium, Arial, sans-serif', 'Franklin Gothic Medium'],
-                ['Lucida Sans Unicode, Lucida Grande, sans-serif', 'Lucida Sans Unicode'],
-                ['Lucida Grande, Lucida Sans Unicode, sans-serif', 'Lucida Grande'],
-                ['Optima, Segoe UI, sans-serif', 'Optima'],
-                ['Gill Sans, Gill Sans MT, Calibri, sans-serif', 'Gill Sans'],
-                ['Futura, Century Gothic, sans-serif', 'Futura'],
-                ['Liberation Sans, Arial, sans-serif', 'Liberation Sans'],
-                ['DejaVu Sans, Arial, sans-serif', 'DejaVu Sans'],
-                ['Noto Sans, Arial, sans-serif', 'Noto Sans'],
-                ['Ubuntu, Cantarell, sans-serif', 'Ubuntu'],
-                ['Bahnschrift, Helvetica, Arial, sans-serif', 'Bahnschrift'],
-                ['Segoe Print, Verdana, sans-serif', 'Segoe Print'],
-                ['Segoe Script, Brush Script MT, cursive', 'Segoe Script'],
-                ['MV Boli, sans-serif', 'MV Boli']
-            ]
-        },
-        {
-            key: 'fonts.groupSerif',
-            fb: 'Serif',
-            items: [
-                ['Times New Roman, Times, serif', 'Times New Roman'],
-                ['Georgia, serif', 'Georgia'],
-                ['Cambria, Georgia, serif', 'Cambria'],
-                ['Garamond, Times New Roman, serif', 'Garamond'],
-                ['Palatino Linotype, Palatino, Book Antiqua, serif', 'Palatino Linotype'],
-                ['Book Antiqua, Palatino, serif', 'Book Antiqua'],
-                ['Baskerville, Times New Roman, serif', 'Baskerville'],
-                ['Constantia, Georgia, serif', 'Constantia'],
-                ['Didot, Didot LT STD, Times New Roman, serif', 'Didot'],
-                ['Liberation Serif, Times New Roman, serif', 'Liberation Serif'],
-                ['Noto Serif, Georgia, serif', 'Noto Serif']
-            ]
-        },
-        {
-            key: 'fonts.groupMono',
-            fb: 'Monospace',
-            items: [
-                ['Courier New, Courier, monospace', 'Courier New'],
-                ['Consolas, Monaco, monospace', 'Consolas'],
-                ['Monaco, Menlo, Consolas, monospace', 'Monaco'],
-                ['Menlo, Monaco, Consolas, monospace', 'Menlo'],
-                ['Lucida Console, Monaco, monospace', 'Lucida Console'],
-                ['Andale Mono, Courier New, monospace', 'Andale Mono'],
-                ['DejaVu Sans Mono, Consolas, monospace', 'DejaVu Sans Mono'],
-                ['Liberation Mono, Courier New, monospace', 'Liberation Mono']
-            ]
-        },
-        {
-            key: 'fonts.groupDisplay',
-            fb: 'Affichage & manuscrites',
-            items: [
-                ['Impact, Haettenschweiler, Arial Narrow Bold, sans-serif', 'Impact'],
-                ['Comic Sans MS, cursive', 'Comic Sans MS'],
-                ['Brush Script MT, cursive', 'Brush Script MT'],
-                ['Marker Felt, fantasy', 'Marker Felt'],
-                ['Trattatello, fantasy', 'Trattatello'],
-                ['Chalkduster, fantasy', 'Chalkduster'],
-                ['Papyrus, fantasy', 'Papyrus'],
-                ['Copperplate, Papyrus, fantasy', 'Copperplate'],
-                ['Rockwell, Courier Bold, serif', 'Rockwell']
+                ['Creepster, fantasy', 'Creepster'],
+                ['Bangers, cursive', 'Bangers']
             ]
         }
     ];
@@ -148,31 +112,17 @@
         return og;
     }
 
-    /** HTMLOptGroupElement n’a pas de .options — uniquement les &lt;option&gt; enfants. */
     function optgroupOptions(og) {
         return og ? [...og.querySelectorAll('option')] : [];
-    }
-
-    function ensureLocalOptgroup(sel) {
-        let og = document.getElementById('illu-text-font-local-optgroup');
-        if (!og) {
-            og = document.createElement('optgroup');
-            og.id = 'illu-text-font-local-optgroup';
-            og.label = groupLabel('fonts.groupLocal', 'Polices locales (OS)');
-            og.hidden = true;
-            sel.appendChild(og);
-        }
-        return og;
     }
 
     window.populateIlluTextFontSelect = function () {
         const sel = document.getElementById('tool-text-font');
         if (!sel) return;
         const prev = sel.value;
-        const hadLocal = document.getElementById('illu-text-font-local-optgroup');
-        const localChildren = hadLocal ? [...hadLocal.querySelectorAll('option')].map((o) => ({ v: o.value, t: o.textContent })) : [];
 
         sel.textContent = '';
+        let allFonts = [];
 
         PRESETS.forEach((g) => {
             const og = document.createElement('optgroup');
@@ -183,23 +133,10 @@
                 o.textContent = label;
                 o.style.fontFamily = value;
                 og.appendChild(o);
+                allFonts.push({ value, label, fontFamily: value, group: og.label });
             });
             sel.appendChild(og);
         });
-
-        if (localChildren.length) {
-            const og = document.createElement('optgroup');
-            og.id = 'illu-text-font-local-optgroup';
-            og.label = groupLabel('fonts.groupLocal', 'Polices locales (OS)');
-            localChildren.forEach(({ v, t }) => {
-                const o = document.createElement('option');
-                o.value = v;
-                o.textContent = t;
-                o.style.fontFamily = v;
-                og.appendChild(o);
-            });
-            sel.appendChild(og);
-        }
 
         const match = [...sel.options].some((o) => o.value === prev);
         if (match) {
@@ -212,9 +149,12 @@
             o.style.fontFamily = prev;
             cog.appendChild(o);
             sel.value = prev;
+            allFonts.push({ value: prev, label: o.textContent, fontFamily: prev, group: cog.label });
         } else {
             sel.value = 'Arial, sans-serif';
         }
+
+        setupCustomFontComboBox(sel, allFonts);
     };
 
     window.syncIlluTextFontSelectFromToolProps = function () {
@@ -223,82 +163,245 @@
         const v = EditorManager.toolProps.textFont || 'Arial, sans-serif';
         if ([...sel.options].some((o) => o.value === v)) {
             sel.value = v;
-            return;
+        } else {
+            const cog = ensureCustomOptgroup(sel);
+            if (!optgroupOptions(cog).some((o) => o.value === v)) {
+                const o = document.createElement('option');
+                o.value = v;
+                o.textContent = (v.split(',')[0] || 'Police').replace(/^["']|["']$/g, '').trim() || 'Police';
+                o.style.fontFamily = v;
+                cog.appendChild(o);
+                if (sel.parentElement && sel.parentElement._allFonts) {
+                    sel.parentElement._allFonts.push({ value: v, label: o.textContent, fontFamily: v, group: cog.label });
+                }
+            }
+            sel.value = v;
         }
-        const cog = ensureCustomOptgroup(sel);
-        if (!optgroupOptions(cog).some((o) => o.value === v)) {
-            const o = document.createElement('option');
-            o.value = v;
-            o.textContent = (v.split(',')[0] || 'Police').replace(/^["']|["']$/g, '').trim() || 'Police';
-            o.style.fontFamily = v;
-            cog.appendChild(o);
+
+        // Sync input
+        if (sel.parentElement && sel.parentElement.classList.contains('illu-font-combo-wrap')) {
+            const input = sel.parentElement.querySelector('input');
+            const opt = sel.options[sel.selectedIndex];
+            if (input && opt) input.value = opt.textContent;
         }
-        sel.value = v;
     };
 
-    function cssStackForFamilyName(name) {
-        const safe = String(name || '').replace(/"/g, '').trim();
-        if (!safe) return 'sans-serif';
-        if (/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/i.test(safe)) return safe;
-        return `"${safe}", sans-serif`;
+    function setupCustomFontComboBox(sel, allFonts) {
+        let wrap = sel.parentElement;
+        let input, listDiv;
+
+        if (!wrap || !wrap.classList.contains('illu-font-combo-wrap')) {
+            wrap = document.createElement('div');
+            wrap.className = 'illu-font-combo-wrap';
+            wrap.style.position = 'relative';
+            wrap.style.display = 'inline-block';
+            wrap.style.width = '100%';
+            wrap.style.verticalAlign = 'middle';
+            wrap._allFonts = allFonts;
+
+            sel.parentNode.insertBefore(wrap, sel);
+            wrap.appendChild(sel);
+            sel.style.setProperty('display', 'none', 'important');
+
+            input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'tool-text-font-input';
+            input.className = sel.className.replace('illu-text-font-select', '');
+            input.style.width = '100%';
+            input.style.boxSizing = 'border-box';
+            input.style.padding = '0 4px';
+            input.style.height = '17px';
+            input.style.maxHeight = '17px';
+            input.style.lineHeight = '15px';
+            input.placeholder = 'Rechercher...';
+            input.autocomplete = 'off';
+            input.style.fontFamily = 'var(--ui-font)';
+
+            listDiv = document.createElement('div');
+            listDiv.className = 'illu-font-combo-list illu-win-panel';
+            listDiv.style.position = 'absolute';
+            listDiv.style.top = '100%';
+            listDiv.style.left = '0';
+            listDiv.style.right = '0';
+            listDiv.style.maxHeight = '450px';
+            listDiv.style.overflowY = 'auto';
+            listDiv.style.overflowX = 'hidden';
+            listDiv.style.zIndex = '100000';
+            listDiv.style.display = 'none';
+            listDiv.style.background = 'var(--win-bg, #c0c0c0)';
+            listDiv.style.border = '2px solid';
+            listDiv.style.borderColor = 'var(--win-border-light, #dfdfdf) var(--win-border-dark, #808080) var(--win-border-dark, #808080) var(--win-border-light, #dfdfdf)';
+            listDiv.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.3)';
+
+            wrap.appendChild(input);
+            wrap.appendChild(listDiv);
+
+            function closeList() {
+                listDiv.style.display = 'none';
+            }
+
+            function renderList(query) {
+                listDiv.innerHTML = '';
+                const q = (query || '').toLowerCase();
+                let currentGroup = null;
+
+                wrap._allFonts.forEach(f => {
+                    if (f.label.toLowerCase().includes(q) || f.value.toLowerCase().includes(q)) {
+                        if (currentGroup !== f.group) {
+                            const gEl = document.createElement('div');
+                            gEl.textContent = f.group;
+                            gEl.style.padding = '4px 6px';
+                            gEl.style.fontSize = '10px';
+                            gEl.style.fontWeight = 'bold';
+                            gEl.style.background = 'var(--win-title-bg, #000080)';
+                            gEl.style.color = 'var(--win-title-fg, #fff)';
+                            gEl.style.textTransform = 'uppercase';
+                            listDiv.appendChild(gEl);
+                            currentGroup = f.group;
+                        }
+                        const item = document.createElement('div');
+                        item.textContent = f.label;
+                        item.style.padding = '4px 6px';
+                        item.style.cursor = 'pointer';
+                        item.style.fontFamily = f.fontFamily;
+                        item.style.fontSize = '14px';
+                        item.style.color = 'var(--text-normal, #000)';
+                        item.style.whiteSpace = 'nowrap';
+                        item.style.overflow = 'hidden';
+                        item.style.textOverflow = 'ellipsis';
+
+                        item.onmouseover = () => {
+                            item.style.background = 'var(--accent-bg, #000080)';
+                            item.style.color = 'var(--accent-fg, #fff)';
+                        };
+                        item.onmouseout = () => {
+                            item.style.background = 'transparent';
+                            item.style.color = 'var(--text-normal, #000)';
+                        };
+                        item.onmousedown = (e) => {
+                            e.preventDefault(); // Prevent blur
+                            input.value = f.label;
+                            sel.value = f.value;
+                            closeList();
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        };
+                        listDiv.appendChild(item);
+                    }
+                });
+                if (listDiv.children.length === 0) {
+                    const noEl = document.createElement('div');
+                    noEl.textContent = 'Aucun résultat';
+                    noEl.style.padding = '4px 6px';
+                    noEl.style.fontStyle = 'italic';
+                    noEl.style.color = 'var(--text-muted, #666)';
+                    listDiv.appendChild(noEl);
+                }
+            }
+
+            input.addEventListener('focus', () => {
+                input.select();
+                renderList('');
+                listDiv.style.display = 'block';
+            });
+
+            input.addEventListener('input', () => {
+                renderList(input.value);
+                listDiv.style.display = 'block';
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(closeList, 150);
+                const match = wrap._allFonts.find(f => f.label.toLowerCase() === input.value.trim().toLowerCase());
+                if (match) {
+                    input.value = match.label;
+                    if (sel.value !== match.value) {
+                        sel.value = match.value;
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } else if (input.value.trim()) {
+                    // Allow custom system font typed by user
+                    sel.value = input.value.trim();
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    const opt = sel.options[sel.selectedIndex];
+                    input.value = opt ? opt.textContent : '';
+                }
+            });
+
+            sel.addEventListener('change', () => {
+                const opt = sel.options[sel.selectedIndex];
+                if (opt) input.value = opt.textContent;
+            });
+        } else {
+            wrap._allFonts = allFonts;
+            input = wrap.querySelector('input');
+        }
+
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && input) {
+            input.value = opt.textContent;
+        }
     }
 
-    window.loadIlluLocalFonts = async function () {
-        if (typeof window.queryLocalFonts !== 'function') {
-            if (typeof window.showIlluAlert === 'function') {
-                window.showIlluAlert(
-                    window.IlluI18n && typeof window.IlluI18n.t === 'function'
-                        ? window.IlluI18n.t('fonts.localUnavailable')
-                        : 'Les polices du système ne sont pas lisibles dans ce navigateur. Utilisez Chrome ou Edge en HTTPS, ou choisissez une police dans la liste.'
-                );
+    // Auto-load local fonts from fonts directory
+    fetch('fonts-api.php')
+        .then(r => r.json())
+        .then(fonts => {
+            if (!fonts || !fonts.length) return;
+
+            let style = document.getElementById('illu-local-fonts');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'illu-local-fonts';
+                document.head.appendChild(style);
             }
-            return;
-        }
-        let fonts;
-        try {
-            fonts = await window.queryLocalFonts();
-        } catch (err) {
-            if (typeof window.showIlluAlert === 'function') {
-                window.showIlluAlert(
-                    (window.IlluI18n && window.IlluI18n.t('fonts.localDenied')) || 'Accès aux polices refusé ou annulé.'
-                );
-            }
-            return;
-        }
-        const sel = document.getElementById('tool-text-font');
-        if (!sel || !fonts || !fonts.length) return;
 
-        const families = [...new Set(fonts.map((f) => f.family).filter(Boolean))];
-        families.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            let css = '';
 
-        let og = document.getElementById('illu-text-font-local-optgroup');
-        if (og) {
-            og.remove();
-        }
-        og = document.createElement('optgroup');
-        og.id = 'illu-text-font-local-optgroup';
-        og.label = groupLabel('fonts.groupLocal', 'Polices locales (OS)');
-        families.forEach((fam) => {
-            const o = document.createElement('option');
-            o.value = cssStackForFamilyName(fam);
-            o.textContent = fam;
-            o.style.fontFamily = o.value;
-            og.appendChild(o);
-        });
-        sel.appendChild(og);
-        og.hidden = false;
+            // Define categories
+            let categories = {
+                'Manuscrit (Local)': [],
+                'Fantastique (Local)': [],
+                'Informatique (Local)': [],
+                'Autres (Local)': []
+            };
+            let families = {};
 
-        if (typeof window.syncIlluTextFontSelectFromToolProps === 'function') {
-            window.syncIlluTextFontSelectFromToolProps();
-        }
-    };
+            fonts.forEach(f => {
+                css += `@font-face { font-family: "${f.name}"; src: url("${f.url}"); }\n`;
+                const n = f.name.toLowerCase();
+                const item = [`"${f.name}"`, f.name];
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const btn = document.getElementById('tool-text-font-scan');
-        if (btn) {
-            btn.addEventListener('click', () => {
-                window.loadIlluLocalFonts();
+                if (n.includes('minecraft') || n.startsWith('star ') || n.includes('magic') || n.includes('fantasy')) {
+                    categories['Fantastique (Local)'].push(item);
+                }
+                else if (n.includes('pixel') || n.includes('7 segment') || n.includes('7segment') || n.includes('digital') || n.includes('lcd') || n.includes('bit') || n.includes('computer') || n.includes('tech')) {
+                    categories['Informatique (Local)'].push(item);
+                }
+                else if (n.includes('marker') || n.includes('pen ') || n.includes('pencil') || n.includes('script') || n.includes('hand') || n.includes('brush') || n.includes('chalk') || n.includes('crayon') || n.includes('feutre')) {
+                    categories['Manuscrit (Local)'].push(item);
+                }
+                else {
+                    categories['Autres (Local)'].push(item);
+                }
             });
-        }
-    });
+
+            for (let cat in categories) {
+                if (categories[cat].length > 0) {
+                    PRESETS.push({
+                        key: 'fonts.group' + cat.replace(/\s+/g, ''),
+                        fb: cat,
+                        items: categories[cat]
+                    });
+                }
+            }
+
+            style.textContent = css;
+
+            // Refresh select
+            if (typeof window.populateIlluTextFontSelect === 'function') {
+                window.populateIlluTextFontSelect();
+            }
+        })
+        .catch(e => console.log('No local fonts found or error fetching fonts-api.php:', e));
 })();

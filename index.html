@@ -19,9 +19,9 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Anton&family=Bangers&family=Bebas+Neue&family=Caveat&family=Cinzel&family=Creepster&family=Crimson+Text&family=Dancing+Script&family=EB+Garamond&family=Fira+Code&family=Great+Vibes&family=Inconsolata&family=Indie+Flower&family=Inter&family=Lato&family=Lobster&family=Lora&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=Pacifico&family=Permanent+Marker&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=PT+Serif&family=Righteous&family=Roboto&family=Satisfy&family=Source+Code+Pro&family=Ubuntu&family=VT323&display=swap"
-        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Anton&family=Audiowide&family=Bangers&family=Bebas+Neue&family=Black+Ops+One&family=Bungee&family=Caveat&family=Cinzel&family=Creepster&family=Crimson+Text&family=Dancing+Script&family=DotGothic16&family=EB+Garamond&family=Fira+Code&family=Great+Vibes&family=Inconsolata&family=Indie+Flower&family=Inter&family=Lato&family=Lobster&family=Lora&family=Merriweather&family=Michroma&family=Montserrat&family=Nunito&family=Open+Sans&family=Orbitron&family=Oswald&family=Pacifico&family=Permanent+Marker&family=Pixelify+Sans&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=PT+Serif&family=Righteous&family=Roboto&family=Russo+One&family=Satisfy&family=Share+Tech+Mono&family=Silkscreen&family=Source+Code+Pro&family=Ubuntu&family=VT323&display=swap"
+        crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
@@ -602,12 +602,15 @@
                                     id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
                                 class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
                                 data-i18n="menu.winRulers">Règles</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
+                        <li role="menuitem" class="menu-row-icon"
+                            onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
                             <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
                                     id="menu-win-snap-edges-check" style="visibility: hidden;"></i></span><i
                                 class="fa-solid fa-magnet" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.winSnapEdges">Aimantation des bords</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="window.illuOpenSnapSettings && window.illuOpenSnapSettings()">
+                                data-i18n="menu.winSnapEdges">Aimantation des bords</span>
+                        </li>
+                        <li role="menuitem" class="menu-row-icon"
+                            onclick="window.illuOpenSnapSettings && window.illuOpenSnapSettings()">
                             <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span>
                             <span>Paramètres aimantation…</span>
                         </li>
@@ -759,15 +762,11 @@
             <!-- Tool Options Toolbars -->
             <div id="tool-options-container" class="illu-app-toolbars-container">
 
-                <!-- Consolidated Top Options Bar (Actions & Tool Config) -->
-                <div id="tool-options-bar-row1" class="tool-options-bar illu-toolbar-ribbon-row">
-                    <div id="tool-pinned-toggles" class="tool-pinned-toggles" role="group"
-                        aria-label="Modes et actions sélection">
-                        <div id="tool-main-header" class="illu-tool-header" tabindex="0" role="combobox"
-                            aria-haspopup="listbox" aria-controls="illu-tool-list-select"
-                            data-i18n-aria-label="title.activeTool">
-                            <select id="illu-tool-list-select"
-                                class="illu-select-mini illu-tool-picker-select opt-tool-name"
+                <div class="illu-ribbon-group" data-illu-ribbon-group="tool">
+                    <div class="illu-ribbon-group-body">
+                        <div id="tool-main-header" class="illu-tool-header" tabindex="0" role="combobox" aria-haspopup="listbox"
+                            aria-controls="illu-tool-list-select" data-i18n-aria-label="title.activeTool">
+                            <select id="illu-tool-list-select" class="illu-select-mini illu-tool-picker-select opt-tool-name"
                                 data-i18n-title="title.activeTool" tabindex="-1" aria-hidden="true">
                                 <option value="select" data-i18n="tool.select">Sélection</option>
                                 <option value="direct-select" data-i18n="tool.direct-select">Lasso</option>
@@ -790,8 +789,7 @@
                                 <option value="diamond" data-i18n="tool.diamond">Losange</option>
                                 <option value="trapezoid" data-i18n="tool.trapezoid">Trapèze</option>
                                 <option value="parallelogram" data-i18n="tool.parallelogram">Parallélogramme</option>
-                                <option value="triangle-right" data-i18n="tool.triangle-right">Triangle rectangle
-                                </option>
+                                <option value="triangle-right" data-i18n="tool.triangle-right">Triangle rectangle</option>
                                 <option value="callout" data-i18n="tool.callout">Légende</option>
                                 <option value="line" data-i18n="tool.line">Ligne</option>
                                 <option value="round-3" data-i18n="tool.round-3">Rect. arrondi</option>
@@ -807,12 +805,16 @@
                                 <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
                             </label>
                         </div>
+                    </div>
+                    <span class="illu-ribbon-group-label" data-i18n="ribbon.groupTool">Outil</span>
+                </div>
 
+                <div class="illu-ribbon-group" data-illu-ribbon-group="shape-picker">
+                    <div class="illu-ribbon-group-body">
                         <div id="illu-shape-picker-wrap" class="illu-shape-picker-wrap" hidden>
                             <div id="illu-shape-picker-header" class="illu-tool-header illu-shape-picker-header"
-                                tabindex="0" role="button" aria-haspopup="menu"
-                                aria-controls="illu-shape-picker-popup" aria-expanded="false"
-                                data-i18n-aria-label="shapePicker.ariaLabel">
+                                tabindex="0" role="button" aria-haspopup="menu" aria-controls="illu-shape-picker-popup"
+                                aria-expanded="false" data-i18n-aria-label="shapePicker.ariaLabel">
                                 <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
                                     <span id="illu-shape-picker-icon" class="illu-tool-header-icon"
                                         aria-hidden="true"></span>
@@ -822,6 +824,400 @@
                             </div>
                             <div id="illu-shape-picker-popup" class="illu-shape-picker-popup" hidden role="menu"></div>
                         </div>
+                    </div>
+                    <span class="illu-ribbon-group-label" data-i18n="ribbon.groupShapePicker">Forme</span>
+                </div>
+
+
+                <!-- BAR 2: Consolidated Parameters (Bottom) -->
+                <div id="tool-options-bar-2" class="tool-options-bar illu-toolbar-ribbon-row" hidden>
+                    <div id="opt-grp-size-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span class="field-row illu-gauge-field">
+                            <label for="tool-size" class="illu-opt-lbl" data-i18n="tools.size">Taille</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-size-val">5</span>
+                                <input type="range" id="tool-size" class="illu-gauge-input" min="1" max="600" value="5">
+                            </span>
+                        </span>
+                        <span id="tool-line-contour-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-line-contour" class="illu-opt-lbl"
+                                data-i18n="tools.lineContour">Contour</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-line-contour-val">0</span>
+                                <input type="range" id="tool-line-contour" class="illu-gauge-input" min="0" max="128"
+                                    value="0">
+                            </span>
+                        </span>
+                        <span id="tool-brush-hardness-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
+                                title="Dureté">Dureté</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-brush-hardness-val">100</span>
+                                <input type="range" id="tool-brush-hardness" class="illu-gauge-input" min="0" max="100"
+                                    value="100">
+                            </span>
+                        </span>
+                        <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
+                            <label class="opt-bar-check">
+                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1"
+                                    disabled>
+                                <span data-i18n="tools.optClosePath">Fermer</span>
+                            </label>
+                        </span>
+                    </div>
+                    <div id="opt-grp-symmetry-params" class="opt-grp illu-ribbon-group"
+                        data-illu-ribbon-group="symmetry" hidden>
+                        <div class="illu-ribbon-group-body">
+                            <span
+                                class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-1"
+                                id="illu-sym-toggle-group">
+                                <span
+                                    class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                    <button type="button" id="tool-sym-x-btn"
+                                        class="illu-icon-toggle illu-mode-toggle-btn"
+                                        title="Sym. X — Symétrie horizontale" aria-pressed="false">
+                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16"
+                                            aria-hidden="true">
+                                            <use href="icons/illu-sprite.svg#illu-icon-sym-x" />
+                                        </svg>
+                                        <span class="illu-mode-toggle-lbl">Sym. X</span>
+                                    </button>
+                                </span>
+                                <span
+                                    class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                    <button type="button" id="tool-sym-y-btn"
+                                        class="illu-icon-toggle illu-mode-toggle-btn"
+                                        title="Sym. Y — Symétrie verticale" aria-pressed="false">
+                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16"
+                                            aria-hidden="true">
+                                            <use href="icons/illu-sprite.svg#illu-icon-sym-y" />
+                                        </svg>
+                                        <span class="illu-mode-toggle-lbl">Sym. Y</span>
+                                    </button>
+                                </span>
+                                <!-- Checkboxes cachées pour compatibilité avec le code existant -->
+                                <input type="checkbox" id="tool-sym-x" style="display:none" aria-hidden="true">
+                                <input type="checkbox" id="tool-sym-y" style="display:none" aria-hidden="true">
+                            </span>
+                        </div>
+                        <span class="illu-ribbon-group-label" data-i18n="ribbon.groupSymmetry">Symétrie</span>
+                    </div>
+                    <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
+                        <label class="opt-bar-check">
+                            <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1" disabled>
+                            <span data-i18n="tools.optClosePath">Fermer</span>
+                        </label>
+                    </span>
+
+                    <div id="opt-grp-eyedropper-params" class="opt-grp illu-ribbon-param-pack illu-eyedropper-info"
+                        hidden>
+                        <div class="illu-eyedropper-preview" data-i18n-title="eyedropper.preview">
+                            <span id="eyedropper-swatch" class="illu-eyedropper-swatch" role="img"
+                                aria-labelledby="eyedropper-hex"></span>
+                        </div>
+                        <div class="illu-eyedropper-values">
+                            <span class="illu-eyedropper-line">
+                                <span class="illu-opt-lbl" data-i18n="eyedropper.hex">HEX</span>
+                                <code id="eyedropper-hex" class="illu-eyedropper-code">#000000</code>
+                            </span>
+                            <span class="illu-eyedropper-line">
+                                <span class="illu-opt-lbl" data-i18n="eyedropper.rgb">RGB</span>
+                                <span id="eyedropper-rgb" class="illu-eyedropper-val">0 · 0 · 0</span>
+                            </span>
+                            <span class="illu-eyedropper-line">
+                                <span class="illu-opt-lbl" data-i18n="eyedropper.ral">RAL</span>
+                                <span id="eyedropper-ral" class="illu-eyedropper-val" title="">—</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div id="opt-grp-wand-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.wandMode">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="wand-mode"
+                                    data-illu-value="contiguous" data-i18n-title="wand.contiguous"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-mode-contiguous" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="wand.contiguousShort">Contigu</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="wand-mode"
+                                    data-illu-value="similar" data-i18n-title="wand.similar"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-mode-layer" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="wand.similarShort">Calque</span>
+                            </span>
+                        </span>
+                        <div class="opt-sep"></div>
+                        <span class="field-row illu-gauge-field">
+                            <label for="wand-tolerance" class="illu-opt-lbl" data-i18n="tools.wandToleranceShort"
+                                data-i18n-title="tools.wandTolerance">Tol.</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="wand-tolerance-val">32</span>
+                                <input type="range" id="wand-tolerance" class="illu-gauge-input" min="0" max="128"
+                                    value="32">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-fill-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked"
+                        hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-fill-mode-group"
+                            data-i18n-title="tools.fillMode">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
+                                    data-illu-value="contiguous" data-i18n-title="fill.contiguous"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-mode-contiguous" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="fill.contiguousShort">Contigu</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
+                                    data-illu-value="layer" data-i18n-title="fill.layer"><svg class="illu-shape-ico"
+                                        width="16" height="16">
+                                        <use href="#illu-icon-mode-layer" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="fill.layerShort">Calque</span>
+                            </span>
+                        </span>
+                        <div class="opt-sep"></div>
+                        <span class="field-row illu-gauge-field">
+                            <label for="fill-tolerance" class="illu-opt-lbl" data-i18n="tools.fillToleranceShort"
+                                data-i18n-title="tools.fillTolerance">Tol.</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="fill-tolerance-val">0</span>
+                                <input type="range" id="fill-tolerance" class="illu-gauge-input" min="0" max="128"
+                                    value="0">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-shapes-params" class="opt-grp" hidden>
+                        <span id="tool-shape-mode-row" class="field-row">
+                            <label data-i18n="tools.shapeFillStyle">Style rempl.</label>
+                        </span>
+                        <div class="opt-sep"></div>
+                        <span id="tool-triangle-branches-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-triangle-branches" class="illu-opt-lbl"
+                                data-i18n="tools.starBranches">Branches étoile</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-triangle-branches-val">5</span>
+                                <input type="range" id="tool-triangle-branches" class="illu-gauge-input" min="4"
+                                    max="24" value="5" step="1">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="tool-triangle-branches-sep"></div>
+                        <span id="tool-polygon-sides-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-polygon-sides" class="illu-opt-lbl"
+                                data-i18n="tools.polygonSides">Faces</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-polygon-sides-val">6</span>
+                                <input type="range" id="tool-polygon-sides" class="illu-gauge-input" min="3" max="24"
+                                    value="6" step="1">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="tool-polygon-sides-sep"></div>
+                        <span id="tool-callout-style-row" class="field-row" hidden>
+                            <label class="illu-opt-lbl" data-i18n="tools.calloutStyle">Style bulle</label>
+                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-callout-style-group">
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle active" data-illu-callout-style="rect"
+                                        data-i18n-title="shape.calloutRect"><i class="fa-regular fa-comment"
+                                            aria-hidden="true"></i></button>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="round"
+                                        data-i18n-title="shape.calloutRound"><i class="fa-regular fa-comment-dots"
+                                            aria-hidden="true"></i></button>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="oval"
+                                        data-i18n-title="shape.calloutOval"><i class="fa-regular fa-comment"
+                                            aria-hidden="true"></i></button>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="cloud"
+                                        data-i18n-title="shape.calloutCloud"><i class="fa-regular fa-cloud"
+                                            aria-hidden="true"></i></button>
+                                </span>
+                            </span>
+                            <select id="tool-callout-style" style="display:none!important;" aria-hidden="true"
+                                tabindex="-1">
+                                <option value="rect">rect</option>
+                                <option value="round">round</option>
+                                <option value="oval">oval</option>
+                                <option value="cloud">cloud</option>
+                            </select>
+                        </span>
+                        <div class="opt-sep" id="tool-callout-style-sep"></div>
+                        <span id="tool-shape-corner-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-shape-corner-radius" class="illu-opt-lbl"
+                                data-i18n="tools.shapeCornerRadius">Arrondi</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-shape-corner-radius-val">12</span>
+                                <input type="range" id="tool-shape-corner-radius" class="illu-gauge-input" min="0"
+                                    max="256" value="12">
+                            </span>
+                        </span>
+                        <div class="opt-sep"></div>
+                        <span id="tool-shape-grad-angle-row" class="field-row illu-gauge-field">
+                            <label for="tool-shape-grad-angle" class="illu-opt-lbl"
+                                data-i18n="tools.shapeGradAngle">Angle lin. °</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-shape-grad-angle-val">0</span>
+                                <input type="range" id="tool-shape-grad-angle" class="illu-gauge-input" min="0"
+                                    max="360" value="0">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-text-params" class="opt-grp" hidden>
+                        <span id="tool-text-font-size-stack" class="illu-text-font-size-stack">
+                            <span class="field-row illu-gauge-field illu-text-font-row">
+                                <label for="tool-text-font" class="illu-opt-lbl"
+                                    data-i18n="tools.textFont">Police</label>
+                                <select id="tool-text-font" class="illu-select-mini illu-text-font-select">
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="Verdana, sans-serif">Verdana</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                    <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                                </select>
+                            </span>
+                            <span class="field-row illu-gauge-field">
+                                <label for="tool-text-size" class="illu-opt-lbl"
+                                    data-i18n="tools.textSize">Taille</label>
+                                <span class="illu-gauge-wrap">
+                                    <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                    <span class="illu-gauge-val" id="tool-text-size-val">18</span>
+                                    <input type="range" id="tool-text-size" class="illu-gauge-input" min="8" max="500"
+                                        value="18">
+                                </span>
+                            </span>
+                            <span id="tool-text-stroke-w-row" class="field-row illu-gauge-field illu-text-stroke-w-row">
+                                <label for="tool-text-stroke-w" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Ép.
+                                    contour</label>
+                                <span class="illu-gauge-wrap">
+                                    <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                    <span class="illu-gauge-val" id="tool-text-stroke-w-val">2</span>
+                                    <input type="range" id="tool-text-stroke-w" class="illu-gauge-input" min="1"
+                                        max="150" value="2" disabled>
+                                </span>
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="tool-text-grad-angle-sep"></div>
+                        <span id="tool-text-grad-angle-row" class="field-row illu-gauge-field" hidden>
+                            <label for="tool-text-grad-angle" class="illu-opt-lbl"
+                                data-i18n="tools.shapeGradAngle">Angle lin. °</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="tool-text-grad-angle-val">0</span>
+                                <input type="range" id="tool-text-grad-angle" class="illu-gauge-input" min="0" max="360"
+                                    value="0">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-vector-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span id="vector-prop-stroke-w-row" class="field-row illu-gauge-field">
+                            <label for="vector-prop-stroke-width" class="illu-opt-lbl"
+                                data-i18n="tools.textStrokeW">Contour</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-stroke-width-val">0</span>
+                                <input type="range" id="vector-prop-stroke-width" class="illu-gauge-input" min="0"
+                                    max="150" value="0">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="vector-prop-grad-angle-sep"></div>
+                        <span id="vector-prop-grad-angle-row" class="field-row illu-gauge-field">
+                            <label for="vector-prop-grad-angle" class="illu-opt-lbl"
+                                data-i18n="tools.shapeGradAngle">Angle °</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-grad-angle-val">0</span>
+                                <input type="range" id="vector-prop-grad-angle" class="illu-gauge-input" min="0"
+                                    max="360" value="0">
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="vector-prop-corner-radius-sep"></div>
+                        <span id="vector-prop-corner-radius-wrap" class="field-row illu-gauge-field">
+                            <label for="vector-prop-corner-radius" class="illu-opt-lbl"
+                                data-i18n="tools.shapeCornerRadius">Arrondi</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="vector-prop-corner-radius-val">0</span>
+                                <input type="range" id="vector-prop-corner-radius" class="illu-gauge-input" min="0"
+                                    max="256" value="0">
+                            </span>
+                        </span>
+                    </div>
+
+                    <div id="opt-grp-warp-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked"
+                        hidden>
+                        <span id="opt-warp-resample-wrap">
+                            <span class="illu-opt-lbl" data-i18n="settings.resampleRibbonShort">Interp.</span>
+                            <select id="tool-warp-resampling" class="illu-select-mini"
+                                onchange="if(window.EditorManager) window.EditorManager.toolProps.warpResampling = this.value">
+                                <option value="smooth" data-i18n="settings.resampleSmooth">Lissage</option>
+                                <option value="nearest" data-i18n="settings.resampleNearest">Plus proche</option>
+                            </select>
+                        </span>
+                        <span id="opt-warp-outside-canvas-wrap" class="illu-opt-inline illu-opt-check-row"
+                            style="display: none !important;">
+                            <label class="illu-opt-check" for="tool-allow-outside-canvas">
+                                <input type="checkbox" id="tool-allow-outside-canvas" value="1">
+                                <span class="illu-opt-lbl" data-i18n="tools.allowOutsideCanvasShort"
+                                    data-i18n-title="tools.allowOutsideCanvas">Hors toile</span>
+                            </label>
+                        </span>
+                        <div id="opt-warp-resample-sep" class="opt-sep"></div>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-warp-bar-toggles">
+                            <span class="illu-mode-toggle-item" id="opt-warp-quad-rect-lock-wrap" hidden>
+                                <button type="button" id="warp-quad-rect-lock" class="illu-icon-toggle"
+                                    data-i18n-title="tools.warpRectLock" aria-pressed="false"><svg
+                                        class="illu-shape-ico" width="16" height="16">
+                                        <use href="#illu-icon-warp-rect-lock" />
+                                    </svg></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.warpRectLockShort">Rect.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item" id="opt-warp-quad-snap-wrap" hidden>
+                                <button type="button" id="warp-quad-snap-rect-btn" class="illu-icon-toggle"
+                                    data-i18n-title="tools.warpSnapRect" aria-pressed="false"><i
+                                        class="fa-solid fa-vector-square illu-shape-ico"
+                                        aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="tools.warpSnapRectShort">Align.</span>
+                            </span>
+                            <span class="illu-mode-toggle-item" id="opt-select-quad-to-warp-wrap" hidden>
+                                <button type="button" id="opt-select-quad-to-warp-btn" class="illu-icon-toggle"
+                                    data-i18n-title="tools.selectQuadToWarp" aria-pressed="false"><i
+                                        class="fa-solid fa-up-right-and-down-left-from-center illu-shape-ico"
+                                        aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl"
+                                    data-i18n="tools.selectQuadToWarpShort">Déform.</span>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Consolidated Top Options Bar (Actions & Tool Config) -->
+                <div id="tool-options-bar-row1" class="tool-options-bar illu-toolbar-ribbon-row">
+                    <div id="tool-pinned-toggles" class="tool-pinned-toggles" role="group"
+                        aria-label="Modes et actions sélection">
 
                         <span class="illu-icon-toggle-group illu-mode-toggle-group" id="selection-mode-group"
                             data-i18n-title="title.selectionModeGroup" hidden>
@@ -1046,8 +1442,8 @@
                                         toile</span>
                                 </span>
                                 <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle opt-toggle-snap" id="ribbon-snap-toggle"
-                                        title="Aimantation (Clic droit pour les paramètres)"
+                                    <button type="button" class="illu-icon-toggle opt-toggle-snap"
+                                        id="ribbon-snap-toggle" title="Aimantation (Clic droit pour les paramètres)"
                                         onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()"
                                         oncontextmenu="event.preventDefault(); if(window.illuOpenSnapSettings) window.illuOpenSnapSettings();">
                                         <i class="fa-solid fa-magnet"></i>
@@ -1624,376 +2020,6 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- BAR 2: Consolidated Parameters (Bottom) -->
-                <div id="tool-options-bar-2" class="tool-options-bar illu-toolbar-ribbon-row" hidden>
-                    <div id="opt-grp-size-params" class="opt-grp illu-ribbon-param-pack" hidden>
-                        <span class="field-row illu-gauge-field">
-                            <label for="tool-size" class="illu-opt-lbl" data-i18n="tools.size">Taille</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-size-val">5</span>
-                                <input type="range" id="tool-size" class="illu-gauge-input" min="1" max="600" value="5">
-                            </span>
-                        </span>
-                        <span id="tool-line-contour-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-line-contour" class="illu-opt-lbl"
-                                data-i18n="tools.lineContour">Contour</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-line-contour-val">0</span>
-                                <input type="range" id="tool-line-contour" class="illu-gauge-input" min="0" max="128"
-                                    value="0">
-                            </span>
-                        </span>
-                        <span id="tool-brush-hardness-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-brush-hardness" class="illu-opt-lbl" data-i18n="tools.brushHardnessShort"
-                                title="Dureté">Dureté</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-brush-hardness-val">100</span>
-                                <input type="range" id="tool-brush-hardness" class="illu-gauge-input" min="0" max="100"
-                                    value="100">
-                            </span>
-                        </span>
-                        <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
-                            <label class="opt-bar-check">
-                                <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1"
-                                    disabled>
-                                <span data-i18n="tools.optClosePath">Fermer</span>
-                            </label>
-                        </span>
-                    </div>
-                    <div id="opt-grp-symmetry-params" class="opt-grp illu-ribbon-group" data-illu-ribbon-group="symmetry" hidden>
-                        <div class="illu-ribbon-group-body">
-                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-1" id="illu-sym-toggle-group">
-                                <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
-                                    <button type="button" id="tool-sym-x-btn" class="illu-icon-toggle illu-mode-toggle-btn" title="Sym. X — Symétrie horizontale" aria-pressed="false">
-                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16" aria-hidden="true"><use href="icons/illu-sprite.svg#illu-icon-sym-x"/></svg>
-                                        <span class="illu-mode-toggle-lbl">Sym. X</span>
-                                    </button>
-                                </span>
-                                <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
-                                    <button type="button" id="tool-sym-y-btn" class="illu-icon-toggle illu-mode-toggle-btn" title="Sym. Y — Symétrie verticale" aria-pressed="false">
-                                        <svg class="tool-icon" style="width:16px;height:16px;" viewBox="0 0 16 16" aria-hidden="true"><use href="icons/illu-sprite.svg#illu-icon-sym-y"/></svg>
-                                        <span class="illu-mode-toggle-lbl">Sym. Y</span>
-                                    </button>
-                                </span>
-                                <!-- Checkboxes cachées pour compatibilité avec le code existant -->
-                                <input type="checkbox" id="tool-sym-x" style="display:none" aria-hidden="true">
-                                <input type="checkbox" id="tool-sym-y" style="display:none" aria-hidden="true">
-                            </span>
-                        </div>
-                        <span class="illu-ribbon-group-label" data-i18n="ribbon.groupSymmetry">Symétrie</span>
-                    </div>
-                    <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
-                        <label class="opt-bar-check">
-                            <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1" disabled>
-                            <span data-i18n="tools.optClosePath">Fermer</span>
-                        </label>
-                    </span>
-
-                    <div id="opt-grp-eyedropper-params" class="opt-grp illu-ribbon-param-pack illu-eyedropper-info"
-                        hidden>
-                        <div class="illu-eyedropper-preview" data-i18n-title="eyedropper.preview">
-                            <span id="eyedropper-swatch" class="illu-eyedropper-swatch" role="img"
-                                aria-labelledby="eyedropper-hex"></span>
-                        </div>
-                        <div class="illu-eyedropper-values">
-                            <span class="illu-eyedropper-line">
-                                <span class="illu-opt-lbl" data-i18n="eyedropper.hex">HEX</span>
-                                <code id="eyedropper-hex" class="illu-eyedropper-code">#000000</code>
-                            </span>
-                            <span class="illu-eyedropper-line">
-                                <span class="illu-opt-lbl" data-i18n="eyedropper.rgb">RGB</span>
-                                <span id="eyedropper-rgb" class="illu-eyedropper-val">0 · 0 · 0</span>
-                            </span>
-                            <span class="illu-eyedropper-line">
-                                <span class="illu-opt-lbl" data-i18n="eyedropper.ral">RAL</span>
-                                <span id="eyedropper-ral" class="illu-eyedropper-val" title="">—</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <div id="opt-grp-wand-params" class="opt-grp illu-ribbon-param-pack" hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group" data-i18n-title="title.wandMode">
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="wand-mode"
-                                    data-illu-value="contiguous" data-i18n-title="wand.contiguous"><svg
-                                        class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-mode-contiguous" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="wand.contiguousShort">Contigu</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="wand-mode"
-                                    data-illu-value="similar" data-i18n-title="wand.similar"><svg class="illu-shape-ico"
-                                        width="16" height="16">
-                                        <use href="#illu-icon-mode-layer" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="wand.similarShort">Calque</span>
-                            </span>
-                        </span>
-                        <div class="opt-sep"></div>
-                        <span class="field-row illu-gauge-field">
-                            <label for="wand-tolerance" class="illu-opt-lbl" data-i18n="tools.wandToleranceShort"
-                                data-i18n-title="tools.wandTolerance">Tol.</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="wand-tolerance-val">32</span>
-                                <input type="range" id="wand-tolerance" class="illu-gauge-input" min="0" max="128"
-                                    value="32">
-                            </span>
-                        </span>
-                    </div>
-
-                    <div id="opt-grp-fill-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked"
-                        hidden>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-fill-mode-group"
-                            data-i18n-title="tools.fillMode">
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
-                                    data-illu-value="contiguous" data-i18n-title="fill.contiguous"><svg
-                                        class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-mode-contiguous" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="fill.contiguousShort">Contigu</span>
-                            </span>
-                            <span class="illu-mode-toggle-item">
-                                <button type="button" class="illu-icon-toggle" data-illu-sync="fill-mode"
-                                    data-illu-value="layer" data-i18n-title="fill.layer"><svg class="illu-shape-ico"
-                                        width="16" height="16">
-                                        <use href="#illu-icon-mode-layer" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="fill.layerShort">Calque</span>
-                            </span>
-                        </span>
-                        <div class="opt-sep"></div>
-                        <span class="field-row illu-gauge-field">
-                            <label for="fill-tolerance" class="illu-opt-lbl" data-i18n="tools.fillToleranceShort"
-                                data-i18n-title="tools.fillTolerance">Tol.</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="fill-tolerance-val">0</span>
-                                <input type="range" id="fill-tolerance" class="illu-gauge-input" min="0" max="128"
-                                    value="0">
-                            </span>
-                        </span>
-                    </div>
-
-                    <div id="opt-grp-shapes-params" class="opt-grp" hidden>
-                        <span id="tool-shape-mode-row" class="field-row">
-                            <label data-i18n="tools.shapeFillStyle">Style rempl.</label>
-                        </span>
-                        <div class="opt-sep"></div>
-                        <span id="tool-triangle-branches-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-triangle-branches" class="illu-opt-lbl"
-                                data-i18n="tools.starBranches">Branches étoile</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-triangle-branches-val">5</span>
-                                <input type="range" id="tool-triangle-branches" class="illu-gauge-input" min="4"
-                                    max="24" value="5" step="1">
-                            </span>
-                        </span>
-                        <div class="opt-sep" id="tool-triangle-branches-sep"></div>
-                        <span id="tool-polygon-sides-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-polygon-sides" class="illu-opt-lbl"
-                                data-i18n="tools.polygonSides">Faces</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-polygon-sides-val">6</span>
-                                <input type="range" id="tool-polygon-sides" class="illu-gauge-input" min="3" max="24"
-                                    value="6" step="1">
-                            </span>
-                        </span>
-                        <div class="opt-sep" id="tool-polygon-sides-sep"></div>
-                        <span id="tool-callout-style-row" class="field-row" hidden>
-                            <label class="illu-opt-lbl" data-i18n="tools.calloutStyle">Style bulle</label>
-                            <span class="illu-icon-toggle-group illu-mode-toggle-group illu-callout-style-group">
-                                <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle active" data-illu-callout-style="rect"
-                                        data-i18n-title="shape.calloutRect"><i class="fa-regular fa-comment"
-                                            aria-hidden="true"></i></button>
-                                </span>
-                                <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="round"
-                                        data-i18n-title="shape.calloutRound"><i class="fa-regular fa-comment-dots"
-                                            aria-hidden="true"></i></button>
-                                </span>
-                                <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="oval"
-                                        data-i18n-title="shape.calloutOval"><i class="fa-regular fa-comment"
-                                            aria-hidden="true"></i></button>
-                                </span>
-                                <span class="illu-mode-toggle-item">
-                                    <button type="button" class="illu-icon-toggle" data-illu-callout-style="cloud"
-                                        data-i18n-title="shape.calloutCloud"><i class="fa-regular fa-cloud"
-                                            aria-hidden="true"></i></button>
-                                </span>
-                            </span>
-                            <select id="tool-callout-style" style="display:none!important;" aria-hidden="true"
-                                tabindex="-1">
-                                <option value="rect">rect</option>
-                                <option value="round">round</option>
-                                <option value="oval">oval</option>
-                                <option value="cloud">cloud</option>
-                            </select>
-                        </span>
-                        <div class="opt-sep" id="tool-callout-style-sep"></div>
-                        <span id="tool-shape-corner-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-shape-corner-radius" class="illu-opt-lbl"
-                                data-i18n="tools.shapeCornerRadius">Arrondi</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-shape-corner-radius-val">12</span>
-                                <input type="range" id="tool-shape-corner-radius" class="illu-gauge-input" min="0"
-                                    max="256" value="12">
-                            </span>
-                        </span>
-                        <div class="opt-sep"></div>
-                        <span id="tool-shape-grad-angle-row" class="field-row illu-gauge-field">
-                            <label for="tool-shape-grad-angle" class="illu-opt-lbl"
-                                data-i18n="tools.shapeGradAngle">Angle lin. °</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-shape-grad-angle-val">0</span>
-                                <input type="range" id="tool-shape-grad-angle" class="illu-gauge-input" min="0"
-                                    max="360" value="0">
-                            </span>
-                        </span>
-                    </div>
-
-                    <div id="opt-grp-text-params" class="opt-grp" hidden>
-                        <span id="tool-text-font-size-stack" class="illu-text-font-size-stack">
-                            <span class="field-row illu-gauge-field illu-text-font-row">
-                                <label for="tool-text-font" class="illu-opt-lbl"
-                                    data-i18n="tools.textFont">Police</label>
-                                <select id="tool-text-font" class="illu-select-mini illu-text-font-select">
-                                    <option value="Arial, sans-serif">Arial</option>
-                                    <option value="'Courier New', monospace">Courier New</option>
-                                    <option value="'Times New Roman', serif">Times New Roman</option>
-                                    <option value="Verdana, sans-serif">Verdana</option>
-                                    <option value="Georgia, serif">Georgia</option>
-                                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                                    <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
-                                </select>
-                            </span>
-                            <span class="field-row illu-gauge-field">
-                                <label for="tool-text-size" class="illu-opt-lbl"
-                                    data-i18n="tools.textSize">Taille</label>
-                                <span class="illu-gauge-wrap">
-                                    <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                    <span class="illu-gauge-val" id="tool-text-size-val">18</span>
-                                    <input type="range" id="tool-text-size" class="illu-gauge-input" min="8" max="500"
-                                        value="18">
-                                </span>
-                            </span>
-                            <span id="tool-text-stroke-w-row" class="field-row illu-gauge-field illu-text-stroke-w-row">
-                                <label for="tool-text-stroke-w" class="illu-opt-lbl" data-i18n="tools.textStrokeW">Ép.
-                                    contour</label>
-                                <span class="illu-gauge-wrap">
-                                    <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                    <span class="illu-gauge-val" id="tool-text-stroke-w-val">2</span>
-                                    <input type="range" id="tool-text-stroke-w" class="illu-gauge-input" min="1"
-                                        max="150" value="2" disabled>
-                                </span>
-                            </span>
-                        </span>
-                        <div class="opt-sep" id="tool-text-grad-angle-sep"></div>
-                        <span id="tool-text-grad-angle-row" class="field-row illu-gauge-field" hidden>
-                            <label for="tool-text-grad-angle" class="illu-opt-lbl"
-                                data-i18n="tools.shapeGradAngle">Angle lin. °</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="tool-text-grad-angle-val">0</span>
-                                <input type="range" id="tool-text-grad-angle" class="illu-gauge-input" min="0" max="360"
-                                    value="0">
-                            </span>
-                        </span>
-                    </div>
-
-                    <div id="opt-grp-vector-params" class="opt-grp illu-ribbon-param-pack" hidden>
-                        <span id="vector-prop-stroke-w-row" class="field-row illu-gauge-field">
-                            <label for="vector-prop-stroke-width" class="illu-opt-lbl"
-                                data-i18n="tools.textStrokeW">Contour</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="vector-prop-stroke-width-val">0</span>
-                                <input type="range" id="vector-prop-stroke-width" class="illu-gauge-input" min="0"
-                                    max="150" value="0">
-                            </span>
-                        </span>
-                        <div class="opt-sep" id="vector-prop-grad-angle-sep"></div>
-                        <span id="vector-prop-grad-angle-row" class="field-row illu-gauge-field">
-                            <label for="vector-prop-grad-angle" class="illu-opt-lbl"
-                                data-i18n="tools.shapeGradAngle">Angle °</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="vector-prop-grad-angle-val">0</span>
-                                <input type="range" id="vector-prop-grad-angle" class="illu-gauge-input" min="0"
-                                    max="360" value="0">
-                            </span>
-                        </span>
-                        <div class="opt-sep" id="vector-prop-corner-radius-sep"></div>
-                        <span id="vector-prop-corner-radius-wrap" class="field-row illu-gauge-field">
-                            <label for="vector-prop-corner-radius" class="illu-opt-lbl"
-                                data-i18n="tools.shapeCornerRadius">Arrondi</label>
-                            <span class="illu-gauge-wrap">
-                                <span class="illu-gauge-fill" aria-hidden="true"></span>
-                                <span class="illu-gauge-val" id="vector-prop-corner-radius-val">0</span>
-                                <input type="range" id="vector-prop-corner-radius" class="illu-gauge-input" min="0"
-                                    max="256" value="0">
-                            </span>
-                        </span>
-                    </div>
-
-                    <div id="opt-grp-warp-params" class="opt-grp illu-ribbon-param-pack illu-ribbon-param-pack--stacked"
-                        hidden>
-                        <span id="opt-warp-resample-wrap">
-                            <span class="illu-opt-lbl" data-i18n="settings.resampleRibbonShort">Interp.</span>
-                            <select id="tool-warp-resampling" class="illu-select-mini"
-                                onchange="if(window.EditorManager) window.EditorManager.toolProps.warpResampling = this.value">
-                                <option value="smooth" data-i18n="settings.resampleSmooth">Lissage</option>
-                                <option value="nearest" data-i18n="settings.resampleNearest">Plus proche</option>
-                            </select>
-                        </span>
-                        <span id="opt-warp-outside-canvas-wrap" class="illu-opt-inline illu-opt-check-row"
-                            style="display: none !important;">
-                            <label class="illu-opt-check" for="tool-allow-outside-canvas">
-                                <input type="checkbox" id="tool-allow-outside-canvas" value="1">
-                                <span class="illu-opt-lbl" data-i18n="tools.allowOutsideCanvasShort"
-                                    data-i18n-title="tools.allowOutsideCanvas">Hors toile</span>
-                            </label>
-                        </span>
-                        <div id="opt-warp-resample-sep" class="opt-sep"></div>
-                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-warp-bar-toggles">
-                            <span class="illu-mode-toggle-item" id="opt-warp-quad-rect-lock-wrap" hidden>
-                                <button type="button" id="warp-quad-rect-lock" class="illu-icon-toggle"
-                                    data-i18n-title="tools.warpRectLock" aria-pressed="false"><svg
-                                        class="illu-shape-ico" width="16" height="16">
-                                        <use href="#illu-icon-warp-rect-lock" />
-                                    </svg></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.warpRectLockShort">Rect.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item" id="opt-warp-quad-snap-wrap" hidden>
-                                <button type="button" id="warp-quad-snap-rect-btn" class="illu-icon-toggle"
-                                    data-i18n-title="tools.warpSnapRect" aria-pressed="false"><i
-                                        class="fa-solid fa-vector-square illu-shape-ico"
-                                        aria-hidden="true"></i></button>
-                                <span class="illu-mode-toggle-lbl" data-i18n="tools.warpSnapRectShort">Align.</span>
-                            </span>
-                            <span class="illu-mode-toggle-item" id="opt-select-quad-to-warp-wrap" hidden>
-                                <button type="button" id="opt-select-quad-to-warp-btn" class="illu-icon-toggle"
-                                    data-i18n-title="tools.selectQuadToWarp" aria-pressed="false"><i
-                                        class="fa-solid fa-up-right-and-down-left-from-center illu-shape-ico"
-                                        aria-hidden="true"></i></button>
-                                <span class="illu-mode-toggle-lbl"
-                                    data-i18n="tools.selectQuadToWarpShort">Déform.</span>
-                            </span>
-                        </span>
-                    </div>
-                </div>
             </div>
 
             <div id="illu-mobile-opt-strip" class="illu-mobile-opt-strip" hidden aria-hidden="true"></div>
@@ -2322,7 +2348,8 @@
                         style="grid-column: 2; grid-row: 2; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; background: #808080; width: 100%; height: 100%; min-width: 0; min-height: 0;">
                         <canvas id="pixel-grid-overlay"
                             style="position: absolute; pointer-events: none; z-index: 4; display: none;"></canvas>
-                        <canvas id="snap-guides-overlay" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000; display: none;"></canvas>
+                        <canvas id="snap-guides-overlay"
+                            style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000; display: none;"></canvas>
 
                         <div id="main-canvas-container"
                             style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 10px rgba(0,0,0,0.5); width: 1280px; height: 720px;">
@@ -3393,9 +3420,10 @@
                                 <label class="settings-accent-swatch" data-i18n-title="accent.navy"><input type="radio"
                                         name="welcome-accent" value="#0f2d5c"><span class="settings-accent-face"
                                         style="background:#0f2d5c;" aria-hidden="true"></span></label>
-                                <label class="settings-accent-swatch" data-i18n-title="accent.indigo"><input type="radio"
-                                        name="welcome-accent" value="#4338ca"><span class="settings-accent-face"
-                                        style="background:#4338ca;" aria-hidden="true"></span></label>
+                                <label class="settings-accent-swatch" data-i18n-title="accent.indigo"><input
+                                        type="radio" name="welcome-accent" value="#4338ca"><span
+                                        class="settings-accent-face" style="background:#4338ca;"
+                                        aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.violet"><input
                                         type="radio" name="welcome-accent" value="#5b21b6"><span
                                         class="settings-accent-face" style="background:#5b21b6;"
@@ -3657,8 +3685,9 @@
                                         class="settings-accent-face" style="background:#059669;"
                                         aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.teal"><input type="radio"
-                                        name="settings-accent" value="#0d7a7a" checked><span class="settings-accent-face"
-                                        style="background:#0d7a7a;" aria-hidden="true"></span></label>
+                                        name="settings-accent" value="#0d7a7a" checked><span
+                                        class="settings-accent-face" style="background:#0d7a7a;"
+                                        aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.cyan"><input type="radio"
                                         name="settings-accent" value="#0891b2"><span class="settings-accent-face"
                                         style="background:#0891b2;" aria-hidden="true"></span></label>
@@ -3666,12 +3695,12 @@
                                         name="settings-accent" value="#2563eb"><span class="settings-accent-face"
                                         style="background:#2563eb;" aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.navy"><input type="radio"
-                                        name="settings-accent" value="#0f2d5c"><span
-                                        class="settings-accent-face" style="background:#0f2d5c;"
+                                        name="settings-accent" value="#0f2d5c"><span class="settings-accent-face"
+                                        style="background:#0f2d5c;" aria-hidden="true"></span></label>
+                                <label class="settings-accent-swatch" data-i18n-title="accent.indigo"><input
+                                        type="radio" name="settings-accent" value="#4338ca"><span
+                                        class="settings-accent-face" style="background:#4338ca;"
                                         aria-hidden="true"></span></label>
-                                <label class="settings-accent-swatch" data-i18n-title="accent.indigo"><input type="radio"
-                                        name="settings-accent" value="#4338ca"><span class="settings-accent-face"
-                                        style="background:#4338ca;" aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.violet"><input
                                         type="radio" name="settings-accent" value="#5b21b6"><span
                                         class="settings-accent-face" style="background:#5b21b6;"
@@ -4261,120 +4290,120 @@
 
     </script>
     <script>
-    // Initialisation des réglages d'aimantation
-    (function() {
-        var div = localStorage.getItem('illu_snap_grid_divisor');
-        if (div) window._illuSnapGridDivisor = parseInt(div, 10);
-        var thresh = localStorage.getItem('illu_snap_threshold');
-        if (thresh) window._illuSnapThreshold = parseInt(thresh, 10);
-        var always = localStorage.getItem('illu_snap_always');
-        if (always) window._illuSnapGridAlwaysVisible = (always === '1');
-        var guides = localStorage.getItem('illu_snap_guides');
-        if (guides) window._illuSnapGuidesVisible = (guides === '1');
-        else window._illuSnapGuidesVisible = true; // defaut activé
-    })();
-    
-    if (typeof window.illuDrawSnapGridPreview !== 'function') {
-        window.illuDrawSnapGridPreview = function() {
-            const isActive = window._illuSnapPreviewActive;
-            const isAlwaysOn = window._illuSnapGridAlwaysVisible && window.EditorManager && window.EditorManager.snapToEdges;
-            
-            const mcc = document.getElementById('main-canvas-container');
-            const p = window.EditorManager && window.EditorManager.activeProject;
-            if (!mcc || !p) return;
-            
-            let overlay = document.getElementById('illu-snap-preview-layer');
-            if (!isActive && !isAlwaysOn) {
-                if (overlay) overlay.style.display = 'none';
-                return;
-            }
-            
-            if (!overlay) {
-                overlay = document.createElement('canvas');
-                overlay.id = 'illu-snap-preview-layer';
-                overlay.style.position = 'absolute';
-                overlay.style.left = '0';
-                overlay.style.top = '0';
-                overlay.style.pointerEvents = 'none';
-                overlay.style.zIndex = '9999';
-                mcc.appendChild(overlay);
-            }
-            
-            const W = p.width;
-            const H = p.height;
-            const z = p.zoomLevel || 1;
-            
-            if (overlay.width !== W || overlay.height !== H) {
-                overlay.width = W;
-                overlay.height = H;
-            }
-            
-            // Forcer la taille CSS pour correspondre exactement à l'image interne
-            overlay.style.width = W + 'px';
-            overlay.style.height = H + 'px';
-            overlay.style.display = 'block';
-            
-            const ctx = overlay.getContext('2d');
-            ctx.clearRect(0, 0, W, H);
-            ctx.save();
-            
-            const divi = window._illuSnapGridDivisor || 48;
-            const stepX = W / divi;
-            const stepY = H / (divi * H / W);
-            
-            // Styles différenciés si on est en réglages (fort) ou en simple affichage (très discret)
-            ctx.strokeStyle = isActive ? 'rgba(167,139,250,0.8)' : 'rgba(167,139,250,0.15)';
-            ctx.lineWidth = Math.max(1 / z, 0.5);
-            ctx.setLineDash([Math.max(4/z, 2), Math.max(4/z, 2)]);
-            ctx.beginPath();
-            for (let x = 0; x <= W; x += stepX) {
-                ctx.moveTo(x, 0); ctx.lineTo(x, H);
-            }
-            for (let y = 0; y <= H; y += stepY) {
-                ctx.moveTo(0, y); ctx.lineTo(W, y);
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            if (isActive) {
-                // Points d'intersection (carrés)
-                ctx.fillStyle = 'rgba(167,139,250,1.0)';
-                const dotSize = Math.max(3 / z, 1);
-                for (let xi = 0; xi * stepX <= W + 0.1; xi++) {
-                    for (let yi = 0; yi * stepY <= H + 0.1; yi++) {
-                        let px = xi * stepX;
-                        let py = yi * stepY;
-                        ctx.fillRect(px - dotSize/2, py - dotSize/2, dotSize, dotSize);
-                    }
-                }
-                
-                // Zone d'attraction (halo autour du centre)
-                const cx = W / 2;
-                const cy = H / 2;
-                const nearPx = Math.round(cx / stepX) * stepX;
-                const nearPy = Math.round(cy / stepY) * stepY;
-                const thresh = window._illuSnapThreshold || 50;
-                
-                const effThreshX = (stepX / 2) * (thresh / 100);
-                const effThreshY = (stepY / 2) * (thresh / 100);
-                
-                ctx.beginPath();
-                ctx.ellipse(nearPx, nearPy, effThreshX, effThreshY, 0, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(52,211,153,0.9)';
-                ctx.lineWidth = Math.max(1.5 / z, 1);
-                ctx.setLineDash([Math.max(4/z, 2), Math.max(3/z, 1.5)]);
-                ctx.stroke();
-            }
-            
-            ctx.restore();
-        };
-    }
+            // Initialisation des réglages d'aimantation
+            (function () {
+                var div = localStorage.getItem('illu_snap_grid_divisor');
+                if (div) window._illuSnapGridDivisor = parseInt(div, 10);
+                var thresh = localStorage.getItem('illu_snap_threshold');
+                if (thresh) window._illuSnapThreshold = parseInt(thresh, 10);
+                var always = localStorage.getItem('illu_snap_always');
+                if (always) window._illuSnapGridAlwaysVisible = (always === '1');
+                var guides = localStorage.getItem('illu_snap_guides');
+                if (guides) window._illuSnapGuidesVisible = (guides === '1');
+                else window._illuSnapGuidesVisible = true; // defaut activé
+            })();
 
-    window.illuOpenSnapSettings = function() {
-        var div = window._illuSnapGridDivisor || 48;
-        var thresh = window._illuSnapThreshold || 50;
-        
-        var html = `
+        if (typeof window.illuDrawSnapGridPreview !== 'function') {
+            window.illuDrawSnapGridPreview = function () {
+                const isActive = window._illuSnapPreviewActive;
+                const isAlwaysOn = window._illuSnapGridAlwaysVisible && window.EditorManager && window.EditorManager.snapToEdges;
+
+                const mcc = document.getElementById('main-canvas-container');
+                const p = window.EditorManager && window.EditorManager.activeProject;
+                if (!mcc || !p) return;
+
+                let overlay = document.getElementById('illu-snap-preview-layer');
+                if (!isActive && !isAlwaysOn) {
+                    if (overlay) overlay.style.display = 'none';
+                    return;
+                }
+
+                if (!overlay) {
+                    overlay = document.createElement('canvas');
+                    overlay.id = 'illu-snap-preview-layer';
+                    overlay.style.position = 'absolute';
+                    overlay.style.left = '0';
+                    overlay.style.top = '0';
+                    overlay.style.pointerEvents = 'none';
+                    overlay.style.zIndex = '9999';
+                    mcc.appendChild(overlay);
+                }
+
+                const W = p.width;
+                const H = p.height;
+                const z = p.zoomLevel || 1;
+
+                if (overlay.width !== W || overlay.height !== H) {
+                    overlay.width = W;
+                    overlay.height = H;
+                }
+
+                // Forcer la taille CSS pour correspondre exactement à l'image interne
+                overlay.style.width = W + 'px';
+                overlay.style.height = H + 'px';
+                overlay.style.display = 'block';
+
+                const ctx = overlay.getContext('2d');
+                ctx.clearRect(0, 0, W, H);
+                ctx.save();
+
+                const divi = window._illuSnapGridDivisor || 48;
+                const stepX = W / divi;
+                const stepY = H / (divi * H / W);
+
+                // Styles différenciés si on est en réglages (fort) ou en simple affichage (très discret)
+                ctx.strokeStyle = isActive ? 'rgba(167,139,250,0.8)' : 'rgba(167,139,250,0.15)';
+                ctx.lineWidth = Math.max(1 / z, 0.5);
+                ctx.setLineDash([Math.max(4 / z, 2), Math.max(4 / z, 2)]);
+                ctx.beginPath();
+                for (let x = 0; x <= W; x += stepX) {
+                    ctx.moveTo(x, 0); ctx.lineTo(x, H);
+                }
+                for (let y = 0; y <= H; y += stepY) {
+                    ctx.moveTo(0, y); ctx.lineTo(W, y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                if (isActive) {
+                    // Points d'intersection (carrés)
+                    ctx.fillStyle = 'rgba(167,139,250,1.0)';
+                    const dotSize = Math.max(3 / z, 1);
+                    for (let xi = 0; xi * stepX <= W + 0.1; xi++) {
+                        for (let yi = 0; yi * stepY <= H + 0.1; yi++) {
+                            let px = xi * stepX;
+                            let py = yi * stepY;
+                            ctx.fillRect(px - dotSize / 2, py - dotSize / 2, dotSize, dotSize);
+                        }
+                    }
+
+                    // Zone d'attraction (halo autour du centre)
+                    const cx = W / 2;
+                    const cy = H / 2;
+                    const nearPx = Math.round(cx / stepX) * stepX;
+                    const nearPy = Math.round(cy / stepY) * stepY;
+                    const thresh = window._illuSnapThreshold || 50;
+
+                    const effThreshX = (stepX / 2) * (thresh / 100);
+                    const effThreshY = (stepY / 2) * (thresh / 100);
+
+                    ctx.beginPath();
+                    ctx.ellipse(nearPx, nearPy, effThreshX, effThreshY, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(52,211,153,0.9)';
+                    ctx.lineWidth = Math.max(1.5 / z, 1);
+                    ctx.setLineDash([Math.max(4 / z, 2), Math.max(3 / z, 1.5)]);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            };
+        }
+
+        window.illuOpenSnapSettings = function () {
+            var div = window._illuSnapGridDivisor || 48;
+            var thresh = window._illuSnapThreshold || 50;
+
+            var html = `
             <div class="effect-slider-block">
                 <span class="effect-param-label">Taille des cases (1/N)</span>
                 <div class="effect-track-row">
@@ -4404,76 +4433,76 @@
             <p style="margin-top:15px; font-size:11px; opacity:0.8; line-height:1.4;">La grille de prévisualisation s'affiche sur la toile. Validez avec OK pour sauvegarder les paramètres de l'aimantation.</p>
         `;
 
-        document.getElementById('effect-dialog-title').innerText = 'Paramètres aimantation';
-        document.getElementById('effect-dialog-content').innerHTML = html;
-        
-        var btnRaz = document.getElementById('effect-dialog-btn-raz');
-        if (btnRaz) btnRaz.style.display = 'none';
-        
-        var shell = document.getElementById('effect-dialog');
-        var win = document.getElementById('effect-dialog-window');
-        
-        if (win) {
-            win.style.width = '400px';
-            win.style.maxWidth = 'min(620px, 98vw)';
-            win.classList.add('floating-window');
-            win.style.position = 'fixed';
-            win.classList.remove('effect-dialog--vhs');
-            
-            // Centrer sur le workspace
-            var ws = document.getElementById('workspace');
-            if (ws) {
-                var wsR = ws.getBoundingClientRect();
-                var w = win.offsetWidth || 400;
-                var h = win.offsetHeight || 200;
-                win.style.left = Math.max(wsR.left, Math.round(wsR.left + (wsR.width - w) / 2)) + 'px';
-                win.style.top = Math.max(wsR.top, Math.round(wsR.top + (wsR.height - h) / 2)) + 'px';
+            document.getElementById('effect-dialog-title').innerText = 'Paramètres aimantation';
+            document.getElementById('effect-dialog-content').innerHTML = html;
+
+            var btnRaz = document.getElementById('effect-dialog-btn-raz');
+            if (btnRaz) btnRaz.style.display = 'none';
+
+            var shell = document.getElementById('effect-dialog');
+            var win = document.getElementById('effect-dialog-window');
+
+            if (win) {
+                win.style.width = '400px';
+                win.style.maxWidth = 'min(620px, 98vw)';
+                win.classList.add('floating-window');
+                win.style.position = 'fixed';
+                win.classList.remove('effect-dialog--vhs');
+
+                // Centrer sur le workspace
+                var ws = document.getElementById('workspace');
+                if (ws) {
+                    var wsR = ws.getBoundingClientRect();
+                    var w = win.offsetWidth || 400;
+                    var h = win.offsetHeight || 200;
+                    win.style.left = Math.max(wsR.left, Math.round(wsR.left + (wsR.width - w) / 2)) + 'px';
+                    win.style.top = Math.max(wsR.top, Math.round(wsR.top + (wsR.height - h) / 2)) + 'px';
+                }
             }
-        }
-        
-        window._illuSnapPreviewActive = true;
-        
-        var closeFn = function() {
-            shell.style.display = 'none';
-            window._illuSnapPreviewActive = false;
-            
-            if (!window._illuSnapGridAlwaysVisible) {
-                var previewLayer = document.getElementById('illu-snap-preview-layer');
-                if (previewLayer) previewLayer.style.display = 'none';
-            } else if (typeof window.illuDrawSnapGridPreview === 'function') {
-                window.illuDrawSnapGridPreview();
+
+            window._illuSnapPreviewActive = true;
+
+            var closeFn = function () {
+                shell.style.display = 'none';
+                window._illuSnapPreviewActive = false;
+
+                if (!window._illuSnapGridAlwaysVisible) {
+                    var previewLayer = document.getElementById('illu-snap-preview-layer');
+                    if (previewLayer) previewLayer.style.display = 'none';
+                } else if (typeof window.illuDrawSnapGridPreview === 'function') {
+                    window.illuDrawSnapGridPreview();
+                }
+
+                if (btnRaz) btnRaz.style.display = '';
+                if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
+
+                // Restore default OK/Cancel
+                document.getElementById('effect-dialog-btn-ok').onclick = window.applyCurrentEffectModal;
+                document.getElementById('effect-dialog-btn-fermer').onclick = window.closeEffectModal;
+                document.getElementById('effect-dialog-btn-annuler').onclick = window.closeEffectModal;
+            };
+
+            document.getElementById('effect-dialog-btn-ok').onclick = function () {
+                localStorage.setItem('illu_snap_grid_divisor', String(window._illuSnapGridDivisor || 48));
+                localStorage.setItem('illu_snap_threshold', String(window._illuSnapThreshold || 50));
+                localStorage.setItem('illu_snap_always', window._illuSnapGridAlwaysVisible ? '1' : '0');
+                localStorage.setItem('illu_snap_guides', window._illuSnapGuidesVisible ? '1' : '0');
+                closeFn();
+            };
+
+            document.getElementById('effect-dialog-btn-fermer').onclick = closeFn;
+            document.getElementById('effect-dialog-btn-annuler').onclick = closeFn;
+
+            // Custom drag handling for this modal so it doesn't need FilterManager
+            if (typeof FilterManager !== 'undefined' && typeof FilterManager.makeDialogDraggable === 'function') {
+                FilterManager.makeDialogDraggable(win, shell.querySelector('.title-bar'));
             }
-            
-            if (btnRaz) btnRaz.style.display = ''; 
-            if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
-            
-            // Restore default OK/Cancel
-            document.getElementById('effect-dialog-btn-ok').onclick = window.applyCurrentEffectModal;
-            document.getElementById('effect-dialog-btn-fermer').onclick = window.closeEffectModal;
-            document.getElementById('effect-dialog-btn-annuler').onclick = window.closeEffectModal;
+
+            shell.style.display = 'block';
+
+
+            window.illuDrawSnapGridPreview();
         };
-        
-        document.getElementById('effect-dialog-btn-ok').onclick = function() {
-            localStorage.setItem('illu_snap_grid_divisor', String(window._illuSnapGridDivisor || 48));
-            localStorage.setItem('illu_snap_threshold', String(window._illuSnapThreshold || 50));
-            localStorage.setItem('illu_snap_always', window._illuSnapGridAlwaysVisible ? '1' : '0');
-            localStorage.setItem('illu_snap_guides', window._illuSnapGuidesVisible ? '1' : '0');
-            closeFn();
-        };
-        
-        document.getElementById('effect-dialog-btn-fermer').onclick = closeFn;
-        document.getElementById('effect-dialog-btn-annuler').onclick = closeFn;
-        
-        // Custom drag handling for this modal so it doesn't need FilterManager
-        if (typeof FilterManager !== 'undefined' && typeof FilterManager.makeDialogDraggable === 'function') {
-            FilterManager.makeDialogDraggable(win, shell.querySelector('.title-bar'));
-        }
-        
-        shell.style.display = 'block';
-        
-        
-        window.illuDrawSnapGridPreview();
-    };
     </script>
     <script src="js/contact.js"></script>
 </body>

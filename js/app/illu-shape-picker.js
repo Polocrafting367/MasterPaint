@@ -80,56 +80,56 @@
         'star-4': {
             tool: 'star',
             branches: 4,
-            fa: 'fa-regular fa-star',
+            sprite: 'illu-icon-shape-star-4',
             labelKey: 'shape.star4',
             fallback: 'Étoile 4 branches'
         },
         'star-5': {
             tool: 'star',
             branches: 5,
-            fa: 'fa-regular fa-star',
+            sprite: 'illu-icon-shape-star-5',
             labelKey: 'shape.star5',
             fallback: 'Étoile 5 branches'
         },
         'star-6': {
             tool: 'star',
             branches: 6,
-            fa: 'fa-regular fa-star',
+            sprite: 'illu-icon-shape-star-6',
             labelKey: 'shape.star6',
             fallback: 'Étoile 6 branches'
         },
         'star-thin': {
             tool: 'star',
             branches: 4,
-            fa: 'fa-regular fa-star',
+            sprite: 'illu-icon-shape-star-thin',
             labelKey: 'shape.starThin',
             fallback: 'Étoile fine'
         },
         'callout-rect': {
             tool: 'callout',
             calloutStyle: 'rect',
-            fa: 'fa-regular fa-comment',
+            sprite: 'illu-icon-shape-callout-rect',
             labelKey: 'shape.calloutRect',
             fallback: 'Bulle rectangulaire'
         },
         'callout-round': {
             tool: 'callout',
             calloutStyle: 'round',
-            fa: 'fa-regular fa-comment-dots',
+            sprite: 'illu-icon-shape-callout-round',
             labelKey: 'shape.calloutRound',
             fallback: 'Bulle arrondie'
         },
         'callout-oval': {
             tool: 'callout',
             calloutStyle: 'oval',
-            fa: 'fa-regular fa-comment',
+            sprite: 'illu-icon-shape-callout-oval',
             labelKey: 'shape.calloutOval',
             fallback: 'Bulle ovale'
         },
         'callout-cloud': {
             tool: 'callout',
             calloutStyle: 'cloud',
-            fa: 'fa-regular fa-cloud',
+            sprite: 'illu-icon-shape-callout-cloud',
             labelKey: 'shape.calloutCloud',
             fallback: 'Bulle nuage'
         },
@@ -238,7 +238,7 @@
     window.illuShouldShowShapePickerRibbon = function () {
         return (
             !!window.illuShapesFamilyMode &&
-            window.illuIsShapeFamilyTool(window.activeTool)
+            window.illuIsShapeDrawingTool(window.activeTool)
         );
     };
 
@@ -265,7 +265,7 @@
         if (window.ILLU_SHAPE_FAMILY_TOOLS.has(toolId)) {
             window.illuLastShapeFamilyTool = toolId;
         }
-        if (window.ILLU_SHAPE_FAMILY_TOOLS.has(toolId)) {
+        if (window.illuIsShapeDrawingTool(toolId)) {
             if (opts.familyMode !== false) window.illuShapesFamilyMode = true;
         } else {
             window.illuShapesFamilyMode = false;
@@ -319,7 +319,7 @@
         const family = document.getElementById('tool-shapes-family');
         if (!family) return;
         const t = window.activeTool || '';
-        family.classList.toggle('active', window.illuShapesFamilyMode && window.ILLU_SHAPE_FAMILY_TOOLS.has(t));
+        family.classList.toggle('active', window.illuShapesFamilyMode && window.illuIsShapeDrawingTool(t));
     };
 
     window.illuCloseShapePickerPopup = function () {

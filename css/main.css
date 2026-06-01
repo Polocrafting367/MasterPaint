@@ -49,7 +49,7 @@ html {
 body.effect-dialog-open #win-tools,
 body.effect-dialog-open #win-history,
 body.effect-dialog-open #win-layers,
-body.effect-dialog-open #win-colors {
+body.effect-dialog-open:not(.effect-allows-colors) #win-colors {
     display: none !important;
     pointer-events: none !important;
 }

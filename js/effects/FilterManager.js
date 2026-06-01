@@ -204,7 +204,7 @@ window.FilterManager = {
     },
 
     _effectDialogDidClose() {
-        document.body.classList.remove('effect-dialog-open');
+        document.body.classList.remove('effect-dialog-open', 'effect-allows-colors');
         this._clearEffectDialogScopeSession();
     },
 
@@ -1328,7 +1328,9 @@ window.FilterManager = {
                     </div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
                         <label style="width:92px;" data-i18n="effect.param.color">Couleur</label>
-                        <input type="color" id="ef-contour-color" value="#ff0000" oninput="FilterManager.preview()">
+                        <button type="button" onclick="window.toggleFloatingPaletteVisibility('win-colors')" style="flex-grow:1; font-size:11px; padding:3px 6px;">
+                            <i class="fa-solid fa-palette"></i> Palette de Couleurs (Primaire)
+                        </button>
                     </div>
                     <div class="field-row" style="margin-top:6px;">
                         <label style="width:92px;" data-i18n="effect.param.opacity">Opacité %</label>
@@ -1343,13 +1345,23 @@ window.FilterManager = {
                             <option value="both" data-i18n="effect.contour.both">Double (Centré)</option>
                         </select>
                     </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.corner">Angles</label>
+                        <select id="ef-contour-corner" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="round" data-i18n="effect.contour.round">Arrondi</option>
+                            <option value="miter" data-i18n="effect.contour.miter">Pointu (Miter)</option>
+                        </select>
+                    </div>
                 `);
                 break;
             case 'duotone':
                 this.showModal(illuEffectTitle('duotone', 'Duo-tone'), `
                     <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.duotone">Teinte du dégradé selon la luminance du calque.</p>
-                    <div class="field-row" style="align-items:center;gap:8px;"><label style="width:72px;" data-i18n="effect.param.shadow">Ombre</label><input type="color" id="ef-duo-c1" value="#1a0533" oninput="FilterManager.preview()"></div>
-                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;"><label style="width:72px;" data-i18n="effect.param.highlight">Lumière</label><input type="color" id="ef-duo-c2" value="#fff5e0" oninput="FilterManager.preview()"></div>
+                    <div class="field-row" style="align-items:center;gap:8px;">
+                        <button type="button" onclick="window.toggleFloatingPaletteVisibility('win-colors')" style="flex-grow:1; font-size:11px; padding:3px 6px;">
+                            <i class="fa-solid fa-palette"></i> Palette de Couleurs (Prim. / Sec.)
+                        </button>
+                    </div>
                     <div class="field-row" style="margin-top:8px;"><label style="width: 92px;" data-i18n="effect.param.midtone">Mi-ton</label><input type="range" id="ef-duo-mid" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-duo-mid-val').innerText=this.value; FilterManager.preview()"> <span id="ef-duo-mid-val" style="width:28px;text-align:right;">128</span></div>
                 `);
                 break;
@@ -1464,6 +1476,10 @@ window.FilterManager = {
                 break;
             }
             default: {
+                this._effectDialogScope = this._hasVisiblePixelSelection() ? 'selection' : 'active';
+                this._effectSessionScopeAll = false;
+                this._setupEffectTargets();
+
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         this.apply(true);
@@ -1495,6 +1511,10 @@ window.FilterManager = {
             else win.style.width = '440px';
             win.classList.add('floating-window');
             win.style.position = 'fixed';
+        }
+        document.body.classList.add('effect-dialog-open');
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+            document.body.classList.add('effect-allows-colors');
         }
         document.getElementById('effect-dialog-title').innerText = title;
         const scope = this._readEffectScope();
@@ -1549,6 +1569,25 @@ window.FilterManager = {
                     this.preview();
                 };
             }
+        }
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+            if (this._colorPollInterval) clearInterval(this._colorPollInterval);
+            let lastP = window.EditorManager ? JSON.stringify(window.EditorManager.primaryColor) : '';
+            let lastS = window.EditorManager ? JSON.stringify(window.EditorManager.secondaryColor) : '';
+            this._colorPollInterval = setInterval(() => {
+                if (document.getElementById('effect-dialog').style.display === 'none') {
+                    clearInterval(this._colorPollInterval);
+                    return;
+                }
+                if (!window.EditorManager) return;
+                const curP = JSON.stringify(window.EditorManager.primaryColor);
+                const curS = JSON.stringify(window.EditorManager.secondaryColor);
+                if (curP !== lastP || curS !== lastS) {
+                    lastP = curP;
+                    lastS = curS;
+                    this.preview();
+                }
+            }, 100);
         }
         if (this.currentEffect === 'vhs') {
             document.querySelectorAll('#effect-dialog-content [data-illu-vhs-toggle]').forEach((h) => {
@@ -1627,6 +1666,10 @@ window.FilterManager = {
     },
 
     dismissEffectDialogWithoutRestore() {
+        if (this._colorPollInterval) {
+            clearInterval(this._colorPollInterval);
+            this._colorPollInterval = null;
+        }
         if (this._previewRaf != null) {
             cancelAnimationFrame(this._previewRaf);
             this._previewRaf = null;
@@ -2222,6 +2265,17 @@ window.FilterManager = {
         }
         if (this.currentEffect === 'cabossage') {
             vals._cabossageSeed = this._cabossageSeed >>> 0;
+        }
+        
+        // Inject global colors for effects that use the palette instead of inputs
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+            const rgbToHex = (c) => "#" + (1 << 24 | c.r << 16 | c.g << 8 | c.b).toString(16).slice(1);
+            if (this.currentEffect === 'contour') {
+                vals['ef-contour-color'] = rgbToHex(window.EditorManager.primaryColor);
+            } else if (this.currentEffect === 'duotone') {
+                vals['ef-duo-c1'] = rgbToHex(window.EditorManager.primaryColor);
+                vals['ef-duo-c2'] = rgbToHex(window.EditorManager.secondaryColor);
+            }
         }
 
         const nTargets = this._effectTargets.length;

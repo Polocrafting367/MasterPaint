@@ -1552,7 +1552,11 @@ window.updateToolOptionsBar = function () {
     const toolHeader = document.getElementById('tool-main-header');
     const shapePickerWrap = document.getElementById('illu-shape-picker-wrap');
     if (toolHeader) toolHeader.hidden = !!showShapePickerRibbon;
-    if (shapePickerWrap) shapePickerWrap.hidden = !showShapePickerRibbon;
+    if (shapePickerWrap) {
+        const group = shapePickerWrap.closest('.illu-ribbon-group');
+        if (group) group.hidden = !showShapePickerRibbon;
+        else shapePickerWrap.hidden = !showShapePickerRibbon;
+    }
     if (showShapePickerRibbon && typeof window.illuSyncShapePickerUI === 'function') {
         window.illuSyncShapePickerUI(window.illuActiveShapeVariant || t);
     }
@@ -5159,17 +5163,7 @@ window.illuEnsurePinnedToggleBarOrder = function () {
         pin.setAttribute('aria-label', 'Modes et actions sélection');
         row1.appendChild(pin);
     }
-    if (header.parentElement !== pin) {
-        pin.insertBefore(header, pin.firstChild);
-    }
-    if (pin.parentElement !== row1) {
-        const stash = document.getElementById('tool-row1-hidden-sync');
-        if (stash && stash.parentElement === row1) {
-            row1.insertBefore(pin, stash);
-        } else {
-            row1.insertBefore(pin, row1.firstChild);
-        }
-    }
+
     const global = document.getElementById('tool-global-modes');
     if (global) {
         while (global.firstChild) pin.appendChild(global.firstChild);
@@ -16993,13 +16987,20 @@ window.finalizePendingPixelLiveEdits = function () {
 
         if (
             window.pixelShapeEdit &&
-            ['rect', 'circle', 'line', 'round-3', 'triangle', 'cubic-3', 'pen', 'polygon'].includes(window.activeTool)
+            window.ILLU_SHAPE_DRAWING_TOOLS &&
+            window.ILLU_SHAPE_DRAWING_TOOLS.has(window.activeTool)
         ) {
             if (typeof window.hidePixelShapeEditOverlay === 'function') window.hidePixelShapeEditOverlay();
             window.pixelShapeEdit = null;
             window._shapeBackupCanvas = null;
             if (typeof EditorManager.clearShapePreviewOverlay === 'function') {
                 EditorManager.clearShapePreviewOverlay();
+            }
+            if (typeof window.flushShapeEditPreview === 'function') {
+                window.flushShapeEditPreview();
+            }
+            if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') {
+                EditorManager.drawUI(true);
             }
             done = true;
         }
@@ -18245,9 +18246,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', () => {
-                if (el.checked && typeof window._illuShowRulers !== 'undefined' && !window._illuShowRulers) {
-                    if (typeof window.toggleIlluRulers === 'function') window.toggleIlluRulers();
+                const symX = document.getElementById('tool-sym-x');
+                const symY = document.getElementById('tool-sym-y');
+                const anyOn = (symX && symX.checked) || (symY && symY.checked);
+
+                if (anyOn) {
+                    if (!window._illuSymRulerSavedState) {
+                        window._illuSymRulerSavedState = { saved: true, wasRulerOn: !!window._illuShowRulers };
+                    }
+                    if (typeof window._illuShowRulers !== 'undefined' && !window._illuShowRulers) {
+                        if (typeof window.toggleIlluRulers === 'function') window.toggleIlluRulers();
+                    }
+                } else {
+                    if (window._illuSymRulerSavedState && window._illuSymRulerSavedState.saved) {
+                        const wasOn = window._illuSymRulerSavedState.wasRulerOn;
+                        if (!!window._illuShowRulers !== wasOn) {
+                            if (typeof window.toggleIlluRulers === 'function') window.toggleIlluRulers();
+                        }
+                        window._illuSymRulerSavedState.saved = false;
+                    }
                 }
+
                 if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') EditorManager.drawUI(true);
                 if (typeof window.illuUpdateRulers === 'function') window.illuUpdateRulers();
             });

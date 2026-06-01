@@ -122,7 +122,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group {
     overflow: visible;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-group:last-child {
+body.illu-toolbar-ribbon .illu-ribbon-group:last-child:not([data-illu-ribbon-group="symmetry"]) {
     border-right: none;
 }
 
@@ -2502,7 +2502,7 @@ body.illu-toolbar-ribbon #illu-shape-picker-header:focus .illu-tool-picker {
     top: calc(100% + 2px);
     left: 0;
     z-index: 12000;
-    min-width: 300px;
+    min-width: max-content;
     max-width: min(92vw, 400px);
     padding: 6px 8px 8px;
     border: 1px solid #808080;
@@ -2553,16 +2553,25 @@ body.illu-toolbar-ribbon #illu-shape-picker-header:focus .illu-tool-picker {
     background: rgba(49, 106, 197, 0.12);
 }
 
-.illu-shape-picker-item i,
-.illu-shape-picker-item svg {
-    width: 22px;
-    height: 22px;
-    font-size: 18px;
+.illu-shape-picker-item i {
+    width: 20px;
+    height: 20px;
+    font-size: 15px;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.illu-shape-picker-item svg {
+    width: 36px;
+    height: 36px;
+    pointer-events: none;
+    transform: scale(1.1); /* Slight boost to make thin strokes pop more */
 }
 
 .illu-shape-picker-item .illu-shape-picker-fa {
-    font-size: 17px;
+    font-size: 15px;
     line-height: 1;
     color: inherit;
 }
