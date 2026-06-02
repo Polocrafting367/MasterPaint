@@ -1,5 +1,13 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.106 (02/06/26)
+- Correction de l'effet flou radial et flou de zoom car il ne fonctionnait pas correctement
+       > Vrai flou progressif et non duplication de calc moche comme avant !
+- Ajout d'un theme moderne type Windows 10
+- Correction bug visuel lié au theme
+       > fenetre calc repensé
+       > Différente petite icones repensé
+
 2.8.103 (01/06/26)
 - Amélioration de l'outil d'aimantation
 - Ajout d'un outil de symétrie vertical/horizontal

@@ -466,5 +466,13 @@
     <!-- Moitié basse : triangle (miroir) pointant vers le haut -->
     <path d="M 5 13.5 L 8 9.5 L 11 13.5 Z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none" opacity="0.4"/>
   </symbol>
+  
+<symbol id="illu-icon-layer-merge" viewBox="0 0 16 16">
+  <path d="M 1 0 V 6 H 5.5 M 10.5 6 H 15 V 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <path d="M 1 16 V 10 H 3 M 13 10 H 15 V 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <path d="M 7 1.5 V 10 H 4.5 L 8 14 L 11.5 10 H 9 V 1.5 Z" fill="currentColor"/>
+</symbol>
 
 </svg>

@@ -10,6 +10,10 @@ html {
     --illu-palette-cell: 13px;
 }
 
+#win-history {
+    width: 146px !important ;
+}
+
 #app-window {
     width: 100vw;
     width: 100dvw;
@@ -296,8 +300,8 @@ body.ui-layout-docked #main-toolbox.tool-grid--pdn .tool-group {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 1px;
-    padding: 1px 2px 2px;
+    gap: 0;
+    padding: 0 1px 1px;
     flex: 0 0 auto;
 }
 
@@ -610,11 +614,10 @@ body.ui-layout-floating #win-tools .tool-grid.tool-grid--pdn {
 
 body.ui-layout-floating #win-tools .tool-grid--pdn .tool-group {
     display: grid;
-    grid-template-columns: repeat(2, 28px);
+    grid-template-columns: repeat(2, 25px);
     justify-content: center;
-    gap: 2px;
-    padding: 2px 3px;
     box-sizing: border-box;
+    gap: 1px;
 }
 
 /* Téléphone + dock bas : une seule rangée logique qui revient à la ligne sur toute la largeur */
@@ -731,8 +734,7 @@ body:not(.ui-layout-floating) #win-tools .tool-grid.tool-grid--pdn {
     flex-wrap: wrap;
     justify-content: center;
     align-content: flex-start;
-    gap: 1px;
-    padding: 1px 2px 2px;
+    gap: 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 65%);
@@ -1210,17 +1212,12 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     letter-spacing: 0.01em;
     color: #fff !important;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
-    background: linear-gradient(
-        180deg,
-        var(--mp-title-light, #4a7ab8) 0%,
-        var(--mp-accent, #0d7a7a) 52%,
-        color-mix(in srgb, var(--mp-accent, #0d7a7a) 78%, #000) 100%
-    ) !important;
+    background: linear-gradient(180deg,
+            var(--mp-title-light, #4a7ab8) 0%,
+            var(--mp-accent, #0d7a7a) 52%,
+            color-mix(in srgb, var(--mp-accent, #0d7a7a) 78%, #000) 100%) !important;
     border: 2px solid !important;
-    border-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff)
-        color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000)
-        color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000)
-        color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff) !important;
+    border-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff) color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000) color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, #000) color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, #fff) !important;
     border-radius: var(--mp-radius, 2px) !important;
     box-shadow:
         inset 1px 1px 0 rgba(255, 255, 255, 0.38),
@@ -1243,8 +1240,7 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
 
 #welcome-overlay .welcome-dialog-start-btn:active {
     filter: brightness(0.96);
-    border-color: var(--mp-inset-top, #404040) var(--mp-inset-bot, #dfdfdf)
-        var(--mp-inset-bot, #dfdfdf) var(--mp-inset-top, #404040) !important;
+    border-color: var(--mp-inset-top, #404040) var(--mp-inset-bot, #dfdfdf) var(--mp-inset-bot, #dfdfdf) var(--mp-inset-top, #404040) !important;
     padding: 9px 17px 7px 19px !important;
     box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.28) !important;
 }
@@ -1606,9 +1602,7 @@ body.theme-dark #welcome-overlay .welcome-dialog-start-btn {
 #settings-overlay #settings-beta-skin-row,
 #settings-overlay #settings-icon-style-row,
 #settings-overlay .settings-appearance-beta-fieldset {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
+
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -3734,4 +3728,27 @@ body.illu-mobile-ui #palette-dock-left {
 
 #tool-text-font {
     width: 130px;
+}
+
+#settings-overlay .settings-dialog-actions-group>* {
+    height: 28px;
+    box-sizing: border-box;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.window-body {
+    padding: 6px;
+}
+
+#app-window>.window-body.illu-app-window-body,
+#win-layers .window-body,
+#win-history .window-body {
+    padding: 0 !important;
+}
+
+/* Hide theme base layout switcher in settings & welcome windows when on mobile */
+body.illu-mobile-ui .settings-table-row:has(#settings-ui-base-row),
+body.illu-mobile-ui .settings-table-row:has(#welcome-ui-base-row) {
+    display: none !important;
 }

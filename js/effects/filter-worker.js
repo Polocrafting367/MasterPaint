@@ -295,14 +295,18 @@ const FilterManager = {
         const cellFine = Math.max(1.5, cell * 0.22);
         const rough = Math.max(0, Math.min(100, roughUi)) / 100;
         const H = new Float32Array(w * h);
+        let minV = Infinity, maxV = -Infinity;
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 const i = y * w + x;
                 let v = this._smoothCabNoise(x, y, cell, seed);
                 v += rough * this._smoothCabNoise(x + 17.3, y + 91.1, cellFine, seed + 1103515245);
                 H[i] = v;
+                if(v < minV) minV = v; if(v > maxV) maxV = v;
             }
         }
+        const range = maxV - minV;
+        if(range > 0) { for(let i=0; i<H.length; i++) H[i] = (H[i] - minV) / range; }
         const tension = Math.max(0, Math.min(100, tensionUi));
         const blurPasses = Math.max(0, Math.round(tension / 4));
         if (blurPasses > 0) this._blurFloatField2D(H, w, h, blurPasses);
@@ -687,25 +691,45 @@ const FilterManager = {
                 this.ctx.putImageData(img, 0, 0); return;
             }
             case 'median': {
-                const rad = pxRad(val('ef-med-rad')||2);
-                const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), od=img.data, src=new Uint8ClampedArray(srcOrig);
-                for(let y=sy; y<ey; y++){
-                    for(let x=0; x<w; x++){
-                        const rs=[], gs=[], bs=[];
-                        for(let dy=-rad; dy<=rad; dy++){
-                            const ny = Math.max(0, Math.min(h-1, y+dy));
-                            for(let dx=-rad; dx<=rad; dx++){
-                                const nx = Math.max(0, Math.min(w-1, x+dx));
-                                const j=(ny*w+nx)*4; rs.push(src[j]); gs.push(src[j+1]); bs.push(src[j+2]);
+                // OpenPDN ReduceNoiseEffect: per-channel percentile histogram + lerp
+                const srcD = new Uint8ClampedArray(srcOrig);
+                const imgD = new ImageData(w, h);
+                const od   = imgD.data;
+                const rad  = Math.max(1, Math.min(8, parseInt(vals['ef-med-rad'] || '2', 10)));
+                const strength = (parseFloat(vals['ef-med-str'] ?? '100') / 100) * 0.2;
+                for (let y = sy; y < ey; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const hr = new Int32Array(256);
+                        const hg = new Int32Array(256);
+                        const hb = new Int32Array(256);
+                        let area = 0;
+                        for (let dy = -rad; dy <= rad; dy++) {
+                            const ny = Math.max(0, Math.min(h - 1, y + dy));
+                            for (let dx = -rad; dx <= rad; dx++) {
+                                const nx = Math.max(0, Math.min(w - 1, x + dx));
+                                const j = (ny * w + nx) * 4;
+                                hr[srcD[j]]++; hg[srcD[j+1]]++; hb[srcD[j+2]]++; area++;
                             }
                         }
-                        rs.sort((a,b)=>a-b); gs.sort((a,b)=>a-b); bs.sort((a,b)=>a-b);
-                        const i=(y*w+x)*4, m=Math.floor(rs.length/2);
-                        od[i]=rs[m]; od[i+1]=gs[m]; od[i+2]=bs[m]; od[i+3]=src[i+3];
+                        const si = (y * w + x) * 4;
+                        const pR = srcD[si], pG = srcD[si+1], pB = srcD[si+2];
+                        let cR = 0; for (let k = 0; k < pR; k++) cR += hr[k];
+                        let cG = 0; for (let k = 0; k < pG; k++) cG += hg[k];
+                        let cB = 0; for (let k = 0; k < pB; k++) cB += hb[k];
+                        const nR = Math.min(255, Math.round((cR * 255) / area));
+                        const nG = Math.min(255, Math.round((cG * 255) / area));
+                        const nB = Math.min(255, Math.round((cB * 255) / area));
+                        const luma = (0.299 * pR + 0.587 * pG + 0.114 * pB) / 255;
+                        const t = Math.max(0, Math.min(1, strength * (1 - 0.75 * luma)));
+                        od[si]   = Math.round(pR + (nR - pR) * t);
+                        od[si+1] = Math.round(pG + (nG - pG) * t);
+                        od[si+2] = Math.round(pB + (nB - pB) * t);
+                        od[si+3] = srcD[si+3];
                     }
                 }
-                this.ctx.putImageData(img,0,0); return;
+                this.ctx.putImageData(imgD, 0, 0); return;
             }
+
             case 'oil': {
                 const R = pxInt(val('ef-oil')||4);
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), od=img.data, src=new Uint8ClampedArray(srcOrig);
@@ -740,7 +764,6 @@ const FilterManager = {
             case 'softglow': { const r=pxRad(val('ef-glow-r')||6), am=(val('ef-glow-a')||40)/100; const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), blur=new Uint8ClampedArray(srcOrig); this._boxBlurRGBA(blur,w,h,r); for(let i=sy*w*4; i<ey*w*4; i+=4){ img.data[i]=Math.min(255,img.data[i]+blur[i]*am); img.data[i+1]=Math.min(255,img.data[i+1]+blur[i+1]*am); img.data[i+2]=Math.min(255,img.data[i+2]+blur[i+2]*am); } this.ctx.putImageData(img,0,0); return; }
             case 'vignette': { 
                 const vig=val('ef-vig')/100, cx=w/2, cy=h/2, maxR=Math.hypot(cx,cy)||1;
-                // Note: val() parses numbers. For string color, we need vals directly
                 const colorStr = vals['ef-vig-color'] || '#000000';
                 const h_str = colorStr.replace('#', '').trim();
                 const hn = parseInt(h_str, 16);
@@ -757,8 +780,8 @@ const FilterManager = {
                         if (d <= 0.2) mask = 1.0;
                         else if (d >= 0.8) mask = 0.0;
                         else {
-                            let t = (d - 0.8) / (0.2 - 0.8);
-                            mask = t * t * (3.0 - 2.0 * t);
+                            let t = (d - 0.2) / (0.8 - 0.2);
+                            mask = 1.0 - (t * t * (3.0 - 2.0 * t));
                         }
                         
                         const i=(y*w+x)*4; 
@@ -1004,15 +1027,13 @@ const FilterManager = {
                     return;
                 }
                 const out = fn(srcOrig, w, h, {
-                    cx: w / 2,
-                    cy: h / 2,
-                    sharpPct: pxU(val('ef-rblur-sharp') ?? 15),
-                    startPct: pxU(val('ef-rblur-start') ?? 30),
-                    intensity: pxU(val('ef-rblur') || 12),
-                    angleDeg: val('ef-rblur-angle') || 0,
-                    startY: sy,
-                    endY: ey,
-                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                    angle:       Math.max(0, parseFloat(vals['ef-rblur-angle']   ?? 2)),
+                    quality:     Math.max(1, Math.min(5, parseInt(vals['ef-rblur-quality'] ?? 2, 10))),
+                    innerRadius: Math.max(0, Math.min(1, parseFloat(vals['ef-rblur-inner'] ?? 0) / 100)),
+                    offsetX:     (parseFloat(vals['ef-rblur-ox'] ?? 0)) / 100,
+                    offsetY:     (parseFloat(vals['ef-rblur-oy'] ?? 0)) / 100,
+                    startY:      sy,
+                    endY:        ey
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -1024,14 +1045,12 @@ const FilterManager = {
                     return;
                 }
                 const out = fn(srcOrig, w, h, {
-                    cx: w / 2,
-                    cy: h / 2,
-                    sharpPct: pxU(val('ef-zblur-sharp') ?? 15),
-                    startPct: pxU(val('ef-zblur-start') ?? 30),
-                    intensity: pxU(val('ef-zblur') || 12),
-                    startY: sy,
-                    endY: ey,
-                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                    amount:      Math.max(0, Math.min(100, parseFloat(vals['ef-zblur-amount'] ?? 10))),
+                    innerRadius: Math.max(0, Math.min(1, parseFloat(vals['ef-zblur-inner'] ?? 0) / 100)),
+                    offsetX:     (parseFloat(vals['ef-zblur-ox'] ?? 0)) / 100,
+                    offsetY:     (parseFloat(vals['ef-zblur-oy'] ?? 0)) / 100,
+                    startY:      sy,
+                    endY:        ey
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -1058,10 +1077,11 @@ const FilterManager = {
                         if (y > 0 && y < h - 1) hy = (H[i + w] - H[i - w]) * 0.5;
                         else if (y > 0) hy = H[i] - H[i - w];
                         else if (y < h - 1) hy = H[i + w] - H[i];
+
+                        const di = i * 4;
                         const sx = x + hx * str;
                         const sy_ = y + hy * str;
                         const [r, g, b, a] = this._sampleBilinear(srcOrig, w, h, sx, sy_);
-                        const di = i * 4;
                         od[di] = r;
                         od[di + 1] = g;
                         od[di + 2] = b;

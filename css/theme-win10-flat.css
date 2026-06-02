@@ -1,77 +1,76 @@
 /**
- * Thème « Windows 98 revisité » : bords 3D nets, palette plus douce,
- * moins de gris béton, lisibilité moderne. Remplace l’ancien w98.css.
+ * Thème « Windows 10 Flat » : bords plats 1px, sans relief 3D,
+ * couleurs unies, accent bleu Win10. Remplace l’ancien w98.css.
  */
 :root {
-    --mp-teal: #0d7a7a;
-    --mp-teal-dark: #065a5a;
-    --mp-surface: #ebe8e4;
-    --mp-surface-deep: #ddd9d4;
-    --mp-raised-top: #ffffff;
-    --mp-raised-bot: #8a8a8a;
-    --mp-inset-top: #7a7a7a;
-    --mp-inset-bot: #fafafa;
-    --mp-text: #1a1a1a;
-    --mp-title: #065a5a;
-    --mp-title-light: #6aadad;
-    --mp-accent: #0d7a7a;
-    --mp-workspace: #9aa3b0;
-    --mp-workspace-deep: #7d8694;
-    --mp-menu-hover-bg: var(--mp-accent);
-    --mp-menu-hover-fg: #fff;
-    --mp-focus: var(--mp-accent);
+    --mp-teal: #0078D7;
+    /* Bleu Windows 10 */
+    --mp-teal-dark: #005A9E;
+    --mp-surface: #ffffff;
+    --mp-surface-deep: #E1E1E1;
+    --mp-raised-top: #cccccc;
+    --mp-raised-bot: #cccccc;
+    --mp-inset-top: #ADADAD;
+    --mp-inset-bot: #ADADAD;
+    --mp-text: #000000;
+    --mp-title: #ffffff;
+    --mp-title-light: #ffffff;
+    --mp-accent: #0078D7;
+    --mp-workspace: #e1dfdd;
+    --mp-workspace-deep: #c8c6c4;
+    --mp-menu-hover-bg: #e5e5e5;
+    /* Gris clair Win10 pour éviter le manque de contraste */
+    --mp-menu-hover-fg: #000000;
+    --mp-focus: #0078D7;
     /* Survol secondaire (menus contextuels, zones teintées) */
-    --mp-accent-muted: #0a6363;
-    --mp-radius: 2px;
-    --mp-font: "Segoe UI", "MS Sans Serif", Tahoma, Arial, sans-serif;
+    --mp-accent-muted: #cce8ff;
+    --mp-radius: 0px;
+    /* Win10 Flat = pas d'arrondis */
+    --mp-font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
     --mp-ui-font-size: 13px;
     --mp-ui-font-small: 12px;
     /* Hauteur minimale commune : listes, selects, boutons de palette */
     --mp-control-min-height: 24px;
     /* Chrome autour de l’app (modifiable thème sombre) */
-    --mp-body-chrome: #0d8f8f;
-    --mp-dock-bg: #c0c0c0;
-    --mp-dock-border: #808080;
-    --mp-center-strip: #808080;
+    --mp-body-chrome: #0078D7;
+    --mp-dock-bg: #f3f2f1;
+    --mp-dock-border: #cccccc;
+    --mp-center-strip: #e1dfdd;
     --mp-checker-a: #ffffff;
-    --mp-checker-b: #d6d6d6;
-    --mp-tab-bar-bg: #c0c0c0;
-    --mp-opt-bar-text: #222;
-    --mp-menu-submenu-bg: #f4f2ef;
-    --mp-menu-icon: #444;
-    --mp-effect-label: #333;
-    /* Barres de défilement — alignées sur 98.css (piste damier + pouce « button face ») */
+    --mp-checker-b: #e6e6e6;
+    --mp-tab-bar-bg: #f3f2f1;
+    --mp-opt-bar-text: #000000;
+    --mp-menu-submenu-bg: #ffffff;
+    --mp-menu-icon: #000000;
+    --mp-effect-label: #000000;
+    /* Barres de défilement Win10 */
     --mp-scrollbar-size: 16px;
-    --mp-scrollbar-size-h: 17px;
-    --mp-scrollbar-thumb-face: #dfdfdf;
-    --mp-scrollbar-track-solid: #c0c0c0;
-    --mp-scrollbar-thumb-solid: #c0c0c0;
-    /* Remplissage barres de progression type 98 « segmented » (proche accent) */
-    --mp-progress-fill: color-mix(in srgb, var(--mp-accent) 88%, #ffffff);
-    --mp-scrollbar-thumb: linear-gradient(180deg, #e8e8e8 0%, #d4d0c8 18%, #c0c0c0 55%, #b0aca4 100%);
-    --mp-scrollbar-thumb-hover: linear-gradient(180deg, #f2f2f2 0%, #dedcd6 22%, #c8c8c8 55%, #b8b4ac 100%);
-    --mp-scrollbar-thumb-active: linear-gradient(180deg, #a8a8a8 0%, #b0b0b0 45%, #c0c0c0 100%);
-    --mp-scrollbar-corner: #dfdfdf;
+    --mp-scrollbar-size-h: 16px;
+    --mp-scrollbar-thumb-face: #cdcdcd;
+    --mp-scrollbar-track-solid: #f3f2f1;
+    --mp-scrollbar-thumb-solid: #cdcdcd;
+    --mp-progress-fill: var(--mp-accent);
+    --mp-scrollbar-thumb: #cdcdcd;
+    --mp-scrollbar-thumb-hover: #a6a6a6;
+    --mp-scrollbar-thumb-active: #606060;
+    --mp-scrollbar-corner: #f3f2f1;
 
-    /* Patterns & Icons dynamiques (mode clair) */
-    --mp-scrollbar-track-pattern: url("data:image/svg+xml;charset=utf-8,%3Csvg width='2' height='2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M1 0H0v1h1v1h1V1H1V0z' fill='silver'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 0H1v1H0v1h1V1h1V0z' fill='%23fff'/%3E%3C/svg%3E");
-    --mp-icon-scroll-up: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 6L4 10H12L8 6Z' fill='black'/%3E%3C/svg%3E");
-    --mp-icon-scroll-down: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 11L12 7H4L8 11Z' fill='black'/%3E%3C/svg%3E");
-    --mp-icon-scroll-left: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 8.5L11 4.5V12.5L7 8.5Z' fill='black'/%3E%3C/svg%3E");
-    --mp-icon-scroll-right: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 8.5L5 12.5V4.5L9 8.5Z' fill='black'/%3E%3C/svg%3E");
+    /* Patterns & Icons dynamiques (mode clair) - Simplifiés pour Win10 */
+    --mp-scrollbar-track-pattern: none;
+    --mp-icon-scroll-up: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 6L4 10H12L8 6Z' fill='%23606060'/%3E%3C/svg%3E");
+    --mp-icon-scroll-down: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 11L12 7H4L8 11Z' fill='%23606060'/%3E%3C/svg%3E");
+    --mp-icon-scroll-left: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 8.5L11 4.5V12.5L7 8.5Z' fill='%23606060'/%3E%3C/svg%3E");
+    --mp-icon-scroll-right: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 8.5L5 12.5V4.5L9 8.5Z' fill='%23606060'/%3E%3C/svg%3E");
 }
 
 /* =========================================================================
-   Barres de défilement — extraits du modèle 98.css (sans importer la librairie)
-   Réf. : https://github.com/jdan/98.css / https://jdan.github.io/98.css/
-   WebKit : damier + pouce #dfdfdf + flèches ; Firefox : scrollbar-color seulement.
+   Barres de défilement — Win10 Style
    ========================================================================= */
 html,
 body,
 * {
     color-scheme: light;
     scrollbar-width: auto;
-    /* Pour Firefox */
 }
 
 html:has(body.theme-dark),
@@ -80,33 +79,25 @@ html:has(body.theme-dark) * {
     color-scheme: dark;
 }
 
-
-.title-bar-text {
-    margin-left: 4px;
-}
-
 /* Taille de la barre */
 ::-webkit-scrollbar {
     width: var(--mp-scrollbar-size) !important;
     height: var(--mp-scrollbar-size-h) !important;
 }
 
-/* La piste (Track) avec le damier Win98 dynamique */
+/* La piste (Track) */
 ::-webkit-scrollbar-track {
     background-color: var(--mp-scrollbar-track-solid) !important;
-    background-image: var(--mp-scrollbar-track-pattern) !important;
+    background-image: none !important;
 }
 
-/* Le pouce (Thumb/Slider) - Le relief 3D */
+/* Le pouce (Thumb/Slider) - Win10 Flat */
 ::-webkit-scrollbar-thumb {
     background: var(--mp-scrollbar-thumb) !important;
-    border: none !important;
+    border: 3px solid var(--mp-scrollbar-track-solid) !important;
+    background-clip: padding-box !important;
     border-radius: 0 !important;
-    box-shadow:
-        inset -1px -1px #0a0a0a,
-        inset 1px 1px #fff,
-        inset -2px -2px var(--mp-raised-bot),
-        inset 2px 2px #dfdfdf !important;
+    box-shadow: none !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -115,11 +106,7 @@ html:has(body.theme-dark) * {
 
 ::-webkit-scrollbar-thumb:active {
     background: var(--mp-scrollbar-thumb-active) !important;
-    box-shadow:
-        inset 1px 1px #0a0a0a,
-        inset -1px -1px #fafafa,
-        inset 2px 2px #606060,
-        inset -2px -2px #d0ccc6 !important;
+    box-shadow: none !important;
 }
 
 /* Le coin entre deux barres (Corner) */
@@ -127,10 +114,9 @@ html:has(body.theme-dark) * {
     background: var(--mp-scrollbar-corner) !important;
 }
 
-
 ::-webkit-scrollbar-button {
     display: none !important;
-    background-color: var(--mp-surface);
+    background-color: var(--mp-scrollbar-track-solid);
     background-repeat: no-repeat;
     background-position: center;
 }
@@ -152,141 +138,124 @@ html:has(body.theme-dark) * {
     height: var(--mp-scrollbar-size-h) !important;
 }
 
-/* Flèche Haut */
+/* Flèches */
 ::-webkit-scrollbar-button:vertical:start:decrement {
     background-image: var(--mp-icon-scroll-up);
 }
 
-/* Flèche Bas */
 ::-webkit-scrollbar-button:vertical:end:increment {
     background-image: var(--mp-icon-scroll-down);
 }
 
-/* Flèche Gauche */
 ::-webkit-scrollbar-button:horizontal:start:decrement {
     background-image: var(--mp-icon-scroll-left);
 }
 
-/* Flèche Droite */
 ::-webkit-scrollbar-button:horizontal:end:increment {
     background-image: var(--mp-icon-scroll-right);
 }
 
-/* Style Win98 des boutons : relief */
+/* Style Win10 des boutons : flat hover */
 ::-webkit-scrollbar-button:vertical:start:decrement,
 ::-webkit-scrollbar-button:vertical:end:increment,
 ::-webkit-scrollbar-button:horizontal:start:decrement,
 ::-webkit-scrollbar-button:horizontal:end:increment {
-    box-shadow:
-        inset 1px 1px #fff,
-        inset -1px -1px var(--mp-raised-bot),
-        inset 2px 2px #dfdfdf,
-        inset -2px -2px #0a0a0a !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+::-webkit-scrollbar-button:hover {
+    background-color: #e5e5e5 !important;
 }
 
 /* Les boutons s'enfoncent au clic */
 ::-webkit-scrollbar-button:active {
-    background-color: var(--mp-surface-deep) !important;
-    box-shadow:
-        inset 1px 1px #0a0a0a,
-        inset -1px -1px #fafafa,
-        inset 2px 2px #606060,
-        inset -2px -2px #d0ccc6 !important;
+    background-color: #cccccc !important;
+    box-shadow: none !important;
 }
 
 /* Dark mode overrides pour l'état actif des boutons */
+html:has(body.theme-dark) *::-webkit-scrollbar-button:hover {
+    background-color: #333333 !important;
+}
+
 html:has(body.theme-dark) *::-webkit-scrollbar-button:active {
-    background-color: var(--mp-surface-deep) !important;
-    box-shadow:
-        inset 1px 1px #000,
-        inset -1px -1px var(--mp-raised-bot),
-        inset 2px 2px #111,
-        inset -2px -2px var(--mp-surface-deep) !important;
+    background-color: #444444 !important;
+    box-shadow: none !important;
 }
 
 /* Thème sombre (activé par body.theme-dark) */
 body.theme-dark {
-    --mp-surface: #2a2d32;
-    --mp-surface-deep: #1e2126;
-    --mp-raised-top: #4a5058;
-    --mp-raised-bot: #0f1114;
-    --mp-inset-top: #0f1114;
-    --mp-inset-bot: #3a4048;
-    --mp-text: #e8eaed;
-    --mp-workspace: #3d4450;
-    --mp-workspace-deep: #2a3038;
-    --mp-body-chrome: #0d1117;
-    --mp-dock-bg: #252830;
-    --mp-dock-border: #3d4450;
-    --mp-center-strip: #1e2329;
-    --mp-checker-a: #2a2e36;
-    --mp-checker-b: #363b45;
-    --mp-tab-bar-bg: #252830;
-    --mp-opt-bar-text: #e8eaed;
-    /* Sous-menus : même base que les surfaces (évite texte sombre sur fond clair hérité de :root) */
-    --mp-menu-submenu-bg: #2c3038;
-    --mp-menu-icon: #c5cad3;
-    --mp-effect-label: #c4c8d0;
-    --mp-accent-muted: #4a6fa8;
+    --mp-surface: #202020;
+    --mp-surface-deep: #2b2b2b;
+    --mp-raised-top: #444444;
+    --mp-raised-bot: #444444;
+    --mp-inset-top: #555555;
+    --mp-inset-bot: #555555;
+    --mp-text: #ffffff;
+    --mp-workspace: #111111;
+    --mp-workspace-deep: #000000;
+    --mp-body-chrome: #000000;
+    --mp-dock-bg: #202020;
+    --mp-dock-border: #444444;
+    --mp-center-strip: #2b2b2b;
+    --mp-checker-a: #1a1a1a;
+    --mp-checker-b: #2b2b2b;
+    --mp-tab-bar-bg: #202020;
+    --mp-opt-bar-text: #ffffff;
+    --mp-menu-submenu-bg: #2b2b2b;
+    --mp-menu-icon: #cccccc;
+    --mp-effect-label: #ffffff;
+    --mp-accent-muted: rgba(0, 120, 215, 0.4);
+    --mp-menu-hover-bg: #555555;
+    --mp-menu-hover-fg: #ffffff;
 }
 
-/* Scrollbars : variables sur la racine quand le thème sombre est actif (html seul ne hérite pas de body) */
+/* Scrollbars : variables sur la racine quand le thème sombre est actif */
 html:has(body.theme-dark) {
-    --mp-scrollbar-track-solid: #1e2126;
-    --mp-scrollbar-thumb-solid: #4a5058;
-    --mp-scrollbar-thumb-face: #3a4048;
-    --mp-scrollbar-thumb: linear-gradient(180deg, #5c6470 0%, #454d58 40%, #3a4048 100%);
-    --mp-scrollbar-thumb-hover: linear-gradient(180deg, #6a7280 0%, #505860 40%, #454d58 100%);
-    --mp-scrollbar-thumb-active: linear-gradient(180deg, #353b44 0%, #3a4048 50%, #4a5058 100%);
-    --mp-scrollbar-corner: #1a1d22;
+    --mp-scrollbar-track-solid: #202020;
+    --mp-scrollbar-thumb-solid: #4d4d4d;
+    --mp-scrollbar-thumb-face: #4d4d4d;
+    --mp-scrollbar-thumb: #4d4d4d;
+    --mp-scrollbar-thumb-hover: #7a7a7a;
+    --mp-scrollbar-thumb-active: #999999;
+    --mp-scrollbar-corner: #202020;
 
     /* Patterns & Icons dynamiques (mode sombre) */
-    --mp-scrollbar-track-pattern: url("data:image/svg+xml;charset=utf-8,%3Csvg width='2' height='2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M1 0H0v1h1v1h1V1H1V0z' fill='%231e2126'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 0H1v1H0v1h1V1h1V0z' fill='%232a2d32'/%3E%3C/svg%3E");
-    --mp-icon-scroll-up: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 6L4 10H12L8 6Z' fill='%23FFFFFF'/%3E%3C/svg%3E") !important;
-    --mp-icon-scroll-down: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 11L12 7H4L8 11Z' fill='%23FFFFFF'/%3E%3C/svg%3E") !important;
-    --mp-icon-scroll-left: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 8.5L11 4.5V12.5L7 8.5Z' fill='%23FFFFFF'/%3E%3C/svg%3E") !important;
-    --mp-icon-scroll-right: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 8.5L5 12.5V4.5L9 8.5Z' fill='%23FFFFFF'/%3E%3C/svg%3E") !important;
+    --mp-scrollbar-track-pattern: none;
+    --mp-icon-scroll-up: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 6L4 10H12L8 6Z' fill='%23999999'/%3E%3C/svg%3E") !important;
+    --mp-icon-scroll-down: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 11L12 7H4L8 11Z' fill='%23999999'/%3E%3C/svg%3E") !important;
+    --mp-icon-scroll-left: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 8.5L11 4.5V12.5L7 8.5Z' fill='%23999999'/%3E%3C/svg%3E") !important;
+    --mp-icon-scroll-right: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' viewBox='0 0 16 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 8.5L5 12.5V4.5L9 8.5Z' fill='%23999999'/%3E%3C/svg%3E") !important;
 }
 
-/* WebKit scrollbars — thème sombre : damier + pouce + boutons simplifiés */
+/* WebKit scrollbars — thème sombre */
 html:has(body.theme-dark) html::-webkit-scrollbar-track,
 html:has(body.theme-dark) body::-webkit-scrollbar-track,
 html:has(body.theme-dark) *::-webkit-scrollbar-track {
     background-color: var(--mp-scrollbar-track-solid);
-    background-image: var(--mp-scrollbar-track-pattern) !important;
+    background-image: none !important;
 }
 
 html:has(body.theme-dark) html::-webkit-scrollbar-thumb,
 html:has(body.theme-dark) body::-webkit-scrollbar-thumb,
 html:has(body.theme-dark) *::-webkit-scrollbar-thumb {
     background-color: var(--mp-scrollbar-thumb-face);
-    box-shadow:
-        inset -1px -1px #000,
-        inset 1px 1px #5a6270,
-        inset -2px -2px #0a0c0e,
-        inset 2px 2px var(--mp-scrollbar-thumb-face) !important;
+    box-shadow: none !important;
 }
 
 html:has(body.theme-dark) html::-webkit-scrollbar-thumb:hover,
 html:has(body.theme-dark) body::-webkit-scrollbar-thumb:hover,
 html:has(body.theme-dark) *::-webkit-scrollbar-thumb:hover {
-    background-color: #454d58;
-    box-shadow:
-        inset -1px -1px #000,
-        inset 1px 1px #6a7280,
-        inset -2px -2px #1a1d22,
-        inset 2px 2px #454d58 !important;
+    background-color: var(--mp-scrollbar-thumb-hover);
+    box-shadow: none !important;
 }
 
 html:has(body.theme-dark) html::-webkit-scrollbar-thumb:active,
 html:has(body.theme-dark) body::-webkit-scrollbar-thumb:active,
 html:has(body.theme-dark) *::-webkit-scrollbar-thumb:active {
-    background-color: #2e343d;
-    box-shadow:
-        inset 1px 1px #000,
-        inset -1px -1px #5a6270,
-        inset 2px 2px #1a1d22,
-        inset -2px -2px #2e343d !important;
+    background-color: var(--mp-scrollbar-thumb-active);
+    box-shadow: none !important;
 }
 
 html:has(body.theme-dark) html::-webkit-scrollbar-corner,
@@ -296,47 +265,43 @@ html:has(body.theme-dark) *::-webkit-scrollbar-corner {
 }
 
 html:has(body.theme-dark) *::-webkit-scrollbar-button:vertical:start:decrement {
-    background-image: var(--mp-icon-scroll-up), linear-gradient(180deg, #4e565f 0%, #353b44 55%, #2a2f38 100%) !important;
+    background-image: var(--mp-icon-scroll-up) !important;
 }
 
 html:has(body.theme-dark) *::-webkit-scrollbar-button:vertical:end:increment {
-    background-image: var(--mp-icon-scroll-down), linear-gradient(180deg, #4e565f 0%, #353b44 55%, #2a2f38 100%) !important;
+    background-image: var(--mp-icon-scroll-down) !important;
 }
 
 html:has(body.theme-dark) *::-webkit-scrollbar-button:horizontal:start:decrement {
-    background-image: var(--mp-icon-scroll-left), linear-gradient(180deg, #4e565f 0%, #353b44 55%, #2a2f38 100%) !important;
+    background-image: var(--mp-icon-scroll-left) !important;
 }
 
 html:has(body.theme-dark) *::-webkit-scrollbar-button:horizontal:end:increment {
-    background-image: var(--mp-icon-scroll-right), linear-gradient(180deg, #4e565f 0%, #353b44 55%, #2a2f38 100%) !important;
+    background-image: var(--mp-icon-scroll-right) !important;
 }
 
 html:has(body.theme-dark) *::-webkit-scrollbar-button:vertical:start:decrement,
 html:has(body.theme-dark) *::-webkit-scrollbar-button:vertical:end:increment,
 html:has(body.theme-dark) *::-webkit-scrollbar-button:horizontal:start:decrement,
 html:has(body.theme-dark) *::-webkit-scrollbar-button:horizontal:end:increment {
-    background-color: transparent !important;
+    background-color: var(--mp-scrollbar-track-solid) !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
-    box-shadow:
-        inset 1px 1px var(--mp-raised-top),
-        inset -1px -1px var(--mp-raised-bot),
-        inset 2px 2px rgba(255, 255, 255, 0.05),
-        inset -2px -2px #000 !important;
+    box-shadow: none !important;
 }
 
 body.theme-dark .window {
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border-color: var(--mp-raised-top);
 }
 
 body.theme-dark menu[role="menubar"]>li[role="menuitem"]>ul[role="menu"] {
     background: var(--mp-surface);
     color: var(--mp-text);
-    border: 1px solid #555;
+    border: 1px solid #444;
 }
 
 body.theme-dark .list-box {
-    background: #1a1d22;
+    background: var(--mp-surface-deep);
     color: var(--mp-text);
 }
 
@@ -347,20 +312,20 @@ body.theme-dark #tool-options-bar {
 }
 
 body.theme-dark {
-    background: #1a1c20;
+    background: #111111;
 }
 
 body.theme-dark #app-window.window {
     background: var(--mp-surface);
-    border-color: var(--mp-raised-top) #2a2a2a #2a2a2a var(--mp-raised-top);
+    border-color: var(--mp-raised-top);
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) menu[role="menubar"],
 body.theme-dark:not(.theme-aero):not(.theme-luna) #app-window .window-body>menu.illu-menubar-root {
-    background: linear-gradient(180deg, #323840 0%, #252830 100%) !important;
+    background: var(--mp-surface) !important;
     color: var(--mp-text) !important;
-    border-bottom: 1px solid var(--mp-raised-bot) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 1px solid var(--mp-raised-top) !important;
+    box-shadow: none !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="menuitem"],
@@ -371,7 +336,7 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] {
     background: var(--mp-menu-submenu-bg) !important;
     color: var(--mp-text) !important;
-    border-color: var(--mp-raised-top) #1a1a1a #1a1a1a var(--mp-raised-top) !important;
+    border-color: var(--mp-raised-top) !important;
 }
 
 body.theme-dark #tab-bar-outer,
@@ -380,44 +345,43 @@ body.theme-dark #tab-bar,
 body.theme-dark .tab-bar-inner,
 body.theme-dark .tab-bar {
     background: var(--mp-surface-deep);
-    border-color: var(--mp-raised-bot);
+    border-color: var(--mp-raised-top);
 }
 
 body.theme-dark #tab-bar-outer {
-    border-bottom-color: var(--mp-raised-bot) !important;
+    border-bottom-color: var(--mp-raised-top) !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) .tab {
     background: var(--mp-surface-deep);
     color: var(--mp-text);
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
+    border-color: transparent transparent var(--mp-raised-top) transparent;
+    box-shadow: none;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) .tab.active {
-    background: linear-gradient(180deg, #3d4552 0%, #2e343d 100%) !important;
+    background: var(--mp-surface) !important;
     color: #fff !important;
-    font-weight: 600;
-    box-shadow: inset 0 -3px 0 var(--mp-accent), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    border-color: var(--mp-raised-top) #1a1d22 #1a1d22 var(--mp-raised-top) !important;
+    font-weight: normal;
+    box-shadow: inset 0 -2px 0 var(--mp-accent);
+    border-color: transparent !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) .tab:not(.active) {
-    color: #b8bcc4;
+    color: #cccccc;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) .tab.tab--alpha-mask:not(.active) {
-    color: #c9c2dc;
+    color: #cccccc;
 }
 
-/* Même logique 3D que #layers-list .layer-alpha-btn */
+/* Mêmes toggles plats et propres pour le Dark Mode */
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn {
-    background: var(--mp-surface-deep) !important;
+    background: transparent !important;
     color: var(--mp-text) !important;
-    border: 2px solid !important;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
+    border: 1px solid transparent !important;
     border-radius: var(--mp-radius);
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn i,
@@ -427,28 +391,28 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn svg {
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn:not(.tool-btn--planned):not(:disabled):hover {
-    background: #424a56 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;
-    border-color: #5a6270 !important;
+    border-color: transparent !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn.active {
-    background: #1e2633 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
     color: #fff !important;
     border-color: var(--mp-accent) !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: none !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn:disabled,
 body.theme-dark:not(.theme-aero):not(.theme-luna) #win-tools .tool-btn.tool-btn--planned {
     opacity: 0.45;
-    color: #9aa0a8 !important;
+    color: #777777 !important;
 }
 
 body.theme-dark #main-toolbox.tool-grid--pdn .tool-group {
-    border-bottom-color: rgba(255, 255, 255, 0.07);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 70%);
+    border-bottom-color: #444444;
+    box-shadow: none;
+    background: transparent;
 }
 
 body.theme-dark input[type="text"],
@@ -456,23 +420,23 @@ body.theme-dark input[type="number"],
 body.theme-dark input[type="search"],
 body.theme-dark textarea,
 body.theme-dark select {
-    background: #1e2228;
+    background: #2b2b2b;
     color: var(--mp-text);
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border-color: #555555;
 }
 
 body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
-    background: var(--mp-btn-bg-hover, #3d4450);
+    background: #444444;
 }
 
 body.theme-dark .palette-panel.window,
 body.theme-dark .floating-window.window {
-    box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 body.theme-dark .title-bar-controls button {
-    border-color: var(--mp-raised-top) #2a2a2a #2a2a2a var(--mp-raised-top);
-    background: linear-gradient(180deg, #5a6578 0%, #3d4555 45%, #2e3542 100%);
+    border-color: transparent;
+    background: transparent;
 }
 
 body.theme-dark #settings-overlay .window-body,
@@ -485,7 +449,7 @@ body.theme-dark #settings-overlay fieldset {
 }
 
 body.theme-dark kbd {
-    background: #2a3038;
+    background: #2b2b2b;
     color: var(--mp-text);
     border-color: #555;
 }
@@ -504,7 +468,7 @@ body {
 }
 
 #workspace {
-    background: linear-gradient(165deg, var(--mp-workspace) 0%, var(--mp-workspace-deep) 100%) !important;
+    background: var(--mp-workspace) !important;
 }
 
 *,
@@ -513,24 +477,23 @@ body {
     box-sizing: border-box;
 }
 
-/* ——— Fenêtre principale & flottantes (Win98 — pas Aero / Modern) ——— */
+/* ——— Fenêtre principale & flottantes (Win10 Flat) ——— */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window {
     display: flex;
     flex-direction: column;
     background: var(--mp-surface);
     color: var(--mp-text);
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    box-shadow:
-        2px 2px 0 rgba(0, 0, 0, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    border: 1px solid var(--mp-raised-top);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
     font-family: var(--mp-font);
     font-size: 12px;
 }
 
 #app-window.window {
-    border-color: var(--mp-raised-top) #5c5c5c #5c5c5c var(--mp-raised-top);
+    border-color: var(--mp-raised-top);
     height: 100%;
+    box-shadow: none;
+    /* Plein écran */
 }
 
 /* Ne pas utiliser display:none au boot : le layout / centrage workspace se calcule dès le chargement. */
@@ -544,20 +507,20 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(180deg, var(--mp-title-light) 0%, var(--mp-title) 48%, #0a1f42 100%);
-    color: #fff;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
-    border-bottom: 1px solid #000;
+    background: var(--mp-surface);
+    color: var(--mp-text);
+    font-weight: normal;
+    letter-spacing: normal;
+    text-shadow: none;
+    border-bottom: none;
     flex-shrink: 0;
     cursor: default;
     user-select: none;
+    height: 32px;
 }
 
-
 body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .title-bar-text {
-    color: #ffffff !important;
+    color: var(--mp-text) !important;
 }
 
 .title-bar-text {
@@ -570,55 +533,67 @@ body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .title-bar-text {
 
 body:not(.theme-aero):not(.theme-luna) .title-bar-controls {
     display: flex;
-    gap: 2px;
+    gap: 0;
+    /* Pas d'espace entre les boutons Win10 */
     flex-shrink: 0;
+    height: 100%;
 }
 
+/* Boutons title bar carrés ! */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     padding: 0;
     margin: 0;
-    border: 1px solid;
-    border-color: var(--mp-raised-top) #404040 #404040 var(--mp-raised-top);
-    background: linear-gradient(180deg, #c8d4e8 0%, #7a8fb0 45%, #5a6d8a 100%);
+    border: none;
+    background: transparent;
     cursor: pointer;
     position: relative;
     min-width: 0 !important;
     min-height: 0 !important;
+    border-radius: 0;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:hover {
-    filter: brightness(1.08);
+    background: rgba(128, 128, 128, 0.2);
+    filter: none;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:active {
-    border-color: #404040 var(--mp-raised-top) var(--mp-raised-top) #404040;
+    background: rgba(128, 128, 128, 0.3);
+    border-color: transparent;
 }
 
 /* Boutons minimise / maximise / fermer — pictos simples */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"]::after {
     content: "";
     position: absolute;
-    left: 3px;
-    right: 3px;
-    bottom: 4px;
-    height: 2px;
-    background: #111;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 1px;
+    background: var(--mp-text);
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"]::after {
     content: "";
     position: absolute;
-    inset: 4px;
-    border: 1px solid #111;
-    border-top-width: 2px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--mp-text);
+    border-top-width: 1px;
+    /* Uniform for flat */
+    background: transparent;
 }
 
 /* Croix : aria-label « Close » OU .title-bar-close-btn (i18n remplace souvent l’attribut) */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::before,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after {
-    background: #000000 !important;
+    background: var(--mp-text) !important;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::before,
@@ -628,7 +603,7 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls bu
     left: 50%;
     top: 50%;
     width: 10px;
-    height: 2px;
+    height: 1px;
     transform: translate(-50%, -50%) rotate(45deg);
 }
 
@@ -637,54 +612,66 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls bu
     transform: translate(-50%, -50%) rotate(-45deg);
 }
 
+/* Hover rouge sur le bouton fermer : le bouton devient carré rouge vif ! */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover {
+    background-color: #E81123 !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover::after {
+    background: #ffffff !important;
+}
+
 body.theme-dark .title-bar-controls button.title-bar-close-btn::before,
 body.theme-dark .title-bar-controls button.title-bar-close-btn::after,
 body.theme-dark .title-bar-controls button[aria-label="Close"]::before,
 body.theme-dark .title-bar-controls button[aria-label="Close"]::after,
 body.theme-dark .illu-mobile-drawer__close::before,
 body.theme-dark .illu-mobile-drawer__close::after {
-    background: #f2f2f2 !important;
+    background: #ffffff !important;
 }
 
 body.theme-dark .illu-mobile-drawer__palette-tile .fa-circle-xmark::before,
 body.theme-dark .illu-mobile-drawer__palette-tile .fa-circle-xmark::after {
-    background: #f2f2f2 !important;
+    background: #ffffff !important;
 }
 
 body:not(.theme-aero):not(.theme-luna) .window-body {
     min-height: 0;
-    background: var(--mp-surface) !important;
+    background: #F0F0F0 !important;
     color: var(--mp-text);
     font-size: var(--mp-ui-font-size);
 }
 
-/* Corps principal de l’app : seul ce bloc doit occuper l’espace vertical (évite flex:1 sur toutes les fenêtres). */
+body.theme-dark:not(.theme-aero):not(.theme-luna) .window-body {
+    background: var(--mp-surface) !important;
+}
+
 #app-window>.window-body.illu-app-window-body {
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: visible;
-    /* Allow menus to overflow downwards */
     flex: 1 1 auto;
     align-items: stretch;
 }
 
-/* #workspace est dans #editor-dock-row, pas enfant direct du window-body */
 #app-window>.window-body.illu-app-window-body #workspace {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
 }
 
-/* Mode Paint.NET : fixed pour contrer .palette-panel { position: relative } — ne pas forcer left/top (sinon les positions inline sont ignorées). */
-/* Outils / Couleurs / Historique : largeur au contenu. Calques exclus : sinon width:auto !important écrase le inline (~240px) et la fenêtre rétrécit (~183px). */
 body.ui-layout-floating #floating-palette-host>.window.palette-panel:not(#win-layers) {
     position: fixed !important;
     width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
     flex-shrink: 0 !important;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 body.ui-layout-floating #floating-palette-host>#win-layers.window.palette-panel {
@@ -692,14 +679,13 @@ body.ui-layout-floating #floating-palette-host>#win-layers.window.palette-panel 
     max-width: none !important;
     box-sizing: border-box;
     flex-shrink: 0 !important;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 body:not(.theme-aero):not(.theme-luna) .floating-window .title-bar {
     cursor: move;
 }
 
-/* Bouton × des palettes : visible seulement en mode fenêtres flottantes (pas en Photoshop / docké) */
 body.ui-layout-floating .illu-palette-float-close {
     display: flex;
 }
@@ -709,28 +695,31 @@ body.ui-layout-docked .illu-palette-float-close {
     display: none !important;
 }
 
-/* ——— Boutons généraux ——— */
+/* ——— Boutons généraux Win10 ——— */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
     font-family: var(--mp-font);
     font-size: var(--mp-ui-font-size);
-    padding: 4px 12px;
+    padding: 2px 8px;
     min-height: 22px;
-    background: var(--mp-btn-bg, var(--mp-surface-deep));
+    background: var(--mp-surface-deep);
     color: var(--mp-text);
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border: 1px solid var(--mp-inset-top);
     cursor: pointer;
     border-radius: var(--mp-radius);
     z-index: 1;
+    transition: background 0.1s, border-color 0.1s;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
-    background: var(--mp-btn-bg-hover, #e8e4df);
+    background: var(--mp-surface);
+    border-color: var(--mp-accent);
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active {
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    padding: 5px 11px 3px 13px;
+    background: #cccccc;
+    border-color: var(--mp-accent);
+
+    /* Remove 3D shift */
 }
 
 /* ——— Champs ——— */
@@ -742,35 +731,34 @@ select {
     font-family: var(--mp-font);
     font-size: var(--mp-ui-font-size);
     color: var(--mp-text);
-    background: #fff;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    background: var(--mp-surface);
+    border: 1px solid var(--mp-inset-top);
     border-radius: var(--mp-radius);
-    padding: 3px 5px;
+    padding: 4px 6px;
+    transition: border-color 0.1s;
 }
 
 input[type="text"]:focus,
 input[type="number"]:focus,
 textarea:focus,
 select:focus {
-    outline: 1px dotted var(--mp-focus);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--mp-accent);
 }
 
 input[type="range"] {
-    accent-color: var(--mp-title);
+    accent-color: var(--mp-accent);
     cursor: pointer;
 }
 
-/* ——— Checkboxes Modernisés ——— */
+/* ——— Checkboxes Modernisés Win10 ——— */
 input[type="checkbox"] {
     -webkit-appearance: none;
     appearance: none;
     width: 16px;
     height: 16px;
-    background: #fff;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    background: var(--mp-surface);
+    border: 1px solid var(--mp-text);
     border-radius: var(--mp-radius);
     margin: 0 6px 0 0;
     vertical-align: middle;
@@ -780,27 +768,37 @@ input[type="checkbox"] {
 }
 
 body.theme-dark input[type="checkbox"] {
-    background: #1e2228;
+    background: #2b2b2b;
+    border-color: #ffffff;
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--mp-accent);
+}
+
+input[type="checkbox"]:checked {
+    background: var(--mp-accent);
+    border-color: var(--mp-accent);
 }
 
 input[type="checkbox"]:checked::after {
     content: "";
     position: absolute;
-    top: 1px;
-    left: 4px;
-    width: 4px;
-    height: 8px;
-    border: solid var(--mp-accent);
+    top: 2px;
+    left: 5px;
+    width: 3px;
+    height: 7px;
+    border: solid #ffffff;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }
 
 body.theme-dark input[type="checkbox"]:checked::after {
-    border-color: #8ab4e8;
+    border-color: #ffffff;
 }
 
 input[type="checkbox"]:active {
-    background: #e8e8e8;
+    background: #cccccc;
 }
 
 /* ——— Slider / Jauge Universelle ——— */
@@ -817,14 +815,12 @@ input[type="checkbox"]:active {
 }
 
 #convert-dither-size-val {
-
     width: calc(100% - 25px);
-
 }
 
 body.theme-dark .illu-range-wrap,
 body.theme-dark .illu-gauge-wrap {
-    background: #1e2228;
+    background: #2b2b2b;
 }
 
 .illu-range-wrap .illu-range-fill,
@@ -834,16 +830,15 @@ body.theme-dark .illu-gauge-wrap {
     left: 0;
     bottom: 0;
     width: var(--illu-gauge-pct, 0%);
-    background: linear-gradient(180deg, var(--mp-title-light) 0%, var(--mp-accent) 100%);
-    opacity: 0.25;
+    background: var(--mp-accent);
+    opacity: 0.5;
     pointer-events: none;
 }
 
 body.theme-dark .illu-range-wrap .illu-range-fill,
 body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
-    background: linear-gradient(180deg, var(--mp-accent-muted) 0%, #1e4a8c 100%);
+    background: var(--mp-accent);
 }
-
 
 .illu-range-wrap .illu-range-val,
 .illu-gauge-wrap .illu-gauge-val {
@@ -856,7 +851,7 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
     z-index: 3;
 }
 
-/* ——— Barre de progression (statut) — alvéole : message optionnel + piste ——— */
+/* ——— Barre de progression (statut) ——— */
 .status-bar-cell--progress {
     flex: 0 1 min(200px, 28vw);
     min-width: 72px;
@@ -879,19 +874,17 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
     max-width: 100%;
 }
 
-/* Type 98.css .progress-indicator.segmented (style.css) — remplissage = --mp-progress-fill (accent) */
+/* Type 98.css .progress-indicator.segmented -> Win10 continuous */
 .illu-mp-progress-indicator {
     position: relative;
     box-sizing: border-box;
-    height: 22px;
-    padding: 3px;
-    border: none;
+    height: 14px;
+    padding: 0;
+    border: 1px solid var(--mp-inset-top);
     border-radius: 0;
     overflow: hidden;
     background: var(--mp-surface-deep);
-    box-shadow:
-        inset 1px 1px 0 var(--mp-inset-top),
-        inset -1px -1px 0 var(--mp-inset-bot);
+    box-shadow: none;
 }
 
 .illu-mp-progress-indicator__bar {
@@ -902,27 +895,22 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
 }
 
 .illu-mp-progress-indicator--segmented>.illu-mp-progress-indicator__bar {
-    background-color: transparent;
-    background-image: linear-gradient(90deg,
-            var(--mp-progress-fill) 0 12px,
-            transparent 12px 14px);
-    background-repeat: repeat;
-    background-size: 14px 100%;
+    background-color: var(--mp-progress-fill);
+    background-image: none;
+    /* Removed segments */
 }
 
 .illu-status-progress-track.illu-mp-progress-indicator {
     width: 200px;
-    height: 20px;
-    padding: 2px;
+    height: 14px;
+    padding: 0;
 }
 
-/* Compat : anciennes classes si HTML partiel */
 .illu-status-progress-track:not(.illu-mp-progress-indicator) {
     width: 100%;
-    height: 8px;
+    height: 14px;
     background: var(--mp-surface-deep);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -930,12 +918,10 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
 .illu-status-progress-fill:not(.illu-mp-progress-indicator__bar) {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--mp-accent), color-mix(in srgb, var(--mp-accent) 65%, #7ec4a0));
+    background: var(--mp-accent);
     transition: width 0.14s ease-out;
 }
 
-/* Fenêtre d’information : effet instantané en cours (non fermable, non annulable) */
-/* `display: flex` ne doit pas s’appliquer avec [hidden], sinon la boîte reste visible au chargement. */
 #illu-instant-effect-busy[hidden] {
     display: none !important;
     pointer-events: none !important;
@@ -968,8 +954,9 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
     z-index: 1;
     width: min(380px, 94vw);
     max-width: 100%;
-    box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     pointer-events: auto;
+    border: 1px solid var(--mp-raised-top);
 }
 
 .illu-instant-effect-busy__box .title-bar {
@@ -1002,7 +989,6 @@ body.illu-instant-effect-busy-active {
     font-size: 11px;
 }
 
-/* Fenêtre sauvegarde auto par intervalle (fond flou) */
 .illu-autosave-overlay {
     position: fixed;
     inset: 0;
@@ -1022,13 +1008,12 @@ body.illu-instant-effect-busy-active {
     box-sizing: border-box;
 }
 
-/* ——— Splash : fond bureau, disparition en fondu (écran entier) ——— */
+/* ——— Splash ——— */
 body.illu-splash-active {
-    background-color: var(--illu-splash-desk, #008080);
+    background-color: var(--illu-splash-desk, var(--mp-accent));
     transition: background-color 0.48s ease-out;
 }
 
-/* illu-splash-fading : retrait du fond body uniquement après le fondu (voir IlluProgress.js) */
 body.illu-splash-active.illu-splash-fading {
     background-color: transparent;
     transition: background-color 0.48s ease-out;
@@ -1042,12 +1027,11 @@ body.illu-splash-active.illu-splash-fading {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: var(--illu-splash-desk, #008080);
+    background-color: var(--illu-splash-desk, var(--mp-accent));
     box-sizing: border-box;
     padding: 24px 16px 20px;
     pointer-events: auto;
     opacity: 1;
-    /* transition CSS en secours ; le fondu boot utilise element.animate() */
     transition: opacity 0.48s ease-out;
 }
 
@@ -1071,17 +1055,16 @@ body.illu-splash-active.illu-splash-fading {
     display: block;
     max-width: 100%;
     height: auto;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(145deg, #e8e8e8, #d0d0d0);
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: #ffffff;
     min-height: 120px;
     object-fit: cover;
 }
 
 .illu-splash__img--missing {
     min-height: 200px;
-    background: linear-gradient(160deg, #ececec 0%, #c8c8c8 100%);
+    background: #ffffff;
 }
 
 .status-bar-cell status-bar-cell--progress {
@@ -1095,31 +1078,27 @@ body.illu-splash-active.illu-splash-fading {
     top: 10px;
     text-align: center;
     pointer-events: none;
-    filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 14px rgba(255, 255, 255, 0.75));
+    filter: none;
 }
 
 .illu-splash__brand .illu-splash__title,
 .illu-splash__brand .illu-splash__sub {
-    text-shadow:
-        0 0 2px #fff,
-        0 0 6px rgba(255, 255, 255, 0.98),
-        0 0 12px rgba(255, 255, 255, 0.85),
-        0 1px 0 rgba(255, 255, 255, 0.9);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
 }
 
 .illu-splash__title {
     margin: 0;
     font-size: 60px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: #1a1a1a;
+    font-weight: 300;
+    /* Plus moderne, moins gras */
+    letter-spacing: 0.02em;
 }
 
 .illu-splash__sub {
     margin: 0px 0 0;
     font-size: clamp(0.95rem, 2.6vw, 1.15rem);
-    color: #333;
-    font-weight: 600;
+    font-weight: 400;
 }
 
 .illu-splash__sub.illu-splash__sub--boot {
@@ -1154,7 +1133,6 @@ body.illu-splash-active.illu-splash-fading {
     transition: opacity 0.22s ease-out;
 }
 
-/* Texte + barre de chargement superposés en bas de l’image (pas sur gris sous la carte). */
 .illu-splash__overlay-bottom {
     position: absolute;
     left: 0;
@@ -1162,8 +1140,8 @@ body.illu-splash-active.illu-splash-fading {
     bottom: 0;
     padding: 10px 6px 12px;
     box-sizing: border-box;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.12) 65%, transparent 100%);
-    border-radius: 0 0 2px 2px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+    border-radius: 0;
     pointer-events: none;
 }
 
@@ -1173,32 +1151,31 @@ body.illu-splash-active.illu-splash-fading {
     line-height: 1.35;
     color: #fff;
     text-align: left;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+    text-shadow: none;
 }
 
 .illu-splash__track.illu-mp-progress-indicator {
-    height: 20px;
+    height: 4px;
+    /* Win10 loading style */
     width: 100%;
     max-width: none;
-    padding: 2px;
-    background: rgba(0, 0, 0, 0.32);
-    box-shadow:
-        inset 1px 1px 0 rgba(0, 0, 0, 0.55),
-        inset -1px -1px 0 rgba(255, 255, 255, 0.22);
+    padding: 0;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+    border: none;
 }
 
 #illu-splash .illu-mp-progress-indicator--segmented>.illu-mp-progress-indicator__bar {
-    --mp-progress-fill: color-mix(in srgb, var(--mp-title-light) 88%, #ffffff);
+    --mp-progress-fill: #ffffff;
     transition: width 0.18s ease-out;
 }
 
 .illu-splash__track:not(.illu-mp-progress-indicator) {
-    height: 20px;
+    height: 4px;
     width: 100%;
     max-width: none;
-    background: rgba(0, 0, 0, 0.35);
-    border: 2px solid;
-    border-color: rgba(0, 0, 0, 0.45) rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.35) rgba(0, 0, 0, 0.45);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
     overflow: hidden;
     box-sizing: border-box;
 }
@@ -1206,11 +1183,11 @@ body.illu-splash-active.illu-splash-fading {
 .illu-splash__fill:not(.illu-mp-progress-indicator__bar) {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #7eb8ff, #a8e6cf);
+    background: #ffffff;
     transition: width 0.18s ease-out;
 }
 
-/* ——— Barre de statut (style Win98 : alvéoles enfoncées) ——— */
+/* ——— Barre de statut (Win10) ——— */
 .status-bar {
     display: flex;
     flex-wrap: nowrap;
@@ -1220,11 +1197,10 @@ body.illu-splash-active.illu-splash-fading {
     gap: 4px;
     padding: 4px 5px;
     font-size: var(--mp-ui-font-size);
-    background: linear-gradient(180deg, var(--mp-surface-deep) 0%, #d4d0cb 100%);
-    border-top: 2px solid;
-    border-color: var(--mp-raised-top) transparent transparent var(--mp-raised-top);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    color: #333;
+    background: var(--mp-surface);
+    border-top: 1px solid var(--mp-raised-top);
+    box-shadow: none;
+    color: var(--mp-text);
     overflow: hidden;
 }
 
@@ -1237,7 +1213,6 @@ body.illu-splash-active.illu-splash-fading {
     min-width: 0;
 }
 
-/* Alvéole enfoncée (comme zone de texte Win98) */
 .status-bar-cell {
     display: flex;
     align-items: center;
@@ -1245,19 +1220,22 @@ body.illu-splash-active.illu-splash-fading {
     min-height: calc(var(--mp-control-min-height, 24px) - 6px);
     padding: 2px 8px;
     box-sizing: border-box;
-    background: var(--mp-surface);
-    background: linear-gradient(180deg, #dcd8d3 0%, var(--mp-surface) 55%);
-    border: 1px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-radius: var(--mp-radius);
-    box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.06);
+    background: transparent;
+    border: 1px solid transparent;
+    border-right: 1px solid var(--mp-inset-top);
+    /* Séparateur discret */
+    border-radius: 0;
+    box-shadow: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
 }
 
-/* Les zones flexibles : Nom du doc et Progrès */
+.status-bar-cell:last-child {
+    border-right: none;
+}
+
 .status-bar-cell--flex,
 .status-bar-cell--progress {
     flex: 1 1 auto !important;
@@ -1268,7 +1246,6 @@ body.illu-splash-active.illu-splash-fading {
     max-width: 320px;
 }
 
-/* Texte interne */
 .status-bar-field {
     width: 100%;
     margin: 0;
@@ -1281,16 +1258,12 @@ body.illu-splash-active.illu-splash-fading {
     width: 100% !important;
 }
 
-/* --- Priorités de disparition --- */
-
-/* 1. Coordonnées (First to go) */
 @media (max-width: 850px) {
     .status-bar-cell:has(#status-coords) {
         display: none !important;
     }
 }
 
-/* 2. Taille et Zoom */
 @media (max-width: 700px) {
 
     .status-bar-cell:has(#status-doc-size),
@@ -1299,15 +1272,13 @@ body.illu-splash-active.illu-splash-fading {
     }
 }
 
-/* 3. Logic 'SM' (800px) : on cache les éléments marqués */
 @media (max-width: 750px) {
     .hide-sm {
         display: none !important;
     }
 }
 
-/* 4. Logic 'XS' (650px) : Très petit, on cache le nom du projet pour garder le progrès/crédit */
-@media (max-width:450px) {
+@media (max-width: 450px) {
 
     .hide-xs,
     .status-bar-cell--flex {
@@ -1315,7 +1286,6 @@ body.illu-splash-active.illu-splash-fading {
     }
 }
 
-/* 5. Vraiment restreint (500px) : Only Credits remain */
 @media (max-width: 250px) {
     .status-bar-cell:not(:has(.status-bar-credit-line)) {
         display: none !important;
@@ -1355,17 +1325,17 @@ body.illu-splash-active.illu-splash-fading {
 }
 
 .status-bar-credit-link {
-    color: #000080;
-    text-decoration: underline;
+    color: var(--mp-accent);
+    text-decoration: none;
     cursor: pointer;
 }
 
 .status-bar-credit-link:hover {
-    color: #0000cc;
+    text-decoration: underline;
 }
 
 .status-bar-credit-link:active {
-    color: #000050;
+    color: var(--mp-teal-dark);
 }
 
 .status-bar-field {
@@ -1415,7 +1385,7 @@ body.illu-splash-active.illu-splash-fading {
 .illu-new-project-sep {
     margin: 12px 0;
     border: none;
-    border-top: 1px solid var(--mp-inset-top, #808080);
+    border-top: 1px solid var(--mp-inset-top);
     opacity: 0.55;
 }
 
@@ -1472,66 +1442,63 @@ body.illu-splash-active.illu-splash-fading {
 
 /* ——— Boîtes de liste ——— */
 .list-box {
-    background: #fff !important;
-    border: 2px solid !important;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-inset-top) !important;
     border-radius: var(--mp-radius);
     font-size: var(--mp-ui-font-size);
 }
 
 .list-item.active {
-    background: var(--mp-menu-hover-bg) !important;
-    color: var(--mp-menu-hover-fg) !important;
+    background: color-mix(in srgb, var(--mp-accent, #806020) 30%, transparent) !important;
+    color: #000 !important;
 }
 
-/* Lignes calque : même rayon / boîte que les boutons outils (liste cohérente) */
 #layers-list.list-box .list-item.layer-row {
-    border-radius: var(--mp-radius);
-    margin: 1px 0;
+    border-radius: 0;
+    margin: 0;
     padding: 3px 5px;
     box-sizing: border-box;
-    border: 1px solid transparent;
+    border: none;
+    border-bottom: 1px solid var(--mp-surface-deep);
 }
 
 #layers-list.list-box .list-item.layer-row:not(.active):hover {
-    background: rgba(0, 0, 0, 0.045);
+    background: var(--mp-surface-deep);
 }
 
 body.theme-dark #layers-list.list-box .list-item.layer-row:not(.active):hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: #333333;
 }
 
 /* ——— Calques : bouton alpha ——— */
 #layers-list .layer-alpha-btn {
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border: 1px solid var(--mp-inset-top);
     background: var(--mp-surface-deep);
-    border-radius: var(--mp-radius);
+    border-radius: 0;
 }
 
 #layers-list .layer-dynfx-btn {
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border: 1px solid var(--mp-inset-top);
     background: var(--mp-surface-deep);
-    border-radius: var(--mp-radius);
-    color: var(--mp-title);
+    border-radius: 0;
+    color: var(--mp-text);
 }
 
 #layers-list .layer-dynfx-btn.layer-dynfx-btn--on {
-    background: linear-gradient(180deg, #e8eefc 0%, #c8d4f0 100%);
-    border-color: var(--mp-accent) #6a6a6a #6a6a6a var(--mp-accent);
-    color: #1a3d7a;
+    background: var(--mp-accent);
+    border-color: var(--mp-accent);
+    color: #ffffff;
 }
 
 #layers-list .layer-row.layer-row--dyn-filter {
-    background: linear-gradient(180deg, #ebe6f7 0%, #ddd4f2 100%);
+    background: #f0f0f0;
     border-left: 3px solid #6b4fc9;
     box-sizing: border-box;
 }
 
 #layers-list .layer-row.layer-row--dyn-filter.active {
-    background: linear-gradient(180deg, #5c4a9e 0%, #4a3a82 100%);
-    border-left-color: #b9a6ff;
+    background: var(--mp-accent);
+    border-left-color: #ffffff;
     color: #fff;
 }
 
@@ -1546,17 +1513,15 @@ body.theme-dark #layers-list.list-box .list-item.layer-row:not(.active):hover {
 }
 
 #layers-list .layer-row.layer-row--dyn-filter.active .layer-dynfx-btn.layer-dynfx-btn--on {
-    background: rgba(200, 210, 255, 0.35);
-    border-color: #d0c4ff;
-    color: #fff;
+    background: #ffffff;
+    color: var(--mp-accent);
 }
 
 body.theme-dark #layers-list .layer-dynfx-btn.layer-dynfx-btn--on {
-    background: linear-gradient(180deg, #2a3550 0%, #1e2840 100%);
-    color: #b8c8ff;
+    background: var(--mp-accent);
+    color: #ffffff;
 }
 
-/* Palette Calques : même taille de texte que list-box / menus + hauteur select = boutons */
 #win-layers #layer-bounds-panel.layer-bounds-panel-compact {
     font-size: var(--mp-ui-font-size);
     padding: 6px 6px;
@@ -1633,7 +1598,7 @@ body.theme-dark #layers-list .layer-dynfx-btn.layer-dynfx-btn--on {
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--dyn-filter {
-    background: linear-gradient(180deg, #2d2640 0%, #252038 100%) !important;
+    background: #333333 !important;
     border-left-color: #8b6fd9;
 }
 
@@ -1642,52 +1607,51 @@ body.theme-dark #layers-list .layer-row.layer-row--dyn-filter .layer-name {
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--dyn-filter.active {
-    background: linear-gradient(180deg, #4a3d72 0%, #3d3260 100%) !important;
-    border-left-color: #c4b0ff;
+    background: var(--mp-accent) !important;
+    border-left-color: #ffffff;
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--dyn-filter.active .layer-name {
     color: #fff !important;
 }
 
-/* ——— Onglets MDI ——— inactif : enfoncé ; actif : surélevé */
+/* ——— Onglets MDI Win10 ——— */
 .tab {
-    background: var(--mp-surface-deep);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-bottom: none;
-    border-radius: var(--mp-radius) var(--mp-radius) 0 0;
-    color: var(--mp-title);
-    font-weight: 600;
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.06);
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--mp-inset-top);
+    border-radius: 0;
+    color: var(--mp-text);
+    font-weight: normal;
+    box-shadow: none;
     position: relative;
-    top: 2px;
+    top: 0;
     z-index: 1;
+    padding: 6px 12px;
 }
 
 .tab.active {
-    background: linear-gradient(180deg, #faf8f5 0%, #e2ded8 100%);
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    border-bottom-color: transparent;
-    font-weight: 600;
-    color: #111;
-    box-shadow: inset 0 -3px 0 var(--mp-accent);
+    background: var(--mp-surface);
+    border-color: transparent;
+    border-right: 1px solid var(--mp-inset-top);
+    font-weight: normal;
+    color: var(--mp-text);
+    box-shadow: inset 0 2px 0 var(--mp-accent);
+    /* Win10 accent line */
     top: 0;
     z-index: 3;
 }
 
-/* Réordonnancement onglets : appui long (~1 s) puis glisser */
 .tab-group--drag-armed .tab {
     outline: 2px dashed var(--mp-accent);
-    outline-offset: 2px;
+    outline-offset: -2px;
 }
 
 body.theme-dark .tab-group--drag-armed .tab {
-    outline-color: color-mix(in srgb, var(--mp-accent) 85%, #fff);
+    outline-color: var(--mp-accent);
 }
 
-/* Portée d’effet : actif = enfoncé, inactif = surélevé, une seule ligne sans écart */
-/* overflow-x:hidden + overflow-y:visible est réécrit en overflow-y:auto par le spec → barres de scroll inutiles ; on masque tout débordement. */
+/* Portée d’effet */
 .illu-scope-btn-row {
     display: flex;
     flex-wrap: nowrap;
@@ -1700,11 +1664,9 @@ body.theme-dark .tab-group--drag-armed .tab {
     box-sizing: border-box;
     overflow: hidden;
     overscroll-behavior: none;
-    /* Marge pour le léger décalage vertical des boutons actifs (top: 2px) sans déborder */
-    padding-bottom: 2px;
+    padding-bottom: 0;
 }
 
-/* Barre « Portée » (effets, redimensionner, etc.) : pas de scrollbar sur le groupe */
 .effect-scope-bar.illu-effect-scope-bar.field-row,
 .illu-effect-scope-bar.field-row {
     min-width: 0;
@@ -1718,50 +1680,48 @@ body.theme-dark .tab-group--drag-armed .tab {
     box-sizing: border-box;
     font-family: var(--mp-font);
     font-size: var(--mp-ui-font-small, 11px);
-    padding: 4px 8px;
+    padding: 6px 8px;
     min-height: 22px;
     cursor: pointer;
     line-height: 1.2;
     white-space: nowrap;
-    /* inactif = bouton relevé */
-    background: linear-gradient(180deg, #faf8f5 0%, #e2ded8 100%);
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    border-bottom: none;
-    border-radius: var(--mp-radius) var(--mp-radius) 0 0;
-    color: var(--mp-title);
-    font-weight: 600;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    background: var(--mp-surface-deep);
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--mp-text);
+    font-weight: normal;
+    box-shadow: none;
     position: relative;
     top: 0;
     z-index: 3;
 }
 
 .illu-scope-btn+.illu-scope-btn {
-    margin-left: -2px;
+    margin-left: 1px;
 }
 
 .illu-scope-btn--active {
-    background: var(--mp-surface-deep);
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-bottom-color: transparent;
-    color: #111;
-    box-shadow: inset 0 -3px 0 var(--mp-accent), inset 1px 1px 2px rgba(0, 0, 0, 0.06);
-    top: 2px;
+    background: var(--mp-surface);
+    border-color: transparent;
+    border-bottom: 2px solid var(--mp-accent);
+    color: var(--mp-accent);
+    font-weight: 600;
+    box-shadow: none;
+    top: 0;
     z-index: 1;
 }
 
 .illu-scope-btn:not(.illu-scope-btn--active):hover {
-    filter: brightness(1.05);
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .illu-scope-btn:focus-visible {
     outline: 2px solid var(--mp-accent);
-    outline-offset: 1px;
+    outline-offset: -2px;
     z-index: 4;
 }
 
-/* Ligne « Portée » + onglets : ne pas repasser à la ligne (la fenêtre effet est élargie) */
 .illu-effect-scope-bar.field-row {
     flex-wrap: nowrap;
     align-items: center;
@@ -1777,62 +1737,52 @@ body.theme-dark .tab-group--drag-armed .tab {
     min-width: min(320px, 98vw);
 }
 
-/* Onglet masque α : relié visuellement au projet parent (groupe .tab-group) */
 .tab--alpha-mask {
-    border: 2px solid;
-    border-left: 3px solid #6b4fd6;
-    border-top-color: var(--mp-inset-top);
-    border-right-color: var(--mp-inset-bot);
-    border-bottom: none;
-    background: linear-gradient(180deg, #e2dcf5 0%, #d4cce8 100%);
+    border: none;
+    border-right: 1px solid var(--mp-inset-top);
+    background: #f0e6ff;
     font-size: 10px;
     min-width: 0;
     max-width: 140px;
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
 }
 
 .tab--alpha-mask.active {
-    border-top-color: var(--mp-raised-top);
-    border-right-color: var(--mp-raised-bot);
-    background: linear-gradient(180deg, #f6f2ff 0%, #e8dff8 100%);
-    font-weight: 600;
-    box-shadow: inset 0 -3px 0 #6b4fd6;
+    background: #ffffff;
+    box-shadow: inset 0 2px 0 #6b4fd6;
 }
 
 body.theme-dark .tab--alpha-mask {
-    background: linear-gradient(180deg, #252030 0%, #1a1728 100%);
-    border-left-color: #9b7dff;
-    border-top-color: var(--mp-inset-top);
-    border-right-color: var(--mp-inset-bot);
+    background: #2b203d;
+    border-right-color: #444;
     color: var(--mp-text);
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
+    box-shadow: none;
 }
 
 body.theme-dark .tab--alpha-mask.active {
-    background: linear-gradient(180deg, #42386a 0%, #352d55 100%) !important;
-    border-top-color: var(--mp-raised-top);
-    border-right-color: #1a1d22;
+    background: #202020 !important;
     color: #fff !important;
-    font-weight: 600;
-    box-shadow: inset 0 -3px 0 #b794f6, inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 2px 0 #b794f6;
+    border-right-color: #444;
 }
 
 #tab-bar-outer {
     background: var(--mp-tab-bar-bg, var(--mp-surface-deep));
-    border-bottom-color: #6a6a6a !important;
+    border-bottom: 1px solid var(--mp-raised-top) !important;
 }
 
 /* ——— Barre d’options outil ——— */
 .tool-options-bar,
 #tool-options-bar {
-    background: linear-gradient(180deg, #f8f6f2 0%, var(--mp-surface) 100%) !important;
-    border-top: 1px solid var(--mp-raised-top) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
-    border-bottom: 1px solid #9a9a9a;
+    background: var(--mp-surface) !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid var(--mp-raised-top);
     font-size: var(--mp-ui-font-small);
     flex-wrap: nowrap !important;
     overflow-x: auto;
     flex-shrink: 0;
+    min-height: 34px !important;
 }
 
 .illu-tool-selector-wrap {
@@ -1843,30 +1793,32 @@ body.theme-dark .tab--alpha-mask.active {
 
 .opt-tool-name {
     padding-right: 24px !important;
-    font-weight: 700 !important;
-    color: var(--mp-title) !important;
+    font-weight: normal !important;
+    color: var(--mp-text) !important;
+    border-right: 1px solid var(--mp-inset-top);
 }
 
 .opt-bar-btn {
-    border: 2px solid !important;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
-    background: var(--mp-surface-deep) !important;
-    border-radius: var(--mp-radius) !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    border-radius: 0 !important;
 }
 
-/* Bascule type bouton (ex. « 4 coins ») : état actif = enfoncé / teinté accent */
+.opt-bar-btn:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+
 .opt-bar-btn.opt-bar-btn--on {
-    background: linear-gradient(180deg, #e8eefc 0%, #c8d4f0 100%) !important;
-    border-color: var(--mp-accent) #6a6a6a #6a6a6a var(--mp-accent) !important;
+    background: var(--mp-accent-muted) !important;
+    border-color: var(--mp-accent) !important;
 }
 
 body.theme-dark .opt-bar-btn.opt-bar-btn--on {
-    background: linear-gradient(180deg, #2a3550 0%, #1e2840 100%) !important;
-    border-color: var(--mp-accent) #1a1d22 #1a1d22 var(--mp-accent) !important;
+    background: rgba(0, 120, 215, 0.4) !important;
+    border-color: var(--mp-accent) !important;
     color: var(--mp-text) !important;
 }
 
-/* ——— Options formes : sélecteurs icônes ——— */
 .illu-hidden-native-select {
     position: absolute !important;
     width: 1px !important;
@@ -1888,7 +1840,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-shapes .illu-shape-opt-row .illu-opt-lbl {
     min-width: 2.8em;
     font-size: var(--mp-ui-font-small);
-    color: var(--mp-opt-bar-text, #222);
+    color: var(--mp-text);
 }
 
 #opt-grp-shapes .illu-icon-toggle-group,
@@ -1902,7 +1854,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     display: inline-flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 3px;
+    gap: 0;
 }
 
 #opt-grp-shapes .illu-icon-toggle,
@@ -1917,13 +1869,13 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 27px;
-    height: 27px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     margin: 0;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background: transparent;
-    border-radius: var(--mp-radius);
+    border-radius: 0;
     cursor: pointer;
     box-sizing: border-box;
 }
@@ -1937,8 +1889,8 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 .tool-options-bar .opt-grp .illu-icon-toggle:hover,
 #tool-pinned-toggles .illu-icon-toggle:hover,
 .tool-options-bar .illu-icon-toggle:hover {
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    background: color-mix(in srgb, var(--mp-accent) 8%, var(--mp-surface-deep));
+    background: rgba(0, 0, 0, 0.05);
+    border-color: transparent;
 }
 
 #opt-grp-shapes .illu-icon-toggle:active,
@@ -1950,7 +1902,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 .tool-options-bar .opt-grp .illu-icon-toggle:active,
 #tool-pinned-toggles .illu-icon-toggle:active,
 .tool-options-bar .illu-icon-toggle:active {
-    border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 #opt-grp-shapes .illu-icon-toggle--on,
@@ -1965,9 +1917,9 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #tool-pinned-toggles .illu-icon-toggle.active,
 .tool-options-bar .illu-icon-toggle--on,
 .tool-options-bar .illu-icon-toggle.active {
-    border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot);
-    background: color-mix(in srgb, var(--mp-accent) 14%, var(--mp-surface-deep));
-    box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.15);
+    border-color: var(--mp-accent);
+    background: var(--mp-accent-muted);
+    box-shadow: none;
 }
 
 #opt-grp-shapes .illu-icon-toggle .illu-shape-ico {
@@ -1986,7 +1938,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 #opt-grp-brush-pattern .illu-brush-opt-row .illu-opt-lbl {
     min-width: 2.8em;
     font-size: var(--mp-ui-font-small);
-    color: var(--mp-opt-bar-text, #222);
+    color: var(--mp-text);
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle-group {
@@ -1994,37 +1946,37 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     display: inline-flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 3px;
+    gap: 0;
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 27px;
-    height: 27px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     margin: 0;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background: transparent;
-    border-radius: var(--mp-radius);
+    border-radius: 0;
     cursor: pointer;
     box-sizing: border-box;
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle:hover {
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    background: color-mix(in srgb, var(--mp-accent) 8%, var(--mp-surface-deep));
+    background: rgba(0, 0, 0, 0.05);
+    border-color: transparent;
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle:active {
-    border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle--on {
-    border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot);
-    background: color-mix(in srgb, var(--mp-accent) 14%, var(--mp-surface-deep));
-    box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.15);
+    border-color: var(--mp-accent);
+    background: var(--mp-accent-muted);
+    box-shadow: none;
 }
 
 #opt-grp-brush-pattern .illu-icon-toggle .illu-shape-ico {
@@ -2036,11 +1988,10 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     pointer-events: none;
 }
 
-/* ——— Outil texte : liste de polices + scan OS ——— */
 .illu-text-font-scan-btn {
     flex-shrink: 0;
-    padding: 2px 6px !important;
-    font-size: 9px !important;
+    padding: 4px 8px !important;
+    font-size: 11px !important;
     min-width: 28px;
     line-height: 1.2;
 }
@@ -2049,27 +2000,12 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     font-size: var(--mp-ui-font-small);
 }
 
-/* ——— Unified Toolbars (compact + flat) ——— */
-.tool-options-bar {
-    display: flex;
-    align-items: center;
-    gap: 4px !important;
-    background: linear-gradient(180deg, #f8f6f2 0%, var(--mp-surface) 100%);
-    border-bottom: 1px solid var(--mp-raised-bot);
-    min-height: 30px !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
 .tool-options-bar .opt-grp {
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
-/* Hauteur uniforme barre d’options (hors toggles mode icône+libellé) */
 .tool-options-bar button:not(.illu-icon-toggle),
 .tool-options-bar select,
 .tool-options-bar .illu-btn-mini,
@@ -2077,13 +2013,13 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 .tool-options-bar .illu-select-mini,
 .tool-options-bar .opt-bar-btn,
 .illu-menubar-toolbar .illu-menubar-icon-btn {
-    line-height: 27px !important;
+    line-height: 24px !important;
     box-sizing: border-box !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 6px !important;
-    font-size: 11px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
     vertical-align: middle;
 }
 
@@ -2093,19 +2029,18 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 }
 
 .tool-options-bar .illu-icon-toggle {
-    width: 27px !important;
-    height: 27px !important;
+    width: 28px !important;
+    height: 28px !important;
     padding: 0 !important;
 }
 
 .tool-options-bar .illu-icon-toggle.active,
 .tool-options-bar .illu-icon-toggle.illu-icon-toggle--on {
-    background: color-mix(in srgb, var(--mp-accent) 14%, var(--mp-surface-deep)) !important;
-    border-color: var(--mp-raised-bot) var(--mp-raised-top) var(--mp-raised-top) var(--mp-raised-bot) !important;
-    box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.18) !important;
+    background: var(--mp-accent-muted) !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: none !important;
 }
 
-/* Groupes toggle : une seule ligne sur bureau (retour à la ligne = shell mobile uniquement) */
 .tool-options-bar .illu-icon-toggle-group,
 .tool-options-bar .illu-mode-toggle-group,
 #tool-global-modes .illu-icon-toggle-group,
@@ -2121,7 +2056,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     flex: 0 0 auto;
     max-width: none;
     flex-wrap: nowrap !important;
-    gap: 2px 4px;
+    gap: 0;
     white-space: nowrap;
 }
 
@@ -2140,7 +2075,7 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     flex: 0 0 auto;
     max-width: none;
     flex-wrap: wrap !important;
-    gap: 2px 4px;
+    gap: 0;
     white-space: normal;
 }
 
@@ -2161,23 +2096,23 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 }
 
 .tool-options-bar .illu-opt-lbl {
-    font-size: 11px;
-    color: var(--mp-opt-bar-text);
+    font-size: 12px;
+    color: var(--mp-text);
     margin-right: 2px;
 }
 
 .tool-options-bar .opt-sep {
     width: 1px;
-    height: 14px;
-    background: var(--mp-raised-bot);
-    margin: 0 3px;
+    height: 20px;
+    background: var(--mp-inset-top);
+    margin: 0 6px;
     flex-shrink: 0;
 }
 
 .illu-app-toolbars-container {
     display: flex;
     flex-direction: column;
-    border-bottom: 1px solid #000;
+    border-bottom: 1px solid var(--mp-raised-top);
     flex-shrink: 0;
 }
 
@@ -2185,7 +2120,6 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     border-bottom: none;
 }
 
-/* Bouton « déplacer » texte pixel + poignée centrale déformation (même look) */
 .illu-pixel-text-move-btn,
 .illu-deform-selection-move-btn {
     pointer-events: auto;
@@ -2193,10 +2127,10 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     line-height: 1;
     padding: 3px 5px;
     cursor: grab;
-    border: 1px solid #0066cc;
-    background: rgba(230, 240, 255, 0.95);
-    color: #003366;
-    border-radius: 2px;
+    border: 1px solid var(--mp-accent);
+    background: var(--mp-surface);
+    color: var(--mp-accent);
+    border-radius: 0;
     flex-shrink: 0;
     box-sizing: border-box;
 }
@@ -2204,15 +2138,15 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
 .illu-pixel-text-move-btn:active,
 .illu-deform-selection-move-btn:active {
     cursor: grabbing;
+    background: var(--mp-accent);
+    color: #fff;
 }
 
-/* Compensate canvas zoom for pixel text move button */
 .illu-pixel-text-wrap .illu-pixel-text-move-btn {
     transform: scale(calc(1 / var(--canvas-zoom, 1)));
     transform-origin: right bottom;
 }
 
-/* Poignée dans le SVG : remplit le foreignObject */
 #svg-ui foreignObject.illu-deform-move-fo {
     overflow: visible;
 }
@@ -2239,11 +2173,11 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     width: 14px;
     height: 14px;
     font-size: 14px;
-    color: #001a33;
-    filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.9));
+    color: var(--mp-accent);
+    filter: none;
 }
 
-/* ——— Barre de menus (menu unique) + outils rapides dans le dernier <li> ——— */
+/* ——— Barre de menus (menu unique) ——— */
 #app-window .window-body>menu.illu-menubar-root {
     display: flex;
     flex-flow: row nowrap;
@@ -2256,14 +2190,14 @@ body.theme-dark .opt-bar-btn.opt-bar-btn--on {
     margin: 0;
     padding: 0;
     list-style: none;
-    min-height: 30px;
+    min-height: 32px;
     overflow: visible;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) #app-window .window-body>menu.illu-menubar-root {
-    background: linear-gradient(180deg, #f5f3f0 0%, #dcd8d3 100%);
-    border-bottom: 2px solid #7a7a7a !important;
-    box-shadow: inset 0 1px 0 #fff;
+    background: var(--mp-surface);
+    border-bottom: none !important;
+    box-shadow: none;
 }
 
 #app-window .window-body>menu.illu-menubar-root>li[role="menuitem"] {
@@ -2279,7 +2213,6 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) #app-window .window-body
     flex-shrink: 0;
 }
 
-/* Slot toolbar : à droite du bouton contact (contact a margin-left: auto) */
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
     list-style: none;
     margin: 0;
@@ -2287,7 +2220,7 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) #app-window .window-body
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    background: linear-gradient(180deg, #f5f3f0 0%, #dcd8d3 100%);
+    background: var(--mp-surface);
 }
 
 #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
@@ -2306,13 +2239,9 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-toolbar 
     flex-wrap: nowrap;
     gap: 2px;
     padding: 2px 8px 2px 6px;
-    border-left: 1px solid color-mix(in srgb, var(--mp-accent) 28%, #a0a0a0);
-    box-shadow:
-        inset 1px 0 0 rgba(255, 255, 255, 0.5),
-        inset 0 0 0 1px color-mix(in srgb, var(--mp-accent) 12%, transparent);
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--mp-accent) 14%, transparent) 0%,
-            transparent 62%);
+    border-left: 1px solid var(--mp-inset-top);
+    box-shadow: none;
+    background: transparent;
 }
 
 .illu-menubar-toolbar {
@@ -2329,36 +2258,36 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-toolbar 
     align-self: stretch;
     min-height: 20px;
     margin: 1px 4px;
-    border-left: 1px solid #888;
-    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.35);
+    border-left: 1px solid var(--mp-inset-top);
+    box-shadow: none;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 27px;
-    height: 27px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    border: 2px solid transparent;
-    border-radius: var(--mp-radius);
+    border: 1px solid transparent;
+    border-radius: 0;
     background: transparent;
     color: var(--mp-text);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn:hover {
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    background: color-mix(in srgb, var(--mp-accent) 10%, var(--mp-surface-deep));
-    color: var(--mp-title);
+    border-color: transparent;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--mp-text);
 }
 
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn:active {
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    background: color-mix(in srgb, var(--mp-accent) 12%, var(--mp-surface-deep));
+    border-color: transparent;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .illu-menubar-zoom-wrap {
@@ -2368,34 +2297,33 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn
     margin: 0 2px;
 }
 
-/* Même principe que #tool-options-bar .illu-gauge-wrap + .wand-slider */
 .illu-menubar-zoom-gauge.illu-gauge-wrap {
     width: 104px;
     height: 18px;
     flex-shrink: 0;
-    border-color: var(--mp-inset-top);
-    background: #fff;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
+    border-radius: 0;
 }
 
 .illu-menubar-zoom-gauge .illu-gauge-fill {
-    background: linear-gradient(180deg, var(--mp-title-light) 0%, var(--mp-accent) 100%);
+    background: var(--mp-accent);
 }
 
-/* Jauges barre d’options / dialogue effet = même chrome que zoom menu (curseur #illu-zoom-slider) */
 #tool-options-bar .illu-gauge-wrap:not(.illu-menubar-zoom-gauge),
 #effect-dialog .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) {
     width: 104px;
     height: 18px;
     flex-shrink: 0;
     box-sizing: border-box;
-    border: 1px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    background: #fff;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
+    border-radius: 0;
 }
 
 #tool-options-bar .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) .illu-gauge-fill,
 #effect-dialog .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) .illu-gauge-fill {
-    background: linear-gradient(180deg, var(--mp-title-light) 0%, var(--mp-accent) 100%);
+    background: var(--mp-accent);
 }
 
 .illu-menubar-zoom-gauge .illu-menubar-zoom-gauge-inner {
@@ -2410,7 +2338,7 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn
     color: var(--mp-text);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
-    font-weight: 600;
+    font-weight: normal;
 }
 
 .illu-menubar-zoom-btn {
@@ -2419,15 +2347,16 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-icon-btn
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) menu[role="menubar"] {
-    background: linear-gradient(180deg, #f5f3f0 0%, #dcd8d3 100%);
-    border-bottom: 2px solid #7a7a7a !important;
-    box-shadow: inset 0 1px 0 #fff;
+    background: var(--mp-surface);
+    border-bottom: none !important;
+    box-shadow: none;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="menuitem"] {
     padding: 4px 10px;
-    border-radius: var(--mp-radius);
+    border-radius: 0;
     font-size: var(--mp-ui-font-size);
+    transition: background 0.1s;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="menuitem"]:hover {
@@ -2441,44 +2370,42 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] {
     z-index: 2000000 !important;
-    background: #f4f2ef !important;
-    border: 2px solid !important;
-    border-color: var(--mp-raised-top) #555 #555 var(--mp-raised-top) !important;
-    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.18) !important;
-    border-radius: var(--mp-radius);
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-inset-top) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 0;
     padding: 4px 0 !important;
     min-width: 180px;
 }
 
-/* Sous-menus (Effets → …) au-dessus du premier niveau */
 li[role="menuitem"]>ul[role="menu"] ul[role="menu"] {
     z-index: 50001 !important;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"] {
     position: relative;
-    padding: 5px 10px !important;
+    padding: 4px 16px !important;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-size: var(--mp-ui-font-size);
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon {
-    padding-left: 28px !important;
+    padding-left: 36px !important;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"] .menu-icon {
     position: absolute;
-    left: 8px;
+    left: 12px;
     width: 16px;
     text-align: center;
-    color: #444;
+    color: var(--mp-text);
     font-size: var(--mp-ui-font-small);
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"]:hover .menu-icon {
-    color: inherit;
+    color: var(--mp-menu-hover-fg);
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"][aria-haspopup="true"] {
@@ -2489,7 +2416,7 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role=
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"][aria-haspopup="true"]::after {
     content: "\25B8";
     position: absolute;
-    right: 8px;
+    right: 12px;
     font-size: 10px;
     opacity: 0.55;
     pointer-events: none;
@@ -2510,13 +2437,13 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role=
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"]:hover[aria-haspopup="true"]::after {
     color: var(--mp-menu-hover-fg);
-    opacity: 0.92;
+    opacity: 1;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divider {
-    background: #9a9a9a !important;
-    border-bottom-color: #eee !important;
-    margin: 3px 4px !important;
+    background: var(--mp-inset-top) !important;
+    border-bottom: none !important;
+    margin: 4px 0 !important;
     height: 1px !important;
     min-height: 0 !important;
     padding: 0 !important;
@@ -2525,7 +2452,6 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
     pointer-events: none;
 }
 
-/* ——— Dialogues overlay ——— */
 #dialog-overlay,
 #import-choice-overlay,
 #import-oversize-overlay,
@@ -2536,11 +2462,11 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 #welcome-overlay,
 #illu-alert-overlay {
     z-index: 6000 !important;
-    background: rgba(15, 25, 40, 0.38) !important;
-    backdrop-filter: blur(1px);
+    background: rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(2px);
 }
 
-/* ——— Effets : pistes dégradées (structure FilterManager) ——— */
+/* ——— Effets : pistes dégradées ——— */
 .effect-slider-block {
     margin-bottom: 12px;
 }
@@ -2548,8 +2474,8 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 .effect-param-label {
     display: block;
     font-size: var(--mp-ui-font-small);
-    font-weight: 600;
-    color: #333;
+    font-weight: normal;
+    color: var(--mp-text);
     margin-bottom: 4px;
 }
 
@@ -2562,15 +2488,14 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 .effect-track {
     flex: 1;
     min-width: 0;
-    height: 14px;
-    border-radius: 3px;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+    height: 16px;
+    border-radius: 0;
+    border: 1px solid var(--mp-inset-top);
+    box-shadow: none;
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0 6px;
+    padding: 0;
     overflow: visible;
 }
 
@@ -2594,21 +2519,22 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 .effect-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 10px;
-    height: 18px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #fff 0%, #c8c8c8 50%, #909090 100%);
-    border: 1px solid #333;
-    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+    width: 8px;
+    height: 16px;
+    border-radius: 4px;
+    background: var(--mp-accent);
+    border: none;
+    box-shadow: none;
     cursor: grab;
+    margin-top: -6px;
 }
 
 .effect-range::-moz-range-thumb {
-    width: 10px;
-    height: 18px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #fff 0%, #c8c8c8 50%, #909090 100%);
-    border: 1px solid #333;
+    width: 8px;
+    height: 16px;
+    border-radius: 4px;
+    background: var(--mp-accent);
+    border: none;
     cursor: grab;
 }
 
@@ -2626,20 +2552,11 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 }
 
 .effect-track--hue {
-    background: linear-gradient(to right,
-            #f00,
-            #ff0,
-            #0f0,
-            #0ff,
-            #00f,
-            #f0f,
-            #f00);
+    background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
 }
 
 .effect-track--sat {
-    background: linear-gradient(to right,
-            #ffffff,
-            hsl(var(--hsv-strip-h, 210), 100%, 50%));
+    background: linear-gradient(to right, #ffffff, hsl(var(--hsv-strip-h, 210), 100%, 50%));
 }
 
 .effect-track--lum {
@@ -2658,7 +2575,6 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
     --hsv-strip-h: 210;
 }
 
-/* Teinte / saturation : raccourcis R V B sous le curseur teinte */
 .ef-hsv-rgb-presets {
     display: flex;
     flex-direction: row;
@@ -2668,50 +2584,45 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 }
 
 .ef-hsv-preset {
-    width: 22px;
-    height: 18px;
+    width: 24px;
+    height: 20px;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: normal;
     line-height: 1;
     cursor: pointer;
-    border: 1px solid;
-    border-radius: 2px;
+    border: none;
+    border-radius: 0;
     color: #fff;
-    text-shadow: 0 0 2px #000;
+    text-shadow: none;
 }
 
 .ef-hsv-preset--r {
-    background: linear-gradient(180deg, #ff4444 0%, #cc0000 100%);
-    border-color: #800;
+    background: #E81123;
 }
 
 .ef-hsv-preset--g {
-    background: linear-gradient(180deg, #3ddc6a 0%, #0a8f2e 100%);
-    border-color: #064;
+    background: #10893E;
 }
 
 .ef-hsv-preset--b {
-    background: linear-gradient(180deg, #5599ff 0%, #0033cc 100%);
-    border-color: #006;
+    background: #0078D7;
 }
 
 .ef-hsv-preset:hover {
-    filter: brightness(1.08);
+    filter: brightness(0.9);
 }
 
 .ef-hsv-preset:active {
-    filter: brightness(0.92);
+    filter: brightness(0.8);
 }
 
-/* Sections avancées des effets : détails repliables façon Camera Raw */
 .illu-advanced-section {
     margin-top: 8px;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-inset-top);
+    border-radius: 0;
     background: var(--mp-surface);
     overflow: hidden;
 }
@@ -2719,16 +2630,16 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
 .illu-advanced-section-summary {
     list-style: none;
     margin: 0;
-    padding: 6px 8px;
+    padding: 8px;
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
     user-select: none;
     font-size: var(--mp-ui-font-size);
-    font-weight: 600;
+    font-weight: normal;
     color: var(--mp-text);
-    background: linear-gradient(180deg, var(--mp-raised-top) 0%, var(--mp-surface-deep) 100%);
+    background: var(--mp-surface-deep);
     border-bottom: 1px solid var(--mp-inset-top);
 }
 
@@ -2752,12 +2663,10 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
     padding: 8px;
 }
 
-/* Éditeur de courbe (ajustements) : lisible en clair/sombre */
 .illu-curve-editor {
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-radius: var(--mp-radius);
-    background: color-mix(in srgb, var(--mp-surface) 94%, transparent);
+    border: 1px solid var(--mp-inset-top);
+    border-radius: 0;
+    background: var(--mp-surface);
     padding: 8px;
 }
 
@@ -2765,9 +2674,9 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
     position: relative;
     width: 256px;
     height: 256px;
-    border: 1px solid color-mix(in srgb, var(--mp-text) 26%, transparent);
-    border-radius: 3px;
-    background: color-mix(in srgb, var(--mp-accent) 6%, var(--mp-surface));
+    border: 1px solid var(--mp-inset-top);
+    border-radius: 0;
+    background: var(--mp-surface-deep);
     overflow: hidden;
 }
 
@@ -2782,43 +2691,35 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li.divid
     inset: 0;
     pointer-events: none;
     opacity: 0.2;
-    background-image:
-        linear-gradient(to right, color-mix(in srgb, var(--mp-text) 34%, transparent) 1px, transparent 1px),
-        linear-gradient(to top, color-mix(in srgb, var(--mp-text) 34%, transparent) 1px, transparent 1px);
+    background-image: linear-gradient(to right, var(--mp-text) 1px, transparent 1px), linear-gradient(to top, var(--mp-text) 1px, transparent 1px);
     background-size: 32px 32px;
 }
 
-/* À propos : touches */
 #settings-overlay kbd {
     display: inline-block;
-    padding: 1px 5px;
-    font-size: 10px;
+    padding: 2px 6px;
+    font-size: 11px;
     font-family: var(--mp-font);
-    background: linear-gradient(180deg, #fafafa, #e0e0e0);
-    border: 1px solid;
-    border-color: var(--mp-raised-top) #666 #666 var(--mp-raised-top);
-    border-radius: 2px;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
-    color: #1a1a1a;
-}
-
-/* Plus spécifique que #settings-overlay kbd : thème sombre dans la boîte Paramètres */
-body.theme-dark #settings-overlay kbd {
-    background: linear-gradient(180deg, #3d4654, #2a3038);
+    background: var(--mp-surface-deep);
+    border: 1px solid var(--mp-inset-top);
+    border-radius: 0;
+    box-shadow: none;
     color: var(--mp-text);
-    border-color: #5a6570 #1e2228 #1e2228 #5a6570;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }
 
-/* Roue couleurs (conteneur défini dans index.html) */
+body.theme-dark #settings-overlay kbd {
+    background: #333333;
+    color: var(--mp-text);
+    border-color: #555555;
+    box-shadow: none;
+}
+
 #color-wheel-container {
-    background: linear-gradient(180deg, #e8e5e1, #d5d1cc) !important;
-    border: 2px solid !important;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
-    border-radius: var(--mp-radius);
+    background: var(--mp-surface-deep) !important;
+    border: 1px solid var(--mp-inset-top) !important;
+    border-radius: 0;
 }
 
-/* ——— Docks & zones définies dans index.html (inline) : variables + thème sombre complet ——— */
 .palette-dock {
     background: var(--mp-dock-bg) !important;
     border-color: var(--mp-dock-border) !important;
@@ -2848,16 +2749,16 @@ body.theme-dark #settings-overlay kbd {
 }
 
 .tool-btn.active {
-    background: #d8d4cf;
+    background: var(--mp-accent-muted);
 }
 
 .list-box {
-    background: #fff !important;
+    background: var(--mp-surface) !important;
     color: var(--mp-text);
 }
 
 .list-item {
-    border-bottom-color: #eee;
+    border-bottom-color: var(--mp-surface-deep);
     color: inherit;
 }
 
@@ -2867,7 +2768,6 @@ body.theme-dark #settings-overlay kbd {
 
 ul[role="menu"] {
     background: var(--mp-menu-submenu-bg) !important;
-    /* Réinitialise la couleur : le ul est enfant du li barre (souvent :hover = texte blanc) ; sans cela les flèches ::after héritent du blanc en mode clair. */
     color: var(--mp-text) !important;
 }
 
@@ -2880,79 +2780,71 @@ ul[role="menu"] li[role="menuitem"] .menu-icon {
 }
 
 menu[role="menubar"] {
-    background: linear-gradient(180deg, var(--mp-surface) 0%, var(--mp-surface-deep) 100%);
+    background: var(--mp-surface);
 }
 
 .status-bar {
-    background: linear-gradient(180deg, var(--mp-surface-deep) 0%, var(--mp-surface) 100%);
+    background: var(--mp-surface);
     color: var(--mp-text);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: none;
     font-size: var(--mp-ui-font-size);
 }
 
 body.theme-dark .status-bar-cell {
-    background: linear-gradient(180deg, #1a1c20 0%, var(--mp-surface-deep) 50%);
-    box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.35);
+    background: transparent;
+    box-shadow: none;
+    border-right-color: #444;
 }
 
 body.theme-dark .status-bar-credit-link {
-    color: #8ab4f8;
+    color: var(--mp-accent);
 }
 
 body.theme-dark .status-bar-credit-link:hover {
-    color: #b8d4ff;
+    color: #8ab4f8;
 }
 
 body.theme-dark .status-bar-credit-link:active {
-    color: #a8c4ef;
+    color: #ffffff;
 }
 
-/* Thème sombre : compléments (menus, listes, options, dialogues, couleurs) */
 body.theme-dark menu[role="menubar"] {
-    background: linear-gradient(180deg, #323840 0%, #252830 100%) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    background: var(--mp-surface) !important;
+    box-shadow: none;
 }
 
 body.theme-dark #app-window .window-body>menu.illu-menubar-root {
-    background: linear-gradient(180deg, #323840 0%, #252830 100%) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    border-bottom-color: #1a1d22 !important;
+    background: var(--mp-surface) !important;
+    box-shadow: none;
+    border-bottom-color: var(--mp-raised-top) !important;
     scrollbar-color: var(--mp-scrollbar-thumb-solid) var(--mp-scrollbar-track-solid);
 }
 
 body.theme-dark #app-window .window-body>menu.illu-menubar-root>li.illu-menubar-toolbar-slot {
-    background: linear-gradient(180deg, #323840 0%, #252830 100%) !important;
-    box-shadow: -8px 0 12px -4px rgba(37, 40, 48, 0.95);
+    background: var(--mp-surface) !important;
+    box-shadow: none;
 }
 
 body.theme-dark .illu-menubar-toolbar {
-    border-left: 1px solid #4a5568;
-    border-left: 1px solid color-mix(in srgb, var(--mp-accent) 35%, #4a5568);
-    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
-    box-shadow:
-        inset 1px 0 0 rgba(255, 255, 255, 0.08),
-        inset 0 0 0 1px color-mix(in srgb, var(--mp-accent) 18%, transparent);
-    background: linear-gradient(180deg, rgba(74, 111, 168, 0.2) 0%, transparent 58%);
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--mp-accent) 22%, transparent) 0%,
-            transparent 58%);
+    border-left: 1px solid #444;
+    box-shadow: none;
+    background: transparent;
 }
 
 body.theme-dark .illu-menubar-toolbar__sep {
-    border-left-color: #5a6068;
-    box-shadow: 1px 0 0 rgba(0, 0, 0, 0.25);
+    border-left-color: #444;
+    box-shadow: none;
 }
 
 body.theme-dark .illu-menubar-icon-btn {
-    background: var(--mp-surface-deep);
+    background: transparent;
     color: var(--mp-text);
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border-color: transparent;
 }
 
 body.theme-dark .illu-menubar-icon-btn:hover {
-    background: #3a4558;
-    background: color-mix(in srgb, var(--mp-accent) 28%, #353b45);
-    color: #e8eef8;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 
 body.theme-dark .illu-menubar-zoom-val {
@@ -2960,30 +2852,30 @@ body.theme-dark .illu-menubar-zoom-val {
 }
 
 body.theme-dark .illu-menubar-zoom-gauge.illu-gauge-wrap {
-    border-color: #5a6068;
+    border-color: #555;
     background: var(--mp-surface-deep);
 }
 
 body.theme-dark .illu-menubar-zoom-gauge .illu-gauge-fill {
-    background: linear-gradient(180deg, #5a9ae8 0%, var(--mp-accent) 100%);
+    background: var(--mp-accent);
 }
 
 body.theme-dark #tool-options-bar .illu-gauge-wrap:not(.illu-menubar-zoom-gauge),
 body.theme-dark #effect-dialog .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) {
-    border-color: #5a6068;
+    border-color: #555;
     background: var(--mp-surface-deep);
 }
 
 body.theme-dark #tool-options-bar .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) .illu-gauge-fill,
 body.theme-dark #effect-dialog .illu-gauge-wrap:not(.illu-menubar-zoom-gauge) .illu-gauge-fill {
-    background: linear-gradient(180deg, #5a9ae8 0%, var(--mp-accent) 100%);
+    background: var(--mp-accent);
 }
 
 body.theme-dark ul[role="menu"] {
-    background: var(--mp-menu-submenu-bg) !important;
+    background: var(--mp-surface) !important;
     color: var(--mp-text) !important;
-    border-color: var(--mp-raised-top) #1a1a1a #1a1a1a var(--mp-raised-top) !important;
-    box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.45) !important;
+    border-color: var(--mp-inset-top) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
 body.theme-dark ul[role="menu"] li[role="menuitem"] {
@@ -2995,7 +2887,7 @@ body.theme-dark ul[role="menu"] li[role="menuitem"]>span:not(.menu-icon) {
 }
 
 body:not(.theme-dark) ul[role="menu"] li[role="menuitem"]>span:not(.menu-icon) {
-    color: #1a1a1a !important;
+    color: #000000 !important;
 }
 
 body.theme-dark ul[role="menu"] li[role="menuitem"] .menu-icon,
@@ -3019,48 +2911,54 @@ body.theme-dark ul[role="menu"] li[role="menuitem"][aria-haspopup="true"]::after
 
 body.theme-dark ul[role="menu"] li[role="menuitem"]:hover[aria-haspopup="true"]::after {
     color: var(--mp-menu-hover-fg);
-    opacity: 0.92;
+    opacity: 1;
 }
 
 body.theme-dark ul[role="menu"] li.divider {
-    background: #4a5058 !important;
-    border-bottom-color: #1a1d22 !important;
-    margin: 3px 4px !important;
+    background: #444 !important;
+    border-bottom: none !important;
+    margin: 4px 0 !important;
+    padding: 0px !important;
     height: 1px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+    font-size: 0 !important;
+    pointer-events: none;
 }
 
 body.theme-dark .tool-options-bar,
 body.theme-dark #tool-options-bar {
-    background: linear-gradient(180deg, #353b45 0%, #2a2f38 100%) !important;
-    border-bottom-color: #4a5058 !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    background: var(--mp-surface) !important;
+    border-bottom-color: var(--mp-raised-top) !important;
+    box-shadow: none !important;
 }
 
 body.theme-dark .opt-tool-name {
-    border-right-color: #4a5058 !important;
+    border-right-color: var(--mp-inset-top) !important;
     color: var(--mp-text) !important;
     font-size: var(--mp-ui-font-size);
 }
 
 body.theme-dark .illu-pixel-text-move-btn,
 body.theme-dark .illu-deform-selection-move-btn {
-    border-color: #5b9bd9;
-    background: rgba(45, 55, 72, 0.95);
-    color: #c5d8f0;
+    border-color: var(--mp-accent);
+    background: #333333;
+    color: var(--mp-accent);
 }
 
 body.theme-dark #svg-ui foreignObject.illu-deform-move-fo .illu-deform-selection-move-btn i.illu-deform-move-icon {
-    color: #e8f4ff;
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.75));
+    color: #ffffff;
+    filter: none;
 }
 
 body.theme-dark .opt-bar-btn {
-    background: #2e3440 !important;
+    background: transparent !important;
     color: var(--mp-text) !important;
 }
 
 body.theme-dark #opt-grp-shapes .illu-shape-opt-row .illu-opt-lbl {
-    color: var(--mp-opt-bar-text) !important;
+    color: var(--mp-text) !important;
 }
 
 body.theme-dark .tool-options-bar .opt-grp .illu-icon-toggle,
@@ -3069,8 +2967,8 @@ body.theme-dark #opt-grp-brush-actions .illu-icon-toggle,
 body.theme-dark #opt-grp-text-actions .illu-icon-toggle,
 body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle,
 body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle {
-    background: #2e3440 !important;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
+    background: transparent !important;
+    border-color: transparent !important;
     transform: none !important;
 }
 
@@ -3080,7 +2978,7 @@ body.theme-dark #opt-grp-brush-actions .illu-icon-toggle:hover,
 body.theme-dark #opt-grp-text-actions .illu-icon-toggle:hover,
 body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle:hover,
 body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle:hover {
-    background: linear-gradient(180deg, #3d4450 0%, #2e3440 100%) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     transform: none !important;
 }
 
@@ -3091,36 +2989,37 @@ body.theme-dark #opt-grp-brush-actions .illu-icon-toggle--on,
 body.theme-dark #opt-grp-text-actions .illu-icon-toggle--on,
 body.theme-dark #opt-grp-gradient-actions .illu-icon-toggle--on,
 body.theme-dark #opt-grp-vector-context-actions .illu-icon-toggle--on {
-    background: linear-gradient(180deg, #3d4a62 0%, #2d3a52 100%) !important;
-    border-color: var(--mp-accent) #4a5058 #4a5058 var(--mp-accent) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: var(--mp-accent) !important;
     transform: none !important;
 }
 
 body.theme-dark #opt-grp-brush-pattern .illu-brush-opt-row .illu-opt-lbl {
-    color: var(--mp-opt-bar-text) !important;
-}
-
-body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle {
-    background: #2e3440 !important;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
-}
-
-body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle:hover {
-    background: linear-gradient(180deg, #3d4450 0%, #2e3440 100%) !important;
-}
-
-body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle--on {
-    background: linear-gradient(180deg, #3d4a62 0%, #2d3a52 100%) !important;
-    border-color: var(--mp-accent) #4a5058 #4a5058 var(--mp-accent) !important;
-}
-
-body.theme-dark .list-box {
-    background: #1a1d22 !important;
     color: var(--mp-text) !important;
 }
 
+body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.theme-dark #opt-grp-brush-pattern .illu-icon-toggle--on {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: var(--mp-accent) !important;
+}
+
+body.theme-dark .list-box {
+    background: var(--mp-surface) !important;
+    color: var(--mp-text) !important;
+    border-color: var(--mp-inset-top) !important;
+}
+
 body.theme-dark .list-item {
-    border-bottom-color: #2f3540 !important;
+    border-bottom-color: #333 !important;
 }
 
 body.theme-dark .list-item.active {
@@ -3129,33 +3028,33 @@ body.theme-dark .list-item.active {
 }
 
 body.theme-dark #color-wheel-container {
-    background: linear-gradient(180deg, #3a4048, #2a2f36) !important;
+    background: var(--mp-surface-deep) !important;
 }
 
 body.theme-dark #palette-grid {
-    background: #3a4048 !important;
+    background: var(--mp-surface-deep) !important;
     border-color: var(--mp-inset-top) !important;
 }
 
 body.theme-dark .color-section-title {
-    border-bottom-color: #4a5058 !important;
+    border-bottom-color: #444 !important;
     color: var(--mp-text) !important;
 }
 
 body.theme-dark #layer-bounds-panel {
-    border-top-color: #4a5058 !important;
+    border-top-color: #444 !important;
     color: var(--mp-text) !important;
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--alpha-mask {
-    background: linear-gradient(180deg, #3d3420 0%, #2a2315 100%);
+    background: #2b203d;
     border-left-color: #c9a227;
     color: var(--mp-text);
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--alpha-mask.active {
-    background: linear-gradient(180deg, #6b5a1e 0%, #4a3f14 100%);
-    border-left-color: #e8c84a;
+    background: var(--mp-accent);
+    border-left-color: #ffffff;
 }
 
 body.theme-dark #layers-list .layer-row.layer-row--alpha-mask.active .layer-name {
@@ -3169,7 +3068,7 @@ body.theme-dark #layers-list .layer-dynfilter-alpha-preview-btn--on {
 }
 
 body.theme-dark #settings-overlay .window-body a {
-    color: #8ab4ff;
+    color: var(--mp-accent);
 }
 
 body.theme-dark #settings-overlay fieldset,
@@ -3189,27 +3088,26 @@ body.theme-dark #settings-overlay fieldset legend {
 
 body.theme-dark #image-bounds-overlay p[style*='color:#333'],
 body.theme-dark .muted-help {
-    color: #b8bcc4 !important;
+    color: #cccccc !important;
 }
 
 body.theme-dark #export-dialog-overlay p[style*='color:#404040'] {
-    color: #a8acb4 !important;
+    color: #cccccc !important;
 }
 
 body.theme-dark hr {
-    border-color: #4a5058;
+    border-color: #444;
 }
 
-/* Menu contextuel : mêmes gris / accent que les menus déroulants (clair + sombre) */
 #context-menu.ctx-menu-panel {
-    background: var(--mp-menu-submenu-bg) !important;
+    background: var(--mp-surface) !important;
     color: var(--mp-text) !important;
-    border: 2px solid !important;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top) !important;
-    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--mp-inset-top) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     font-family: var(--mp-font);
     font-size: var(--mp-ui-font-small);
     z-index: 2000001 !important;
+    border-radius: 0;
 }
 
 #context-menu.ctx-menu-panel ul {
@@ -3227,7 +3125,7 @@ body.theme-dark hr {
     align-items: center;
     justify-content: flex-start;
     gap: 8px;
-    padding: 5px 14px;
+    padding: 8px 16px;
     cursor: default;
     white-space: nowrap;
     color: var(--mp-text);
@@ -3252,14 +3150,14 @@ body.theme-dark hr {
 }
 
 #context-menu .ctx-sep {
-    margin: 2px 4px !important;
+    margin: 4px 0 !important;
     border-top: 1px solid var(--mp-inset-top);
-    border-bottom: 1px solid var(--mp-raised-top);
+    border-bottom: none;
 }
 
 body.theme-dark #context-menu.ctx-menu-panel {
-    box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.45) !important;
-    border-color: var(--mp-raised-top) #1a1a1a #1a1a1a var(--mp-raised-top) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    border-color: var(--mp-inset-top) !important;
 }
 
 body.theme-dark #context-menu .ctx-item:hover {
@@ -3268,8 +3166,7 @@ body.theme-dark #context-menu .ctx-item:hover {
 }
 
 body.theme-dark #context-menu .ctx-sep {
-    border-top-color: var(--mp-inset-top);
-    border-bottom-color: var(--mp-raised-bot);
+    border-top-color: #444;
 }
 
 body.theme-dark input[type="checkbox"],
@@ -3278,20 +3175,19 @@ body.theme-dark input[type="radio"] {
 }
 
 body.theme-dark #settings-overlay .settings-dialog-aside {
-    border-right-color: var(--mp-dock-border);
+    border-right-color: var(--mp-inset-top);
 }
-
 
 body.theme-dark #settings-overlay .settings-accent-swatch .settings-accent-face,
 body.theme-dark #welcome-overlay .settings-accent-swatch .settings-accent-face {
     border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
 }
 
 body.theme-dark #settings-overlay .settings-accent-swatch input:checked+.settings-accent-face,
 body.theme-dark #welcome-overlay .settings-accent-swatch input:checked+.settings-accent-face {
-    box-shadow: 0 0 0 2px var(--mp-surface-deep), 0 0 0 4px var(--mp-accent);
-    border-color: #c5cad3;
+    box-shadow: 0 0 0 2px var(--mp-surface), 0 0 0 4px var(--mp-accent);
+    border-color: transparent;
 }
 
 body.theme-dark #settings-overlay .settings-layout-desc,
@@ -3304,109 +3200,122 @@ body.theme-dark #settings-overlay .settings-data-hint {
 }
 
 body.theme-dark #settings-overlay .settings-dialog-actions {
-    border-top-color: var(--mp-dock-border);
+    border-top-color: var(--mp-inset-top);
 }
 
 body.theme-dark .illu-gauge-wrap {
-    border-color: #c5cad3;
-    background: var(--mp-surface-deep, #2a2d32);
+    border-color: #555;
+    background: var(--mp-surface);
 }
 
 body.theme-dark .illu-gauge-fill {
-    background: linear-gradient(180deg, #4a8ae8 0%, #2d5cb0 100%);
+    background: var(--mp-accent);
 }
 
 body.theme-dark .illu-gauge-wrap--low .illu-gauge-val {
-    color: var(--mp-text, #e8eaed);
+    color: var(--mp-text);
 }
 
 body.theme-dark button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
-    background: #4a5568;
+    background: #444;
 }
 
-
-
-
-
-
 body.theme-dark .illu-scope-btn:not(.illu-scope-btn--active) {
-    background: linear-gradient(180deg, #3d4552 0%, #2e343d 100%) !important;
-    color: #fff !important;
-    border-color: var(--mp-raised-top) #1a1d22 #1a1d22 var(--mp-raised-top) !important;
-    border-bottom: none;
-    border-radius: var(--mp-radius) var(--mp-radius) 0 0;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    background: var(--mp-surface-deep) !important;
+    color: var(--mp-text) !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none;
     top: 0;
     z-index: 3;
 }
 
 body.theme-dark .illu-scope-btn--active {
-    background: var(--mp-surface-deep) !important;
-    color: #b8bcc4 !important;
-    font-weight: 600;
-    box-shadow: inset 0 -3px 0 var(--mp-accent), inset 1px 1px 2px rgba(0, 0, 0, 0.35);
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top) !important;
-    border-bottom-color: transparent !important;
-    top: 2px;
+    background: var(--mp-surface) !important;
+    color: var(--mp-accent) !important;
+    font-weight: normal;
+    box-shadow: none;
+    border: none !important;
+    border-bottom: 2px solid var(--mp-accent) !important;
+    top: 0;
     z-index: 1;
 }
 
 body.theme-dark .effect-range::-webkit-slider-thumb {
-    background: linear-gradient(180deg, #5a6570 0%, #3d4550 50%, #2e3540 100%);
-    border-color: #1a1a1a;
+    background: var(--mp-accent);
+    border-color: transparent;
+    border-radius: 4px;
 }
 
 body.theme-dark .effect-range::-moz-range-thumb {
-    background: linear-gradient(180deg, #5a6570 0%, #3d4550 50%, #2e3540 100%);
-    border-color: #1a1a1a;
+    background: var(--mp-accent);
+    border-color: transparent;
+    border-radius: 4px;
 }
 
 body.theme-dark #main-canvas-container {
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.65) !important;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* ——— Cohérence : boutons outils = relief bouton α calque (#layers-list .layer-alpha-btn) ——— */
+html body #win-tools #main-toolbox.tool-grid--pdn {
+    gap: 1px !important;
+    padding: 2px !important;
+}
+
 html body #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    background: var(--mp-surface-deep);
-    border-radius: var(--mp-radius);
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 0;
     color: var(--mp-text);
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.07);
+    box-shadow: none;
     padding: 0;
     width: 26px;
     min-width: 26px;
     height: 26px;
     box-sizing: border-box;
+    transition: background 0.1s, border-color 0.1s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Ancrage Photoshop : tailles inchangées (index.html) */
+html body #win-tools #main-toolbox.tool-grid--pdn .tool-btn i {
+    font-size: 15px !important;
+}
+
+
 body.ui-layout-docked #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
-    width: 28px;
-    min-width: 28px;
+    width: 26px;
+    min-width: 26px;
     height: 26px;
 }
 
 html body #win-tools #main-toolbox.tool-grid--pdn .tool-btn:hover:not(:disabled) {
-    filter: brightness(1.05);
+    background: rgba(0, 0, 0, 0.1);
+    filter: none;
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 html body #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active {
-    background: linear-gradient(180deg, #e8eefc 0%, #c8d4f0 100%);
-    border-color: var(--mp-accent) #6a6a6a #6a6a6a var(--mp-accent);
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-        inset 1px 1px 3px rgba(0, 0, 0, 0.14);
+    background: color-mix(in srgb, var(--mp-accent) 14%, #FFFFFF) !important;
+    border-color: var(--mp-accent) !important;
+    box-shadow: none;
+}
+
+html body.theme-dark #win-tools #main-toolbox.tool-grid--pdn .tool-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 html body.theme-dark #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active {
-    background: linear-gradient(180deg, #2a3550 0%, #1e2840 100%) !important;
-    border-color: var(--mp-accent) #1a1d22 #1a1d22 var(--mp-accent) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: var(--mp-accent) !important;
     color: #fff !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: none !important;
 }
 
-/* ——— Mode mobile / tactile (body.illu-mobile-ui) : réglable dans Paramètres ——— */
+/* ——— Mode mobile / tactile ——— */
 body.illu-mobile-ui .editor-dock-row {
     flex-direction: column;
     flex: 1 1 auto;
@@ -3485,16 +3394,15 @@ body.illu-mobile-ui .palette-dock--right .window.palette-panel {
 body.illu-mobile-ui #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
     width: 40px;
     min-width: 40px;
-    height: 38px;
-    min-height: 38px;
+    height: 40px;
+    min-height: 40px;
 }
 
-/* Téléphone + dock bas (legacy, sans shell v2) */
 body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
-    width: 28px;
-    min-width: 28px;
-    height: 26px;
-    min-height: 26px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
 }
 
 body.illu-mobile-ui .tab-bar-outer {
@@ -3505,7 +3413,6 @@ body.illu-mobile-ui.ui-layout-floating .workspace-dock-center {
     min-height: 45vh;
 }
 
-/* Téléphone + dock bas legacy (sans shell v2) */
 body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) .workspace-dock-center {
     padding-right: max(34px, env(safe-area-inset-right, 0px));
     padding-bottom: min(42vh, 300px);
@@ -3513,15 +3420,14 @@ body.illu-mobile-ui.illu-pdn-dock-active:not(.illu-mobile-shell-active) .workspa
 }
 
 body.theme-dark.illu-mobile-ui .palette-dock {
-    background: var(--mp-dock-bg, #252830);
+    background: var(--mp-dock-bg);
 }
 
-/* En mode flottant + mobile : garder la colonne outils (sinon tout disparaît) */
 body.illu-mobile-ui.ui-layout-floating .editor-dock-row .palette-dock {
     display: flex !important;
 }
 
-/* ——— Tiroir latéral (burger) : palettes + menus dépliants ——— */
+/* ——— Tiroir latéral ——— */
 body:not(.illu-mobile-ui) .illu-mobile-burger-slot {
     display: none !important;
 }
@@ -3548,17 +3454,16 @@ body.illu-mobile-ui .illu-mobile-burger-slot {
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-radius: var(--mp-radius);
-    background: var(--mp-surface-deep);
-    color: var(--mp-title);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--mp-text);
     cursor: pointer;
     font-size: 18px;
 }
 
 .illu-mobile-burger-btn:active {
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 body.illu-mobile-ui .illu-menubar-toolbar {
@@ -3607,41 +3512,19 @@ body.illu-mobile-drawer-open #app-window {
     max-width: 100%;
     box-sizing: border-box;
     background: var(--mp-surface);
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    border-right: 1px solid var(--mp-raised-top);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     transform: translateX(-105%);
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
     display: flex;
     flex-direction: column;
     outline: none;
     color: var(--mp-text);
-    padding-left: 32px;
-    /* Space for the blue stripe */
+    padding-left: 0;
 }
 
-/* Vertical Win98 Stripe */
 .illu-mobile-drawer__panel::before {
-    content: "MasterPaint 98";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 32px;
-    background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%);
-    color: rgba(255, 255, 255, 0.82);
-    writing-mode: vertical-lr;
-    transform: rotate(180deg);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-bottom: 12px;
-    font-weight: 900;
-    font-size: 19px;
-    letter-spacing: 0.05em;
-    font-family: var(--mp-font);
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
-    z-index: 1;
+    display: none;
 }
 
 .illu-mobile-drawer--open .illu-mobile-drawer__panel {
@@ -3653,33 +3536,38 @@ body.illu-mobile-drawer-open #app-window {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 12px 16px;
     background: var(--mp-surface);
-    border-bottom: 2px solid var(--mp-inset-top);
+    border-bottom: 1px solid var(--mp-inset-top);
     flex-shrink: 0;
 }
 
 .illu-mobile-drawer__title {
     margin: 0;
     font-size: 16px;
-    font-weight: 700;
-    color: var(--mp-title);
-    padding-left: 4px;
+    font-weight: normal;
+    color: var(--mp-text);
+    padding-left: 0;
 }
 
 .illu-mobile-drawer__close {
     position: relative;
-    width: 24px;
-    height: 22px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    border: 1px solid;
-    border-color: var(--mp-raised-top) #404040 #404040 var(--mp-raised-top);
-    background: var(--mp-surface);
+    border: none;
+    background: transparent;
     cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.1s;
+}
+
+.illu-mobile-drawer__close:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .illu-mobile-drawer__close:active {
-    border-color: #404040 var(--mp-raised-top) var(--mp-raised-top) #404040;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .illu-mobile-drawer__close::before,
@@ -3688,9 +3576,9 @@ body.illu-mobile-drawer-open #app-window {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 10px;
-    height: 2px;
-    background: #000000;
+    width: 14px;
+    height: 1px;
+    background: var(--mp-text);
     transform: translate(-50%, -50%) rotate(45deg);
 }
 
@@ -3698,43 +3586,36 @@ body.illu-mobile-drawer-open #app-window {
     transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-.illu-mobile-drawer__close:active::before,
-.illu-mobile-drawer__close:active::after {
-    transform: translate(-45%, -45%) rotate(45deg);
-}
-
-.illu-mobile-drawer__close:active::after {
-    transform: translate(-45%, -45%) rotate(-45deg);
-}
-
 .illu-mobile-drawer__body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 12px 24px;
-    font-size: 13px;
+    padding: 12px 16px 24px;
+    font-size: 14px;
 }
 
 .illu-mobile-drawer__section-label {
     margin: 10px 0 8px;
     font-size: 12px;
-    font-weight: bold;
-    color: var(--mp-text);
-    padding: 2px 4px;
-    background: var(--mp-surface-deep);
-    border-bottom: 1px solid var(--mp-inset-top);
+    font-weight: 600;
+    color: var(--mp-accent);
+    padding: 4px 0;
+    background: transparent;
+    border-bottom: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .illu-mobile-drawer__section-label--menus {
-    margin-top: 18px;
+    margin-top: 24px;
 }
 
 .illu-mobile-drawer__palette-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 16px;
 }
 
 .illu-mobile-drawer__palette-tile {
@@ -3744,17 +3625,18 @@ body.illu-mobile-drawer-open #app-window {
     justify-content: flex-start;
     gap: 12px;
     min-height: 48px;
-    padding: 6px 12px;
+    padding: 8px 12px;
     box-sizing: border-box;
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border: 1px solid var(--mp-inset-top);
     background: var(--mp-surface);
     color: var(--mp-text);
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 14px;
+    font-weight: normal;
     cursor: pointer;
     text-align: left;
     -webkit-tap-highlight-color: transparent;
+    border-radius: var(--mp-radius);
+    transition: background 0.1s;
 }
 
 .illu-mobile-drawer__palette-tile i {
@@ -3765,7 +3647,6 @@ body.illu-mobile-drawer-open #app-window {
     flex-shrink: 0;
 }
 
-/* Modern cross style override for fa-circle-xmark in tiles */
 .illu-mobile-drawer__palette-tile .fa-circle-xmark {
     position: relative;
     color: transparent !important;
@@ -3778,7 +3659,7 @@ body.illu-mobile-drawer-open #app-window {
     left: 50%;
     top: 50%;
     width: 11px;
-    height: 2px;
+    height: 1px;
     background: var(--mp-text);
     transform: translate(-50%, -50%) rotate(45deg);
 }
@@ -3788,8 +3669,9 @@ body.illu-mobile-drawer-open #app-window {
 }
 
 .illu-mobile-drawer__palette-tile:active {
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    padding: 7px 11px 5px 13px;
+    background: var(--mp-surface-deep);
+    border-color: var(--mp-inset-top);
+    padding: 8px 12px;
 }
 
 .illu-mobile-drawer__details {
@@ -3800,32 +3682,32 @@ body.illu-mobile-drawer-open #app-window {
 .illu-mobile-drawer__summary {
     list-style: none;
     cursor: pointer;
-    padding: 8px 10px;
+    padding: 12px 10px;
     display: flex;
     align-items: center;
-    font-weight: bold;
-    font-size: 13px;
+    font-weight: normal;
+    font-size: 14px;
     color: var(--mp-text);
-    background: var(--mp-surface-deep);
-    border: 1px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
-    margin-bottom: 2px;
+    background: transparent;
+    border: none;
+    margin-bottom: 0;
     -webkit-tap-highlight-color: transparent;
     transition: background 0.1s;
+    border-radius: var(--mp-radius);
 }
 
 .illu-mobile-drawer__summary:hover {
-    background: var(--mp-menu-hover-bg);
-    color: var(--mp-menu-hover-fg);
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .illu-mobile-drawer__summary::before {
     content: "";
     width: 3px;
-    height: 12px;
+    height: 16px;
     background: var(--mp-accent);
-    margin-right: 8px;
-    opacity: 0.5;
+    margin-right: 12px;
+    opacity: 1;
+    border-radius: 2px;
 }
 
 .illu-mobile-drawer__summary::-webkit-details-marker {
@@ -3844,90 +3726,86 @@ body.illu-mobile-drawer-open #app-window {
 }
 
 .illu-mobile-drawer__sub-list {
-    padding: 2px 0 8px 8px;
-    border-left: 1px dotted var(--mp-inset-top);
-    margin-left: 10px;
+    padding: 4px 0 8px 16px;
+    border-left: 2px solid var(--mp-surface-deep);
+    margin-left: 14px;
 }
 
 .illu-mobile-drawer__menu-btn {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 6px 12px;
+    padding: 10px 12px;
     border: none;
     background: transparent;
     color: var(--mp-text);
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: normal;
     cursor: pointer;
     text-align: left;
-    margin: 1px 0;
+    margin: 2px 0;
+    border-radius: var(--mp-radius);
+    transition: background 0.1s;
 }
 
 .illu-mobile-drawer__menu-btn:hover {
-    background: var(--mp-menu-hover-bg);
-    color: var(--mp-menu-hover-fg);
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .illu-mobile-drawer__menu-btn:active {
-    background: var(--mp-menu-hover-bg);
-    color: var(--mp-menu-hover-fg);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .illu-mobile-drawer__divider {
     height: 1px;
     background: var(--mp-inset-top);
-    margin: 4px 10px;
+    margin: 8px 10px;
 }
 
-/* Bouton "Signaler un problème" : style accentué identique à la menubar et aux paramètres */
 .illu-mobile-drawer__menu-btn--contact {
     width: 100%;
-    margin: 10px 0 2px;
-    padding: 9px 14px;
+    margin: 16px 0 8px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     gap: 8px;
     justify-content: center;
-    background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%) !important;
+    background: var(--mp-accent) !important;
     color: #fff !important;
-    font-size: 13px;
-    font-weight: 600;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    font-size: 14px;
+    font-weight: normal;
+    text-shadow: none;
+    border: none;
+    border-radius: var(--mp-radius);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
 
 .illu-mobile-drawer__menu-btn--contact i {
     color: #fff !important;
-    font-size: 14px;
+    font-size: 16px;
     margin-right: 0 !important;
 }
 
 .illu-mobile-drawer__menu-btn--contact:hover {
-    background: linear-gradient(180deg, var(--mp-accent) 0%, var(--mp-title) 100%) !important;
-    color: #fff !important;
+    background: var(--mp-teal-dark) !important;
 }
 
 .illu-mobile-drawer__menu-btn--contact:active {
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    padding: 10px 13px 8px 15px;
+    padding: 12px 14px;
 }
 
-/* Pied de page crédit du tiroir mobile */
 .illu-mobile-drawer__footer {
     flex-shrink: 0;
-    padding: 8px 12px;
-    background: var(--mp-surface-deep);
+    padding: 12px 16px;
+    background: var(--mp-surface);
     border-top: 1px solid var(--mp-inset-top);
     text-align: center;
 }
 
 .illu-mobile-drawer__credit {
     margin: 0;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--mp-text);
     opacity: 0.75;
     white-space: nowrap;
@@ -3938,79 +3816,78 @@ body.illu-mobile-drawer-open #app-window {
 .illu-mobile-drawer__credit-link {
     color: var(--mp-accent);
     text-decoration: none;
-    font-weight: 600;
+    font-weight: normal;
 }
 
 .illu-mobile-drawer__credit-link:hover {
     text-decoration: underline;
 }
 
-/* Modern overrides for mobile drawer elements */
 body.theme-modern .illu-mobile-drawer__panel {
     background: var(--mp-surface);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: var(--modern-shadow-lg);
-    padding-left: 36px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding-left: 0;
 }
 
 body.theme-modern .illu-mobile-drawer__panel::before {
-    width: 36px;
+    display: none;
 }
 
 body.theme-modern .illu-mobile-drawer__summary {
-    background: var(--mp-surface-deep);
+    background: transparent;
     border: none;
     border-radius: var(--mp-radius);
-    padding: 10px 14px;
-    margin: 4px 6px;
-    box-shadow: var(--modern-shadow-sm);
+    padding: 12px 10px;
+    margin: 0;
+    box-shadow: none;
 }
 
 body.theme-modern .illu-mobile-drawer__palette-tile {
-    border: none;
-    background: var(--mp-surface-deep);
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
     border-radius: var(--mp-radius);
-    box-shadow: var(--modern-shadow-sm);
+    box-shadow: none;
 }
 
 body.theme-modern .illu-mobile-drawer__close {
     border: none;
-    background: rgba(0, 0, 0, 0.05);
+    background: transparent;
     border-radius: 50%;
 }
 
 body.theme-dark .illu-mobile-drawer__panel {
     background: var(--mp-surface);
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border-color: #444;
 }
 
 body.theme-dark .illu-mobile-drawer__panel::before {
-    background: linear-gradient(180deg, #10151a 0%, #2a3038 100%);
-    color: #8ab4e8;
+    display: none;
 }
 
 body.theme-dark .illu-mobile-drawer__section-label {
-    background: var(--mp-surface-deep);
+    background: transparent;
+    color: var(--mp-accent);
 }
 
 body.theme-dark .illu-mobile-drawer__palette-tile {
     background: var(--mp-surface);
+    border-color: #444;
 }
 
 body.theme-dark .illu-mobile-drawer__palette-tile i {
-    color: #8ab4e8;
+    color: var(--mp-accent);
 }
 
 body.theme-dark .illu-mobile-drawer__footer {
-    background: var(--mp-surface-deep);
-    border-top-color: var(--mp-inset-top);
+    background: var(--mp-surface);
+    border-top-color: #444;
 }
 
 body.theme-dark .illu-mobile-drawer__credit-link {
-    color: #8ab4e8;
+    color: var(--mp-accent);
 }
 
-/* Sous-menus drawer : survol discret (pas de gris/blanc Win98 hérité de main.css) */
 body.theme-dark .illu-mobile-drawer__menu-btn,
 body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn {
     background: transparent !important;
@@ -4025,27 +3902,26 @@ body.theme-dark .illu-mobile-drawer__menu-btn:focus-visible,
 body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:hover,
 body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:active,
 body.theme-dark .illu-mobile-drawer__sub-list .illu-mobile-drawer__menu-btn:focus-visible {
-    background: color-mix(in srgb, var(--mp-accent-muted, #4a6fa8) 50%, var(--mp-surface-deep, #1e2126) 50%) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     color: var(--mp-text) !important;
     border: none !important;
 }
 
 body.theme-dark .illu-mobile-drawer__summary:hover,
 body.theme-dark .illu-mobile-drawer__summary:active {
-    background: color-mix(in srgb, var(--mp-accent-muted, #4a6fa8) 42%, var(--mp-surface-deep, #1e2126) 58%) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     color: var(--mp-text) !important;
 }
 
 body.theme-dark .illu-mobile-drawer__sub-list {
-    border-left-color: var(--mp-inset-bot, #3a4048);
+    border-left-color: #444;
 }
 
-/* Hide old cloned menu styles if they interfere */
 .illu-mobile-drawer__cloned-menu {
     display: none !important;
 }
 
-/* ——— Paint.NET : dock bas + languettes latérales (body.illu-pdn-dock-active) ——— */
+/* ——— Paint.NET Dock ——— */
 body.illu-pdn-dock-active .illu-pdn-bottom-dock {
     position: fixed;
     left: 0;
@@ -4065,7 +3941,6 @@ body.illu-pdn-dock-active .illu-pdn-bottom-dock {
     max-width: 100vw;
 }
 
-/* Une seule palette visible : les autres ne prennent pas de place (centrage horizontal du panneau ouvert). */
 body.illu-pdn-dock-active .illu-pdn-slot:not(.illu-pdn-slot--open) {
     flex: 0 0 0 !important;
     width: 0 !important;
@@ -4089,7 +3964,7 @@ body.illu-pdn-dock-active .illu-pdn-slot {
     max-width: 100%;
     transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, width 0.2s ease;
     transform: translateY(100%);
-    filter: drop-shadow(0 -3px 10px rgba(0, 0, 0, 0.18));
+    filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, 0.15));
 }
 
 body.illu-pdn-dock-active .illu-pdn-slot--open {
@@ -4111,6 +3986,8 @@ body.illu-pdn-dock-active .illu-pdn-slot .floating-window {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    border-bottom: none;
+    border-radius: 0;
 }
 
 body.illu-pdn-dock-active .illu-pdn-slot .floating-window .window-body {
@@ -4119,16 +3996,16 @@ body.illu-pdn-dock-active .illu-pdn-slot .floating-window .window-body {
 }
 
 body.theme-dark .illu-pdn-tab {
-    background: linear-gradient(180deg, #3a3f48 0%, #2c3138 100%);
-    color: color-mix(in srgb, var(--mp-accent) 75%, #b8c4e8);
-    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    background: var(--mp-surface-deep);
+    color: var(--mp-text);
+    border-color: var(--mp-inset-top);
 }
 
 body.theme-dark .illu-pdn-tab[aria-pressed='true'] {
-    background: linear-gradient(180deg, #2f343c 0%, #252a30 100%);
+    background: var(--mp-surface);
 }
 
-/* —— Camera Raw : même chrome que les autres fenêtres (Win98 / thème) —— */
+/* —— Camera Raw —— */
 body.illu-camera-raw-open {
     overflow: hidden;
 }
@@ -4156,7 +4033,9 @@ body.illu-camera-raw-open {
     width: min(760px, 100%);
     max-width: min(760px, 98vw);
     max-height: min(92vh, 900px);
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--mp-raised-top);
+    background: var(--mp-surface);
 }
 
 .illu-cr-window-body {
@@ -4187,8 +4066,7 @@ body.illu-camera-raw-open {
     justify-content: center;
     padding: 8px;
     background: var(--mp-surface-deep);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     box-sizing: border-box;
 }
 
@@ -4197,7 +4075,8 @@ body.illu-camera-raw-open {
     max-width: 100%;
     height: auto;
     image-rendering: auto;
-    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: none;
+    border: 1px solid var(--mp-inset-top);
 }
 
 .illu-cr-controls-col {
@@ -4219,16 +4098,15 @@ body.illu-camera-raw-open {
 
 .illu-cr-sec {
     margin-bottom: 6px;
-    border: 1px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     background: var(--mp-surface);
 }
 
 .illu-cr-sec-h {
     margin: 0;
-    padding: 6px 8px;
+    padding: 8px 12px;
     font-size: var(--mp-ui-font-size);
-    font-weight: 600;
+    font-weight: normal;
     cursor: pointer;
     user-select: none;
     display: flex;
@@ -4236,14 +4114,23 @@ body.illu-camera-raw-open {
     align-items: center;
     gap: 6px;
     color: var(--mp-text);
-    background: linear-gradient(180deg, var(--mp-raised-top) 0%, var(--mp-surface-deep) 100%);
+    background: var(--mp-surface-deep);
     border-bottom: 1px solid var(--mp-inset-top);
+    transition: background 0.1s;
+}
+
+.illu-cr-sec-h:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 body.theme-dark .illu-cr-sec-h {
-    background: linear-gradient(180deg, var(--mp-raised-top) 0%, var(--mp-surface-deep) 100%);
+    background: var(--mp-surface-deep);
     color: var(--mp-text);
     border-bottom-color: var(--mp-inset-top);
+}
+
+body.theme-dark .illu-cr-sec-h:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .illu-cr-chev {
@@ -4260,14 +4147,14 @@ body.theme-dark .illu-cr-sec-h {
 }
 
 .illu-cr-sec-body {
-    padding: 8px 8px 10px;
+    padding: 12px;
 }
 
 .illu-cr-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .illu-cr-row:last-child {
@@ -4281,18 +4168,16 @@ body.theme-dark .illu-cr-sec-h {
     color: var(--mp-text);
 }
 
-/* Piste du curseur : dégradé derrière le slider */
 .illu-cr-range-wrap {
     flex: 1;
     min-width: 0;
-    height: 20px;
+    height: 16px;
     display: flex;
     align-items: center;
-    padding: 0 6px;
+    padding: 0;
     box-sizing: border-box;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-inset-top);
+    border-radius: 0;
     overflow: visible;
 }
 
@@ -4316,7 +4201,6 @@ body.theme-dark .illu-cr-sec-h {
     background: linear-gradient(to right, #f8f8f8, #ffffff);
 }
 
-/* Gauche blanc → droite noir */
 .illu-cr-range-wrap--blacks {
     background: linear-gradient(to right, #ffffff, #000000);
 }
@@ -4329,17 +4213,16 @@ body.theme-dark .illu-cr-sec-h {
     background: linear-gradient(to right, #6ec06e, #f5f5f5, #d86ed8);
 }
 
-
 .illu-cr-chan-group--red {
-    background-color: rgba(255, 60, 60, 0.08);
+    background-color: rgba(255, 60, 60, 0.05);
 }
 
 .illu-cr-chan-group--green {
-    background-color: rgba(60, 255, 60, 0.08);
+    background-color: rgba(60, 255, 60, 0.05);
 }
 
 .illu-cr-chan-group--blue {
-    background-color: rgba(60, 60, 255, 0.08);
+    background-color: rgba(60, 60, 255, 0.05);
 }
 
 body.theme-modern .illu-cr-chan-group {
@@ -4349,7 +4232,7 @@ body.theme-modern .illu-cr-chan-group {
 
 .illu-cr-chan-header {
     font-size: 11px;
-    font-weight: 600;
+    font-weight: normal;
     margin-bottom: 8px;
     color: var(--mp-text);
     opacity: 0.9;
@@ -4362,19 +4245,19 @@ body.theme-modern .illu-cr-chan-group {
     gap: 10px;
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid rgba(128, 128, 128, 0.15);
+    border-top: 1px solid var(--mp-inset-top);
 }
 
 .illu-cr-row--mini .illu-cr-lab {
-    font-size: 10px !important;
-    opacity: 0.75;
+    font-size: 11px !important;
+    opacity: 0.85;
     margin-bottom: 4px;
     display: flex;
     justify-content: space-between;
 }
 
 .illu-cr-row--mini .illu-cr-range-wrap {
-    height: 12px;
+    height: 16px;
 }
 
 .illu-cr-range-wrap--vibrance {
@@ -4404,13 +4287,13 @@ body.theme-modern .illu-cr-chan-group {
 .illu-cr-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 12px;
+    width: 8px;
     height: 16px;
+    border-radius: 4px;
+    background: var(--mp-accent);
+    border: none;
+    box-shadow: none;
     margin-top: -6px;
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-raised-top);
-    background: linear-gradient(180deg, #f5f5f5 0%, #c0c0c0 100%);
-    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
 }
 
 .illu-cr-range::-moz-range-track {
@@ -4420,12 +4303,11 @@ body.theme-modern .illu-cr-chan-group {
 }
 
 .illu-cr-range::-moz-range-thumb {
-    width: 12px;
+    width: 8px;
     height: 16px;
-    border: 2px solid;
-    border-color: var(--mp-raised-top) #404040 #404040 var(--mp-raised-top);
-    background: linear-gradient(180deg, #f5f5f5 0%, #c0c0c0 100%);
-    border-radius: 0;
+    border: none;
+    background: var(--mp-accent);
+    border-radius: 4px;
 }
 
 .illu-cr-num {
@@ -4436,13 +4318,15 @@ body.theme-modern .illu-cr-chan-group {
     text-align: right;
     padding-left: 4px;
     padding-right: 4px;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
 }
 
 .illu-cr-foot {
     flex-shrink: 0;
-    padding-top: 4px;
+    padding-top: 12px;
     border-top: 1px solid var(--mp-inset-top);
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 @media (max-width: 640px) {
@@ -4466,7 +4350,7 @@ body.theme-modern .illu-cr-chan-group {
     }
 }
 
-/* —— Effet VHS : même principe que Camera Raw (aperçu | réglages), portée reste au-dessus dans #effect-dialog-content —— */
+/* —— Effet VHS —— */
 #effect-dialog-window.effect-dialog--vhs {
     width: min(900px, 98vw) !important;
     max-width: min(900px, 98vw) !important;
@@ -4521,8 +4405,7 @@ body.theme-modern .illu-cr-chan-group {
     justify-content: center;
     padding: 8px;
     background: var(--mp-surface-deep);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     box-sizing: border-box;
 }
 
@@ -4531,7 +4414,8 @@ body.theme-modern .illu-cr-chan-group {
     max-width: 100%;
     height: auto;
     image-rendering: auto;
-    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: none;
+    border: 1px solid var(--mp-inset-top);
 }
 
 .illu-vhs-controls-col {
@@ -4554,7 +4438,7 @@ body.theme-modern .illu-cr-chan-group {
 }
 
 .illu-vhs-controls-inner {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.35;
 }
 
@@ -4565,15 +4449,15 @@ body.theme-modern .illu-cr-chan-group {
 
 .illu-vhs-hint--muted {
     margin: 0 0 8px;
-    font-size: 10px;
+    font-size: 11px;
     opacity: 0.88;
-    color: color-mix(in srgb, var(--mp-text) 72%, #666);
+    color: var(--mp-text);
 }
 
 .illu-vhs-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px 10px;
+    gap: 12px 16px;
     align-items: start;
 }
 
@@ -4594,7 +4478,6 @@ body.theme-modern .illu-cr-chan-group {
     align-items: center;
 }
 
-/* Pied de page modale effets : RAZ + lien VHS à gauche, OK / Fermer / Annuler à droite */
 .illu-effect-dialog-footer {
     display: flex;
     flex-wrap: wrap;
@@ -4632,7 +4515,8 @@ body.theme-modern .illu-cr-chan-group {
 }
 
 body.theme-dark .illu-vhs-hint--muted {
-    color: color-mix(in srgb, var(--mp-text) 75%, transparent);
+    color: var(--mp-text);
+    opacity: 0.7;
 }
 
 @media (max-width: 640px) {
@@ -4660,7 +4544,7 @@ body.theme-dark .illu-vhs-hint--muted {
     }
 }
 
-/* —— Suppression de fond IA (@imgly) : fenêtre type Win98 —— */
+/* —— Suppression de fond IA —— */
 body.illu-rmbg-open {
     overflow: hidden;
 }
@@ -4687,7 +4571,8 @@ body.illu-rmbg-open {
     z-index: 1;
     width: min(440px, 100%);
     max-width: min(440px, 98vw);
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--mp-raised-top);
 }
 
 .illu-rmbg-window--progress {
@@ -4706,14 +4591,16 @@ body.illu-rmbg-open {
     color: var(--mp-text);
 }
 
-/* Barre RMBG : même modèle que .illu-status-progress-track (segmenté Win98) */
 .illu-rmbg-panel-progress .illu-rmbg-progress-track {
     width: 100%;
     margin: 0 0 12px;
     box-sizing: border-box;
+    height: 14px;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface-deep);
 }
 
-/* CAF : fenêtre de progression modale */
+/* CAF */
 .illu-caf-progress-overlay {
     position: fixed;
     inset: 0;
@@ -4736,14 +4623,14 @@ body.illu-rmbg-open {
     z-index: 1;
     width: min(520px, 100%);
     max-width: min(520px, 98vw);
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--mp-raised-top);
 }
 
 .illu-caf-progress-body {
     min-height: 0;
 }
 
-/* CAF : piste identique à la barre de statut */
 .illu-caf-progress-body .illu-caf-progress-track {
     width: 100%;
     margin: 0 0 10px;
@@ -4753,13 +4640,13 @@ body.illu-rmbg-open {
 .illu-caf-progress-msg,
 .illu-caf-progress-hint {
     margin: 0 0 10px;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.4;
 }
 
 .illu-rmbg-hint,
 .illu-rmbg-hint-settings {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.4;
     color: var(--mp-text);
     opacity: 0.9;
@@ -4794,14 +4681,15 @@ body.illu-levels-open {
     width: min(920px, 100%);
     max-width: min(920px, 98vw);
     max-height: min(94vh, 920px);
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--mp-raised-top);
 }
 
 .illu-lvl-body {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 8px 10px 10px;
+    padding: 12px;
 }
 
 .illu-lvl-main {
@@ -4809,7 +4697,7 @@ body.illu-levels-open {
     flex-direction: row;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 10px;
+    gap: 16px;
     flex-wrap: wrap;
     min-height: 0;
 }
@@ -4818,14 +4706,14 @@ body.illu-levels-open {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     min-width: 140px;
     flex: 1 1 160px;
 }
 
 .illu-lvl-col-title {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: normal;
     color: var(--mp-text);
     text-align: center;
 }
@@ -4835,8 +4723,7 @@ body.illu-levels-open {
     width: 100%;
     max-width: 256px;
     height: auto;
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     image-rendering: pixelated;
 }
 
@@ -4844,22 +4731,24 @@ body.illu-levels-open {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex: 0 0 auto;
     min-width: 100px;
 }
 
 .illu-lvl-num {
     box-sizing: border-box;
-    width: 52px;
-    min-width: 52px;
+    width: 56px;
+    min-width: 56px;
     text-align: center;
     font-size: var(--mp-ui-font-size);
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
 }
 
 .illu-lvl-num--gamma {
-    width: 56px;
-    min-width: 56px;
+    width: 60px;
+    min-width: 60px;
 }
 
 .illu-lvl-ramp-wrap {
@@ -4873,8 +4762,7 @@ body.illu-levels-open {
     position: absolute;
     inset: 0;
     background: linear-gradient(to top, #000000 0%, #ffffff 100%);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    border: 1px solid var(--mp-inset-top);
     box-sizing: border-box;
     pointer-events: none;
 }
@@ -4882,13 +4770,13 @@ body.illu-levels-open {
 .illu-lvl-handle {
     position: absolute;
     left: 50%;
-    width: 14px;
-    height: 11px;
-    margin-left: -7px;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
     padding: 0;
-    border: 2px solid;
-    border-color: var(--mp-raised-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-raised-top);
-    background: linear-gradient(180deg, #f0f0f0 0%, #b8b8b8 100%);
+    border: none;
+    background: var(--mp-accent);
+    border-radius: 50%;
     cursor: ns-resize;
     z-index: 2;
     transform: translateY(50%);
@@ -4902,12 +4790,12 @@ body.illu-levels-open {
 .illu-lvl-gamma-block {
     width: 100%;
     max-width: 200px;
-    margin-top: 4px;
+    margin-top: 8px;
 }
 
 .illu-lvl-gamma-lab {
     display: block;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--mp-text);
     margin-bottom: 4px;
     text-align: center;
@@ -4927,7 +4815,7 @@ body.illu-levels-open {
 }
 
 .illu-lvl-preview-wrap {
-    margin-top: 10px;
+    margin-top: 12px;
     flex: 1;
     min-height: 80px;
     max-height: 220px;
@@ -4936,9 +4824,8 @@ body.illu-levels-open {
     align-items: center;
     justify-content: center;
     background: var(--mp-surface-deep);
-    border: 2px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    padding: 6px;
+    border: 1px solid var(--mp-inset-top);
+    padding: 8px;
     box-sizing: border-box;
 }
 
@@ -4947,6 +4834,8 @@ body.illu-levels-open {
     max-width: 100%;
     height: auto;
     image-rendering: auto;
+    box-shadow: none;
+    border: 1px solid var(--mp-inset-top);
 }
 
 .illu-lvl-foot {
@@ -4955,8 +4844,8 @@ body.illu-levels-open {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-top: 10px;
-    padding-top: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
     border-top: 1px solid var(--mp-inset-top);
 }
 
@@ -4983,8 +4872,8 @@ body.illu-levels-open {
 }
 
 .illu-lvl-btn-ok:focus {
-    outline: 2px solid #0066cc;
-    outline-offset: 1px;
+    outline: 2px solid var(--mp-accent);
+    outline-offset: -2px;
 }
 
 @media (max-width: 720px) {
@@ -5008,7 +4897,7 @@ body.illu-levels-open {
     }
 }
 
-/* —— Recadrage interactif (panneau à gauche, toujours dans le viewport) —— */
+/* —— Recadrage interactif —— */
 .illu-crop-panel-host {
     position: fixed;
     left: 10px;
@@ -5029,14 +4918,15 @@ body.illu-levels-open {
     max-width: 100%;
     max-height: 100%;
     min-height: 0;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     overflow: visible;
     display: flex;
     flex-direction: column;
     position: relative;
+    border: 1px solid var(--mp-raised-top);
+    background: var(--mp-surface);
 }
 
-/* Session recadrage : masquer les 4 palettes (flottant ou docké) pour libérer la vue */
 body.illu-crop-session #win-tools,
 body.illu-crop-session #win-colors,
 body.illu-crop-session #win-layers,
@@ -5045,13 +4935,13 @@ body.illu-crop-session #win-history {
 }
 
 .illu-crop-panel-body {
-    padding: 8px 10px 10px;
+    padding: 12px;
     overflow-y: auto;
     min-height: 0;
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .illu-crop-ratio-row {
@@ -5061,28 +4951,28 @@ body.illu-crop-session #win-history {
 }
 
 .illu-crop-ratio-btn {
-    min-height: 44px;
+    min-height: 48px;
     padding: 6px 4px;
     font-size: 12px;
-    font-weight: 600;
-    border: 2px solid;
-    border-color: var(--mp-raised-top, #fff) var(--mp-raised-bot, #808080) var(--mp-inset-bot, #404040) var(--mp-inset-top, #a0a0a0);
-    background: var(--mp-surface-deep, #d4d0c8);
-    color: var(--mp-text, #000);
+    font-weight: normal;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
+    color: var(--mp-text);
     cursor: pointer;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
+    transition: border-color 0.1s, background 0.1s;
 }
 
 .illu-crop-ratio-preview {
     display: block;
     flex-shrink: 0;
-    border: 1.5px solid var(--mp-icon-stroke, #000);
-    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 18%, var(--mp-surface-deep, #d4d0c8));
+    border: 1px solid var(--mp-text);
+    background: var(--mp-surface-deep);
     box-sizing: border-box;
 }
 
@@ -5118,9 +5008,13 @@ body.illu-crop-session #win-history {
     line-height: 1.1;
 }
 
+.illu-crop-ratio-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
 .illu-crop-ratio-btn--active {
-    border-color: var(--mp-inset-top, #a0a0a0) var(--mp-inset-bot, #404040) var(--mp-raised-bot, #808080) var(--mp-raised-top, #fff);
-    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 14%, var(--mp-surface-deep, #d4d0c8));
+    border-color: var(--mp-accent);
+    background: var(--mp-accent-muted);
 }
 
 .illu-crop-actions {
@@ -5132,22 +5026,31 @@ body.illu-crop-session #win-history {
 
 .illu-crop-actions button {
     flex: 1 1 0;
-    min-height: 48px;
-    font-size: 20px;
-    border: 2px solid;
-    border-color: var(--mp-raised-top, #fff) var(--mp-raised-bot, #808080) var(--mp-inset-bot, #404040) var(--mp-inset-top, #a0a0a0);
-    background: var(--mp-surface-deep, #d4d0c8);
+    min-height: 40px;
+    font-size: 18px;
+    border: 1px solid var(--mp-inset-top);
+    background: var(--mp-surface);
     cursor: pointer;
+    transition: background 0.1s;
+}
+
+.illu-crop-actions button:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .illu-crop-btn-primary {
-    font-weight: 600;
-    color: var(--mp-accent, #0d7a7a);
+    font-weight: normal;
+    color: var(--mp-accent);
+    border-color: var(--mp-accent) !important;
+}
+
+.illu-crop-btn-primary:hover {
+    background: var(--mp-accent-muted) !important;
 }
 
 .illu-crop-btn-cancel {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: normal;
 }
 
 .illu-crop-panel__title-bar .title-bar-text {
@@ -5181,122 +5084,124 @@ body.illu-crop-session #win-history {
     }
 }
 
-/* Recadrage mobile shell : règles complètes dans illu-mobile-shell.css */
-
-
-/* --- Slider Range Windows 98 Moderne --- */
+/* --- Slider Range Windows 10 Moderne --- */
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     background: transparent;
-    height: 12px;
+    height: 16px;
 }
 
 input[type="range"]:focus {
     outline: none;
 }
 
-/* La Piste (Track) */
 input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
-    height: 4px;
-    background: var(--mp-surface);
-    border: 1px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
-    box-shadow: inset 1px 1px 0px #000;
+    height: 2px;
+    background: var(--mp-inset-top);
+    border: none;
+    box-shadow: none;
 }
 
 input[type="range"]::-moz-range-track {
     width: 100%;
-    height: 4px;
-    background: var(--mp-surface);
-    border: 1px solid;
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    height: 2px;
+    background: var(--mp-inset-top);
+    border: none;
 }
 
-/* Le Curseur (Thumb) */
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    height: 18px;
-    width: 10px;
-    background: var(--mp-surface);
-    border: 1px solid #000;
-    margin-top: -8px;
-    /* Centre le curseur sur la piste */
-    box-shadow:
-        inset 1px 1px 0 var(--mp-raised-top),
-        inset -1px -1px 0 var(--mp-raised-bot);
+    height: 16px;
+    width: 8px;
+    background: var(--mp-accent);
+    border: none;
+    border-radius: 4px;
+    margin-top: -7px;
+    box-shadow: none;
     cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb {
-    height: 18px;
-    width: 10px;
-    background: var(--mp-surface);
-    border: 1px solid #000;
-    border-radius: 0;
-    box-shadow:
-        inset 1px 1px 0 var(--mp-raised-top),
-        inset -1px -1px 0 var(--mp-raised-bot);
+    height: 16px;
+    width: 8px;
+    background: var(--mp-accent);
+    border: none;
+    border-radius: 4px;
+    box-shadow: none;
     cursor: pointer;
 }
 
-/* État actif (clic) */
-input[type="range"]:active::-webkit-slider-thumb {
-    background: var(--mp-surface-deep);
+input[type="range"]:hover::-webkit-slider-thumb {
+    background: var(--mp-teal-dark);
 }
 
-/* --- Boutons Radio Windows 98 Moderne --- */
+input[type="range"]:active::-webkit-slider-thumb {
+    background: #000000;
+}
+
+body.theme-dark input[type="range"]:active::-webkit-slider-thumb {
+    background: #ffffff;
+}
+
+/* --- Boutons Radio Windows 10 Moderne --- */
 input[type="radio"] {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
-    background: #fff;
-    border: 1px solid;
-    /* Effet d'ombre interne typique W98 */
-    border-color: var(--mp-inset-top) var(--mp-inset-bot) var(--mp-inset-bot) var(--mp-inset-top);
+    width: 16px;
+    height: 16px;
+    background: var(--mp-surface);
+    border: 1px solid var(--mp-text);
     border-radius: 50%;
-    /* Cercle parfait */
     margin-right: 6px;
     vertical-align: middle;
     cursor: pointer;
     position: relative;
-    box-shadow: inset 1px 1px 0px #000;
+    box-shadow: none;
+    transition: border-color 0.1s;
 }
 
-/* Fond sombre pour le thème dark */
 body.theme-dark input[type="radio"] {
-    background: #1e2228;
+    background: #2b2b2b;
+    border-color: #ffffff;
 }
 
-/* Le point central quand coché */
+input[type="radio"]:hover {
+    border-color: var(--mp-accent);
+}
+
+input[type="radio"]:checked {
+    border-color: var(--mp-accent);
+}
+
 input[type="radio"]:checked::after {
     content: "";
     position: absolute;
     top: 3px;
     left: 3px;
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: #000;
-    /* Point noir classique */
+    background: var(--mp-accent);
 }
 
-/* Couleur du point en thème sombre ou avec accent */
 body.theme-dark input[type="radio"]:checked::after {
     background: var(--mp-accent);
 }
 
-/* Effet au clic */
 input[type="radio"]:active {
-    background: #d4d0c8;
+    background: #cccccc;
 }
 
-/* Paint.NET Layout Default Corner Positioning & Translucency */
+body.theme-dark input[type="radio"]:active {
+    background: #444444;
+}
+
+/* Paint.NET Layout Default */
 body.ui-layout-floating #floating-palette-host>.window.palette-panel {
     position: absolute;
-    opacity: 0.8;
+    opacity: 0.9;
     transition: opacity 0.2s ease;
 }
 
@@ -5324,32 +5229,235 @@ body.ui-layout-floating #floating-palette-host>#win-colors {
     left: 10px;
 }
 
-/* Thème sombre classique : même espacement menus / barre que en clair */
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] {
     padding: 4px 0 !important;
     min-width: 180px;
-    border-radius: var(--mp-radius);
+    border-radius: 0;
+    border: 1px solid var(--mp-raised-top) !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"] {
     position: relative;
-    padding: 5px 10px !important;
+    padding: 4px 16px !important;
     display: flex !important;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-size: var(--mp-ui-font-size);
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon {
-    padding-left: 28px !important;
+    padding-left: 36px !important;
 }
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="menuitem"] {
     padding: 4px 10px;
-    border-radius: var(--mp-radius);
+    border-radius: 0;
     font-size: var(--mp-ui-font-size);
+    transition: background 0.1s;
 }
 
 body.theme-dark .illu-menubar-icon-btn {
     transform: none !important;
+}
+
+/* --- Flat UI Overrides for 3D Buttons --- */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #btn-open-example,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-btn-open-example,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-settings-example-btn {
+    border: 1px solid #d97706 !important;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-weight: normal;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-overlay .welcome-dialog-start-btn {
+    background: var(--mp-accent) !important;
+    border: 1px solid var(--mp-accent) !important;
+    color: #ffffff !important;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-weight: bold !important;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .settings-github-link {
+    background: var(--mp-surface-deep) !important;
+    border: 1px solid var(--mp-inset-top) !important;
+    color: var(--mp-text) !important;
+    border-radius: var(--mp-radius) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-weight: normal;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #btn-open-example:hover,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-btn-open-example:hover,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-settings-example-btn:hover {
+    filter: brightness(1.05) !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-overlay .welcome-dialog-start-btn:hover {
+    background: var(--mp-teal-dark, #005a9e) !important;
+    border-color: var(--mp-teal-dark, #005a9e) !important;
+    color: #ffffff !important;
+    filter: none !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .settings-github-link:hover {
+    background: var(--mp-surface) !important;
+    border-color: var(--mp-accent) !important;
+    color: var(--mp-text) !important;
+    filter: none !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #btn-open-example:active,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-btn-open-example:active,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-settings-example-btn:active {
+    border-color: #b45309 !important;
+    padding: 4px 10px !important;
+    filter: none !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-overlay .welcome-dialog-start-btn:active {
+    background: color-mix(in srgb, var(--mp-accent) 80%, #000) !important;
+    border-color: color-mix(in srgb, var(--mp-accent) 80%, #000) !important;
+    color: #ffffff !important;
+    filter: none !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .settings-github-link:active {
+    background: #cccccc !important;
+    border-color: var(--mp-accent) !important;
+    padding: 4px 10px !important;
+    color: var(--mp-text) !important;
+    filter: none !important;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) #welcome-overlay .welcome-dialog-start-btn:active {
+    background: color-mix(in srgb, var(--mp-accent) 65%, #000) !important;
+    border-color: color-mix(in srgb, var(--mp-accent) 65%, #000) !important;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .settings-github-link:active {
+    background: #555555 !important;
+}
+
+/* Ensure title-bar close button is always red and smaller padding */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"] {
+    background-color: #C75050 !important;
+    padding: 0px 0px !important;
+    margin: 5px 1px;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+    background: #ffffff !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover {
+    background-color: #f1525f !important;
+}
+
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:active,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:active {
+    background-color: #c10f1d !important;
+}
+
+/* Fix text visibility on hover menus and buttons globally */
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover,
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover>span,
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover .menu-icon,
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover,
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover>span,
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover .menu-icon {
+    color: #000000 !important;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover>span,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:hover .menu-icon,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover>span,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"]>li[role="menuitem"]:hover .menu-icon {
+    color: #ffffff !important;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
+    color: var(--mp-text) !important;
+}
+
+/* Replace the blue #353c48 background of the ribbon with a neutral gray #414141 */
+body.illu-toolbar-ribbon.theme-dark:not(.theme-aero):not(.theme-luna) #tool-options-container,
+body.illu-toolbar-ribbon.theme-dark:not(.theme-aero):not(.theme-luna) .tool-options-bar {
+    background: #414141 !important;
+}
+
+/* Make toggle buttons (like icon toggles) look pro and flat, instead of 3D */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-mode-toggle-btn.active,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-mode-toggle-btn.illu-icon-toggle--on,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-icon-toggle.active,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-icon-toggle--on {
+    background: color-mix(in srgb, var(--mp-accent) 14%, var(--mp-surface-deep)) !important;
+    border: 1px solid var(--mp-accent) !important;
+    box-shadow: none !important;
+    border-radius: var(--mp-radius) !important;
+    color: var(--mp-text) !important;
+}
+
+/* Range input (gauges) flat dark theme styling */
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-gauge-input {
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-gauge-input::-webkit-slider-runnable-track {
+    background: #555555;
+    height: 4px;
+    border-radius: 2px;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-gauge-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 8px;
+    background: var(--mp-accent);
+    margin-top: -5px;
+    border-radius: 2px;
+    border: none;
+    box-shadow: none;
+}
+
+/* Firefox support for gauge */
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-gauge-input::-moz-range-track {
+    background: #555555;
+    height: 4px;
+    border-radius: 2px;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-gauge-input::-moz-range-thumb {
+    height: 14px;
+    width: 8px;
+    background: var(--mp-accent);
+    border-radius: 2px;
+    border: none;
+    box-shadow: none;
+}
+
+/* Select element flat dark theme styling (for font list etc) */
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) select.illu-select-mini,
+body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) select.illu-text-font-select {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    border-radius: var(--mp-radius);
+    padding: 2px 4px;
+    box-shadow: none;
 }

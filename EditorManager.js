@@ -636,6 +636,41 @@ const EditorManager = {
             }
         }
         ctx.putImageData(img, 0, 0);
+
+        // Draw selected color marker/indicator
+        const activeCol = this.activeColorTarget === 'secondary' ? this.secondaryColor : this.primaryColor;
+        const grid = this.isColorPickerGridMode();
+        let mx = canvas.width / 2;
+        let my = canvas.height / 2;
+        if (grid) {
+            const hsl = this.rgbToHsl(activeCol.r, activeCol.g, activeCol.b);
+            mx = (hsl.h / 360) * canvas.width;
+            my = (hsl.l / 100) * canvas.height;
+        } else {
+            const hsv = this.rgbToHsv(activeCol.r, activeCol.g, activeCol.b);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const r = canvas.width / 2;
+            const theta = ((hsv.h - 180) * Math.PI) / 180; // Wait, let's look at buildColorWheelDiscImageData: const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360; -> so dy, dx has angle theta. Let's make sure it matches atan2 logic: angle in radians is hsv.h * Math.PI / 180
+            const thetaRad = (hsv.h * Math.PI) / 180;
+            const dist = (hsv.s / 100) * r;
+            mx = cx + dist * Math.cos(thetaRad);
+            my = cy + dist * Math.sin(thetaRad);
+        }
+
+        // Outer black shadow ring
+        ctx.beginPath();
+        ctx.arc(mx, my, 5, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Inner white ring
+        ctx.beginPath();
+        ctx.arc(mx, my, 4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
     },
 
     setDitherPattern(id) {
@@ -728,11 +763,11 @@ const EditorManager = {
     /** Délai entre deux miniatures calque (ms) pour ne pas saturer le thread. */
     THUMB_SEQ_GAP_MS: 20,
     /** Côté max (px) pour miniatures calque (génération + affichage CSS). */
-    THUMB_LAYER_MAX_DIM: 28,
+    THUMB_LAYER_MAX_DIM: 40,
     /** Taille de génération interne (plus petit = plus rapide). */
-    THUMB_LAYER_INTERNAL_SIZE: 22,
+    THUMB_LAYER_INTERNAL_SIZE: 40,
     /** Aplat document pour onglet : côté max réduit. */
-    THUMB_TAB_MAX_DIM: 28,
+    THUMB_TAB_MAX_DIM: 40,
 
     /** Dimensions miniatures en conservant le ratio w/h (côté le plus long ≤ maxDim). */
     _thumbFitSize(cw, ch, maxDim) {
@@ -8289,6 +8324,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const isDither = this.activeProject && this.activeProject.mode === 'pixel-dither';
         if (uiPri) {
             uiPri.style.backgroundColor = `rgba(${this.primaryColor.r}, ${this.primaryColor.g}, ${this.primaryColor.b}, ${this.primaryColor.a/255})`;
+            uiPri.style.zIndex = this.activeColorTarget === 'primary' ? '3' : '1';
+            uiPri.classList.toggle('active', this.activeColorTarget === 'primary');
             if (!isDither) {
                 uiPri.style.backgroundImage = 'none';
             } else {
@@ -8302,6 +8339,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         if (uiSec) {
             uiSec.style.backgroundColor = `rgba(${this.secondaryColor.r}, ${this.secondaryColor.g}, ${this.secondaryColor.b}, ${this.secondaryColor.a/255})`;
+            uiSec.style.zIndex = this.activeColorTarget === 'secondary' ? '3' : '1';
+            uiSec.classList.toggle('active', this.activeColorTarget === 'secondary');
             if (!isDither) {
                 uiSec.style.backgroundImage = 'none';
             } else {
@@ -8312,6 +8351,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     uiSec.style.backgroundSize = 'auto';
                 }
             }
+        }
+
+        // Redraw color wheel selected color marker
+        if (this.updateColorWheelForMode) {
+            this.updateColorWheelForMode();
         }
 
         if (isDither) {
@@ -8354,6 +8398,23 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
     },
     
+    rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    },
+
     rgbToHsv(r, g, b) {
         r /= 255; g /= 255; b /= 255;
         let max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -9445,13 +9506,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             item.dataset.layerIndex = String(idx);
             item.dataset.layerId = String(layer.id);
 
-            const eye = document.createElement('span');
+            const eye = document.createElement('input');
+            eye.type = 'checkbox';
             eye.className = 'layer-eye';
-            eye.innerHTML = layer.visible ? '👁️' : '🌑';
+            eye.checked = !!layer.visible;
             eye.title = 'Visibilité';
             eye.onclick = (e) => {
                 e.stopPropagation();
-                layer.visible = !layer.visible;
+            };
+            eye.onchange = () => {
+                layer.visible = eye.checked;
                 this.updateLayerUI();
                 this.render();
             };

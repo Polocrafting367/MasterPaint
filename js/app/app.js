@@ -705,7 +705,7 @@ window.showPixelTransformDialog = function () {
     const i18n = window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t.bind(window.IlluI18n) : null;
     const titleEl = document.getElementById('effect-dialog-title');
     if (titleEl) titleEl.textContent = i18n ? i18n('dlg.transformTitle') : 'Rotation et retournement';
-    const scope = 'all'; // Default to all for this specific transform dialog
+    const scope = illuReadEffectScope(); // Follow standard effect scope setting
     const scopeRow = `<div class="effect-scope-bar illu-effect-scope-bar field-row" style="flex-wrap:nowrap;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #808080;font-size:11px;align-items:stretch;">
             <span class="illu-scope-label" data-i18n="effect.scopeLabel" style="flex:0 0 auto;align-self:center;">${i18n ? i18n('effect.scopeLabel') : 'Portée :'}</span>
             <div class="illu-scope-btn-row" role="group">
@@ -2315,7 +2315,7 @@ window.applyFloatingPaletteDefaults = function () {
             l.style.bottom = `${pad}px`;
             l.style.left = 'auto';
             l.style.top = 'auto';
-            l.style.width = '230px';
+            l.style.width = '196px';
         }
         return;
     }
@@ -2349,7 +2349,7 @@ window.applyFloatingPaletteDefaults = function () {
         l.style.bottom = `${Math.round(ih - r.bottom + pad)}px`;
         l.style.left = 'auto';
         l.style.top = 'auto';
-        l.style.width = '230px';
+        l.style.width = '196px';
         l.style.maxWidth = '';
     }
 };
@@ -2879,10 +2879,11 @@ function syncIlluSettingsToggleRows(root) {
 window.syncIlluSettingsToggleRows = syncIlluSettingsToggleRows;
 
 function illuBindSettingsToggleRows() {
-    const ov = document.getElementById('settings-overlay');
-    if (!ov || ov.dataset.illuSettingsToggleBound === '1') return;
-    ov.dataset.illuSettingsToggleBound = '1';
-    ov.querySelectorAll('[data-illu-toggle-for]').forEach((row) => {
+    const bound = document.dataset?.illuSettingsToggleBound === '1';
+    if (bound) return;
+    if (document.documentElement) document.documentElement.dataset.illuSettingsToggleBound = '1';
+    
+    document.querySelectorAll('[data-illu-toggle-for]').forEach((row) => {
         const targetId = row.getAttribute('data-illu-toggle-for') || '';
         const input = document.getElementById(targetId);
         row.addEventListener('click', (e) => {
@@ -2899,7 +2900,7 @@ function illuBindSettingsToggleRows() {
             });
         }
     });
-    syncIlluSettingsToggleRows(ov);
+    syncIlluSettingsToggleRows(document);
 }
 
 function syncSettingsLangScopeFromStorage() {
@@ -2930,10 +2931,8 @@ function syncSettingsAutosaveScopeFromStorage() {
     illuSettingsScopeSetActive(row, mode === 'interval' || mode === 'off' ? mode : 'continuous');
 }
 
-/** Interface verrouillée : classique Win98, pas de skins Luna/Aero ni icônes colorées. */
 function illuEnforceLockedAppearanceStorage() {
     try {
-        localStorage.setItem('illu_theme_variant', 'classic');
         localStorage.setItem('illu_beta_skin', 'none');
         localStorage.setItem('illu_icon_style', 'monochrome');
     } catch (e) { /* ignore */ }
@@ -2942,8 +2941,15 @@ window.illuEnforceLockedAppearanceStorage = illuEnforceLockedAppearanceStorage;
 
 function syncSettingsThemeVariantScopeFromStorage() {
     illuEnforceLockedAppearanceStorage();
+    let variant = 'classic';
+    try {
+        variant = localStorage.getItem('illu_theme_variant') === 'flat' ? 'flat' : 'classic';
+    } catch (e) { /* ignore */ }
     const row = document.getElementById('settings-ui-base-row');
-    if (row) illuSettingsScopeSetActive(row, 'classic');
+    if (row) illuSettingsScopeSetActive(row, variant);
+    
+    const welcomeRow = document.getElementById('welcome-ui-base-row');
+    if (welcomeRow) illuSettingsScopeSetActive(welcomeRow, variant);
 }
 
 function syncSettingsBetaSkinFromStorage() {
@@ -2969,10 +2975,11 @@ function syncSettingsControlsLayoutFromStorage() {
 }
 
 function illuBindSettingsScopeRows() {
-    const ov = document.getElementById('settings-overlay');
-    if (!ov || ov.dataset.illuSettingsScopeBound === '1') return;
-    ov.dataset.illuSettingsScopeBound = '1';
-    ov.querySelectorAll('.illu-settings-scope-btn-row').forEach((row) => {
+    const bound = document.dataset?.illuSettingsScopeBound === '1';
+    if (bound) return;
+    if (document.documentElement) document.documentElement.dataset.illuSettingsScopeBound = '1';
+    
+    document.querySelectorAll('.illu-settings-scope-btn-row').forEach((row) => {
         row.addEventListener('click', (e) => {
             const btn = e.target.closest('.illu-scope-btn');
             if (!btn || !row.contains(btn)) return;
@@ -2980,7 +2987,7 @@ function illuBindSettingsScopeRows() {
             if (value == null || value === '') return;
             illuSettingsScopeSetActive(row, value);
             if (
-                row.id === 'settings-lang-scope-row' &&
+                (row.id === 'settings-lang-scope-row' || row.id === 'welcome-lang-scope-row') &&
                 window.IlluI18n &&
                 typeof window.IlluI18n.setLang === 'function'
             ) {
@@ -2994,6 +3001,13 @@ function illuBindSettingsScopeRows() {
                 try {
                     localStorage.setItem(ILLU_RESAMPLE_KEY, value);
                     window.illuInterpolationMode = value;
+                } catch (e) { /* ignore */ }
+            } else if (row.id === 'settings-ui-base-row' || row.id === 'welcome-ui-base-row') {
+                try {
+                    localStorage.setItem('illu_theme_variant', value);
+                    if (window.IlluTheme && window.IlluTheme.applyFromStorage) {
+                        window.IlluTheme.applyFromStorage();
+                    }
                 } catch (e) { /* ignore */ }
             }
         });
@@ -4106,8 +4120,33 @@ window.IlluTheme = {
 
         document.body.classList.remove('illu-flat-colored-icons', 'illu-colored-icons');
 
+        let themeVariant = 'flat';
+        try {
+            const stored = localStorage.getItem('illu_theme_variant');
+            if (stored === 'classic') themeVariant = 'classic';
+        } catch(e) {}
+
+        // Force classic Windows 98 theme on mobile/phone UI
+        const isMobileMode = (document.body && document.body.classList.contains('illu-mobile-ui')) || 
+                             (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'phone') ||
+                             (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
+        if (isMobileMode) {
+            themeVariant = 'classic';
+        }
+
         const classicLink = document.getElementById('theme-link-classic');
-        if (classicLink) classicLink.disabled = false;
+        const flatLink = document.getElementById('theme-link-flat');
+        if (classicLink && flatLink) {
+            if (themeVariant === 'flat') {
+                classicLink.disabled = true;
+                flatLink.disabled = false;
+            } else {
+                classicLink.disabled = false;
+                flatLink.disabled = true;
+            }
+        } else if (classicLink) {
+            classicLink.disabled = false;
+        }
 
         const desk = this.mix(rgb, [0, 128, 128], 0.42);
         const deskHex = this.rgbToHex(desk[0], desk[1], desk[2]);
@@ -4212,6 +4251,9 @@ function initSettingsLiveApply() {
 }
 
 window.addEventListener('illu-mobile-ui-changed', () => {
+    if (window.IlluTheme && typeof window.IlluTheme.applyFromStorage === 'function') {
+        window.IlluTheme.applyFromStorage();
+    }
     if (typeof window.refreshPaletteGridLayout === 'function') window.refreshPaletteGridLayout();
 });
 

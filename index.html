@@ -10,7 +10,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>MasterPaint 98 - Advanced Graphics Suite</title>
+    <title>MasterPaint 98 - Éditeur Photo en Ligne (Alternative Paint.NET)</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="MasterPaint 98 est un puissant éditeur d'images en ligne gratuit, conçu comme la meilleure alternative à Paint.NET. Retouchez vos photos avec des calques, filtres et outils professionnels directement dans votre navigateur.">
+    <meta name="keywords" content="paint.net, paint.net online, éditeur photo en ligne, retouche photo, alternative paint.net, image editor online, photoshop online, dessin, calques, masterpaint">
+    <meta name="author" content="Polocrafting367">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Réseaux Sociaux -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://polocrafting.fr/MasterPaint/">
+    <meta property="og:title" content="MasterPaint 98 - L'éditeur photo en ligne style Paint.NET">
+    <meta property="og:description" content="Éditez vos images gratuitement dans votre navigateur avec une interface professionnelle et des outils avancés (calques, filtres).">
+    
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -23,7 +36,8 @@
         href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Anton&family=Audiowide&family=Bangers&family=Bebas+Neue&family=Black+Ops+One&family=Bungee&family=Caveat&family=Cinzel&family=Creepster&family=Crimson+Text&family=Dancing+Script&family=DotGothic16&family=EB+Garamond&family=Fira+Code&family=Great+Vibes&family=Inconsolata&family=Indie+Flower&family=Inter&family=Lato&family=Lobster&family=Lora&family=Merriweather&family=Michroma&family=Montserrat&family=Nunito&family=Open+Sans&family=Orbitron&family=Oswald&family=Pacifico&family=Permanent+Marker&family=Pixelify+Sans&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=PT+Serif&family=Righteous&family=Roboto&family=Russo+One&family=Satisfy&family=Share+Tech+Mono&family=Silkscreen&family=Source+Code+Pro&family=Ubuntu&family=VT323&display=swap"
         crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic">
+    <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic" disabled>
+    <link rel="stylesheet" href="css/theme-win10-flat.css" id="theme-link-flat">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/photo-mode.css">
@@ -175,7 +189,7 @@
                         data-i18n="menu.file">Fichier</span>
                     <ul role="menu">
                         <li role="menuitem" class="menu-row-icon" onclick="showNewProjectDialog()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-regular fa-file"></i></span><span
+                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span><span
                                 data-i18n="menu.fileNew">Nouveau...</span></li>
                         <li role="menuitem" class="menu-row-icon"
                             onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><span
@@ -704,7 +718,7 @@
                         <button type="button" class="illu-menubar-icon-btn" id="illu-tb-new"
                             data-i18n-title="menubar.tbNew" title="Nouveau"
                             onclick="typeof showNewProjectDialog==='function'&&showNewProjectDialog()"><i
-                                class="fa-regular fa-file" aria-hidden="true"></i></button>
+                                class="fa-solid fa-file-circle-plus" aria-hidden="true"></i></button>
                         <button type="button" class="illu-menubar-icon-btn" id="illu-tb-open" title="Ouvrir"
                             onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><i
                                 class="fa-regular fa-folder-open" aria-hidden="true"></i></button>
@@ -2441,40 +2455,36 @@
                                 style="padding: 4px 3px; flex-direction: column; align-items: stretch; gap: 6px;">
                                 <div class="layer-palette-toolbar__wrap" role="toolbar"
                                     data-i18n-aria-label="layer.paletteToolbarAria" aria-label="">
-                                    <div class="layer-palette-toolbar__icons">
+                                    <div class="layer-palette-toolbar__icons" style="flex-wrap: wrap; justify-content: flex-start; gap: 4px;">
                                         <button id="btn-add-layer" type="button" class="illu-menubar-icon-btn"
                                             data-i18n-title="menu.layerAdd" title=""><i class="fa-solid fa-plus"
                                                 aria-hidden="true"></i></button>
                                         <button id="btn-del-layer" type="button" class="illu-menubar-icon-btn"
                                             data-i18n-title="layer.delBtnTitle" title=""><i class="fa-solid fa-minus"
                                                 aria-hidden="true"></i></button>
+                                        <button id="btn-dup-layer" type="button" class="illu-menubar-icon-btn"
+                                            data-i18n-title="ctx.layerDuplicate" title=""><i class="fa-solid fa-clone" aria-hidden="true"></i></button>
+                                        <button id="btn-merge-layers" type="button" class="illu-menubar-icon-btn"
+                                            data-i18n-title="layer.mergeBtn" title="">
+                                            <svg style="width:16px;height:16px;display:block;" viewBox="0 0 16 16" aria-hidden="true">
+                                                <use href="icons/illu-sprite.svg#illu-icon-layer-merge" />
+                                            </svg>
+                                        </button>
                                         <button id="btn-move-up" type="button" class="illu-menubar-icon-btn"
                                             data-i18n-title="layer.moveUpTitle" title=""><i class="fa-solid fa-arrow-up"
                                                 aria-hidden="true"></i></button>
                                         <button id="btn-move-down" type="button" class="illu-menubar-icon-btn"
                                             data-i18n-title="layer.moveDownTitle" title=""><i
                                                 class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
-                                        <button id="btn-layer-solo" type="button" class="illu-menubar-icon-btn"
+                                        <button id="btn-layer-solo" type="button" class="illu-menubar-icon-btn" style="display:none"
                                             data-i18n-title="ctx.layerSolo" title=""><i class="fa-solid fa-eye"
                                                 aria-hidden="true"></i></button>
-                                        <button id="btn-layer-show-all" type="button" class="illu-menubar-icon-btn"
+                                        <button id="btn-layer-show-all" type="button" class="illu-menubar-icon-btn" style="display:none"
                                             data-i18n-title="ctx.layerShowAll" title=""><i
                                                 class="fa-solid fa-layer-group" aria-hidden="true"></i></button>
-                                        <button id="btn-fit-layer" type="button" class="illu-menubar-icon-btn"
+                                        <button id="btn-fit-layer" type="button" class="illu-menubar-icon-btn" style="display:none"
                                             data-i18n-title="menu.imageAlignLayerWidth" title=""><i
                                                 class="fa-solid fa-arrows-left-right" aria-hidden="true"></i></button>
-                                    </div>
-                                    <div class="layer-palette-toolbar__text-row">
-                                        <button id="btn-dup-layer" type="button"
-                                            class="layer-palette-toolbar__text-btn">
-                                            <i class="fa-solid fa-clone" aria-hidden="true"></i>
-                                            <span data-i18n="ctx.layerDuplicate">Dupliquer le calque</span>
-                                        </button>
-                                        <button id="btn-merge-layers" type="button"
-                                            class="layer-palette-toolbar__text-btn">
-                                            <i class="fa-solid fa-object-group" aria-hidden="true"></i>
-                                            <span data-i18n="layer.mergeBtn">Fusionner</span>
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -3441,6 +3451,17 @@
                             <div class="settings-table">
                                 <div class="settings-table-row">
                                     <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.themeLabel">Thème d'interface</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="welcome-ui-base-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="classic" aria-pressed="true">Windows 98</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="flat" aria-pressed="false">Flat Design</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-table-row">
+                                    <div class="settings-table-main">
                                         <div class="settings-table-title" data-i18n="settings.dark">Thème sombre</div>
                                     </div>
                                     <div class="settings-table-control">
@@ -3474,6 +3495,8 @@
                                     data-i18n="settings.langEn" aria-pressed="false">English</button>
                             </div>
                         </fieldset>
+
+
                         <p class="settings-github-row">
                             <a href="https://github.com/Polocrafting367/MasterPaint" target="_blank"
                                 rel="noopener noreferrer" class="settings-github-link"
@@ -3718,6 +3741,17 @@
                             <div class="settings-table">
                                 <div class="settings-table-row">
                                     <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.themeLabel">Thème d'interface</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-ui-base-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="classic" aria-pressed="true">Windows 98</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="flat" aria-pressed="false">Flat Design</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-table-row">
+                                    <div class="settings-table-main">
                                         <div class="settings-table-title" data-i18n="settings.dark">Thème sombre</div>
                                     </div>
                                     <div class="settings-table-control">
@@ -3738,14 +3772,10 @@
                                 </div>
                             </div>
                         </fieldset>
-                        <!-- Ancres masquées : thème classique forcé (sync JS localStorage) -->
+
+
+                        <!-- Ancres masquées : sync JS localStorage -->
                         <div class="settings-appearance-locked-ui" hidden aria-hidden="true">
-                            <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-ui-base-row"
-                                role="group">
-                                <button type="button"
-                                    class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
-                                    data-value="classic" aria-pressed="true">Classique</button>
-                            </div>
                             <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-beta-skin-row"
                                 role="group">
                                 <button type="button"

@@ -22,8 +22,8 @@ const EFFECT_PARAM_DEFAULTS = {
     edges: { 'ef-edge': '40' },
     emboss: { 'ef-emb': '12' },
     solarize: { 'ef-sol': '128' },
-    radialblur: { 'ef-rblur-sharp': '15', 'ef-rblur-start': '30', 'ef-rblur': '24', 'ef-rblur-angle': '0' },
-    zoomblur: { 'ef-zblur-sharp': '15', 'ef-zblur-start': '30', 'ef-zblur': '24' },
+    radialblur: { 'ef-rblur-angle': '2', 'ef-rblur-quality': '2', 'ef-rblur-ox': '0', 'ef-rblur-oy': '0', 'ef-rblur-inner': '0' },
+    zoomblur:   { 'ef-zblur-amount': '10', 'ef-zblur-ox': '0', 'ef-zblur-oy': '0', 'ef-zblur-inner': '0' },
     motionblur: { 'ef-mblur-angle': '25', 'ef-mblur-dist': '10', 'ef-mblur-center': '1' },
     surfaceblur: { 'ef-sblur-r': '6', 'ef-sblur-t': '15' },
     fragment: { 'ef-frag-n': '4', 'ef-frag-d': '8', 'ef-frag-r': '0' },
@@ -1169,20 +1169,22 @@ window.FilterManager = {
                 `);
                 break;
             case 'radialblur':
-                this.showModal(illuEffectTitle('radialblur', 'Flou radial'), `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.radialblur">Zone nette au centre, puis flou tangential progressif (rotation).</p>
-                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.sharpCenter">Centre net %</label><input type="range" id="ef-rblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.blurStart">Début flou %</label><input type="range" id="ef-rblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-start-val" style="width:28px;text-align:right;">30</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-rblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-val" style="width:28px;text-align:right;">24</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.angle">Angle °</label><input type="range" id="ef-rblur-angle" min="-180" max="180" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:28px;text-align:right;">0</span></div>
+                this.showModal(illuEffectTitle('radialblur', 'Flou radial (rotation)'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#888;" data-i18n="effect.desc.radialblur">Flou par rotation autour du centre — algorithme Paint.NET.</p>
+                    <div class="field-row"><label style="width:130px;" data-i18n="effect.param.angle">Arc de rotation °</label><input type="range" id="ef-rblur-angle" min="0" max="360" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:36px;text-align:right;">2</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.quality">Qualité (1-5)</label><input type="range" id="ef-rblur-quality" min="1" max="5" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-quality-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-quality-val" style="width:36px;text-align:right;">2</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.innerRadius">Zone nette (rayon %)</label><input type="range" id="ef-rblur-inner" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-inner-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-inner-val" style="width:36px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetX">Décalage centre X</label><input type="range" id="ef-rblur-ox" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-ox-val" style="width:36px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetY">Décalage centre Y</label><input type="range" id="ef-rblur-oy" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-oy-val" style="width:36px;text-align:right;">0</span></div>
                 `);
                 break;
             case 'zoomblur':
                 this.showModal(illuEffectTitle('zoomblur', 'Flou de zoom'), `
-                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.zoomblur">Zone nette au centre, flou radial progressif depuis le point focal.</p>
-                    <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.sharpCenter">Centre net %</label><input type="range" id="ef-zblur-sharp" min="0" max="70" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-sharp-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-sharp-val" style="width:28px;text-align:right;">15</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.blurStart">Début flou %</label><input type="range" id="ef-zblur-start" min="0" max="100" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-start-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-start-val" style="width:28px;text-align:right;">30</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.intensity">Intensité</label><input type="range" id="ef-zblur" min="2" max="80" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-val" style="width:28px;text-align:right;">24</span></div>
+                    <p style="margin:0 0 8px;font-size:11px;color:#888;" data-i18n="effect.desc.zoomblur">Flou radial centripète — algorithme Paint.NET.</p>
+                    <div class="field-row"><label style="width:130px;" data-i18n="effect.param.amount">Intensité (0-100)</label><input type="range" id="ef-zblur-amount" min="0" max="100" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-amount-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-amount-val" style="width:36px;text-align:right;">10</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.innerRadius">Zone nette (rayon %)</label><input type="range" id="ef-zblur-inner" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-inner-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-inner-val" style="width:36px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetX">Décalage centre X</label><input type="range" id="ef-zblur-ox" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-ox-val" style="width:36px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetY">Décalage centre Y</label><input type="range" id="ef-zblur-oy" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-oy-val" style="width:36px;text-align:right;">0</span></div>
                 `);
                 break;
             case 'motionblur':
@@ -3276,13 +3278,11 @@ window.FilterManager = {
                 const fn = typeof illuRadialBlurRGBA === 'function' ? illuRadialBlurRGBA : null;
                 if (!fn) return;
                 const out = fn(srcOrig, w, h, {
-                    cx: w / 2,
-                    cy: h / 2,
-                    sharpPct: pxU(val('ef-rblur-sharp') ?? 15),
-                    startPct: pxU(val('ef-rblur-start') ?? 30),
-                    intensity: pxU(val('ef-rblur') || 12),
-                    angleDeg: val('ef-rblur-angle') || 0,
-                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                    angle:       Math.max(0, parseFloat(vals['ef-rblur-angle']   ?? 2)),
+                    quality:     Math.max(1, Math.min(5, parseInt(vals['ef-rblur-quality'] ?? 2, 10))),
+                    innerRadius: Math.max(0, Math.min(1, parseFloat(vals['ef-rblur-inner'] ?? 0) / 100)),
+                    offsetX:     (parseFloat(vals['ef-rblur-ox'] ?? 0)) / 100,
+                    offsetY:     (parseFloat(vals['ef-rblur-oy'] ?? 0)) / 100
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -3291,12 +3291,10 @@ window.FilterManager = {
                 const fn = typeof illuZoomBlurRGBA === 'function' ? illuZoomBlurRGBA : null;
                 if (!fn) return;
                 const out = fn(srcOrig, w, h, {
-                    cx: w / 2,
-                    cy: h / 2,
-                    sharpPct: pxU(val('ef-zblur-sharp') ?? 15),
-                    startPct: pxU(val('ef-zblur-start') ?? 30),
-                    intensity: pxU(val('ef-zblur') || 12),
-                    sampleBilinear: (s, ww, hh, x, y) => this._sampleBilinear(s, ww, hh, x, y)
+                    amount:      Math.max(0, Math.min(100, parseFloat(vals['ef-zblur-amount'] ?? 10))),
+                    innerRadius: Math.max(0, Math.min(1, parseFloat(vals['ef-zblur-inner'] ?? 0) / 100)),
+                    offsetX:     (parseFloat(vals['ef-zblur-ox'] ?? 0)) / 100,
+                    offsetY:     (parseFloat(vals['ef-zblur-oy'] ?? 0)) / 100
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -3386,39 +3384,49 @@ window.FilterManager = {
                 return;
             }
             case 'median': {
-                const src = this.originalImageData.data;
+                // Port of OpenPDN ReduceNoiseEffect:
+                // For each pixel, compute per-channel percentile from local histogram,
+                // then lerp toward that percentile by strength * (1 - 0.75 * intensity).
+                const srcD = this.originalImageData.data;
                 const imgData = new ImageData(w, h);
                 const data = imgData.data;
-                const rad = 1;
-                const win = [];
+                const rad = Math.max(1, Math.min(8, parseInt(vals['ef-med-rad'] || '2', 10)));
+                const strength = (parseFloat(vals['ef-med-str'] ?? '100') / 100) * 0.2; // PDN: strength = -0.2 * ui (we use positive for lerp)
+                // Pre-build per-row sliding window histograms (R,G,B separately)
                 for (let y = 0; y < h; y++) {
                     for (let x = 0; x < w; x++) {
-                        win.length = 0;
+                        // Collect neighbourhood into per-channel histograms
+                        const hr = new Int32Array(256);
+                        const hg = new Int32Array(256);
+                        const hb = new Int32Array(256);
+                        let area = 0;
                         for (let dy = -rad; dy <= rad; dy++) {
+                            const ny = Math.max(0, Math.min(h - 1, y + dy));
                             for (let dx = -rad; dx <= rad; dx++) {
-                                const nx = x + dx, ny = y + dy;
-                                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                    const j = (ny * w + nx) * 4;
-                                    win.push(0.299 * src[j] + 0.587 * src[j + 1] + 0.114 * src[j + 2]);
-                                }
+                                const nx = Math.max(0, Math.min(w - 1, x + dx));
+                                const j = (ny * w + nx) * 4;
+                                hr[srcD[j]]++;
+                                hg[srcD[j + 1]]++;
+                                hb[srcD[j + 2]]++;
+                                area++;
                             }
                         }
-                        win.sort((a, b) => a - b);
-                        const med = win[Math.floor(win.length / 2)];
-                        let best = 0, bestD = 1e9;
-                        for (let dy = -rad; dy <= rad; dy++) {
-                            for (let dx = -rad; dx <= rad; dx++) {
-                                const nx = x + dx, ny = y + dy;
-                                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                    const j = (ny * w + nx) * 4;
-                                    const lum = 0.299 * src[j] + 0.587 * src[j + 1] + 0.114 * src[j + 2];
-                                    const d = Math.abs(lum - med);
-                                    if (d < bestD) { bestD = d; best = j; }
-                                }
-                            }
-                        }
-                        const i = (y * w + x) * 4;
-                        data[i] = src[best]; data[i + 1] = src[best + 1]; data[i + 2] = src[best + 2]; data[i + 3] = src[best + 3];
+                        const si = (y * w + x) * 4;
+                        const pR = srcD[si], pG = srcD[si + 1], pB = srcD[si + 2];
+                        // Compute cumulative count up to pixel value → percentile position in [0,255]
+                        let cR = 0; for (let k = 0; k < pR; k++) cR += hr[k];
+                        let cG = 0; for (let k = 0; k < pG; k++) cG += hg[k];
+                        let cB = 0; for (let k = 0; k < pB; k++) cB += hb[k];
+                        const nR = Math.min(255, Math.round((cR * 255) / area));
+                        const nG = Math.min(255, Math.round((cG * 255) / area));
+                        const nB = Math.min(255, Math.round((cB * 255) / area));
+                        // lerp = strength * (1 - 0.75 * intensity)   where intensity = luma / 255
+                        const luma = (0.299 * pR + 0.587 * pG + 0.114 * pB) / 255;
+                        const t = Math.max(0, Math.min(1, strength * (1 - 0.75 * luma)));
+                        data[si]     = Math.round(pR + (nR - pR) * t);
+                        data[si + 1] = Math.round(pG + (nG - pG) * t);
+                        data[si + 2] = Math.round(pB + (nB - pB) * t);
+                        data[si + 3] = srcD[si + 3];
                     }
                 }
                 this.ctx.putImageData(imgData, 0, 0);
@@ -4235,9 +4243,9 @@ FilterManager.showInstantFilterGallery = function() {
         </p>
     `;
 
-    // Force "all" scope by default when opening the gallery
+    // Force "active" scope by default when opening the gallery
     try {
-        localStorage.setItem(EFFECT_SCOPE_STORAGE_KEY, 'all');
+        localStorage.setItem(EFFECT_SCOPE_STORAGE_KEY, 'active');
     } catch (e) { /* ignore */ }
 
     this.showModal(typeof tKey === 'function' ? tKey('photo.filtersGallery', 'Galerie de Filtres') : 'Galerie de Filtres', contentHtml);

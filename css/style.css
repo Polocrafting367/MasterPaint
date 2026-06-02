@@ -9,9 +9,6 @@
     --illu-icon-subtle: #e2e8f0;
 }
 
-.title-bar-text {
-    margin-left: 4px;
-}
 
 body.theme-dark {
     /* Ajustements en mode sombre pour les icônes SVG */
@@ -282,7 +279,7 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip .illu-mode-toggle-item.illu
 }
 
 /* Libellé hors bouton (avant unify) : zone cliquable sur toute la cellule */
-.illu-mode-toggle-item--unified > .illu-mode-toggle-lbl {
+.illu-mode-toggle-item--unified>.illu-mode-toggle-lbl {
     pointer-events: none;
 }
 
@@ -817,7 +814,35 @@ ul[role="menu"] li[role="menuitem"] .menu-icon .illu-menu-sprite-icon {
 .col-primary,
 .col-secondary {
     cursor: pointer;
+    box-sizing: border-box;
+    transition: outline 0.1s ease, box-shadow 0.1s ease;
 }
+
+.col-primary.active,
+.col-secondary.active {
+    outline: 2px solid var(--mp-accent, #1e4a8c) !important;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Hide color target selector and push remaining buttons to the right */
+#color-target-sel {
+    display: none !important;
+}
+
+.color-top-row__start {
+    display: flex !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    gap: 5px !important;
+}
+
+/* Swatch box on the left of the color wheel, aligned to the top edge */
+.color-wheel-row {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+}
+
 
 .col-swap:hover {
     background: #fff;
@@ -1516,9 +1541,19 @@ body.illu-colored-icons .fa-rotate-left {
     color: #ea580c !important;
 }
 
-/* Undo red-orange */
+/* Redo light-blue */
 body.illu-colored-icons .fa-rotate-right {
     color: #0284c7 !important;
 }
 
-/* Redo light-blue */
+
+
+/* Ensure right-click context menu hover text is always black in light mode */
+body:not(.theme-dark) #context-menu .ctx-item:hover,
+body:not(.theme-dark) #context-menu .ctx-item:hover * {
+    color: #000000 !important;
+}
+
+#win-history {
+    width: 146px !important ;
+}

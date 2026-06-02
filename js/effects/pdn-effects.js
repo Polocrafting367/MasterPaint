@@ -1,6 +1,4 @@
-/**
- * Effets portés depuis OpenPDN (algorithmes réécrits en JS — pas de copie du C#).
- */
+
 (function (global) {
     'use strict';
 

@@ -17845,7 +17845,10 @@ function illuSyncSystemClipboardFromInternal(gen, copyBounds, projectId) {
 
 /** Coller depuis le tampon interne plutôt que l’OS (évite copier/coller rapide → ancienne image). */
 window.illuPreferInternalPaste = function (dt) {
-    if (!window.ctxClipboard || !EditorManager?.isPixelMode || EditorManager.mode === 'vector') return false;
+    if (EditorManager.mode === 'vector') {
+        return !!(window.ctxVectorClipboard && window.ctxVectorClipboard.length);
+    }
+    if (!window.ctxClipboard || !EditorManager?.isPixelMode) return false;
     const age = Date.now() - (window.ctxClipboardTimestamp || 0);
     if (age < 60000) return true;
     const gen = window.ctxClipboardGeneration || 0;

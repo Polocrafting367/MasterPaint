@@ -1,9 +1,13 @@
 .illu-photo-mode-overlay {
     position: fixed;
-    top: 28px; left: 0; right: 0; bottom: 32px;
+    top: 28px;
+    left: 0;
+    right: 0;
+    bottom: 32px;
     background: #111;
     color: #d4d4d4;
-    z-index: 4500; /* Au-dessus du dock mobile (z-index 4000) et des sheets (4100) */
+    z-index: 4500;
+    /* Au-dessus du dock mobile (z-index 4000) et des sheets (4100) */
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -25,7 +29,7 @@
     background: #252526;
     margin-top: 0;
     border-bottom: 1px solid #333;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     z-index: 10;
 }
 
@@ -59,10 +63,10 @@
 }
 
 .illu-pm-btn-danger {
-    --mp-btn-bg: #c0392b;
-    --mp-btn-bg-hover: #e74c3c;
+    --mp-btn-bg: #c0392b !important;
+    --mp-btn-bg-hover: #e74c3c !important;
     color: #fff !important;
-    border-color: rgba(255,100,80,0.35) rgba(100,0,0,0.5) rgba(100,0,0,0.5) rgba(255,100,80,0.35) !important;
+    border-color: rgba(255, 100, 80, 0.35) rgba(100, 0, 0, 0.5) rgba(100, 0, 0, 0.5) rgba(255, 100, 80, 0.35) !important;
 }
 
 .illu-pm-btn-danger:hover {
@@ -99,9 +103,9 @@ body.theme-win98-modern #pm-dlg-discard {
     display: flex;
     align-items: center;
     pointer-events: auto;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     z-index: 100;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -117,8 +121,8 @@ body.theme-win98-modern #pm-dlg-discard {
 }
 
 .illu-pm-zoom-btn-toggle {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
     cursor: pointer;
     margin-left: 10px;
@@ -134,8 +138,8 @@ body.theme-win98-modern #pm-dlg-discard {
 }
 
 .illu-pm-zoom-btn-toggle:hover {
-    background: rgba(255,255,255,0.2);
-    border-color: rgba(255,255,255,0.3);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .illu-pm-zoom-btn-toggle.is-off {
@@ -148,7 +152,7 @@ body.theme-win98-modern #pm-dlg-discard {
     font-size: 11px;
 }
 
-.illu-photo-mode-overlay input[type="number"], 
+.illu-photo-mode-overlay input[type="number"],
 .illu-photo-mode-overlay select {
     background: #111 !important;
     color: #ccc !important;
@@ -165,6 +169,7 @@ body.illu-photo-mode-active #app-status-bar {
     border-top: 1px solid #333 !important;
     box-shadow: none !important;
 }
+
 body.illu-photo-mode-active #app-status-bar .status-bar-cell,
 body.illu-photo-mode-active #app-status-bar button,
 body.illu-photo-mode-active #app-status-bar .status-item {
@@ -173,6 +178,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     border-color: #333 !important;
     box-shadow: none !important;
 }
+
 body.illu-photo-mode-active #app-status-bar button:hover {
     background: #333 !important;
     color: #fff !important;
@@ -206,7 +212,7 @@ body.illu-photo-mode-active #app-status-bar button:hover {
 }
 
 .illu-pm-canvas-wrap canvas {
-    box-shadow: 0 0 30px rgba(0,0,0,1);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 1);
     background-color: #000;
 }
 
@@ -221,11 +227,18 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     overflow-x: auto;
     overflow-y: hidden;
     box-sizing: border-box;
-    box-shadow: inset 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.3);
     scrollbar-width: thin;
 }
-.illu-pm-filmstrip::-webkit-scrollbar { height: 4px; }
-.illu-pm-filmstrip::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+
+.illu-pm-filmstrip::-webkit-scrollbar {
+    height: 4px;
+}
+
+.illu-pm-filmstrip::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 2px;
+}
 
 .illu-pm-thumb {
     height: 80px;
@@ -243,10 +256,12 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     transition: border-color 0.2s, background 0.2s;
     border-radius: 4px;
 }
+
 .illu-pm-thumb:hover {
     background: #222;
     border-color: #555;
 }
+
 .illu-pm-thumb.is-active {
     border-color: var(--mp-accent);
     background: #333;
@@ -260,15 +275,19 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     opacity: 0.7;
     transition: opacity 0.2s;
 }
-.illu-pm-thumb:hover img, .illu-pm-thumb.is-active img {
+
+.illu-pm-thumb:hover img,
+.illu-pm-thumb.is-active img {
     opacity: 1;
 }
 
 .illu-pm-thumb-close {
     position: absolute;
-    top: 4px; left: 4px;
-    width: 18px; height: 18px;
-    background: rgba(0,0,0,0.6);
+    top: 4px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.6);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -279,9 +298,11 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     transition: opacity 0.2s, background 0.2s, transform 0.1s;
     z-index: 10;
 }
+
 .illu-pm-thumb:hover .illu-pm-thumb-close {
     opacity: 1;
 }
+
 .illu-pm-thumb-close:hover {
     background: #ff4d4d;
     transform: scale(1.1);
@@ -289,12 +310,13 @@ body.illu-photo-mode-active #app-status-bar button:hover {
 
 .illu-pm-thumb.is-selected {
     border: 2px dashed #ffaa00 !important;
-    box-shadow: inset 0 0 0 2px rgba(255,170,0,0.3);
+    box-shadow: inset 0 0 0 2px rgba(255, 170, 0, 0.3);
 }
+
 .illu-pm-thumb.is-selected.is-active {
     border-style: solid !important;
     border-color: var(--mp-accent) !important;
-    box-shadow: inset 0 0 0 2px rgba(255,170,0,0.5);
+    box-shadow: inset 0 0 0 2px rgba(255, 170, 0, 0.5);
 }
 
 .illu-pm-thumb-check {
@@ -303,8 +325,8 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     left: 6px;
     width: 14px;
     height: 14px;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 2px;
     display: flex;
     align-items: center;
@@ -314,9 +336,11 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     z-index: 11;
     transition: all 0.2s;
 }
+
 .illu-pm-thumb:hover .illu-pm-thumb-check {
     border-color: #ffaa00;
 }
+
 .illu-pm-thumb.is-selected .illu-pm-thumb-check {
     background: #ffaa00;
     border-color: #ffaa00;
@@ -330,7 +354,10 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     margin-bottom: 12px;
     text-align: center;
 }
-.illu-pm-thumb.is-active img { opacity: 1; }
+
+.illu-pm-thumb.is-active img {
+    opacity: 1;
+}
 
 .illu-pm-sidebar {
     width: 300px;
@@ -368,7 +395,10 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     user-select: none;
 }
 
-.illu-pm-sec-h:hover { background: #333; color: #fff; }
+.illu-pm-sec-h:hover {
+    background: #333;
+    color: #fff;
+}
 
 .illu-pm-sec-body {
     padding: 15px;
@@ -383,6 +413,7 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     transition: transform 0.2s;
     font-size: 10px;
 }
+
 .illu-pm-sec--collapsed .illu-pm-sec-h i {
     transform: rotate(-90deg);
 }
@@ -401,7 +432,10 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     color: var(--mp-text);
 }
 
-.illu-pm-row span.val { color: var(--mp-accent); font-weight: bold; }
+.illu-pm-row span.val {
+    color: var(--mp-accent);
+    font-weight: bold;
+}
 
 /* Standard range inputs within PM rows */
 .illu-pm-row input[type=range] {
@@ -419,12 +453,18 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     z-index: 5;
 }
 
-.illu-pm-empty-state i { font-size: 48px; color: #333; margin-bottom: 20px; }
+.illu-pm-empty-state i {
+    font-size: 48px;
+    color: #333;
+    margin-bottom: 20px;
+}
 
-#pm-file-input { display: none; }
+#pm-file-input {
+    display: none;
+}
 
 #pm-btn-zoom-fit {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
     border: none;
     color: #fff;
     cursor: pointer;
@@ -439,7 +479,7 @@ body.illu-photo-mode-active #app-status-bar button:hover {
 }
 
 #pm-btn-zoom-fit:hover {
-    background: rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 /* Status Bar Fix - Dark Mode */
@@ -447,16 +487,20 @@ body.illu-photo-mode-active #app-status-bar {
     background: #252526 !important;
     color: #ccc !important;
     border-top: 1px solid #333 !important;
-    z-index: 1501; /* Just above overlay but below modals */
+    z-index: 1501;
+    /* Just above overlay but below modals */
 }
+
 body.illu-photo-mode-active #app-status-bar * {
     color: #ccc !important;
 }
+
 body.illu-photo-mode-active #app-status-bar .status-bar-cell {
     background: #2d2d2d !important;
     border-color: #444 #555 #555 #444 !important;
     box-shadow: none !important;
 }
+
 body.illu-photo-mode-active #app-status-bar .status-item {
     border-right: 1px solid #333 !important;
 }
@@ -465,7 +509,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
 .illu-pm-dlg-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -476,7 +520,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
 .illu-pm-dlg {
     background: #252526;
     border: 1px solid #444;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
     width: 450px;
     padding: 0;
     color: #eee;
@@ -536,7 +580,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
 }
 
 .illu-pm-crop-mask {
-    fill: rgba(0,0,0,0.65);
+    fill: rgba(0, 0, 0, 0.65);
     fill-rule: evenodd;
 }
 
@@ -550,7 +594,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     cursor: pointer;
     pointer-events: auto;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     z-index: 2005;
 }
 
@@ -566,11 +610,11 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     transform: translateX(-50%);
     display: flex;
     gap: 10px;
-    background: rgba(30,30,30,0.9);
+    background: rgba(30, 30, 30, 0.9);
     padding: 10px 20px;
     border-radius: 40px;
     border: 1px solid #444;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
     z-index: 2100;
     pointer-events: auto;
     opacity: 0;
@@ -590,6 +634,7 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     overflow-y: auto;
     padding: 5px;
 }
+
 .illu-pm-filter-card {
     background: #333;
     border: 1px solid #444;
@@ -604,15 +649,18 @@ body.illu-photo-mode-active #app-status-bar .status-item {
     gap: 10px;
     user-select: none;
 }
+
 .illu-pm-filter-card:hover {
     background: #444;
     border-color: #ffaa00;
     transform: translateY(-2px);
 }
+
 .illu-pm-filter-card i {
     font-size: 24px;
     color: #ffaa00;
 }
+
 .illu-pm-filter-card span {
     font-size: 10px;
     font-weight: 600;
@@ -652,7 +700,8 @@ body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
     }
 
     .illu-pm-header-text {
-        display: none; /* Masquer le texte 'Mode Photo Pro', garder l'icône */
+        display: none;
+        /* Masquer le texte 'Mode Photo Pro', garder l'icône */
     }
 
     .illu-pm-header-btns {
@@ -664,6 +713,7 @@ body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
     .illu-pm-btn-text {
         display: none !important;
     }
+
     .illu-pm-btn-text--mobile-short {
         display: inline !important;
         font-size: 11px;
@@ -685,7 +735,8 @@ body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
     }
 
     .illu-pm-body {
-        flex-direction: column-reverse; /* Sidebar + pellicule en bas */
+        flex-direction: column-reverse;
+        /* Sidebar + pellicule en bas */
     }
 
     .illu-pm-main {
@@ -736,15 +787,20 @@ body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
 
 /* Optimization for very small screens */
 @media (max-width: 480px) {
-    .illu-pm-header h2 { display: none; } /* Hide title entirely */
+    .illu-pm-header h2 {
+        display: none;
+    }
+
+    /* Hide title entirely */
 }
 
 /* RAZ (Reset) buttons for adjustments */
-.pm-raz-btn, .cr-raz-btn {
+.pm-raz-btn,
+.cr-raz-btn {
     font-size: 9px;
     padding: 1px 4px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: #ccc;
     cursor: pointer;
     border-radius: 2px;
@@ -754,7 +810,9 @@ body.illu-photo-mode-active.illu-mobile-shell-active .illu-photo-mode-overlay {
     letter-spacing: normal;
     text-transform: none;
 }
-.pm-raz-btn:hover, .cr-raz-btn:hover {
+
+.pm-raz-btn:hover,
+.cr-raz-btn:hover {
     background: var(--mp-accent, #0078d7);
     color: #fff;
     border-color: var(--mp-accent, #0078d7);

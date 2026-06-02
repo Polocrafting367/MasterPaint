@@ -229,20 +229,16 @@ document.addEventListener('copy', (e) => {
         e.preventDefault();
         return;
     }
-    if (typeof window.ctxCopy === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
+    if (typeof window.ctxCopy === 'function' && EditorManager?.isPixelMode) {
         e.preventDefault();
-        window.ctxCopy();
-    } else if (typeof window.ctxCopy === 'function') {
         window.ctxCopy();
     }
 });
 
 document.addEventListener('cut', (e) => {
     if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
-    if (typeof window.ctxCut === 'function' && EditorManager?.isPixelMode && EditorManager.mode !== 'vector') {
+    if (typeof window.ctxCut === 'function' && EditorManager?.isPixelMode) {
         e.preventDefault();
-        window.ctxCut();
-    } else if (typeof window.ctxCut === 'function') {
         window.ctxCut();
     }
 });
@@ -578,7 +574,6 @@ window.addEventListener('keydown', (e) => {
         if (
             !(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) &&
             EditorManager?.isPixelMode &&
-            EditorManager.mode !== 'vector' &&
             typeof window.ctxCopy === 'function'
         ) {
             e.preventDefault();
@@ -591,9 +586,8 @@ window.addEventListener('keydown', (e) => {
         if (
             !(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) &&
             EditorManager?.isPixelMode &&
-            EditorManager.mode !== 'vector' &&
-            window.ctxClipboard &&
-            typeof window.ctxPaste === 'function'
+            typeof window.ctxPaste === 'function' &&
+            ((EditorManager.mode === 'vector' && window.ctxVectorClipboard && window.ctxVectorClipboard.length) || (EditorManager.mode !== 'vector' && window.ctxClipboard))
         ) {
             e.preventDefault();
             window._illuSkipNextPasteEvent = true;
@@ -602,7 +596,11 @@ window.addEventListener('keydown', (e) => {
         return;
     }
     if (k === 'x' && !e.shiftKey) {
-        if (!(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) && typeof window.ctxCut === 'function') {
+        if (
+            !(typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) &&
+            EditorManager?.isPixelMode &&
+            typeof window.ctxCut === 'function'
+        ) {
             e.preventDefault();
             window.ctxCut();
         }
