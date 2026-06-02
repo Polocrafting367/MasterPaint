@@ -13,7 +13,7 @@
     <title>MasterPaint 98 - Éditeur Photo en Ligne (Alternative Paint.NET)</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="MasterPaint 98 est un puissant éditeur d'images en ligne gratuit, conçu comme la meilleure alternative à Paint.NET. Retouchez vos photos avec des calques, filtres et outils professionnels directement dans votre navigateur.">
+    <meta name="description" content="MasterPaint 98 est un puissant éditeur d'images en ligne gratuit, conçu une alternative à Paint.NET. Retouchez vos photos avec des calques, filtres et outils professionnels directement dans votre navigateur.">
     <meta name="keywords" content="paint.net, paint.net online, éditeur photo en ligne, retouche photo, alternative paint.net, image editor online, photoshop online, dessin, calques, masterpaint">
     <meta name="author" content="Polocrafting367">
     <meta name="robots" content="index, follow">
@@ -3954,6 +3954,48 @@
                                         <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-settings-toggle-row"
                                             data-illu-toggle-for="settings-ui-thumbs" role="group"
                                             data-i18n-aria-label="settings.uiThumbs">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                                data-value="0" data-i18n="settings.toggleOff"
+                                                aria-pressed="false">Off</button>
+                                            <button type="button"
+                                                class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                                data-value="1" data-i18n="settings.toggleOn"
+                                                aria-pressed="true">On</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-table-row settings-table-row--flex">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.win11Effects">Effets Windows 11 (Arrondis & Flou)</div>
+                                        <div class="settings-table-hint" data-i18n="settings.win11EffectsHint">Active les coins arrondis et les effets de flou translucide sur les fenêtres du Flat Design.</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <input type="checkbox" id="settings-win11-enabled" class="settings-toggle-input"
+                                            hidden checked>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-settings-toggle-row"
+                                            data-illu-toggle-for="settings-win11-enabled" role="group"
+                                            data-i18n-aria-label="settings.win11Effects">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                                data-value="0" data-i18n="settings.toggleOff"
+                                                aria-pressed="false">Off</button>
+                                            <button type="button"
+                                                class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                                data-value="1" data-i18n="settings.toggleOn"
+                                                aria-pressed="true">On</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-table-row settings-table-row--flex">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.tabBgPreview">Aperçu de l'onglet en arrière-plan</div>
+                                        <div class="settings-table-hint" data-i18n="settings.tabBgPreviewHint">Affiche le haut du projet actif en arrière-plan de l'écran.</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <input type="checkbox" id="settings-tab-bg-preview-enabled" class="settings-toggle-input"
+                                            hidden checked>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-settings-toggle-row"
+                                            data-illu-toggle-for="settings-tab-bg-preview-enabled" role="group"
+                                            data-i18n-aria-label="settings.tabBgPreview">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn"
                                                 data-value="0" data-i18n="settings.toggleOff"
                                                 aria-pressed="false">Off</button>

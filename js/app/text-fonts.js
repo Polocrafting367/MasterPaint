@@ -209,13 +209,17 @@
             input.className = sel.className.replace('illu-text-font-select', '');
             input.style.width = '100%';
             input.style.boxSizing = 'border-box';
-            input.style.padding = '0 4px';
-            input.style.height = '17px';
-            input.style.maxHeight = '17px';
-            input.style.lineHeight = '15px';
+            input.style.padding = '0 6px';
+            input.style.height = '22px';
+            input.style.maxHeight = '22px';
+            input.style.lineHeight = '20px';
             input.placeholder = 'Rechercher...';
             input.autocomplete = 'off';
-            input.style.fontFamily = 'var(--ui-font)';
+            input.style.fontFamily = 'var(--mp-font, var(--ui-font))';
+            input.style.borderRadius = 'var(--mp-radius, 4px)';
+            input.style.border = '1px solid var(--mp-inset-top, #dfdfdf)';
+            input.style.background = 'var(--mp-surface, #fff)';
+            input.style.color = 'var(--mp-text, #000)';
 
             listDiv = document.createElement('div');
             listDiv.className = 'illu-font-combo-list illu-win-panel';
@@ -228,10 +232,10 @@
             listDiv.style.overflowX = 'hidden';
             listDiv.style.zIndex = '100000';
             listDiv.style.display = 'none';
-            listDiv.style.background = 'var(--win-bg, #c0c0c0)';
-            listDiv.style.border = '2px solid';
-            listDiv.style.borderColor = 'var(--win-border-light, #dfdfdf) var(--win-border-dark, #808080) var(--win-border-dark, #808080) var(--win-border-light, #dfdfdf)';
-            listDiv.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.3)';
+            listDiv.style.background = 'var(--mp-surface, var(--win-bg, #c0c0c0))';
+            listDiv.style.border = '1px solid var(--mp-raised-top, var(--win-border-dark, #808080))';
+            listDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            listDiv.style.borderRadius = 'var(--mp-radius, 4px)';
 
             wrap.appendChild(input);
             wrap.appendChild(listDiv);
@@ -253,9 +257,10 @@
                             gEl.style.padding = '4px 6px';
                             gEl.style.fontSize = '10px';
                             gEl.style.fontWeight = 'bold';
-                            gEl.style.background = 'var(--win-title-bg, #000080)';
-                            gEl.style.color = 'var(--win-title-fg, #fff)';
+                            gEl.style.background = 'var(--mp-surface-deep, var(--win-title-bg, #000080))';
+                            gEl.style.color = 'var(--mp-text, var(--win-title-fg, #fff))';
                             gEl.style.textTransform = 'uppercase';
+                            gEl.style.borderBottom = '1px solid var(--mp-raised-top, transparent)';
                             listDiv.appendChild(gEl);
                             currentGroup = f.group;
                         }
@@ -265,18 +270,18 @@
                         item.style.cursor = 'pointer';
                         item.style.fontFamily = f.fontFamily;
                         item.style.fontSize = '14px';
-                        item.style.color = 'var(--text-normal, #000)';
+                        item.style.color = 'var(--mp-text, var(--text-normal, #000))';
                         item.style.whiteSpace = 'nowrap';
                         item.style.overflow = 'hidden';
                         item.style.textOverflow = 'ellipsis';
 
                         item.onmouseover = () => {
-                            item.style.background = 'var(--accent-bg, #000080)';
-                            item.style.color = 'var(--accent-fg, #fff)';
+                            item.style.background = 'var(--mp-accent, var(--accent-bg, #000080))';
+                            item.style.color = 'var(--mp-menu-hover-fg, var(--accent-fg, #fff))';
                         };
                         item.onmouseout = () => {
                             item.style.background = 'transparent';
-                            item.style.color = 'var(--text-normal, #000)';
+                            item.style.color = 'var(--mp-text, var(--text-normal, #000))';
                         };
                         item.onmousedown = (e) => {
                             e.preventDefault(); // Prevent blur

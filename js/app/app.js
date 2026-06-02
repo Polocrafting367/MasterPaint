@@ -3093,6 +3093,22 @@ function syncSettingsFormFromStorage() {
             thumbsCb.checked = true;
         }
     }
+    const win11Cb = document.getElementById('settings-win11-enabled');
+    if (win11Cb) {
+        try {
+            win11Cb.checked = localStorage.getItem('settings-win11-enabled') !== '0';
+        } catch (e) {
+            win11Cb.checked = true;
+        }
+    }
+    const tabBgCb = document.getElementById('settings-tab-bg-preview-enabled');
+    if (tabBgCb) {
+        try {
+            tabBgCb.checked = localStorage.getItem('settings-tab-bg-preview-enabled') !== '0';
+        } catch (e) {
+            tabBgCb.checked = true;
+        }
+    }
     const strokeLightCb = document.getElementById('settings-stroke-light-render');
     if (strokeLightCb) {
         try {
@@ -3457,6 +3473,85 @@ window.initTabBarScrollBehavior = function () {
         true
     );
 };
+
+window.centerActiveTabInScroll = function () {
+    const wrap = document.getElementById('tab-bar-scroll');
+    if (!wrap) return;
+    const activeTab = wrap.querySelector('.tab.active');
+    if (!activeTab) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const tabRect = activeTab.getBoundingClientRect();
+    const relativeLeft = tabRect.left - wrapRect.left + wrap.scrollLeft;
+    const targetScrollLeft = relativeLeft - (wrapRect.width / 2) + (tabRect.width / 2);
+    wrap.scrollTo({
+        left: targetScrollLeft,
+        behavior: 'smooth'
+    });
+};
+window.updateBodyBackgroundFromActiveTabThumb = function () {
+    const bar = document.getElementById('tab-bar');
+    if (!bar) return;
+    
+    let enabled = true;
+    try {
+        enabled = localStorage.getItem('settings-tab-bg-preview-enabled') !== '0';
+    } catch (e) { /* ignore */ }
+
+    // 1. Gestion du conteneur principal (bgDiv)
+    let bgDiv = document.getElementById('body-bg-preview');
+    if (!bgDiv) {
+        bgDiv = document.createElement('div');
+        bgDiv.id = 'body-bg-preview';
+        bgDiv.style.position = 'fixed';
+        bgDiv.style.top = '0';
+        bgDiv.style.left = '0';
+        bgDiv.style.width = '100vw';
+        bgDiv.style.height = '70px';
+        bgDiv.style.zIndex = '-1000';
+        bgDiv.style.pointerEvents = 'none';
+        bgDiv.style.backgroundSize = 'cover';
+        bgDiv.style.backgroundPosition = 'top center';
+        bgDiv.style.backgroundRepeat = 'no-repeat';
+        bgDiv.style.backgroundColor = '#ffffff';
+        document.body.appendChild(bgDiv);
+    }
+
+    // 2. Gestion du calque de couleur (overlay)
+    let overlay = document.getElementById('bg-color-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'bg-color-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        bgDiv.appendChild(overlay);
+    }
+
+    if (!enabled) {
+        bgDiv.style.display = 'none';
+        return;
+    }
+
+    const activeTab = bar.querySelector('.tab.active');
+    const img = activeTab ? activeTab.querySelector('img.tab-thumb') : null;
+
+    if (img && img.src) {
+        bgDiv.style.backgroundImage = `url("${img.src}")`;
+        // Opacité de 0.3 réglable ici
+        overlay.style.backgroundColor = 'rgba(var(--mp-accent-rgb), 0.3)';
+        bgDiv.style.display = 'block';
+    } else {
+        bgDiv.style.display = 'none';
+    }
+};
+
+window.addEventListener('resize', () => {
+    if (typeof window.centerActiveTabInScroll === 'function') {
+        window.centerActiveTabInScroll();
+    }
+});
 
 /**
  * Zoom « adapter à la fenêtre » (sans modifier le projet) : facteur CSS pour que la toile tienne dans #workspace.
@@ -4118,6 +4213,12 @@ window.IlluTheme = {
         const isPhotoMode = document.body.classList.contains('illu-photo-mode-active');
         document.body.classList.toggle('theme-dark', darkTheme || isPhotoMode);
 
+        let w11 = true;
+        try {
+            w11 = localStorage.getItem('settings-win11-enabled') !== '0';
+        } catch (e) { /* ignore */ }
+        document.body.classList.toggle('win11-effects', w11);
+
         document.body.classList.remove('illu-flat-colored-icons', 'illu-colored-icons');
 
         let themeVariant = 'flat';
@@ -4219,6 +4320,30 @@ function initSettingsLiveApply() {
 
     const dark = document.getElementById('settings-theme-dark');
     if (dark) dark.addEventListener('change', applyDarkFromForm);
+
+    const applyWin11FromForm = () => {
+        const w11 = document.getElementById('settings-win11-enabled');
+        try {
+            localStorage.setItem('settings-win11-enabled', w11 && w11.checked ? '1' : '0');
+        } catch (e) { /* ignore */ }
+        if (window.IlluTheme && typeof window.IlluTheme.applyFromStorage === 'function') {
+            window.IlluTheme.applyFromStorage();
+        }
+    };
+    const win11 = document.getElementById('settings-win11-enabled');
+    if (win11) win11.addEventListener('change', applyWin11FromForm);
+
+    const applyTabBgFromForm = () => {
+        const tbg = document.getElementById('settings-tab-bg-preview-enabled');
+        try {
+            localStorage.setItem('settings-tab-bg-preview-enabled', tbg && tbg.checked ? '1' : '0');
+        } catch (e) { /* ignore */ }
+        if (typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+            window.updateBodyBackgroundFromActiveTabThumb();
+        }
+    };
+    const tabBg = document.getElementById('settings-tab-bg-preview-enabled');
+    if (tabBg) tabBg.addEventListener('change', applyTabBgFromForm);
 
     ov.querySelectorAll('input[name="settings-accent"]').forEach((r) => {
         r.addEventListener('change', applyAccentFromForm);

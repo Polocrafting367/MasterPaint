@@ -24,7 +24,7 @@
     --mp-focus: #0078D7;
     /* Survol secondaire (menus contextuels, zones teintées) */
     --mp-accent-muted: #cce8ff;
-    --mp-radius: 0px;
+    --mp-radius: 4px;
     /* Win10 Flat = pas d'arrondis */
     --mp-font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
     --mp-ui-font-size: 13px;
@@ -2244,7 +2244,6 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-toolbar 
     border-right: 1px solid var(--mp-inset-top);
     box-shadow: none;
     background: color-mix(in srgb, var(--mp-accent) 12%, var(--mp-surface)) !important;
-    border-radius: 4px;
     margin: 2px;
 }
 
@@ -5556,4 +5555,46 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
     background: #f1707a !important;
     /* Lighter red hover */
     color: #ffffff !important;
+}
+
+
+.illu-cr-foot, .welcome-dialog-footer  {
+    padding: 5px;
+}
+
+.title-bar-text {
+    transform: translateX(10px); /* Déplace le texte de 5px vers la droite */
+}
+
+
+.illu-scope-btn {
+    border-radius:  0 !important;
+}
+
+
+body.win11-effects .window {
+    --radius: 8px; /* Ta variable unique est ici */
+    border-radius: var(--radius);
+    background: transparent !important;
+}
+
+body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.win11-effects .floating-window {
+    border-top-right-radius: var(--radius);
+    border-top-left-radius: var(--radius);
+    background: color-mix(in srgb, var(--mp-surface) 60%, transparent) !important;
+}
+
+body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window {
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    background-color: var(--mp-surface);
+}
+
+body.win11-effects .window-body, body.win11-effects .status-bar, body.win11-effects .illu-cr-foot {
+    border-bottom-right-radius: var(--radius);
+    border-bottom-left-radius: var(--radius);
+}
+
+body.win11-effects button {
+    border-radius: 4px !important;
 }

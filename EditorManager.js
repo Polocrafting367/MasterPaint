@@ -1546,6 +1546,14 @@ const EditorManager = {
                     localStorage.setItem('illu_ui_thumbs', ut && ut.checked ? '1' : '0');
                 } catch (err) { /* ignore */ }
                 try {
+                    const w11 = document.getElementById('settings-win11-enabled');
+                    localStorage.setItem('settings-win11-enabled', w11 && w11.checked ? '1' : '0');
+                } catch (err) { /* ignore */ }
+                try {
+                    const tbg = document.getElementById('settings-tab-bg-preview-enabled');
+                    localStorage.setItem('settings-tab-bg-preview-enabled', tbg && tbg.checked ? '1' : '0');
+                } catch (err) { /* ignore */ }
+                try {
                     const sl = document.getElementById('settings-stroke-light-render');
                     localStorage.setItem('illu_stroke_light_render', sl && sl.checked ? '1' : '0');
                 } catch (err) { /* ignore */ }
@@ -3992,16 +4000,26 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             const tab = bar.querySelector(`[data-project-index="${index}"]`);
             const img = tab && tab.querySelector ? tab.querySelector('img.tab-thumb') : null;
             if (!img || !proj) return;
-            if (proj.mode === 'vector') {
+             if (proj.mode === 'vector') {
                 this._getVectorProjectThumbnailDataUrl(proj).then((u) => {
-                    if (gen === this._thumbPassGeneration && u) img.src = u;
+                    if (gen === this._thumbPassGeneration && u) {
+                        img.src = u;
+                        if (index === this.activeProjectIndex && typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+                            window.updateBodyBackgroundFromActiveTabThumb();
+                        }
+                    }
                 }).catch(() => {});
                 this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
                 return;
             }
             if (proj.mode.startsWith('pixel')) {
                 const u = this.getProjectTabThumbnailDataUrl(proj);
-                if (u) img.src = u;
+                if (u) {
+                    img.src = u;
+                    if (index === this.activeProjectIndex && typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+                        window.updateBodyBackgroundFromActiveTabThumb();
+                    }
+                }
             }
             this._queueThumbSeqStep(gen, 'tab', index + 1, gap);
         }
@@ -7804,6 +7822,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         try {
             window.dispatchEvent(new CustomEvent('illu-tabs-updated'));
         } catch (e) { /* ignore */ }
+        
+        setTimeout(() => {
+            if (typeof window.centerActiveTabInScroll === 'function') {
+                window.centerActiveTabInScroll();
+            }
+            if (typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+                window.updateBodyBackgroundFromActiveTabThumb();
+            }
+        }, 50);
     },
 
     _makePhotoModeTab() {

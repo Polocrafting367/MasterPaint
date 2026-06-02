@@ -1229,7 +1229,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
             return;
         }
 
-        if (em.mode && em.mode.startsWith('pixel')) {
+        if (!em.isPixelMode) {
             window.showIlluAlert('Export image raster : passez sur un onglet mode Pixel, ou choisissez SVG / projet.');
             return;
         }

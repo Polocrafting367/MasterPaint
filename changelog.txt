@@ -1,14 +1,17 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.107 (02/06/26)
+2.8.108 (02/06/26)
+- Revu emplacement des onglet comme paint.net, 
+- Correction gu lié a l'export Bitmap non fonctionne
+       >obtimisation de la hauteur du projet
 - Correction de l'effet flou radial et flou de zoom car il ne fonctionnait pas correctement
        > Vrai flou progressif et non duplication de calc moche comme avant !
 - Ajout d'un theme moderne type Windows 10
 - Correction bug visuel lié au theme
        > fenetre calc repensé
        > Différente petite icones repensé
-- Revu emplacement des projet pour collé a paint.net, 
-       >obtimisation de la hauteur du projet
+
+
 
 2.8.103 (01/06/26)
 - Amélioration de l'outil d'aimantation
