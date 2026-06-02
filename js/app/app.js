@@ -3488,7 +3488,13 @@ window.centerActiveTabInScroll = function () {
         behavior: 'smooth'
     });
 };
+
 window.updateBodyBackgroundFromActiveTabThumb = function () {
+    // --- VARIABLES DE CONFIGURATION ---
+    const BLUR_INTENSITY = '0px'; // Intensité du flou de l'arrière-plan
+    const MAX_BRIGHTNESS = 1.5;   // Luminosité maximale (appliquée si l'image est noire/sombre)
+    const MIN_BRIGHTNESS = 0.6;   // Luminosité minimale (appliquée si l'image est blanche/très vive)
+
     const bar = document.getElementById('tab-bar');
     if (!bar) return;
     
@@ -3513,6 +3519,9 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
         bgDiv.style.backgroundPosition = 'top center';
         bgDiv.style.backgroundRepeat = 'no-repeat';
         bgDiv.style.backgroundColor = '#ffffff';
+        // Évite le bord blanc (effet de halo) créé par le flou sur les bords
+        bgDiv.style.transform = 'scale(1.05)';
+        bgDiv.style.transformOrigin = 'top center';
         document.body.appendChild(bgDiv);
     }
 
@@ -3539,13 +3548,69 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
 
     if (img && img.src) {
         bgDiv.style.backgroundImage = `url("${img.src}")`;
-        // Opacité de 0.3 réglable ici
         overlay.style.backgroundColor = 'rgba(var(--mp-accent-rgb), 0.3)';
+        
+        // --- Calcul de l'intensité (Luminosité + Couleurs vives) ---
+        let brightnessFilter = 1; // Valeur par défaut
+        try {
+            // Création d'un mini-canvas pour lire les pixels rapidement
+            if (!window._bgPreviewAnalyzerCanvas) {
+                window._bgPreviewAnalyzerCanvas = document.createElement('canvas');
+                window._bgPreviewAnalyzerCanvas.width = 50; 
+                window._bgPreviewAnalyzerCanvas.height = 50;
+            }
+            const canvas = window._bgPreviewAnalyzerCanvas;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            // On dessine l'image miniature sur le canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // On lit les pixels
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let intensitySum = 0;
+            let count = 0;
+            
+            for (let i = 0; i < imgData.length; i += 4) {
+                if (imgData[i + 3] < 128) continue; // Ignore les zones transparentes
+                
+                let r = imgData[i];
+                let g = imgData[i + 1];
+                let b = imgData[i + 2];
+                
+                // Luminance classique (perception de la lumière)
+                let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                // Intensité de la couleur (prend la valeur la plus haute parmi Rouge, Vert, Bleu)
+                let maxColor = Math.max(r, g, b);
+                
+                // On garde la valeur la plus forte. Ainsi, un rouge vif (faible luminance mais fort maxColor) sera considéré comme "intense".
+                let pixelIntensity = Math.max(luminance, maxColor);
+                
+                intensitySum += pixelIntensity;
+                count++;
+            }
+            
+            if (count > 0) {
+                const avgIntensity = intensitySum / count; // Moyenne de l'intensité entre 0 et 255
+                // Ajustement dynamique : une intensité élevée va vers MIN_BRIGHTNESS (assombrit)
+                brightnessFilter = MAX_BRIGHTNESS - (avgIntensity / 255) * (MAX_BRIGHTNESS - MIN_BRIGHTNESS);
+            }
+        } catch (e) {
+            // Si l'image ne peut pas être lue (ex: blocage CORS), on ignore l'erreur
+            // Le brightness restera à sa valeur par défaut
+        }
+
+        // Application du filtre flou + luminosité dynamique
+        bgDiv.style.filter = `blur(${BLUR_INTENSITY}) brightness(${brightnessFilter})`;
+
         bgDiv.style.display = 'block';
     } else {
         bgDiv.style.display = 'none';
     }
 };
+
+
 
 window.addEventListener('resize', () => {
     if (typeof window.centerActiveTabInScroll === 'function') {
