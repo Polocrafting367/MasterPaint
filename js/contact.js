@@ -31,7 +31,7 @@ function openContactModal(titre) {
         modal.innerHTML = `
             <div class="window" style="width: 400px; max-width: 95vw; box-shadow: 2px 2px 20px rgba(0,0,0,0.5);">
                 <div class="title-bar">
-                    <div class="title-bar-text"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="contact.title">Signaler un problème</span></div>
+                    <div class="title-bar-text"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="contact.title">Signaler un bug</span></div>
                     <div class="title-bar-controls">
                         <button type="button" aria-label="Close" onclick="closeContactModal()" class="title-bar-close-btn"></button>
                     </div>

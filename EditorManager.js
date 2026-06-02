@@ -7694,6 +7694,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             true
         );
         tab.addEventListener('click', () => this.switchProject(i));
+
+        const label = document.createElement('span');
+        label.textContent = p.name;
+        label.style.flex = '1';
+        label.style.textAlign = 'left';
+        label.style.pointerEvents = 'none';
+        label.style.fontSize = isAlphaChild ? '10px' : '';
+        tab.appendChild(label);
+
         if (
             (p.mode.startsWith('pixel') || p.mode === 'vector') &&
             this._uiThumbsVisible()
@@ -7721,12 +7730,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
             tab.appendChild(thumb);
         }
-        const label = document.createElement('span');
-        label.textContent = p.name;
-        label.style.flex = '1';
-        label.style.textAlign = 'left';
-        label.style.pointerEvents = 'none';
-        label.style.fontSize = isAlphaChild ? '10px' : '';
+
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
         closeBtn.setAttribute('aria-label', isAlphaChild ? 'Fermer l’éditeur de masque' : 'Fermer l’onglet');
@@ -7740,7 +7744,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             e.stopPropagation();
             this.requestCloseProject(i);
         };
-        tab.appendChild(label);
         tab.appendChild(closeBtn);
         return tab;
     },

@@ -1123,3 +1123,89 @@ if (workspaceEl) {
     };
     // workspaceEl.addEventListener('pointerdown', onWorkspacePointerDown, { passive: false });
 }
+
+// Wire MDI tab-bar scroll buttons
+function illuInitTabScrollButtons() {
+    const leftBtn = document.getElementById('tab-scroll-left-btn');
+    const rightBtn = document.getElementById('tab-scroll-right-btn');
+    const scrollBox = document.getElementById('tab-bar-scroll');
+    if (leftBtn && rightBtn && scrollBox) {
+        leftBtn.onclick = (e) => {
+            e.stopPropagation();
+            scrollBox.scrollBy({ left: -80, behavior: 'smooth' });
+        };
+        rightBtn.onclick = (e) => {
+            e.stopPropagation();
+            scrollBox.scrollBy({ left: 80, behavior: 'smooth' });
+        };
+    }
+    setTimeout(() => {
+        if (typeof window.illuRecalculateTabBarWidth === 'function') {
+            window.illuRecalculateTabBarWidth();
+        }
+    }, 150);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', illuInitTabScrollButtons);
+} else {
+    illuInitTabScrollButtons();
+}
+
+// Dynamic calculation of tab-bar-outer available width based on visible options in tool-options-container
+window.illuRecalculateTabBarWidth = function () {
+    const container = document.getElementById('tool-options-container');
+    const tabBarOuter = document.getElementById('tab-bar-outer');
+    if (!container || !tabBarOuter) return;
+
+    // Find all visible ribbon groups inside the options container
+    const groups = Array.from(container.querySelectorAll('.illu-ribbon-group'));
+    let rightmost = 0;
+    
+    // Also check the menus and sub-menus wrapper on the same row to avoid overlapping
+    const menuWrapper = document.querySelector('.illu-menu-and-sub-wrapper');
+    if (menuWrapper) {
+        const menuRect = menuWrapper.getBoundingClientRect();
+        rightmost = Math.max(rightmost, menuRect.right);
+    }
+    
+    groups.forEach(group => {
+        if (group.offsetParent !== null && group.offsetHeight > 0) {
+            const rect = group.getBoundingClientRect();
+            if (rect.right > rightmost) {
+                rightmost = rect.right;
+            }
+        }
+    });
+
+    // Total available viewport width
+    const viewportWidth = window.innerWidth;
+
+    // Calculate remaining width on the right of the rightmost element
+    // Leave a safe margin
+    const margin = 24;
+    const occupiedWidth = rightmost + margin;
+    const availableWidth = viewportWidth - occupiedWidth;
+
+    // Set the max-width and width of the MDI tab bar container dynamically!
+    // Minimum width is 76px (1 tab card)
+    const finalWidth = Math.max(76, availableWidth) + 15;
+    tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
+    tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
+
+    // Detect overflow and toggle navigation buttons visibility after layout settles
+    requestAnimationFrame(() => {
+        const scrollBox = document.getElementById('tab-bar-scroll');
+        if (scrollBox) {
+            const hasOverflow = scrollBox.scrollWidth > scrollBox.clientWidth;
+            tabBarOuter.classList.toggle('tab-bar-has-overflow', hasOverflow);
+        }
+    });
+};
+
+// Wire resize trigger
+window.addEventListener('resize', () => {
+    if (typeof window.illuRecalculateTabBarWidth === 'function') {
+        window.illuRecalculateTabBarWidth();
+    }
+});

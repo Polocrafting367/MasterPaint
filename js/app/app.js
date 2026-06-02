@@ -4148,8 +4148,7 @@ window.IlluTheme = {
             classicLink.disabled = false;
         }
 
-        const desk = this.mix(rgb, [0, 128, 128], 0.42);
-        const deskHex = this.rgbToHex(desk[0], desk[1], desk[2]);
+        const deskHex = '#0d8f8f';
         window._illuSplashDeskColor = deskHex;
         document.documentElement.style.setProperty('--illu-splash-desk', deskHex);
         document.body.style.backgroundColor = deskHex;

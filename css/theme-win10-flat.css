@@ -339,18 +339,13 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] {
     border-color: var(--mp-raised-top) !important;
 }
 
-body.theme-dark #tab-bar-outer,
-body.theme-dark .tab-bar-outer,
 body.theme-dark #tab-bar,
 body.theme-dark .tab-bar-inner,
 body.theme-dark .tab-bar {
-    background: var(--mp-surface-deep);
-    border-color: var(--mp-raised-top);
+    background: transparent !important;
+    border-color: transparent !important;
 }
 
-body.theme-dark #tab-bar-outer {
-    border-bottom-color: var(--mp-raised-top) !important;
-}
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) .tab {
     background: var(--mp-surface-deep);
@@ -1083,7 +1078,13 @@ body.illu-splash-active.illu-splash-fading {
 
 .illu-splash__brand .illu-splash__title,
 .illu-splash__brand .illu-splash__sub {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow:
+        0 4px 8px rgba(0, 0, 0, 1),
+        /* Couche 1 : Intense près du texte */
+        0 8px 24px rgba(0, 0, 0, 1),
+        /* Couche 2 : Moyen format */
+        0 12px 50px rgba(0, 0, 0, 1);
+    /* Couche 3 : Énorme masse noire */
     color: #ffffff;
 }
 
@@ -1767,8 +1768,9 @@ body.theme-dark .tab--alpha-mask.active {
 }
 
 #tab-bar-outer {
-    background: var(--mp-tab-bar-bg, var(--mp-surface-deep));
-    border-bottom: 1px solid var(--mp-raised-top) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* ——— Barre d’options outil ——— */
@@ -2239,9 +2241,11 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-menubar-toolbar 
     flex-wrap: nowrap;
     gap: 2px;
     padding: 2px 8px 2px 6px;
-    border-left: 1px solid var(--mp-inset-top);
+    border-right: 1px solid var(--mp-inset-top);
     box-shadow: none;
-    background: transparent;
+    background: color-mix(in srgb, var(--mp-accent) 12%, var(--mp-surface)) !important;
+    border-radius: 4px;
+    margin: 2px;
 }
 
 .illu-menubar-toolbar {
@@ -5460,4 +5464,96 @@ body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) select.illu
     border-radius: var(--mp-radius);
     padding: 2px 4px;
     box-shadow: none;
+}
+
+/* ——— Paint.NET Style Tabs Overrides for Windows 10 Flat Theme ——— */
+.tab-bar-inner .tab {
+    height: 60px !important;
+    /* reduced height to bring title closer to preview */
+    width: 72px !important;
+    padding: 2px !important;
+    gap: 1px !important;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    position: relative !important;
+    border-radius: 0px !important;
+    transition: outline 0.15s ease, background-color 0.15s ease;
+}
+
+/* Permanent blue contour for active tab (and lighter on hover) */
+.tab-bar-inner .tab.active {
+    outline: 2px solid var(--mp-accent, #0078d7) !important;
+    outline-offset: -1px !important;
+    background: color-mix(in srgb, var(--mp-accent, #0078d7) 28%, transparent) !important;
+}
+
+.tab-bar-inner .tab:hover:not(.active) {
+    outline: 2px solid color-mix(in srgb, var(--mp-accent, #0078d7) 40%, transparent) !important;
+    outline-offset: -1px !important;
+    background: color-mix(in srgb, var(--mp-accent, #0078d7) 12%, transparent) !important;
+}
+
+/* Title at the top (smaller font, closer to top, bolder, in white) */
+.tab-bar-inner .tab span {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    margin: 1px 0 2px 0 !important;
+    order: 1 !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Preview thumbnail box inside */
+.tab-bar-inner .tab .tab-thumb {
+    width: 66px !important;
+    height: 36px !important;
+    max-width: 66px !important;
+    max-height: 36px !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    background: #ffffff !important;
+    order: 2 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+body.theme-dark .tab-bar-inner .tab .tab-thumb {
+    background: #181818 !important;
+    border-color: #404040 !important;
+}
+
+/* Close button - square red cross button at the level of the title, positioned absolute top-right, visible on hover */
+.tab-bar-inner .tab button {
+    position: absolute !important;
+    top: 2px !important;
+    right: 2px !important;
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    font-size: 8px !important;
+    line-height: 9px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0px !important;
+    /* Square button like in Paint.NET/Win10 flat */
+    background: #e81123 !important;
+    /* Red close button */
+    color: #ffffff !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 15 !important;
+    cursor: pointer !important;
+}
+
+.tab-bar-inner .tab:hover button {
+    display: flex !important;
+}
+
+.tab-bar-inner .tab button:hover {
+    background: #f1707a !important;
+    /* Lighter red hover */
+    color: #ffffff !important;
 }

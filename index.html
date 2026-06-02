@@ -89,7 +89,7 @@
             root.style.setProperty('--mp-accent', hex);
             root.style.setProperty('--mp-accent-rgb', rgb.join(', '));
             root.style.setProperty('--mp-title-light', rgbToHex(light[0], light[1], light[2]));
-            const deskHex = rgbToHex(desk[0], desk[1], desk[2]);
+            const deskHex = '#0d8f8f';
             root.style.setProperty('--illu-splash-desk', deskHex);
             document.body.style.backgroundColor = deskHex;
             window._illuSplashDeskColor = deskHex;
@@ -171,592 +171,610 @@
 
     <div id="app-window" class="window illu-boot-hidden" aria-hidden="true">
         <div class="window-body illu-app-window-body" style="padding: 0; margin: 0;">
-            <menu role="menubar" class="illu-menubar-root">
-                <li role="none" class="illu-mobile-burger-slot">
-                    <button type="button" class="illu-mobile-burger-btn" id="illu-mobile-drawer-open"
-                        aria-expanded="false" aria-controls="illu-mobile-drawer-panel"
-                        data-i18n-title="mobile.drawerOpenTitle" title="Menu et palettes">
-                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
-                    </button>
-                </li>
-                <li role="none" class="illu-mobile-menubar-doc-slot" hidden aria-hidden="true">
-                    <button type="button" class="illu-mobile-menubar-doc-btn" id="illu-mobile-menubar-doc-title-btn"
-                        aria-haspopup="dialog" data-i18n-aria-label="mobile.activeDocument">
-                        <span class="illu-mobile-menubar-doc-title-text" data-i18n="app.untitled">Sans titre</span>
-                    </button>
-                </li>
-                <li role="menuitem" aria-haspopup="true" id="menu-file-standard"><span
-                        data-i18n="menu.file">Fichier</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon" onclick="showNewProjectDialog()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span><span
-                                data-i18n="menu.fileNew">Nouveau...</span></li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-regular fa-folder-open"></i></span><span data-i18n="menu.fileOpen">Ouvrir
-                                / Importer image…</span></li>
-                        <input type="file" id="file-import" style="display: none"
-                            accept="image/*,image/svg+xml,.svg,.illu,.pdn" onchange="importFile(event)">
-                        <input type="file" id="illu-vectorize-file-input" style="display:none"
-                            accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/*" aria-hidden="true"
-                            tabindex="-1">
-                        <li role="menuitem" class="menu-row-icon" onclick="WorkspaceIO&&WorkspaceIO.showExportDialog()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-download"></i></span>
-                            <span data-i18n="menu.fileExport">Exporter…</span>
+            <div class="app-header-container">
+                <div class="app-header-left">
+                    <div class="illu-menu-and-sub-wrapper">
+                        <menu role="menubar" class="illu-menubar-root">
+                        <li role="none" class="illu-mobile-burger-slot">
+                            <button type="button" class="illu-mobile-burger-btn" id="illu-mobile-drawer-open"
+                                aria-expanded="false" aria-controls="illu-mobile-drawer-panel"
+                                data-i18n-title="mobile.drawerOpenTitle" title="Menu et palettes">
+                                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                            </button>
                         </li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="typeof PhotoModeManager !== 'undefined' && PhotoModeManager.open()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
-                            <span data-i18n="menu.photoModePro">Mode Photo Pro…</span>
+                        <li role="none" class="illu-mobile-menubar-doc-slot" hidden aria-hidden="true">
+                            <button type="button" class="illu-mobile-menubar-doc-btn" id="illu-mobile-menubar-doc-title-btn"
+                                aria-haspopup="dialog" data-i18n-aria-label="mobile.activeDocument">
+                                <span class="illu-mobile-menubar-doc-title-text" data-i18n="app.untitled">Sans titre</span>
+                            </button>
                         </li>
-                        <li role="menuitem" aria-haspopup="true">
-                            <span data-i18n="menu.imageConvert">Ouvrir comme...</span>
+                        <li role="menuitem" aria-haspopup="true" id="menu-file-standard"><span
+                                data-i18n="menu.file">Fichier</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" id="menu-convert-pixel"
-                                    onclick="EditorManager.convertActiveProjectToPixel()">
-                                    <span class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-paintbrush"></i></span>
-                                    <span data-i18n="menu.convertPixel">Bitmap (Couleurs)</span>
+                                <li role="menuitem" class="menu-row-icon" onclick="showNewProjectDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span><span
+                                        data-i18n="menu.fileNew">Nouveau...</span></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-regular fa-folder-open"></i></span><span data-i18n="menu.fileOpen">Ouvrir
+                                        / Importer image…</span></li>
+                                <input type="file" id="file-import" style="display: none"
+                                    accept="image/*,image/svg+xml,.svg,.illu,.pdn" onchange="importFile(event)">
+                                <input type="file" id="illu-vectorize-file-input" style="display:none"
+                                    accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/*" aria-hidden="true"
+                                    tabindex="-1">
+                                <li role="menuitem" class="menu-row-icon" onclick="WorkspaceIO&&WorkspaceIO.showExportDialog()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-download"></i></span>
+                                    <span data-i18n="menu.fileExport">Exporter…</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon" id="menu-convert-dither"
-                                    onclick="EditorManager.convertActiveProjectToDither()">
-                                    <span class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-braille"></i></span>
-                                    <span data-i18n="menu.convertDither">Tramé (Noir et Blanc)</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon" id="menu-convert-ral"
-                                    onclick="EditorManager.convertActiveProjectToRal()">
-                                    <span class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-palette"></i></span>
-                                    <span data-i18n="menu.convertRal">Couleurs RAL (Limité)</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
-                                    onclick="EditorManager.convertActiveProjectToCmjn()">
-                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-print"></i></span>
-                                    <span data-i18n="menu.convertCmjn">Espace de travail CMJN</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon" id="menu-convert-photomodepro"
-                                    onclick="(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()">
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="typeof PhotoModeManager !== 'undefined' && PhotoModeManager.open()">
                                     <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
-                                    <span data-i18n="menu.convertPhotoModePro">Photo Mode Pro</span>
+                                    <span data-i18n="menu.photoModePro">Mode Photo Pro…</span>
                                 </li>
+                                <li role="menuitem" aria-haspopup="true">
+                                    <span data-i18n="menu.imageConvert">Ouvrir comme...</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-pixel"
+                                            onclick="EditorManager.convertActiveProjectToPixel()">
+                                            <span class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-paintbrush"></i></span>
+                                            <span data-i18n="menu.convertPixel">Bitmap (Couleurs)</span>
+                                        </li>
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-dither"
+                                            onclick="EditorManager.convertActiveProjectToDither()">
+                                            <span class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-braille"></i></span>
+                                            <span data-i18n="menu.convertDither">Tramé (Noir et Blanc)</span>
+                                        </li>
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-ral"
+                                            onclick="EditorManager.convertActiveProjectToRal()">
+                                            <span class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-palette"></i></span>
+                                            <span data-i18n="menu.convertRal">Couleurs RAL (Limité)</span>
+                                        </li>
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
+                                            onclick="EditorManager.convertActiveProjectToCmjn()">
+                                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-print"></i></span>
+                                            <span data-i18n="menu.convertCmjn">Espace de travail CMJN</span>
+                                        </li>
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-photomodepro"
+                                            onclick="(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()">
+                                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
+                                            <span data-i18n="menu.convertPhotoModePro">Photo Mode Pro</span>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="EditorManager.requestCloseActiveDocumentFromMenu()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-file-circle-xmark"></i></span><span
+                                        data-i18n="menu.fileCloseProject">Fermer le projet actif…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
+                                        data-i18n="menu.fileSettings">Paramètres…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="EditorManager.requestCloseActiveDocumentFromMenu()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-file-circle-xmark"></i></span><span
-                                data-i18n="menu.fileCloseProject">Fermer le projet actif…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
-                                data-i18n="menu.fileSettings">Paramètres…</span></li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true" id="menu-file-photopro" style="display:none"><span
-                        data-i18n="menu.file">Fichier</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="document.getElementById('pm-file-input').click()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span
-                                data-i18n="photo.importTitle">Importer Photos</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.applyToAll()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-copy"></i></span><span
-                                data-i18n="photo.applyAll">Appliquer à toutes</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.openActiveInEditor()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-up-right-from-square"></i></span><span
-                                data-i18n="photo.openInEditor">Ouvrir Image</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.showExportOptions()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-export"></i></span><span
-                                data-i18n="photo.exportBtn">Exporter...</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
-                                data-i18n="menu.fileSettings">Paramètres…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.close()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span><span
-                                data-i18n="photo.closeTitle">Fermer Photo Pro</span></li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.edit">Édition</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon" onclick="undo()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-rotate-left"></i></span><span
-                                data-i18n="menu.editUndo">Annuler</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="redo()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-rotate-right"></i></span><span
-                                data-i18n="menu.editRedo">Rétablir</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-wand-magic-sparkles"></i></span><span
-                                data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
-                        <li role="menuitem" class="menu-row-icon" id="menu-edit-vectorize" aria-disabled="true"
-                            onclick="illuMenuVectorizeBitmap()"><span class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-bezier-curve"></i></span><span
-                                data-i18n="menu.editVectorize">Vectoriser…</span></li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.image">Image</span>
-                    <ul role="menu">
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCrop">Recadrage</span>
+                        <li role="menuitem" aria-haspopup="true" id="menu-file-photopro" style="display:none"><span
+                                data-i18n="menu.file">Fichier</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.cropToSelection()">
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="document.getElementById('pm-file-input').click()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span
+                                        data-i18n="photo.importTitle">Importer Photos</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.applyToAll()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-copy"></i></span><span
+                                        data-i18n="photo.applyAll">Appliquer à toutes</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.openActiveInEditor()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-up-right-from-square"></i></span><span
+                                        data-i18n="photo.openInEditor">Ouvrir Image</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.showExportOptions()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-export"></i></span><span
+                                        data-i18n="photo.exportBtn">Exporter...</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
+                                        data-i18n="menu.fileSettings">Paramètres…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.close()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span><span
+                                        data-i18n="photo.closeTitle">Fermer Photo Pro</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.edit">Édition</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="undo()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-rotate-left"></i></span><span
+                                        data-i18n="menu.editUndo">Annuler</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="redo()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-rotate-right"></i></span><span
+                                        data-i18n="menu.editRedo">Rétablir</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-wand-magic-sparkles"></i></span><span
+                                        data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
+                                <li role="menuitem" class="menu-row-icon" id="menu-edit-vectorize" aria-disabled="true"
+                                    onclick="illuMenuVectorizeBitmap()"><span class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-bezier-curve"></i></span><span
+                                        data-i18n="menu.editVectorize">Vectoriser…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.image">Image</span>
+                            <ul role="menu">
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCrop">Recadrage</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.cropToSelection()">
+                                            <span class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-scissors"></i></span><span
+                                                data-i18n="menu.imageCropToSelection">Régler la zone de travail à la sélection
+                                                (Ctrl+Maj+X)</span>
+                                        </li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="resizeCanvas()"><span
+                                                class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-maximize"></i></span><span
+                                                data-i18n="menu.imageResize">Redimensionner…</span></li>
+                                    </ul>
+                                </li>
+
+                                <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-crop"></i></span><span
+                                        data-i18n="menu.imageCropLive">Recadrer (sélection sur la toile)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-square-plus"></i></span><span
+                                        data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span><span
+                                        data-i18n="menu.imageTransform">Rotation et retournement…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.openImageLayerBoundsDialog()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-expand"></i></span><span
+                                        data-i18n="menu.imageLayerBounds">Calque actif…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="EditorManager.alignActiveLayerWidthToCanvas()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-arrows-left-right"></i></span><span
+                                        data-i18n="menu.imageAlignLayerWidth">Calque à la largeur de la toile</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.expandCanvasToLayers()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-object-group"></i></span><span
+                                        data-i18n="menu.imageExpand">Ajuster la page…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser"></i></span><span
+                                        data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
+
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.layers">Calques</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.addLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span><span
+                                        data-i18n="menu.layerAdd">Ajouter un calque</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.deleteLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-regular fa-trash-can"></i></span><span
+                                        data-i18n="menu.layerDelete">Supprimer</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.mergeLayers()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-object-ungroup"></i></span><span
+                                        data-i18n="menu.layerMerge">Fusionner</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.splitActiveLayerRgbChannels()">
                                     <span class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-scissors"></i></span><span
-                                        data-i18n="menu.imageCropToSelection">Régler la zone de travail à la sélection
-                                        (Ctrl+Maj+X)</span>
+                                            class="fa-solid fa-table-columns"></i></span><span
+                                        data-i18n="menu.layerRgbSplit">Séparer canaux RVB (3 calques)</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon" onclick="resizeCanvas()"><span
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('h')">
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-h" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelH">Centrer la sélection
+                                        horizontalement</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('v')">
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-v" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelV">Centrer la sélection
+                                        verticalement</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('both')">
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-both" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelBoth">Centrer la sélection (H +
+                                        V)</span>
+                                </li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.adjust">Ajustements</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="FilterManager.showInstantFilterGallery()">
+                                    <span class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-wand-magic-sparkles"></i></span><span
+                                        data-i18n="menu.instFiltersGallery">Galerie de Filtres…</span>
+                                </li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span><span
+                                        data-i18n="menu.adjAutolevel">Auto-niveau</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openLevelsForActiveLayer()"><span
                                         class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-maximize"></i></span><span
-                                        data-i18n="menu.imageResize">Redimensionner…</span></li>
-                            </ul>
-                        </li>
-
-                        <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-crop"></i></span><span
-                                data-i18n="menu.imageCropLive">Recadrer (sélection sur la toile)…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-square-plus"></i></span><span
-                                data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span><span
-                                data-i18n="menu.imageTransform">Rotation et retournement…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.openImageLayerBoundsDialog()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-expand"></i></span><span
-                                data-i18n="menu.imageLayerBounds">Calque actif…</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="EditorManager.alignActiveLayerWidthToCanvas()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-arrows-left-right"></i></span><span
-                                data-i18n="menu.imageAlignLayerWidth">Calque à la largeur de la toile</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.expandCanvasToLayers()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-object-group"></i></span><span
-                                data-i18n="menu.imageExpand">Ajuster la page…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser"></i></span><span
-                                data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
-
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.layers">Calques</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.addLayer()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span><span
-                                data-i18n="menu.layerAdd">Ajouter un calque</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.deleteLayer()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-regular fa-trash-can"></i></span><span
-                                data-i18n="menu.layerDelete">Supprimer</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.mergeLayers()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-object-ungroup"></i></span><span
-                                data-i18n="menu.layerMerge">Fusionner</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.splitActiveLayerRgbChannels()">
-                            <span class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-table-columns"></i></span><span
-                                data-i18n="menu.layerRgbSplit">Séparer canaux RVB (3 calques)</span>
-                        </li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('h')">
-                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
-                                    height="16" aria-hidden="true">
-                                    <use href="#illu-icon-sel-center-h" />
-                                </svg></span><span data-i18n="menu.layerCenterSelH">Centrer la sélection
-                                horizontalement</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('v')">
-                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
-                                    height="16" aria-hidden="true">
-                                    <use href="#illu-icon-sel-center-v" />
-                                </svg></span><span data-i18n="menu.layerCenterSelV">Centrer la sélection
-                                verticalement</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('both')">
-                            <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
-                                    height="16" aria-hidden="true">
-                                    <use href="#illu-icon-sel-center-both" />
-                                </svg></span><span data-i18n="menu.layerCenterSelBoth">Centrer la sélection (H +
-                                V)</span>
-                        </li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.adjust">Ajustements</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon" onclick="FilterManager.showInstantFilterGallery()">
-                            <span class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-wand-magic-sparkles"></i></span><span
-                                data-i18n="menu.instFiltersGallery">Galerie de Filtres…</span>
-                        </li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span><span
-                                data-i18n="menu.adjAutolevel">Auto-niveau</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="openLevelsForActiveLayer()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-chart-column"></i></span><span
-                                data-i18n="menu.adjLevels">Niveaux…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-circle-half-stroke"></i></span><span
-                                data-i18n="menu.adjInvert">Inverser…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-droplet-slash"></i></span><span
-                                data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span
-                                class="menu-icon"><i class="fa-solid fa-image-portrait"></i></span><span
-                                data-i18n="menu.adjSepia">Sépia</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span
-                                class="menu-icon"><i class="fa-solid fa-swatchbook"></i></span><span
-                                data-i18n="menu.adjPosterize">Postériser…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span><span
-                                data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-palette"></i></span><span
-                                data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-camera-retro"></i></span><span
-                                data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span
-                                class="menu-icon"><i class="fa-solid fa-bolt"></i></span><span
-                                data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span
-                                class="menu-icon"><i class="fa-solid fa-eye"></i></span><span
-                                data-i18n="menu.adjSharpen">Netteté…</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span
-                                class="menu-icon"><i class="fa-solid fa-chart-line"></i></span><span
-                                data-i18n="menu.adjCurves">Courbes…</span></li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.effects">Effets</span>
-                    <ul role="menu">
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span
-                                        class="menu-icon"><i class="fa-solid fa-pencil"></i></span><span
-                                        data-i18n="menu.fxSketch">Esquisse…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span
-                                        class="menu-icon"><i class="fa-solid fa-paintbrush"></i></span><span
-                                        data-i18n="menu.fxOil">Peinture…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span
-                                        class="menu-icon"><i class="fa-solid fa-plus"></i></span><span
-                                        data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span
-                                        class="menu-icon"><i class="fa-solid fa-film"></i></span><span
-                                        data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span
-                                        class="menu-icon"><i class="fa-solid fa-border-all"></i></span><span
-                                        data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span
-                                        class="menu-icon"><i class="fa-solid fa-tape"></i></span><span
-                                        data-i18n="menu.fxVhs">Effet
-                                        VHS…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span
-                                        class="menu-icon"><i class="fa-solid fa-minus"></i></span><span
-                                        data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span
-                                        class="menu-icon"><i class="fa-solid fa-circle-dot"></i></span><span
-                                        data-i18n="menu.fxBulge">Bosse…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span
-                                        class="menu-icon"><i class="fa-solid fa-compress"></i></span><span
-                                        data-i18n="menu.fxPinch">Pincement…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cabossage')"><span
-                                        class="menu-icon"><i class="fa-solid fa-mountain"></i></span><span
-                                        data-i18n="menu.fxCabossage">Cabossage…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span
-                                        class="menu-icon"><i class="fa-solid fa-gem"></i></span><span
-                                        data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span
-                                        class="menu-icon"><i class="fa-solid fa-arrows-rotate"></i></span><span
-                                        data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span
-                                        class="menu-icon"><i class="fa-solid fa-border-none"></i></span><span
-                                        data-i18n="menu.fxPixelate">Pixéliser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span
-                                        class="menu-icon"><i class="fa-solid fa-table-cells-large"></i></span><span
-                                        data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span
-                                        class="menu-icon"><i class="fa-solid fa-hurricane"></i></span><span
-                                        data-i18n="menu.fxTwist">Torsion…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span
-                                        class="menu-icon"><i class="fa-solid fa-water"></i></span><span
-                                        data-i18n="menu.fxWave">Onde…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span
-                                        class="menu-icon"><i class="fa-solid fa-clover"></i></span><span
-                                        data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span
-                                        class="menu-icon"><i class="fa-solid fa-snowflake"></i></span><span
-                                        data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span
+                                            class="fa-solid fa-chart-column"></i></span><span
+                                        data-i18n="menu.adjLevels">Niveaux…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span
                                         class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-cube"></i></span><span
-                                        data-i18n="menu.fxProjection3d">Projection 3D…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span
-                                        class="menu-icon"><i class="fa-solid fa-droplet"></i></span><span
-                                        data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span
-                                        class="menu-icon"><i class="fa-solid fa-smog"></i></span><span
-                                        data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span
-                                        class="menu-icon"><i class="fa-solid fa-circle-notch"></i></span><span
-                                        data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span
-                                        class="menu-icon"><i class="fa-solid fa-forward"></i></span><span
-                                        data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span
-                                        class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou
-                                        de mouvement…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span
-                                        class="menu-icon"><i class="fa-solid fa-water"></i></span><span>Flou de
-                                        surface…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span
-                                        class="menu-icon"><i class="fa-solid fa-eye-slash"></i></span><span
-                                        data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span
-                                        class="menu-icon"><i class="fa-solid fa-camera"></i></span><span
-                                        data-i18n="menu.fxVignette">Vignettage…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span
-                                        class="menu-icon"><i class="fa-solid fa-lightbulb"></i></span><span
-                                        data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span
-                                        class="menu-icon"><i class="fa-solid fa-clone"></i></span><span
-                                        data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span
-                                        class="menu-icon"><i class="fa-solid fa-pen-nib"></i></span><span
-                                        data-i18n="menu.fxEdges">Contours…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span
-                                        class="menu-icon"><i class="fa-solid fa-border-style"></i></span><span
-                                        data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span
-                                        class="menu-icon"><i class="fa-solid fa-stamp"></i></span><span
-                                        data-i18n="menu.fxEmboss">Relief…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span
-                                        class="menu-icon"><i class="fa-solid fa-sun"></i></span><span
-                                        data-i18n="menu.fxSolarize">Solariser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span
-                                        class="menu-icon"><i class="fa-solid fa-braille"></i></span><span
-                                        data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
-                            </ul>
-                        </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxColor">Couleur</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chroma')"><span
+                                            class="fa-solid fa-circle-half-stroke"></i></span><span
+                                        data-i18n="menu.adjInvert">Inverser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span
                                         class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-fill-drip"></i></span><span
-                                        data-i18n="menu.fxChroma">Incrustation…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span
-                                        class="menu-icon"><i class="fa-solid fa-glasses"></i></span><span
-                                        data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span
-                                        class="menu-icon"><i class="fa-solid fa-circle-half-stroke"></i></span><span
-                                        data-i18n="menu.fxDuotone">Duo-tone…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span
-                                        class="menu-icon"><i class="fa-solid fa-palette"></i></span><span
-                                        data-i18n="menu.fxRal">Conversion de couleur RAL…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cmjn')"><span
-                                        class="menu-icon"><i class="fa-solid fa-print"></i></span><span
-                                        data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
+                                            class="fa-solid fa-droplet-slash"></i></span><span
+                                        data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span
+                                        class="menu-icon"><i class="fa-solid fa-image-portrait"></i></span><span
+                                        data-i18n="menu.adjSepia">Sépia</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span
+                                        class="menu-icon"><i class="fa-solid fa-swatchbook"></i></span><span
+                                        data-i18n="menu.adjPosterize">Postériser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span><span
+                                        data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-palette"></i></span><span
+                                        data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-camera-retro"></i></span><span
+                                        data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span
+                                        class="menu-icon"><i class="fa-solid fa-bolt"></i></span><span
+                                        data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span
+                                        class="menu-icon"><i class="fa-solid fa-eye"></i></span><span
+                                        data-i18n="menu.adjSharpen">Netteté…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span
+                                        class="menu-icon"><i class="fa-solid fa-chart-line"></i></span><span
+                                        data-i18n="menu.adjCurves">Courbes…</span></li>
                             </ul>
                         </li>
-                    </ul>
-                </li>
-                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.window">Fenêtre</span>
-                    <ul role="menu">
-                        <li role="menuitem" class="menu-row-icon" onclick="openCanvasLivePreviewWindow()"><span
-                                class="menu-icon" aria-hidden="true"><i
-                                    class="fa-solid fa-up-right-from-square"></i></span><span
-                                data-i18n="menu.winLivePreview">Aperçu toile 1:1 (fenêtre)…</span></li>
-                        <li role="menuitem" class="divider"></li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.effects">Effets</span>
+                            <ul role="menu">
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span
+                                                class="menu-icon"><i class="fa-solid fa-pencil"></i></span><span
+                                                data-i18n="menu.fxSketch">Esquisse…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span
+                                                class="menu-icon"><i class="fa-solid fa-paintbrush"></i></span><span
+                                                data-i18n="menu.fxOil">Peinture…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span
+                                                class="menu-icon"><i class="fa-solid fa-plus"></i></span><span
+                                                data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span
+                                                class="menu-icon"><i class="fa-solid fa-film"></i></span><span
+                                                data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-all"></i></span><span
+                                                data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span
+                                                class="menu-icon"><i class="fa-solid fa-tape"></i></span><span
+                                                data-i18n="menu.fxVhs">Effet
+                                                VHS…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span
+                                                class="menu-icon"><i class="fa-solid fa-minus"></i></span><span
+                                                data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-dot"></i></span><span
+                                                data-i18n="menu.fxBulge">Bosse…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span
+                                                class="menu-icon"><i class="fa-solid fa-compress"></i></span><span
+                                                data-i18n="menu.fxPinch">Pincement…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cabossage')"><span
+                                                class="menu-icon"><i class="fa-solid fa-mountain"></i></span><span
+                                                data-i18n="menu.fxCabossage">Cabossage…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span
+                                                class="menu-icon"><i class="fa-solid fa-gem"></i></span><span
+                                                data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span
+                                                class="menu-icon"><i class="fa-solid fa-arrows-rotate"></i></span><span
+                                                data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-none"></i></span><span
+                                                data-i18n="menu.fxPixelate">Pixéliser…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span
+                                                class="menu-icon"><i class="fa-solid fa-table-cells-large"></i></span><span
+                                                data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span
+                                                class="menu-icon"><i class="fa-solid fa-hurricane"></i></span><span
+                                                data-i18n="menu.fxTwist">Torsion…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span
+                                                class="menu-icon"><i class="fa-solid fa-water"></i></span><span
+                                                data-i18n="menu.fxWave">Onde…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span
+                                                class="menu-icon"><i class="fa-solid fa-clover"></i></span><span
+                                                data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span
+                                                class="menu-icon"><i class="fa-solid fa-snowflake"></i></span><span
+                                                data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span
+                                                class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-cube"></i></span><span
+                                                data-i18n="menu.fxProjection3d">Projection 3D…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-droplet"></i></span><span
+                                                data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span
+                                                class="menu-icon"><i class="fa-solid fa-smog"></i></span><span
+                                                data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-notch"></i></span><span
+                                                data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-forward"></i></span><span
+                                                data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou
+                                                de mouvement…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-water"></i></span><span>Flou de
+                                                surface…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span
+                                                class="menu-icon"><i class="fa-solid fa-eye-slash"></i></span><span
+                                                data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span
+                                                class="menu-icon"><i class="fa-solid fa-camera"></i></span><span
+                                                data-i18n="menu.fxVignette">Vignettage…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span
+                                                class="menu-icon"><i class="fa-solid fa-lightbulb"></i></span><span
+                                                data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span
+                                                class="menu-icon"><i class="fa-solid fa-clone"></i></span><span
+                                                data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span
+                                                class="menu-icon"><i class="fa-solid fa-pen-nib"></i></span><span
+                                                data-i18n="menu.fxEdges">Contours…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-style"></i></span><span
+                                                data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span
+                                                class="menu-icon"><i class="fa-solid fa-stamp"></i></span><span
+                                                data-i18n="menu.fxEmboss">Relief…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span
+                                                class="menu-icon"><i class="fa-solid fa-sun"></i></span><span
+                                                data-i18n="menu.fxSolarize">Solariser…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span
+                                                class="menu-icon"><i class="fa-solid fa-braille"></i></span><span
+                                                data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxColor">Couleur</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chroma')"><span
+                                                class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-fill-drip"></i></span><span
+                                                data-i18n="menu.fxChroma">Incrustation…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span
+                                                class="menu-icon"><i class="fa-solid fa-glasses"></i></span><span
+                                                data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-half-stroke"></i></span><span
+                                                data-i18n="menu.fxDuotone">Duo-tone…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span
+                                                class="menu-icon"><i class="fa-solid fa-palette"></i></span><span
+                                                data-i18n="menu.fxRal">Conversion de couleur RAL…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
+                                            onclick="applyEffect('cmjn')"><span
+                                                class="menu-icon"><i class="fa-solid fa-print"></i></span><span
+                                                data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.window">Fenêtre</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="openCanvasLivePreviewWindow()"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-up-right-from-square"></i></span><span
+                                        data-i18n="menu.winLivePreview">Aperçu toile 1:1 (fenêtre)…</span></li>
+                                <li role="menuitem" class="divider"></li>
 
-                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluPixelGrid()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
-                                    id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><i
-                                class="fa-solid fa-border-all" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.winPixelGrid">Grille de pixels</span></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluRulers()"><span
-                                class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
-                                    id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
-                                class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.winRulers">Règles</span></li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
-                                    id="menu-win-snap-edges-check" style="visibility: hidden;"></i></span><i
-                                class="fa-solid fa-magnet" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.winSnapEdges">Aimantation des bords</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.illuOpenSnapSettings && window.illuOpenSnapSettings()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span>
-                            <span>Paramètres aimantation…</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluShowAllRibbonOptions()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
-                                    id="menu-win-show-all-ribbon-options-check"
-                                    style="visibility: hidden;"></i></span><i class="fa-solid fa-eye"
-                                style="margin-right: 6px;"></i><span data-i18n="menu.winShowAllRibbonOptions">Toutes les
-                                options du ruban</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.toggleIlluAllowOutsideCanvas && window.toggleIlluAllowOutsideCanvas()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
-                                    id="menu-win-outside-canvas-check" style="visibility: hidden;"></i></span><svg
-                                class="illu-shape-ico" width="14" height="14"
-                                style="margin-right: 6px; vertical-align: middle;" aria-hidden="true">
-                                <use href="#illu-icon-outside-canvas" />
-                            </svg><span data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
-                        </li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
-                                data-i18n="menu.winReset">Réinitialiser le bureau</span></li>
-                        <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.showChangelog && window.showChangelog()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></span>
-                            <span data-i18n="menu.winChangelog">Changelog…</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.showWelcomeDialog && window.showWelcomeDialog(true)">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
-                            <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
-                        </li>
-                        <li role="menuitem" class="menu-row-icon"
-                            onclick="window.openIconViewerWindow && window.openIconViewerWindow()">
-                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-icons"></i></span>
-                            <span>Visionneuse d'icônes…</span>
-                        </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluPixelGrid()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-border-all" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.winPixelGrid">Grille de pixels</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluRulers()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.winRulers">Règles</span></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-snap-edges-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-magnet" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.winSnapEdges">Aimantation des bords</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.illuOpenSnapSettings && window.illuOpenSnapSettings()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span>
+                                    <span>Paramètres aimantation…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluShowAllRibbonOptions()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-show-all-ribbon-options-check"
+                                            style="visibility: hidden;"></i></span><i class="fa-solid fa-eye"
+                                        style="margin-right: 6px;"></i><span data-i18n="menu.winShowAllRibbonOptions">Toutes les
+                                        options du ruban</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.toggleIlluAllowOutsideCanvas && window.toggleIlluAllowOutsideCanvas()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-outside-canvas-check" style="visibility: hidden;"></i></span><svg
+                                        class="illu-shape-ico" width="14" height="14"
+                                        style="margin-right: 6px; vertical-align: middle;" aria-hidden="true">
+                                        <use href="#illu-icon-outside-canvas" />
+                                    </svg><span data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
+                                </li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
+                                        data-i18n="menu.winReset">Réinitialiser le bureau</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.showChangelog && window.showChangelog()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></span>
+                                    <span data-i18n="menu.winChangelog">Changelog…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.showWelcomeDialog && window.showWelcomeDialog(true)">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
+                                    <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.openIconViewerWindow && window.openIconViewerWindow()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-icons"></i></span>
+                                    <span>Visionneuse d'icônes…</span>
+                                </li>
 
-                        <li role="menuitem" class="menu-win-hint-mobile-only"
-                            style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
-                                data-i18n="menu.winLayoutMobile">Interface : mode téléphone (menu ☰, palettes en
-                                colonnes)</span></li>
-                        <li role="menuitem" class="menu-win-hint-docked"
-                            style="opacity:0.75;font-size:10px;cursor:default;"
-                            title="Les quatre palettes sont ancrées ; pas de déplacement par la barre de titre."><span
-                                data-i18n="menu.winHint">Palettes : ancrage fixe (style Adobe)</span></li>
-                        <li role="menuitem" class="menu-floating-only menu-win-pdn-sep"
-                            style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
-                                data-i18n="menu.winPalSep">Palettes volantes (Paint.NET)</span></li>
-                        <li role="menuitem" class="menu-floating-only menu-row-icon"
-                            onclick="window.toggleFloatingPaletteVisibility('win-tools')"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-tools-check"
-                                    style="visibility: visible;"></i></span>
-                            <i class="fa-solid fa-paintbrush" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.floatPalTools">Outils</span>
+                                <li role="menuitem" class="menu-win-hint-mobile-only"
+                                    style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
+                                        data-i18n="menu.winLayoutMobile">Interface : mode téléphone (menu ☰, palettes en
+                                        colonnes)</span></li>
+                                <li role="menuitem" class="menu-win-hint-docked"
+                                    style="opacity:0.75;font-size:10px;cursor:default;"
+                                    title="Les quatre palettes sont ancrées ; pas de déplacement par la barre de titre."><span
+                                        data-i18n="menu.winHint">Palettes : ancrage fixe (style Adobe)</span></li>
+                                <li role="menuitem" class="menu-floating-only menu-win-pdn-sep"
+                                    style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
+                                        data-i18n="menu.winPalSep">Palettes volantes (Paint.NET)</span></li>
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-tools')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-tools-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-paintbrush" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.floatPalTools">Outils</span>
+                                </li>
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-colors')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-colors-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-palette" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.floatPalColors">Couleurs</span>
+                                </li>
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-layers')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-layers-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-layer-group" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.floatPalLayers">Calques</span>
+                                </li>
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-history')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-history-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i><span
+                                        data-i18n="menu.floatPalHistory">Historique</span>
+                                </li>
+                            </ul>
                         </li>
-                        <li role="menuitem" class="menu-floating-only menu-row-icon"
-                            onclick="window.toggleFloatingPaletteVisibility('win-colors')"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-colors-check"
-                                    style="visibility: visible;"></i></span>
-                            <i class="fa-solid fa-palette" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.floatPalColors">Couleurs</span>
-                        </li>
-                        <li role="menuitem" class="menu-floating-only menu-row-icon"
-                            onclick="window.toggleFloatingPaletteVisibility('win-layers')"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-layers-check"
-                                    style="visibility: visible;"></i></span>
-                            <i class="fa-solid fa-layer-group" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.floatPalLayers">Calques</span>
-                        </li>
-                        <li role="menuitem" class="menu-floating-only menu-row-icon"
-                            onclick="window.toggleFloatingPaletteVisibility('win-history')"><span class="menu-icon"
-                                aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-history-check"
-                                    style="visibility: visible;"></i></span>
-                            <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i><span
-                                data-i18n="menu.floatPalHistory">Historique</span>
-                        </li>
-                    </ul>
-                </li>
-                <li role="menuitem" class="menubar-contact-btn" onclick="openContactModal('MasterPaint')"
-                    style="background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%) !important; padding: 4px 10px; margin-left: auto; cursor: pointer; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 1px rgba(0,0,0,0.4); border: 2px solid; border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top); border-radius: 0;">
-                    <span class="menu-icon" aria-hidden="true" style="color: #fff; width: 14px; text-align: center;"><i
-                            class="fa-solid fa-bug"></i></span>
-                    <span data-i18n="menu.contact" style="font-weight: 600; color: #fff;">Signaler un problème</span>
-                </li>
-                <li role="none" class="illu-menubar-toolbar-slot">
-                    <div class="illu-menubar-toolbar" role="toolbar" aria-label=""
-                        data-i18n-aria-label="menubar.quickToolbarAria">
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-new"
-                            data-i18n-title="menubar.tbNew" title="Nouveau"
-                            onclick="typeof showNewProjectDialog==='function'&&showNewProjectDialog()"><i
-                                class="fa-solid fa-file-circle-plus" aria-hidden="true"></i></button>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-open" title="Ouvrir"
-                            onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><i
-                                class="fa-regular fa-folder-open" aria-hidden="true"></i></button>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-save"
-                            data-i18n-title="menubar.tbSave" title="Enregistrer"
-                            onclick="typeof saveFile==='function'&&saveFile()"><i class="fa-solid fa-floppy-disk"
-                                aria-hidden="true"></i></button>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-print" title="Imprimer"
-                            onclick="typeof window.printCanvasLive==='function'&&window.printCanvasLive()"><i
-                                class="fa-solid fa-print" aria-hidden="true"></i></button>
-                        <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-undo"
-                            data-i18n-title="menubar.tbUndo" title="Annuler"
-                            onclick="typeof undo==='function'&&undo()"><i class="fa-solid fa-rotate-left"
-                                aria-hidden="true"></i></button>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-redo"
-                            data-i18n-title="menubar.tbRedo" title="Rétablir"
-                            onclick="typeof redo==='function'&&redo()"><i class="fa-solid fa-rotate-right"
-                                aria-hidden="true"></i></button>
-                        <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
-                        <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
-                            data-i18n-title="menubar.tbZoomOut" title="Zoom arrière"
-                            onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
-                                class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
-                        <div class="illu-menubar-zoom-wrap">
-                            <span class="illu-menubar-zoom-val" id="illu-zoom-value">100%</span>
+                    </menu>
+
+                    <!-- Div barre sous menubar et au dessus tool-options-container -->
+                    <div class="illu-sub-menubar">
+                        <div class="illu-menubar-toolbar" role="toolbar" aria-label=""
+                            data-i18n-aria-label="menubar.quickToolbarAria">
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-new"
+                                data-i18n-title="menubar.tbNew" title="Nouveau"
+                                onclick="typeof showNewProjectDialog==='function'&&showNewProjectDialog()"><i
+                                    class="fa-solid fa-file-circle-plus" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-open" title="Ouvrir"
+                                onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><i
+                                    class="fa-regular fa-folder-open" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-save"
+                                data-i18n-title="menubar.tbSave" title="Enregistrer"
+                                onclick="typeof saveFile==='function'&&saveFile()"><i class="fa-solid fa-floppy-disk"
+                                    aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-print" title="Imprimer"
+                                onclick="typeof window.printCanvasLive==='function'&&window.printCanvasLive()"><i
+                                    class="fa-solid fa-print" aria-hidden="true"></i></button>
+                            <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-undo"
+                                data-i18n-title="menubar.tbUndo" title="Annuler"
+                                onclick="typeof undo==='function'&&undo()"><i class="fa-solid fa-rotate-left"
+                                    aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-redo"
+                                data-i18n-title="menubar.tbRedo" title="Rétablir"
+                                onclick="typeof redo==='function'&&redo()"><i class="fa-solid fa-rotate-right"
+                                    aria-hidden="true"></i></button>
+                            <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
+                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-out"
+                                data-i18n-title="menubar.tbZoomOut" title="Zoom arrière"
+                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(-0.1)"><i
+                                    class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
+                            <div class="illu-menubar-zoom-wrap">
+                                <span class="illu-menubar-zoom-val" id="illu-zoom-value">100%</span>
+                            </div>
+                            <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
+                                data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
+                                onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
+                                    class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn" id="illu-tb-zoom-fit-row1"
+                                title="Adapter au workspace"
+                                onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
+                                    class="fa-solid fa-expand" aria-hidden="true"></i></button>
                         </div>
-                        <button type="button" class="illu-menubar-icon-btn illu-menubar-zoom-btn" id="illu-tb-zoom-in"
-                            data-i18n-title="menubar.tbZoomIn" title="Zoom avant"
-                            onclick="typeof EditorManager!=='undefined'&&EditorManager.zoom&&EditorManager.zoom(0.1)"><i
-                                class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
-                        <button type="button" class="illu-menubar-icon-btn" id="illu-tb-zoom-fit-row1"
-                            title="Adapter au workspace"
-                            onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
-                                class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                        <div class="menubar-contact-btn" onclick="openContactModal('MasterPaint')" role="button"
+                            style="background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%) !important; padding: 2px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 1px rgba(0,0,0,0.4); border: 2px solid; border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top); border-radius: 0; font-size: 11px;">
+                            <span class="menu-icon" aria-hidden="true" style="color: #fff; width: 12px; text-align: center;"><i
+                                    class="fa-solid fa-bug" style="font-size: 11px;"></i></span>
+                            <span data-i18n="menu.contact" style="font-weight: 600; color: #fff;">Signaler un bug</span>
+                        </div>
                     </div>
-                </li>
-            </menu>
+                </div> <!-- End of illu-menu-and-sub-wrapper -->
+            </div> <!-- End of app-header-left -->
+ 
+            <!-- Tab Bar for MDI (document tabs rendered as miniature boxes with text above thumbnail) -->
+            <div id="tab-bar-outer" class="tab-bar-outer">
+                <button type="button" id="tab-scroll-left-btn" class="tab-scroll-btn" title="Faire défiler à gauche">◀</button>
+                <div id="tab-bar-scroll" class="tab-bar-scroll">
+                    <div id="tab-bar" class="tab-bar-inner"></div>
+                </div>
+                <button type="button" id="tab-scroll-right-btn" class="tab-scroll-btn" title="Faire défiler à droite">▶</button>
+            </div>
+        </div> <!-- End of app-header-container -->
 
             <header id="illu-mobile-top-bar" class="illu-mobile-top-bar" hidden aria-hidden="true">
                 <button type="button" class="illu-mobile-top-bar__btn" id="illu-mobile-undo"
@@ -2038,12 +2056,6 @@
 
             <div id="illu-mobile-opt-strip" class="illu-mobile-opt-strip" hidden aria-hidden="true"></div>
 
-            <!-- Tab Bar for MDI (défilement horizontal + glisser pour faire défiler) -->
-            <div id="tab-bar-outer" class="tab-bar-outer">
-                <div id="tab-bar-scroll" class="tab-bar-scroll">
-                    <div id="tab-bar" class="tab-bar-inner"></div>
-                </div>
-            </div>
             <!-- Mode téléphone (Paint.NET) : #win-tools est déplacé ici par app.js ; barre fixe sous les onglets -->
             <div id="illu-mobile-toolbar-host" class="illu-mobile-toolbar-host" aria-hidden="true"></div>
 
@@ -2455,7 +2467,7 @@
                                 style="padding: 4px 3px; flex-direction: column; align-items: stretch; gap: 6px;">
                                 <div class="layer-palette-toolbar__wrap" role="toolbar"
                                     data-i18n-aria-label="layer.paletteToolbarAria" aria-label="">
-                                    <div class="layer-palette-toolbar__icons" style="flex-wrap: wrap; justify-content: flex-start; gap: 4px;">
+                                    <div class="layer-palette-toolbar__icons" style="flex-wrap: wrap; justify-content: flex-start; gap: 3px;">
                                         <button id="btn-add-layer" type="button" class="illu-menubar-icon-btn"
                                             data-i18n-title="menu.layerAdd" title=""><i class="fa-solid fa-plus"
                                                 aria-hidden="true"></i></button>
@@ -3319,7 +3331,7 @@
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 6000; align-items: center; justify-content: center;">
         <div class="window welcome-dialog-window" style="width: min(96vw, 700px); max-width: 96vw;">
             <div class="title-bar">
-                <div class="title-bar-text" data-i18n="welcome.title">Bienvenue sur MasterPaint</div>
+                <div class="title-bar-text" data-i18n="welcome.title">&nbsp;&nbsp;Bienvenue sur MasterPaint</div>
                 <div class="title-bar-controls">
                     <button aria-label="Close" class="title-bar-close-btn"
                         onclick="window.closeWelcomeDialog && window.closeWelcomeDialog()"></button>
@@ -3340,6 +3352,18 @@
                                     rel="noopener noreferrer">polocrafting 367</a></p>
                             <p class="settings-ai-note" data-i18n="settings.aiNote">Interface et logique créées par IA.
                             </p>
+                                       <fieldset class="settings-fieldset-compact settings-aside-lang">
+                            <legend data-i18n="settings.langLabel">Langue de l’interface</legend>
+                            <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="welcome-lang-scope-row"
+                                role="group" data-i18n-aria-label="settings.langLabel">
+                                <button type="button"
+                                    class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                    data-value="fr" data-i18n="settings.langFr" aria-pressed="true">Français</button>
+                                <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="en"
+                                    data-i18n="settings.langEn" aria-pressed="false">English</button>
+                            </div>
+                        </fieldset>
+
                             <div class="settings-aside-block settings-aside-block--shortcuts welcome-shortcuts--open">
                                 <p class="settings-shortcuts-heading" data-i18n="settings.shortcuts"
                                     onclick="const block = this.closest('.settings-aside-block'); block.classList.toggle('welcome-shortcuts--open'); const list = block.querySelector('.settings-shortcuts-list'); const open = block.classList.contains('welcome-shortcuts--open'); list.style.display = open ? 'block' : 'none'; this.querySelector('.toggle-icon').style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';">
@@ -3484,18 +3508,7 @@
                         </fieldset>
 
 
-                        <fieldset class="settings-fieldset-compact settings-aside-lang">
-                            <legend data-i18n="settings.langLabel">Langue de l’interface</legend>
-                            <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="welcome-lang-scope-row"
-                                role="group" data-i18n-aria-label="settings.langLabel">
-                                <button type="button"
-                                    class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
-                                    data-value="fr" data-i18n="settings.langFr" aria-pressed="true">Français</button>
-                                <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="en"
-                                    data-i18n="settings.langEn" aria-pressed="false">English</button>
-                            </div>
-                        </fieldset>
-
+             
 
                         <p class="settings-github-row">
                             <a href="https://github.com/Polocrafting367/MasterPaint" target="_blank"
@@ -3655,7 +3668,7 @@
                                 <button type="button" class="btn primary" onclick="openContactModal('Settings')"
                                     style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%);  color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.3);">
                                     <i class="fa-solid fa-bug"></i>
-                                    <span data-i18n="menu.contact">Signaler un problème</span>
+                                    <span data-i18n="menu.contact">Signaler un bug</span>
                                 </button>
                             </div>
                         </div>

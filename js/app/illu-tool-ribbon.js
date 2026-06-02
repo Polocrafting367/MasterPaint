@@ -359,9 +359,7 @@
         const isMobile =
             typeof window.illuIsRibbonMobileLayout === 'function' &&
             window.illuIsRibbonMobileLayout();
-        const isPixel =
-            typeof EditorManager !== 'undefined' && EditorManager && EditorManager.isPixelMode;
-        const hideForDocMode = isMobile || !isPixel;
+        const hideForDocMode = isMobile;
         if (hideForDocMode) {
             if (viewRibbon) setGroupHidden(viewRibbon, true);
             if (viewGrp) {
@@ -572,31 +570,22 @@
                         window.illuShouldShowShapePickerRibbon();
                 } else if (id === 'selection') {
                     active =
-                        !isVectorDoc &&
-                        !isVectorSelect &&
                         (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
                 } else if (id === 'clipboard') {
                     active =
-                        !isVectorDoc &&
-                        !isVectorSelect &&
                         !isMobileRibbon &&
                         SELECT_ACTION_TOOLS.has(tool);
                 } else if (id === 'selection-extra') {
                     /* Téléphone : alvéole « Outils » (4 coins si pertinent + Désélectionner) pour tous les outils sélection/déplacement. */
                     active =
-                        !isVectorDoc &&
-                        !isVectorSelect &&
                         isMobileRibbon &&
                         SELECT_ACTION_TOOLS.has(tool);
                 } else if (id === 'adjustments') {
-                    active = !isVectorDoc && SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                    active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
                 } else if (id === 'view') {
                     /* Alvéole Affichage : uniquement en mode document pixel (pas SVG / vecteur).
                      * Mobile : masqué (Grille / Règles via menu Fenêtre). */
-                    const isPixelDoc =
-                        typeof EditorManager !== 'undefined' &&
-                        EditorManager &&
-                        EditorManager.isPixelMode;
+                    const isPixelDoc = true;
                     const isShapeTool =
                         window.ILLU_DRAG_SHAPE_TOOLS && window.ILLU_DRAG_SHAPE_TOOLS.includes(tool)
                             ? true
@@ -618,7 +607,7 @@
                                   'polygon'
                               ].includes(tool);
                     active =
-                        isPixelDoc && !isVectorSelect && !isShapeTool && !isMobileRibbon;
+                        isPixelDoc && !isShapeTool && !isMobileRibbon;
                 } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
                 else if (id === 'shape-style-fill') {
                     active = shapesActionsActive(actionIds);
@@ -643,15 +632,15 @@
             setGroupHidden(group, !active);
         });
 
-        if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
-            window.illuSyncFreeCornersRibbonPlacement();
-        }
-        if (isMobileRibbon && typeof window.illuSyncMobileViewActions === 'function') {
-            window.illuSyncMobileViewActions();
-        }
-        if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
-            window.illuSyncMobileSelectionRibbonActions();
-        }
+         if (typeof window.illuSyncFreeCornersRibbonPlacement === 'function') {
+             window.illuSyncFreeCornersRibbonPlacement();
+         }
+         if (isMobileRibbon && typeof window.illuSyncMobileViewActions === 'function') {
+             window.illuSyncMobileViewActions();
+         }
+         if (typeof window.illuSyncMobileSelectionRibbonActions === 'function') {
+             window.illuSyncMobileSelectionRibbonActions();
+         }
 
         document.querySelectorAll('.illu-ribbon-groups--params .illu-ribbon-group').forEach((group) => {
             const id = group.dataset.illuRibbonGroup;
@@ -663,7 +652,7 @@
             } else {
                 if (id === 'size') active = paramIds.has('opt-grp-size-params');
                 else if (id === 'wand') {
-                    active = !isVectorDoc && paramIds.has('opt-grp-wand-params');
+                    active = paramIds.has('opt-grp-wand-params');
                 } else if (id === 'eyedropper') active = paramIds.has('opt-grp-eyedropper-params');
                 else if (id === 'fill') active = paramIds.has('opt-grp-fill-params');
                 else if (id === 'shape-angle') {
@@ -676,7 +665,7 @@
                 } else if (id === 'text-grad-angle') {
                     active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
                 } else if (id === 'warp') {
-                    active = !isVectorDoc && (paramIds.has('opt-grp-warp-params') || warpActive);
+                    active = (paramIds.has('opt-grp-warp-params') || warpActive);
                 } else if (id === 'vector-params') active = isVectorSelect && !suppressVectorContext;
                 else if (id === 'symmetry') active = paramIds.has('opt-grp-symmetry-params');
             }
@@ -691,6 +680,11 @@
         }
         if (typeof window.syncRibbonParamPackGaugeLayout === 'function') {
             window.syncRibbonParamPackGaugeLayout();
+        }
+        
+        // Dynamically scale MDI tab bar width based on newly applied tool option groups
+        if (typeof window.illuRecalculateTabBarWidth === 'function') {
+            window.illuRecalculateTabBarWidth();
         }
     };
 
