@@ -1,5 +1,12 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.110 (03/06/26)
+- Correction visuel divers
+       > Bouton W11/W10, 
+       > arrondie a coté de signaler bug affiché quand il ne falais pas
+       > Visuel de la barres des onglets
+- Passage automatique de la barre des onglet sous 930px sous la barre d'outils
+
 2.8.108 (02/06/26)
 - Revu emplacement des onglet comme paint.net, 
 - Correction gu lié a l'export Bitmap non fonctionne

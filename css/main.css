@@ -3876,7 +3876,7 @@ body.theme-dark .illu-sub-menubar {
     position: absolute !important;
     top: 10px !important;
     right: 5px !important;
-    z-index: 4000 !important;
+    z-index: 4800 !important;
     background: transparent !important;
     border: none !important;
     min-height: 70px !important;
@@ -3916,7 +3916,7 @@ body.theme-dark .illu-sub-menubar {
     min-width: 16px !important;
     min-height: 60px !important;
     border: none !important;
-    background: rgba(0, 0, 0, 0.05) !important;
+    background: rgba(var(--mp-accent-rgb), 0.2) !important;
     color: var(--mp-text, #ffffff) !important;
     cursor: pointer !important;
     /* Hidden by default! */
@@ -3927,6 +3927,8 @@ body.theme-dark .illu-sub-menubar {
     margin: 0 !important;
     z-index: 4010 !important;
     transition: background 0.15s ease, color 0.15s ease !important;
+    border: 1px solid var(--mp-accent) !important;
+    transition: all 0.2s ease !important;
 }
 
 .tab-bar-outer.tab-bar-has-overflow .tab-scroll-btn {
@@ -3938,10 +3940,10 @@ body.theme-dark .tab-scroll-btn {
     background: rgba(255, 255, 255, 0.06) !important;
     color: #dfdfdf !important;
 }
-
 .tab-scroll-btn:hover {
-    background: var(--mp-accent, #0078d7) !important;
-    color: #ffffff !important;
+    background: var(--mp-accent) !important; /* Le fond devient la couleur d'accent */
+    color: white !important;                 /* Texte contrasté */
+    box-shadow: 0 0 8px var(--mp-accent) !important; /* Effet lumineux (glow) */
 }
 
 .tab-scroll-btn:active {
@@ -4121,6 +4123,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
 }
 
 /* Dynamic gold gradient border for tab-groups containing 2 or more elements (parent tab + alpha mask tabs) */
+/* Dynamic gold gradient border for tab-groups containing 2 or more elements (parent tab + alpha mask tabs) */
 .tab-bar-inner .tab-group {
     border: none !important;
     /* Remove legacy JavaScript grey border by default */
@@ -4144,4 +4147,37 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
     pointer-events: none !important;
     z-index: 10 !important;
     box-shadow: 0 1px 4px rgba(245, 176, 65, 0.25) !important;
+}
+
+@media (max-width: 930px) {
+  
+
+  .tab-bar-outer {
+    /* On annule tes anciennes contraintes */
+    position: static !important; 
+        width: 100% !important;
+    max-width: 100% !important;
+    height: 40px !important;
+min-height: 40px !important;
+  }
+
+  #tab-bar {
+    flex-direction: row !important;
+
+  }
+  .tab-bar-inner .tab {
+    width: 100px !important;
+          height: 40px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        
+  }
+  .tab-bar-inner .tab .tab-thumb {
+width: 40px !important;
+    height: 25px !important;
+        margin-bottom:0px;
+  }
+  .tab-bar-inner .tab span {
+    color: black !important;
+  }
 }

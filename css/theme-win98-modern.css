@@ -5353,3 +5353,11 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) menu[role="menubar"]>li[role="
 body.theme-dark .illu-menubar-icon-btn {
     transform: none !important;
 }
+
+@media (max-width: 930px) {
+  
+
+  #tab-bar-outer { 
+  background: var(--mp-surface, #c0c0c0) !important; 
+}
+}

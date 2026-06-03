@@ -1154,6 +1154,17 @@ if (document.readyState === 'loading') {
 
 // Dynamic calculation of tab-bar-outer available width based on visible options in tool-options-container
 window.illuRecalculateTabBarWidth = function () {
+
+if (window.innerWidth <= 930) {
+        const tabBarOuter = document.getElementById('tab-bar-outer');
+        if (tabBarOuter) {
+            tabBarOuter.style.removeProperty('width');
+            tabBarOuter.style.removeProperty('max-width');
+        }
+        return; 
+    }
+
+
     const container = document.getElementById('tool-options-container');
     const tabBarOuter = document.getElementById('tab-bar-outer');
     if (!container || !tabBarOuter) return;
@@ -1189,7 +1200,7 @@ window.illuRecalculateTabBarWidth = function () {
 
     // Set the max-width and width of the MDI tab bar container dynamically!
     // Minimum width is 76px (1 tab card)
-    const finalWidth = Math.max(76, availableWidth) + 15;
+    const finalWidth = Math.max(76, availableWidth) + 10;
     tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
     tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
 
