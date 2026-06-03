@@ -68,6 +68,9 @@
         const baseFsr = fr / n;   // rotation maximale par step (intensité = 1)
 
         for (let y = sy; y < ey; y++) {
+            if (y % 20 === 0 && typeof opts.onProgress === 'function') {
+                opts.onProgress(Math.round(((y - sy) / (ey - sy)) * 100));
+            }
             for (let x = 0; x < w; x++) {
                 const si0 = (y * w + x) * 4;
 
@@ -190,6 +193,9 @@
         const N = 64; // PDN : constante 64 samples
 
         for (let y = sy; y < ey; y++) {
+            if (y % 20 === 0 && typeof opts.onProgress === 'function') {
+                opts.onProgress(Math.round(((y - sy) / (ey - sy)) * 100));
+            }
             for (let x = 0; x < w; x++) {
                 const si0 = (y * w + x) * 4;
 

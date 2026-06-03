@@ -20,9 +20,14 @@ var document = {
         return i >= 0 ? p.slice(0, i + 1) : '/';
     })();
     function illuWorkerImport(rel) {
-        const path = String(rel || '').replace(/^\//, '');
-        const url = path.startsWith('http') ? path : workerDir + path;
-        importScripts(url);
+        try {
+            const url = new URL(rel, self.location.href).href;
+            importScripts(url);
+        } catch (e) {
+            const path = String(rel || '').replace(/^\//, '');
+            const url = path.startsWith('http') ? path : workerDir + path;
+            importScripts(url);
+        }
     }
     const deps = [
         'radial-zoom-blur.js',
@@ -82,6 +87,17 @@ const FilterManager = {
     _margin: 0,
     _startY: 0,
     _endY: 0,
+
+    reportProgress(percent, label) {
+        if (this._jobId) {
+            self.postMessage({
+                type: 'progress',
+                jobId: this._jobId,
+                percent: percent,
+                message: label + ' (' + percent + '%)'
+            });
+        }
+    },
 
     _sampleBilinear(src, w, h, x, y) {
         if (x < 0) x = 0; if (y < 0) y = 0;
@@ -193,7 +209,11 @@ const FilterManager = {
         const tmp = new Uint8ClampedArray(rgba.length);
         const sy = FilterManager._startY || 0, ey = FilterManager._endY || h, margin = FilterManager._margin || 0;
         const safeSy = Math.max(0, sy - margin), safeEy = Math.min(h, ey + margin);
-        for (let y = safeSy; y < safeEy; y++) {
+        
+        // Horizontal pass must calculate y values expanded by the radius to provide data for the vertical pass
+        const horizSy = Math.max(0, safeSy - radius);
+        const horizEy = Math.min(h, safeEy + radius);
+        for (let y = horizSy; y < horizEy; y++) {
             let r=0,g=0,b=0,a=0,ws=0; const ro = y * w * 4;
             for (let x = -radius; x <= radius; x++) { const ix = Math.max(0, Math.min(w-1, x)); const o = ro + ix*4; r+=rgba[o]; g+=rgba[o+1]; b+=rgba[o+2]; a+=rgba[o+3]; ws++; }
             for (let x = 0; x < w; x++) {
@@ -325,10 +345,12 @@ const FilterManager = {
             if (n < 1) return 0;
             return Math.max(1, Math.round(pxU(n)));
         };
-        const geometricOutput = (mapFn) => {
+        const geometricOutput = (mapFn, label = "Déformation géométrique") => {
             const out = new ImageData(w, h); const od = out.data; const cx = w / 2, cy = h / 2, maxR = Math.hypot(cx, cy) || 1;
             const sy = FilterManager._startY || 0, ey = FilterManager._endY || h;
+            const total = ey - sy;
             for (let y = sy; y < ey; y++) {
+                if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), label);
                 for (let x = 0; x < w; x++) {
                     const [sx, sy_] = mapFn(x, y, cx, cy, maxR); const [r, g, b, a] = this._sampleBilinear(srcOrig, w, h, sx, sy_);
                     const i = (y * w + x)*4; od[i]=r; od[i+1]=g; od[i+2]=b; od[i+3]=a;
@@ -343,8 +365,8 @@ const FilterManager = {
             try {
                 const res = MasterPaintWasm.applyFilter(this.currentEffect, new ImageData(new Uint8ClampedArray(srcOrig), w, h), {
                     ...vals,
-                    startY: sy,
-                    endY: ey,
+                    startY: FilterManager._margin ? Math.max(0, sy - FilterManager._margin) : sy,
+                    endY: FilterManager._margin ? Math.min(h, ey + FilterManager._margin) : ey,
                     ps: ps,
                     // Generic mappings for common Wasm parameters
                     radius: pxRad(val('ef-rad') || 2),
@@ -385,7 +407,9 @@ const FilterManager = {
             case 'brightness': { 
                 const br=val('ef-b')||val('ef-br')||0, co=val('ef-c')||val('ef-co')||0; 
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data, f=(259*(co+255))/(255*(259-co));
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Ajustement de la luminosité");
                     for(let c=0; c<3; c++) d_[i+c]=Math.max(0, Math.min(255, f*(d_[i+c]+br-128)+128));
                 }
                 this.ctx.putImageData(img,0,0); return; 
@@ -435,7 +459,9 @@ const FilterManager = {
                 const d_ = img.data;
 
                 if (dither > 0 && colors.length > 0) {
+                    const total = ey - sy;
                     for (let y = sy; y < ey; y++) {
+                        if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Conversion RAL (dither)");
                         for (let x = 0; x < w; x++) {
                             const i = (y * w + x) * 4;
                             const a = d_[i + 3];
@@ -482,7 +508,9 @@ const FilterManager = {
                         }
                     }
                 } else if (colors.length > 0) {
+                    const total = ey - sy;
                     for (let y = sy; y < ey; y++) {
+                        if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Conversion RAL");
                         for (let x = 0; x < w; x++) {
                             const i = (y * w + x) * 4;
                             const a = d_[i + 3];
@@ -507,7 +535,9 @@ const FilterManager = {
                 const iy = { r: 1.0, g: 0.94, b: 0.0 };
                 const ik = { r: 0.1, g: 0.1, b: 0.1 };
 
-                for (let i = sy * w * 4; i < ey * w * 4; i += 4) {
+                const startIdx = sy * w * 4, endIdx = ey * w * 4, total = endIdx - startIdx || 1;
+                for (let i = startIdx; i < endIdx; i += 4) {
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Conversion CMJN");
                     if (d_[i + 3] < 128) continue;
                     
                     const r = d_[i], g = d_[i + 1], b = d_[i + 2];
@@ -547,9 +577,9 @@ const FilterManager = {
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
                 const d_ = img.data;
 
-                const radiusSq = width * width;
-
+                const total = ey - sy;
                 for (let y = sy; y < ey; y++) {
+                    if (y % 20 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Tracé des contours");
                     for (let x = 0; x < w; x++) {
                         const i = (y * w + x) * 4;
                         const currentAlpha = srcOrig[i + 3];
@@ -648,7 +678,9 @@ const FilterManager = {
             }
             case 'grayscale': {
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Niveaux de gris");
                     const l = 0.299*d_[i]+0.587*d_[i+1]+0.114*d_[i+2];
                     d_[i]=d_[i+1]=d_[i+2]=l;
                 }
@@ -656,14 +688,18 @@ const FilterManager = {
             }
             case 'invert': {
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Inversion");
                     d_[i]=255-d_[i]; d_[i+1]=255-d_[i+1]; d_[i+2]=255-d_[i+2];
                 }
                 this.ctx.putImageData(img,0,0); return;
             }
             case 'sepia': {
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Effet Sépia");
                     const r=d_[i], g=d_[i+1], b=d_[i+2];
                     d_[i]=Math.min(255, (r*0.393)+(g*0.769)+(b*0.189));
                     d_[i+1]=Math.min(255, (r*0.349)+(g*0.686)+(b*0.168));
@@ -674,7 +710,9 @@ const FilterManager = {
             case 'exposure': {
                 const exp=(val('ef-exp')||100)/100, gam=(val('ef-gamma')||100)/100, invG=gam>.05?1/gam:1;
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Exposition & Gamma");
                     for(let c=0; c<3; c++) {
                         let v = Math.min(255, Math.max(0, d_[i+c]*exp));
                         d_[i+c]=Math.min(255, Math.max(0, Math.round(Math.pow(v/255, invG)*255)));
@@ -687,7 +725,10 @@ const FilterManager = {
                 const rad = pxRad(val('ef-rad')||2);
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h);
                 const passes = FilterManager.currentEffect === 'gaussian' ? 3 : 1;
-                for (let p = 0; p < passes; p++) this._boxBlurRGBA(img.data, w, h, rad);
+                for (let p = 0; p < passes; p++) {
+                    this._boxBlurRGBA(img.data, w, h, rad);
+                    this.reportProgress(Math.round(((p + 1) / passes) * 100), "Flou");
+                }
                 this.ctx.putImageData(img, 0, 0); return;
             }
             case 'median': {
@@ -697,7 +738,9 @@ const FilterManager = {
                 const od   = imgD.data;
                 const rad  = Math.max(1, Math.min(8, parseInt(vals['ef-med-rad'] || '2', 10)));
                 const strength = (parseFloat(vals['ef-med-str'] ?? '100') / 100) * 0.2;
+                const total = ey - sy;
                 for (let y = sy; y < ey; y++) {
+                    if (y % 10 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Réduction du bruit");
                     for (let x = 0; x < w; x++) {
                         const hr = new Int32Array(256);
                         const hg = new Int32Array(256);
@@ -733,7 +776,9 @@ const FilterManager = {
             case 'oil': {
                 const R = pxInt(val('ef-oil')||4);
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), od=img.data, src=new Uint8ClampedArray(srcOrig);
+                const total = ey - sy;
                 for(let y=sy; y<ey; y++){
+                    if (y % 10 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Peinture à l'huile");
                     for(let x=0; x<w; x++){
                         const hist=new Array(512).fill(0), sR=new Array(512).fill(0), sG=new Array(512).fill(0), sB=new Array(512).fill(0);
                         for(let dy=-R; dy<=R; dy++){
@@ -759,9 +804,9 @@ const FilterManager = {
             case 'polarInvert': geometricOutput((x,y,cx,cy,maxR)=>{ const dX=x-cx, dY=y-cy, r=Math.hypot(dX,dY), th=Math.atan2(dY,dX), amt=val('ef-polar')/100; const rS=r*(1-amt)+(maxR-r)*amt; return [cx+rS*Math.cos(th), cy+rS*Math.sin(th)]; }); return;
             case 'tileReflect': geometricOutput((x,y)=>{ const T=Math.max(4, pxInt(val('ef-tile'))); const qx=Math.floor(x/T), qy=Math.floor(y/T); let tx=x-qx*T, ty=y-qy*T; const mx=tx<T/2?tx:T-1-tx, my=ty<T/2?ty:T-1-ty; return [qx*T+mx, qy*T+my]; }); return;
             case 'wave': geometricOutput((x,y)=>{ const amp=pxU(val('ef-wave-a')||12), frq=val('ef-wave-f')||14, k=(2*Math.PI)/frq; return [x+amp*Math.sin(y*k), y+amp*Math.cos(x*k)]; }); return;
-            case 'chromatic': { const sh=pxInt(val('ef-chr')||6); const out=new ImageData(w,h); for(let y=sy; y<ey; y++) { for(let x=0; x<w; x++) { const r=this._sampleBilinear(srcOrig,w,h,x-sh,y)[0], g=this._sampleBilinear(srcOrig,w,h,x,y)[1], b=this._sampleBilinear(srcOrig,w,h,x+sh,y)[2], a=this._sampleBilinear(srcOrig,w,h,x,y)[3]; const i=(y*w+x)*4; out.data[i]=r; out.data[i+1]=g; out.data[i+2]=b; out.data[i+3]=a; } } this.ctx.putImageData(out,0,0); return; }
-            case 'crystallize': { const cell=pxInt(val('ef-cry')||12); const out=new ImageData(w,h), d_=out.data; for(let yy=0; yy<h; yy+=cell) { for(let xx=0; xx<w; xx+=cell) { const si=(Math.min(h-1,yy+cell/2|0)*w+Math.min(w-1,xx+cell/2|0))*4, vr=srcOrig[si], vg=srcOrig[si+1], vb=srcOrig[si+2], va=srcOrig[si+3]; for(let dy=0; dy<cell && yy+dy<h; dy++) { const cy=yy+dy; if(cy<sy||cy>=ey) continue; for(let dx=0; dx<cell && xx+dx<w; dx++) { const di=(cy*w+xx+dx)*4; d_[di]=vr; d_[di+1]=vg; d_[di+2]=vb; d_[di+3]=va; } } } } this.ctx.putImageData(out,0,0); return; }
-            case 'softglow': { const r=pxRad(val('ef-glow-r')||6), am=(val('ef-glow-a')||40)/100; const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), blur=new Uint8ClampedArray(srcOrig); this._boxBlurRGBA(blur,w,h,r); for(let i=sy*w*4; i<ey*w*4; i+=4){ img.data[i]=Math.min(255,img.data[i]+blur[i]*am); img.data[i+1]=Math.min(255,img.data[i+1]+blur[i+1]*am); img.data[i+2]=Math.min(255,img.data[i+2]+blur[i+2]*am); } this.ctx.putImageData(img,0,0); return; }
+            case 'chromatic': { const sh=pxInt(val('ef-chr')||6); const out=new ImageData(w,h); const total = ey - sy; for(let y=sy; y<ey; y++) { if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Aberration chromatique"); for(let x=0; x<w; x++) { const r=this._sampleBilinear(srcOrig,w,h,x-sh,y)[0], g=this._sampleBilinear(srcOrig,w,h,x,y)[1], b=this._sampleBilinear(srcOrig,w,h,x+sh,y)[2], a=this._sampleBilinear(srcOrig,w,h,x,y)[3]; const i=(y*w+x)*4; out.data[i]=r; out.data[i+1]=g; out.data[i+2]=b; out.data[i+3]=a; } } this.ctx.putImageData(out,0,0); return; }
+            case 'crystallize': { const cell=pxInt(val('ef-cry')||12); const out=new ImageData(w,h), d_=out.data; for(let yy=0; yy<h; yy+=cell) { if (yy % 40 === 0) this.reportProgress(Math.round((yy / h) * 100), "Cristallisation"); for(let xx=0; xx<w; xx+=cell) { const si=(Math.min(h-1,yy+cell/2|0)*w+Math.min(w-1,xx+cell/2|0))*4, vr=srcOrig[si], vg=srcOrig[si+1], vb=srcOrig[si+2], va=srcOrig[si+3]; for(let dy=0; dy<cell && yy+dy<h; dy++) { const cy=yy+dy; if(cy<sy||cy>=ey) continue; for(let dx=0; dx<cell && xx+dx<w; dx++) { const di=(cy*w+xx+dx)*4; d_[di]=vr; d_[di+1]=vg; d_[di+2]=vb; d_[di+3]=va; } } } } this.ctx.putImageData(out,0,0); return; }
+            case 'softglow': { const r=pxRad(val('ef-glow-r')||6), am=(val('ef-glow-a')||40)/100; const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), blur=new Uint8ClampedArray(srcOrig); this._boxBlurRGBA(blur,w,h,r); const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1; for(let i=startIdx; i<endIdx; i+=4){ if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Lueur diffuse"); img.data[i]=Math.min(255,img.data[i]+blur[i]*am); img.data[i+1]=Math.min(255,img.data[i+1]+blur[i+1]*am); img.data[i+2]=Math.min(255,img.data[i+2]+blur[i+2]*am); } this.ctx.putImageData(img,0,0); return; }
             case 'vignette': { 
                 const vig=val('ef-vig')/100, cx=w/2, cy=h/2, maxR=Math.hypot(cx,cy)||1;
                 const colorStr = vals['ef-vig-color'] || '#000000';
@@ -771,7 +816,9 @@ const FilterManager = {
                 const blend = parseInt(vals['ef-vig-blend'] || 0, 10);
                 
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data; 
+                const total = ey - sy;
                 for(let y=sy; y<ey; y++){ 
+                    if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Vignettage");
                     for(let x=0; x<w; x++){ 
                         const dist = Math.hypot(x-cx, y-cy);
                         let normDist = dist / maxR;
@@ -810,11 +857,13 @@ const FilterManager = {
                 } 
                 this.ctx.putImageData(img,0,0); return; 
             }
-            case 'sharpen': { const amt=val('ef-sharp')/100, rad=pxRad(val('ef-sharp-r')||1); const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), blur=new Uint8ClampedArray(srcOrig); this._boxBlurRGBA(blur,w,h,rad); for(let i=sy*w*4; i<ey*w*4; i+=4){ for(let c=0; c<3; c++) img.data[i+c]=Math.max(0,Math.min(255,srcOrig[i+c]+(srcOrig[i+c]-blur[i+c])*amt)); } this.ctx.putImageData(img,0,0); return; }
+            case 'sharpen': { const amt=val('ef-sharp')/100, rad=pxRad(val('ef-sharp-r')||1); const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), blur=new Uint8ClampedArray(srcOrig); this._boxBlurRGBA(blur,w,h,rad); const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1; for(let i=startIdx; i<endIdx; i+=4){ if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Ajustement netteté"); for(let c=0; c<3; c++) img.data[i+c]=Math.max(0,Math.min(255,srcOrig[i+c]+(srcOrig[i+c]-blur[i+c])*amt)); } this.ctx.putImageData(img,0,0); return; }
             case 'hsv': {
                 const h_=val('ef-h'), s_=val('ef-s'), l_=val('ef-l'), img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data, pm=FilterManager._hsvMixParams||{};
                 const hasM = (pm.hslHue && pm.hslHue.some(v=>v!==0)) || (pm.hslSat && pm.hslSat.some(v=>v!==0)) || (pm.hslLum && pm.hslLum.some(v=>v!==0));
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Teinte Saturation Lum.");
                     if(hasM){
                         let hsl=this.rgbToTrueHsl(d_[i],d_[i+1],d_[i+2]); const wgt=this.getHslWeightsFast(hsl.h);
                         const hS=pm.hslHue?(pm.hslHue[wgt.i1]*wgt.w1+pm.hslHue[wgt.i2]*wgt.w2):0, sS=pm.hslSat?(pm.hslSat[wgt.i1]*wgt.w1+pm.hslSat[wgt.i2]*wgt.w2):0, lS=pm.hslLum?(pm.hslLum[wgt.i1]*wgt.w1+pm.hslLum[wgt.i2]*wgt.w2):0;
@@ -830,7 +879,10 @@ const FilterManager = {
             case 'digitalpattern': {
                 const str = val('ef-grain') / 100, cell = Math.max(2, pxInt(val('ef-grain-fine')));
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
-                for (let y = sy; y < ey; y++) { for (let x = 0; x < w; x++) {
+                const total = ey - sy;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Grain numérique");
+                    for (let x = 0; x < w; x++) {
                     const n = this._grainNoise((x / cell) | 0, (y / cell) | 0) * str * 64, i = (y * w + x) * 4;
                     for (let c = 0; c < 3; c++) d_[i + c] = Math.min(255, Math.max(0, d_[i + c] + n));
                 } }
@@ -839,7 +891,10 @@ const FilterManager = {
             case 'halftone': {
                 const dotSize = pxInt(val('ef-half-rad')) * 1.5, freq = (2 * Math.PI) / dotSize, angle = Math.PI / 4, cosA = Math.cos(angle), sinA = Math.sin(angle);
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
-                for (let y = sy; y < ey; y++) { for (let x = 0; x < w; x++) {
+                const total = ey - sy;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Demi-teintes");
+                    for (let x = 0; x < w; x++) {
                     const luma = (0.299 * d_[((y*w+x)*4)] + 0.587 * d_[((y*w+x)*4)+1] + 0.114 * d_[((y*w+x)*4)+2]) / 255;
                     const rotX = x * cosA - y * sinA, rotY = x * sinA + y * cosA;
                     const pattern = (Math.sin(rotX * freq) + Math.sin(rotY * freq)) / 2, thresh = (pattern + 1) / 2, v = luma >= thresh ? 255 : 0, i = (y * w + x) * 4;
@@ -850,7 +905,9 @@ const FilterManager = {
             case 'duotone': {
                 const c1 = this._parseHexColor(vals['ef-duo-c1'] || '#1a0533'), c2 = this._parseHexColor(vals['ef-duo-c2'] || '#fff5e0'), piv = val('ef-duo-mid') || 128;
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
-                for (let i = sy * w * 4; i < ey * w * 4; i += 4) {
+                const startIdx = sy * w * 4, endIdx = ey * w * 4, total = endIdx - startIdx || 1;
+                for (let i = startIdx; i < endIdx; i += 4) {
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Bicontraste");
                     const l = (0.299 * d_[i] + 0.587 * d_[i + 1] + 0.114 * d_[i + 2]);
                     const t = l < piv ? (l / piv) * 0.5 : 0.5 + ((l - piv) / (256 - piv)) * 0.5;
                     d_[i] = c1.r + t * (c2.r - c1.r); d_[i + 1] = c1.g + t * (c2.g - c1.g); d_[i + 2] = c1.b + t * (c2.b - c1.b);
@@ -861,7 +918,10 @@ const FilterManager = {
                 const sens = (val('ef-edge')||50)/100, img = new ImageData(w, h), d_ = img.data;
                 const gray = new Float32Array(w * h); for (let j = 0; j < w * h; j++) gray[j] = 0.299 * srcOrig[j * 4] + 0.587 * srcOrig[j * 4 + 1] + 0.114 * srcOrig[j * 4 + 2];
                 const g = (xx, yy) => (xx >= 0 && xx < w && yy >= 0 && yy < h) ? gray[yy * w + xx] : 0;
-                for (let y = sy; y < ey; y++) { for (let x = 0; x < w; x++) {
+                const total = ey - sy;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Détection des contours");
+                    for (let x = 0; x < w; x++) {
                     const h_ = g(x - 1, y - 1) + 2 * g(x - 1, y) + g(x - 1, y + 1) - (g(x + 1, y - 1) + 2 * g(x + 1, y) + g(x + 1, y + 1));
                     const v_ = g(x - 1, y - 1) + 2 * g(x, y - 1) + g(x + 1, y - 1) - (g(x - 1, y + 1) + 2 * g(x, y + 1) + g(x + 1, y + 1));
                     const edge = Math.sqrt(h_ * h_ + v_ * v_), i = (y * w + x) * 4;
@@ -874,7 +934,9 @@ const FilterManager = {
                 const kr=Math.max(0,Math.min(255,val('ef-ch-r'))), kg=Math.max(0,Math.min(255,val('ef-ch-g'))), kb=Math.max(0,Math.min(255,val('ef-ch-b')));
                 const p={ tolerance:val('ef-ch-tol')||30, drift:val('ef-ch-drift'), feather:val('ef-ch-feather'), clipBlack:val('ef-ch-black'), clipWhite:vals['ef-ch-white']!==undefined?val('ef-ch-white'):100, gamma:val('ef-ch-gamma')||1.0, spill:val('ef-ch-spill') };
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data;
-                for(let i=sy*w*4; i<ey*w*4; i+=4){
+                const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
+                for(let i=startIdx; i<endIdx; i+=4){
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Incrustation couleur");
                     const k_=ChromaKeyer.computeMatte(d_[i],d_[i+1],d_[i+2],kr,kg,kb,p); d_[i+3]=Math.round(d_[i+3]*k_);
                     if(p.spill>0 && d_[i+3]>0){ const rr_=ChromaKeyer.applyDespill(d_[i],d_[i+1],d_[i+2],kr,kg,kb,p.spill); d_[i]=rr_[0]; d_[i+1]=rr_[1]; d_[i+2]=rr_[2]; }
                 }
@@ -1033,7 +1095,8 @@ const FilterManager = {
                     offsetX:     (parseFloat(vals['ef-rblur-ox'] ?? 0)) / 100,
                     offsetY:     (parseFloat(vals['ef-rblur-oy'] ?? 0)) / 100,
                     startY:      sy,
-                    endY:        ey
+                    endY:        ey,
+                    onProgress:  (percent) => this.reportProgress(percent, "Flou radial")
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -1050,7 +1113,8 @@ const FilterManager = {
                     offsetX:     (parseFloat(vals['ef-zblur-ox'] ?? 0)) / 100,
                     offsetY:     (parseFloat(vals['ef-zblur-oy'] ?? 0)) / 100,
                     startY:      sy,
-                    endY:        ey
+                    endY:        ey,
+                    onProgress:  (percent) => this.reportProgress(percent, "Flou de zoom")
                 });
                 this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
                 return;
@@ -1062,11 +1126,14 @@ const FilterManager = {
                 const tensionUi = parseFloat(vals['ef-cab-tension']) || 10;
                 const qUi = parseFloat(vals['ef-cab-q']) || 2;
                 const seed = (vals._cabossageSeed != null ? vals._cabossageSeed : this._cabossageSeed) >>> 0;
+                this.reportProgress(10, "Génération de la carte de hauteur");
                 const H = this._buildCabossageHeightField(w, h, scaleUi, roughUi, tensionUi, qUi, seed);
                 const str = (refrUi / 100) * Math.min(w, h) * 0.1;
                 const out = new ImageData(w, h);
                 const od = out.data;
+                const total = ey - sy;
                 for (let y = sy; y < ey; y++) {
+                    if (y % 20 === 0) this.reportProgress(Math.min(99, Math.round(15 + ((y - sy) / total) * 84)), "Déformation des pixels");
                     for (let x = 0; x < w; x++) {
                         const i = y * w + x;
                         let hx = 0;
@@ -1077,7 +1144,7 @@ const FilterManager = {
                         if (y > 0 && y < h - 1) hy = (H[i + w] - H[i - w]) * 0.5;
                         else if (y > 0) hy = H[i] - H[i - w];
                         else if (y < h - 1) hy = H[i + w] - H[i];
-
+ 
                         const di = i * 4;
                         const sx = x + hx * str;
                         const sy_ = y + hy * str;

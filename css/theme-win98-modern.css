@@ -945,7 +945,7 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
 #illu-instant-effect-busy:not([hidden]) {
     position: fixed;
     inset: 0;
-    z-index: 40200;
+    z-index: 4999;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5354,7 +5354,7 @@ body.theme-dark .illu-menubar-icon-btn {
     transform: none !important;
 }
 
-@media (max-width: 930px) {
+@media (max-width: 770px) {
   
 
   #tab-bar-outer { 

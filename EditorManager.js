@@ -4880,6 +4880,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (typeof window.illuAfterImportActivateDeformTool === 'function') {
                 window.illuAfterImportActivateDeformTool(opts);
             }
+            if (importOpts.onComplete) importOpts.onComplete();
         };
 
         const finishNewLayerImport = () => {
@@ -4908,6 +4909,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const btnLayer = document.getElementById('btn-import-layer');
         if (btnLayer) {
             btnLayer.onclick = () => {
+                window._illuGlobalImportChoice = 'layer';
                 finishNewLayerImport();
             };
         }
@@ -4915,6 +4917,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const btnCur = document.getElementById('btn-import-current');
         if (btnCur) {
             btnCur.onclick = () => {
+                window._illuGlobalImportChoice = 'current';
                 overlay.style.display = 'none';
                 if (overlayOversize) overlayOversize.style.display = 'none';
                 const hist = fromInternalClipboard ? 'Coller (calque actif)' : 'Import sur calque actif';
@@ -4943,9 +4946,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const btnTab = document.getElementById('btn-import-tab');
         if (btnTab) {
             btnTab.onclick = () => {
+                window._illuGlobalImportChoice = 'tab';
                 overlay.style.display = 'none';
                 if (overlayOversize) overlayOversize.style.display = 'none';
                 this.handleNewProjectFromImage(img);
+                if (importOpts.onComplete) importOpts.onComplete();
             };
         }
     },
@@ -5241,6 +5246,38 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         let pasteIw = iw;
         let pasteIh = ih;
+        
+        // --- Fix for Oversize Import Cropping ---
+        // If the imported image is larger than the document, scale it down to fit.
+        // This prevents the image from being permanently cropped to a "small square in the center".
+        let scaleDown = 1;
+        if (pasteIw > W || pasteIh > H) {
+            scaleDown = Math.min(W / pasteIw, H / pasteIh);
+            pasteIw = Math.max(1, Math.round(pasteIw * scaleDown));
+            pasteIh = Math.max(1, Math.round(pasteIh * scaleDown));
+            
+            const scaledScratch = document.createElement('canvas');
+            scaledScratch.width = pasteIw;
+            scaledScratch.height = pasteIh;
+            const scaledCtx = scaledScratch.getContext('2d', { willReadFrequently: true });
+            if (scaledCtx) {
+                scaledCtx.imageSmoothingQuality = 'high';
+                scaledCtx.drawImage(scratch, 0, 0, pasteIw, pasteIh);
+            }
+            // Replace scratch with scaled version
+            scratch.width = pasteIw;
+            scratch.height = pasteIh;
+            const sctxNew = scratch.getContext('2d', { willReadFrequently: true });
+            sctxNew.clearRect(0, 0, pasteIw, pasteIh);
+            sctxNew.drawImage(scaledScratch, 0, 0);
+            
+            // Re-center docX and docY
+            if (!opts.pasteDocBounds && !opts.pasteProjectId) {
+                docX = Math.round((W - pasteIw) / 2);
+                docY = Math.round((H - pasteIh) / 2);
+            }
+        }
+
         if (typeof window.illuTightenPasteCanvas === 'function') {
             const tightened = window.illuTightenPasteCanvas(scratch, docX, docY);
             if (tightened && tightened.canvas) {

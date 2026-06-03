@@ -3548,7 +3548,7 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
 
     if (img && img.src) {
         bgDiv.style.backgroundImage = `url("${img.src}")`;
-        overlay.style.backgroundColor = 'rgba(var(--mp-accent-rgb), 0.3)';
+        overlay.style.backgroundColor = 'color-mix(in srgb, rgba(var(--mp-accent-rgb), 0.3), white 40%)';
         
         // --- Calcul de l'intensité (Luminosité + Couleurs vives) ---
         let brightnessFilter = 1; // Valeur par défaut

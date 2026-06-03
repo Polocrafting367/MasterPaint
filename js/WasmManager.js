@@ -79,18 +79,21 @@ class WasmManager {
     /**
      * Ensure we have enough memory for an image of size (w * h)
      */
-    _prepareBuffers(width, height) {
-        const requiredSize = width * height * 4;
+    _prepareBuffers(width, height, isFloat = false) {
+        const inputSize = width * height * 4 * (isFloat ? 4 : 1);
+        const outputSize = width * height * 4;
+        const requiredSize = Math.max(inputSize, outputSize);
         
-        if (this.bufferSize >= requiredSize && this.hslPtr) return;
+        if (this.bufferSize >= requiredSize && this.hslPtr && this.lastIsFloat === isFloat) return;
         
         // Base heap start after module static data
         this.inputPtr = 65536; 
-        this.outputPtr = this.inputPtr + requiredSize + 1024;
-        this.hslPtr = this.outputPtr + requiredSize + 1024; // 96 bytes for 24 floats
+        this.outputPtr = this.inputPtr + inputSize + 1024;
+        this.hslPtr = this.outputPtr + outputSize + 1024; // 96 bytes for 24 floats
         this.lutPtr = this.hslPtr + 1024; // 1024 bytes for 4 LUTs
         
         this.bufferSize = requiredSize;
+        this.lastIsFloat = isFloat;
         
         const totalRequiredMemory = this.lutPtr + 2048;
         const currentPages = this.memory.buffer.byteLength / 65536;
@@ -101,7 +104,7 @@ class WasmManager {
         }
     }
 
-    applyCameraRaw(imageData, params = {}) {
+    applyCameraRaw(imageData, params = {}, width = 0, height = 0) {
         if (!this.isLoaded) return null;
 
         // Respect Wasm toggle
@@ -109,11 +112,20 @@ class WasmManager {
             return null;
         }
 
-        const { width, height } = imageData;
-        this._prepareBuffers(width, height);
+        const isFloat = imageData instanceof Float32Array || (imageData && imageData.constructor && imageData.constructor.name === 'Float32Array');
+        const w = isFloat ? width : imageData.width;
+        const h = isFloat ? height : imageData.height;
+        const data = isFloat ? imageData : imageData.data;
+
+        this._prepareBuffers(w, h, isFloat);
         
-        const inputView = new Uint8Array(this.memory.buffer, this.inputPtr, width * height * 4);
-        inputView.set(imageData.data);
+        if (isFloat) {
+            const inputView = new Float32Array(this.memory.buffer, this.inputPtr, w * h * 4);
+            inputView.set(data);
+        } else {
+            const inputView = new Uint8Array(this.memory.buffer, this.inputPtr, w * h * 4);
+            inputView.set(data);
+        }
 
         // Map HSL Mixer params (8 bands * 3 values)
         if (params.hsvMixParams) {
@@ -148,39 +160,70 @@ class WasmManager {
         };
 
         const startY = Math.max(0, params.startY || 0);
-        const endY = Math.min(height, params.endY || height);
-        if (startY >= endY) return imageData;
+        const endY = Math.min(h, params.endY || h);
+        if (startY >= endY) return isFloat ? new Uint8ClampedArray(w * h * 4) : imageData;
 
         // Safety check for pointers
         const safeHslPtr = (params.hsvMixParams && this.hslPtr) ? this.hslPtr : 0;
         const safeLutPtr = (params.cbParams && this.lutPtr) ? this.lutPtr : 0;
 
         try {
-            // Export AssemblyScript @varargs : doit recevoir le nombre d’arguments JS (24 ici).
-            if (typeof this.exports.__setArgumentsLength === 'function') {
-                this.exports.__setArgumentsLength(24);
+            if (isFloat) {
+                if (typeof this.exports.__setArgumentsLength === 'function') {
+                    this.exports.__setArgumentsLength(27);
+                }
+                this.exports.applyCameraRawFloat(
+                    this.inputPtr,
+                    this.outputPtr,
+                    w,
+                    h,
+                    sanitize(params.exposure),
+                    sanitize(params.contrast),
+                    sanitize(params.highlights),
+                    sanitize(params.shadows),
+                    sanitize(params.whites),
+                    sanitize(params.blacks),
+                    sanitize(params.temperature !== undefined ? params.temperature : params.temp),
+                    sanitize(params.tint),
+                    sanitize(params.vibrance),
+                    sanitize(params.saturation),
+                    // Split Toning
+                    sanitize(params.red), sanitize(params.redHi), sanitize(params.redSh),
+                    sanitize(params.green), sanitize(params.greenHi), sanitize(params.greenSh),
+                    sanitize(params.blue), sanitize(params.blueHi), sanitize(params.blueSh),
+                    safeHslPtr,
+                    safeLutPtr,
+                    startY,
+                    endY
+                );
+            } else {
+                if (typeof this.exports.__setArgumentsLength === 'function') {
+                    this.exports.__setArgumentsLength(26);
+                }
+                this.exports.applyCameraRaw(
+                    this.inputPtr,
+                    w,
+                    h,
+                    sanitize(params.exposure),
+                    sanitize(params.contrast),
+                    sanitize(params.highlights),
+                    sanitize(params.shadows),
+                    sanitize(params.whites),
+                    sanitize(params.blacks),
+                    sanitize(params.temperature !== undefined ? params.temperature : params.temp),
+                    sanitize(params.tint),
+                    sanitize(params.vibrance),
+                    sanitize(params.saturation),
+                    // Split Toning
+                    sanitize(params.red), sanitize(params.redHi), sanitize(params.redSh),
+                    sanitize(params.green), sanitize(params.greenHi), sanitize(params.greenSh),
+                    sanitize(params.blue), sanitize(params.blueHi), sanitize(params.blueSh),
+                    safeHslPtr,
+                    safeLutPtr,
+                    startY,
+                    endY
+                );
             }
-            this.exports.applyCameraRaw(
-                this.inputPtr,
-                width,
-                height,
-                sanitize(params.exposure),
-                sanitize(params.contrast),
-                sanitize(params.highlights),
-                sanitize(params.shadows),
-                sanitize(params.temperature !== undefined ? params.temperature : params.temp),
-                sanitize(params.tint),
-                sanitize(params.vibrance),
-                sanitize(params.saturation),
-                // Split Toning
-                sanitize(params.red), sanitize(params.redHi), sanitize(params.redSh),
-                sanitize(params.green), sanitize(params.greenHi), sanitize(params.greenSh),
-                sanitize(params.blue), sanitize(params.blueHi), sanitize(params.blueSh),
-                safeHslPtr,
-                safeLutPtr,
-                startY,
-                endY
-            );
         } catch (wasmErr) {
             if (!this._cameraRawWasmWarned) {
                 console.warn('[Wasm Engine] applyCameraRaw indisponible, repli CPU/WebGL :', wasmErr);
@@ -189,9 +232,13 @@ class WasmManager {
             return null;
         }
         
-        const resultView = new Uint8ClampedArray(this.memory.buffer, this.inputPtr, width * height * 4);
-        imageData.data.set(resultView);
-        return imageData;
+        if (isFloat) {
+            return new Uint8ClampedArray(this.memory.buffer, this.outputPtr, w * h * 4);
+        } else {
+            const resultView = new Uint8ClampedArray(this.memory.buffer, this.inputPtr, w * h * 4);
+            imageData.data.set(resultView);
+            return imageData;
+        }
     }
 
     applyFilter(type, imageData, params = {}) {
@@ -238,9 +285,6 @@ class WasmManager {
             const levels = params.levels || 4;
             this.exports.posterize(this.inputPtr, width, height, levels, startY, endY);
             targetOutPtr = this.inputPtr;
-        } else if (type === 'blur') {
-            const radius = params.radius || 1;
-            this.exports.boxBlur(this.inputPtr, this.outputPtr, width, height, radius, startY, endY);
         } else if (type === 'pinch') {
             const amount = params.amount || 1.5;
             this.exports.pinch(this.inputPtr, this.outputPtr, width, height, amount, startY, endY);
@@ -330,7 +374,7 @@ class WasmManager {
     isEffectSupported(type) {
         const supported = [
             'chromatic', 'wave', 'twist', 'brightness', 'contrast', 
-            'invert', 'grayscale', 'posterize', 'blur', 'pinch', 
+            'invert', 'grayscale', 'posterize', 'pinch', 
             'vignette', 'crystallize', 'softglow', 'orderedDither', 'pixelate',
             'sepia', 'exposure', 'halftone', 'edges', 'scanlines',
             'oilPainting', 'relief', 'frostedGlass', 'redEyeRemove'

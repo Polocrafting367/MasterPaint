@@ -1616,7 +1616,6 @@ body.illu-toolbar-ribbon .illu-grad-method-group {
 }
 
 body.illu-toolbar-ribbon #tool-options-container .illu-mode-toggle-btn.illu-icon-toggle {
-    width: auto !important;
     height: auto !important;
 }
 
@@ -2226,7 +2225,7 @@ body.illu-toolbar-ribbon:not(.illu-mobile-ui)
     min-width: 52px !important;
     height: 27px !important;
     min-height: 27px !important;
-    padding: 2px 6px !important;
+    padding: 0 0 0 4px !important;
     gap: 5px !important;
     box-sizing: border-box !important;
 }

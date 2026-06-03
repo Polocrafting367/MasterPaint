@@ -371,6 +371,7 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0;
     box-sizing: border-box;
     color: #eee;
@@ -437,9 +438,41 @@ body.illu-photo-mode-active #app-status-bar button:hover {
     color: var(--mp-text);
 }
 
-.illu-pm-row span.val {
+.illu-pm-row span.val,
+.illu-pm-row input.val-input {
     color: var(--mp-accent);
     font-weight: bold;
+}
+
+.illu-pm-row input.val-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: 10px;
+    width: 36px;
+    text-align: right;
+    outline: none;
+    padding: 0 2px;
+    transition: all 0.2s;
+    -moz-appearance: textfield;
+}
+
+.illu-pm-row input.val-input::-webkit-outer-spin-button,
+.illu-pm-row input.val-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.illu-pm-row input.val-input:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.illu-pm-row input.val-input:focus {
+    background: #111;
+    border-color: var(--mp-accent);
+    color: #fff;
 }
 
 /* Standard range inputs within PM rows */
@@ -827,6 +860,19 @@ display: none;
     border-color: var(--mp-accent, #0078d7);
 }
 
+
+
+body.illu-photo-mode-active .status-bar-cell.status-bar-cell--flex.hide-xs {
+    display: none !important;
+}
+body.illu-photo-mode-active .status-bar-zones {
+    justify-content: flex-end;
+    width: 100% !important;
+    flex: 1 !important;
+}
+body.illu-photo-mode-active #status-mode {
+    display: none;
+}
 body.illu-photo-mode-active .illu-sub-menubar {
     display: none;
 }

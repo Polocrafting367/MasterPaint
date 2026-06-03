@@ -1,13 +1,19 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.110 (03/06/26)
+2.8.116,3 (03/06/26)
 - Correction visuel divers
        > Bouton W11/W10, 
        > arrondie a coté de signaler bug affiché quand il ne falais pas
        > Visuel de la barres des onglets
 - Passage automatique de la barre des onglet sous 930px sous la barre d'outils
+- Importation de fichier raw png, cr3, net, cr2 .. maintenant possible! 
+- Photo mode pro et maintenant capable de vraiment gérré des fihcier raw et les edithé 
+- Traitement amélioré, + Pref catastrophique (mieux mais pas parfait !)
+- Liste d'attentre traitement ouverture fichier un a un mais ouverture multiple possible ! 
+- Revu affichage progression du calcul pour un effet quand effet lourd ! 
+- Amélioration fenetre de chargement (import, export, effet...) car utilisé partout créant bugs..
 
-2.8.108 (02/06/26)
+2.8.108,4 (02/06/26)
 - Revu emplacement des onglet comme paint.net, 
 - Correction gu lié a l'export Bitmap non fonctionne
        >obtimisation de la hauteur du projet
@@ -18,8 +24,6 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
        > fenetre calc repensé
        > Différente petite icones repensé
 
-
-
 2.8.103 (01/06/26)
 - Amélioration de l'outil d'aimantation
 - Ajout d'un outil de symétrie vertical/horizontal
@@ -27,7 +31,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ajout de font utilisable avec l'outil text ! 
 - Correction de l'effet Contour et duo-tone pour utiliser les couleur de la palette plustot que html standard
 
-2.8.98 (31/05/26)
+2.8.98,1 (31/05/26)
 - Ajout d'un mode de travail CMJN et RAL
 - Modification du mode tramé et des effets lisibilité
 - Modification de la fenetre nouveau projet pour inclur eles nouveau mode de travail
@@ -52,7 +56,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - amélioration des outil général de selection, uniformisation a travers tout les outils
 - Correction de bug multiples
 
-2.7.75 (27/05/26)
+2.7.75,1 (27/05/26)
 - Fin implementation de bordure sur les trais/trais arrondie
 - Continuer mise en place du ruabn type office
 - Ajout d'une obtion pour garder ou non le contenu des pixel quand on sort des bordure du canvas  
@@ -64,7 +68,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - correction d'un bug ou un calc blanc apparaisait dans certains cas en plus en bas
 - Correction de l'importation de fichier illu qui avait tendance a planté
 
-2.7.66 (26/05/26)
+2.7.66,2 (26/05/26)
 - Réduit la selection d'importation au fichiers supporté
 - Modifier les outil de selection/déofrmation/déplacement pour plus de performance
 - Revu gestion des mignature pour les calcs
@@ -129,7 +133,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ajout pour les 4pts d'une obtion de redraissement rectangulaire
 - Ajout obtion Régle et Visu des pixel en mode zoom fort
 
-2.7.13 (22/05/26) MAJ VISUEL TELEPHONE
+2.7.13,2 (22/05/26) MAJ VISUEL TELEPHONE
 - Revu gestion de la selection, des déplacements...
 - Obtimisation divers
 - Mode téléphone type app : barre du bas (menu fixe + scroll), sheets outils/couleurs/calques/effets...
@@ -151,7 +155,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Correctif sélection : ReferenceError « e is not defined » au resize poignées
 
 
-2.6.27 (17/05/26)
+2.6.27,4 (17/05/26)
 - Consolidation de l'ergonomie 
 - Correction des boutons Zoom avant/arrière
 - Revu mise en page des barres d'actions
@@ -201,7 +205,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - ajouter en tant que effet classic aussi courbe et tsl.
 - Regroupé le code pour photo mode pro et raw
 
-2.5.7 (19/04/26)
+2.5.7,3 (19/04/26)
 - Adaptation de l'interface Photo Mode Pro pour mobiles (Layout vertical, boutons compacts)
 - Création d'un mode photo pro type lightroom.
        > Multi-images, application par lot, recadrage interactif...
@@ -236,7 +240,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ajout d'un system de trammage dans effet et création de projet
 - Ajout du bouton "Ouvrir un projet d'exemple" depuis les paramètres
 
-2.3.4 (06/04/26)
+2.3.4,2 (06/04/26)
 - Optimisation massive des performances du Canvas 2D sur tout le projet
        > Utilisation systématique de willReadFrequently pour accélérer la lecture GPU -> CPU
 - Refonte de l'outils de déformation (Warp) pour plus de fluidité
@@ -244,7 +248,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Correction de bug de bordure transparente lors des déformations
 - Amélioration de l'accessibilité sur l'interface (correction aria-hidden)
 
-2.2.15 (04/04/26)
+2.2.15,1 (04/04/26)
 - Ajout des raccourcis clavier complets
        > Ctrl+A selectionner tout, Ctrl+I inverser couleurs, Ctrl+C/V copier coller, Ctrl+/- zoom canvas, Echap déselection
 - Ajout du pan workspace avec clic molette souris
@@ -252,7 +256,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Correction des lints CSS dans w98.css (appearance, syntaxe selecteur)
 - Suppression des puces (billes) dans les sous menus
 
-2.2.10 (02/04/26)
+2.2.10,3 (02/04/26)
 - Refonte majeure: Architecture Multi-Document (MDI) avec onglets
        > Plusieurs projets ouverts en même temps, chaque onglet garde son état indépendant
 - System de calques avancé avec buffers persistants hors-canvas

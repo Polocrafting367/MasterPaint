@@ -581,7 +581,7 @@
                         isMobileRibbon &&
                         SELECT_ACTION_TOOLS.has(tool);
                 } else if (id === 'adjustments') {
-                    active = SELECT_ACTION_TOOLS.has(tool) && !isMobileRibbon;
+                    active = SELECT_ACTION_TOOLS.has(tool) && tool !== 'wand' && !isMobileRibbon;
                 } else if (id === 'view') {
                     /* Alvéole Affichage : uniquement en mode document pixel (pas SVG / vecteur).
                      * Mobile : masqué (Grille / Règles via menu Fenêtre). */
@@ -610,7 +610,7 @@
                         isPixelDoc && !isShapeTool && !isMobileRibbon;
                 } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
                 else if (id === 'shape-style-fill') {
-                    active = shapesActionsActive(actionIds);
+                    active = shapesActionsActive(actionIds) && !['line', 'cubic-3', 'pen'].includes(tool);
                 } else if (id === 'shape-grad') {
                     active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
                 } else if (id === 'shape-grad-method') {

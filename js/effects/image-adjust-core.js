@@ -211,6 +211,7 @@
     }
 
     function applyCameraRawBuffer(src, width, height, p) {
+        const isFloatArray = src instanceof Float32Array || (src && src.constructor && src.constructor.name === 'Float32Array');
         // --- WASM Engine Integration ---
         if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
             // Setup Curves LUTs (Graphiques en courbe) for Wasm
@@ -221,7 +222,7 @@
                 curveB: p.curveB && p.curveB.length > 0 ? { lut: createCurveLUT(p.curveB) } : null
             };
 
-            const res = MasterPaintWasm.applyCameraRaw(new ImageData(src, width, height), { 
+            const res = MasterPaintWasm.applyCameraRaw(isFloatArray ? src : new ImageData(src, width, height), { 
                 ...p, 
                 cbParams,
                 hsvMixParams: {
@@ -231,9 +232,15 @@
                 },
                 startY: (typeof FilterManager !== 'undefined' && typeof FilterManager._startY === 'number' ? FilterManager._startY : 0), 
                 endY: (typeof FilterManager !== 'undefined' && typeof FilterManager._endY === 'number' ? FilterManager._endY : height)
-            });
-            if (res && res.data) {
-                return new Uint8ClampedArray(res.data.buffer, res.data.byteOffset, res.data.byteLength);
+            }, width, height);
+            
+            if (res) {
+                if (isFloatArray) {
+                    return res;
+                }
+                if (res.data) {
+                    return new Uint8ClampedArray(res.data.buffer, res.data.byteOffset, res.data.byteLength);
+                }
             }
         }
 
@@ -255,24 +262,45 @@
         const hslSatArr = p.hslSat || [0, 0, 0, 0, 0, 0, 0, 0];
         const hslLumArr = p.hslLum || [0, 0, 0, 0, 0, 0, 0, 0];
 
+        const isFloat = src instanceof Float32Array || (src && src.constructor && src.constructor.name === 'Float32Array');
+
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const i = (y * width + x) * 4;
 
-                let r = SRGB_TO_LIN[src[i]];
-                let g = SRGB_TO_LIN[src[i + 1]];
-                let b = SRGB_TO_LIN[src[i + 2]];
-                const a = src[i + 3];
+                let r, g, b, a;
+                if (isFloat) {
+                    // Float32Array data is already true linear light, no gamma conversion needed
+                    r = src[i];
+                    g = src[i + 1];
+                    b = src[i + 2];
+                    a = src[i + 3] * 255;
+                } else {
+                    r = SRGB_TO_LIN[src[i]];
+                    g = SRGB_TO_LIN[src[i + 1]];
+                    b = SRGB_TO_LIN[src[i + 2]];
+                    a = src[i + 3];
+                }
 
                 r *= mult; g *= mult; b *= mult;
 
+                // Temp & Tint based on luminance zones (preserving pure black and pure white highlights)
+                const Y_orig = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                const Y_clamp = Math.max(0.0, Math.min(1.0, Y_orig));
+                const wZone = Y_clamp * (1.0 - Y_clamp) * 4.0;
+                const scaleDiv = isFloat ? 1000 : 100;
+
                 if (p.temp !== 0) {
-                    const t = p.temp / 100;
-                    r *= 1 + t * 0.12; b *= 1 - t * 0.12; g *= 1 + t * 0.02;
+                    const t = (p.temp / scaleDiv) * wZone;
+                    r *= Math.max(0.0, 1 + t * 0.12);
+                    b *= Math.max(0.0, 1 - t * 0.12);
+                    g *= Math.max(0.0, 1 + t * 0.02);
                 }
                 if (p.tint !== 0) {
-                    const tn = p.tint / 100;
-                    r *= 1 + tn * 0.06; b *= 1 + tn * 0.06; g *= 1 - tn * 0.08;
+                    const tn = (p.tint / scaleDiv) * wZone;
+                    r *= Math.max(0.0, 1 + tn * 0.06);
+                    b *= Math.max(0.0, 1 + tn * 0.06);
+                    g *= Math.max(0.0, 1 - tn * 0.08);
                 }
 
                 // HDR-like Luma mapping
@@ -281,45 +309,29 @@
                 if (Y > 0.001) {
                     let yNew = Y;
 
-                    // Dehaze (Correction du voile) - Agit en retirant du luma dans les zones à faible contraste/voilées
-                    if (p.dehaze && p.dehaze !== 0) {
-                        const dh = p.dehaze / 100;
-                        yNew -= dh * (1 - Y) * 0.2;
-                    }
-
-                    // Clarity (Clarté) - Pseudo masque flou agissant sur le micro-contraste des tons moyens
-                    if (p.clarity && p.clarity !== 0) {
-                        const cl = p.clarity / 100;
-                        const midWeight = 1 - Math.abs(Y - 0.5) * 2; // Maximum at Y=0.5
-                        yNew += (Y - 0.5) * cl * midWeight * 0.4;
-                    }
-
-                    // Shadows
-                    if (p.shadows !== 0) {
-                        const sh = p.shadows / 100;
-                        const weight = Math.max(0, 1 - (Y / 0.5));
-                        yNew += sh * weight * 0.4 * Math.sqrt(Y);
-                    }
-
-                    // Highlights
+                    // Highlights — ramp from Y=0.5 (w=0) to Y=1.0+ (w=1), quadratic
                     if (p.highlights !== 0) {
                         const hi = p.highlights / 100;
-                        const weight = Math.max(0, (Y - 0.5) / 0.5);
-                        yNew += hi * weight * 0.6 * (1.1 - Y);
+                        let w = Math.max(0, (yNew - 0.5) / 0.5);
+                        w = w * w; // Quadratic: concentrated near whites
+                        if (hi < 0 && yNew > 0.5) {
+                            const over = yNew - 0.5;
+                            yNew = 0.5 + over * Math.pow(over + 1.0, hi * 0.5);
+                        } else {
+                            yNew += hi * w * 1.5;
+                        }
                     }
 
-                    // Whites
+                    // Whites — only top range (Y > 0.7)
                     if (p.whites !== 0) {
                         const wh = p.whites / 100;
-                        const weight = Math.pow(Math.max(0, (Y - 0.7) / 0.3), 2);
-                        yNew += wh * weight;
-                    }
-
-                    // Blacks
-                    if (p.blacks !== 0) {
-                        const bl = p.blacks / 100;
-                        const weight = Math.pow(Math.max(0, 1 - (Y / 0.3)), 2);
-                        yNew += bl * weight * 0.3;
+                        const w = Math.max(0, (yNew - 0.7) / 0.3);
+                        if (wh < 0 && yNew > 0.7) {
+                            const over = yNew - 0.7;
+                            yNew = 0.7 + over * Math.pow(over + 1.0, wh * 0.6);
+                        } else {
+                            yNew += wh * w * 2.0;
+                        }
                     }
 
                     yNew = Math.max(0, yNew);
@@ -327,6 +339,43 @@
                     r *= multLuma;
                     g *= multLuma;
                     b *= multLuma;
+
+                    Y = yNew;
+                }
+
+                // Shadows (multiplicative tone adjustment, preserves blacks and avoids division explosions)
+                if (p.shadows !== 0) {
+                    const sh = p.shadows / 100;
+                    const w = Math.max(0, 1 - (Y / 0.5));
+                    const factor = Math.max(0, 1.0 + sh * w * w * 1.2);
+                    r *= factor;
+                    g *= factor;
+                    b *= factor;
+                }
+
+                // Blacks (multiplicative tone adjustment, preserves blacks and avoids division explosions)
+                if (p.blacks !== 0) {
+                    const bl = p.blacks / 100;
+                    const w = Math.max(0, 1 - (Y / 0.3));
+                    const factor = Math.max(0, 1.0 + bl * w * w * 1.5);
+                    r *= factor;
+                    g *= factor;
+                    b *= factor;
+                }
+
+                // Extended Reinhard tonemapping — preserves HDR range with smooth shoulder
+                // Uses luminance-based mapping to maintain color ratios
+                if (isFloat) {
+                    const maxC = Math.max(r, g, b);
+                    if (maxC > 0) {
+                        // Reinhard with white point at 4.0 (preserves detail up to ~4 stops over mid-gray)
+                        const Lw = 4.0;
+                        const mappedMax = maxC * (1.0 + maxC / (Lw * Lw)) / (1.0 + maxC);
+                        const ratio = mappedMax / maxC;
+                        r *= ratio;
+                        g *= ratio;
+                        b *= ratio;
+                    }
                 }
 
                 // --- RGB Split Toning ---
@@ -560,40 +609,45 @@
         const lowClip = (lumHist[0] + lumHist[1] + lumHist[2] + lumHist[3] + lumHist[4] + lumHist[5]) / sampled;
         const gradMean = gradCount > 0 ? gradSum / gradCount : 0;
 
-        // Exposure: center midtones (median + mean blend).
-        const targetMid = 122;
-        const midBias = (targetMid - lerp(p50, avgY, 0.35)) * 0.85;
-        const exposure = clamp(Math.round(midBias), -110, 110);
+        // Exposure: center midtones, but strongly protect highlights.
+        const targetMid = 125;
+        let midBias = (targetMid - lerp(p50, avgY, 0.4)) * 0.9;
+        if (highClip > 0.01) {
+            midBias -= (highClip * 500); 
+        }
+        const exposure = clamp(Math.round(midBias), -130, 130);
 
-        // Contrast from dynamic range and stdev.
-        const dynTarget = 178;
-        const contrastFromDyn = (dynTarget - dyn) * 0.45;
-        const contrastFromStd = (58 - stdY) * 0.35;
-        const contrast = clamp(Math.round(contrastFromDyn + contrastFromStd), -55, 55);
+        // Contrast: User wants MORE contrast, punchier look!
+        const dynTarget = 210;
+        const contrastFromDyn = (dynTarget - dyn) * 0.6;
+        const contrastFromStd = (65 - stdY) * 0.5;
+        const contrast = clamp(Math.round(contrastFromDyn + contrastFromStd + 15), -40, 75);
 
-        // Tonal recovery/push from clipping and percentile spacing.
-        const highlights = clamp(Math.round(-highClip * 420 - Math.max(0, p99 - 242) * 0.5), -70, 45);
-        const shadows = clamp(Math.round(lowClip * 420 + Math.max(0, 14 - p01) * 0.45), -40, 70);
-        const whites = clamp(Math.round((245 - p99) * 0.4 - highClip * 130), -45, 45);
-        const blacks = clamp(Math.round((p01 - 10) * 0.35 - lowClip * 95), -45, 45);
+        // Tonal recovery: No burned whites! (Aggressive recovery)
+        const highlights = clamp(Math.round(-highClip * 800 - Math.max(0, p95 - 230) * 0.8), -100, 30);
+        const whites = clamp(Math.round((245 - p99) * 0.5 - highClip * 400), -80, 20);
+        
+        // Less burned blacks (permissive but protected)
+        const shadows = clamp(Math.round(lowClip * 300 + Math.max(0, 20 - p05) * 0.6), -20, 60);
+        const blacks = clamp(Math.round((p01 - 5) * 0.4 - lowClip * 150), -35, 30);
 
-        // White balance from global channel bias (kept moderate).
-        const rbDelta = (avgR - avgB) / 255; // warm > 0
-        const gBias = (avgG - (avgR + avgB) * 0.5) / 255; // magenta < 0, green > 0
-        const temp = clamp(Math.round(-rbDelta * 95), -65, 65);
-        const tint = clamp(Math.round(-gBias * 120), -55, 55);
+        // White balance from global channel bias.
+        const rbDelta = (avgR - avgB) / 255;
+        const gBias = (avgG - (avgR + avgB) * 0.5) / 255;
+        const temp = clamp(Math.round(-rbDelta * 110), -70, 70);
+        const tint = clamp(Math.round(-gBias * 140), -60, 60);
 
-        // Color/texture: raise if flat, reduce if already strong.
-        const vibrance = clamp(Math.round((34 - avgSat) * 0.9), -25, 45);
-        const saturation = clamp(Math.round((26 - avgSat) * 0.35), -18, 22);
-        const clarity = clamp(Math.round((52 - stdY) * 0.45), -20, 35);
-        const dehaze = clamp(Math.round((46 - stdY) * 0.22 + (avgY > 150 ? 6 : 0)), -12, 22);
+        // Color/texture: More colorful & clear
+        const vibrance = clamp(Math.round((42 - avgSat) * 1.1), -10, 55);
+        const saturation = clamp(Math.round((30 - avgSat) * 0.4), -10, 25);
+        const clarity = clamp(Math.round((50 - stdY) * 0.6 + 10), -10, 45);
+        const dehaze = clamp(Math.round((46 - stdY) * 0.3 + (avgY > 160 ? 10 : 0)), -5, 30);
 
         // Sharpen only when source looks soft.
-        const sharpen = clamp(Math.round((16 - gradMean) * 1.8), 0, 30);
+        const sharpen = clamp(Math.round((14 - gradMean) * 2.5), 0, 40);
 
         // Subtle vignette correction only when edges are too bright.
-        const vignette = clamp(Math.round((edgeAvg - avgY) * 0.18), -15, 22);
+        const vignette = clamp(Math.round((edgeAvg - avgY) * 0.25), -20, 25);
 
         return {
             exposure,
@@ -630,13 +684,23 @@
         RANGES: {
             // Plages "raisonnables mais créatives": éviter les aplats/cassures trop brutales,
             // tout en gardant de la marge pour des looks marqués.
-            exposure: [-150, 150], contrast: [-80, 80], highlights: [-85, 85], shadows: [-85, 85],
-            whites: [-70, 70], blacks: [-70, 70], temp: [-1000, 1000], tint: [-1000, 1000],
+            exposure: [-150, 150], contrast: [-80, 80], highlights: [-170, 170], shadows: [-170, 170],
+            whites: [-140, 140], blacks: [-140, 140], temp: [-1000, 1000], tint: [-1000, 1000],
             vibrance: [-90, 90], saturation: [-80, 80], clarity: [-70, 70], dehaze: [-70, 70], vignette: [-85, 85],
             red: [-80, 80], redHi: [-70, 70], redSh: [-70, 70],
             green: [-80, 80], greenHi: [-70, 70], greenSh: [-70, 70],
             blue: [-80, 80], blueHi: [-70, 70], blueSh: [-70, 70],
             grain: [0, 100], sharpen: [0, 100], grainSharpness: [0, 100]
+        },
+        RANGES_RAW: {
+            // Plages EXTRÊMES pour un contrôle total de la dynamique 14-bit RAW
+            exposure: [-400, 400], contrast: [-200, 200], highlights: [-400, 400], shadows: [-400, 400],
+            whites: [-300, 300], blacks: [-300, 300], temp: [-1500, 1500], tint: [-1500, 1500],
+            vibrance: [-150, 150], saturation: [-150, 150], clarity: [-150, 150], dehaze: [-150, 150], vignette: [-150, 150],
+            red: [-150, 150], redHi: [-150, 150], redSh: [-150, 150],
+            green: [-150, 150], greenHi: [-150, 150], greenSh: [-150, 150],
+            blue: [-150, 150], blueHi: [-150, 150], blueSh: [-150, 150],
+            grain: [0, 150], sharpen: [0, 150], grainSharpness: [0, 150]
         },
         UI_LAYOUT: [
             {
@@ -779,7 +843,10 @@
                 if (isMini) {
                     return `
                         <div class="illu-pm-row illu-pm-row--mini" style="margin-bottom:5px">
-                            <label style="font-size:9px"><span>${label}</span> <span class="val" id="${id}-val">0</span></label>
+                            <label style="font-size:9px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>${label}</span>
+                                <input type="number" class="val val-input" id="${id}-val" value="0">
+                            </label>
                             <div class="illu-cr-range-wrap ${wrapClass}">
                                 <input type="range" class="illu-cr-range" id="${id}" min="${min}" max="${max}" value="0">
                             </div>
@@ -789,7 +856,10 @@
 
                 return `
                     <div class="illu-pm-row">
-                        <label><span>${label}</span> <span class="val" id="${id}-val">0</span></label>
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>${label}</span>
+                            <input type="number" class="val val-input" id="${id}-val" value="0">
+                        </label>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="illu-cr-range-wrap ${wrapClass}" style="flex: 1;">
                                 <input type="range" class="illu-cr-range" id="${id}" min="${min}" max="${max}" value="0">
@@ -803,33 +873,71 @@
                 const rangeInput = root.querySelector('#' + id);
                 if (!rangeInput) return;
 
-                // Safety: specify if binding is numeric (standard slider)
                 const defVal = METADATA.DEFAULT_PARAMS[key];
-                if (Array.isArray(defVal)) {
-                    // Complex types (Curves, HSL arrays) should not use standard slider binder
-                    return;
-                }
+                if (Array.isArray(defVal)) return;
 
                 const valDisplay = root.querySelector('#' + id + '-val');
 
-                const update = (val) => {
-                    val = parseInt(val, 10);
-                    if (isNaN(val)) val = 0;
+                const update = (val, fromTextInput = false) => {
+                    let parsedVal = parseInt(val, 10);
+                    if (isNaN(parsedVal)) parsedVal = 0;
 
-                    const ranges = METADATA.RANGES || {};
-                    const range = ranges[key] || [0, 100];
-                    val = Math.max(range[0], Math.min(range[1], val));
+                    const min = parseInt(rangeInput.getAttribute('min'), 10) || -100;
+                    const max = parseInt(rangeInput.getAttribute('max'), 10) || 100;
+                    
+                    // Si on tape au clavier, on permet d'aller jusqu'à 4x la limite du slider
+                    const safeMin = fromTextInput ? min * 4 : min;
+                    const safeMax = fromTextInput ? max * 4 : max;
+                    
+                    parsedVal = Math.max(safeMin, Math.min(safeMax, parsedVal));
 
-                    rangeInput.value = val;
-                    if (valDisplay) valDisplay.innerText = val;
+                    // Ne pas forcer le rangeInput si on est hors limite pour ne pas brider le texte
+                    if (parsedVal >= min && parsedVal <= max) {
+                        rangeInput.value = parsedVal;
+                    } else {
+                        // Le slider reste bloqué à son bord visuellement
+                        rangeInput.value = parsedVal > max ? max : min; 
+                    }
+                    
+                    if (valDisplay && valDisplay.value !== parsedVal.toString()) {
+                        valDisplay.value = parsedVal;
+                    }
 
-                    if (callbacks.onInput) callbacks.onInput(val);
+                    if (callbacks.onInput) callbacks.onInput(parsedVal);
                 };
 
-                rangeInput.addEventListener('input', (e) => update(e.target.value));
+                rangeInput.addEventListener('input', (e) => update(e.target.value, false));
                 rangeInput.addEventListener('change', (e) => {
-                    if (callbacks.onChange) callbacks.onChange(parseInt(e.target.value, 10));
+                    if (callbacks.onChange) callbacks.onChange(parseInt(e.target.value, 10) || 0);
                 });
+                
+                if (valDisplay) {
+                    valDisplay.addEventListener('input', (e) => update(e.target.value, true));
+                    valDisplay.addEventListener('change', (e) => {
+                        update(e.target.value, true);
+                        if (callbacks.onChange) callbacks.onChange(parseInt(e.target.value, 10) || 0);
+                    });
+                }
+            },
+            
+            updateRanges(root, idPrefix, isRaw) {
+                if (!root) return;
+                const ranges = isRaw ? (METADATA.RANGES_RAW || METADATA.RANGES) : METADATA.RANGES;
+                for (const key in ranges) {
+                    const rangeInput = root.querySelector('#' + idPrefix + key);
+                    if (rangeInput) {
+                        rangeInput.setAttribute('min', ranges[key][0]);
+                        rangeInput.setAttribute('max', ranges[key][1]);
+                        
+                        // Re-clamp current value to new limits
+                        let val = parseInt(rangeInput.value, 10) || 0;
+                        val = Math.max(ranges[key][0], Math.min(ranges[key][1], val));
+                        rangeInput.value = val;
+                        
+                        const valDisplay = root.querySelector('#' + idPrefix + key + '-val');
+                        if (valDisplay) valDisplay.innerText = val;
+                    }
+                }
             }
         };
 

@@ -37,6 +37,10 @@ async function instantiate(module, imports = {}) {
       // assembly/vector/isPointOnSegment(f32, f32, f32, f32, f32, f32, f32) => bool
       return exports.isPointOnSegment(px, py, x1, y1, x2, y2, tol) != 0;
     },
+    detectGridCellSize(dataPtr, w, h, outPtr, minAlpha) {
+      // assembly/vectorize/detectGridCellSize(usize, i32, i32, usize, i32) => bool
+      return exports.detectGridCellSize(dataPtr, w, h, outPtr, minAlpha) != 0;
+    },
   }, exports);
   function __liftString(pointer) {
     if (!pointer) return null;
@@ -106,6 +110,11 @@ export const {
   perpendicularDistance,
   isPointOnSegment,
   getCubicBezierPoint,
+  labelColorRegions,
+  detectGridCellSize,
+  extractLabelMask,
+  computeLabelBounds,
+  sampleCellAverageColor,
   oilPainting,
   relief,
   frostedGlass,

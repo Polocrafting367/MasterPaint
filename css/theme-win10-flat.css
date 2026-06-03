@@ -926,7 +926,7 @@ body.theme-dark .illu-gauge-wrap .illu-gauge-fill {
 #illu-instant-effect-busy:not([hidden]) {
     position: fixed;
     inset: 0;
-    z-index: 40200;
+    z-index: 4999;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3237,11 +3237,11 @@ body.theme-dark .illu-scope-btn:not(.illu-scope-btn--active) {
 
 body.theme-dark .illu-scope-btn--active {
     background: var(--mp-surface) !important;
-    color: var(--mp-accent) !important;
+    color: color-mix(in srgb, var(--mp-accent), #ffffff 60%) !important;
     font-weight: normal;
     box-shadow: none;
     border: none !important;
-    border-bottom: 2px solid var(--mp-accent) !important;
+    border-bottom: 2px solid color-mix(in srgb, var(--mp-accent), #ffffff 60%) !important;
     top: 0;
     z-index: 1;
 }
@@ -5579,7 +5579,7 @@ body.win11-effects .window {
     background: transparent !important;
 }
 
-body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.win11-effects .floating-window {
+body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.win11-effects .floating-window, body.win11-effects .illu-instant-effect-busy__box  {
     border-top-right-radius: var(--radius);
     border-top-left-radius: var(--radius);
     background: color-mix(in srgb, var(--mp-surface) 60%, transparent) !important;
@@ -5601,7 +5601,7 @@ body.win11-effects button {
     border-radius: 4px;
 }
 
-@media (max-width: 930px) {
+@media (max-width: 770px) {
   
 
   #tab-bar-outer { 

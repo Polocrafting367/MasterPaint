@@ -1,5 +1,5 @@
 /**
- * Panneau type Camera Raw + import RAW (conversion serveur via raw-convert.php).
+ * Panneau type Camera Raw + import RAW (WASM local via LibRaw).
  */
 (function () {
     const RAW_EXT = new Set([
@@ -23,6 +23,7 @@
     let DEFAULT_PARAMS = METADATA.DEFAULT_PARAMS;
     let PRESETS = METADATA.PRESETS;
     let showEffects = true;
+    let highResTimeout = null;
 
     function refreshMetadata() {
         if (window.IlluImageAdjustCore) {
@@ -123,17 +124,21 @@
             g *= mult;
             b *= mult;
 
+            const Y_orig = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            const Y_clamp = Math.max(0.0, Math.min(1.0, Y_orig));
+            const wZone = Y_clamp * (1.0 - Y_clamp) * 4.0;
+
             if (p.temp !== 0) {
-                const t = p.temp / 100;
-                r *= 1 + t * 0.12;
-                b *= 1 - t * 0.12;
-                g *= 1 + t * 0.02;
+                const t = (p.temp / 100) * wZone;
+                r *= Math.max(0.0, 1 + t * 0.12);
+                b *= Math.max(0.0, 1 - t * 0.12);
+                g *= Math.max(0.0, 1 + t * 0.02);
             }
             if (p.tint !== 0) {
-                const tn = p.tint / 100;
-                r *= 1 + tn * 0.06;
-                b *= 1 + tn * 0.06;
-                g *= 1 - tn * 0.08;
+                const tn = (p.tint / 100) * wZone;
+                r *= Math.max(0.0, 1 + tn * 0.06);
+                b *= Math.max(0.0, 1 + tn * 0.06);
+                g *= Math.max(0.0, 1 - tn * 0.08);
             }
 
             let r8 = linToSrgbByte(r);
@@ -235,11 +240,12 @@
                     if (gpuRes) return gpuRes;
                 }
             } catch (err) {
-                console.warn('[CameraRaw] WebGL failed, falling back', err);
+                console.error('[CameraRaw] WebGL failed, falling back to CPU:', err);
             }
         }
 
-        const srcBuf = new Uint8ClampedArray(imageData.data);
+        // CPU fallback — handles both Uint8ClampedArray and Float32Array
+        let srcBuf = (p.isRawMode && imageData.rawFloatData) ? imageData.rawFloatData : imageData.data;
         const core = typeof window.IlluImageAdjustCore !== 'undefined' ? window.IlluImageAdjustCore : null;
         const d =
             core && typeof core.applyCameraRawBuffer === 'function'
@@ -300,6 +306,15 @@
         try {
             console.log('CameraRawPanel: Initializing worker (js/effects/image-adjust-worker.js)');
             worker = new Worker('js/effects/image-adjust-worker.js');
+            
+            // Initialisation du worker avec les paramètres Wasm
+            worker.postMessage({
+                type: 'init',
+                settings: {
+                    wasmEnabled: localStorage.getItem('settings-wasm-enabled') !== '0'
+                }
+            });
+
             worker.onmessage = (ev) => {
                 const msg = ev.data || {};
                 const pending = workerPending.get(msg.jobId | 0);
@@ -389,12 +404,18 @@
     function schedulePreview() {
         if (!panelRoot || !previewBase) return;
         if (rafPending != null) cancelAnimationFrame(rafPending);
+        if (highResTimeout != null) {
+            clearTimeout(highResTimeout);
+            highResTimeout = null;
+        }
+
         rafPending = requestAnimationFrame(() => {
             rafPending = null;
             try {
                 const root = panelRoot;
                 if (!root || !previewBase) return;
                 const previewJobId = ++latestPreviewJobId;
+                
                 const applyPreview = (prev) => {
                     if (previewJobId !== latestPreviewJobId || root !== panelRoot) return;
                     const pv = root.querySelector('#illu-cr-preview');
@@ -415,17 +436,39 @@
                 }
 
                 currentParams = readParamsFromDom(root);
+                
+                // Proxy fast render
                 if (workerAvailable()) {
                     requestWorker('cameraRaw', previewBase, currentParams)
-                        .then((msg) => {
-                            applyPreview(new ImageData(new Uint8ClampedArray(msg.buffer), msg.width, msg.height));
-                        })
-                        .catch(() => {
-                            applyPreview(window.illuApplyCameraRawParams(previewBase, currentParams));
-                        });
-                    return;
+                        .then((msg) => applyPreview(new ImageData(new Uint8ClampedArray(msg.buffer), msg.width, msg.height)))
+                        .catch(() => applyPreview(window.illuApplyCameraRawParams(previewBase, currentParams)));
+                } else {
+                    applyPreview(window.illuApplyCameraRawParams(previewBase, currentParams));
                 }
-                applyPreview(window.illuApplyCameraRawParams(previewBase, currentParams));
+
+                // Schedule High-Res rendering after 800ms of inactivity
+                if (baseFull && baseFull !== previewBase) {
+                    highResTimeout = setTimeout(() => {
+                        highResTimeout = null;
+                        if (root !== panelRoot || !baseFull) return;
+                        
+                        // We use main thread renderer since WebGL applies it instantly without worker serialization overhead
+                        const highResImg = window.illuApplyCameraRawParams(baseFull, currentParams);
+                        
+                        const pv = root.querySelector('#illu-cr-preview');
+                        if (pv) {
+                            const c2d = pv.getContext('2d');
+                            if (c2d) {
+                                if (pv.width !== highResImg.width || pv.height !== highResImg.height) {
+                                    pv.width = highResImg.width;
+                                    pv.height = highResImg.height;
+                                }
+                                c2d.putImageData(highResImg, 0, 0);
+                            }
+                        }
+                    }, 800);
+                }
+
             } catch (err) {
                 console.warn('Camera Raw preview', err);
             }
@@ -434,6 +477,10 @@
 
     function closePanel(runCancel) {
         latestPreviewJobId = 0;
+        if (highResTimeout != null) {
+            clearTimeout(highResTimeout);
+            highResTimeout = null;
+        }
         if (panelRoot) {
             panelRoot.remove();
             panelRoot = null;
@@ -760,6 +807,9 @@
             window.IlluI18n.apply(panelRoot);
         }
         wirePanel();
+        if (window.IlluImageAdjustCore && window.IlluImageAdjustCore.Slider) {
+            window.IlluImageAdjustCore.Slider.updateRanges(panelRoot, 'illu-cr-', !!(baseFull && baseFull.rawFloatData));
+        }
         schedulePreview();
     };
 
@@ -787,33 +837,427 @@
         });
     };
 
-    window.illuConvertRawFileToImageData = async function (file) {
-        const url = window.ILLU_RAW_CONVERT_URL || 'raw-convert.php';
-        const fd = new FormData();
-        fd.append('raw', file, file.name);
-        const res = await fetch(url, { method: 'POST', body: fd });
-        if (!res.ok) {
-            const text = await res.text().catch(() => '');
-            throw new Error(text.trim() || res.statusText);
+    function illuExtractLargestEmbeddedJpeg(arrayBuffer) {
+        const u8 = new Uint8Array(arrayBuffer);
+        const length = u8.length;
+        const jpegStarts = [];
+        
+        // Find all SOI markers
+        for (let i = 0; i < length - 4; i++) {
+            if (u8[i] === 0xFF && u8[i+1] === 0xD8 && u8[i+2] === 0xFF) {
+                jpegStarts.push(i);
+            }
         }
-        const blob = await res.blob();
-        const bmp = await createImageBitmap(blob);
+        
+        let maxLen = 0;
+        let largestBlob = null;
+        
+        for (let i = 0; i < jpegStarts.length; i++) {
+            const start = jpegStarts[i];
+            
+            // Check if it's a Lossless JPEG (FF C3). Browsers can't decode these, they are RAW data!
+            let isLossless = false;
+            for (let k = start; k < Math.min(start + 1000, length - 1); k++) {
+                if (u8[k] === 0xFF && u8[k+1] === 0xC3) {
+                    isLossless = true;
+                    break;
+                }
+            }
+            if (isLossless) continue; // Skip RAW data
+            
+            let depth = 1;
+            let end = -1;
+            for (let j = start + 2; j < length - 1; j++) {
+                if (u8[j] === 0xFF) {
+                    if (u8[j+1] === 0xD8) {
+                        depth++;
+                        j++;
+                    } else if (u8[j+1] === 0xD9) {
+                        depth--;
+                        j++;
+                        if (depth === 0) {
+                            end = j + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (end !== -1) {
+                const len = end - start;
+                if (len > maxLen) {
+                    maxLen = len;
+                    largestBlob = new Blob([u8.slice(start, end)], { type: 'image/jpeg' });
+                }
+            }
+        }
+        return largestBlob;
+    }
+
+    function illuGetExifOrientation(buf) {
+        try {
+            const view = new DataView(buf);
+            if (view.byteLength < 2) return 1;
+            const m1 = view.getUint16(0, false);
+            let little = false, offset = 0;
+            if (m1 === 0xFFD8) {
+                let i = 2;
+                while (i < view.byteLength - 4) {
+                    const marker = view.getUint16(i, false);
+                    const len = view.getUint16(i + 2, false);
+                    if (marker === 0xFFE1) {
+                        if (view.getUint32(i + 4, false) === 0x45786966) {
+                            little = view.getUint16(i + 10, false) === 0x4949;
+                            offset = i + 10 + view.getUint32(i + 14, little);
+                            break;
+                        }
+                    } else if ((marker & 0xFF00) !== 0xFF00) { break; }
+                    i += 2 + len;
+                }
+            } else if (m1 === 0x4949 || m1 === 0x4D4D) {
+                little = m1 === 0x4949;
+                offset = view.getUint32(4, little);
+            }
+            if (offset && offset < view.byteLength - 2) {
+                const tags = view.getUint16(offset, little);
+                offset += 2;
+                for (let j = 0; j < tags; j++) {
+                    if (offset + (j * 12) + 12 > view.byteLength) break;
+                    if (view.getUint16(offset + (j * 12), little) === 0x0112) {
+                        return view.getUint16(offset + (j * 12) + 8, little);
+                    }
+                }
+            }
+        } catch(e) {}
+        return 1;
+    }
+
+    function illuDrawOrientedBitmap(bmp, orientation) {
         const c = document.createElement('canvas');
-        c.width = bmp.width;
-        c.height = bmp.height;
-        const x = c.getContext('2d');
-        x.drawImage(bmp, 0, 0);
-        bmp.close();
-        return x.getImageData(0, 0, c.width, c.height);
+        let width = bmp.width, height = bmp.height;
+        if (orientation >= 5 && orientation <= 8) {
+            c.width = height; c.height = width;
+        } else {
+            c.width = width; c.height = height;
+        }
+        const ctx = c.getContext('2d');
+        switch (orientation) {
+            case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
+            case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
+            case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
+            case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;
+            case 6: ctx.transform(0, 1, -1, 0, height, 0); break;
+            case 7: ctx.transform(0, -1, -1, 0, height, width); break;
+            case 8: ctx.transform(0, -1, 1, 0, 0, width); break;
+        }
+        ctx.drawImage(bmp, 0, 0);
+        return ctx.getImageData(0, 0, c.width, c.height);
+    }
+
+    // --- RAW DECODE DIRECT ---
+    async function illuDecodeRawDirect(buffer) {
+        const scripts = document.querySelectorAll('script[src*="CameraRawPanel"]');
+        let librawUrl = './js/libraw/index.js';
+        if (scripts.length) {
+            librawUrl = new URL('../libraw/index.js', scripts[0].src).href;
+        }
+
+        const { default: LibRaw } = await import(librawUrl);
+        const lr = new LibRaw();
+        const u8 = new Uint8Array(buffer);
+
+        await lr.open(u8, {
+            outputBps: 16,
+            useCameraWb: true,
+            highlight: 1,      // 1 = Ne pas clipper les hautes lumières
+            expCorrec: 1,      // Activer la correction d'exposition interne
+            expShift: 0.25,    // -2 stops, compresse les hautes lumières dans la plage 16-bit
+            outputColor: 0,    // Raw camera color space
+        });
+
+        const imgDataRaw = await lr.imageData();
+
+        if (!imgDataRaw || !imgDataRaw.data || !imgDataRaw.width || !imgDataRaw.height) {
+            throw new Error('libraw returned empty imageData');
+        }
+
+        const { width, height } = imgDataRaw;
+        const expectedRgbLen = width * height * 3;
+        const expectedRgbaLen = width * height * 4;
+
+        const isUint16 = (imgDataRaw.data instanceof Uint16Array);
+        const isFloat  = (imgDataRaw.data instanceof Float32Array);
+
+        // Build Float32 RGBA in linear 0..∞ space
+        const floatData = new Float32Array(expectedRgbaLen);
+        const HDR_HEADROOM = 16.0; // Restauration du headroom HDR depuis LibRaw + Compensation Reinhard
+        
+        function srgbToLinear(x) {
+            return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        }
+
+        if (imgDataRaw.data.length === expectedRgbLen) {
+            let s = 0, d = 0;
+            const data = imgDataRaw.data;
+            const len = width * height;
+            if (isUint16) {
+                const lut = new Float32Array(65536);
+                for (let i = 0; i < 65536; i++) lut[i] = srgbToLinear(i / 65535.0) * HDR_HEADROOM;
+                for (let i = 0; i < len; i++) {
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = 1.0;
+                }
+            } else if (!isFloat) {
+                const lut = new Float32Array(256);
+                for (let i = 0; i < 256; i++) lut[i] = srgbToLinear(i / 255.0) * HDR_HEADROOM;
+                for (let i = 0; i < len; i++) {
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = lut[data[s++]];
+                    floatData[d++] = 1.0;
+                }
+            } else {
+                for (let i = 0; i < len; i++) {
+                    floatData[d++] = srgbToLinear(data[s++]) * HDR_HEADROOM;
+                    floatData[d++] = srgbToLinear(data[s++]) * HDR_HEADROOM;
+                    floatData[d++] = srgbToLinear(data[s++]) * HDR_HEADROOM;
+                    floatData[d++] = 1.0;
+                }
+            }
+        } else {
+            const data = imgDataRaw.data;
+            const len = expectedRgbaLen;
+            if (isUint16) {
+                const lut = new Float32Array(65536);
+                for (let i = 0; i < 65536; i++) lut[i] = srgbToLinear(i / 65535.0) * HDR_HEADROOM;
+                for (let i = 0; i < len; i++) {
+                    if ((i + 1) % 4 === 0) floatData[i] = 1.0;
+                    else floatData[i] = lut[data[i]];
+                }
+            } else if (!isFloat) {
+                const lut = new Float32Array(256);
+                for (let i = 0; i < 256; i++) lut[i] = srgbToLinear(i / 255.0) * HDR_HEADROOM;
+                for (let i = 0; i < len; i++) {
+                    if ((i + 1) % 4 === 0) floatData[i] = 1.0;
+                    else floatData[i] = lut[data[i]];
+                }
+            } else {
+                for (let i = 0; i < len; i++) {
+                    if ((i + 1) % 4 === 0) floatData[i] = 1.0;
+                    else floatData[i] = srgbToLinear(data[i]) * HDR_HEADROOM;
+                }
+            }
+        }
+
+        // Extract metadata from the RAW file if available
+        let metadata = null;
+        try {
+            metadata = await lr.metadata(true);
+            console.log('[CameraRaw] Loaded RAW Metadata:', metadata);
+        } catch (metaErr) {
+            console.warn('[CameraRaw] Failed to load RAW metadata:', metaErr);
+        }
+
+        // Also build a U8 preview (sRGB gamma-corrected) for the 8-bit thumbnail
+        // We apply the same Reinhard tonemapping here so the thumbnail perfectly matches the WebGL/Wasm canvas!
+        const previewU8 = new Uint8ClampedArray(expectedRgbaLen);
+        const Lw = 4.0;
+        const Lw2 = Lw * Lw;
+        
+        // LUT for fast linToSrgbByte conversion since Reinhard outputs [0..1]
+        const srgbOutLUT = new Uint8Array(4096);
+        for (let i = 0; i < 4096; i++) {
+            let x = i / 4095.0;
+            let v = x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+            srgbOutLUT[i] = Math.max(0, Math.min(255, Math.round(v * 255)));
+        }
+
+        for (let i = 0; i < expectedRgbaLen; i += 4) {
+            let r = floatData[i];
+            let g = floatData[i + 1];
+            let b = floatData[i + 2];
+            
+            // Fast inline max
+            let maxC = r > g ? r : g;
+            if (b > maxC) maxC = b;
+            
+            if (maxC > 0.0) {
+                const mappedMax = maxC * (1.0 + maxC / Lw2) / (1.0 + maxC);
+                const ratio = mappedMax / maxC;
+                r *= ratio;
+                g *= ratio;
+                b *= ratio;
+            }
+
+            // LUT lookup
+            previewU8[i]     = srgbOutLUT[(r * 4095) | 0] || 255;
+            previewU8[i + 1] = srgbOutLUT[(g * 4095) | 0] || 255;
+            previewU8[i + 2] = srgbOutLUT[(b * 4095) | 0] || 255;
+            previewU8[i + 3] = 255;
+        }
+
+        return { floatData, previewU8, width, height, metadata };
+    }
+
+    window.illuConvertRawFileToImageData = async function (file) {
+        if (window.IlluProgress && window.IlluProgress.instantEffectStart) {
+            window.IlluProgress.instantEffectStart('Décodage RAW');
+            window.IlluProgress.instantEffectProgress(0, 'Le traitement natif (14-bit) peut prendre quelques secondes.');
+        }
+
+        try {
+            const buf = await file.arrayBuffer();
+            const orientation = illuGetExifOrientation(buf);
+
+        // Try libraw-wasm FIRST via background Worker for true linear RAW demosaicing
+        // The worker runs libraw in a separate thread — UI stays fully responsive!
+        try {
+            // --- KEEPALIVE: ping IlluProgress every 2s so stall-timer doesn't fire ---
+            const startMs = Date.now();
+            const rawPhases = [
+                'Initialisation du décodeur libraw-wasm…',
+                'Démosaïcage des capteurs RAW…',
+                'Traitement de la balance des blancs…',
+                'Conversion en espace linéaire 16-bit…',
+                'Rotation et reconstruction de l\'image…',
+                'Finalisation des données flottantes…'
+            ];
+            let phaseIdx = 0;
+            const keepalive = setInterval(() => {
+                if (!window.IlluProgress || !window.IlluProgress.instantEffectProgress) return;
+                const elapsed = Math.round((Date.now() - startMs) / 1000);
+                const phase = rawPhases[Math.min(phaseIdx++, rawPhases.length - 1)];
+                window.IlluProgress.instantEffectProgress(
+                    Math.min(95, elapsed * 3), // Simulated progress (caps at 95%)
+                    `${phase} (${elapsed}s)`
+                );
+            }, 2000);
+
+            let floatResult;
+            try {
+                floatResult = await illuDecodeRawDirect(buf);
+            } finally {
+                clearInterval(keepalive);
+            }
+
+            if (floatResult && floatResult.floatData && floatResult.width) {
+                if (window.IlluProgress && window.IlluProgress.instantEffectProgress) {
+                    window.IlluProgress.instantEffectProgress(98, 'Application de l\'orientation…');
+                }
+                const { floatData, previewU8, width, height } = floatResult;
+
+                // Build the 8-bit preview ImageData (sRGB) for display & thumbnail
+                // previewU8 is already gamma-corrected by the worker
+                const imgDataObj = new ImageData(previewU8, width, height);
+
+                // Apply orientation to the 8-bit preview
+                const c = document.createElement('canvas');
+                c.width = imgDataObj.width; c.height = imgDataObj.height;
+                c.getContext('2d').putImageData(imgDataObj, 0, 0);
+                const bmp = await createImageBitmap(c);
+                const id = illuDrawOrientedBitmap(bmp, orientation);
+                bmp.close();
+
+                // Rotate the Float32Array to match the 8-bit preview orientation
+                if (orientation > 1) {
+                    const w = width;
+                    const h = height;
+                    let outW = w, outH = h;
+                    if (orientation >= 5 && orientation <= 8) { outW = h; outH = w; }
+                    const outFloat = new Float32Array(outW * outH * 4);
+                    
+                    // Fast branch-hoisted loops for the common orientations
+                    if (orientation === 6) { // 90 deg CW
+                        for (let y = 0; y < h; y++) {
+                            for (let x = 0; x < w; x++) {
+                                const si = (y * w + x) * 4;
+                                const di = (x * outW + (h - 1 - y)) * 4;
+                                outFloat[di] = floatData[si]; outFloat[di+1] = floatData[si+1];
+                                outFloat[di+2] = floatData[si+2]; outFloat[di+3] = floatData[si+3];
+                            }
+                        }
+                    } else if (orientation === 8) { // 90 deg CCW
+                        for (let y = 0; y < h; y++) {
+                            for (let x = 0; x < w; x++) {
+                                const si = (y * w + x) * 4;
+                                const di = ((w - 1 - x) * outW + y) * 4;
+                                outFloat[di] = floatData[si]; outFloat[di+1] = floatData[si+1];
+                                outFloat[di+2] = floatData[si+2]; outFloat[di+3] = floatData[si+3];
+                            }
+                        }
+                    } else if (orientation === 3) { // 180 deg
+                        for (let y = 0; y < h; y++) {
+                            for (let x = 0; x < w; x++) {
+                                const si = (y * w + x) * 4;
+                                const di = ((h - 1 - y) * outW + (w - 1 - x)) * 4;
+                                outFloat[di] = floatData[si]; outFloat[di+1] = floatData[si+1];
+                                outFloat[di+2] = floatData[si+2]; outFloat[di+3] = floatData[si+3];
+                            }
+                        }
+                    } else {
+                        for (let y = 0; y < h; y++) {
+                            for (let x = 0; x < w; x++) {
+                                let dx = x, dy = y;
+                                switch (orientation) {
+                                    case 2: dx = w - 1 - x; dy = y; break;
+                                    case 4: dx = x; dy = h - 1 - y; break;
+                                    case 5: dx = y; dy = x; break;
+                                    case 7: dx = h - 1 - y; dy = w - 1 - x; break;
+                                }
+                                const si = (y * w + x) * 4;
+                                const di = (dy * outW + dx) * 4;
+                                outFloat[di] = floatData[si]; outFloat[di+1] = floatData[si+1];
+                                outFloat[di+2] = floatData[si+2]; outFloat[di+3] = floatData[si+3];
+                            }
+                        }
+                    }
+                    id.rawFloatData   = outFloat;
+                    id.rawFloatWidth  = outW;
+                    id.rawFloatHeight = outH;
+                } else {
+                    id.rawFloatData   = floatData;
+                    id.rawFloatWidth  = width;
+                    id.rawFloatHeight = height;
+                }
+                id.rawMetadata = floatResult.metadata;
+
+                return id;
+            }
+        } catch (wasmErr) {
+            console.warn('[CameraRaw] Worker RAW decoding failed, falling back to embedded JPEG.', wasmErr);
+        }
+
+        // Try local extraction first
+        try {
+            const localBlob = illuExtractLargestEmbeddedJpeg(buf);
+            if (localBlob) {
+                const bmp = await createImageBitmap(localBlob, { imageOrientation: "none" });
+                const id = illuDrawOrientedBitmap(bmp, orientation);
+                bmp.close();
+                return id;
+            }
+        } catch (localErr) {
+            console.warn('[CameraRaw] Client-side RAW preview extraction failed.', localErr);
+        }
+
+            throw new Error("Conversion RAW indisponible : fichier corrompu ou illisible localement. Le traitement serveur a été désactivé.");
+        } finally {
+            if (window.IlluProgress && window.IlluProgress.instantEffectDone) {
+                window.IlluProgress.instantEffectDone();
+            }
+        }
     };
 
     window.openCameraRawAfterRawImport = async function (file, fileInputEl) {
         const em = window.EditorManager;
-        if (!em || !em.isPixelMode) {
-            window.showIlluAlert(tKey('msg.cameraRawPixel', 'Disponible en mode Pixel avec un calque bitmap.'));
-            if (fileInputEl) fileInputEl.value = '';
-            return;
+        
+        // Open the Photo Mode Pro UI immediately so the user isn't stuck on the main canvas
+        if (window.PhotoModeManager && typeof window.PhotoModeManager.openMode === 'function') {
+            window.PhotoModeManager.openMode();
         }
+
         let id;
         try {
             id = await window.illuConvertRawFileToImageData(file);
@@ -825,18 +1269,23 @@
             if (fileInputEl) fileInputEl.value = '';
             return;
         }
-        window.openCameraRawPanel(id, {
-            onCommit: (out) => {
-                const c = document.createElement('canvas');
-                c.width = out.width;
-                c.height = out.height;
-                c.getContext('2d').putImageData(out, 0, 0);
-                if (typeof em.promptImport === 'function') {
-                    em.promptImport(c);
-                }
-            },
-            onCancel: () => { }
-        });
+        
+        const c = document.createElement('canvas');
+        c.width = id.width;
+        c.height = id.height;
+        c.getContext('2d').putImageData(id, 0, 0);
+
+        if (em && typeof em.handleNewProjectFromImage === 'function') {
+            em.handleNewProjectFromImage(c);
+            if (window.PhotoModeManager && typeof window.PhotoModeManager.openFromCanvas === 'function') {
+                await window.PhotoModeManager.openFromCanvas(c, file.name, {
+                    rawFloatData: id.rawFloatData,
+                    rawFloatWidth: id.rawFloatWidth,
+                    rawFloatHeight: id.rawFloatHeight,
+                    rawMetadata: id.rawMetadata
+                });
+            }
+        }
         if (fileInputEl) fileInputEl.value = '';
     };
 })();

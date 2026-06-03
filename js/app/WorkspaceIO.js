@@ -1073,6 +1073,10 @@
     }
 
     function hideExportDialog() {
+        const P = window.IlluProgress;
+        if (P && typeof P.setInstantEffectBusy === 'function') {
+            P.setInstantEffectBusy(false);
+        }
         const ov = document.getElementById('export-dialog-overlay');
         if (ov) ov.style.display = 'none';
     }
@@ -1118,6 +1122,22 @@ function applyBitDepthReduction(ctx, width, height, bits) {
 }
 
     function runExportDownload(overrides) {
+        const P = window.IlluProgress;
+        if (P && typeof P.setInstantEffectBusy === 'function') {
+            const t = window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t : (k, fb) => fb || k;
+            P.setInstantEffectBusy(true, t('dlg.exporting', 'Exportation et Traitement...'));
+            P.instantEffectProgress(30);
+        }
+        
+        // Defer execution to allow the browser to render the loading overlay
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                _doRunExportDownload(overrides);
+            }, 50);
+        });
+    }
+
+    function _doRunExportDownload(overrides) {
         overrides = overrides || {};
         const em = window.EditorManager;
         const fmtEl = document.getElementById('export-format-select');

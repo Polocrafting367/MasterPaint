@@ -77,6 +77,7 @@ export const {
   ALPHA_ARRAY_ID,
   createBuffer,
   applyCameraRaw,
+  applyCameraRawFloat,
   generateThumbnail,
   chromatic,
   wave,

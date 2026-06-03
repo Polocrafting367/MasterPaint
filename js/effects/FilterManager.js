@@ -1859,6 +1859,7 @@ window.FilterManager = {
 
         if (hasWork && !instant) {
             const busyToken = this._beginHeavyBusyToken(label);
+            const abortController = new AbortController();
             const runApply = async ({ progress }) => {
                 if (progress) progress(8);
                 this._tearDownVhsEffectDialogUI();
@@ -1875,10 +1876,17 @@ window.FilterManager = {
                     this._restoreAllLayersFromFrozen();
                     this._setupEffectTargets();
                     this._effectPreviewIsFinal = true;
-                    await this._runPreviewSafe();
+                    
+                    if (!abortController.signal.aborted) {
+                        await this._runPreviewSafe();
+                    }
+                    
                     this._effectPreviewIsFinal = false;
                     this._vhsUseLowResPreview = wasLow;
-                    this._commitEffectHistory(`Effet : ${label}`);
+                    
+                    if (!abortController.signal.aborted) {
+                        this._commitEffectHistory(`Effet : ${label}`);
+                    }
                 } finally {
                     this._effectPreviewIsFinal = false;
                     this._frozenSnapshots = null;
@@ -1891,7 +1899,13 @@ window.FilterManager = {
             };
             try {
                 if (P && typeof P.runAsyncEffect === 'function') {
-                    await P.runAsyncEffect(label, runApply, { delayMs: 220 });
+                    await P.runAsyncEffect(label, runApply, { 
+                        delayMs: 220,
+                        onCancel: () => {
+                            abortController.abort();
+                            this._cancelActiveWorkerPreview();
+                        }
+                    });
                 } else {
                     await runApply({});
                 }
@@ -2082,7 +2096,7 @@ window.FilterManager = {
     _getFilterWorkers() {
         if (!this._filterWorkers && typeof Worker !== 'undefined') {
             const cores = Math.max(1, typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4);
-            const poolSize = Math.max(1, Math.min(4, cores));
+            const poolSize = Math.max(1, Math.min(8, cores));
             this._filterWorkers = [];
             this._filterWorkerPending = new Map();
             for (let i = 0; i < poolSize; i++) {
@@ -2098,9 +2112,26 @@ window.FilterManager = {
                     wk.onmessage = (e) => {
                         const msg = e.data;
                         if (msg.type === 'progress') {
-                            const P = window.IlluProgress;
-                            if (P && P.instantEffectProgress) {
-                                P.instantEffectProgress(null, msg.message);
+                            const pending = this._filterWorkerPending.get(msg.jobId);
+                            if (pending) {
+                                if (typeof pending.resetWatchdog === 'function') {
+                                    pending.resetWatchdog();
+                                }
+                                pending.percent = msg.percent;
+                                
+                                // Aggregate progress across ALL chunks (completed + remaining)
+                                let totalPercent = (this._activeBatchCompletedChunks || 0) * 100;
+                                for (const p of this._filterWorkerPending.values()) {
+                                    if (p.batchId === pending.batchId) {
+                                        totalPercent += (p.percent || 0);
+                                    }
+                                }
+                                const totalChunks = this._activeBatchChunkCount || 1;
+                                const aggregatePercent = Math.min(100, Math.round(totalPercent / totalChunks));
+                                const P = window.IlluProgress;
+                                if (P && P.instantEffectProgress) {
+                                    P.instantEffectProgress(aggregatePercent, msg.message);
+                                }
                             }
                             return;
                         }
@@ -2112,6 +2143,20 @@ window.FilterManager = {
                             console.error('FilterManager: Worker job error', msg.error);
                             p.resolve(null);
                         } else {
+                            this._activeBatchCompletedChunks = (this._activeBatchCompletedChunks || 0) + 1;
+                            
+                            // Optional: Final progress push for this chunk completion
+                            const totalPercent = (this._activeBatchCompletedChunks * 100);
+                            let remainingPercent = 0;
+                            for (const remP of this._filterWorkerPending.values()) {
+                                if (remP.batchId === p.batchId) remainingPercent += (remP.percent || 0);
+                            }
+                            const totalChunks = this._activeBatchChunkCount || 1;
+                            const aggregatePercent = Math.min(100, Math.round((totalPercent + remainingPercent) / totalChunks));
+                            if (window.IlluProgress && window.IlluProgress.instantEffectProgress) {
+                                window.IlluProgress.instantEffectProgress(aggregatePercent, 'Traitement...');
+                            }
+
                             p.resolve({
                                 imgData: new ImageData(new Uint8ClampedArray(msg.buffer), msg.w, msg.h),
                                 workerId: i,
@@ -2148,6 +2193,9 @@ window.FilterManager = {
             const chunkCount =
                 effect === 'dropshadow' || effect === 'motionblur' || effect === 'surfaceblur' ? 1 : wks.length;
             const stepY = Math.ceil(h / chunkCount);
+            
+            this._activeBatchChunkCount = chunkCount;
+            this._activeBatchCompletedChunks = 0;
 
             let completed = 0;
             const results = [];
@@ -2162,12 +2210,17 @@ window.FilterManager = {
             };
 
             const timeoutMs = Math.max(15000, Math.min(90000, Math.round((w * h) / 12000)));
-            watchdog = setTimeout(() => {
+            const resetWatchdog = () => {
                 if (settled) return;
-                console.warn('FilterManager: worker preview timeout, annulation du lot');
-                this._destroyFilterWorkerPool({ cancelled: true });
-                finish(null);
-            }, timeoutMs);
+                if (watchdog) clearTimeout(watchdog);
+                watchdog = setTimeout(() => {
+                    if (settled) return;
+                    console.warn('FilterManager: worker preview timeout, annulation du lot');
+                    this._destroyFilterWorkerPool({ cancelled: true });
+                    finish(null);
+                }, timeoutMs);
+            };
+            resetWatchdog();
 
             const passes = (effect === 'gaussian') ? 3 : 1;
             for (let i = 0; i < chunkCount; i++) {
@@ -2179,6 +2232,7 @@ window.FilterManager = {
                     batchId,
                     startY,
                     endY,
+                    resetWatchdog,
                     resolve: (res) => {
                         if (settled) return;
                         if (!res || res.cancelled || batchId !== this._activeFilterPreviewBatchId) {

@@ -55,7 +55,8 @@
         isDocked: false,
         selectedIds: [],       // Array of IDs for multi-selection
         lastSelectedId: null,  // For Shift+Click range
-        showEffects: true      // Toggle for viewing original image
+        showEffects: true,     // Toggle for viewing original image
+        useRawMode: true       // true = 14-bit float rendering if available
     };
 
     let tKey = (k, fb) => (window.IlluI18n && window.IlluI18n.t ? window.IlluI18n.t(k) : fb);
@@ -131,7 +132,17 @@
                             </div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px;">
                                 <button class="illu-pm-btn illu-pm-btn-secondary" style="width: 100%;" id="pm-btn-reset"><i class="fa-solid fa-undo"></i> <span class="illu-pm-btn-text">${tKey('photo.resetAll', 'Réinitialiser')}</span></button>
-                                <button class="illu-pm-btn" style="width: 100%; justify-content:center;" id="pm-btn-crop-mode"><i class="fa-solid fa-crop-simple"></i> <span class="illu-pm-btn-text">${tKey('photo.cropLive', 'Recadrer')}</span></button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="illu-pm-btn" style="flex: 1; justify-content:center;" id="pm-btn-crop-mode"><i class="fa-solid fa-crop-simple"></i> <span class="illu-pm-btn-text">${tKey('photo.cropLive', 'Recadrer')}</span></button>
+                                    <button class="illu-pm-btn" style="flex: 1; justify-content:center;" id="pm-btn-rotate-90"><i class="fa-solid fa-rotate-right"></i> <span class="illu-pm-btn-text">${tKey('photo.rotate', 'Rotation')}</span></button>
+                                </div>
+                            </div>
+                            <div class="illu-pm-row" style="margin-top:10px; background: rgba(255,255,255,0.05); padding: 5px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+                                <label style="color: #4facfe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;"><i class="fa-solid fa-microchip"></i> Moteur WebGL</label>
+                                <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="pm-mode-btn-row" role="group" style="width: 100%;">
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="raw" id="pm-mode-raw-btn" aria-pressed="false" style="flex: 1; padding: 4px 8px; font-size: 11px;">RAW Profond (14-bit)</button>
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="normal" id="pm-mode-normal-btn" aria-pressed="false" style="flex: 1; padding: 4px 8px; font-size: 11px;">Normal (8-bit)</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -197,9 +208,37 @@
         document.getElementById('pm-btn-zoom-fit').addEventListener('click', zoomToFit);
         document.getElementById('pm-btn-toggle-effects').addEventListener('click', toggleEffects);
 
+        // RAW Mode
+        const modeBtns = document.querySelectorAll('#pm-mode-btn-row .illu-scope-btn');
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const photo = state.photos.find(p => p.id === state.activeId);
+                if (photo) {
+                    photo.useRawMode = (btn.dataset.value === 'raw');
+                    
+                    // Update classes visually
+                    modeBtns.forEach(b => {
+                        b.classList.remove('illu-scope-btn--active');
+                        b.setAttribute('aria-pressed', 'false');
+                    });
+                    btn.classList.add('illu-scope-btn--active');
+                    btn.setAttribute('aria-pressed', 'true');
+                    
+                    if (window.IlluImageAdjustCore && window.IlluImageAdjustCore.Slider) {
+                        IlluImageAdjustCore.Slider.updateRanges(document.getElementById('pm-panel-edit'), 'pm-slider-', photo.useRawMode);
+                    }
+                    
+                    renderActivePhoto();
+                }
+            });
+        });
+
         // Crop mode button (in presets panel)
         const cropBtn = document.getElementById('pm-btn-crop-mode');
         if (cropBtn) cropBtn.addEventListener('click', startCropMode);
+        
+        const rotBtn = document.getElementById('pm-btn-rotate-90');
+        if (rotBtn) rotBtn.addEventListener('click', rotateActivePhoto90);
 
         // Crop overlay buttons
         document.getElementById('pm-crop-apply').addEventListener('click', applyCrop);
@@ -374,7 +413,7 @@
             state.panX -= mouseX * (factor - 1);
             state.panY -= mouseY * (factor - 1);
             state.zoom = newZoom;
-            renderActivePhoto();
+            renderActivePhoto('highres');
             updateZoomBadge();
         }
     }
@@ -420,7 +459,7 @@
         state.panY += dy;
         state.startDragX = e.clientX;
         state.startDragY = e.clientY;
-        renderActivePhoto();
+        renderActivePhoto('highres');
     }
 
     function handleMouseUp() {
@@ -450,7 +489,7 @@
 
     function updateZoom(factor) {
         state.zoom = Math.max(0.1, Math.min(10, state.zoom * factor));
-        renderActivePhoto();
+        renderActivePhoto('highres');
         updateZoomBadge();
     }
 
@@ -458,7 +497,7 @@
         zoomToFit();
         state.panX = 0;
         state.panY = 0;
-        renderActivePhoto();
+        renderActivePhoto('highres');
         updateZoomBadge();
     }
 
@@ -473,11 +512,11 @@
         const margin = 40;
         const availW = Math.max(100, wr - margin);
         const availH = Math.max(100, hr - margin);
-        const z = Math.min(availW / photo.previewImageData.width, availH / photo.previewImageData.height);
+        const z = Math.min(availW / photo.imageData.width, availH / photo.imageData.height);
         state.zoom = z; // Remove the 1.0 cap as requested to allow small images to fit the area
         state.panX = 0;
         state.panY = 0;
-        renderActivePhoto();
+        renderActivePhoto('highres');
         updateZoomBadge();
     }
 
@@ -551,6 +590,38 @@
     }
 
     // --- Interactive Crop Mode ---
+
+    function rotateActivePhoto90() {
+        if (!state.activeId) return;
+        const p = state.photos.find(x => x.id === state.activeId);
+        if (!p) return;
+
+        const rotateImgData = (id) => {
+            const w = id.width;
+            const h = id.height;
+            const out = new ImageData(h, w);
+            const s = id.data;
+            const d = out.data;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const si = (y * w + x) * 4;
+                    const di = (x * h + (h - 1 - y)) * 4;
+                    d[di] = s[si];
+                    d[di + 1] = s[si + 1];
+                    d[di + 2] = s[si + 2];
+                    d[di + 3] = s[si + 3];
+                }
+            }
+            return out;
+        };
+
+        p.imageData = rotateImgData(p.imageData);
+        p.previewImageData = rotateImgData(p.previewImageData);
+        p.isModified = true;
+        
+        renderActivePhoto();
+        renderFilmstrip();
+    }
 
     function startCropMode() {
         if (!state.activeId) return;
@@ -679,32 +750,58 @@
         await openFromCanvas(project.composite || window.EditorManager.mainCanvas, project.name || 'Projet');
     }
 
-    async function openFromCanvas(canvas, fileName = 'image.png') {
+    async function openFromCanvas(canvas, fileName = 'image.png', options = {}) {
         if (!canvas) return;
         openMode();
 
-        setTimeout(async () => {
-            try {
-                const ctx = canvas.getContext('2d');
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        return new Promise((resolve) => {
+            setTimeout(async () => {
+                try {
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-                const photoObj = {
-                    id: generateId(),
-                    fileName: fileName,
-                    imageData: imageData,
-                    previewImageData: downscaleForPreview(imageData),
-                    params: deepCloneParams(DEFAULT_PARAMS),
-                    isModified: false
-                };
+                    if (options.rawFloatData) {
+                        imageData.rawFloatData = options.rawFloatData;
+                        imageData.rawFloatWidth = options.rawFloatWidth;
+                        imageData.rawFloatHeight = options.rawFloatHeight;
+                        imageData.rawMetadata = options.rawMetadata;
+                    }
 
-                state.photos.push(photoObj);
-                renderFilmstrip();
-                selectPhoto(photoObj.id);
-                updateEmptyState();
-            } catch (err) {
-                console.error("openFromCanvas error", err);
-            }
-        }, 150);
+                    const photoObj = {
+                        id: generateId(),
+                        fileName: fileName,
+                        imageData: imageData,
+                        previewImageData: downscaleForPreview(imageData),
+                        params: deepCloneParams(DEFAULT_PARAMS),
+                        isModified: false,
+                        useRawMode: !!imageData.rawFloatData,
+                        metadata: imageData.rawMetadata
+                    };
+
+                    if (photoObj.metadata) {
+                        applyMetadataPresets(photoObj);
+                    }
+
+                    state.photos.push(photoObj);
+                    renderFilmstrip();
+                    selectPhoto(photoObj.id);
+                    updateEmptyState();
+                } catch (err) {
+                    console.error("openFromCanvas error", err);
+                } finally {
+                    resolve();
+                }
+            }, 50);
+        });
+    }
+
+    function applyMetadataPresets(photo) {
+        if (!photo || !photo.metadata) return;
+        const meta = photo.metadata;
+        if (typeof meta.exposure_bias === 'number' && meta.exposure_bias !== 0) {
+            // Our Exposure parameter maps exposure_bias * 50
+            photo.params.exposure = Math.max(-350, Math.min(350, Math.round(meta.exposure_bias * 50)));
+        }
     }
 
     // --- Standard logic ---
@@ -715,10 +812,22 @@
         const w = id.width;
         const h = id.height;
         const PREVIEW_MAX = 1200;
-        if (Math.max(w, h) <= PREVIEW_MAX) return new ImageData(new Uint8ClampedArray(id.data), w, h);
+        
+        let outId;
+        if (Math.max(w, h) <= PREVIEW_MAX) {
+            outId = new ImageData(new Uint8ClampedArray(id.data), w, h);
+            if (id.rawFloatData) {
+                outId.rawFloatData = id.rawFloatData;
+                outId.rawFloatWidth = w;
+                outId.rawFloatHeight = h;
+            }
+            return outId;
+        }
+
         const s = PREVIEW_MAX / Math.max(w, h);
         const nw = Math.round(w * s);
         const nh = Math.round(h * s);
+        
         const c = document.createElement('canvas');
         c.width = nw; c.height = nh;
         const x = c.getContext('2d');
@@ -726,7 +835,31 @@
         c0.width = w; c0.height = h;
         c0.getContext('2d').putImageData(id, 0, 0);
         x.drawImage(c0, 0, 0, nw, nh);
-        return x.getImageData(0, 0, nw, nh);
+        
+        outId = x.getImageData(0, 0, nw, nh);
+
+        // Downscale float data via Nearest Neighbor if present
+        if (id.rawFloatData) {
+            const outFloat = new Float32Array(nw * nh * 4);
+            const inFloat = id.rawFloatData;
+            for (let y = 0; y < nh; y++) {
+                const srcY = Math.floor(y / s);
+                for (let x = 0; x < nw; x++) {
+                    const srcX = Math.floor(x / s);
+                    const si = (srcY * w + srcX) * 4;
+                    const di = (y * nw + x) * 4;
+                    outFloat[di] = inFloat[si];
+                    outFloat[di+1] = inFloat[si+1];
+                    outFloat[di+2] = inFloat[si+2];
+                    outFloat[di+3] = inFloat[si+3];
+                }
+            }
+            outId.rawFloatData = outFloat;
+            outId.rawFloatWidth = nw;
+            outId.rawFloatHeight = nh;
+        }
+
+        return outId;
     }
 
     function generateThumbUrl(previewId) {
@@ -811,7 +944,8 @@
                 previewImageData: previewImageData,
                 thumbUrl: thumbUrl,
                 params: deepCloneParams(DEFAULT_PARAMS),
-                isModified: false
+                isModified: false,
+                useRawMode: !!imageData.rawFloatData
             };
 
             state.photos.push(photoObj);
@@ -1030,7 +1164,52 @@
         IlluImageAdjustCore.HSLManager.bind(document, 'pm-editor', photo.params, () => renderActivePhoto());
 
         const sDoc = document.getElementById('status-doc-size');
-        if (sDoc) sDoc.innerText = `${photo.imageData.width} x ${photo.imageData.height} px`;
+        if (sDoc) {
+            let info = `${photo.imageData.width} x ${photo.imageData.height} px`;
+            if (photo.metadata) {
+                const meta = photo.metadata;
+                const details = [];
+                if (meta.camera_make || meta.camera_model) {
+                    details.push(`${meta.camera_make || ''} ${meta.camera_model || ''}`.trim());
+                }
+                if (meta.iso_speed) details.push(`ISO ${meta.iso_speed}`);
+                if (meta.shutter) {
+                    const sh = meta.shutter < 0.99 ? `1/${Math.round(1 / meta.shutter)}s` : `${meta.shutter}s`;
+                    details.push(sh);
+                }
+                if (meta.aperture) details.push(`f/${meta.aperture}`);
+                if (details.length > 0) {
+                    info += ` | ${details.join(' | ')}`;
+                }
+            }
+            sDoc.innerText = info;
+        }
+
+        const modeBtnRow = document.getElementById('pm-mode-btn-row');
+        if (modeBtnRow) {
+            const rawBtn = document.getElementById('pm-mode-raw-btn');
+            const normalBtn = document.getElementById('pm-mode-normal-btn');
+            
+            modeBtnRow.style.opacity = '1';
+            modeBtnRow.style.pointerEvents = 'auto';
+            modeBtnRow.title = "Mode de rendu du moteur d'ajustement";
+            
+            if (photo.useRawMode) {
+                rawBtn.classList.add('illu-scope-btn--active');
+                rawBtn.setAttribute('aria-pressed', 'true');
+                normalBtn.classList.remove('illu-scope-btn--active');
+                normalBtn.setAttribute('aria-pressed', 'false');
+            } else {
+                rawBtn.classList.remove('illu-scope-btn--active');
+                rawBtn.setAttribute('aria-pressed', 'false');
+                normalBtn.classList.add('illu-scope-btn--active');
+                normalBtn.setAttribute('aria-pressed', 'true');
+            }
+        }
+        
+        if (window.IlluImageAdjustCore && window.IlluImageAdjustCore.Slider) {
+            IlluImageAdjustCore.Slider.updateRanges(document.getElementById('pm-panel-edit'), 'pm-slider-', photo.useRawMode);
+        }
 
         if (isInitial) {
             zoomToFit();
@@ -1054,6 +1233,9 @@
         const photo = state.photos.find(p => p.id === state.activeId);
         if (!photo) return;
         photo.params = deepCloneParams(DEFAULT_PARAMS);
+        if (photo.metadata) {
+            applyMetadataPresets(photo);
+        }
         photo.isModified = false;
         selectPhoto(photo.id);
     }
@@ -1083,44 +1265,168 @@
         state.rafPending = requestAnimationFrame(() => { state.rafPending = null; callback(); });
     }
 
-    function renderActivePhoto() {
+    function renderActivePhoto(mode = 'proxy') {
         if (!state.activeId) return;
         const photo = state.photos.find(p => p.id === state.activeId);
         if (!photo) return;
 
+        // Schedule High-Res rendering after inactivity (debounce)
+        if (mode === 'proxy') {
+            if (state.highResTimeout) clearTimeout(state.highResTimeout);
+            state.highResTimeout = setTimeout(() => {
+                state.highResTimeout = null;
+                renderActivePhoto('highres');
+            }, 800);
+        }
+
         scheduleRender(() => {
             const c = document.getElementById('pm-main-canvas');
-            if (!c) return;
+            const centerEl = document.getElementById('pm-canvas-viewport');
+            if (!c || !centerEl) return;
             const ctx = c.getContext('2d');
 
+            const W = photo.imageData.width;
+            const H = photo.imageData.height;
+            
+            // Ensure c has the correct full resolution
+            if (c.width !== W || c.height !== H) {
+                c.width = W;
+                c.height = H;
+            }
+
+            const targetW = (W * state.zoom) + 'px';
+            const targetH = (H * state.zoom) + 'px';
+            const targetTr = `translate(${state.panX}px, ${state.panY}px)`;
+
+            if (c.style.width !== targetW) c.style.width = targetW;
+            if (c.style.height !== targetH) c.style.height = targetH;
+            if (c.style.transform !== targetTr) c.style.transform = targetTr;
+
+            // PERFORMANCE: Calculate visible viewport in unscaled image coordinates
+            const vpW = centerEl.clientWidth || (window.innerWidth * 0.8);
+            const vpH = centerEl.clientHeight || (window.innerHeight * 0.8);
+            const z = state.zoom || 1;
+            
+            // The center of the viewport corresponds to this local unscaled coordinate:
+            const cx = W / 2 - (state.panX || 0) / z;
+            const cy = H / 2 - (state.panY || 0) / z;
+            let sw = vpW / z;
+            let sh = vpH / z;
+            
+            // Add a margin to avoid popping during fast panning
+            const pad = 64 / z;
+            let sx = Math.floor(cx - sw / 2 - pad);
+            let sy = Math.floor(cy - sh / 2 - pad);
+            
+            // Clamp to image bounds
+            sx = Math.max(0, sx);
+            sy = Math.max(0, sy);
+            sw = Math.ceil(Math.min(W - sx, sw + pad * 2));
+            sh = Math.ceil(Math.min(H - sy, sh + pad * 2));
+
+            if (sw <= 0 || sh <= 0) {
+                sx = 0; sy = 0; sw = W; sh = H;
+            }
+
+            // Cache the original image as a canvas for fast cropping
+            if (!photo.previewCanvas || photo.previewCanvas.width !== W || photo.previewCanvas.height !== H) {
+                photo.previewCanvas = document.createElement('canvas');
+                photo.previewCanvas.width = W;
+                photo.previewCanvas.height = H;
+                photo.previewCanvas.getContext('2d').putImageData(photo.imageData, 0, 0);
+            }
+
+            // Proxy mode uses a low LOD for fast dragging. High-res uses screen-accurate LOD.
+            let MAX_PROCESS_DIM = 320; 
+            if (mode === 'highres') {
+                const screenMax = Math.max(window.innerWidth, window.innerHeight);
+                // Si l'écran est 1080p ou moins, le rendu au repos (dézoomé) se limite à 720p pour la vitesse.
+                // Si c'est un écran 1440p ou 4K, on monte à 1080p pour le rendu global au repos.
+                MAX_PROCESS_DIM = (screenMax > 1920) ? 1080 : 720;
+            }
+
+            let scale = 1.0;
+            if (sw > MAX_PROCESS_DIM || sh > MAX_PROCESS_DIM) {
+                scale = MAX_PROCESS_DIM / Math.max(sw, sh);
+            }
+            
+            const procW = Math.max(1, Math.floor(sw * scale));
+            const procH = Math.max(1, Math.floor(sh * scale));
+
+            if (!state.cropScratch) state.cropScratch = document.createElement('canvas');
+            const cropScratch = state.cropScratch;
+            if (cropScratch.width !== procW || cropScratch.height !== procH) {
+                cropScratch.width = procW;
+                cropScratch.height = procH;
+            }
+            const cropCtx = cropScratch.getContext('2d', { willReadFrequently: true });
+            cropCtx.clearRect(0, 0, procW, procH);
+            
+            // Draw the required region, downscaling it natively via canvas for the LOD
+            cropCtx.drawImage(photo.previewCanvas, sx, sy, sw, sh, 0, 0, procW, procH);
+            
+            // We need ImageData to pass to the filter engine
+            let visibleImageData = cropCtx.getImageData(0, 0, procW, procH);
+
+            // --- RAW MODE 14-BIT LOGIC (bilinear interpolation) ---
+            if (photo.useRawMode && photo.imageData.rawFloatData) {
+                const floatView = new Float32Array(procW * procH * 4);
+                const fullFloat = photo.imageData.rawFloatData;
+                const fullW = photo.imageData.rawFloatWidth;
+                const fullH = photo.imageData.rawFloatHeight;
+                const invScale = 1.0 / scale;
+
+                for (let y = 0; y < procH; y++) {
+                    const srcYf = sy + y * invScale;
+                    const y0 = Math.floor(srcYf);
+                    const y1 = Math.min(y0 + 1, fullH - 1);
+                    const fy = srcYf - y0;
+                    if (y0 >= fullH) continue;
+
+                    for (let x = 0; x < procW; x++) {
+                        const srcXf = sx + x * invScale;
+                        const x0 = Math.floor(srcXf);
+                        const x1 = Math.min(x0 + 1, fullW - 1);
+                        const fx = srcXf - x0;
+                        if (x0 >= fullW) continue;
+
+                        const dstIdx = (y * procW + x) * 4;
+                        const i00 = (y0 * fullW + x0) * 4;
+                        const i10 = (y0 * fullW + x1) * 4;
+                        const i01 = (y1 * fullW + x0) * 4;
+                        const i11 = (y1 * fullW + x1) * 4;
+
+                        const w00 = (1 - fx) * (1 - fy);
+                        const w10 = fx * (1 - fy);
+                        const w01 = (1 - fx) * fy;
+                        const w11 = fx * fy;
+
+                        floatView[dstIdx]   = fullFloat[i00]   * w00 + fullFloat[i10]   * w10 + fullFloat[i01]   * w01 + fullFloat[i11]   * w11;
+                        floatView[dstIdx+1] = fullFloat[i00+1] * w00 + fullFloat[i10+1] * w10 + fullFloat[i01+1] * w01 + fullFloat[i11+1] * w11;
+                        floatView[dstIdx+2] = fullFloat[i00+2] * w00 + fullFloat[i10+2] * w10 + fullFloat[i01+2] * w01 + fullFloat[i11+2] * w11;
+                        floatView[dstIdx+3] = fullFloat[i00+3] * w00 + fullFloat[i10+3] * w10 + fullFloat[i01+3] * w01 + fullFloat[i11+3] * w11;
+                    }
+                }
+                // Wrap in object mimicking ImageData but containing Float32Array
+                visibleImageData = { width: procW, height: procH, data: floatView };
+            } else if (photo.useRawMode) {
+                console.warn('[RAW DEBUG] useRawMode=true but NO rawFloatData on imageData!');
+            }
+
             if (state.showEffects && window.illuApplyCameraRawParams) {
-                // Use isLivePreview to get direct GPU canvas if WebGL is active
                 const p = Object.assign({}, photo.params, {
                     isLivePreview: true,
-                    u_res: [c.width, c.height] // For sharpening offsets
+                    u_res: [procW, procH], // Use processed resolution for shaders
+                    isRawMode: photo.useRawMode // Tell shader to act on full dynamic range
                 });
-                const out = window.illuApplyCameraRawParams(photo.previewImageData, p);
+                
+                // Process ONLY the visible portion at LOD resolution
+                const out = window.illuApplyCameraRawParams(visibleImageData, p);
 
-                // PERFORMANCE: Only resize canvas buffer if dimensions changed
-                if (c.width !== photo.previewImageData.width || c.height !== photo.previewImageData.height) {
-                    c.width = photo.previewImageData.width;
-                    c.height = photo.previewImageData.height;
-                }
-
-                // PERFORMANCE: Group style updates and avoid redundant writes
-                const targetW = (c.width * state.zoom) + 'px';
-                const targetH = (c.height * state.zoom) + 'px';
-                const targetTr = `translate(${state.panX}px, ${state.panY}px)`;
-
-                if (c.style.width !== targetW) c.style.width = targetW;
-                if (c.style.height !== targetH) c.style.height = targetH;
-                if (c.style.transform !== targetTr) c.style.transform = targetTr;
-
+                ctx.clearRect(0, 0, W, H);
                 if (out instanceof HTMLCanvasElement) {
-                    // DIRECT GPU PATH: ZERO-COPY (Extremely fast)
-                    ctx.drawImage(out, 0, 0);
+                    ctx.drawImage(out, 0, 0, procW, procH, sx, sy, sw, sh);
                 } else if (out && out.width) {
-                    // CPU FALLBACK path
                     if (!state.scratchCanvas) state.scratchCanvas = document.createElement('canvas');
                     const tempC = state.scratchCanvas;
                     if (tempC.width !== out.width || tempC.height !== out.height) {
@@ -1132,28 +1438,16 @@
                     } else {
                         tempC.getContext('2d').drawImage(out, 0, 0);
                     }
-                    ctx.drawImage(tempC, 0, 0);
+                    ctx.drawImage(tempC, 0, 0, procW, procH, sx, sy, sw, sh);
                 }
             } else {
-                // Show original image (effects OFF)
-                // PERFORMANCE: Only resize canvas buffer if dimensions changed
-                if (c.width !== photo.previewImageData.width || c.height !== photo.previewImageData.height) {
-                    c.width = photo.previewImageData.width;
-                    c.height = photo.previewImageData.height;
-                }
-
-                const targetW = (c.width * state.zoom) + 'px';
-                const targetH = (c.height * state.zoom) + 'px';
-                const targetTr = `translate(${state.panX}px, ${state.panY}px)`;
-
-                if (c.style.width !== targetW) c.style.width = targetW;
-                if (c.style.height !== targetH) c.style.height = targetH;
-                if (c.style.transform !== targetTr) c.style.transform = targetTr;
-
-                ctx.putImageData(photo.previewImageData, 0, 0);
+                ctx.clearRect(0, 0, W, H);
+                ctx.drawImage(cropScratch, 0, 0, procW, procH, sx, sy, sw, sh);
             }
         });
     }
+
+
 
     async function exportAll(targetIds = null) {
         // targets: if IDs provided, use those. Otherwise, use all photos.
@@ -1174,7 +1468,9 @@
                 if (busy) busy.progress(Math.round((i / targets.length) * 100));
                 const p = targets[i];
                 const extendedParams = Object.assign({}, p.params, {
-                    u_res: [p.imageData.width, p.imageData.height]
+                    u_res: [p.imageData.width, p.imageData.height],
+                    isLivePreview: false,
+                    isRawMode: p.useRawMode
                 });
                 const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(p.imageData, extendedParams) : p.imageData;
 
@@ -1253,29 +1549,43 @@
         document.getElementById('pm-exp-cancel').onclick = () => overlay.remove();
     }
 
-    function openActiveInEditor() {
+    async function openActiveInEditor() {
         if (!state.activeId) return;
         const photo = state.photos.find(p => p.id === state.activeId);
         if (!photo || !window.EditorManager || !window.EditorManager.handleNewProjectFromImage) return;
 
-        const busy = window.IlluProgress ? window.IlluProgress.createDelayedInstantEffect('Exportation vers l\'éditeur...', 10) : null;
+        if (window.IlluProgress && window.IlluProgress.instantEffectStart) {
+            window.IlluProgress.instantEffectStart('Export en cours');
+            window.IlluProgress.instantEffectProgress(0, 'Transfert de la haute définition vers le canevas...');
+        }
 
-        // Apply full res edits
-        const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(photo.imageData, photo.params) : photo.imageData;
-        const c = document.createElement('canvas');
-        c.width = outId.width; c.height = outId.height;
-        c.getContext('2d').putImageData(outId, 0, 0);
+        // Yield to browser to render the loader
+        await new Promise(r => setTimeout(r, 50));
 
-        window.EditorManager.handleNewProjectFromImage(c);
-        if (busy) busy.done();
+        try {
+            const p = Object.assign({}, photo.params, {
+                isLivePreview: false,
+                isRawMode: photo.useRawMode
+            });
+            const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(photo.imageData, p) : photo.imageData;
+            const c = document.createElement('canvas');
+            c.width = outId.width; c.height = outId.height;
+            c.getContext('2d').putImageData(outId, 0, 0);
 
-        if (window.showIlluAlert) window.showIlluAlert(tKey('photo.openedInEditor', 'Image ouverte dans MasterPaint !'));
+            window.EditorManager.handleNewProjectFromImage(c);
 
-        // Policy: if only 1 image, close PM Pro. If more, dock it.
-        if (state.photos.length === 1) {
-            finishClose();
-        } else {
-            finishClose(true); // Dock the rest
+            if (window.showIlluAlert) window.showIlluAlert(tKey('photo.openedInEditor', 'Image ouverte dans MasterPaint !'));
+
+            // Policy: if only 1 image, close PM Pro. If more, dock it.
+            if (state.photos.length === 1) {
+                finishClose();
+            } else {
+                finishClose(true); // Dock the rest
+            }
+        } finally {
+            if (window.IlluProgress && window.IlluProgress.instantEffectDone) {
+                window.IlluProgress.instantEffectDone();
+            }
         }
     }
 
@@ -1292,7 +1602,8 @@
             for (let i = 0; i < targets.length; i++) {
                 if (busy) busy.progress(Math.round((i / targets.length) * 100));
                 const p = targets[i];
-                const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(p.imageData, p.params) : p.imageData;
+                const extendedParams = Object.assign({}, p.params, { isLivePreview: false, isRawMode: p.useRawMode });
+                const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(p.imageData, extendedParams) : p.imageData;
                 const c = document.createElement('canvas');
                 c.width = outId.width; c.height = outId.height;
                 c.getContext('2d').putImageData(outId, 0, 0);

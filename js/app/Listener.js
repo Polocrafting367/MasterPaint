@@ -257,31 +257,19 @@ window.addEventListener('drop', (e) => {
             return;
         }
 
-        const f0 = files[0];
-        console.log('Drop: File info:', f0.name, f0.type, f0.size);
-
-        if (f0.size === 0) {
-            console.error('Drop: 0-byte file detected. URI-list:', uriList);
+        // Convert FileList to array to filter out 0-byte files
+        const validFiles = Array.from(files).filter(f => f.size > 0);
+        if (validFiles.length === 0) {
+            console.error('Drop: 0-byte files detected. URI-list:', uriList);
             if (window.showIlluAlert) {
                 window.showIlluAlert(
-                    "Fichier inaccessible (0 octets). Il s'agit peut-être d'un lien système que le navigateur ne peut pas lire directement. Utilisez le bouton d'importation (O).");
+                    "Fichier(s) inaccessible(s) (0 octets). Il s'agit peut-être d'un lien système que le navigateur ne peut pas lire directement. Utilisez le bouton d'importation (O).");
             }
             return;
         }
 
         if (typeof window.illuProcessFileImport === 'function') {
-            window.illuProcessFileImport(f0);
-        } else {
-            // Fallback legacy (should not happen since it's defined in DrawingTools.js)
-            if (f0.type.indexOf('image') !== -1) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = new Image();
-                    img.onload = () => EditorManager.promptImport(img);
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(f0);
-            }
+            window.illuProcessFileImport(validFiles);
         }
     }
 });
@@ -1155,7 +1143,7 @@ if (document.readyState === 'loading') {
 // Dynamic calculation of tab-bar-outer available width based on visible options in tool-options-container
 window.illuRecalculateTabBarWidth = function () {
 
-if (window.innerWidth <= 930) {
+if (window.innerWidth <= 770) {
         const tabBarOuter = document.getElementById('tab-bar-outer');
         if (tabBarOuter) {
             tabBarOuter.style.removeProperty('width');

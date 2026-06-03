@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
+Allow: /MasterPaint/
+Allow: /MasterPaint/icons/
 
 Sitemap: https://polocrafting.fr/MasterPaint/sitemap.xml

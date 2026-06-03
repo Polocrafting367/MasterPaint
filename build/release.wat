@@ -21,19 +21,21 @@
  (type $19 (func (param i32 i32 i64)))
  (type $20 (func (result i32)))
  (type $21 (func (param f64 f64) (result f64)))
- (type $22 (func (param i64) (result i32)))
- (type $23 (func (param i32 i32 i32 i32 f32 f32 i32 i32)))
- (type $24 (func (param i32 i32 i32 f32 i32 i32 i32 i32 i32 i32)))
- (type $25 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)))
- (type $26 (func (param i32 i32 i32 i32 i32 i32 i32 i32 f32 f32)))
- (type $27 (func (param f32 f32 f32 f32) (result f32)))
- (type $28 (func (param f32 f32 f32 f32 f32 f32) (result f32)))
- (type $29 (func (param f32 f32 f32 f32 f32 f32 f32) (result i32)))
- (type $30 (func (param f32 f32 f32 f32 f32 f32 f32 f32 f32) (result f32)))
- (type $31 (func (param i32 i32 i32 i32 f32 f32 i32 i32 i32)))
- (type $32 (func (param i32 i32 i32 i32 i32 f32 i32 i32)))
- (type $33 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
- (type $34 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
+ (type $22 (func (param f32) (result f32)))
+ (type $23 (func (param i64) (result i32)))
+ (type $24 (func (param i32 i32 i32 i32 f32 f32 i32 i32)))
+ (type $25 (func (param i32 i32 i32 f32 i32 i32 i32 i32 i32 i32)))
+ (type $26 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)))
+ (type $27 (func (param i32 i32 i32 i32 i32 i32 i32 i32 f32 f32)))
+ (type $28 (func (param f32 f32 f32 f32) (result f32)))
+ (type $29 (func (param f32 f32 f32 f32 f32 f32) (result f32)))
+ (type $30 (func (param f32 f32 f32 f32 f32 f32 f32) (result i32)))
+ (type $31 (func (param f32 f32 f32 f32 f32 f32 f32 f32 f32) (result f32)))
+ (type $32 (func (param i32 i32 i32 i32 f32 f32 i32 i32 i32)))
+ (type $33 (func (param i32 i32 i32 i32 i32 f32 i32 i32)))
+ (type $34 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
+ (type $35 (func (param i32 i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
+ (type $36 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
  (import "env" "abort" (func $~lib/builtins/abort (param i32 i32 i32 i32)))
  (global $~lib/rt/itcms/total (mut i32) (i32.const 0))
  (global $~lib/rt/itcms/threshold (mut i32) (i32.const 0))
@@ -230,6 +232,7 @@
  (export "ALPHA_ARRAY_ID" (global $assembly/index/ALPHA_ARRAY_ID))
  (export "createBuffer" (func $assembly/index/createBuffer))
  (export "applyCameraRaw" (func $assembly/camera_raw/applyCameraRaw))
+ (export "applyCameraRawFloat" (func $assembly/camera_raw/applyCameraRawFloat))
  (export "generateThumbnail" (func $assembly/camera_raw/generateThumbnail))
  (export "chromatic" (func $assembly/filters/chromatic))
  (export "wave" (func $assembly/filters/wave))
@@ -362,7 +365,7 @@
    local.get $1
    global.set $~lib/rt/itcms/iter
   end
-  block $__inlined_func$~lib/rt/itcms/Object#unlink$214
+  block $__inlined_func$~lib/rt/itcms/Object#unlink$234
    local.get $0
    i32.load offset=4
    i32.const -4
@@ -386,7 +389,7 @@
      call $~lib/builtins/abort
      unreachable
     end
-    br $__inlined_func$~lib/rt/itcms/Object#unlink$214
+    br $__inlined_func$~lib/rt/itcms/Object#unlink$234
    end
    local.get $0
    i32.load offset=8
@@ -2556,6 +2559,156 @@
    end
   end
  )
+ (func $~lib/math/NativeMathf.mod (param $0 f32) (result f32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.reinterpret_f32
+  local.tee $2
+  i32.const 23
+  i32.shr_u
+  i32.const 255
+  i32.and
+  local.tee $4
+  i32.const 255
+  i32.eq
+  if
+   local.get $0
+   f32.const 360
+   f32.mul
+   local.tee $0
+   local.get $0
+   f32.div
+   return
+  end
+  local.get $2
+  i32.const 1
+  i32.shl
+  local.tee $1
+  i32.const -2023227392
+  i32.le_u
+  if
+   local.get $0
+   local.get $1
+   i32.const -2023227392
+   i32.ne
+   f32.convert_i32_u
+   f32.mul
+   return
+  end
+  local.get $2
+  i32.const -2147483648
+  i32.and
+  local.set $3
+  local.get $4
+  if (result i32)
+   local.get $2
+   i32.const 8388607
+   i32.and
+   i32.const 8388608
+   i32.or
+  else
+   local.get $2
+   i32.const 1
+   local.get $4
+   local.get $2
+   i32.const 9
+   i32.shl
+   i32.clz
+   i32.sub
+   local.tee $4
+   i32.sub
+   i32.shl
+  end
+  local.set $1
+  loop $while-continue|0
+   local.get $4
+   i32.const 135
+   i32.gt_s
+   if
+    local.get $1
+    i32.const 11796480
+    i32.ge_u
+    if (result i32)
+     local.get $1
+     i32.const 11796480
+     i32.eq
+     if
+      local.get $0
+      f32.const 0
+      f32.mul
+      return
+     end
+     local.get $1
+     i32.const 11796480
+     i32.sub
+    else
+     local.get $1
+    end
+    i32.const 1
+    i32.shl
+    local.set $1
+    local.get $4
+    i32.const 1
+    i32.sub
+    local.set $4
+    br $while-continue|0
+   end
+  end
+  local.get $1
+  i32.const 11796480
+  i32.ge_u
+  if
+   local.get $1
+   i32.const 11796480
+   i32.eq
+   if
+    local.get $0
+    f32.const 0
+    f32.mul
+    return
+   end
+   local.get $1
+   i32.const 11796480
+   i32.sub
+   local.set $1
+  end
+  local.get $4
+  local.get $1
+  i32.const 8
+  i32.shl
+  i32.clz
+  local.tee $2
+  i32.sub
+  local.set $4
+  local.get $1
+  local.get $2
+  i32.shl
+  local.set $1
+  local.get $4
+  i32.const 0
+  i32.gt_s
+  if (result i32)
+   local.get $1
+   i32.const 8388608
+   i32.sub
+   local.get $4
+   i32.const 23
+   i32.shl
+   i32.or
+  else
+   local.get $1
+   i32.const 1
+   local.get $4
+   i32.sub
+   i32.shr_u
+  end
+  local.get $3
+  i32.or
+  f32.reinterpret_i32
+ )
  (func $assembly/camera_raw/generateThumbnail (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32)
   (local $6 i32)
   (local $7 f32)
@@ -4085,7 +4238,7 @@
        f32.mul
        f32.add
        local.set $22
-       block $assembly/math/clamp255|inlined.9 (result i32)
+       block $assembly/math/clamp255|inlined.19 (result i32)
         i32.const 0
         local.get $17
         i32.load8_u
@@ -4120,43 +4273,43 @@
         local.tee $11
         local.get $11
         f32.ne
-        br_if $assembly/math/clamp255|inlined.9
+        br_if $assembly/math/clamp255|inlined.19
         drop
         i32.const 0
         local.get $11
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.9
+        br_if $assembly/math/clamp255|inlined.19
         drop
         i32.const 255
         local.get $11
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.9
+        br_if $assembly/math/clamp255|inlined.19
         drop
         local.get $11
         i32.trunc_sat_f32_u
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.10 (result i32)
+       block $assembly/math/clamp255|inlined.20 (result i32)
         i32.const 0
         local.get $20
         local.get $20
         f32.ne
-        br_if $assembly/math/clamp255|inlined.10
+        br_if $assembly/math/clamp255|inlined.20
         drop
         i32.const 0
         local.get $20
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.10
+        br_if $assembly/math/clamp255|inlined.20
         drop
         i32.const 255
         local.get $20
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.10
+        br_if $assembly/math/clamp255|inlined.20
         drop
         local.get $20
         i32.trunc_sat_f32_u
@@ -4166,24 +4319,24 @@
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.11 (result i32)
+       block $assembly/math/clamp255|inlined.21 (result i32)
         i32.const 0
         local.get $21
         local.get $21
         f32.ne
-        br_if $assembly/math/clamp255|inlined.11
+        br_if $assembly/math/clamp255|inlined.21
         drop
         i32.const 0
         local.get $21
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.11
+        br_if $assembly/math/clamp255|inlined.21
         drop
         i32.const 255
         local.get $21
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.11
+        br_if $assembly/math/clamp255|inlined.21
         drop
         local.get $21
         i32.trunc_sat_f32_u
@@ -4193,24 +4346,24 @@
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.12 (result i32)
+       block $assembly/math/clamp255|inlined.22 (result i32)
         i32.const 0
         local.get $22
         local.get $22
         f32.ne
-        br_if $assembly/math/clamp255|inlined.12
+        br_if $assembly/math/clamp255|inlined.22
         drop
         i32.const 0
         local.get $22
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.12
+        br_if $assembly/math/clamp255|inlined.22
         drop
         i32.const 255
         local.get $22
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.12
+        br_if $assembly/math/clamp255|inlined.22
         drop
         local.get $22
         i32.trunc_sat_f32_u
@@ -4975,7 +5128,7 @@
        f32.mul
        f32.add
        local.set $27
-       block $assembly/math/clamp255|inlined.13 (result i32)
+       block $assembly/math/clamp255|inlined.23 (result i32)
         i32.const 0
         local.get $14
         local.get $19
@@ -4998,43 +5151,43 @@
         local.tee $9
         local.get $9
         f32.ne
-        br_if $assembly/math/clamp255|inlined.13
+        br_if $assembly/math/clamp255|inlined.23
         drop
         i32.const 0
         local.get $9
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.13
+        br_if $assembly/math/clamp255|inlined.23
         drop
         i32.const 255
         local.get $9
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.13
+        br_if $assembly/math/clamp255|inlined.23
         drop
         local.get $9
         i32.trunc_sat_f32_u
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.14 (result i32)
+       block $assembly/math/clamp255|inlined.24 (result i32)
         i32.const 0
         local.get $25
         local.get $25
         f32.ne
-        br_if $assembly/math/clamp255|inlined.14
+        br_if $assembly/math/clamp255|inlined.24
         drop
         i32.const 0
         local.get $25
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.14
+        br_if $assembly/math/clamp255|inlined.24
         drop
         i32.const 255
         local.get $25
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.14
+        br_if $assembly/math/clamp255|inlined.24
         drop
         local.get $25
         i32.trunc_sat_f32_u
@@ -5044,24 +5197,24 @@
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.15 (result i32)
+       block $assembly/math/clamp255|inlined.25 (result i32)
         i32.const 0
         local.get $26
         local.get $26
         f32.ne
-        br_if $assembly/math/clamp255|inlined.15
+        br_if $assembly/math/clamp255|inlined.25
         drop
         i32.const 0
         local.get $26
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.15
+        br_if $assembly/math/clamp255|inlined.25
         drop
         i32.const 255
         local.get $26
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.15
+        br_if $assembly/math/clamp255|inlined.25
         drop
         local.get $26
         i32.trunc_sat_f32_u
@@ -5071,24 +5224,24 @@
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.16 (result i32)
+       block $assembly/math/clamp255|inlined.26 (result i32)
         i32.const 0
         local.get $27
         local.get $27
         f32.ne
-        br_if $assembly/math/clamp255|inlined.16
+        br_if $assembly/math/clamp255|inlined.26
         drop
         i32.const 0
         local.get $27
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.16
+        br_if $assembly/math/clamp255|inlined.26
         drop
         i32.const 255
         local.get $27
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.16
+        br_if $assembly/math/clamp255|inlined.26
         drop
         local.get $27
         i32.trunc_sat_f32_u
@@ -5432,7 +5585,7 @@
         f32.mul
         f32.add
         local.set $23
-        block $assembly/math/clamp255|inlined.17 (result i32)
+        block $assembly/math/clamp255|inlined.27 (result i32)
          i32.const 0
          local.get $15
          local.get $16
@@ -5455,43 +5608,43 @@
          local.tee $8
          local.get $8
          f32.ne
-         br_if $assembly/math/clamp255|inlined.17
+         br_if $assembly/math/clamp255|inlined.27
          drop
          i32.const 0
          local.get $8
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.17
+         br_if $assembly/math/clamp255|inlined.27
          drop
          i32.const 255
          local.get $8
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.17
+         br_if $assembly/math/clamp255|inlined.27
          drop
          local.get $8
          i32.trunc_sat_f32_u
         end
         i32.const 255
         i32.and
-        block $assembly/math/clamp255|inlined.18 (result i32)
+        block $assembly/math/clamp255|inlined.28 (result i32)
          i32.const 0
          local.get $21
          local.get $21
          f32.ne
-         br_if $assembly/math/clamp255|inlined.18
+         br_if $assembly/math/clamp255|inlined.28
          drop
          i32.const 0
          local.get $21
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.18
+         br_if $assembly/math/clamp255|inlined.28
          drop
          i32.const 255
          local.get $21
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.18
+         br_if $assembly/math/clamp255|inlined.28
          drop
          local.get $21
          i32.trunc_sat_f32_u
@@ -5501,24 +5654,24 @@
         i32.const 8
         i32.shl
         i32.or
-        block $assembly/math/clamp255|inlined.19 (result i32)
+        block $assembly/math/clamp255|inlined.29 (result i32)
          i32.const 0
          local.get $22
          local.get $22
          f32.ne
-         br_if $assembly/math/clamp255|inlined.19
+         br_if $assembly/math/clamp255|inlined.29
          drop
          i32.const 0
          local.get $22
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.19
+         br_if $assembly/math/clamp255|inlined.29
          drop
          i32.const 255
          local.get $22
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.19
+         br_if $assembly/math/clamp255|inlined.29
          drop
          local.get $22
          i32.trunc_sat_f32_u
@@ -5528,24 +5681,24 @@
         i32.const 16
         i32.shl
         i32.or
-        block $assembly/math/clamp255|inlined.20 (result i32)
+        block $assembly/math/clamp255|inlined.30 (result i32)
          i32.const 0
          local.get $23
          local.get $23
          f32.ne
-         br_if $assembly/math/clamp255|inlined.20
+         br_if $assembly/math/clamp255|inlined.30
          drop
          i32.const 0
          local.get $23
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.20
+         br_if $assembly/math/clamp255|inlined.30
          drop
          i32.const 255
          local.get $23
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.20
+         br_if $assembly/math/clamp255|inlined.30
          drop
          local.get $23
          i32.trunc_sat_f32_u
@@ -5879,7 +6032,7 @@
       local.get $0
       local.get $5
       i32.add
-      block $assembly/math/clamp255|inlined.21 (result i32)
+      block $assembly/math/clamp255|inlined.31 (result i32)
        i32.const 0
        local.get $14
        local.get $23
@@ -5895,19 +6048,19 @@
        local.tee $10
        local.get $10
        f32.ne
-       br_if $assembly/math/clamp255|inlined.21
+       br_if $assembly/math/clamp255|inlined.31
        drop
        i32.const 0
        local.get $10
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.21
+       br_if $assembly/math/clamp255|inlined.31
        drop
        i32.const 255
        local.get $10
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.21
+       br_if $assembly/math/clamp255|inlined.31
        drop
        local.get $10
        i32.trunc_sat_f32_u
@@ -5916,7 +6069,7 @@
       local.get $0
       local.get $5
       i32.add
-      block $assembly/math/clamp255|inlined.22 (result i32)
+      block $assembly/math/clamp255|inlined.32 (result i32)
        i32.const 0
        local.get $15
        local.get $23
@@ -5932,19 +6085,19 @@
        local.tee $10
        local.get $10
        f32.ne
-       br_if $assembly/math/clamp255|inlined.22
+       br_if $assembly/math/clamp255|inlined.32
        drop
        i32.const 0
        local.get $10
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.22
+       br_if $assembly/math/clamp255|inlined.32
        drop
        i32.const 255
        local.get $10
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.22
+       br_if $assembly/math/clamp255|inlined.32
        drop
        local.get $10
        i32.trunc_sat_f32_u
@@ -5953,7 +6106,7 @@
       local.get $0
       local.get $5
       i32.add
-      block $assembly/math/clamp255|inlined.23 (result i32)
+      block $assembly/math/clamp255|inlined.33 (result i32)
        i32.const 0
        local.get $16
        local.get $23
@@ -5969,19 +6122,19 @@
        local.tee $10
        local.get $10
        f32.ne
-       br_if $assembly/math/clamp255|inlined.23
+       br_if $assembly/math/clamp255|inlined.33
        drop
        i32.const 0
        local.get $10
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.23
+       br_if $assembly/math/clamp255|inlined.33
        drop
        i32.const 255
        local.get $10
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.23
+       br_if $assembly/math/clamp255|inlined.33
        drop
        local.get $10
        i32.trunc_sat_f32_u
@@ -6050,7 +6203,7 @@
        i32.const 3
        i32.lt_u
        if
-        block $assembly/math/clamp255|inlined.24 (result i32)
+        block $assembly/math/clamp255|inlined.34 (result i32)
          i32.const 0
          local.get $0
          local.get $9
@@ -6075,19 +6228,19 @@
          local.tee $3
          local.get $3
          f32.ne
-         br_if $assembly/math/clamp255|inlined.24
+         br_if $assembly/math/clamp255|inlined.34
          drop
          i32.const 0
          local.get $3
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.24
+         br_if $assembly/math/clamp255|inlined.34
          drop
          i32.const 255
          local.get $3
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.24
+         br_if $assembly/math/clamp255|inlined.34
          drop
          local.get $3
          i32.trunc_sat_f32_u
@@ -6708,24 +6861,24 @@
       local.get $0
       local.get $9
       i32.add
-      block $assembly/math/clamp255|inlined.25 (result i32)
+      block $assembly/math/clamp255|inlined.35 (result i32)
        i32.const 0
        local.get $7
        local.get $7
        f32.ne
-       br_if $assembly/math/clamp255|inlined.25
+       br_if $assembly/math/clamp255|inlined.35
        drop
        i32.const 0
        local.get $7
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.25
+       br_if $assembly/math/clamp255|inlined.35
        drop
        i32.const 255
        local.get $7
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.25
+       br_if $assembly/math/clamp255|inlined.35
        drop
        local.get $7
        i32.trunc_sat_f32_u
@@ -6734,24 +6887,24 @@
       local.get $0
       local.get $9
       i32.add
-      block $assembly/math/clamp255|inlined.26 (result i32)
+      block $assembly/math/clamp255|inlined.36 (result i32)
        i32.const 0
        local.get $6
        local.get $6
        f32.ne
-       br_if $assembly/math/clamp255|inlined.26
+       br_if $assembly/math/clamp255|inlined.36
        drop
        i32.const 0
        local.get $6
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.26
+       br_if $assembly/math/clamp255|inlined.36
        drop
        i32.const 255
        local.get $6
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.26
+       br_if $assembly/math/clamp255|inlined.36
        drop
        local.get $6
        i32.trunc_sat_f32_u
@@ -6760,24 +6913,24 @@
       local.get $0
       local.get $9
       i32.add
-      block $assembly/math/clamp255|inlined.27 (result i32)
+      block $assembly/math/clamp255|inlined.37 (result i32)
        i32.const 0
        local.get $8
        local.get $8
        f32.ne
-       br_if $assembly/math/clamp255|inlined.27
+       br_if $assembly/math/clamp255|inlined.37
        drop
        i32.const 0
        local.get $8
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.27
+       br_if $assembly/math/clamp255|inlined.37
        drop
        i32.const 255
        local.get $8
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.27
+       br_if $assembly/math/clamp255|inlined.37
        drop
        local.get $8
        i32.trunc_sat_f32_u
@@ -7074,7 +7227,7 @@
        f32.mul
        f32.add
        local.set $22
-       block $assembly/math/clamp255|inlined.28 (result i32)
+       block $assembly/math/clamp255|inlined.38 (result i32)
         i32.const 0
         local.get $11
         local.get $15
@@ -7097,43 +7250,43 @@
         local.tee $9
         local.get $9
         f32.ne
-        br_if $assembly/math/clamp255|inlined.28
+        br_if $assembly/math/clamp255|inlined.38
         drop
         i32.const 0
         local.get $9
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.28
+        br_if $assembly/math/clamp255|inlined.38
         drop
         i32.const 255
         local.get $9
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.28
+        br_if $assembly/math/clamp255|inlined.38
         drop
         local.get $9
         i32.trunc_sat_f32_u
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.29 (result i32)
+       block $assembly/math/clamp255|inlined.39 (result i32)
         i32.const 0
         local.get $20
         local.get $20
         f32.ne
-        br_if $assembly/math/clamp255|inlined.29
+        br_if $assembly/math/clamp255|inlined.39
         drop
         i32.const 0
         local.get $20
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.29
+        br_if $assembly/math/clamp255|inlined.39
         drop
         i32.const 255
         local.get $20
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.29
+        br_if $assembly/math/clamp255|inlined.39
         drop
         local.get $20
         i32.trunc_sat_f32_u
@@ -7143,24 +7296,24 @@
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.30 (result i32)
+       block $assembly/math/clamp255|inlined.40 (result i32)
         i32.const 0
         local.get $21
         local.get $21
         f32.ne
-        br_if $assembly/math/clamp255|inlined.30
+        br_if $assembly/math/clamp255|inlined.40
         drop
         i32.const 0
         local.get $21
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.30
+        br_if $assembly/math/clamp255|inlined.40
         drop
         i32.const 255
         local.get $21
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.30
+        br_if $assembly/math/clamp255|inlined.40
         drop
         local.get $21
         i32.trunc_sat_f32_u
@@ -7170,24 +7323,24 @@
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.31 (result i32)
+       block $assembly/math/clamp255|inlined.41 (result i32)
         i32.const 0
         local.get $22
         local.get $22
         f32.ne
-        br_if $assembly/math/clamp255|inlined.31
+        br_if $assembly/math/clamp255|inlined.41
         drop
         i32.const 0
         local.get $22
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.31
+        br_if $assembly/math/clamp255|inlined.41
         drop
         i32.const 255
         local.get $22
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.31
+        br_if $assembly/math/clamp255|inlined.41
         drop
         local.get $22
         i32.trunc_sat_f32_u
@@ -7327,7 +7480,7 @@
      local.get $6
      i32.gt_s
      if
-      block $assembly/math/clamp255|inlined.32 (result i32)
+      block $assembly/math/clamp255|inlined.42 (result i32)
        i32.const 0
        local.get $9
        local.get $6
@@ -7360,19 +7513,19 @@
        local.tee $12
        local.get $12
        f32.ne
-       br_if $assembly/math/clamp255|inlined.32
+       br_if $assembly/math/clamp255|inlined.42
        drop
        i32.const 0
        local.get $12
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.32
+       br_if $assembly/math/clamp255|inlined.42
        drop
        i32.const 255
        local.get $12
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.32
+       br_if $assembly/math/clamp255|inlined.42
        drop
        local.get $12
        i32.trunc_sat_f32_u
@@ -7384,7 +7537,7 @@
       local.get $0
       local.get $7
       i32.add
-      block $assembly/math/clamp255|inlined.33 (result i32)
+      block $assembly/math/clamp255|inlined.43 (result i32)
        i32.const 0
        local.get $11
        f32.const 0.3490000069141388
@@ -7400,19 +7553,19 @@
        local.tee $12
        local.get $12
        f32.ne
-       br_if $assembly/math/clamp255|inlined.33
+       br_if $assembly/math/clamp255|inlined.43
        drop
        i32.const 0
        local.get $12
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.33
+       br_if $assembly/math/clamp255|inlined.43
        drop
        i32.const 255
        local.get $12
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.33
+       br_if $assembly/math/clamp255|inlined.43
        drop
        local.get $12
        i32.trunc_sat_f32_u
@@ -7421,7 +7574,7 @@
       local.get $0
       local.get $7
       i32.add
-      block $assembly/math/clamp255|inlined.34 (result i32)
+      block $assembly/math/clamp255|inlined.44 (result i32)
        i32.const 0
        local.get $11
        f32.const 0.2720000147819519
@@ -7437,19 +7590,19 @@
        local.tee $5
        local.get $5
        f32.ne
-       br_if $assembly/math/clamp255|inlined.34
+       br_if $assembly/math/clamp255|inlined.44
        drop
        i32.const 0
        local.get $5
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.34
+       br_if $assembly/math/clamp255|inlined.44
        drop
        i32.const 255
        local.get $5
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.34
+       br_if $assembly/math/clamp255|inlined.44
        drop
        local.get $5
        i32.trunc_sat_f32_u
@@ -7520,7 +7673,7 @@
        i32.const 3
        i32.lt_u
        if
-        block $assembly/math/clamp255|inlined.35 (result i32)
+        block $assembly/math/clamp255|inlined.45 (result i32)
          i32.const 0
          local.get $0
          local.get $10
@@ -7543,19 +7696,19 @@
          local.tee $4
          local.get $4
          f32.ne
-         br_if $assembly/math/clamp255|inlined.35
+         br_if $assembly/math/clamp255|inlined.45
          drop
          i32.const 0
          local.get $4
          f32.const 0
          f32.lt
-         br_if $assembly/math/clamp255|inlined.35
+         br_if $assembly/math/clamp255|inlined.45
          drop
          i32.const 255
          local.get $4
          f32.const 255
          f32.gt
-         br_if $assembly/math/clamp255|inlined.35
+         br_if $assembly/math/clamp255|inlined.45
          drop
          local.get $4
          i32.trunc_sat_f32_u
@@ -7797,7 +7950,7 @@
        local.get $1
        i32.add
        local.tee $8
-       block $assembly/math/clamp255|inlined.36 (result i32)
+       block $assembly/math/clamp255|inlined.46 (result i32)
         i32.const 0
         local.get $0
         local.get $7
@@ -8089,19 +8242,19 @@
         local.tee $14
         local.get $14
         f32.ne
-        br_if $assembly/math/clamp255|inlined.36
+        br_if $assembly/math/clamp255|inlined.46
         drop
         i32.const 0
         local.get $14
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.36
+        br_if $assembly/math/clamp255|inlined.46
         drop
         i32.const 255
         local.get $14
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.36
+        br_if $assembly/math/clamp255|inlined.46
         drop
         local.get $14
         i32.trunc_sat_f32_u
@@ -8180,7 +8333,7 @@
      local.get $2
      i32.gt_s
      if
-      block $assembly/math/clamp255|inlined.37 (result i32)
+      block $assembly/math/clamp255|inlined.47 (result i32)
        i32.const 0
        local.get $7
        local.get $2
@@ -8198,19 +8351,19 @@
        local.tee $11
        local.get $11
        f32.ne
-       br_if $assembly/math/clamp255|inlined.37
+       br_if $assembly/math/clamp255|inlined.47
        drop
        i32.const 0
        local.get $11
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.37
+       br_if $assembly/math/clamp255|inlined.47
        drop
        i32.const 255
        local.get $11
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.37
+       br_if $assembly/math/clamp255|inlined.47
        drop
        local.get $11
        i32.trunc_sat_f32_u
@@ -8219,7 +8372,7 @@
       local.get $10
       local.get $12
       i32.store8
-      block $assembly/math/clamp255|inlined.38 (result i32)
+      block $assembly/math/clamp255|inlined.48 (result i32)
        i32.const 0
        local.get $0
        local.get $9
@@ -8234,19 +8387,19 @@
        local.tee $11
        local.get $11
        f32.ne
-       br_if $assembly/math/clamp255|inlined.38
+       br_if $assembly/math/clamp255|inlined.48
        drop
        i32.const 0
        local.get $11
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.38
+       br_if $assembly/math/clamp255|inlined.48
        drop
        i32.const 255
        local.get $11
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.38
+       br_if $assembly/math/clamp255|inlined.48
        drop
        local.get $11
        i32.trunc_sat_f32_u
@@ -8255,7 +8408,7 @@
       local.get $10
       local.get $12
       i32.store8 offset=1
-      block $assembly/math/clamp255|inlined.39 (result i32)
+      block $assembly/math/clamp255|inlined.49 (result i32)
        i32.const 0
        local.get $0
        local.get $9
@@ -8270,19 +8423,19 @@
        local.tee $11
        local.get $11
        f32.ne
-       br_if $assembly/math/clamp255|inlined.39
+       br_if $assembly/math/clamp255|inlined.49
        drop
        i32.const 0
        local.get $11
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.39
+       br_if $assembly/math/clamp255|inlined.49
        drop
        i32.const 255
        local.get $11
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.39
+       br_if $assembly/math/clamp255|inlined.49
        drop
        local.get $11
        i32.trunc_sat_f32_u
@@ -8484,7 +8637,7 @@
         i32.store
         br $for-continue|1
        end
-       block $assembly/math/clamp255|inlined.40 (result i32)
+       block $assembly/math/clamp255|inlined.50 (result i32)
         i32.const 0
         local.get $0
         local.get $2
@@ -8533,19 +8686,19 @@
         local.tee $10
         local.get $10
         f32.ne
-        br_if $assembly/math/clamp255|inlined.40
+        br_if $assembly/math/clamp255|inlined.50
         drop
         i32.const 0
         local.get $10
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.40
+        br_if $assembly/math/clamp255|inlined.50
         drop
         i32.const 255
         local.get $10
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.40
+        br_if $assembly/math/clamp255|inlined.50
         drop
         local.get $10
         i32.trunc_sat_f32_u
@@ -10775,7 +10928,7 @@
       local.tee $10
       local.get $1
       i32.add
-      block $assembly/math/clamp255|inlined.41 (result i32)
+      block $assembly/math/clamp255|inlined.51 (result i32)
        i32.const 0
        local.get $13
        f64.const 128
@@ -10784,19 +10937,19 @@
        local.tee $4
        local.get $4
        f32.ne
-       br_if $assembly/math/clamp255|inlined.41
+       br_if $assembly/math/clamp255|inlined.51
        drop
        i32.const 0
        local.get $4
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.41
+       br_if $assembly/math/clamp255|inlined.51
        drop
        i32.const 255
        local.get $4
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.41
+       br_if $assembly/math/clamp255|inlined.51
        drop
        local.get $4
        i32.trunc_sat_f32_u
@@ -10805,7 +10958,7 @@
       local.get $1
       local.get $10
       i32.add
-      block $assembly/math/clamp255|inlined.42 (result i32)
+      block $assembly/math/clamp255|inlined.52 (result i32)
        i32.const 0
        local.get $7
        f64.const 128
@@ -10814,19 +10967,19 @@
        local.tee $4
        local.get $4
        f32.ne
-       br_if $assembly/math/clamp255|inlined.42
+       br_if $assembly/math/clamp255|inlined.52
        drop
        i32.const 0
        local.get $4
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.42
+       br_if $assembly/math/clamp255|inlined.52
        drop
        i32.const 255
        local.get $4
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.42
+       br_if $assembly/math/clamp255|inlined.52
        drop
        local.get $4
        i32.trunc_sat_f32_u
@@ -10835,7 +10988,7 @@
       local.get $1
       local.get $10
       i32.add
-      block $assembly/math/clamp255|inlined.43 (result i32)
+      block $assembly/math/clamp255|inlined.53 (result i32)
        i32.const 0
        local.get $14
        f64.const 128
@@ -10844,19 +10997,19 @@
        local.tee $4
        local.get $4
        f32.ne
-       br_if $assembly/math/clamp255|inlined.43
+       br_if $assembly/math/clamp255|inlined.53
        drop
        i32.const 0
        local.get $4
        f32.const 0
        f32.lt
-       br_if $assembly/math/clamp255|inlined.43
+       br_if $assembly/math/clamp255|inlined.53
        drop
        i32.const 255
        local.get $4
        f32.const 255
        f32.gt
-       br_if $assembly/math/clamp255|inlined.43
+       br_if $assembly/math/clamp255|inlined.53
        drop
        local.get $4
        i32.trunc_sat_f32_u
@@ -11241,7 +11394,7 @@
        local.get $1
        local.get $13
        i32.add
-       block $assembly/math/clamp255|inlined.44 (result i32)
+       block $assembly/math/clamp255|inlined.54 (result i32)
         i32.const 0
         local.get $16
         f32.convert_i32_u
@@ -11262,19 +11415,19 @@
         local.tee $15
         local.get $15
         f32.ne
-        br_if $assembly/math/clamp255|inlined.44
+        br_if $assembly/math/clamp255|inlined.54
         drop
         i32.const 0
         local.get $15
         f32.const 0
         f32.lt
-        br_if $assembly/math/clamp255|inlined.44
+        br_if $assembly/math/clamp255|inlined.54
         drop
         i32.const 255
         local.get $15
         f32.const 255
         f32.gt
-        br_if $assembly/math/clamp255|inlined.44
+        br_if $assembly/math/clamp255|inlined.54
         drop
         local.get $15
         i32.trunc_sat_f32_u
@@ -11731,7 +11884,7 @@
      global.get $~lib/memory/__stack_pointer
      local.get $0
      i32.store
-     block $__inlined_func$~lib/rt/itcms/__renew$210
+     block $__inlined_func$~lib/rt/itcms/__renew$230
       i32.const 1073741820
       local.get $4
       i32.const 1
@@ -11774,7 +11927,7 @@
        i32.store offset=16
        local.get $4
        local.set $3
-       br $__inlined_func$~lib/rt/itcms/__renew$210
+       br $__inlined_func$~lib/rt/itcms/__renew$230
       end
       local.get $5
       local.get $7
@@ -11999,11 +12152,9 @@
   global.set $~lib/memory/__stack_pointer
   local.get $0
  )
- (func $assembly/camera_raw/applyCameraRaw (param $0 i32) (param $1 i32) (param $2 i32) (param $3 f32) (param $4 f32) (param $5 f32) (param $6 f32) (param $7 f32) (param $8 f32) (param $9 f32) (param $10 f32) (param $11 f32) (param $12 f32) (param $13 f32) (param $14 f32) (param $15 f32) (param $16 f32) (param $17 f32) (param $18 f32) (param $19 f32) (param $20 i32) (param $21 i32) (param $22 i32) (param $23 i32)
-  (local $24 i32)
-  (local $25 i32)
-  (local $26 i32)
-  (local $27 f32)
+ (func $assembly/camera_raw/applyCameraRaw (param $0 i32) (param $1 i32) (param $2 i32) (param $3 f32) (param $4 f32) (param $5 f32) (param $6 f32) (param $7 f32) (param $8 f32) (param $9 f32) (param $10 f32) (param $11 f32) (param $12 f32) (param $13 f32) (param $14 f32) (param $15 f32) (param $16 f32) (param $17 f32) (param $18 f32) (param $19 f32) (param $20 f32) (param $21 f32) (param $22 i32) (param $23 i32) (param $24 i32) (param $25 i32)
+  (local $26 f32)
+  (local $27 i32)
   (local $28 f64)
   (local $29 f64)
   (local $30 f64)
@@ -12013,9 +12164,9 @@
   (local $34 i32)
   (local $35 i32)
   (local $36 f32)
-  (local $37 i32)
+  (local $37 f32)
   (local $38 f32)
-  (local $39 f32)
+  (local $39 i32)
   (local $40 f32)
   (local $41 f32)
   (local $42 i32)
@@ -12041,23 +12192,23 @@
   global.get $~lib/memory/__stack_pointer
   i64.const 0
   i64.store offset=8
-  local.get $22
+  local.get $24
   i32.const 0
-  local.get $22
+  local.get $24
   i32.const 0
   i32.ge_s
   select
-  local.set $22
+  local.set $24
   local.get $2
   local.get $2
-  local.get $23
-  local.get $23
+  local.get $25
+  local.get $25
   i32.const 0
   i32.lt_s
   select
-  local.tee $23
+  local.tee $25
   local.get $2
-  local.get $23
+  local.get $25
   i32.lt_s
   select
   local.set $35
@@ -12077,43 +12228,43 @@
   f32.const 100
   f32.div
   local.set $40
-  local.get $7
-  f32.const 100
-  f32.div
-  local.set $39
-  local.get $8
+  local.get $9
   f32.const 100
   f32.div
   local.set $38
   local.get $10
   f32.const 100
+  f32.div
+  local.set $37
+  local.get $12
+  f32.const 100
   f32.add
   f32.const 100
   f32.div
   local.set $43
-  local.get $9
+  local.get $11
   f32.const 100
   f32.div
   local.set $36
-  local.get $21
+  local.get $23
   i32.const 256
   i32.add
   local.set $34
-  local.get $21
+  local.get $23
   i32.const 512
   i32.add
   local.set $33
-  local.get $21
+  local.get $23
   i32.const 768
   i32.add
   local.set $32
   loop $for-loop|0
-   local.get $22
+   local.get $24
    local.get $35
    i32.lt_s
    if
     local.get $1
-    local.get $22
+    local.get $24
     i32.mul
     i32.const 2
     i32.shl
@@ -12130,7 +12281,7 @@
       i32.const 2
       i32.shl
       i32.add
-      local.tee $37
+      local.tee $39
       local.get $0
       i32.add
       local.tee $2
@@ -12140,11 +12291,11 @@
       local.get $2
       i32.load8_u offset=1
       f32.convert_i32_u
-      local.set $4
+      local.set $10
       local.get $2
       i32.load8_u offset=2
       f32.convert_i32_u
-      local.set $7
+      local.set $4
       local.get $2
       i32.load8_u offset=3
       if
@@ -12185,32 +12336,34 @@
        end
        local.get $41
        f32.mul
-       local.set $3
+       local.tee $9
+       f32.const 0.2125999927520752
+       f32.mul
        block $assembly/camera_raw/srgbToLinear|inlined.1 (result f32)
         f32.const 0
-        local.get $4
+        local.get $10
         f32.const 255
         f32.div
-        local.tee $4
+        local.tee $3
         f32.const 0
         f32.le
         br_if $assembly/camera_raw/srgbToLinear|inlined.1
         drop
         f32.const 1
-        local.get $4
+        local.get $3
         f32.const 1
         f32.ge
         br_if $assembly/camera_raw/srgbToLinear|inlined.1
         drop
-        local.get $4
+        local.get $3
         f32.const 0.040449999272823334
         f32.le
         if (result f32)
-         local.get $4
+         local.get $3
          f32.const 12.920000076293945
          f32.div
         else
-         local.get $4
+         local.get $3
          f32.const 0.054999999701976776
          f32.add
          f64.promote_f32
@@ -12223,32 +12376,35 @@
        end
        local.get $41
        f32.mul
-       local.set $4
+       local.tee $10
+       f32.const 0.7152000069618225
+       f32.mul
+       f32.add
        block $assembly/camera_raw/srgbToLinear|inlined.2 (result f32)
         f32.const 0
-        local.get $7
+        local.get $4
         f32.const 255
         f32.div
-        local.tee $7
+        local.tee $3
         f32.const 0
         f32.le
         br_if $assembly/camera_raw/srgbToLinear|inlined.2
         drop
         f32.const 1
-        local.get $7
+        local.get $3
         f32.const 1
         f32.ge
         br_if $assembly/camera_raw/srgbToLinear|inlined.2
         drop
-        local.get $7
+        local.get $3
         f32.const 0.040449999272823334
         f32.le
         if (result f32)
-         local.get $7
+         local.get $3
          f32.const 12.920000076293945
          f32.div
         else
-         local.get $7
+         local.get $3
          f32.const 0.054999999701976776
          f32.add
          f64.promote_f32
@@ -12261,165 +12417,335 @@
        end
        local.get $41
        f32.mul
-       local.set $7
-       local.get $39
-       f32.const 0
-       f32.ne
-       if
-        local.get $7
-        f32.const 1
-        local.get $39
-        f32.const 0.11999999731779099
-        f32.mul
-        local.tee $8
-        f32.sub
-        f32.mul
-        local.set $7
-        local.get $4
-        local.get $39
-        f32.const 0.019999999552965164
-        f32.mul
-        f32.const 1
-        f32.add
-        f32.mul
-        local.set $4
-        local.get $3
-        local.get $8
-        f32.const 1
-        f32.add
-        f32.mul
-        local.set $3
-       end
+       local.tee $11
+       f32.const 0.0722000002861023
+       f32.mul
+       f32.add
+       f64.promote_f32
+       f64.const 1
+       f64.min
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $3
+       f32.const 1
+       local.get $3
+       f32.sub
+       f32.mul
+       f32.const 4
+       f32.mul
+       local.set $12
        local.get $38
        f32.const 0
        f32.ne
        if
-        local.get $7
+        local.get $9
         local.get $38
+        local.get $12
+        f32.mul
+        local.tee $4
+        f32.const 0.11999999731779099
+        f32.mul
+        local.tee $3
+        f32.const 1
+        f32.add
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        f32.mul
+        local.set $9
+        local.get $11
+        f32.const 1
+        local.get $3
+        f32.sub
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        f32.mul
+        local.set $11
+        local.get $10
+        local.get $4
+        f32.const 0.019999999552965164
+        f32.mul
+        f32.const 1
+        f32.add
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        f32.mul
+        local.set $10
+       end
+       local.get $37
+       f32.const 0
+       f32.ne
+       if
+        local.get $9
+        local.get $37
+        local.get $12
+        f32.mul
+        local.tee $4
         f32.const 0.05999999865889549
         f32.mul
         f32.const 1
         f32.add
-        local.tee $8
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $3
         f32.mul
-        local.set $7
-        local.get $4
+        local.set $9
+        local.get $11
+        local.get $3
+        f32.mul
+        local.set $11
+        local.get $10
         f32.const 1
-        local.get $38
+        local.get $4
         f32.const 0.07999999821186066
         f32.mul
         f32.sub
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
         f32.mul
-        local.set $4
-        local.get $3
-        local.get $8
-        f32.mul
-        local.set $3
+        local.set $10
        end
-       local.get $3
+       local.get $9
        f32.const 0.2125999927520752
        f32.mul
-       local.get $4
+       local.get $10
        f32.const 0.7152000069618225
        f32.mul
        f32.add
-       local.get $7
+       local.get $11
        f32.const 0.0722000002861023
        f32.mul
        f32.add
-       local.tee $9
+       local.tee $3
        f32.const 1.0000000474974513e-03
        f32.gt
        if
-        local.get $6
-        f32.const 0
-        f32.ne
-        if (result f32)
-         local.get $9
-         local.get $6
-         f32.const 100
-         f32.div
-         f32.const 1
-         local.get $9
-         local.get $9
-         f32.add
-         f32.sub
-         f64.promote_f32
-         f64.const 0
-         f64.max
-         f32.demote_f64
-         f32.mul
-         f32.const 0.4000000059604645
-         f32.mul
-         local.get $9
-         f64.promote_f32
-         f64.sqrt
-         f32.demote_f64
-         f32.mul
-         f32.add
-        else
-         local.get $9
-        end
-        local.set $8
-        local.get $3
         local.get $5
         f32.const 0
         f32.ne
         if (result f32)
-         local.get $8
-         local.get $5
-         f32.const 100
-         f32.div
-         local.get $9
+         local.get $3
          f32.const -0.5
          f32.add
-         f32.const 2
-         f32.mul
+         local.tee $26
+         local.get $26
+         f32.add
          f64.promote_f32
          f64.const 0
          f64.max
          f32.demote_f64
+         local.tee $4
+         local.get $4
          f32.mul
-         f32.const 0.6000000238418579
-         f32.mul
-         f32.const 1.100000023841858
-         local.get $9
-         f32.sub
-         f32.mul
-         f32.add
+         local.set $12
+         local.get $5
+         f32.const 100
+         f32.div
+         local.tee $4
+         f32.const 0
+         f32.lt
+         local.get $3
+         f32.const 0.5
+         f32.gt
+         i32.and
+         if (result f32)
+          local.get $26
+          local.get $26
+          f32.const 1
+          f32.add
+          f64.promote_f32
+          local.get $4
+          f32.const 0.5
+          f32.mul
+          f64.promote_f32
+          call $~lib/math/NativeMath.pow
+          f32.demote_f64
+          f32.mul
+          f32.const 0.5
+          f32.add
+         else
+          local.get $3
+          local.get $4
+          local.get $12
+          f32.mul
+          f32.const 1.5
+          f32.mul
+          f32.add
+         end
         else
-         local.get $8
+         local.get $3
+        end
+        local.set $4
+        local.get $9
+        local.get $7
+        f32.const 0
+        f32.ne
+        if (result f32)
+         local.get $4
+         f32.const -0.699999988079071
+         f32.add
+         local.tee $26
+         f32.const 0.30000001192092896
+         f32.div
+         f64.promote_f32
+         f64.const 0
+         f64.max
+         f32.demote_f64
+         local.set $12
+         local.get $7
+         f32.const 100
+         f32.div
+         local.tee $9
+         f32.const 0
+         f32.lt
+         local.get $4
+         f32.const 0.699999988079071
+         f32.gt
+         i32.and
+         if (result f32)
+          local.get $26
+          local.get $26
+          f32.const 1
+          f32.add
+          f64.promote_f32
+          local.get $9
+          f32.const 0.6000000238418579
+          f32.mul
+          f64.promote_f32
+          call $~lib/math/NativeMath.pow
+          f32.demote_f64
+          f32.mul
+          f32.const 0.699999988079071
+          f32.add
+         else
+          local.get $4
+          local.get $9
+          local.get $12
+          f32.mul
+          f32.const 2
+          f32.mul
+          f32.add
+         end
+        else
+         local.get $4
         end
         f64.promote_f32
         f64.const 0
         f64.max
         f32.demote_f64
-        local.get $9
+        local.tee $4
+        local.get $3
         f32.div
-        local.tee $8
+        local.tee $3
         f32.mul
-        local.set $3
-        local.get $7
-        local.get $8
+        local.set $9
+        local.get $10
+        local.get $3
         f32.mul
-        local.set $7
+        local.set $10
+        local.get $11
+        local.get $3
+        f32.mul
+        local.set $11
         local.get $4
-        local.get $8
-        f32.mul
-        local.set $4
+        local.set $3
        end
-       local.get $11
+       local.get $6
        f32.const 0
        f32.ne
-       local.tee $2
-       local.get $12
+       if
+        local.get $9
+        local.get $6
+        f32.const 100
+        f32.div
+        f32.const 1
+        local.get $3
+        local.get $3
+        f32.add
+        f32.sub
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $4
+        f32.mul
+        local.get $4
+        f32.mul
+        f32.const 1.2000000476837158
+        f32.mul
+        f32.const 1
+        f32.add
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $4
+        f32.mul
+        local.set $9
+        local.get $11
+        local.get $4
+        f32.mul
+        local.set $11
+        local.get $10
+        local.get $4
+        f32.mul
+        local.set $10
+       end
+       local.get $8
        f32.const 0
        f32.ne
-       i32.or
+       if
+        local.get $9
+        local.get $8
+        f32.const 100
+        f32.div
+        f32.const 1
+        local.get $3
+        f32.const 0.30000001192092896
+        f32.div
+        f32.sub
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $4
+        f32.mul
+        local.get $4
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $4
+        f32.mul
+        local.set $9
+        local.get $11
+        local.get $4
+        f32.mul
+        local.set $11
+        local.get $10
+        local.get $4
+        f32.mul
+        local.set $10
+       end
        local.get $13
        f32.const 0
        f32.ne
-       i32.or
+       local.tee $2
        local.get $14
        f32.const 0
        f32.ne
@@ -12444,19 +12770,27 @@
        f32.const 0
        f32.ne
        i32.or
+       local.get $20
+       f32.const 0
+       f32.ne
+       i32.or
+       local.get $21
+       f32.const 0
+       f32.ne
+       i32.or
        if
         local.get $2
         if
-         local.get $3
-         local.get $11
+         local.get $9
+         local.get $13
          f32.const 100
          f32.div
          f32.const 1
          f32.add
          f32.mul
-         local.set $3
+         local.set $9
         end
-        local.get $9
+        local.get $3
         f32.const -0.5
         f32.add
         f64.promote_f32
@@ -12465,26 +12799,26 @@
         f32.demote_f64
         f32.const 2
         f32.mul
-        local.set $10
-        local.get $12
+        local.set $4
+        local.get $14
         f32.const 0
         f32.ne
         if
-         local.get $3
-         local.get $12
+         local.get $9
+         local.get $14
          f32.const 100
          f32.div
-         local.get $10
+         local.get $4
          f32.mul
          f32.const 1.5
          f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $3
+         local.set $9
         end
         f32.const 0.5
-        local.get $9
+        local.get $3
         f32.sub
         f64.promote_f32
         f64.const 0
@@ -12492,141 +12826,141 @@
         f32.demote_f64
         f32.const 2
         f32.mul
-        local.set $8
-        local.get $13
-        f32.const 0
-        f32.ne
-        if
-         local.get $3
-         local.get $13
-         f32.const 100
-         f32.div
-         local.get $8
-         f32.mul
-         f32.const 1.5
-         f32.mul
-         f32.const 1
-         f32.add
-         f32.mul
-         local.set $3
-        end
-        local.get $14
-        f32.const 0
-        f32.ne
-        if
-         local.get $4
-         local.get $14
-         f32.const 100
-         f32.div
-         f32.const 1
-         f32.add
-         f32.mul
-         local.set $4
-        end
+        local.set $3
         local.get $15
         f32.const 0
         f32.ne
         if
-         local.get $4
+         local.get $9
          local.get $15
          f32.const 100
          f32.div
-         local.get $10
+         local.get $3
          f32.mul
          f32.const 1.5
          f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $4
+         local.set $9
         end
         local.get $16
         f32.const 0
         f32.ne
         if
-         local.get $4
+         local.get $10
          local.get $16
          f32.const 100
          f32.div
-         local.get $8
-         f32.mul
-         f32.const 1.5
-         f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $4
+         local.set $10
         end
         local.get $17
         f32.const 0
         f32.ne
         if
-         local.get $7
+         local.get $10
          local.get $17
          f32.const 100
          f32.div
+         local.get $4
+         f32.mul
+         f32.const 1.5
+         f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $7
+         local.set $10
         end
         local.get $18
         f32.const 0
         f32.ne
         if
-         local.get $7
+         local.get $10
          local.get $18
          f32.const 100
          f32.div
-         local.get $10
+         local.get $3
          f32.mul
          f32.const 1.5
          f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $7
+         local.set $10
         end
         local.get $19
         f32.const 0
         f32.ne
         if
-         local.get $7
+         local.get $11
          local.get $19
          f32.const 100
          f32.div
-         local.get $8
+         f32.const 1
+         f32.add
+         f32.mul
+         local.set $11
+        end
+        local.get $20
+        f32.const 0
+        f32.ne
+        if
+         local.get $11
+         local.get $20
+         f32.const 100
+         f32.div
+         local.get $4
          f32.mul
          f32.const 1.5
          f32.mul
          f32.const 1
          f32.add
          f32.mul
-         local.set $7
+         local.set $11
+        end
+        local.get $21
+        f32.const 0
+        f32.ne
+        if
+         local.get $11
+         local.get $21
+         f32.const 100
+         f32.div
+         local.get $3
+         f32.mul
+         f32.const 1.5
+         f32.mul
+         f32.const 1
+         f32.add
+         f32.mul
+         local.set $11
         end
        end
        block $assembly/camera_raw/linearToSrgb|inlined.0 (result f32)
         f32.const 0
-        local.get $3
+        local.get $9
         f32.const 0
         f32.le
         br_if $assembly/camera_raw/linearToSrgb|inlined.0
         drop
         f32.const 255
-        local.get $3
+        local.get $9
         f32.const 1
         f32.ge
         br_if $assembly/camera_raw/linearToSrgb|inlined.0
         drop
-        local.get $3
+        local.get $9
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
-         local.get $3
+         local.get $9
          f32.const 12.920000076293945
          f32.mul
         else
-         local.get $3
+         local.get $9
          f64.promote_f32
          f64.const 0.4166666666666667
          call $~lib/math/NativeMath.pow
@@ -12642,26 +12976,26 @@
        local.set $3
        block $assembly/camera_raw/linearToSrgb|inlined.1 (result f32)
         f32.const 0
-        local.get $4
+        local.get $10
         f32.const 0
         f32.le
         br_if $assembly/camera_raw/linearToSrgb|inlined.1
         drop
         f32.const 255
-        local.get $4
+        local.get $10
         f32.const 1
         f32.ge
         br_if $assembly/camera_raw/linearToSrgb|inlined.1
         drop
-        local.get $4
+        local.get $10
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
-         local.get $4
+         local.get $10
          f32.const 12.920000076293945
          f32.mul
         else
-         local.get $4
+         local.get $10
          f64.promote_f32
          f64.const 0.4166666666666667
          call $~lib/math/NativeMath.pow
@@ -12679,26 +13013,26 @@
        local.set $4
        block $assembly/camera_raw/linearToSrgb|inlined.2 (result f32)
         f32.const 0
-        local.get $7
+        local.get $11
         f32.const 0
         f32.le
         br_if $assembly/camera_raw/linearToSrgb|inlined.2
         drop
         f32.const 255
-        local.get $7
+        local.get $11
         f32.const 1
         f32.ge
         br_if $assembly/camera_raw/linearToSrgb|inlined.2
         drop
-        local.get $7
+        local.get $11
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
-         local.get $7
+         local.get $11
          f32.const 12.920000076293945
          f32.mul
         else
-         local.get $7
+         local.get $11
          f64.promote_f32
          f64.const 0.4166666666666667
          call $~lib/math/NativeMath.pow
@@ -12713,7 +13047,7 @@
        end
        f32.const 255
        f32.div
-       local.set $7
+       local.set $9
        block $assembly/math/clamp01|inlined.0 (result f32)
         f32.const 0
         local.get $3
@@ -12780,36 +13114,36 @@
        local.set $4
        block $assembly/math/clamp01|inlined.2 (result f32)
         f32.const 0
-        local.get $7
+        local.get $9
         f32.const -0.5
         f32.add
         local.get $40
         f32.mul
         f32.const 0.5
         f32.add
-        local.tee $7
-        local.get $7
+        local.tee $9
+        local.get $9
         f32.ne
         br_if $assembly/math/clamp01|inlined.2
         drop
         f32.const 0
-        local.get $7
+        local.get $9
         f32.const 0
         f32.lt
         br_if $assembly/math/clamp01|inlined.2
         drop
         f32.const 1
-        local.get $7
+        local.get $9
         f32.const 1
         f32.gt
         br_if $assembly/math/clamp01|inlined.2
         drop
-        local.get $7
+        local.get $9
        end
        f32.const 255
        f32.mul
-       local.set $7
-       local.get $21
+       local.set $9
+       local.get $23
        if
         local.get $34
         block $assembly/math/clamp255|inlined.0 (result i32)
@@ -12872,24 +13206,24 @@
         local.get $32
         block $assembly/math/clamp255|inlined.2 (result i32)
          i32.const 0
-         local.get $7
-         local.get $7
+         local.get $9
+         local.get $9
          f32.ne
          br_if $assembly/math/clamp255|inlined.2
          drop
          i32.const 0
-         local.get $7
+         local.get $9
          f32.const 0
          f32.lt
          br_if $assembly/math/clamp255|inlined.2
          drop
          i32.const 255
-         local.get $7
+         local.get $9
          f32.const 255
          f32.gt
          br_if $assembly/math/clamp255|inlined.2
          drop
-         local.get $7
+         local.get $9
          i32.trunc_sat_f32_u
         end
         i32.const 255
@@ -12897,8 +13231,8 @@
         i32.add
         i32.load8_u
         f32.convert_i32_u
-        local.set $7
-        local.get $21
+        local.set $9
+        local.get $23
         block $assembly/math/clamp255|inlined.3 (result i32)
          i32.const 0
          local.get $3
@@ -12927,7 +13261,7 @@
         i32.load8_u
         f32.convert_i32_u
         local.set $3
-        local.get $21
+        local.get $23
         block $assembly/math/clamp255|inlined.4 (result i32)
          i32.const 0
          local.get $4
@@ -12956,27 +13290,27 @@
         i32.load8_u
         f32.convert_i32_u
         local.set $4
-        local.get $21
+        local.get $23
         block $assembly/math/clamp255|inlined.5 (result i32)
          i32.const 0
-         local.get $7
-         local.get $7
+         local.get $9
+         local.get $9
          f32.ne
          br_if $assembly/math/clamp255|inlined.5
          drop
          i32.const 0
-         local.get $7
+         local.get $9
          f32.const 0
          f32.lt
          br_if $assembly/math/clamp255|inlined.5
          drop
          i32.const 255
-         local.get $7
+         local.get $9
          f32.const 255
          f32.gt
          br_if $assembly/math/clamp255|inlined.5
          drop
-         local.get $7
+         local.get $9
          i32.trunc_sat_f32_u
         end
         i32.const 255
@@ -12984,27 +13318,27 @@
         i32.add
         i32.load8_u
         f32.convert_i32_u
-        local.set $7
+        local.set $9
        end
-       local.get $20
+       local.get $22
        if
         f32.const 0
         local.get $3
         f32.const 255
         f32.div
-        local.tee $10
+        local.tee $26
         f64.promote_f32
         local.tee $30
         local.get $4
         f32.const 255
         f32.div
-        local.tee $9
+        local.tee $12
         f64.promote_f32
         local.tee $29
-        local.get $7
+        local.get $9
         f32.const 255
         f32.div
-        local.tee $8
+        local.tee $11
         f64.promote_f32
         local.tee $28
         f64.max
@@ -13012,7 +13346,7 @@
         f64.promote_f32
         f64.max
         f32.demote_f64
-        local.tee $7
+        local.tee $10
         local.get $28
         local.get $29
         f64.min
@@ -13021,12 +13355,12 @@
         local.get $30
         f64.min
         f32.demote_f64
-        local.tee $4
+        local.tee $9
         f32.sub
-        local.tee $27
-        local.get $7
+        local.tee $4
+        local.get $10
         f32.div
-        local.get $7
+        local.get $10
         f32.const 0
         f32.eq
         select
@@ -13036,49 +13370,49 @@
         local.tee $2
         i32.store
         local.get $2
-        local.get $4
-        local.get $7
+        local.get $9
+        local.get $10
         f32.eq
-        local.get $27
+        local.get $4
         f32.const 9.999999747378752e-06
         f32.lt
         i32.or
         if (result f32)
          f32.const 0
         else
-         local.get $7
          local.get $10
+         local.get $26
          f32.eq
          if (result f32)
-          local.get $9
-          local.get $8
+          local.get $12
+          local.get $11
           f32.sub
-          local.get $27
+          local.get $4
           f32.div
           f32.const 6
           f32.const 0
-          local.get $8
-          local.get $9
+          local.get $11
+          local.get $12
           f32.gt
           select
           f32.add
          else
-          local.get $7
-          local.get $9
+          local.get $10
+          local.get $12
           f32.eq
           if (result f32)
-           local.get $8
-           local.get $10
+           local.get $11
+           local.get $26
            f32.sub
-           local.get $27
+           local.get $4
            f32.div
            f32.const 2
            f32.add
           else
-           local.get $10
-           local.get $9
+           local.get $26
+           local.get $12
            f32.sub
-           local.get $27
+           local.get $4
            f32.div
            f32.const 4
            f32.add
@@ -13104,41 +13438,42 @@
         local.tee $2
         i32.store
         local.get $2
-        local.get $7
+        local.get $10
         f32.const 100
         f32.mul
         f32.store offset=8
         global.get $~lib/memory/__stack_pointer
         global.get $assembly/math/_hsv
-        local.tee $26
+        local.tee $27
         i32.store offset=4
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
-        local.get $20
-        local.get $26
+        local.get $27
         f32.load
         local.tee $3
         f32.const 30
         f32.lt
-        if (result i32)
+        if (result f32)
+         i32.const 0
+         local.set $25
          i32.const 1
-         local.set $23
+         local.set $2
          f32.const 1
          local.get $3
          f32.const 30
          f32.div
          local.tee $3
          f32.sub
-         local.set $4
-         i32.const 0
         else
          local.get $3
          f32.const 60
          f32.lt
-         if (result i32)
+         if (result f32)
+          i32.const 1
+          local.set $25
           i32.const 2
-          local.set $23
+          local.set $2
           f32.const 1
           local.get $3
           f32.const -30
@@ -13147,15 +13482,15 @@
           f32.div
           local.tee $3
           f32.sub
-          local.set $4
-          i32.const 1
          else
           local.get $3
           f32.const 120
           f32.lt
-          if (result i32)
+          if (result f32)
+           i32.const 2
+           local.set $25
            i32.const 3
-           local.set $23
+           local.set $2
            f32.const 1
            local.get $3
            f32.const -60
@@ -13164,15 +13499,15 @@
            f32.div
            local.tee $3
            f32.sub
-           local.set $4
-           i32.const 2
           else
            local.get $3
            f32.const 180
            f32.lt
-           if (result i32)
+           if (result f32)
+            i32.const 3
+            local.set $25
             i32.const 4
-            local.set $23
+            local.set $2
             f32.const 1
             local.get $3
             f32.const -120
@@ -13181,15 +13516,15 @@
             f32.div
             local.tee $3
             f32.sub
-            local.set $4
-            i32.const 3
            else
             local.get $3
             f32.const 240
             f32.lt
-            if (result i32)
+            if (result f32)
+             i32.const 4
+             local.set $25
              i32.const 5
-             local.set $23
+             local.set $2
              f32.const 1
              local.get $3
              f32.const -180
@@ -13198,15 +13533,15 @@
              f32.div
              local.tee $3
              f32.sub
-             local.set $4
-             i32.const 4
             else
              local.get $3
              f32.const 280
              f32.lt
-             if (result i32)
+             if (result f32)
+              i32.const 5
+              local.set $25
               i32.const 6
-              local.set $23
+              local.set $2
               f32.const 1
               local.get $3
               f32.const -240
@@ -13215,15 +13550,15 @@
               f32.div
               local.tee $3
               f32.sub
-              local.set $4
-              i32.const 5
              else
               local.get $3
               f32.const 320
               f32.lt
-              if (result i32)
+              if (result f32)
+               i32.const 6
+               local.set $25
                i32.const 7
-               local.set $23
+               local.set $2
                f32.const 1
                local.get $3
                f32.const -280
@@ -13232,11 +13567,11 @@
                f32.div
                local.tee $3
                f32.sub
-               local.set $4
-               i32.const 6
               else
+               i32.const 7
+               local.set $25
                i32.const 0
-               local.set $23
+               local.set $2
                f32.const 1
                local.get $3
                f32.const -320
@@ -13245,8 +13580,6 @@
                f32.div
                local.tee $3
                f32.sub
-               local.set $4
-               i32.const 7
               end
              end
             end
@@ -13254,15 +13587,18 @@
           end
          end
         end
+        local.set $10
+        local.get $22
+        local.get $25
         i32.const 12
         i32.mul
         i32.add
-        local.tee $24
+        local.tee $25
         f32.load
-        local.get $4
+        local.get $10
         f32.mul
-        local.get $20
-        local.get $23
+        local.get $22
+        local.get $2
         i32.const 12
         i32.mul
         i32.add
@@ -13271,195 +13607,52 @@
         local.get $3
         f32.mul
         f32.add
-        local.set $8
-        local.get $24
+        local.set $9
+        local.get $25
         f32.load offset=4
-        local.get $4
+        local.get $10
         f32.mul
         local.get $2
         f32.load offset=4
-        local.get $3
-        f32.mul
-        f32.add
-        local.set $7
-        local.get $24
-        f32.load offset=8
-        local.get $4
-        f32.mul
-        local.get $2
-        f32.load offset=8
         local.get $3
         f32.mul
         f32.add
         local.set $4
+        local.get $25
+        f32.load offset=8
+        local.get $10
+        f32.mul
+        local.get $2
+        f32.load offset=8
+        local.get $3
+        f32.mul
+        f32.add
+        local.set $3
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store offset=8
-        local.get $26
-        block $__inlined_func$~lib/math/NativeMathf.mod$4 (result f32)
-         local.get $26
-         f32.load
-         local.get $8
-         f32.add
-         f32.const 3600
-         f32.add
-         local.tee $3
-         i32.reinterpret_f32
-         local.tee $25
-         i32.const 23
-         i32.shr_u
-         i32.const 255
-         i32.and
-         local.tee $23
-         i32.const 255
-         i32.eq
-         if
-          local.get $3
-          f32.const 360
-          f32.mul
-          local.tee $3
-          local.get $3
-          f32.div
-          br $__inlined_func$~lib/math/NativeMathf.mod$4
-         end
-         local.get $25
-         i32.const 1
-         i32.shl
-         local.tee $2
-         i32.const -2023227392
-         i32.le_u
-         if
-          local.get $3
-          local.get $2
-          i32.const -2023227392
-          i32.ne
-          f32.convert_i32_u
-          f32.mul
-          br $__inlined_func$~lib/math/NativeMathf.mod$4
-         end
-         local.get $25
-         i32.const -2147483648
-         i32.and
-         local.set $24
-         local.get $23
-         if (result i32)
-          local.get $25
-          i32.const 8388607
-          i32.and
-          i32.const 8388608
-          i32.or
-         else
-          local.get $25
-          i32.const 1
-          local.get $23
-          local.get $25
-          i32.const 9
-          i32.shl
-          i32.clz
-          i32.sub
-          local.tee $23
-          i32.sub
-          i32.shl
-         end
-         local.set $2
-         loop $while-continue|0
-          local.get $23
-          i32.const 135
-          i32.gt_s
-          if
-           local.get $2
-           i32.const 11796480
-           i32.ge_u
-           if (result i32)
-            local.get $3
-            f32.const 0
-            f32.mul
-            local.get $2
-            i32.const 11796480
-            i32.eq
-            br_if $__inlined_func$~lib/math/NativeMathf.mod$4
-            drop
-            local.get $2
-            i32.const 11796480
-            i32.sub
-           else
-            local.get $2
-           end
-           i32.const 1
-           i32.shl
-           local.set $2
-           local.get $23
-           i32.const 1
-           i32.sub
-           local.set $23
-           br $while-continue|0
-          end
-         end
-         local.get $2
-         i32.const 11796480
-         i32.ge_u
-         if
-          local.get $3
-          f32.const 0
-          f32.mul
-          local.get $2
-          i32.const 11796480
-          i32.eq
-          br_if $__inlined_func$~lib/math/NativeMathf.mod$4
-          drop
-          local.get $2
-          i32.const 11796480
-          i32.sub
-          local.set $2
-         end
-         local.get $23
-         local.get $2
-         i32.const 8
-         i32.shl
-         i32.clz
-         local.tee $23
-         i32.sub
-         local.set $25
-         local.get $2
-         local.get $23
-         i32.shl
-         local.set $2
-         local.get $25
-         i32.const 0
-         i32.gt_s
-         if (result i32)
-          local.get $2
-          i32.const 8388608
-          i32.sub
-          local.get $25
-          i32.const 23
-          i32.shl
-          i32.or
-         else
-          local.get $2
-          i32.const 1
-          local.get $25
-          i32.sub
-          i32.shr_u
-         end
-         local.get $24
-         i32.or
-         f32.reinterpret_i32
-        end
+        local.get $27
+        local.get $27
+        f32.load
+        local.get $9
+        f32.add
+        f32.const 3600
+        f32.add
+        call $~lib/math/NativeMathf.mod
         f32.store
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store offset=8
-        local.get $26
-        local.get $26
+        local.get $27
+        local.get $27
         f32.load offset=4
-        local.get $7
+        local.get $4
         f32.add
         f64.promote_f32
         f64.const 100
@@ -13469,15 +13662,15 @@
         f32.demote_f64
         f32.store offset=4
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store offset=8
-        local.get $26
-        local.get $26
+        local.get $27
+        local.get $27
         f32.load offset=8
-        local.get $4
+        local.get $3
         f32.add
         f64.promote_f32
         f64.const 100
@@ -13487,26 +13680,26 @@
         f32.demote_f64
         f32.store offset=8
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
-        local.get $26
+        local.get $27
         f32.load
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
-        local.get $26
+        local.get $27
         f32.load offset=4
         f32.const 100
         f32.div
         local.set $4
         global.get $~lib/memory/__stack_pointer
-        local.get $26
+        local.get $27
         i32.store
-        local.get $26
+        local.get $27
         f32.load offset=8
         f32.const 100
         f32.div
-        local.set $8
+        local.set $10
         f32.const 360
         f32.div
         local.tee $3
@@ -13536,8 +13729,8 @@
          local.set $4
         end
         f32.const 0
-        local.get $8
-        local.get $8
+        local.get $10
+        local.get $10
         f32.const 0
         f32.lt
         select
@@ -13553,36 +13746,36 @@
         local.get $4
         f32.sub
         f32.mul
-        local.set $8
+        local.set $10
         f32.const 6
         f32.mul
-        local.tee $7
+        local.tee $9
         f64.promote_f32
         f64.floor
         i32.trunc_sat_f64_s
         local.set $2
         local.get $3
         f32.const 1
-        local.get $7
+        local.get $9
         local.get $2
         f32.convert_i32_s
         f32.sub
-        local.tee $7
+        local.tee $9
         local.get $4
         f32.mul
         f32.sub
         f32.mul
-        local.set $10
+        local.set $12
         local.get $3
         f32.const 1
         f32.const 1
-        local.get $7
+        local.get $9
         f32.sub
         local.get $4
         f32.mul
         f32.sub
         f32.mul
-        local.set $9
+        local.set $11
         block $break|2
          block $case5|2
           block $case4|2
@@ -13597,45 +13790,45 @@
               end
               local.get $3
               local.set $4
-              local.get $9
-              local.set $7
-              local.get $8
+              local.get $11
+              local.set $9
+              local.get $10
               local.set $3
               br $break|2
              end
-             local.get $10
+             local.get $12
              local.set $4
              local.get $3
-             local.set $7
-             local.get $8
+             local.set $9
+             local.get $10
              local.set $3
              br $break|2
             end
-            local.get $8
+            local.get $10
             local.set $4
             local.get $3
-            local.set $7
-            local.get $9
+            local.set $9
+            local.get $11
             local.set $3
             br $break|2
            end
-           local.get $8
-           local.set $4
            local.get $10
-           local.set $7
+           local.set $4
+           local.get $12
+           local.set $9
            br $break|2
           end
-          local.get $9
+          local.get $11
           local.set $4
-          local.get $8
-          local.set $7
+          local.get $10
+          local.set $9
           br $break|2
          end
          local.get $3
          local.set $4
-         local.get $8
-         local.set $7
          local.get $10
+         local.set $9
+         local.get $12
          local.set $3
         end
         global.get $~lib/memory/__stack_pointer
@@ -13652,7 +13845,7 @@
         local.tee $2
         i32.store
         local.get $2
-        local.get $7
+        local.get $9
         f32.const 255
         f32.mul
         f32.store offset=4
@@ -13686,7 +13879,7 @@
         i32.store
         local.get $2
         f32.load offset=8
-        local.set $7
+        local.set $9
        end
        local.get $43
        f32.const 1
@@ -13700,18 +13893,18 @@
         f64.promote_f32
         local.get $4
         f64.promote_f32
-        local.get $7
+        local.get $9
         f64.promote_f32
         f64.max
         f32.demote_f64
         f64.promote_f32
         f64.max
         f32.demote_f64
-        local.tee $10
+        local.tee $12
         local.get $3
         local.get $4
         f32.add
-        local.get $7
+        local.get $9
         f32.add
         f32.const 3
         f32.div
@@ -13720,36 +13913,36 @@
         f32.div
         local.get $36
         f32.mul
-        local.set $9
+        local.set $11
         local.get $3
-        local.get $10
+        local.get $12
         local.get $3
         f32.sub
-        local.get $9
+        local.get $11
         f32.mul
         f32.add
         local.tee $3
         f32.const 0.29899999499320984
         f32.mul
         local.get $4
-        local.get $10
+        local.get $12
         local.get $4
         f32.sub
-        local.get $9
+        local.get $11
         f32.mul
         f32.add
-        local.tee $8
+        local.tee $10
         f32.const 0.5870000123977661
         f32.mul
         f32.add
-        local.get $7
-        local.get $10
-        local.get $7
-        f32.sub
         local.get $9
+        local.get $12
+        local.get $9
+        f32.sub
+        local.get $11
         f32.mul
         f32.add
-        local.tee $7
+        local.tee $9
         f32.const 0.11400000005960464
         f32.mul
         f32.add
@@ -13762,15 +13955,15 @@
         f32.add
         local.set $3
         local.get $4
-        local.get $7
+        local.get $9
         local.get $4
         f32.sub
         local.get $43
         f32.mul
         f32.add
-        local.set $7
+        local.set $9
         local.get $4
-        local.get $8
+        local.get $10
         local.get $4
         f32.sub
         local.get $43
@@ -13779,7 +13972,7 @@
         local.set $4
        end
        local.get $0
-       local.get $37
+       local.get $39
        i32.add
        block $assembly/math/clamp255|inlined.6 (result i32)
         i32.const 0
@@ -13805,7 +13998,7 @@
        end
        i32.store8
        local.get $0
-       local.get $37
+       local.get $39
        i32.add
        block $assembly/math/clamp255|inlined.7 (result i32)
         i32.const 0
@@ -13831,28 +14024,28 @@
        end
        i32.store8 offset=1
        local.get $0
-       local.get $37
+       local.get $39
        i32.add
        block $assembly/math/clamp255|inlined.8 (result i32)
         i32.const 0
-        local.get $7
-        local.get $7
+        local.get $9
+        local.get $9
         f32.ne
         br_if $assembly/math/clamp255|inlined.8
         drop
         i32.const 0
-        local.get $7
+        local.get $9
         f32.const 0
         f32.lt
         br_if $assembly/math/clamp255|inlined.8
         drop
         i32.const 255
-        local.get $7
+        local.get $9
         f32.const 255
         f32.gt
         br_if $assembly/math/clamp255|inlined.8
         drop
-        local.get $7
+        local.get $9
         i32.trunc_sat_f32_u
        end
        i32.store8 offset=2
@@ -13864,10 +14057,1886 @@
       br $for-loop|1
      end
     end
-    local.get $22
+    local.get $24
     i32.const 1
     i32.add
-    local.set $22
+    local.set $24
+    br $for-loop|0
+   end
+  end
+  global.get $~lib/memory/__stack_pointer
+  i32.const 16
+  i32.add
+  global.set $~lib/memory/__stack_pointer
+ )
+ (func $assembly/camera_raw/applyCameraRawFloat (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 f32) (param $5 f32) (param $6 f32) (param $7 f32) (param $8 f32) (param $9 f32) (param $10 f32) (param $11 f32) (param $12 f32) (param $13 f32) (param $14 f32) (param $15 f32) (param $16 f32) (param $17 f32) (param $18 f32) (param $19 f32) (param $20 f32) (param $21 f32) (param $22 f32) (param $23 i32) (param $24 i32) (param $25 i32) (param $26 i32)
+  (local $27 f32)
+  (local $28 i32)
+  (local $29 f64)
+  (local $30 f64)
+  (local $31 f64)
+  (local $32 f32)
+  (local $33 i32)
+  (local $34 i32)
+  (local $35 i32)
+  (local $36 i32)
+  (local $37 i32)
+  (local $38 f32)
+  (local $39 f32)
+  (local $40 f32)
+  (local $41 f32)
+  (local $42 f32)
+  (local $43 i32)
+  (local $44 i32)
+  (local $45 f32)
+  global.get $~lib/memory/__stack_pointer
+  i32.const 16
+  i32.sub
+  global.set $~lib/memory/__stack_pointer
+  global.get $~lib/memory/__stack_pointer
+  i32.const 8672
+  i32.lt_s
+  if
+   i32.const 41472
+   i32.const 41520
+   i32.const 1
+   i32.const 1
+   call $~lib/builtins/abort
+   unreachable
+  end
+  global.get $~lib/memory/__stack_pointer
+  i64.const 0
+  i64.store
+  global.get $~lib/memory/__stack_pointer
+  i64.const 0
+  i64.store offset=8
+  local.get $25
+  i32.const 0
+  local.get $25
+  i32.const 0
+  i32.ge_s
+  select
+  local.set $25
+  local.get $3
+  local.get $3
+  local.get $26
+  local.get $26
+  i32.const 0
+  i32.lt_s
+  select
+  local.tee $26
+  local.get $3
+  local.get $26
+  i32.lt_s
+  select
+  local.set $37
+  f64.const 2
+  local.get $4
+  f32.const 100
+  f32.div
+  f32.const 2
+  f32.mul
+  f64.promote_f32
+  call $~lib/math/NativeMath.pow
+  f32.demote_f64
+  local.set $42
+  local.get $5
+  f32.const 100
+  f32.add
+  f32.const 100
+  f32.div
+  local.set $41
+  local.get $10
+  f32.const 1e3
+  f32.div
+  local.set $40
+  local.get $11
+  f32.const 1e3
+  f32.div
+  local.set $39
+  local.get $13
+  f32.const 100
+  f32.add
+  f32.const 100
+  f32.div
+  local.set $45
+  local.get $12
+  f32.const 100
+  f32.div
+  local.set $38
+  local.get $24
+  i32.const 256
+  i32.add
+  local.set $36
+  local.get $24
+  i32.const 512
+  i32.add
+  local.set $35
+  local.get $24
+  i32.const 768
+  i32.add
+  local.set $34
+  loop $for-loop|0
+   local.get $25
+   local.get $37
+   i32.lt_s
+   if
+    local.get $2
+    local.get $25
+    i32.mul
+    i32.const 2
+    i32.shl
+    local.set $33
+    i32.const 0
+    local.set $44
+    loop $for-loop|1
+     local.get $2
+     local.get $44
+     i32.gt_s
+     if
+      local.get $33
+      local.get $44
+      i32.const 2
+      i32.shl
+      i32.add
+      local.tee $43
+      i32.const 2
+      i32.shl
+      local.get $0
+      i32.add
+      local.tee $3
+      f32.load offset=12
+      local.set $32
+      local.get $3
+      f32.load
+      local.get $42
+      f32.mul
+      local.tee $10
+      f32.const 0.2125999927520752
+      f32.mul
+      local.get $3
+      f32.load offset=4
+      local.get $42
+      f32.mul
+      local.tee $11
+      f32.const 0.7152000069618225
+      f32.mul
+      f32.add
+      local.get $3
+      f32.load offset=8
+      local.get $42
+      f32.mul
+      local.tee $12
+      f32.const 0.0722000002861023
+      f32.mul
+      f32.add
+      f64.promote_f32
+      f64.const 1
+      f64.min
+      f64.const 0
+      f64.max
+      f32.demote_f64
+      local.tee $4
+      f32.const 1
+      local.get $4
+      f32.sub
+      f32.mul
+      f32.const 4
+      f32.mul
+      local.set $13
+      local.get $40
+      f32.const 0
+      f32.ne
+      if
+       local.get $10
+       local.get $40
+       local.get $13
+       f32.mul
+       local.tee $5
+       f32.const 0.11999999731779099
+       f32.mul
+       local.tee $4
+       f32.const 1
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.mul
+       local.set $10
+       local.get $12
+       f32.const 1
+       local.get $4
+       f32.sub
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.mul
+       local.set $12
+       local.get $11
+       local.get $5
+       f32.const 0.019999999552965164
+       f32.mul
+       f32.const 1
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.mul
+       local.set $11
+      end
+      local.get $39
+      f32.const 0
+      f32.ne
+      if
+       local.get $10
+       local.get $39
+       local.get $13
+       f32.mul
+       local.tee $5
+       f32.const 0.05999999865889549
+       f32.mul
+       f32.const 1
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $4
+       f32.mul
+       local.set $10
+       local.get $12
+       local.get $4
+       f32.mul
+       local.set $12
+       local.get $11
+       f32.const 1
+       local.get $5
+       f32.const 0.07999999821186066
+       f32.mul
+       f32.sub
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.mul
+       local.set $11
+      end
+      local.get $10
+      f32.const 0.2125999927520752
+      f32.mul
+      local.get $11
+      f32.const 0.7152000069618225
+      f32.mul
+      f32.add
+      local.get $12
+      f32.const 0.0722000002861023
+      f32.mul
+      f32.add
+      local.tee $4
+      f32.const 1.0000000474974513e-03
+      f32.gt
+      if
+       local.get $6
+       f32.const 0
+       f32.ne
+       if (result f32)
+        local.get $4
+        f32.const -0.5
+        f32.add
+        local.tee $27
+        local.get $27
+        f32.add
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.tee $5
+        local.get $5
+        f32.mul
+        local.set $13
+        local.get $6
+        f32.const 100
+        f32.div
+        local.tee $5
+        f32.const 0
+        f32.lt
+        local.get $4
+        f32.const 0.5
+        f32.gt
+        i32.and
+        if (result f32)
+         local.get $27
+         local.get $27
+         f32.const 1
+         f32.add
+         f64.promote_f32
+         local.get $5
+         f32.const 0.5
+         f32.mul
+         f64.promote_f32
+         call $~lib/math/NativeMath.pow
+         f32.demote_f64
+         f32.mul
+         f32.const 0.5
+         f32.add
+        else
+         local.get $4
+         local.get $5
+         local.get $13
+         f32.mul
+         f32.const 1.5
+         f32.mul
+         f32.add
+        end
+       else
+        local.get $4
+       end
+       local.set $5
+       local.get $10
+       local.get $8
+       f32.const 0
+       f32.ne
+       if (result f32)
+        local.get $5
+        f32.const -0.699999988079071
+        f32.add
+        local.tee $27
+        f32.const 0.30000001192092896
+        f32.div
+        f64.promote_f32
+        f64.const 0
+        f64.max
+        f32.demote_f64
+        local.set $13
+        local.get $8
+        f32.const 100
+        f32.div
+        local.tee $10
+        f32.const 0
+        f32.lt
+        local.get $5
+        f32.const 0.699999988079071
+        f32.gt
+        i32.and
+        if (result f32)
+         local.get $27
+         local.get $27
+         f32.const 1
+         f32.add
+         f64.promote_f32
+         local.get $10
+         f32.const 0.6000000238418579
+         f32.mul
+         f64.promote_f32
+         call $~lib/math/NativeMath.pow
+         f32.demote_f64
+         f32.mul
+         f32.const 0.699999988079071
+         f32.add
+        else
+         local.get $5
+         local.get $10
+         local.get $13
+         f32.mul
+         f32.const 2
+         f32.mul
+         f32.add
+        end
+       else
+        local.get $5
+       end
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $5
+       local.get $4
+       f32.div
+       local.tee $4
+       f32.mul
+       local.set $10
+       local.get $11
+       local.get $4
+       f32.mul
+       local.set $11
+       local.get $12
+       local.get $4
+       f32.mul
+       local.set $12
+       local.get $5
+       local.set $4
+      end
+      local.get $7
+      f32.const 0
+      f32.ne
+      if
+       local.get $10
+       local.get $7
+       f32.const 100
+       f32.div
+       f32.const 1
+       local.get $4
+       local.get $4
+       f32.add
+       f32.sub
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $5
+       f32.mul
+       local.get $5
+       f32.mul
+       f32.const 1.2000000476837158
+       f32.mul
+       f32.const 1
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $5
+       f32.mul
+       local.set $10
+       local.get $12
+       local.get $5
+       f32.mul
+       local.set $12
+       local.get $11
+       local.get $5
+       f32.mul
+       local.set $11
+      end
+      local.get $9
+      f32.const 0
+      f32.ne
+      if
+       local.get $10
+       local.get $9
+       f32.const 100
+       f32.div
+       f32.const 1
+       local.get $4
+       f32.const 0.30000001192092896
+       f32.div
+       f32.sub
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $5
+       f32.mul
+       local.get $5
+       f32.mul
+       f32.const 1.5
+       f32.mul
+       f32.const 1
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       local.tee $5
+       f32.mul
+       local.set $10
+       local.get $12
+       local.get $5
+       f32.mul
+       local.set $12
+       local.get $11
+       local.get $5
+       f32.mul
+       local.set $11
+      end
+      local.get $10
+      f64.promote_f32
+      local.get $11
+      f64.promote_f32
+      local.get $12
+      f64.promote_f32
+      f64.max
+      f64.max
+      f32.demote_f64
+      local.tee $5
+      f32.const 0
+      f32.gt
+      if
+       local.get $10
+       local.get $5
+       local.get $5
+       f32.const 0.0625
+       f32.mul
+       f32.const 1
+       f32.add
+       f32.mul
+       local.get $5
+       f32.const 1
+       f32.add
+       f32.div
+       local.get $5
+       f32.div
+       local.tee $5
+       f32.mul
+       local.set $10
+       local.get $12
+       local.get $5
+       f32.mul
+       local.set $12
+       local.get $11
+       local.get $5
+       f32.mul
+       local.set $11
+      end
+      local.get $14
+      f32.const 0
+      f32.ne
+      local.tee $3
+      local.get $15
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $16
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $17
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $18
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $19
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $20
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $21
+      f32.const 0
+      f32.ne
+      i32.or
+      local.get $22
+      f32.const 0
+      f32.ne
+      i32.or
+      if
+       local.get $3
+       if
+        local.get $10
+        local.get $14
+        f32.const 100
+        f32.div
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $10
+       end
+       local.get $4
+       f32.const -0.5
+       f32.add
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.const 2
+       f32.mul
+       local.set $5
+       local.get $15
+       f32.const 0
+       f32.ne
+       if
+        local.get $10
+        local.get $15
+        f32.const 100
+        f32.div
+        local.get $5
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $10
+       end
+       f32.const 0.5
+       local.get $4
+       f32.sub
+       f64.promote_f32
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.const 2
+       f32.mul
+       local.set $4
+       local.get $16
+       f32.const 0
+       f32.ne
+       if
+        local.get $10
+        local.get $16
+        f32.const 100
+        f32.div
+        local.get $4
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $10
+       end
+       local.get $17
+       f32.const 0
+       f32.ne
+       if
+        local.get $11
+        local.get $17
+        f32.const 100
+        f32.div
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $11
+       end
+       local.get $18
+       f32.const 0
+       f32.ne
+       if
+        local.get $11
+        local.get $18
+        f32.const 100
+        f32.div
+        local.get $5
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $11
+       end
+       local.get $19
+       f32.const 0
+       f32.ne
+       if
+        local.get $11
+        local.get $19
+        f32.const 100
+        f32.div
+        local.get $4
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $11
+       end
+       local.get $20
+       f32.const 0
+       f32.ne
+       if
+        local.get $12
+        local.get $20
+        f32.const 100
+        f32.div
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $12
+       end
+       local.get $21
+       f32.const 0
+       f32.ne
+       if
+        local.get $12
+        local.get $21
+        f32.const 100
+        f32.div
+        local.get $5
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $12
+       end
+       local.get $22
+       f32.const 0
+       f32.ne
+       if
+        local.get $12
+        local.get $22
+        f32.const 100
+        f32.div
+        local.get $4
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.const 1
+        f32.add
+        f32.mul
+        local.set $12
+       end
+      end
+      block $assembly/camera_raw/linearToSrgb|inlined.3 (result f32)
+       f32.const 0
+       local.get $10
+       f32.const 0
+       f32.le
+       br_if $assembly/camera_raw/linearToSrgb|inlined.3
+       drop
+       f32.const 255
+       local.get $10
+       f32.const 1
+       f32.ge
+       br_if $assembly/camera_raw/linearToSrgb|inlined.3
+       drop
+       local.get $10
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        local.get $10
+        f32.const 12.920000076293945
+        f32.mul
+       else
+        local.get $10
+        f64.promote_f32
+        f64.const 0.4166666666666667
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.const 1.0549999475479126
+        f32.mul
+        f32.const -0.054999999701976776
+        f32.add
+       end
+       f32.const 255
+       f32.mul
+      end
+      local.set $4
+      block $assembly/camera_raw/linearToSrgb|inlined.4 (result f32)
+       f32.const 0
+       local.get $11
+       f32.const 0
+       f32.le
+       br_if $assembly/camera_raw/linearToSrgb|inlined.4
+       drop
+       f32.const 255
+       local.get $11
+       f32.const 1
+       f32.ge
+       br_if $assembly/camera_raw/linearToSrgb|inlined.4
+       drop
+       local.get $11
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        local.get $11
+        f32.const 12.920000076293945
+        f32.mul
+       else
+        local.get $11
+        f64.promote_f32
+        f64.const 0.4166666666666667
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.const 1.0549999475479126
+        f32.mul
+        f32.const -0.054999999701976776
+        f32.add
+       end
+       f32.const 255
+       f32.mul
+      end
+      f32.const 255
+      f32.div
+      local.set $5
+      block $assembly/camera_raw/linearToSrgb|inlined.5 (result f32)
+       f32.const 0
+       local.get $12
+       f32.const 0
+       f32.le
+       br_if $assembly/camera_raw/linearToSrgb|inlined.5
+       drop
+       f32.const 255
+       local.get $12
+       f32.const 1
+       f32.ge
+       br_if $assembly/camera_raw/linearToSrgb|inlined.5
+       drop
+       local.get $12
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        local.get $12
+        f32.const 12.920000076293945
+        f32.mul
+       else
+        local.get $12
+        f64.promote_f32
+        f64.const 0.4166666666666667
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.const 1.0549999475479126
+        f32.mul
+        f32.const -0.054999999701976776
+        f32.add
+       end
+       f32.const 255
+       f32.mul
+      end
+      f32.const 255
+      f32.div
+      local.set $10
+      block $assembly/math/clamp01|inlined.3 (result f32)
+       f32.const 0
+       local.get $4
+       f32.const 255
+       f32.div
+       f32.const -0.5
+       f32.add
+       local.get $41
+       f32.mul
+       f32.const 0.5
+       f32.add
+       local.tee $4
+       local.get $4
+       f32.ne
+       br_if $assembly/math/clamp01|inlined.3
+       drop
+       f32.const 0
+       local.get $4
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp01|inlined.3
+       drop
+       f32.const 1
+       local.get $4
+       f32.const 1
+       f32.gt
+       br_if $assembly/math/clamp01|inlined.3
+       drop
+       local.get $4
+      end
+      f32.const 255
+      f32.mul
+      local.set $4
+      block $assembly/math/clamp01|inlined.4 (result f32)
+       f32.const 0
+       local.get $5
+       f32.const -0.5
+       f32.add
+       local.get $41
+       f32.mul
+       f32.const 0.5
+       f32.add
+       local.tee $5
+       local.get $5
+       f32.ne
+       br_if $assembly/math/clamp01|inlined.4
+       drop
+       f32.const 0
+       local.get $5
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp01|inlined.4
+       drop
+       f32.const 1
+       local.get $5
+       f32.const 1
+       f32.gt
+       br_if $assembly/math/clamp01|inlined.4
+       drop
+       local.get $5
+      end
+      f32.const 255
+      f32.mul
+      local.set $5
+      block $assembly/math/clamp01|inlined.5 (result f32)
+       f32.const 0
+       local.get $10
+       f32.const -0.5
+       f32.add
+       local.get $41
+       f32.mul
+       f32.const 0.5
+       f32.add
+       local.tee $10
+       local.get $10
+       f32.ne
+       br_if $assembly/math/clamp01|inlined.5
+       drop
+       f32.const 0
+       local.get $10
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp01|inlined.5
+       drop
+       f32.const 1
+       local.get $10
+       f32.const 1
+       f32.gt
+       br_if $assembly/math/clamp01|inlined.5
+       drop
+       local.get $10
+      end
+      f32.const 255
+      f32.mul
+      local.set $10
+      local.get $24
+      if
+       local.get $36
+       block $assembly/math/clamp255|inlined.9 (result i32)
+        i32.const 0
+        local.get $4
+        local.get $4
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.9
+        drop
+        i32.const 0
+        local.get $4
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.9
+        drop
+        i32.const 255
+        local.get $4
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.9
+        drop
+        local.get $4
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $4
+       local.get $35
+       block $assembly/math/clamp255|inlined.10 (result i32)
+        i32.const 0
+        local.get $5
+        local.get $5
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.10
+        drop
+        i32.const 0
+        local.get $5
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.10
+        drop
+        i32.const 255
+        local.get $5
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.10
+        drop
+        local.get $5
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $5
+       local.get $34
+       block $assembly/math/clamp255|inlined.11 (result i32)
+        i32.const 0
+        local.get $10
+        local.get $10
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.11
+        drop
+        i32.const 0
+        local.get $10
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.11
+        drop
+        i32.const 255
+        local.get $10
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.11
+        drop
+        local.get $10
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $10
+       local.get $24
+       block $assembly/math/clamp255|inlined.12 (result i32)
+        i32.const 0
+        local.get $4
+        local.get $4
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.12
+        drop
+        i32.const 0
+        local.get $4
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.12
+        drop
+        i32.const 255
+        local.get $4
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.12
+        drop
+        local.get $4
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $4
+       local.get $24
+       block $assembly/math/clamp255|inlined.13 (result i32)
+        i32.const 0
+        local.get $5
+        local.get $5
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.13
+        drop
+        i32.const 0
+        local.get $5
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.13
+        drop
+        i32.const 255
+        local.get $5
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.13
+        drop
+        local.get $5
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $5
+       local.get $24
+       block $assembly/math/clamp255|inlined.14 (result i32)
+        i32.const 0
+        local.get $10
+        local.get $10
+        f32.ne
+        br_if $assembly/math/clamp255|inlined.14
+        drop
+        i32.const 0
+        local.get $10
+        f32.const 0
+        f32.lt
+        br_if $assembly/math/clamp255|inlined.14
+        drop
+        i32.const 255
+        local.get $10
+        f32.const 255
+        f32.gt
+        br_if $assembly/math/clamp255|inlined.14
+        drop
+        local.get $10
+        i32.trunc_sat_f32_u
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $10
+      end
+      local.get $23
+      if
+       f32.const 0
+       local.get $4
+       f32.const 255
+       f32.div
+       local.tee $27
+       f64.promote_f32
+       local.tee $31
+       local.get $5
+       f32.const 255
+       f32.div
+       local.tee $13
+       f64.promote_f32
+       local.tee $30
+       local.get $10
+       f32.const 255
+       f32.div
+       local.tee $12
+       f64.promote_f32
+       local.tee $29
+       f64.max
+       f32.demote_f64
+       f64.promote_f32
+       f64.max
+       f32.demote_f64
+       local.tee $11
+       local.get $29
+       local.get $30
+       f64.min
+       f32.demote_f64
+       f64.promote_f32
+       local.get $31
+       f64.min
+       f32.demote_f64
+       local.tee $10
+       f32.sub
+       local.tee $5
+       local.get $11
+       f32.div
+       local.get $11
+       f32.const 0
+       f32.eq
+       select
+       local.set $4
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_hsv
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $10
+       local.get $11
+       f32.eq
+       local.get $5
+       f32.const 9.999999747378752e-06
+       f32.lt
+       i32.or
+       if (result f32)
+        f32.const 0
+       else
+        local.get $11
+        local.get $27
+        f32.eq
+        if (result f32)
+         local.get $13
+         local.get $12
+         f32.sub
+         local.get $5
+         f32.div
+         f32.const 6
+         f32.const 0
+         local.get $12
+         local.get $13
+         f32.gt
+         select
+         f32.add
+        else
+         local.get $11
+         local.get $13
+         f32.eq
+         if (result f32)
+          local.get $12
+          local.get $27
+          f32.sub
+          local.get $5
+          f32.div
+          f32.const 2
+          f32.add
+         else
+          local.get $27
+          local.get $13
+          f32.sub
+          local.get $5
+          f32.div
+          f32.const 4
+          f32.add
+         end
+        end
+        f32.const 6
+        f32.div
+       end
+       f32.const 360
+       f32.mul
+       f32.store
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_hsv
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $4
+       f32.const 100
+       f32.mul
+       f32.store offset=4
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_hsv
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $11
+       f32.const 100
+       f32.mul
+       f32.store offset=8
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_hsv
+       local.tee $28
+       i32.store offset=4
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       local.get $28
+       f32.load
+       local.tee $4
+       f32.const 30
+       f32.lt
+       if (result f32)
+        i32.const 0
+        local.set $26
+        i32.const 1
+        local.set $3
+        f32.const 1
+        local.get $4
+        f32.const 30
+        f32.div
+        local.tee $4
+        f32.sub
+       else
+        local.get $4
+        f32.const 60
+        f32.lt
+        if (result f32)
+         i32.const 1
+         local.set $26
+         i32.const 2
+         local.set $3
+         f32.const 1
+         local.get $4
+         f32.const -30
+         f32.add
+         f32.const 30
+         f32.div
+         local.tee $4
+         f32.sub
+        else
+         local.get $4
+         f32.const 120
+         f32.lt
+         if (result f32)
+          i32.const 2
+          local.set $26
+          i32.const 3
+          local.set $3
+          f32.const 1
+          local.get $4
+          f32.const -60
+          f32.add
+          f32.const 60
+          f32.div
+          local.tee $4
+          f32.sub
+         else
+          local.get $4
+          f32.const 180
+          f32.lt
+          if (result f32)
+           i32.const 3
+           local.set $26
+           i32.const 4
+           local.set $3
+           f32.const 1
+           local.get $4
+           f32.const -120
+           f32.add
+           f32.const 60
+           f32.div
+           local.tee $4
+           f32.sub
+          else
+           local.get $4
+           f32.const 240
+           f32.lt
+           if (result f32)
+            i32.const 4
+            local.set $26
+            i32.const 5
+            local.set $3
+            f32.const 1
+            local.get $4
+            f32.const -180
+            f32.add
+            f32.const 60
+            f32.div
+            local.tee $4
+            f32.sub
+           else
+            local.get $4
+            f32.const 280
+            f32.lt
+            if (result f32)
+             i32.const 5
+             local.set $26
+             i32.const 6
+             local.set $3
+             f32.const 1
+             local.get $4
+             f32.const -240
+             f32.add
+             f32.const 40
+             f32.div
+             local.tee $4
+             f32.sub
+            else
+             local.get $4
+             f32.const 320
+             f32.lt
+             if (result f32)
+              i32.const 6
+              local.set $26
+              i32.const 7
+              local.set $3
+              f32.const 1
+              local.get $4
+              f32.const -280
+              f32.add
+              f32.const 40
+              f32.div
+              local.tee $4
+              f32.sub
+             else
+              i32.const 7
+              local.set $26
+              i32.const 0
+              local.set $3
+              f32.const 1
+              local.get $4
+              f32.const -320
+              f32.add
+              f32.const 40
+              f32.div
+              local.tee $4
+              f32.sub
+             end
+            end
+           end
+          end
+         end
+        end
+       end
+       local.set $11
+       local.get $23
+       local.get $26
+       i32.const 12
+       i32.mul
+       i32.add
+       local.tee $26
+       f32.load
+       local.get $11
+       f32.mul
+       local.get $23
+       local.get $3
+       i32.const 12
+       i32.mul
+       i32.add
+       local.tee $3
+       f32.load
+       local.get $4
+       f32.mul
+       f32.add
+       local.set $10
+       local.get $26
+       f32.load offset=4
+       local.get $11
+       f32.mul
+       local.get $3
+       f32.load offset=4
+       local.get $4
+       f32.mul
+       f32.add
+       local.set $5
+       local.get $26
+       f32.load offset=8
+       local.get $11
+       f32.mul
+       local.get $3
+       f32.load offset=8
+       local.get $4
+       f32.mul
+       f32.add
+       local.set $4
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store offset=8
+       local.get $28
+       local.get $28
+       f32.load
+       local.get $10
+       f32.add
+       f32.const 3600
+       f32.add
+       call $~lib/math/NativeMathf.mod
+       f32.store
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store offset=8
+       local.get $28
+       local.get $28
+       f32.load offset=4
+       local.get $5
+       f32.add
+       f64.promote_f32
+       f64.const 100
+       f64.min
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.store offset=4
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store offset=8
+       local.get $28
+       local.get $28
+       f32.load offset=8
+       local.get $4
+       f32.add
+       f64.promote_f32
+       f64.const 100
+       f64.min
+       f64.const 0
+       f64.max
+       f32.demote_f64
+       f32.store offset=8
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       local.get $28
+       f32.load
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       local.get $28
+       f32.load offset=4
+       f32.const 100
+       f32.div
+       local.set $5
+       global.get $~lib/memory/__stack_pointer
+       local.get $28
+       i32.store
+       local.get $28
+       f32.load offset=8
+       f32.const 100
+       f32.div
+       local.set $11
+       f32.const 360
+       f32.div
+       local.tee $4
+       f32.const 0
+       f32.lt
+       if
+        f32.const 0
+        local.set $4
+       end
+       f32.const 1
+       local.get $4
+       local.get $4
+       f32.const 1
+       f32.gt
+       select
+       f32.const 0
+       local.get $5
+       local.get $5
+       f32.const 0
+       f32.lt
+       select
+       local.tee $5
+       f32.const 1
+       f32.gt
+       if
+        f32.const 1
+        local.set $5
+       end
+       f32.const 0
+       local.get $11
+       local.get $11
+       f32.const 0
+       f32.lt
+       select
+       local.tee $4
+       f32.const 1
+       f32.gt
+       if
+        f32.const 1
+        local.set $4
+       end
+       local.get $4
+       f32.const 1
+       local.get $5
+       f32.sub
+       f32.mul
+       local.set $11
+       f32.const 6
+       f32.mul
+       local.tee $10
+       f64.promote_f32
+       f64.floor
+       i32.trunc_sat_f64_s
+       local.set $3
+       local.get $4
+       f32.const 1
+       local.get $10
+       local.get $3
+       f32.convert_i32_s
+       f32.sub
+       local.tee $10
+       local.get $5
+       f32.mul
+       f32.sub
+       f32.mul
+       local.set $13
+       local.get $4
+       f32.const 1
+       f32.const 1
+       local.get $10
+       f32.sub
+       local.get $5
+       f32.mul
+       f32.sub
+       f32.mul
+       local.set $12
+       block $break|2
+        block $case5|2
+         block $case4|2
+          block $case3|2
+           block $case2|2
+            block $case1|2
+             block $case0|2
+              local.get $3
+              i32.const 6
+              i32.rem_s
+              br_table $case0|2 $case1|2 $case2|2 $case3|2 $case4|2 $case5|2
+             end
+             local.get $4
+             local.set $5
+             local.get $12
+             local.set $10
+             local.get $11
+             local.set $4
+             br $break|2
+            end
+            local.get $13
+            local.set $5
+            local.get $4
+            local.set $10
+            local.get $11
+            local.set $4
+            br $break|2
+           end
+           local.get $11
+           local.set $5
+           local.get $4
+           local.set $10
+           local.get $12
+           local.set $4
+           br $break|2
+          end
+          local.get $11
+          local.set $5
+          local.get $13
+          local.set $10
+          br $break|2
+         end
+         local.get $12
+         local.set $5
+         local.get $11
+         local.set $10
+         br $break|2
+        end
+        local.get $4
+        local.set $5
+        local.get $11
+        local.set $10
+        local.get $13
+        local.set $4
+       end
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_rgb
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $5
+       f32.const 255
+       f32.mul
+       f32.store
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_rgb
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $10
+       f32.const 255
+       f32.mul
+       f32.store offset=4
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_rgb
+       local.tee $3
+       i32.store
+       local.get $3
+       local.get $4
+       f32.const 255
+       f32.mul
+       f32.store offset=8
+       global.get $~lib/memory/__stack_pointer
+       global.get $assembly/math/_rgb
+       local.tee $3
+       i32.store offset=12
+       global.get $~lib/memory/__stack_pointer
+       local.get $3
+       i32.store
+       local.get $3
+       f32.load
+       local.set $4
+       global.get $~lib/memory/__stack_pointer
+       local.get $3
+       i32.store
+       local.get $3
+       f32.load offset=4
+       local.set $5
+       global.get $~lib/memory/__stack_pointer
+       local.get $3
+       i32.store
+       local.get $3
+       f32.load offset=8
+       local.set $10
+      end
+      local.get $45
+      f32.const 1
+      f32.ne
+      local.get $38
+      f32.const 0
+      f32.ne
+      i32.or
+      if
+       local.get $4
+       f64.promote_f32
+       local.get $5
+       f64.promote_f32
+       local.get $10
+       f64.promote_f32
+       f64.max
+       f32.demote_f64
+       f64.promote_f32
+       f64.max
+       f32.demote_f64
+       local.tee $13
+       local.get $4
+       local.get $5
+       f32.add
+       local.get $10
+       f32.add
+       f32.const 3
+       f32.div
+       f32.sub
+       f32.const 255
+       f32.div
+       local.get $38
+       f32.mul
+       local.set $12
+       local.get $4
+       local.get $13
+       local.get $4
+       f32.sub
+       local.get $12
+       f32.mul
+       f32.add
+       local.tee $4
+       f32.const 0.29899999499320984
+       f32.mul
+       local.get $5
+       local.get $13
+       local.get $5
+       f32.sub
+       local.get $12
+       f32.mul
+       f32.add
+       local.tee $11
+       f32.const 0.5870000123977661
+       f32.mul
+       f32.add
+       local.get $10
+       local.get $13
+       local.get $10
+       f32.sub
+       local.get $12
+       f32.mul
+       f32.add
+       local.tee $10
+       f32.const 0.11400000005960464
+       f32.mul
+       f32.add
+       local.tee $5
+       local.get $4
+       local.get $5
+       f32.sub
+       local.get $45
+       f32.mul
+       f32.add
+       local.set $4
+       local.get $5
+       local.get $10
+       local.get $5
+       f32.sub
+       local.get $45
+       f32.mul
+       f32.add
+       local.set $10
+       local.get $5
+       local.get $11
+       local.get $5
+       f32.sub
+       local.get $45
+       f32.mul
+       f32.add
+       local.set $5
+      end
+      local.get $1
+      local.get $43
+      i32.add
+      block $assembly/math/clamp255|inlined.15 (result i32)
+       i32.const 0
+       local.get $4
+       local.get $4
+       f32.ne
+       br_if $assembly/math/clamp255|inlined.15
+       drop
+       i32.const 0
+       local.get $4
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp255|inlined.15
+       drop
+       i32.const 255
+       local.get $4
+       f32.const 255
+       f32.gt
+       br_if $assembly/math/clamp255|inlined.15
+       drop
+       local.get $4
+       i32.trunc_sat_f32_u
+      end
+      i32.store8
+      local.get $1
+      local.get $43
+      i32.add
+      block $assembly/math/clamp255|inlined.16 (result i32)
+       i32.const 0
+       local.get $5
+       local.get $5
+       f32.ne
+       br_if $assembly/math/clamp255|inlined.16
+       drop
+       i32.const 0
+       local.get $5
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp255|inlined.16
+       drop
+       i32.const 255
+       local.get $5
+       f32.const 255
+       f32.gt
+       br_if $assembly/math/clamp255|inlined.16
+       drop
+       local.get $5
+       i32.trunc_sat_f32_u
+      end
+      i32.store8 offset=1
+      local.get $1
+      local.get $43
+      i32.add
+      block $assembly/math/clamp255|inlined.17 (result i32)
+       i32.const 0
+       local.get $10
+       local.get $10
+       f32.ne
+       br_if $assembly/math/clamp255|inlined.17
+       drop
+       i32.const 0
+       local.get $10
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp255|inlined.17
+       drop
+       i32.const 255
+       local.get $10
+       f32.const 255
+       f32.gt
+       br_if $assembly/math/clamp255|inlined.17
+       drop
+       local.get $10
+       i32.trunc_sat_f32_u
+      end
+      i32.store8 offset=2
+      local.get $1
+      local.get $43
+      i32.add
+      block $assembly/math/clamp255|inlined.18 (result i32)
+       i32.const 0
+       local.get $32
+       f32.const 255
+       f32.mul
+       local.tee $4
+       local.get $4
+       f32.ne
+       br_if $assembly/math/clamp255|inlined.18
+       drop
+       i32.const 0
+       local.get $4
+       f32.const 0
+       f32.lt
+       br_if $assembly/math/clamp255|inlined.18
+       drop
+       i32.const 255
+       local.get $4
+       f32.const 255
+       f32.gt
+       br_if $assembly/math/clamp255|inlined.18
+       drop
+       local.get $4
+       i32.trunc_sat_f32_u
+      end
+      i32.store8 offset=3
+      local.get $44
+      i32.const 1
+      i32.add
+      local.set $44
+      br $for-loop|1
+     end
+    end
+    local.get $25
+    i32.const 1
+    i32.add
+    local.set $25
     br $for-loop|0
    end
   end

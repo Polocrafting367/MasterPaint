@@ -15,15 +15,25 @@ window.WebGLFilterEngine = {
         if (this.gl) return true;
         try {
             this.canvas = document.createElement('canvas');
-            this.gl = this.canvas.getContext('webgl', {
+            const options = {
                 alpha: true,
                 premultipliedAlpha: false,
                 preserveDrawingBuffer: true,
                 antialias: false,
                 depth: false,
                 stencil: false
-            });
+            };
+            this.gl = this.canvas.getContext('webgl2', options);
+            this.isWebGL2 = !!this.gl;
+            if (!this.gl) {
+                this.gl = this.canvas.getContext('webgl', options);
+            }
             if (!this.gl) return false;
+            
+            // Enable float extensions
+            this.gl.getExtension('OES_texture_float');
+            this.gl.getExtension('OES_texture_float_linear');
+            
             this.maxTextureSize = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) || 4096;
             return true;
         } catch (e) {
@@ -46,6 +56,7 @@ window.WebGLFilterEngine = {
     createProgram(shaderName) {
         if (this.lastShader === shaderName && this.program) return this.program;
 
+        // For WebGL2 compatibility, standard GLSL 1.00 is fine, but we must ensure precision
         const fsSrc = window.FilterShaders.header + window.FilterShaders[shaderName];
         const vs = this.createShader(this.gl.VERTEX_SHADER, window.FilterShaders.VS);
         const fs = this.createShader(this.gl.FRAGMENT_SHADER, fsSrc);
@@ -74,12 +85,13 @@ window.WebGLFilterEngine = {
         const { width: w, height: h } = imageData;
         if (w > this.maxTextureSize || h > this.maxTextureSize) return null;
 
+        let needsUpload = false;
         if (this.canvas.width !== w || this.canvas.height !== h) {
             this.canvas.width = w;
             this.canvas.height = h;
             this.gl.viewport(0, 0, w, h);
-            // Re-allocate outBuffer if size changed
             this.outBuffer = new Uint8Array(w * h * 4);
+            needsUpload = true;
         }
 
         if (!this.texture) {
@@ -89,12 +101,32 @@ window.WebGLFilterEngine = {
             this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
             this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
             this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+            needsUpload = true;
         } else {
             this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
         }
 
-        this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, w, h, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, imageData.data);
+        const floatData = imageData.rawFloatData || imageData.data;
+        if (this.lastSourceData !== floatData) {
+            needsUpload = true;
+            this.lastSourceData = floatData;
+        }
+
+        if (needsUpload) {
+            this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+            
+            const isFloatArray = floatData instanceof Float32Array || (floatData && floatData.constructor && floatData.constructor.name === 'Float32Array');
+            
+            if (isFloatArray) {
+                // Native HDR RAW upload
+                const internalFmt = this.isWebGL2 ? this.gl.RGBA32F : this.gl.RGBA;
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, internalFmt || this.gl.RGBA, w, h, 0, this.gl.RGBA, this.gl.FLOAT, floatData);
+            } else {
+                // Standard 8-bit upload
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, w, h, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, floatData);
+            }
+        }
+        
         return this.texture;
     },
 
@@ -148,6 +180,8 @@ window.WebGLFilterEngine = {
             if (Array.isArray(val)) {
                 if (val.length === 2) this.gl.uniform2f(loc, val[0], val[1]);
                 else if (val.length === 3) this.gl.uniform3f(loc, val[0], val[1], val[2]);
+            } else if (typeof val === 'boolean') {
+                this.gl.uniform1i(loc, val ? 1 : 0);
             } else {
                 this.gl.uniform1f(loc, val);
             }
@@ -205,7 +239,11 @@ window.WebGLFilterEngine = {
             if (Array.isArray(val)) {
                 if (val.length === 2) this.gl.uniform2f(loc, val[0], val[1]);
                 else if (val.length === 3) this.gl.uniform3f(loc, val[0], val[1], val[2]);
-            } else this.gl.uniform1f(loc, val);
+            } else if (typeof val === 'boolean') {
+                this.gl.uniform1i(loc, val ? 1 : 0);
+            } else {
+                this.gl.uniform1f(loc, val);
+            }
         }
 
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);

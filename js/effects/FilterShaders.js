@@ -1,5 +1,6 @@
 /**
  * FilterShaders.js — Bibliothèque des Shaders GLSL pour MasterPaint 98.
+ * Optimisé pour le traitement HDR / RAW 14-bit.
  */
 window.FilterShaders = {
     VS: `
@@ -17,7 +18,6 @@ uniform sampler2D u_tex;
 varying vec2 v_uv;
 `,
 
-    // Effets de couleur simples
     grayscale: `
 void main() {
     vec4 c = texture2D(u_tex, v_uv);
@@ -43,22 +43,20 @@ void main() {
 }`,
 
     brightness_contrast: `
-uniform float u_brightness; // -1.0 to 1.0
-uniform float u_contrast;   // -1.0 to 1.0
+uniform float u_brightness;
+uniform float u_contrast;
 void main() {
     vec4 c = texture2D(u_tex, v_uv);
     vec3 rgb = c.rgb;
-    // Brightness
     rgb += u_brightness;
-    // Contrast
     float factor = (259.0 * (u_contrast * 255.0 + 255.0)) / (255.0 * (259.0 - u_contrast * 255.0));
     rgb = factor * (rgb - 0.5) + 0.5;
     gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), c.a);
 }`,
 
     exposure: `
-uniform float u_exposure; // 0.0 to 2.0+
-uniform float u_gamma;    // 0.1 to 3.0
+uniform float u_exposure;
+uniform float u_gamma;
 void main() {
     vec4 c = texture2D(u_tex, v_uv);
     vec3 rgb = c.rgb * u_exposure;
@@ -67,9 +65,9 @@ void main() {
 }`,
 
     hsv: `
-uniform float u_hue; // -180.0 to 180.0
-uniform float u_sat; // -100.0 to 100.0
-uniform float u_val; // -100.0 to 100.0
+uniform float u_hue;
+uniform float u_sat;
+uniform float u_val;
 
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -93,173 +91,6 @@ void main() {
     hsv.y = clamp(hsv.y + u_sat / 100.0, 0.0, 1.0);
     hsv.z = clamp(hsv.z + u_val / 100.0, 0.0, 1.0);
     gl_FragColor = vec4(hsv2rgb(hsv), c.a);
-}`,
-
-    // Effets géométriques
-    wave: `
-uniform float u_amp;
-uniform float u_freq;
-void main() {
-    vec2 uv = v_uv;
-    uv.x += u_amp * sin(uv.y * u_freq);
-    uv.y += u_amp * cos(uv.x * u_freq);
-    gl_FragColor = texture2D(u_tex, uv);
-}`,
-
-    bulge_pinch: `
-uniform float u_k; // >0 bulge, <0 pinch
-void main() {
-    vec2 uv = v_uv - 0.5;
-    float r = length(uv);
-    if (r < 0.5) {
-        // Reverse mapping: a sample from closer to center (f < 1) creates magnification (Bulge)
-        float f = 1.0 / (1.0 + u_k * (1.0 - pow(r * 2.0, 2.0)));
-        uv *= f;
-    }
-    gl_FragColor = texture2D(u_tex, uv + 0.5);
-}`,
-
-    twist: `
-uniform float u_rad;
-void main() {
-    vec2 uv = v_uv - 0.5;
-    float r = length(uv);
-    if (r < 0.5) {
-        float angle = atan(uv.y, uv.x) + u_rad * (1.0 - r * 2.0);
-        uv = vec2(cos(angle), sin(angle)) * r;
-    }
-    gl_FragColor = texture2D(u_tex, uv + 0.5);
-}`,
-
-    temperature: `
-uniform float u_temp; // -1.0 (cool) to 1.0 (warm)
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    vec3 rgb = c.rgb;
-    rgb.r += u_temp * 0.1;
-    rgb.b -= u_temp * 0.1;
-    gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), c.a);
-}`,
-
-    vignette: `
-uniform float u_intensity; // 0.0 to 1.0
-uniform vec3 u_color;
-uniform int u_blend; // 0=normal, 1=multiply, 2=screen, 3=overlay
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    float dist = distance(v_uv, vec2(0.5));
-    float mask = smoothstep(0.8, 0.2, dist * u_intensity * 2.0);
-    vec3 base = c.rgb;
-    vec3 blend = u_color;
-    vec3 result;
-    if (u_blend == 1) { // Multiply
-        result = base * blend;
-    } else if (u_blend == 2) { // Screen
-        result = 1.0 - (1.0 - base) * (1.0 - blend);
-    } else if (u_blend == 3) { // Overlay
-        vec3 mask_overlay = step(0.5, base);
-        result = mix(
-            2.0 * base * blend,
-            1.0 - 2.0 * (1.0 - base) * (1.0 - blend),
-            mask_overlay
-        );
-    } else { // Normal
-        result = blend;
-    }
-    gl_FragColor = vec4(mix(result, base, mask), c.a);
-}`,
-
-    pixelate: `
-uniform vec2 u_res;
-uniform float u_size;
-void main() {
-    vec2 p = floor(v_uv * u_res / u_size) * u_size / u_res;
-    gl_FragColor = texture2D(u_tex, p);
-}`,
-
-    posterize: `
-uniform float u_levels;
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    float step = 1.0 / (u_levels - 1.0);
-    vec3 rgb = floor(c.rgb / step + 0.5) * step;
-    gl_FragColor = vec4(rgb, c.a);
-}`,
-
-    solarize: `
-uniform float u_threshold;
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    vec3 rgb = c.rgb;
-    if (rgb.r > u_threshold) rgb.r = 1.0 - rgb.r;
-    if (rgb.g > u_threshold) rgb.g = 1.0 - rgb.g;
-    if (rgb.b > u_threshold) rgb.b = 1.0 - rgb.b;
-    gl_FragColor = vec4(rgb, c.a);
-}`,
-
-    colorbal: `
-uniform vec3 u_offset;
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    gl_FragColor = vec4(clamp(c.rgb + u_offset, 0.0, 1.0), c.a);
-}`,
-
-    chromatic: `
-uniform float u_offset; // pixels offset
-uniform vec2 u_res;
-void main() {
-    float off = u_offset / u_res.x;
-    float r = texture2D(u_tex, v_uv + vec2(off, 0.0)).r;
-    float g = texture2D(u_tex, v_uv).g;
-    float b = texture2D(u_tex, v_uv - vec2(off, 0.0)).b;
-    gl_FragColor = vec4(r, g, b, texture2D(u_tex, v_uv).a);
-}`,
-
-    mirrorquad: `
-void main() {
-    vec2 uv = v_uv;
-    if (uv.x > 0.5) uv.x = 1.0 - uv.x;
-    if (uv.y > 0.5) uv.y = 1.0 - uv.y;
-    gl_FragColor = texture2D(u_tex, uv);
-}`,
-
-    duotone: `
-uniform vec3 u_c1;
-uniform vec3 u_c2;
-uniform float u_pivot;
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-    float t;
-    if (lum <= u_pivot) t = (lum / u_pivot) * 0.5;
-    else t = 0.5 + ((lum - u_pivot) / (1.0 - u_pivot)) * 0.5;
-    gl_FragColor = vec4(mix(u_c1, u_c2, clamp(t, 0.0, 1.0)), c.a);
-}`,
-
-    halftone: `
-uniform float u_radius;
-uniform vec2 u_res;
-void main() {
-    vec2 p = v_uv * u_res;
-    vec2 grid = floor(p / u_radius + 0.5) * u_radius;
-    vec4 c = texture2D(u_tex, grid / u_res);
-    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-    float dist = distance(p, grid);
-    float r = u_radius * 0.5 * lum;
-    float mask = smoothstep(r, r - 1.0, dist);
-    gl_FragColor = vec4(vec3(mask), c.a);
-}`,
-
-    filmgrain: `
-uniform float u_intensity;
-uniform float u_time;
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
-void main() {
-    vec4 c = texture2D(u_tex, v_uv);
-    float n = (rand(v_uv + u_time) - 0.5) * u_intensity;
-    gl_FragColor = vec4(clamp(c.rgb + n, 0.0, 1.0), c.a);
 }`,
 
     camera_raw: `
@@ -286,16 +117,20 @@ uniform float grain;
 uniform float grainSharpness;
 uniform float sharpen;
 uniform vec2 u_res;
+uniform bool isRawMode;
 
+// Standard sRGB <-> Linear conversions
 float sToL(float c) {
     return (c <= 0.04045) ? (c / 12.92) : pow((c + 0.055) / 1.055, 2.4);
 }
 float lToS(float c) {
     return (c <= 0.0031308) ? (12.92 * c) : (1.055 * pow(c, 1.0 / 2.4) - 0.055);
 }
+
 float rand(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
+
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
@@ -304,20 +139,40 @@ vec3 rgb2hsv(vec3 c) {
     float e = 1.0e-10;
     return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
+
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// Reinhard Extended Tone Mapping Operator (Matches WASM/CPU)
+vec3 Reinhard(vec3 rgb) {
+    float maxC = max(rgb.r, max(rgb.g, rgb.b));
+    if (maxC > 0.0) {
+        float Lw2 = 16.0; // 4.0 * 4.0
+        float mappedMax = maxC * (1.0 + maxC / Lw2) / (1.0 + maxC);
+        return rgb * (mappedMax / maxC);
+    }
+    return rgb;
+}
+
 void main() {
     vec4 color = texture2D(u_tex, v_uv);
-    vec3 rgb = vec3(sToL(color.r), sToL(color.g), sToL(color.b));
+    vec3 rgb = color.rgb;
     
-    // 1. Exposure
-    rgb *= pow(2.0, (exposure / 100.0) * 2.0);
+    // 1. GESTION DE L'ESPACE COLORIMÉTRIQUE INITIAL
+    // Si c'est un RAW (14-bit), la texture DOIT déjà être linéaire. On ne la décode pas.
+    if (!isRawMode) {
+        rgb = vec3(sToL(rgb.r), sToL(rgb.g), sToL(rgb.b));
+    }
     
-    // 2. Temp / Tint
+    // 2. EXPOSITION (En F-Stops)
+    // -100 à 100 = -2 à +2 stops
+    float expFactor = 2.0; 
+    rgb *= pow(2.0, (exposure / 100.0) * expFactor);
+    
+    // 3. BALANCE DES BLANCS (Temp / Tint)
     float t = temp / 100.0;
     rgb.r *= (1.0 + t * 0.12);
     rgb.b *= (1.0 - t * 0.12);
@@ -327,70 +182,104 @@ void main() {
     rgb.b *= (1.0 + tn * 0.06);
     rgb.g *= (1.0 - tn * 0.08);
 
-    // 3. Tonal Curves
-    float y = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
-    if (y > 0.001) {
-        float yNew = y;
-        if (shadows != 0.0) {
-            float w = max(0.0, 1.0 - (y / 0.5));
-            yNew += (shadows / 100.0) * w * 0.4 * sqrt(y);
-        }
-        if (highlights != 0.0) {
-            float w = max(0.0, (y - 0.5) / 0.5);
-            yNew += (highlights / 100.0) * w * 0.6 * (1.1 - y);
-        }
-        if (whites != 0.0) {
-            float w = pow(max(0.0, (y - 0.7) / 0.3), 2.0);
-            yNew += (whites / 100.0) * w;
-        }
-        if (blacks != 0.0) {
-            float w = pow(max(0.0, 1.0 - (y / 0.3)), 2.0);
-            yNew += (blacks / 100.0) * w * 0.3;
-        }
-        rgb *= (max(0.0, yNew) / y);
-        y = max(0.0, yNew);
+    // 4. COURBES TONALES (Shadows, Highlights, Whites, Blacks)
+    float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+    if (lum > 0.0001) {
+        // Conversion de la luminance en pseudo-perceptuel pour générer des masques de zones fluides
+        // Cela évite que les mathématiques linéaires n'écrasent tout dans les tons sombres
+        float pLum = pow(lum, 1.0 / 2.2); 
+        
+        // Création de masques avec lissage (smoothstep) pour éviter les cassures
+        float shadowMask = smoothstep(0.5, 0.0, pLum);     // Agit dans les ombres
+        float highlightMask = smoothstep(0.5, 1.0, pLum);  // Agit dans les lumières
+        float whiteMask = smoothstep(0.8, 1.2, pLum);      // Agit sur l'extrême clair (HDR)
+        float blackMask = smoothstep(0.2, 0.0, pLum);      // Agit sur l'extrême noir
+        
+        float lumNew = lum;
+        
+        // Intensités des sliders
+        float sFac = shadows / 100.0;
+        float bFac = blacks / 100.0;
+        float hFac = highlights / 100.0;
+        float wFac = whites / 100.0;
+
+        // Application Multiplicative (Protège les contrastes internes)
+        // Ombres et Noirs
+        lumNew *= 1.0 + (sFac * shadowMask * 1.5);
+        lumNew *= 1.0 + (bFac * blackMask * 2.0);
+        
+        // Hautes lumières et Blancs (Si négatif = récupération, Si positif = boost)
+        if (hFac < 0.0) lumNew *= 1.0 + (hFac * highlightMask * 0.85);
+        else lumNew *= 1.0 + (hFac * highlightMask * 1.5);
+
+        if (wFac < 0.0) lumNew *= 1.0 + (wFac * whiteMask * 0.85);
+        else lumNew *= 1.0 + (wFac * whiteMask * 2.0);
+
+        lumNew = max(0.0001, lumNew);
+        rgb *= (lumNew / lum); // Applique le changement de luminance aux canaux RGB
+        lum = lumNew;
     }
     
-    // 4. Per-channel
-    float wHi = max(0.0, y - 0.5) / 0.5;
-    float wSh = max(0.0, 0.5 - y) / 0.5;
+    // 5. AJUSTEMENTS PAR CANAL (Split Toning / Grading)
+    float wHi = max(0.0, min(lum, 1.0) - 0.5) / 0.5;
+    float wSh = max(0.0, 0.5 - min(lum, 1.0)) / 0.5;
     rgb.r *= (1.0 + red / 100.0) * (1.0 + (redHi / 100.0) * wHi * 1.5) * (1.0 + (redSh / 100.0) * wSh * 1.5);
     rgb.g *= (1.0 + green / 100.0) * (1.0 + (greenHi / 100.0) * wHi * 1.5) * (1.0 + (greenSh / 100.0) * wSh * 1.5);
     rgb.b *= (1.0 + blue / 100.0) * (1.0 + (blueHi / 100.0) * wHi * 1.5) * (1.0 + (blueSh / 100.0) * wSh * 1.5);
 
-    // 5. Sharpening (Simple Laplacian 5-tap)
+    // 6. NETTETÉ (Sharpening Laplacian)
     if (sharpen > 0.0 && u_res.x > 0.0) {
         float k = sharpen / 150.0;
         float center = 1.0 + 4.0 * k;
         float neighbor = -k;
         vec2 off = 1.0 / u_res;
+        
+        // Évite la re-conversion sToL coûteuse, on travaille directement en linéaire pour le RAW
         vec3 up = texture2D(u_tex, v_uv + vec2(0, -off.y)).rgb;
         vec3 dn = texture2D(u_tex, v_uv + vec2(0, off.y)).rgb;
         vec3 lf = texture2D(u_tex, v_uv + vec2(-off.x, 0)).rgb;
         vec3 rt = texture2D(u_tex, v_uv + vec2(off.x, 0)).rgb;
-        vec3 upL = vec3(sToL(up.r), sToL(up.g), sToL(up.b));
-        vec3 dnL = vec3(sToL(dn.r), sToL(dn.g), sToL(dn.b));
-        vec3 lfL = vec3(sToL(lf.r), sToL(lf.g), sToL(lf.b));
-        vec3 rtL = vec3(sToL(rt.r), sToL(rt.g), sToL(rt.b));
-        rgb = rgb * center + (upL + dnL + lfL + rtL) * neighbor;
+        
+        if(!isRawMode) {
+            up = vec3(sToL(up.r), sToL(up.g), sToL(up.b));
+            dn = vec3(sToL(dn.r), sToL(dn.g), sToL(dn.b));
+            lf = vec3(sToL(lf.r), sToL(lf.g), sToL(lf.b));
+            rt = vec3(sToL(rt.r), sToL(rt.g), sToL(rt.b));
+        }
+
+        rgb = rgb * center + (up + dn + lf + rt) * neighbor;
+        rgb = max(vec3(0.0), rgb);
     }
 
-    // 6. Grain
+    // 7. GRAIN
     if (grain > 0.0) {
         float gs = grainSharpness / 100.0;
         float noise = (rand(v_uv) - 0.5) * (grain / 100.0) * (0.2 + 0.4 * gs);
         rgb += noise;
     }
 
-    // 7. Back to sRGB for Contrast/Sat
+    // 8. TONE MAPPING (VITAL POUR LE RAW)
+    // Compresse doucement les valeurs HDR (> 1.0) vers l'espace écran (0.0 - 1.0)
+    if (isRawMode) {
+        rgb = Reinhard(rgb);
+    } else {
+        rgb = clamp(rgb, 0.0, 1.0);
+    }
+
+    // 9. RETOUR EN sRGB, CONTRASTE & SATURATION
     rgb = vec3(lToS(rgb.r), lToS(rgb.g), lToS(rgb.b));
+    
+    // Contraste post-ToneMapping (en courbe S)
     float contrastF = (100.0 + contrast) / 100.0;
     rgb = clamp((rgb - 0.5) * contrastF + 0.5, 0.0, 1.0);
     
+    // Saturation / Vibrance
     if (saturation != 0.0 || vibrance != 0.0) {
         vec3 hsv = rgb2hsv(rgb);
         hsv.y = clamp(hsv.y * (1.0 + saturation / 100.0), 0.0, 1.0);
-        if (vibrance != 0.0) hsv.y = clamp(hsv.y + (1.0 - hsv.y) * (vibrance / 100.0) * 0.4, 0.0, 1.0);
+        if (vibrance != 0.0) {
+            hsv.y = clamp(hsv.y + (1.0 - hsv.y) * (vibrance / 100.0) * 0.4, 0.0, 1.0);
+        }
         rgb = hsv2rgb(hsv);
     }
     

@@ -2127,6 +2127,8 @@ window.updateToolOptionsBar = function () {
     }
     const pencilCb = document.getElementById('pencil-auto-close');
     if (pencilCb) pencilCb.checked = !!EditorManager.toolProps.pencilAutoClose;
+    if (pencilCb) pencilCb.checked = !!EditorManager.toolProps.pencilAutoClose;
+
     const capStartEl = document.getElementById('tool-line-cap-start');
     const capEndEl = document.getElementById('tool-line-cap-end');
     if (capStartEl) capStartEl.value = EditorManager.toolProps.lineCapStart || 'none';
@@ -17215,7 +17217,161 @@ function floodFill(startX, startY) {
     EditorManager.render();
 }
 
+window.FileQueueManager = {
+    queue: [],
+    isProcessing: false,
+    globalImportOpts: null,
+    totalFiles: 0,
+    processedCount: 0,
+    currentTask: null,
+
+    cancelAll() {
+        this.queue = [];
+        this.isProcessing = false;
+        if (this.currentTask) {
+            this.currentTask.done();
+            this.currentTask = null;
+        } else {
+            this._updateProgress();
+        }
+    },
+
+    addFiles(files, opts) {
+        if (!files || files.length === 0) return;
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > 0) {
+                this.queue.push({ file: files[i], opts: Object.assign({}, opts) });
+            }
+        }
+        if (this.queue.length > 0 && !this.isProcessing) {
+            this.totalFiles = this.queue.length;
+            this.processedCount = 0;
+            this.globalImportOpts = null;
+            this.processNext();
+        } else if (this.isProcessing) {
+            this.totalFiles += files.length;
+            this._updateProgress();
+        }
+    },
+
+    _updateProgress() {
+        if (window.IlluProgress && window.IlluProgress.registerTask) {
+            if (this.queue.length > 0 || this.isProcessing) {
+                if (!this.currentTask) {
+                    this.currentTask = window.IlluProgress.registerTask('Ouverture de fichiers', {
+                        onCancel: () => {
+                            this.cancelAll();
+                        }
+                    });
+                }
+                const pct = Math.round((this.processedCount / this.totalFiles) * 100);
+                this.currentTask.progress(pct, `Fichier ${this.processedCount + 1} sur ${this.totalFiles}...`);
+            } else {
+                if (this.currentTask) {
+                    this.currentTask.done();
+                    this.currentTask = null;
+                }
+            }
+        } else if (window.IlluProgress && window.IlluProgress.instantEffectStart) {
+            if (this.queue.length > 0 || this.isProcessing) {
+                if (this.processedCount === 0) {
+                    window.IlluProgress.instantEffectStart('Ouverture de fichiers');
+                }
+                const pct = Math.round((this.processedCount / this.totalFiles) * 100);
+                window.IlluProgress.instantEffectProgress(pct, `Fichier ${this.processedCount + 1} sur ${this.totalFiles}...`);
+            } else {
+                if (window.IlluProgress.instantEffectDone) window.IlluProgress.instantEffectDone();
+            }
+        }
+    },
+
+    async processNext() {
+        if (this.queue.length === 0) {
+            this.isProcessing = false;
+            this._updateProgress();
+            return;
+        }
+
+        if (this.totalFiles > 1 && this.processedCount === 0 && !this.globalImportOpts && typeof EditorManager !== 'undefined' && EditorManager.isPixelMode) {
+            const choice = await new Promise(resolve => {
+                const overlay = document.getElementById('import-choice-overlay');
+                if (!overlay) return resolve(null);
+
+                const btnLayer = document.getElementById('btn-import-layer');
+                const btnCur = document.getElementById('btn-import-current');
+                const btnTab = document.getElementById('btn-import-tab');
+
+                const finish = (val) => {
+                    overlay.style.display = 'none';
+                    resolve(val);
+                };
+
+                if (btnLayer) btnLayer.onclick = () => finish('layer');
+                if (btnCur) btnCur.onclick = () => finish('current');
+                if (btnTab) btnTab.onclick = () => finish('tab');
+
+                const btnCancelList = overlay.querySelectorAll('button[onclick*="display=\'none\'"]');
+                btnCancelList.forEach(btn => {
+                    const oldOnClick = btn.onclick;
+                    btn.onclick = (e) => {
+                        if (oldOnClick) oldOnClick.call(btn, e);
+                        finish('abort');
+                    };
+                });
+
+                overlay.style.display = 'flex';
+            });
+
+            if (choice === 'abort') {
+                this.cancelAll();
+                return;
+            }
+
+            if (choice) {
+                this.globalImportOpts = {};
+                if (choice === 'layer') this.globalImportOpts.autoNewLayer = true;
+                if (choice === 'tab') this.globalImportOpts.autoNewProject = true;
+                if (choice === 'current') this.globalImportOpts.autoCurrentLayer = true;
+            }
+        }
+        
+        this.isProcessing = true;
+        this._updateProgress();
+        
+        const item = this.queue.shift();
+        
+        if (this.globalImportOpts) {
+            Object.assign(item.opts, this.globalImportOpts);
+        }
+
+        new Promise(resolve => {
+            item.opts.onComplete = () => {
+                if (window._illuGlobalImportChoice) {
+                    this.globalImportOpts = this.globalImportOpts || {};
+                    if (window._illuGlobalImportChoice === 'layer') this.globalImportOpts.autoNewLayer = true;
+                    if (window._illuGlobalImportChoice === 'tab') this.globalImportOpts.autoNewProject = true;
+                    if (window._illuGlobalImportChoice === 'current') this.globalImportOpts.autoCurrentLayer = true;
+                    window._illuGlobalImportChoice = null;
+                }
+                resolve();
+            };
+            window._illuProcessFileImportInternal(item.file, item.opts);
+        }).then(() => {
+            this.processedCount++;
+            this.processNext();
+        });
+    }
+};
+
 window.illuProcessFileImport = function (file, opts) {
+    if (file instanceof FileList || Array.isArray(file)) {
+        window.FileQueueManager.addFiles(file, opts);
+    } else if (file) {
+        window.FileQueueManager.addFiles([file], opts);
+    }
+};
+
+window._illuProcessFileImportInternal = function (file, opts) {
     if (!file) return;
     const options = opts || {};
     const inputEl = options.inputElement;
@@ -17235,6 +17391,7 @@ window.illuProcessFileImport = function (file, opts) {
                     }
                     if (inputEl) inputEl.value = '';
                     if (P && P.statusDone) P.statusDone();
+                    if (options.onComplete) options.onComplete();
                     return;
                 }
                 if (typeof EditorManager.importPdnDocument === 'function') {
@@ -17321,6 +17478,7 @@ window.illuProcessFileImport = function (file, opts) {
                     await WorkspaceIO.applyWorkspaceFromJsonText(data, { busy: openBusy });
                     openBusy = null;
                     if (inputEl) inputEl.value = '';
+                    if (options.onComplete) options.onComplete();
                     return;
                 }
             } catch (err) {
@@ -17337,6 +17495,7 @@ window.illuProcessFileImport = function (file, opts) {
                     );
                 }
                 if (inputEl) inputEl.value = '';
+                if (options.onComplete) options.onComplete();
                 return;
             }
             if (openBusy) {
@@ -17347,6 +17506,7 @@ window.illuProcessFileImport = function (file, opts) {
                 window.showIlluAlert('Ce fichier n’est pas un projet Illu valide (.illu).');
             }
             if (inputEl) inputEl.value = '';
+            if (options.onComplete) options.onComplete();
         };
         reader.onerror = () => {
             if (openBusy) openBusy.done();
@@ -17371,6 +17531,7 @@ window.illuProcessFileImport = function (file, opts) {
                 } else {
                     runImport({ target: 'new', layerMode: 'split' });
                 }
+                if (options.onComplete) options.onComplete();
             } catch (err) {
                 console.warn(err);
                 if (window.showIlluAlert) {
@@ -17380,6 +17541,7 @@ window.illuProcessFileImport = function (file, opts) {
                             : 'Impossible d’importer ce fichier SVG.'
                     );
                 }
+                if (options.onComplete) options.onComplete();
             }
         };
         reader.readAsText(file);
@@ -17389,14 +17551,18 @@ window.illuProcessFileImport = function (file, opts) {
 
     if (typeof window.illuIsRawFileName === 'function' && window.illuIsRawFileName(file.name || lower)) {
         if (typeof window.openCameraRawAfterRawImport === 'function') {
-            window.openCameraRawAfterRawImport(file, inputEl || null);
+            window.openCameraRawAfterRawImport(file, inputEl || null)
+                .finally(() => {
+                    if (options.onComplete) options.onComplete();
+                });
         } else {
             if (window.showIlluAlert) {
                 window.showIlluAlert(
-                    'Import RAW : chargez CameraRawPanel.js ou vérifiez raw-convert.php sur le serveur.'
+                    'Import RAW : format invalide ou module manquant.'
                 );
             }
             if (inputEl) inputEl.value = '';
+            if (options.onComplete) options.onComplete();
         }
         return;
     }
@@ -17410,20 +17576,36 @@ window.illuProcessFileImport = function (file, opts) {
                     EditorManager.importImageAsNewLayer(img, file.name || 'Image importée', {
                         layerName: (file.name || 'Image importée').replace(/\.[^.]+$/, '')
                     });
+                    if (options.onComplete) options.onComplete();
+                } else if (options.autoNewProject) {
+                    EditorManager.handleNewProjectFromImage(img, file.name || 'Image importée');
+                    if (options.onComplete) options.onComplete();
+                } else if (options.autoCurrentLayer) {
+                    EditorManager.drawImportedImageOnActiveLayer(img, options);
+                    if (options.onComplete) options.onComplete();
                 } else {
-                    EditorManager.promptImport(img);
+                    // promptImport displays UI overlays.
+                    // It doesn't block, so we MUST call onComplete from within promptImport
+                    // once the user clicks a choice.
+                    EditorManager.promptImport(img, options);
                 }
             } else if (typeof window.illuPromptVectorBitmapImport === 'function') {
                 window.illuPromptVectorBitmapImport(img);
+                if (options.onComplete) options.onComplete();
             } else if (typeof EditorManager.embedBitmapInVectorProject === 'function') {
                 EditorManager.embedBitmapInVectorProject(img);
+                if (options.onComplete) options.onComplete();
             } else if (typeof EditorManager.handleNewProjectFromImage === 'function') {
                 EditorManager.handleNewProjectFromImage(img);
+                if (options.onComplete) options.onComplete();
             } else if (window.showIlluAlert) {
                 window.showIlluAlert(
                     window.IlluI18n?.t('msg.importBitmapNeedsPixel') ||
                         'Image bitmap : ouvrez ou créez un projet pixel, ou l’import sera converti automatiquement.'
                 );
+                if (options.onComplete) options.onComplete();
+            } else {
+                if (options.onComplete) options.onComplete();
             }
         };
         img.onerror = () => {
@@ -17432,6 +17614,7 @@ window.illuProcessFileImport = function (file, opts) {
                     `Impossible de lire l’image « ${file.name || 'fichier'} » (format ou fichier endommagé).`
                 );
             }
+            if (options.onComplete) options.onComplete();
         };
         img.src = ev.target.result;
     };
@@ -17439,15 +17622,16 @@ window.illuProcessFileImport = function (file, opts) {
         if (window.showIlluAlert) {
             window.showIlluAlert(`Lecture du fichier « ${file.name || 'fichier'} » impossible.`);
         }
+        if (options.onComplete) options.onComplete();
     };
     reader.readAsDataURL(file);
     if (inputEl) inputEl.value = '';
 };
 
 window.importFile = function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    window.illuProcessFileImport(file, { inputElement: e.target });
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    window.FileQueueManager.addFiles(files, { inputElement: e.target });
 };
 
 // --- CONTEXT MENU ---

@@ -199,7 +199,7 @@
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-regular fa-folder-open"></i></span><span data-i18n="menu.fileOpen">Ouvrir
                                         / Importer image…</span></li>
-                                <input type="file" id="file-import" style="display: none"
+                                <input type="file" id="file-import" style="display: none" multiple
                                     accept="image/*,image/svg+xml,.svg,.illu,.pdn" onchange="importFile(event)">
                                 <input type="file" id="illu-vectorize-file-input" style="display:none"
                                     accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/*" aria-hidden="true"
@@ -4177,20 +4177,26 @@
                         onclick="if (window.IlluProgress) window.IlluProgress.forceDismissInstantEffect();"></button>
                 </div>
             </div>
-            <div class="window-body illu-instant-effect-busy__body"
+            <div class="window-body illu-instant-effect-busy__body" id="illu-instant-effect-tasks"
                 style="display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
-                <p id="illu-instant-effect-busy-msg" class="illu-instant-effect-busy__line"
-                    style="margin: 0; text-align: center;"></p>
-                <div
-                    class="illu-mp-progress-indicator illu-mp-progress-indicator--segmented illu-status-progress-track illu-instant-effect-busy__track">
-                    <span class="illu-mp-progress-indicator__bar illu-status-progress-fill"
-                        id="illu-instant-effect-busy-fill"></span>
+                
+                <!-- Legacy support: default task -->
+                <div id="illu-task-default" style="display: none; flex-direction: column; gap: 8px;">
+                    <p id="illu-instant-effect-busy-msg" class="illu-instant-effect-busy__line"
+                        style="margin: 0; text-align: center;"></p>
+                    <div class="illu-mp-progress-indicator illu-mp-progress-indicator--segmented illu-status-progress-track illu-instant-effect-busy__track">
+                        <span class="illu-mp-progress-indicator__bar illu-status-progress-fill"
+                            id="illu-instant-effect-busy-fill"></span>
+                    </div>
                 </div>
-                <div style="text-align: right; margin-top: 4px;">
-                    <button type="button" style="padding: 2px 12px; font-size: 11px;"
-                        onclick="if (window.IlluProgress) window.IlluProgress.forceDismissInstantEffect();">Forcer la
-                        fermeture</button>
-                </div>
+
+                <!-- Dynamic tasks will be appended here -->
+            </div>
+            <div style="text-align: right; margin-top: 8px; margin-bottom: 4px; padding-right: 8px; display: none;" id="illu-instant-effect-global-actions">
+                <button type="button" style="padding: 2px 12px; font-size: 11px;"
+                    onclick="if (window.IlluProgress && window.IlluProgress.cancelAllTasks) window.IlluProgress.cancelAllTasks();">
+                    Tout annuler
+                </button>
             </div>
         </div>
     </div>

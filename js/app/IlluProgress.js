@@ -28,6 +28,39 @@
     /** Effets applyEffect() sans fenêtre (esquisse, médiane, etc.) : petite fenêtre « Traitement » avant/après le calcul ; validation OK des modales idem. */
     let instantEffectActive = false;
     let instantEffectDepth = 0;
+    
+    // Nouveau système de tâches (Multi-Tâches)
+    const activeTasks = new Map();
+    let nextTaskId = 1;
+
+    function _syncTasksUI() {
+        const ov = document.getElementById('illu-instant-effect-busy');
+        const defaultTask = document.getElementById('illu-task-default');
+        const globalActions = document.getElementById('illu-instant-effect-global-actions');
+        
+        if (activeTasks.size === 0 && instantEffectDepth <= 0) {
+            if (ov) {
+                ov.hidden = true;
+                ov.setAttribute('aria-hidden', 'true');
+            }
+            document.body.classList.remove('illu-instant-effect-busy-active');
+            if (globalActions) globalActions.style.display = 'none';
+        } else {
+            if (ov) {
+                ov.hidden = false;
+                ov.setAttribute('aria-hidden', 'false');
+            }
+            document.body.classList.add('illu-instant-effect-busy-active');
+            
+            if (defaultTask) {
+                defaultTask.style.display = (instantEffectDepth > 0) ? 'flex' : 'none';
+            }
+            if (globalActions) {
+                globalActions.style.display = (activeTasks.size + (instantEffectDepth > 0 ? 1 : 0)) > 1 ? 'block' : 'none';
+            }
+        }
+    }
+
     let instantEffectWatchdog = null;
     let instantEffectStallTimer = null;
     let instantEffectLastProgressMs = 0;
@@ -52,16 +85,16 @@
                 console.warn('IlluProgress: fermeture auto (durée maximale dépassée)');
                 api.forceDismissInstantEffect();
             }
-        }, 90000);
+        }, 300000); // 5 min max pour les décodages RAW longs
         instantEffectStallTimer = setTimeout(function tickStall() {
             if (instantEffectDepth <= 0) return;
-            if (Date.now() - instantEffectLastProgressMs > 10000) {
+            if (Date.now() - instantEffectLastProgressMs > 30000) {
                 console.warn('IlluProgress: fermeture auto (progression bloquée)');
                 api.forceDismissInstantEffect();
                 return;
             }
-            instantEffectStallTimer = setTimeout(tickStall, 2500);
-        }, 10000);
+            instantEffectStallTimer = setTimeout(tickStall, 5000);
+        }, 30000); // 30s stall threshold (RAW decode can take time)
     }
 
     /** Horodatage du premier `splash()` au boot (évite le scintillement si l’init est trop rapide). */
@@ -324,6 +357,115 @@
             return instantEffectActive;
         },
 
+        registerTask(title, options = {}) {
+            const taskId = nextTaskId++;
+            const tId = 'illu-task-' + taskId;
+            
+            const container = document.getElementById('illu-instant-effect-tasks');
+            if (container) {
+                const row = document.createElement('div');
+                row.id = tId;
+                row.style.display = 'flex';
+                row.style.flexDirection = 'column';
+                row.style.gap = '4px';
+                
+                const header = document.createElement('div');
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+                
+                const titleEl = document.createElement('p');
+                titleEl.className = 'illu-instant-effect-busy__line';
+                titleEl.style.margin = '0';
+                titleEl.style.fontSize = '12px';
+                titleEl.textContent = title || 'Traitement…';
+                
+                header.appendChild(titleEl);
+
+                if (options.onCancel) {
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.type = 'button';
+                    cancelBtn.innerHTML = '✕';
+                    cancelBtn.style.padding = '2px 6px';
+                    cancelBtn.style.fontSize = '10px';
+                    cancelBtn.style.background = '#444';
+                    cancelBtn.style.color = '#fff';
+                    cancelBtn.style.border = '1px solid #555';
+                    cancelBtn.style.borderRadius = '3px';
+                    cancelBtn.style.cursor = 'pointer';
+                    cancelBtn.title = 'Annuler';
+                    cancelBtn.onclick = () => {
+                        if (options.onCancel) options.onCancel();
+                        this.finishTask(taskId);
+                    };
+                    header.appendChild(cancelBtn);
+                }
+
+                row.appendChild(header);
+
+                const track = document.createElement('div');
+                track.className = 'illu-mp-progress-indicator illu-mp-progress-indicator--segmented illu-status-progress-track illu-instant-effect-busy__track';
+                
+                const fill = document.createElement('span');
+                fill.className = 'illu-mp-progress-indicator__bar illu-status-progress-fill';
+                fill.id = tId + '-fill';
+                fill.style.width = '0%';
+                
+                track.appendChild(fill);
+                row.appendChild(track);
+
+                container.appendChild(row);
+            }
+
+            const task = {
+                id: taskId,
+                onCancel: options.onCancel,
+                progress: (pct, msg) => {
+                    const fill = document.getElementById(tId + '-fill');
+                    if (fill && pct != null) fill.style.width = Math.max(0, Math.min(100, Number(pct) || 0)) + '%';
+                    if (msg) {
+                        const row = document.getElementById(tId);
+                        if (row) {
+                            const titleEl = row.querySelector('.illu-instant-effect-busy__line');
+                            if (titleEl) titleEl.textContent = msg;
+                        }
+                    }
+                    this.status(pct != null ? pct : -1, msg || '');
+                },
+                done: () => {
+                    this.finishTask(taskId);
+                }
+            };
+            activeTasks.set(taskId, task);
+            _syncTasksUI();
+            
+            return task;
+        },
+
+        finishTask(taskId) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+            activeTasks.delete(taskId);
+            
+            const row = document.getElementById('illu-task-' + taskId);
+            if (row) row.remove();
+            
+            _syncTasksUI();
+            if (activeTasks.size === 0 && instantEffectDepth === 0) {
+                this.statusDone();
+            }
+        },
+
+        cancelAllTasks() {
+            for (const [taskId, task] of activeTasks.entries()) {
+                if (task.onCancel) {
+                    try { task.onCancel(); } catch (e) { console.warn(e); }
+                }
+                this.finishTask(taskId);
+            }
+            this.forceDismissInstantEffect();
+        },
+
         /**
          * @param {string} effectDisplayName libellé (ex. « Réduction du bruit (médian) »)
          */
@@ -331,8 +473,7 @@
             instantEffectDepth++;
             if (instantEffectDepth > 1) return;
             instantEffectActive = true;
-            document.body.classList.add('illu-instant-effect-busy-active');
-            const ov = document.getElementById('illu-instant-effect-busy');
+            _syncTasksUI();
             const titleEl = document.getElementById('illu-instant-effect-busy-title');
             const msgEl = document.getElementById('illu-instant-effect-busy-msg');
             const name = effectDisplayName != null ? String(effectDisplayName) : '';
@@ -349,24 +490,48 @@
                         : 'Traitement';
             }
             if (msgEl) msgEl.textContent = line;
-            if (ov) {
-                ov.hidden = false;
-                ov.setAttribute('aria-hidden', 'false');
-            }
+            // DOM setup if needed
             setFill('illu-instant-effect-busy-fill', 6);
             this.status(6, line);
             armInstantEffectTimers(this);
         },
 
         instantEffectProgress(pct, detailMsg) {
-            if (!instantEffectActive && instantEffectDepth <= 0) return;
+            if (!instantEffectActive && instantEffectDepth <= 0 && activeTasks.size === 0) return;
             instantEffectLastProgressMs = Date.now();
             const hasPct = pct != null && pct !== '';
             const p = hasPct ? Math.max(0, Math.min(100, Number(pct) || 0)) : null;
-            if (p != null) setFill('illu-instant-effect-busy-fill', p);
-            const busyMsg = document.getElementById('illu-instant-effect-busy-msg');
-            if (detailMsg && busyMsg) busyMsg.textContent = detailMsg;
-            const line = busyMsg && busyMsg.textContent ? busyMsg.textContent : '';
+            
+            let updatedTask = false;
+            // Si on a des tâches dynamiques et PAS de fenêtre modale legacy active, on redirige vers les tâches.
+            if (activeTasks.size > 0 && instantEffectDepth <= 0) {
+                for (const task of activeTasks.values()) {
+                    if (task.progress) {
+                        // Avoid infinite loop if task.progress calls this again? No, task.progress is an internal object method we defined.
+                        // Wait! task.progress calls `this.status` but not `instantEffectProgress`. So it's safe.
+                        
+                        const tId = 'illu-task-' + task.id;
+                        const fill = document.getElementById(tId + '-fill');
+                        if (fill && p != null) fill.style.width = p + '%';
+                        if (detailMsg) {
+                            const row = document.getElementById(tId);
+                            if (row) {
+                                const titleEl = row.querySelector('.illu-instant-effect-busy__line');
+                                if (titleEl) titleEl.textContent = detailMsg;
+                            }
+                        }
+                        updatedTask = true;
+                    }
+                }
+            }
+
+            if (!updatedTask) {
+                if (p != null) setFill('illu-instant-effect-busy-fill', p);
+                const busyMsg = document.getElementById('illu-instant-effect-busy-msg');
+                if (detailMsg && busyMsg) busyMsg.textContent = detailMsg;
+            }
+            
+            const line = detailMsg || (document.getElementById('illu-instant-effect-busy-msg') ? document.getElementById('illu-instant-effect-busy-msg').textContent : '');
             this.status(p != null ? p : -1, line);
         },
 
@@ -385,11 +550,7 @@
                 }
             }
             instantEffectActive = false;
-            document.body.classList.remove('illu-instant-effect-busy-active');
-            if (ov) {
-                ov.hidden = true;
-                ov.setAttribute('aria-hidden', 'true');
-            }
+            _syncTasksUI();
             setFill('illu-instant-effect-busy-fill', 0);
             this.statusDone();
         },
@@ -399,12 +560,15 @@
             instantEffectDepth = 0;
             clearInstantEffectTimers();
             instantEffectActive = false;
-            document.body.classList.remove('illu-instant-effect-busy-active');
-            const ov = document.getElementById('illu-instant-effect-busy');
-            if (ov) {
-                ov.hidden = true;
-                ov.setAttribute('aria-hidden', 'true');
+            activeTasks.clear();
+            const container = document.getElementById('illu-instant-effect-tasks');
+            if (container) {
+                // Supprimer toutes les tâches dynamiques (laissant seulement illu-task-default)
+                Array.from(container.children).forEach(c => {
+                    if (c.id !== 'illu-task-default') c.remove();
+                });
             }
+            _syncTasksUI();
             setFill('illu-instant-effect-busy-fill', 0);
             this.statusDone();
         },
@@ -425,7 +589,7 @@
          */
         async runAsyncEffect(effectDisplayName, fn, opts) {
             opts = opts || {};
-            const busy = this.createDelayedInstantEffect(effectDisplayName, opts.delayMs);
+            const busy = this.createDelayedInstantEffect(effectDisplayName, opts);
             try {
                 if (typeof fn === 'function') {
                     await fn({
@@ -450,14 +614,17 @@
         /**
          * Affiche la fenêtre « Traitement » uniquement si l’opération dépasse un court délai.
          */
-        createDelayedInstantEffect(effectDisplayName, delayMs) {
+        createDelayedInstantEffect(effectDisplayName, opts) {
             const api = this;
-            const delay = Math.max(0, Number(delayMs) || 240);
+            if (typeof opts === 'number') opts = { delayMs: opts };
+            opts = opts || {};
+            const delay = Math.max(0, Number(opts.delayMs) || 240);
             let closed = false;
             let visible = false;
             let lastPct = 6;
             let timer = null;
             let watchdog = null;
+            let task = null;
 
             const armWatchdog = () => {
                 if (watchdog) clearTimeout(watchdog);
@@ -467,22 +634,31 @@
                         console.warn('IlluProgress: fermeture auto (traitement prolongé)');
                         api.forceDismissInstantEffect();
                     }
-                }, 45000);
+                }, 300000); // 5 minutes max
             };
 
             timer = setTimeout(() => {
                 timer = null;
                 if (closed || visible) return;
                 visible = true;
-                api.instantEffectStart(effectDisplayName);
-                api.instantEffectProgress(lastPct);
+                if (opts.onCancel || opts.useTask) {
+                    task = api.registerTask(effectDisplayName, opts);
+                    task.progress(lastPct);
+                } else {
+                    api.instantEffectStart(effectDisplayName);
+                    api.instantEffectProgress(lastPct);
+                }
                 armWatchdog();
             }, delay);
 
             return {
                 progress(pct) {
                     lastPct = Math.max(0, Math.min(100, Number(pct) || 0));
-                    if (visible) api.instantEffectProgress(lastPct);
+                    if (visible) {
+                        if (task) task.progress(lastPct);
+                        else api.instantEffectProgress(lastPct);
+                        armWatchdog(); // Reset watchdog timer on progress
+                    }
                 },
                 showNow() {
                     if (closed || visible) return;
@@ -491,8 +667,13 @@
                         timer = null;
                     }
                     visible = true;
-                    api.instantEffectStart(effectDisplayName);
-                    api.instantEffectProgress(lastPct);
+                    if (opts.onCancel || opts.useTask) {
+                        task = api.registerTask(effectDisplayName, opts);
+                        task.progress(lastPct);
+                    } else {
+                        api.instantEffectStart(effectDisplayName);
+                        api.instantEffectProgress(lastPct);
+                    }
                     armWatchdog();
                 },
                 done() {
@@ -507,7 +688,8 @@
                         watchdog = null;
                     }
                     if (visible) {
-                        api.instantEffectDone();
+                        if (task) task.done();
+                        else api.instantEffectDone();
                     }
                 },
                 get visible() {

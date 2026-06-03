@@ -3952,7 +3952,7 @@ body.theme-dark .tab-scroll-btn {
 
 .tab-bar-inner {
     display: flex !important;
-    flex-direction: row-reverse !important;
+    flex-direction: row !important;
     flex-wrap: nowrap !important;
     /* Prevent wrapping so it overflows horizontally! */
     align-items: center !important;
@@ -4149,7 +4149,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
     box-shadow: 0 1px 4px rgba(245, 176, 65, 0.25) !important;
 }
 
-@media (max-width: 930px) {
+@media (max-width: 770px) {
   
 
   .tab-bar-outer {

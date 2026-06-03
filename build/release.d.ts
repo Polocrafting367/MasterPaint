@@ -20,6 +20,8 @@ export declare function createBuffer(size: number): Uint8Array;
  * @param contrast `f32`
  * @param highlights `f32`
  * @param shadows `f32`
+ * @param whites `f32`
+ * @param blacks `f32`
  * @param temperature `f32`
  * @param tint `f32`
  * @param vibrance `f32`
@@ -38,7 +40,38 @@ export declare function createBuffer(size: number): Uint8Array;
  * @param startY `i32`
  * @param endY `i32`
  */
-export declare function applyCameraRaw(dataPtr: number, width: number, height: number, exposure: number, contrast: number, highlights: number, shadows: number, temperature: number, tint: number, vibrance: number, saturation: number, red: number, redHi: number, redSh: number, green: number, greenHi: number, greenSh: number, blue: number, blueHi: number, blueSh: number, hslPtr: number, lutPtr: number, startY: number, endY: number): void;
+export declare function applyCameraRaw(dataPtr: number, width: number, height: number, exposure: number, contrast: number, highlights: number, shadows: number, whites: number, blacks: number, temperature: number, tint: number, vibrance: number, saturation: number, red: number, redHi: number, redSh: number, green: number, greenHi: number, greenSh: number, blue: number, blueHi: number, blueSh: number, hslPtr: number, lutPtr: number, startY: number, endY: number): void;
+/**
+ * assembly/camera_raw/applyCameraRawFloat
+ * @param inputPtr `usize`
+ * @param outputPtr `usize`
+ * @param width `i32`
+ * @param height `i32`
+ * @param exposure `f32`
+ * @param contrast `f32`
+ * @param highlights `f32`
+ * @param shadows `f32`
+ * @param whites `f32`
+ * @param blacks `f32`
+ * @param temperature `f32`
+ * @param tint `f32`
+ * @param vibrance `f32`
+ * @param saturation `f32`
+ * @param red `f32`
+ * @param redHi `f32`
+ * @param redSh `f32`
+ * @param green `f32`
+ * @param greenHi `f32`
+ * @param greenSh `f32`
+ * @param blue `f32`
+ * @param blueHi `f32`
+ * @param blueSh `f32`
+ * @param hslPtr `usize`
+ * @param lutPtr `usize`
+ * @param startY `i32`
+ * @param endY `i32`
+ */
+export declare function applyCameraRawFloat(inputPtr: number, outputPtr: number, width: number, height: number, exposure: number, contrast: number, highlights: number, shadows: number, whites: number, blacks: number, temperature: number, tint: number, vibrance: number, saturation: number, red: number, redHi: number, redSh: number, green: number, greenHi: number, greenSh: number, blue: number, blueHi: number, blueSh: number, hslPtr: number, lutPtr: number, startY: number, endY: number): void;
 /**
  * assembly/camera_raw/generateThumbnail
  * @param srcPtr `usize`

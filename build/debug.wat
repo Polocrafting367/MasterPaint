@@ -9,35 +9,36 @@
  (type $7 (func (param i32) (result f32)))
  (type $8 (func (param i32 i32 i32 i32 f32 i32 i32)))
  (type $9 (func (param i32 i32 i32 i32 i32 i32 i32)))
- (type $10 (func (param i32 i32 i32 i32)))
- (type $11 (func (param f64) (result f64)))
- (type $12 (func (param i32 i32 i32 f32 f32 i32 i32)))
- (type $13 (func (param i32 i32 i32 i32 i32)))
+ (type $10 (func (param i32 i32 i32 i32 i32)))
+ (type $11 (func (param i32 i32 i32 i32)))
+ (type $12 (func (param f64) (result f64)))
+ (type $13 (func (param i32 i32 i32 f32 f32 i32 i32)))
  (type $14 (func (param i32 i32 i32 f32 i32 i32)))
- (type $15 (func (param i32 i32 i32) (result i32)))
- (type $16 (func (param f64 f64) (result f64)))
- (type $17 (func (param i32 i32 i32 i32 i32 i32)))
- (type $18 (func (param i32 i32 i32 i32 i32 i32 i32 i32)))
+ (type $15 (func (param i32 i32 i32 i32 i32 i32 i32 i32)))
+ (type $16 (func (param i32 i32 i32) (result i32)))
+ (type $17 (func (param f64 f64) (result f64)))
+ (type $18 (func (param i32 i32 i32 i32 i32 i32)))
  (type $19 (func (param i32 i32 i32 i32 i32 i32 i32 i32 f32)))
- (type $20 (func (param i32 i32 i64) (result i32)))
- (type $21 (func (result i32)))
- (type $22 (func (param f32 f32) (result f32)))
- (type $23 (func (param f64 i64) (result i32)))
- (type $24 (func (param i32 i32 i32 i32 f32 f32 i32 i32)))
- (type $25 (func (param i32 i32 i32 f32 i32 i32 i32 i32 i32 i32)))
- (type $26 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)))
- (type $27 (func (param i32 i32 i32 i32 i32 i32 i32 i32 f32 f32)))
- (type $28 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32) (result i32)))
- (type $29 (func (param f32 f32 f32 f32) (result f32)))
- (type $30 (func (param f32 f32 f32 f32 f32 f32) (result f32)))
- (type $31 (func (param f32 f32 f32 f32 f32 f32 f32) (result i32)))
- (type $32 (func (param f32 f32 f32 f32 f32 f32 f32 f32 f32) (result f32)))
- (type $33 (func (result f64)))
- (type $34 (func (param i32 i32 i32 i32 f32 f32 i32 i32 i32)))
- (type $35 (func (param i32 i32 i32 i32 i32 f32 i32 i32)))
- (type $36 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
- (type $37 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
- (type $38 (func (param i32 i32 i32 i32) (result i32)))
+ (type $20 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32) (result i32)))
+ (type $21 (func (param i32 i32 i32 i32 i32) (result i32)))
+ (type $22 (func (param i32 i32 i64) (result i32)))
+ (type $23 (func (result i32)))
+ (type $24 (func (param f32 f32) (result f32)))
+ (type $25 (func (param f64 i64) (result i32)))
+ (type $26 (func (param i32 i32 i32 i32 f32 f32 i32 i32)))
+ (type $27 (func (param i32 i32 i32 f32 i32 i32 i32 i32 i32 i32)))
+ (type $28 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 i32)))
+ (type $29 (func (param i32 i32 i32 i32 i32 i32 i32 i32 f32 f32)))
+ (type $30 (func (param f32 f32 f32 f32) (result f32)))
+ (type $31 (func (param f32 f32 f32 f32 f32 f32) (result f32)))
+ (type $32 (func (param f32 f32 f32 f32 f32 f32 f32) (result i32)))
+ (type $33 (func (param f32 f32 f32 f32 f32 f32 f32 f32 f32) (result f32)))
+ (type $34 (func (result f64)))
+ (type $35 (func (param i32 i32 i32 i32 f32 f32 i32 i32 i32)))
+ (type $36 (func (param i32 i32 i32 i32 i32 f32 i32 i32)))
+ (type $37 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
+ (type $38 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
+ (type $39 (func (param i32 i32 i32 i32) (result i32)))
  (import "env" "abort" (func $~lib/builtins/abort (param i32 i32 i32 i32)))
  (global $~lib/rt/itcms/total (mut i32) (i32.const 0))
  (global $~lib/rt/itcms/threshold (mut i32) (i32.const 0))
@@ -57,6 +58,7 @@
  (global $assembly/math/_rgb (mut i32) (i32.const 0))
  (global $~lib/native/ASC_RUNTIME i32 (i32.const 2))
  (global $assembly/filters/BAYER_MATRIX (mut i32) (i32.const 0))
+ (global $assembly/vectorize/MAX_LABELS i32 (i32.const 4096))
  (global $assembly/pdn_effects/seed (mut i32) (i32.const 12345))
  (global $assembly/index/ALPHA_ARRAY_ID i32 (i32.const 8))
  (global $~lib/native/ASC_SHRINK_LEVEL i32 (i32.const 0))
@@ -134,6 +136,11 @@
  (export "perpendicularDistance" (func $assembly/vector/perpendicularDistance))
  (export "isPointOnSegment" (func $assembly/vector/isPointOnSegment))
  (export "getCubicBezierPoint" (func $assembly/vector/getCubicBezierPoint))
+ (export "labelColorRegions" (func $assembly/vectorize/labelColorRegions))
+ (export "detectGridCellSize" (func $assembly/vectorize/detectGridCellSize))
+ (export "extractLabelMask" (func $assembly/vectorize/extractLabelMask))
+ (export "computeLabelBounds" (func $assembly/vectorize/computeLabelBounds))
+ (export "sampleCellAverageColor" (func $assembly/vectorize/sampleCellAverageColor))
  (export "oilPainting" (func $assembly/pdn_effects/oilPainting))
  (export "relief" (func $assembly/pdn_effects/relief))
  (export "frostedGlass" (func $assembly/pdn_effects/frostedGlass))
@@ -14095,6 +14102,1759 @@
   f32.mul
   f32.add
   return
+ )
+ (func $assembly/vectorize/labelColorRegions (param $dataPtr i32) (param $labelsPtr i32) (param $queuePtr i32) (param $palettePtr i32) (param $countsPtr i32) (param $w i32) (param $h i32) (param $tolerance i32) (param $minAlpha i32) (param $maxLabels i32) (result i32)
+  (local $n i32)
+  (local $tol2 i32)
+  (local $cap i32)
+  (local $i i32)
+  (local $i|14 i32)
+  (local $pi i32)
+  (local $numLabels i32)
+  (local $y i32)
+  (local $x i32)
+  (local $idx i32)
+  (local $x|20 i32)
+  (local $y|21 i32)
+  (local $w|22 i32)
+  (local $o i32)
+  (local $dataPtr|24 i32)
+  (local $off i32)
+  (local $r i32)
+  (local $dataPtr|27 i32)
+  (local $off|28 i32)
+  (local $g i32)
+  (local $dataPtr|30 i32)
+  (local $off|31 i32)
+  (local $b i32)
+  (local $dataPtr|33 i32)
+  (local $off|34 i32)
+  (local $a i32)
+  (local $dataPtr|36 i32)
+  (local $off|37 i32)
+  (local $minAlpha|38 i32)
+  (local $dataPtr|39 i32)
+  (local $off|40 i32)
+  (local $label i32)
+  (local $pi|42 i32)
+  (local $qHead i32)
+  (local $qTail i32)
+  (local $cur i32)
+  (local $cx i32)
+  (local $cy i32)
+  (local $d i32)
+  (local $nx i32)
+  (local $ny i32)
+  (local $ni i32)
+  (local $x|52 i32)
+  (local $y|53 i32)
+  (local $w|54 i32)
+  (local $no i32)
+  (local $dataPtr|56 i32)
+  (local $off|57 i32)
+  (local $minAlpha|58 i32)
+  (local $dataPtr|59 i32)
+  (local $off|60 i32)
+  (local $dataPtr|61 i32)
+  (local $off|62 i32)
+  (local $dataPtr|63 i32)
+  (local $off|64 i32)
+  (local $dataPtr|65 i32)
+  (local $off|66 i32)
+  (local $dataPtr|67 i32)
+  (local $off|68 i32)
+  (local $r1 i32)
+  (local $g1 i32)
+  (local $b1 i32)
+  (local $a1 i32)
+  (local $r2 i32)
+  (local $g2 i32)
+  (local $b2 i32)
+  (local $a2 i32)
+  (local $dr i32)
+  (local $dg i32)
+  (local $db i32)
+  (local $da i32)
+  local.get $w
+  i32.const 1
+  i32.lt_s
+  if (result i32)
+   i32.const 1
+  else
+   local.get $h
+   i32.const 1
+   i32.lt_s
+  end
+  if
+   i32.const 0
+   return
+  end
+  local.get $w
+  local.get $h
+  i32.mul
+  local.set $n
+  local.get $tolerance
+  local.get $tolerance
+  i32.mul
+  local.set $tol2
+  local.get $maxLabels
+  global.get $assembly/vectorize/MAX_LABELS
+  i32.gt_s
+  if (result i32)
+   global.get $assembly/vectorize/MAX_LABELS
+  else
+   local.get $maxLabels
+  end
+  local.set $cap
+  local.get $cap
+  i32.const 1
+  i32.lt_s
+  if
+   i32.const 0
+   return
+  end
+  i32.const 0
+  local.set $i
+  loop $for-loop|0
+   local.get $i
+   local.get $n
+   i32.lt_s
+   if
+    local.get $labelsPtr
+    local.get $i
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.const -1
+    i32.store
+    local.get $i
+    i32.const 1
+    i32.add
+    local.set $i
+    br $for-loop|0
+   end
+  end
+  i32.const 0
+  local.set $i|14
+  loop $for-loop|1
+   local.get $i|14
+   local.get $cap
+   i32.lt_s
+   if
+    local.get $countsPtr
+    local.get $i|14
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.const 0
+    i32.store
+    local.get $i|14
+    i32.const 2
+    i32.shl
+    local.set $pi
+    local.get $palettePtr
+    local.get $pi
+    i32.add
+    i32.const 0
+    i32.store8
+    local.get $palettePtr
+    local.get $pi
+    i32.add
+    i32.const 1
+    i32.add
+    i32.const 0
+    i32.store8
+    local.get $palettePtr
+    local.get $pi
+    i32.add
+    i32.const 2
+    i32.add
+    i32.const 0
+    i32.store8
+    local.get $palettePtr
+    local.get $pi
+    i32.add
+    i32.const 3
+    i32.add
+    i32.const 0
+    i32.store8
+    local.get $i|14
+    i32.const 1
+    i32.add
+    local.set $i|14
+    br $for-loop|1
+   end
+  end
+  i32.const 0
+  local.set $numLabels
+  i32.const 0
+  local.set $y
+  loop $for-loop|2
+   local.get $y
+   local.get $h
+   i32.lt_s
+   if
+    i32.const 0
+    local.set $x
+    loop $for-loop|3
+     local.get $x
+     local.get $w
+     i32.lt_s
+     if
+      block $for-continue|3
+       local.get $y
+       local.get $w
+       i32.mul
+       local.get $x
+       i32.add
+       local.set $idx
+       local.get $labelsPtr
+       local.get $idx
+       i32.const 2
+       i32.shl
+       i32.add
+       i32.load
+       i32.const 0
+       i32.ge_s
+       if
+        br $for-continue|3
+       end
+       block $assembly/vectorize/pxOff|inlined.0 (result i32)
+        local.get $x
+        local.set $x|20
+        local.get $y
+        local.set $y|21
+        local.get $w
+        local.set $w|22
+        local.get $y|21
+        local.get $w|22
+        i32.mul
+        local.get $x|20
+        i32.add
+        i32.const 2
+        i32.shl
+        br $assembly/vectorize/pxOff|inlined.0
+       end
+       local.set $o
+       block $assembly/vectorize/loadPx|inlined.0 (result i32)
+        local.get $dataPtr
+        local.set $dataPtr|24
+        local.get $o
+        local.set $off
+        local.get $dataPtr|24
+        local.get $off
+        i32.add
+        i32.load8_u
+        br $assembly/vectorize/loadPx|inlined.0
+       end
+       local.set $r
+       block $assembly/vectorize/loadPx|inlined.1 (result i32)
+        local.get $dataPtr
+        local.set $dataPtr|27
+        local.get $o
+        i32.const 1
+        i32.add
+        local.set $off|28
+        local.get $dataPtr|27
+        local.get $off|28
+        i32.add
+        i32.load8_u
+        br $assembly/vectorize/loadPx|inlined.1
+       end
+       local.set $g
+       block $assembly/vectorize/loadPx|inlined.2 (result i32)
+        local.get $dataPtr
+        local.set $dataPtr|30
+        local.get $o
+        i32.const 2
+        i32.add
+        local.set $off|31
+        local.get $dataPtr|30
+        local.get $off|31
+        i32.add
+        i32.load8_u
+        br $assembly/vectorize/loadPx|inlined.2
+       end
+       local.set $b
+       block $assembly/vectorize/loadPx|inlined.3 (result i32)
+        local.get $dataPtr
+        local.set $dataPtr|33
+        local.get $o
+        i32.const 3
+        i32.add
+        local.set $off|34
+        local.get $dataPtr|33
+        local.get $off|34
+        i32.add
+        i32.load8_u
+        br $assembly/vectorize/loadPx|inlined.3
+       end
+       local.set $a
+       block $assembly/vectorize/isOpaqueAt|inlined.0 (result i32)
+        local.get $dataPtr
+        local.set $dataPtr|36
+        local.get $o
+        local.set $off|37
+        local.get $minAlpha
+        local.set $minAlpha|38
+        block $assembly/vectorize/loadPx|inlined.4 (result i32)
+         local.get $dataPtr|36
+         local.set $dataPtr|39
+         local.get $off|37
+         i32.const 3
+         i32.add
+         local.set $off|40
+         local.get $dataPtr|39
+         local.get $off|40
+         i32.add
+         i32.load8_u
+         br $assembly/vectorize/loadPx|inlined.4
+        end
+        i32.const 255
+        i32.and
+        local.get $minAlpha|38
+        i32.ge_s
+        br $assembly/vectorize/isOpaqueAt|inlined.0
+       end
+       i32.eqz
+       if
+        local.get $labelsPtr
+        local.get $idx
+        i32.const 2
+        i32.shl
+        i32.add
+        i32.const -2
+        i32.store
+        br $for-continue|3
+       end
+       local.get $numLabels
+       local.get $cap
+       i32.ge_s
+       if
+        br $for-continue|3
+       end
+       local.get $numLabels
+       local.set $label
+       local.get $numLabels
+       i32.const 1
+       i32.add
+       local.set $numLabels
+       local.get $label
+       i32.const 2
+       i32.shl
+       local.set $pi|42
+       local.get $palettePtr
+       local.get $pi|42
+       i32.add
+       local.get $r
+       i32.store8
+       local.get $palettePtr
+       local.get $pi|42
+       i32.add
+       i32.const 1
+       i32.add
+       local.get $g
+       i32.store8
+       local.get $palettePtr
+       local.get $pi|42
+       i32.add
+       i32.const 2
+       i32.add
+       local.get $b
+       i32.store8
+       local.get $palettePtr
+       local.get $pi|42
+       i32.add
+       i32.const 3
+       i32.add
+       local.get $a
+       i32.store8
+       i32.const 0
+       local.set $qHead
+       i32.const 0
+       local.set $qTail
+       local.get $queuePtr
+       local.get $qTail
+       i32.const 2
+       i32.shl
+       i32.add
+       local.get $idx
+       i32.store
+       local.get $qTail
+       i32.const 1
+       i32.add
+       local.set $qTail
+       local.get $labelsPtr
+       local.get $idx
+       i32.const 2
+       i32.shl
+       i32.add
+       local.get $label
+       i32.store
+       local.get $countsPtr
+       local.get $label
+       i32.const 2
+       i32.shl
+       i32.add
+       i32.const 1
+       i32.store
+       loop $while-continue|4
+        local.get $qHead
+        local.get $qTail
+        i32.lt_s
+        if
+         local.get $queuePtr
+         local.get $qHead
+         i32.const 2
+         i32.shl
+         i32.add
+         i32.load
+         local.set $cur
+         local.get $qHead
+         i32.const 1
+         i32.add
+         local.set $qHead
+         local.get $cur
+         local.get $w
+         i32.rem_s
+         local.set $cx
+         local.get $cur
+         local.get $w
+         i32.div_s
+         local.set $cy
+         i32.const 0
+         local.set $d
+         loop $for-loop|5
+          local.get $d
+          i32.const 4
+          i32.lt_s
+          if
+           block $for-continue|5
+            local.get $cx
+            local.get $d
+            i32.const 0
+            i32.eq
+            if (result i32)
+             i32.const -1
+            else
+             local.get $d
+             i32.const 1
+             i32.eq
+             if (result i32)
+              i32.const 1
+             else
+              i32.const 0
+             end
+            end
+            i32.add
+            local.set $nx
+            local.get $cy
+            local.get $d
+            i32.const 2
+            i32.eq
+            if (result i32)
+             i32.const -1
+            else
+             local.get $d
+             i32.const 3
+             i32.eq
+             if (result i32)
+              i32.const 1
+             else
+              i32.const 0
+             end
+            end
+            i32.add
+            local.set $ny
+            local.get $nx
+            i32.const 0
+            i32.lt_s
+            if (result i32)
+             i32.const 1
+            else
+             local.get $ny
+             i32.const 0
+             i32.lt_s
+            end
+            if (result i32)
+             i32.const 1
+            else
+             local.get $nx
+             local.get $w
+             i32.ge_s
+            end
+            if (result i32)
+             i32.const 1
+            else
+             local.get $ny
+             local.get $h
+             i32.ge_s
+            end
+            if
+             br $for-continue|5
+            end
+            local.get $ny
+            local.get $w
+            i32.mul
+            local.get $nx
+            i32.add
+            local.set $ni
+            local.get $labelsPtr
+            local.get $ni
+            i32.const 2
+            i32.shl
+            i32.add
+            i32.load
+            i32.const -1
+            i32.ne
+            if
+             br $for-continue|5
+            end
+            block $assembly/vectorize/pxOff|inlined.1 (result i32)
+             local.get $nx
+             local.set $x|52
+             local.get $ny
+             local.set $y|53
+             local.get $w
+             local.set $w|54
+             local.get $y|53
+             local.get $w|54
+             i32.mul
+             local.get $x|52
+             i32.add
+             i32.const 2
+             i32.shl
+             br $assembly/vectorize/pxOff|inlined.1
+            end
+            local.set $no
+            block $assembly/vectorize/isOpaqueAt|inlined.1 (result i32)
+             local.get $dataPtr
+             local.set $dataPtr|56
+             local.get $no
+             local.set $off|57
+             local.get $minAlpha
+             local.set $minAlpha|58
+             block $assembly/vectorize/loadPx|inlined.5 (result i32)
+              local.get $dataPtr|56
+              local.set $dataPtr|59
+              local.get $off|57
+              i32.const 3
+              i32.add
+              local.set $off|60
+              local.get $dataPtr|59
+              local.get $off|60
+              i32.add
+              i32.load8_u
+              br $assembly/vectorize/loadPx|inlined.5
+             end
+             i32.const 255
+             i32.and
+             local.get $minAlpha|58
+             i32.ge_s
+             br $assembly/vectorize/isOpaqueAt|inlined.1
+            end
+            i32.eqz
+            if
+             local.get $labelsPtr
+             local.get $ni
+             i32.const 2
+             i32.shl
+             i32.add
+             i32.const -2
+             i32.store
+             br $for-continue|5
+            end
+            block $assembly/vectorize/colorDistSq|inlined.0 (result i32)
+             local.get $r
+             local.set $r1
+             local.get $g
+             local.set $g1
+             local.get $b
+             local.set $b1
+             local.get $a
+             local.set $a1
+             block $assembly/vectorize/loadPx|inlined.6 (result i32)
+              local.get $dataPtr
+              local.set $dataPtr|61
+              local.get $no
+              local.set $off|62
+              local.get $dataPtr|61
+              local.get $off|62
+              i32.add
+              i32.load8_u
+              br $assembly/vectorize/loadPx|inlined.6
+             end
+             local.set $r2
+             block $assembly/vectorize/loadPx|inlined.7 (result i32)
+              local.get $dataPtr
+              local.set $dataPtr|63
+              local.get $no
+              i32.const 1
+              i32.add
+              local.set $off|64
+              local.get $dataPtr|63
+              local.get $off|64
+              i32.add
+              i32.load8_u
+              br $assembly/vectorize/loadPx|inlined.7
+             end
+             local.set $g2
+             block $assembly/vectorize/loadPx|inlined.8 (result i32)
+              local.get $dataPtr
+              local.set $dataPtr|65
+              local.get $no
+              i32.const 2
+              i32.add
+              local.set $off|66
+              local.get $dataPtr|65
+              local.get $off|66
+              i32.add
+              i32.load8_u
+              br $assembly/vectorize/loadPx|inlined.8
+             end
+             local.set $b2
+             block $assembly/vectorize/loadPx|inlined.9 (result i32)
+              local.get $dataPtr
+              local.set $dataPtr|67
+              local.get $no
+              i32.const 3
+              i32.add
+              local.set $off|68
+              local.get $dataPtr|67
+              local.get $off|68
+              i32.add
+              i32.load8_u
+              br $assembly/vectorize/loadPx|inlined.9
+             end
+             local.set $a2
+             local.get $r1
+             i32.const 255
+             i32.and
+             local.get $r2
+             i32.const 255
+             i32.and
+             i32.sub
+             local.set $dr
+             local.get $g1
+             i32.const 255
+             i32.and
+             local.get $g2
+             i32.const 255
+             i32.and
+             i32.sub
+             local.set $dg
+             local.get $b1
+             i32.const 255
+             i32.and
+             local.get $b2
+             i32.const 255
+             i32.and
+             i32.sub
+             local.set $db
+             local.get $a1
+             i32.const 255
+             i32.and
+             local.get $a2
+             i32.const 255
+             i32.and
+             i32.sub
+             local.set $da
+             local.get $dr
+             local.get $dr
+             i32.mul
+             local.get $dg
+             local.get $dg
+             i32.mul
+             i32.add
+             local.get $db
+             local.get $db
+             i32.mul
+             i32.add
+             local.get $da
+             local.get $da
+             i32.mul
+             i32.const 2
+             i32.mul
+             i32.add
+             br $assembly/vectorize/colorDistSq|inlined.0
+            end
+            local.get $tol2
+            i32.gt_s
+            if
+             br $for-continue|5
+            end
+            local.get $labelsPtr
+            local.get $ni
+            i32.const 2
+            i32.shl
+            i32.add
+            local.get $label
+            i32.store
+            local.get $countsPtr
+            local.get $label
+            i32.const 2
+            i32.shl
+            i32.add
+            local.get $countsPtr
+            local.get $label
+            i32.const 2
+            i32.shl
+            i32.add
+            i32.load
+            i32.const 1
+            i32.add
+            i32.store
+            local.get $qTail
+            local.get $n
+            i32.lt_s
+            if
+             local.get $queuePtr
+             local.get $qTail
+             i32.const 2
+             i32.shl
+             i32.add
+             local.get $ni
+             i32.store
+             local.get $qTail
+             i32.const 1
+             i32.add
+             local.set $qTail
+            end
+           end
+           local.get $d
+           i32.const 1
+           i32.add
+           local.set $d
+           br $for-loop|5
+          end
+         end
+         br $while-continue|4
+        end
+       end
+      end
+      local.get $x
+      i32.const 1
+      i32.add
+      local.set $x
+      br $for-loop|3
+     end
+    end
+    local.get $y
+    i32.const 1
+    i32.add
+    local.set $y
+    br $for-loop|2
+   end
+  end
+  local.get $numLabels
+  return
+ )
+ (func $assembly/vectorize/detectGridCellSize (param $dataPtr i32) (param $w i32) (param $h i32) (param $outPtr i32) (param $minAlpha i32) (result i32)
+  (local $bestScore i32)
+  (local $bestW i32)
+  (local $bestH i32)
+  (local $maxCellW i32)
+  (local $maxCellH i32)
+  (local $cw i32)
+  (local $ch i32)
+  (local $cols i32)
+  (local $rows i32)
+  (local $uniform i32)
+  (local $total i32)
+  (local $stepGx i32)
+  (local $stepGy i32)
+  (local $gy i32)
+  (local $gx i32)
+  (local $x0 i32)
+  (local $y0 i32)
+  (local $x i32)
+  (local $y i32)
+  (local $w|24 i32)
+  (local $o0 i32)
+  (local $dataPtr|26 i32)
+  (local $off i32)
+  (local $minAlpha|28 i32)
+  (local $dataPtr|29 i32)
+  (local $off|30 i32)
+  (local $ok i32)
+  (local $stepX i32)
+  (local $stepY i32)
+  (local $sy i32)
+  (local $sx i32)
+  (local $px i32)
+  (local $py i32)
+  (local $x|38 i32)
+  (local $y|39 i32)
+  (local $w|40 i32)
+  (local $o i32)
+  (local $dataPtr|42 i32)
+  (local $o1 i32)
+  (local $o2 i32)
+  (local $dataPtr|45 i32)
+  (local $off|46 i32)
+  (local $dataPtr|47 i32)
+  (local $off|48 i32)
+  (local $dr i32)
+  (local $dataPtr|50 i32)
+  (local $off|51 i32)
+  (local $dataPtr|52 i32)
+  (local $off|53 i32)
+  (local $dg i32)
+  (local $dataPtr|55 i32)
+  (local $off|56 i32)
+  (local $dataPtr|57 i32)
+  (local $off|58 i32)
+  (local $db i32)
+  (local $dataPtr|60 i32)
+  (local $off|61 i32)
+  (local $dataPtr|62 i32)
+  (local $off|63 i32)
+  (local $da i32)
+  (local $score i32)
+  local.get $w
+  i32.const 8
+  i32.lt_s
+  if (result i32)
+   i32.const 1
+  else
+   local.get $h
+   i32.const 8
+   i32.lt_s
+  end
+  if
+   local.get $outPtr
+   i32.const 0
+   i32.store
+   local.get $outPtr
+   i32.const 4
+   i32.add
+   i32.const 0
+   i32.store
+   local.get $outPtr
+   i32.const 8
+   i32.add
+   i32.const 0
+   i32.store
+   i32.const 0
+   return
+  end
+  i32.const 0
+  local.set $bestScore
+  i32.const 0
+  local.set $bestW
+  i32.const 0
+  local.set $bestH
+  local.get $w
+  i32.const 2
+  i32.shr_s
+  local.set $maxCellW
+  local.get $h
+  i32.const 2
+  i32.shr_s
+  local.set $maxCellH
+  local.get $maxCellW
+  i32.const 128
+  i32.gt_s
+  if
+   i32.const 128
+   local.set $maxCellW
+  end
+  local.get $maxCellH
+  i32.const 128
+  i32.gt_s
+  if
+   i32.const 128
+   local.set $maxCellH
+  end
+  i32.const 4
+  local.set $cw
+  block $for-break0
+   loop $for-loop|0
+    local.get $cw
+    local.get $maxCellW
+    i32.le_s
+    if
+     i32.const 4
+     local.set $ch
+     block $for-break1
+      loop $for-loop|1
+       local.get $ch
+       local.get $maxCellH
+       i32.le_s
+       if
+        block $for-continue|1
+         local.get $w
+         local.get $cw
+         i32.div_s
+         local.set $cols
+         local.get $h
+         local.get $ch
+         i32.div_s
+         local.set $rows
+         local.get $cols
+         i32.const 2
+         i32.lt_s
+         if (result i32)
+          i32.const 1
+         else
+          local.get $rows
+          i32.const 2
+          i32.lt_s
+         end
+         if
+          br $for-continue|1
+         end
+         i32.const 0
+         local.set $uniform
+         i32.const 0
+         local.set $total
+         local.get $cols
+         i32.const 16
+         i32.gt_s
+         if (result i32)
+          local.get $cols
+          i32.const 8
+          i32.div_s
+         else
+          i32.const 1
+         end
+         local.set $stepGx
+         local.get $rows
+         i32.const 16
+         i32.gt_s
+         if (result i32)
+          local.get $rows
+          i32.const 8
+          i32.div_s
+         else
+          i32.const 1
+         end
+         local.set $stepGy
+         i32.const 0
+         local.set $gy
+         loop $for-loop|2
+          local.get $gy
+          local.get $rows
+          i32.lt_s
+          if
+           i32.const 0
+           local.set $gx
+           loop $for-loop|3
+            local.get $gx
+            local.get $cols
+            i32.lt_s
+            if
+             block $for-continue|3
+              local.get $gx
+              local.get $cw
+              i32.mul
+              local.set $x0
+              local.get $gy
+              local.get $ch
+              i32.mul
+              local.set $y0
+              block $assembly/vectorize/pxOff|inlined.2 (result i32)
+               local.get $x0
+               local.set $x
+               local.get $y0
+               local.set $y
+               local.get $w
+               local.set $w|24
+               local.get $y
+               local.get $w|24
+               i32.mul
+               local.get $x
+               i32.add
+               i32.const 2
+               i32.shl
+               br $assembly/vectorize/pxOff|inlined.2
+              end
+              local.set $o0
+              block $assembly/vectorize/isOpaqueAt|inlined.2 (result i32)
+               local.get $dataPtr
+               local.set $dataPtr|26
+               local.get $o0
+               local.set $off
+               local.get $minAlpha
+               local.set $minAlpha|28
+               block $assembly/vectorize/loadPx|inlined.10 (result i32)
+                local.get $dataPtr|26
+                local.set $dataPtr|29
+                local.get $off
+                i32.const 3
+                i32.add
+                local.set $off|30
+                local.get $dataPtr|29
+                local.get $off|30
+                i32.add
+                i32.load8_u
+                br $assembly/vectorize/loadPx|inlined.10
+               end
+               i32.const 255
+               i32.and
+               local.get $minAlpha|28
+               i32.ge_s
+               br $assembly/vectorize/isOpaqueAt|inlined.2
+              end
+              i32.eqz
+              if
+               br $for-continue|3
+              end
+              local.get $total
+              i32.const 1
+              i32.add
+              local.set $total
+              i32.const 1
+              local.set $ok
+              local.get $cw
+              i32.const 8
+              i32.gt_s
+              if (result i32)
+               local.get $cw
+               i32.const 2
+               i32.shr_s
+              else
+               i32.const 1
+              end
+              local.set $stepX
+              local.get $ch
+              i32.const 8
+              i32.gt_s
+              if (result i32)
+               local.get $ch
+               i32.const 2
+               i32.shr_s
+              else
+               i32.const 1
+              end
+              local.set $stepY
+              i32.const 0
+              local.set $sy
+              loop $for-loop|4
+               local.get $sy
+               local.get $ch
+               i32.lt_s
+               if (result i32)
+                local.get $ok
+               else
+                i32.const 0
+               end
+               if
+                i32.const 0
+                local.set $sx
+                loop $for-loop|5
+                 local.get $sx
+                 local.get $cw
+                 i32.lt_s
+                 if (result i32)
+                  local.get $ok
+                 else
+                  i32.const 0
+                 end
+                 if
+                  block $for-continue|5
+                   local.get $x0
+                   local.get $sx
+                   i32.add
+                   local.set $px
+                   local.get $y0
+                   local.get $sy
+                   i32.add
+                   local.set $py
+                   local.get $px
+                   local.get $w
+                   i32.ge_s
+                   if (result i32)
+                    i32.const 1
+                   else
+                    local.get $py
+                    local.get $h
+                    i32.ge_s
+                   end
+                   if
+                    br $for-continue|5
+                   end
+                   block $assembly/vectorize/pxOff|inlined.3 (result i32)
+                    local.get $px
+                    local.set $x|38
+                    local.get $py
+                    local.set $y|39
+                    local.get $w
+                    local.set $w|40
+                    local.get $y|39
+                    local.get $w|40
+                    i32.mul
+                    local.get $x|38
+                    i32.add
+                    i32.const 2
+                    i32.shl
+                    br $assembly/vectorize/pxOff|inlined.3
+                   end
+                   local.set $o
+                   block $assembly/vectorize/colorDistSqAt|inlined.0 (result i32)
+                    local.get $dataPtr
+                    local.set $dataPtr|42
+                    local.get $o0
+                    local.set $o1
+                    local.get $o
+                    local.set $o2
+                    block $assembly/vectorize/loadPx|inlined.11 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|45
+                     local.get $o1
+                     local.set $off|46
+                     local.get $dataPtr|45
+                     local.get $off|46
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.11
+                    end
+                    i32.const 255
+                    i32.and
+                    block $assembly/vectorize/loadPx|inlined.12 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|47
+                     local.get $o2
+                     local.set $off|48
+                     local.get $dataPtr|47
+                     local.get $off|48
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.12
+                    end
+                    i32.const 255
+                    i32.and
+                    i32.sub
+                    local.set $dr
+                    block $assembly/vectorize/loadPx|inlined.13 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|50
+                     local.get $o1
+                     i32.const 1
+                     i32.add
+                     local.set $off|51
+                     local.get $dataPtr|50
+                     local.get $off|51
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.13
+                    end
+                    i32.const 255
+                    i32.and
+                    block $assembly/vectorize/loadPx|inlined.14 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|52
+                     local.get $o2
+                     i32.const 1
+                     i32.add
+                     local.set $off|53
+                     local.get $dataPtr|52
+                     local.get $off|53
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.14
+                    end
+                    i32.const 255
+                    i32.and
+                    i32.sub
+                    local.set $dg
+                    block $assembly/vectorize/loadPx|inlined.15 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|55
+                     local.get $o1
+                     i32.const 2
+                     i32.add
+                     local.set $off|56
+                     local.get $dataPtr|55
+                     local.get $off|56
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.15
+                    end
+                    i32.const 255
+                    i32.and
+                    block $assembly/vectorize/loadPx|inlined.16 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|57
+                     local.get $o2
+                     i32.const 2
+                     i32.add
+                     local.set $off|58
+                     local.get $dataPtr|57
+                     local.get $off|58
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.16
+                    end
+                    i32.const 255
+                    i32.and
+                    i32.sub
+                    local.set $db
+                    block $assembly/vectorize/loadPx|inlined.17 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|60
+                     local.get $o1
+                     i32.const 3
+                     i32.add
+                     local.set $off|61
+                     local.get $dataPtr|60
+                     local.get $off|61
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.17
+                    end
+                    i32.const 255
+                    i32.and
+                    block $assembly/vectorize/loadPx|inlined.18 (result i32)
+                     local.get $dataPtr|42
+                     local.set $dataPtr|62
+                     local.get $o2
+                     i32.const 3
+                     i32.add
+                     local.set $off|63
+                     local.get $dataPtr|62
+                     local.get $off|63
+                     i32.add
+                     i32.load8_u
+                     br $assembly/vectorize/loadPx|inlined.18
+                    end
+                    i32.const 255
+                    i32.and
+                    i32.sub
+                    local.set $da
+                    local.get $dr
+                    local.get $dr
+                    i32.mul
+                    local.get $dg
+                    local.get $dg
+                    i32.mul
+                    i32.add
+                    local.get $db
+                    local.get $db
+                    i32.mul
+                    i32.add
+                    local.get $da
+                    local.get $da
+                    i32.mul
+                    i32.const 2
+                    i32.mul
+                    i32.add
+                    br $assembly/vectorize/colorDistSqAt|inlined.0
+                   end
+                   i32.const 900
+                   i32.gt_s
+                   if
+                    i32.const 0
+                    local.set $ok
+                   end
+                  end
+                  local.get $sx
+                  local.get $stepX
+                  i32.add
+                  local.set $sx
+                  br $for-loop|5
+                 end
+                end
+                local.get $sy
+                local.get $stepY
+                i32.add
+                local.set $sy
+                br $for-loop|4
+               end
+              end
+              local.get $ok
+              if
+               local.get $uniform
+               i32.const 1
+               i32.add
+               local.set $uniform
+              end
+             end
+             local.get $gx
+             local.get $stepGx
+             i32.add
+             local.set $gx
+             br $for-loop|3
+            end
+           end
+           local.get $gy
+           local.get $stepGy
+           i32.add
+           local.set $gy
+           br $for-loop|2
+          end
+         end
+         local.get $total
+         i32.const 4
+         i32.lt_s
+         if
+          br $for-continue|1
+         end
+         local.get $uniform
+         i32.const 1000
+         i32.mul
+         local.get $total
+         i32.div_s
+         local.set $score
+         local.get $score
+         local.get $bestScore
+         i32.gt_s
+         if
+          local.get $score
+          local.set $bestScore
+          local.get $cw
+          local.set $bestW
+          local.get $ch
+          local.set $bestH
+          local.get $bestScore
+          i32.const 980
+          i32.ge_s
+          if
+           br $for-break1
+          end
+         end
+        end
+        local.get $ch
+        i32.const 1
+        i32.add
+        local.set $ch
+        br $for-loop|1
+       end
+      end
+     end
+     local.get $bestScore
+     i32.const 980
+     i32.ge_s
+     if
+      br $for-break0
+     end
+     local.get $cw
+     i32.const 1
+     i32.add
+     local.set $cw
+     br $for-loop|0
+    end
+   end
+  end
+  local.get $outPtr
+  local.get $bestW
+  i32.store
+  local.get $outPtr
+  i32.const 4
+  i32.add
+  local.get $bestH
+  i32.store
+  local.get $outPtr
+  i32.const 8
+  i32.add
+  local.get $bestScore
+  i32.store
+  local.get $bestScore
+  i32.const 920
+  i32.ge_s
+  if (result i32)
+   local.get $bestW
+   local.get $bestH
+   i32.eq
+  else
+   i32.const 0
+  end
+  return
+ )
+ (func $assembly/vectorize/extractLabelMask (param $labelsPtr i32) (param $labelId i32) (param $maskPtr i32) (param $w i32) (param $h i32)
+  (local $n i32)
+  (local $i i32)
+  local.get $w
+  local.get $h
+  i32.mul
+  local.set $n
+  i32.const 0
+  local.set $i
+  loop $for-loop|0
+   local.get $i
+   local.get $n
+   i32.lt_s
+   if
+    local.get $maskPtr
+    local.get $i
+    i32.add
+    local.get $labelsPtr
+    local.get $i
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.get $labelId
+    i32.eq
+    if (result i32)
+     i32.const 1
+    else
+     i32.const 0
+    end
+    i32.store8
+    local.get $i
+    i32.const 1
+    i32.add
+    local.set $i
+    br $for-loop|0
+   end
+  end
+ )
+ (func $assembly/vectorize/computeLabelBounds (param $labelsPtr i32) (param $labelId i32) (param $w i32) (param $h i32) (param $outPtr i32) (result i32)
+  (local $x0 i32)
+  (local $y0 i32)
+  (local $x1 i32)
+  (local $y1 i32)
+  (local $count i32)
+  (local $n i32)
+  (local $i i32)
+  (local $x i32)
+  (local $y i32)
+  local.get $w
+  local.set $x0
+  local.get $h
+  local.set $y0
+  i32.const -1
+  local.set $x1
+  i32.const -1
+  local.set $y1
+  i32.const 0
+  local.set $count
+  local.get $w
+  local.get $h
+  i32.mul
+  local.set $n
+  i32.const 0
+  local.set $i
+  loop $for-loop|0
+   local.get $i
+   local.get $n
+   i32.lt_s
+   if
+    block $for-continue|0
+     local.get $labelsPtr
+     local.get $i
+     i32.const 2
+     i32.shl
+     i32.add
+     i32.load
+     local.get $labelId
+     i32.ne
+     if
+      br $for-continue|0
+     end
+     local.get $count
+     i32.const 1
+     i32.add
+     local.set $count
+     local.get $i
+     local.get $w
+     i32.rem_s
+     local.set $x
+     local.get $i
+     local.get $w
+     i32.div_s
+     local.set $y
+     local.get $x
+     local.get $x0
+     i32.lt_s
+     if
+      local.get $x
+      local.set $x0
+     end
+     local.get $y
+     local.get $y0
+     i32.lt_s
+     if
+      local.get $y
+      local.set $y0
+     end
+     local.get $x
+     local.get $x1
+     i32.gt_s
+     if
+      local.get $x
+      local.set $x1
+     end
+     local.get $y
+     local.get $y1
+     i32.gt_s
+     if
+      local.get $y
+      local.set $y1
+     end
+    end
+    local.get $i
+    i32.const 1
+    i32.add
+    local.set $i
+    br $for-loop|0
+   end
+  end
+  local.get $count
+  i32.const 1
+  i32.lt_s
+  if
+   i32.const 0
+   return
+  end
+  local.get $outPtr
+  local.get $x0
+  i32.store
+  local.get $outPtr
+  i32.const 4
+  i32.add
+  local.get $y0
+  i32.store
+  local.get $outPtr
+  i32.const 8
+  i32.add
+  local.get $x1
+  i32.const 1
+  i32.add
+  i32.store
+  local.get $outPtr
+  i32.const 12
+  i32.add
+  local.get $y1
+  i32.const 1
+  i32.add
+  i32.store
+  local.get $outPtr
+  i32.const 16
+  i32.add
+  local.get $count
+  i32.store
+  local.get $count
+  return
+ )
+ (func $assembly/vectorize/sampleCellAverageColor (param $dataPtr i32) (param $w i32) (param $h i32) (param $x0 i32) (param $y0 i32) (param $cw i32) (param $ch i32) (param $outPtr i32)
+  (local $sr i32)
+  (local $sg i32)
+  (local $sb i32)
+  (local $sa i32)
+  (local $n i32)
+  (local $x1 i32)
+  (local $y1 i32)
+  (local $y i32)
+  (local $x i32)
+  (local $x|17 i32)
+  (local $y|18 i32)
+  (local $w|19 i32)
+  (local $o i32)
+  (local $dataPtr|21 i32)
+  (local $off i32)
+  (local $dataPtr|23 i32)
+  (local $off|24 i32)
+  (local $dataPtr|25 i32)
+  (local $off|26 i32)
+  (local $dataPtr|27 i32)
+  (local $off|28 i32)
+  i32.const 0
+  local.set $sr
+  i32.const 0
+  local.set $sg
+  i32.const 0
+  local.set $sb
+  i32.const 0
+  local.set $sa
+  i32.const 0
+  local.set $n
+  local.get $x0
+  local.get $cw
+  i32.add
+  local.get $w
+  i32.gt_s
+  if (result i32)
+   local.get $w
+  else
+   local.get $x0
+   local.get $cw
+   i32.add
+  end
+  local.set $x1
+  local.get $y0
+  local.get $ch
+  i32.add
+  local.get $h
+  i32.gt_s
+  if (result i32)
+   local.get $h
+  else
+   local.get $y0
+   local.get $ch
+   i32.add
+  end
+  local.set $y1
+  local.get $y0
+  local.set $y
+  loop $for-loop|0
+   local.get $y
+   local.get $y1
+   i32.lt_s
+   if
+    local.get $x0
+    local.set $x
+    loop $for-loop|1
+     local.get $x
+     local.get $x1
+     i32.lt_s
+     if
+      block $assembly/vectorize/pxOff|inlined.4 (result i32)
+       local.get $x
+       local.set $x|17
+       local.get $y
+       local.set $y|18
+       local.get $w
+       local.set $w|19
+       local.get $y|18
+       local.get $w|19
+       i32.mul
+       local.get $x|17
+       i32.add
+       i32.const 2
+       i32.shl
+       br $assembly/vectorize/pxOff|inlined.4
+      end
+      local.set $o
+      local.get $sr
+      block $assembly/vectorize/loadPx|inlined.19 (result i32)
+       local.get $dataPtr
+       local.set $dataPtr|21
+       local.get $o
+       local.set $off
+       local.get $dataPtr|21
+       local.get $off
+       i32.add
+       i32.load8_u
+       br $assembly/vectorize/loadPx|inlined.19
+      end
+      i32.const 255
+      i32.and
+      i32.add
+      local.set $sr
+      local.get $sg
+      block $assembly/vectorize/loadPx|inlined.20 (result i32)
+       local.get $dataPtr
+       local.set $dataPtr|23
+       local.get $o
+       i32.const 1
+       i32.add
+       local.set $off|24
+       local.get $dataPtr|23
+       local.get $off|24
+       i32.add
+       i32.load8_u
+       br $assembly/vectorize/loadPx|inlined.20
+      end
+      i32.const 255
+      i32.and
+      i32.add
+      local.set $sg
+      local.get $sb
+      block $assembly/vectorize/loadPx|inlined.21 (result i32)
+       local.get $dataPtr
+       local.set $dataPtr|25
+       local.get $o
+       i32.const 2
+       i32.add
+       local.set $off|26
+       local.get $dataPtr|25
+       local.get $off|26
+       i32.add
+       i32.load8_u
+       br $assembly/vectorize/loadPx|inlined.21
+      end
+      i32.const 255
+      i32.and
+      i32.add
+      local.set $sb
+      local.get $sa
+      block $assembly/vectorize/loadPx|inlined.22 (result i32)
+       local.get $dataPtr
+       local.set $dataPtr|27
+       local.get $o
+       i32.const 3
+       i32.add
+       local.set $off|28
+       local.get $dataPtr|27
+       local.get $off|28
+       i32.add
+       i32.load8_u
+       br $assembly/vectorize/loadPx|inlined.22
+      end
+      i32.const 255
+      i32.and
+      i32.add
+      local.set $sa
+      local.get $n
+      i32.const 1
+      i32.add
+      local.set $n
+      local.get $x
+      i32.const 1
+      i32.add
+      local.set $x
+      br $for-loop|1
+     end
+    end
+    local.get $y
+    i32.const 1
+    i32.add
+    local.set $y
+    br $for-loop|0
+   end
+  end
+  local.get $n
+  i32.const 1
+  i32.lt_s
+  if
+   local.get $outPtr
+   i32.const 0
+   i32.store8
+   local.get $outPtr
+   i32.const 1
+   i32.add
+   i32.const 0
+   i32.store8
+   local.get $outPtr
+   i32.const 2
+   i32.add
+   i32.const 0
+   i32.store8
+   local.get $outPtr
+   i32.const 3
+   i32.add
+   i32.const 0
+   i32.store8
+   return
+  end
+  local.get $outPtr
+  local.get $sr
+  local.get $n
+  i32.div_s
+  i32.store8
+  local.get $outPtr
+  i32.const 1
+  i32.add
+  local.get $sg
+  local.get $n
+  i32.div_s
+  i32.store8
+  local.get $outPtr
+  i32.const 2
+  i32.add
+  local.get $sb
+  local.get $n
+  i32.div_s
+  i32.store8
+  local.get $outPtr
+  i32.const 3
+  i32.add
+  local.get $sa
+  local.get $n
+  i32.div_s
+  i32.store8
  )
  (func $assembly/pdn_effects/relief (param $srcPtr i32) (param $dstPtr i32) (param $w i32) (param $h i32) (param $angle f32) (param $startY i32) (param $endY i32)
   (local $r f32)
