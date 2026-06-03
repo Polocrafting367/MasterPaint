@@ -2095,8 +2095,18 @@ window.FilterManager = {
 
     _getFilterWorkers() {
         if (!this._filterWorkers && typeof Worker !== 'undefined') {
-            const cores = Math.max(1, typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4);
-            const poolSize = Math.max(1, Math.min(8, cores));
+            // Les navigateurs brident parfois hardwareConcurrency à 1 ou 2 sur les domaines distants 
+            // (protection anti-pistage) si les headers COOP/COEP ne sont pas configurés.
+            let reportedCores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 0;
+            const cores = Math.max(6, reportedCores || 6);
+            const poolSize = Math.min(16, cores);
+            
+            if (reportedCores < 6) {
+                console.log(`[ILLU-INIT] Détection CPU limitée (${reportedCores || 'inconnu'} cœurs). Forçage à ${poolSize} workers pour garantir de bonnes performances.`);
+            } else {
+                console.log(`[ILLU-INIT] Détection CPU réussie : ${reportedCores} cœurs. Utilisation de ${poolSize} workers.`);
+            }
+            
             this._filterWorkers = [];
             this._filterWorkerPending = new Map();
             for (let i = 0; i < poolSize; i++) {
