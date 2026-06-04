@@ -23,6 +23,13 @@
     <meta property="og:url" content="https://polocrafting.fr/MasterPaint/">
     <meta property="og:title" content="MasterPaint 98 - L'éditeur photo en ligne style Paint.NET">
     <meta property="og:description" content="Éditez vos images gratuitement dans votre navigateur avec une interface professionnelle et des outils avancés (calques, filtres).">
+    <meta property="og:image" content="https://polocrafting.fr/MasterPaint/icons/icon-512.png">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MasterPaint 98 - L'éditeur photo en ligne style Paint.NET">
+    <meta name="twitter:description" content="Éditez vos images gratuitement dans votre navigateur avec une interface professionnelle et des outils avancés (calques, filtres).">
+    <meta name="twitter:image" content="https://polocrafting.fr/MasterPaint/icons/icon-512.png">
     
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
@@ -121,10 +128,10 @@
             // Configuration des images de démarrage (facile à étendre)
             // src: chemin de l'image, weight: poids/probabilité relative
             const SPLASH_CONFIG = [
-                { src: 'start.png', weight: 45 },
-                { src: 'start1.png', weight: 35 }, // Image par défaut
-                { src: 'start2.png', weight: 10 },
-                { src: 'start3.png', weight: 10 },
+                { src: 'IMG/start.png', weight: 45 },
+                { src: 'IMG/start1.png', weight: 35 }, // Image par défaut
+                { src: 'IMG/start2.png', weight: 10 },
+                { src: 'IMG/start3.png', weight: 10 },
             ];
 
             const totalWeight = SPLASH_CONFIG.reduce((sum, s) => sum + s.weight, 0);
@@ -144,7 +151,7 @@
     </script>
     <div id="illu-splash" class="illu-splash" role="alert" aria-live="polite" aria-busy="true">
         <div class="illu-splash__frame">
-            <img id="illu-splash-img" class="illu-splash__img" src="start1.png" alt="" width="640" height="360"
+            <img id="illu-splash-img" class="illu-splash__img" src="IMG/start1.png" alt="" width="640" height="360"
                 decoding="async" onerror="this.classList.add('illu-splash__img--missing')">
             <script>
                 // Application immédiate pour éviter le flash de l'image par défaut si différente
@@ -4244,14 +4251,14 @@
     <script src="js/app/illu-svg-import.js"></script>
     <script src="js/app/IlluVectorize.js"></script>
     <script src="js/app/illu-bitmap-vector-import.js"></script>
-    <script src="EditorManager.js"></script>
+    <script src="js/EditorManager.js"></script>
     <script src="js/VectorEngine.js"></script>
     <script src="js/tools/SelectionModel.js"></script>
     <script src="js/tools/SelectionChrome.js"></script>
     <script src="js/tools/SelectionTouchLoupe.js"></script>
     <script src="js/app/IlluGaugeSteppers.js"></script>
     <script src="js/app/illu-cursors.js"></script>
-    <script src="DrawingTools.js"></script>
+    <script src="js/DrawingTools.js"></script>
     <script src="js/app/illu-shape-tools.js"></script>
     <script src="js/app/illu-shape-picker.js"></script>
     <script src="js/app/illu-tool-ribbon.js"></script>

@@ -349,7 +349,7 @@
     }
 
     // Auto-load local fonts from fonts directory
-    fetch('fonts-api.php')
+    fetch('fonts/fonts-api.php')
         .then(r => r.json())
         .then(fonts => {
             if (!fonts || !fonts.length) return;
@@ -408,5 +408,5 @@
                 window.populateIlluTextFontSelect();
             }
         })
-        .catch(e => console.log('No local fonts found or error fetching fonts-api.php:', e));
+        .catch(e => console.log('No local fonts found or error fetching fonts/fonts-api.php:', e));
 })();

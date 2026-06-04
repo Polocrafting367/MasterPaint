@@ -1747,7 +1747,7 @@ window.loadExampleProject = async function () {
 
     try {
         if (window.IlluProgress) window.IlluProgress.splash(20, 'Récupération du projet exemple…');
-        const res = await fetch('./start.illu');
+        const res = await fetch('./IMG/start.illu');
         if (!res.ok) throw new Error('Fichier introuvable (' + res.status + ')');
 
         if (window.IlluProgress) window.IlluProgress.splash(40, 'Lecture des données…');

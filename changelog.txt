@@ -1,11 +1,13 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.121 (04/06/26)
+2.8.123 (04/06/26)
 - Amélioration theme type win10/11
 - Correction photo raw, camera photo pro...
 - Visuel photo mode pro et tactil pris en compe pour zoom/sliders
 - En plus de cmjn et ral ajouter bouleblanche dans le cerlce crhomatique
 - Ouverture de fichier illu en ram uniquement (sauf réglage), "copie dans le nav." ne copie que le proj courant ! 
+- Rangement des fichiers a la racine du projet, suppresion des fichier test...
+- Correction pour les moteur de recherche qui devrais maintenant remonté les favicon
 
 2.8.116,3 (03/06/26)
 - Correction visuel divers
