@@ -3493,7 +3493,7 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
     // --- VARIABLES DE CONFIGURATION ---
     const BLUR_INTENSITY = '0px'; // Intensité du flou de l'arrière-plan
     const MAX_BRIGHTNESS = 1.5;   // Luminosité maximale (appliquée si l'image est noire/sombre)
-    const MIN_BRIGHTNESS = 0.6;   // Luminosité minimale (appliquée si l'image est blanche/très vive)
+    const MIN_BRIGHTNESS = 1;   // Luminosité minimale (appliquée si l'image est blanche/très vive)
 
     const bar = document.getElementById('tab-bar');
     if (!bar) return;

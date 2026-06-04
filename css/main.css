@@ -3780,12 +3780,28 @@ body.theme-dark .illu-sub-menubar {
     width: fit-content !important;
     box-sizing: border-box !important;
     flex-shrink: 0 !important;
-    border-top-right-radius: 6px !important;
+    border-top-right-radius: 10px !important;
     /* round top-right of menubar */
     z-index: 4900 !important;
     /* Lower than tool-options-container so the inverted corner pseudo-element sits below it */
     overflow: visible !important;
     /* Crucial: allow dropdown menus to pop out */
+
+    filter: drop-shadow(1.5px 0px 0px rgba(200, 200, 200,1)) !important;
+
+}
+
+/* Fix hover bleeding on the top right corner of the menubar */
+.illu-menubar-root > li:last-child,
+.illu-menubar-root > li:last-child > span,
+.illu-menubar-root > li:last-child > button {
+    border-top-right-radius: 10px !important;
+}
+
+/* Fix hover bleeding on the sub-menubar */
+.illu-sub-menubar .illu-menubar-toolbar > button:last-child {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
 }
 
 /* Inverted (concave) rounded corner at the bottom-right intersection with options container */
@@ -4019,7 +4035,7 @@ body.theme-dark .illu-menubar-toolbar .illu-menubar-icon-btn:hover {
     box-sizing: border-box !important;
     order: 2 !important;
     /* Thumbnail goes BELOW label! */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6) !important;
 }
 
 body.theme-dark .tab-bar-inner .tab .tab-thumb {
@@ -4044,7 +4060,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
     order: 1 !important;
     /* Label goes ABOVE thumbnail! */
     margin: 1px 0 2px 0 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
 }
 
 /* Close button - styled as a small square red close button at the top-right corner of the tab on hover */

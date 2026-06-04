@@ -1188,7 +1188,7 @@ if (window.innerWidth <= 770) {
 
     // Set the max-width and width of the MDI tab bar container dynamically!
     // Minimum width is 76px (1 tab card)
-    const finalWidth = Math.max(76, availableWidth) + 10;
+    const finalWidth = Math.max(76, availableWidth) + 5;
     tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
     tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
 

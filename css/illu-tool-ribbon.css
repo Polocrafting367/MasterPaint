@@ -1487,8 +1487,8 @@ body.illu-toolbar-ribbon #opt-grp-eyedropper-params.illu-eyedropper-info {
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="eyedropper"] {
-    min-width: 152px;
-    max-width: 152px;
+    min-width: 175px;
+    max-width: 175px;
     min-height: 0;
     padding-top: 1px;
     padding-bottom: 0;

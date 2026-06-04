@@ -5615,7 +5615,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
 
 body.win11-effects .window {
     --radius: 8px; /* Ta variable unique est ici */
-    border-radius: var(--radius);
+    border-radius: calc(var(--radius) + 1px);
     background: transparent !important;
 }
 
