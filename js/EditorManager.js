@@ -4706,7 +4706,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      * @param {HTMLImageElement|HTMLCanvasElement} img
      * @param {(placement: 'staging'|'fitCanvas') => void} onReady
      */
-    _runImportOversizeGate(img, onReady) {
+    _runImportOversizeGate(img, onReady, importOpts = {}) {
         const iw = img.naturalWidth || img.width;
         const ih = img.naturalHeight || img.height;
         const W = Math.max(1, this.width | 0);
@@ -4714,7 +4714,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const finish = (placement) => {
             if (typeof onReady === 'function') onReady(placement || 'commit');
         };
-        if (iw <= W && ih <= H) {
+        if ((iw <= W && ih <= H) || importOpts.multiImport) {
             finish('commit');
             return;
         }
@@ -4780,7 +4780,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (typeof window.illuAfterImportActivateDeformTool === 'function') {
                 window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
             }
-        });
+        }, importOpts);
     },
 
     _finishFloatingPaste(img, importOpts, placement, historyLabel) {
@@ -4864,6 +4864,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             return;
         }
 
+        if (importOpts.multiImport) {
+            if (window._illuGlobalImportChoice) {
+                this._applyImportChoice(img, window._illuGlobalImportChoice, importOpts);
+                return;
+            }
+            if (!this._illuPendingMultiImports) this._illuPendingMultiImports = [];
+            this._illuPendingMultiImports.push({ img, importOpts });
+            if (this._illuPendingMultiImports.length > 1) {
+                return; // Wait for the first image to trigger the prompt
+            }
+        }
+
         const overlay = document.getElementById('import-choice-overlay');
         const overlayOversize = document.getElementById('import-oversize-overlay');
         if (!overlay) {
@@ -4902,11 +4914,23 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             });
         };
 
+        const resolveBatch = (choice) => {
+            window._illuGlobalImportChoice = choice;
+            if (this._illuPendingMultiImports && this._illuPendingMultiImports.length > 1) {
+                for (let i = 1; i < this._illuPendingMultiImports.length; i++) {
+                    const item = this._illuPendingMultiImports[i];
+                    this._applyImportChoice(item.img, choice, item.importOpts);
+                }
+            }
+            this._illuPendingMultiImports = [];
+        };
+
         const btnLayer = document.getElementById('btn-import-layer');
         if (btnLayer) {
             btnLayer.onclick = () => {
                 window._illuGlobalImportChoice = 'layer';
                 finishNewLayerImport();
+                resolveBatch('layer');
             };
         }
 
@@ -4935,7 +4959,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         window.fitActiveProjectZoomToPageWidth();
                     }
                     afterImport({ skipFullLayerSync: true });
-                });
+                    resolveBatch('current');
+                }, importOpts);
             };
         }
 
@@ -4947,7 +4972,28 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 if (overlayOversize) overlayOversize.style.display = 'none';
                 this.handleNewProjectFromImage(img);
                 if (importOpts.onComplete) importOpts.onComplete();
+                resolveBatch('tab');
             };
+        }
+    },
+
+    _applyImportChoice(img, choice, importOpts) {
+        if (choice === 'layer') {
+            this.importImageAsNewLayer(img, importOpts.layerName || 'Image importée', importOpts);
+        } else if (choice === 'current') {
+            const hist = 'Import sur calque actif';
+            this._runImportOversizeGate(img, (placement) => {
+                const pl = placement === 'staging' ? 'staging' : 'commit';
+                if (typeof window.clearSelectionContent === 'function') window.clearSelectionContent();
+                this.drawImportedImageOnActiveLayer(img, { ...importOpts, placement: pl });
+                this.saveHistory(hist, { patchActiveLayer: true });
+                this.render({ flushUiThumbnails: true });
+                if (typeof window.scheduleFitActiveProjectZoomOnDocumentOpen === 'function') window.scheduleFitActiveProjectZoomOnDocumentOpen();
+                else if (typeof window.fitActiveProjectZoomToPageWidth === 'function') window.fitActiveProjectZoomToPageWidth();
+                if (typeof window.illuAfterImportActivateDeformTool === 'function') window.illuAfterImportActivateDeformTool({ skipFullLayerSync: true });
+            }, importOpts);
+        } else if (choice === 'tab') {
+            this.handleNewProjectFromImage(img);
         }
     },
 

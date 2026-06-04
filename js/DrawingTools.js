@@ -677,252 +677,6 @@ window.illuRoundRectAdjustHandleLocal = illuRoundRectAdjustHandleLocal;
 window.illuRoundRectRadiusFromLocalDrag = illuRoundRectRadiusFromLocalDrag;
 window.clampRoundRectCornerRadius = clampRoundRectCornerRadius;
 
-/** Boîte locale (attributs) pour poignées 8 points, rotation et déplacement central. */
-function illuVectorSelectionBoxLocal(shape) {
-    if (!shape) return null;
-    const tag = (shape.tagName || '').toLowerCase();
-    if (tag === 'rect' || tag === 'image') {
-        return {
-            x: parseFloat(shape.getAttribute('x')) || 0,
-            y: parseFloat(shape.getAttribute('y')) || 0,
-            w: parseFloat(shape.getAttribute('width')) || 0,
-            h: parseFloat(shape.getAttribute('height')) || 0
-        };
-    }
-    if (tag === 'ellipse' || tag === 'circle') {
-        const cx = parseFloat(shape.getAttribute('cx')) || 0;
-        const cy = parseFloat(shape.getAttribute('cy')) || 0;
-        const rx =
-            tag === 'circle' ? parseFloat(shape.getAttribute('r')) || 0 : parseFloat(shape.getAttribute('rx')) || 0;
-        const ry = tag === 'circle' ? rx : parseFloat(shape.getAttribute('ry')) || 0;
-        return { x: cx - rx, y: cy - ry, w: rx * 2, h: ry * 2 };
-    }
-    if (tag === 'polygon') {
-        const sb = shape.getAttribute('data-illu-star-branches');
-        if (sb && parseInt(sb, 10) > 3) {
-            const x = parseFloat(shape.getAttribute('data-illu-bbox-x'));
-            const y = parseFloat(shape.getAttribute('data-illu-bbox-y'));
-            const w = parseFloat(shape.getAttribute('data-illu-bbox-w'));
-            const h = parseFloat(shape.getAttribute('data-illu-bbox-h'));
-            if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h)) {
-                return { x, y, w: Math.max(2, w), h: Math.max(2, h) };
-            }
-        }
-        if (shape.getAttribute('data-illu-triangle') === '1') {
-            const st = illuTriangleReadState(shape);
-            return { x: st.x, y: st.y, w: st.w, h: st.h };
-        }
-        if (shape.getAttribute('data-illu-quad-preset')) {
-            const st =
-                typeof window.illuQuadPresetReadState === 'function'
-                    ? window.illuQuadPresetReadState(shape)
-                    : null;
-            if (st) return { x: st.x, y: st.y, w: st.w, h: st.h };
-        }
-    }
-    const bb = illuGetElementBBox(shape);
-    if (bb && bb.width > 0 && bb.height > 0) {
-        return { x: bb.x, y: bb.y, w: bb.width, h: bb.height };
-    }
-    return null;
-}
-window.illuVectorSelectionBoxLocal = illuVectorSelectionBoxLocal;
-
-function illuVectorShapeSupportsRotation(shape) {
-    const b = illuVectorSelectionBoxLocal(shape);
-    return !!(b && b.w > 1e-6 && b.h > 1e-6);
-}
-
-function illuVectorToolsAllowShapeRotation() {
-    return typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector';
-}
-
-function illuVectorShapeLocalBbox(shape) {
-    return illuVectorSelectionBoxLocal(shape);
-}
-
-function illuVectorShapePivotLocal(shape) {
-    const b = illuVectorSelectionBoxLocal(shape);
-    if (!b) return null;
-    return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: b.w, h: b.h };
-}
-
-function illuVectorRotationHandleLocal(shape) {
-    const sb = illuVectorShapeLocalBbox(shape);
-    if (!sb) return null;
-    const ang = parseFloat(shape.getAttribute('data-illu-rotation-rad')) || 0;
-    const z = EditorManager.getCanvasZoomLevel() || 1;
-    const pad = 22 / z;
-    const cx = sb.x + sb.w / 2;
-    const cy = sb.y + sb.h / 2;
-    const topMidRot = {
-        x: cx + (sb.h / 2) * Math.sin(ang),
-        y: cy - (sb.h / 2) * Math.cos(ang)
-    };
-    return {
-        x: topMidRot.x + pad * Math.sin(ang),
-        y: topMidRot.y - pad * Math.cos(ang)
-    };
-}
-
-function illuWriteVectorShapeRotation(shape, angleRad) {
-    const pivot = illuVectorShapePivotLocal(shape);
-    if (!pivot) return;
-    const deg = (angleRad * 180) / Math.PI;
-    shape.setAttribute('data-illu-rotation-rad', String(angleRad));
-    shape.setAttribute('transform', `rotate(${deg} ${pivot.cx} ${pivot.cy})`);
-}
-
-function createSvgRotationHandle(rootX, rootY) {
-    const z = EditorManager.getCanvasZoomLevel() || 1;
-    const rotR = EditorManager.svgUiRotationHandleRadiusDoc();
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('cx', String(rootX));
-    c.setAttribute('cy', String(rootY));
-    c.setAttribute('r', String(rotR));
-    c.setAttribute('fill', '#aecbfa');
-    c.setAttribute('stroke', '#000000');
-    c.setAttribute('stroke-width', String(1 / z));
-    c.setAttribute('class', 'svg-rotation-handle');
-    c.setAttribute('pointer-events', 'all');
-    c.style.cursor = typeof window.illuGrabCursor === 'function' ? window.illuGrabCursor() : 'grab';
-    c.dataset.vectorRotHandle = '1';
-    return c;
-}
-
-function appendVectorRotationHandle(anchorsG, shape) {
-    if (!illuVectorShapeSupportsRotation(shape) || !illuVectorToolsAllowShapeRotation()) return;
-    const local = illuVectorRotationHandleLocal(shape);
-    if (!local) return;
-    const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
-    anchorsG.appendChild(createSvgRotationHandle(r.x, r.y));
-}
-
-function syncVectorRotationHandlePosition(anchorsG, shape) {
-    if (!anchorsG || !shape) return;
-    const el = anchorsG.querySelector('.svg-rotation-handle');
-    if (!el) return;
-    const local = illuVectorRotationHandleLocal(shape);
-    if (!local) return;
-    const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
-    const rotR = EditorManager.svgUiRotationHandleRadiusDoc();
-    el.setAttribute('cx', String(r.x));
-    el.setAttribute('cy', String(r.y));
-    el.setAttribute('r', String(rotR));
-}
-
-function appendVectorCenterMoveHandle(anchorsG, shape) {
-    const box = illuVectorSelectionBoxLocal(shape);
-    if (!box || box.w < 1e-6 || box.h < 1e-6) return;
-    const cx = box.x + box.w / 2;
-    const cy = box.y + box.h / 2;
-    const root = vectorShapeAttrPointToRoot(shape, cx, cy);
-    const z = EditorManager.getCanvasZoomLevel() || 1;
-    const size = EditorManager.svgUiMoveButtonSizeDoc();
-    const half = size / 2;
-    const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-    fo.setAttribute('x', String(root.x - half));
-    fo.setAttribute('y', String(root.y - half));
-    fo.setAttribute('width', String(size));
-    fo.setAttribute('height', String(size));
-    fo.setAttribute('class', 'illu-vector-move-fo');
-    fo.setAttribute('data-vector-move-handle', '1');
-    fo.setAttribute('style', 'overflow: visible; pointer-events: all;');
-    const wrap = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-    wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-    wrap.style.cssText =
-        'display:flex;align-items:center;justify-content:center;width:100%;height:100%;margin:0;padding:0;box-sizing:border-box;';
-    const btn = document.createElementNS('http://www.w3.org/1999/xhtml', 'button');
-    btn.setAttribute('type', 'button');
-    btn.setAttribute('class', 'illu-pixel-text-move-btn illu-deform-selection-move-btn illu-vector-selection-move-btn');
-    btn.innerHTML =
-        '<i class="fa-solid fa-arrows-up-down-left-right illu-deform-move-icon" aria-hidden="true"></i>';
-    const moveTitle =
-        window.IlluI18n && typeof window.IlluI18n.t === 'function'
-            ? window.IlluI18n.t('tools.deformMoveHandle')
-            : 'Déplacer';
-    btn.setAttribute('title', moveTitle);
-    btn.setAttribute('aria-label', moveTitle);
-    const runMove = (ev) => {
-        if (ev.button != null && ev.button !== 0) return;
-        ev.preventDefault();
-        ev.stopPropagation();
-        if (typeof window.illuVectorSelectionMoveButtonMouseDown === 'function') {
-            window.illuVectorSelectionMoveButtonMouseDown(ev);
-        }
-        if (ev.pointerId != null) {
-            try {
-                window._illuVectorMoveFromButtonEl = btn;
-                window._illuVectorMoveFromButtonPointerId = ev.pointerId;
-                btn.setPointerCapture(ev.pointerId);
-            } catch (err) {
-                /* ignore */
-            }
-        }
-    };
-    const releaseMove = (ev) => {
-        if (ev.button != null && ev.button !== 0) return;
-        if (typeof window.illuHandleMouseUp === 'function') window.illuHandleMouseUp(ev);
-        if (typeof window.illuReleaseVectorMoveButtonPointerCapture === 'function') {
-            window.illuReleaseVectorMoveButtonPointerCapture();
-        }
-    };
-    btn.addEventListener('pointerup', releaseMove, { capture: true });
-    btn.addEventListener('mouseup', releaseMove, { capture: true });
-    btn.addEventListener('pointercancel', releaseMove, { capture: true });
-    btn.addEventListener('lostpointercapture', releaseMove, { capture: true });
-    btn.addEventListener('pointerdown', runMove, { passive: false });
-    wrap.appendChild(btn);
-    fo.appendChild(wrap);
-    anchorsG.appendChild(fo);
-}
-
-function syncVectorCenterMoveHandlePosition(anchorsG, shape) {
-    if (!anchorsG || !shape) return;
-    const fo = anchorsG.querySelector('.illu-vector-move-fo');
-    if (!fo) return;
-    const box = illuVectorSelectionBoxLocal(shape);
-    if (!box) return;
-    const root = vectorShapeAttrPointToRoot(shape, box.x + box.w / 2, box.y + box.h / 2);
-    const size = EditorManager.svgUiMoveButtonSizeDoc();
-    const half = size / 2;
-    fo.setAttribute('x', String(root.x - half));
-    fo.setAttribute('y', String(root.y - half));
-    fo.setAttribute('width', String(size));
-    fo.setAttribute('height', String(size));
-}
-
-window.illuReleaseVectorMoveButtonPointerCapture = function () {
-    const el = window._illuVectorMoveFromButtonEl;
-    const pid = window._illuVectorMoveFromButtonPointerId;
-    if (el && pid != null) {
-        try {
-            el.releasePointerCapture(pid);
-        } catch (err) {
-            /* ignore */
-        }
-    }
-    window._illuVectorMoveFromButtonEl = null;
-    window._illuVectorMoveFromButtonPointerId = null;
-};
-
-window.illuVectorSelectionMoveButtonMouseDown = function (e) {
-    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
-    if (e.button != null && e.button !== 0) return;
-    const sel = EditorManager.activeVectorSelection;
-    if (!sel || !sel.length) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const VE = window.VectorEngine;
-    if (!VE || typeof VE.beginDrag !== 'function') return;
-    const pos = typeof getPos === 'function' ? getPos(e) : { x: 0, y: 0 };
-    window._illuVectorDragActive = true;
-    window._shiftConstraintProportions = e.shiftKey;
-    isDrawing = true;
-    activeVectorShape = sel[sel.length - 1];
-    window._activeVectorShapeEl = activeVectorShape;
-    VE.beginDrag(sel, pos, e);
-};
 
 /** Brouillon vecteur : applique le rayon des coins de la barre d’options au <rect data-illu-round> en cours. */
 window.applyVectorRoundRectRadiusFromToolProps = function () {
@@ -5123,6 +4877,24 @@ function initTools() {
     });
     // Double-clic : valider pen/polygon
     container.addEventListener('dblclick', (e) => {
+        if (EditorManager.mode === 'vector' && window.activeTool === 'select') {
+            const z = EditorManager.getCanvasZoomLevel() || 1;
+            const cr = document.getElementById('main-canvas-container').getBoundingClientRect();
+            const pos = {
+                x: (e.clientX - cr.left) / z,
+                y: (e.clientY - cr.top) / z
+            };
+            const hit = window.VectorEngine && window.VectorEngine.hitTest ? window.VectorEngine.hitTest(pos, e) : null;
+            if (hit && (hit.tagName.toLowerCase() === 'path' || hit.tagName.toLowerCase() === 'polygon' || hit.tagName.toLowerCase() === 'polyline')) {
+                window._illuForceNodeMode = !window._illuForceNodeMode;
+                window.VectorEngine.refreshSelectionUI();
+                e.preventDefault();
+                return;
+            } else {
+                window._illuForceNodeMode = false;
+                if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+            }
+        }
         const VE = window.VectorEngine;
         if (!VE) return;
         if (window.activeTool === 'pen' && VE.isPenActive()) {
@@ -6047,9 +5819,7 @@ window.illuVectorBakeSelectionTransforms = function (sel) {
 
 /** En mode vecteur : une seule UI de sélection (poignées blanches), sauf édition de nœuds. */
 window.illuVectorPreferBitmapSelectionUI = function () {
-    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return false;
-    const t = window.activeTool || 'select';
-    return t !== 'direct-select' && t !== 'node-select';
+    return false; // Use native VectorEngine SVG UI
 };
 
 window.illuVectorSnapshotForDrag = function (el) {
@@ -6101,14 +5871,6 @@ window.illuSyncVectorSelectionAnchors = function () {
 };
 
 window.illuSyncVectorSelectionUI = function () {
-    if (typeof EditorManager === 'undefined' || EditorManager.mode !== 'vector') return;
-    if (window.illuVectorPreferBitmapSelectionUI()) {
-        if (window.VectorEngine && typeof window.VectorEngine.clearUI === 'function') {
-            window.VectorEngine.clearUI();
-        }
-        window.illuSyncVectorSelectionAnchors();
-        return;
-    }
     if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
         window.VectorEngine.refreshSelectionUI();
     }
@@ -6426,200 +6188,19 @@ function appendShapeAdjustAnchors(svgUI, shape) {
 }
 
 function appendAnchorsForShape(svgUI, shape) {
-    const tag = shape.tagName.toLowerCase();
-    const rootAnchor = (lx, ly, index, cursor) => {
-        const r = vectorShapeAttrPointToRoot(shape, lx, ly);
-        svgUI.appendChild(createSvgAnchor(r.x, r.y, index, cursor));
-    };
-    if (tag === 'foreignobject') {
-        const x = parseFloat(shape.getAttribute('x')) || 0;
-        const y = parseFloat(shape.getAttribute('y')) || 0;
-        const w = parseFloat(shape.getAttribute('width')) || 0;
-        const h = parseFloat(shape.getAttribute('height')) || 0;
-        const corners = [
-            [x, y, 0],
-            [x + w, y, 1],
-            [x, y + h, 2],
-            [x + w, y + h, 3]
-        ];
-        corners.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i));
-    } else if (tag === 'rect' || tag === 'image') {
-        const x = parseFloat(shape.getAttribute('x')) || 0;
-        const y = parseFloat(shape.getAttribute('y')) || 0;
-        const w = parseFloat(shape.getAttribute('width')) || 0;
-        const h = parseFloat(shape.getAttribute('height')) || 0;
-        const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'w-resize', 'e-resize', 'sw-resize', 's-resize', 'se-resize'];
-        const pts = [
-            [x, y, 0],
-            [x + w / 2, y, 1],
-            [x + w, y, 2],
-            [x, y + h / 2, 3],
-            [x + w, y + h / 2, 4],
-            [x, y + h, 5],
-            [x + w / 2, y + h, 6],
-            [x + w, y + h, 7]
-        ];
-        pts.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i, cursors[i] || 'pointer'));
-        if (tag === 'rect') appendShapeAdjustAnchors(svgUI, shape);
-    } else if (tag === 'line') {
-        const x1 = parseFloat(shape.getAttribute('x1')) || 0;
-        const y1 = parseFloat(shape.getAttribute('y1')) || 0;
-        const x2 = parseFloat(shape.getAttribute('x2')) || 0;
-        const y2 = parseFloat(shape.getAttribute('y2')) || 0;
-        rootAnchor(x1, y1, 0);
-        rootAnchor(x2, y2, 1);
-    } else if (tag === 'ellipse' || tag === 'circle') {
-        const cx = parseFloat(shape.getAttribute('cx')) || 0;
-        const cy = parseFloat(shape.getAttribute('cy')) || 0;
-        const rx = tag === 'circle' ? parseFloat(shape.getAttribute('r')) || 0 : parseFloat(shape.getAttribute('rx')) || 0;
-        const ry = tag === 'circle' ? rx : parseFloat(shape.getAttribute('ry')) || 0;
-        const x = cx - rx;
-        const y = cy - ry;
-        const w = rx * 2;
-        const h = ry * 2;
-        const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'w-resize', 'e-resize', 'sw-resize', 's-resize', 'se-resize'];
-        const pts = [
-            [x, y, 0],
-            [x + w / 2, y, 1],
-            [x + w, y, 2],
-            [x, y + h / 2, 3],
-            [x + w, y + h / 2, 4],
-            [x, y + h, 5],
-            [x + w / 2, y + h, 6],
-            [x + w, y + h, 7]
-        ];
-        pts.forEach(([px, py, i]) => rootAnchor(px, py, i, cursors[i] || 'pointer'));
-    } else if (tag === 'polygon' && shape.getAttribute('data-illu-triangle') === '1') {
-        const st = illuTriangleReadState(shape);
-        const { x, y, w, h } = st;
-        const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'w-resize', 'e-resize', 'sw-resize', 's-resize', 'se-resize'];
-        const pts = [
-            [x, y, 0],
-            [x + w / 2, y, 1],
-            [x + w, y, 2],
-            [x, y + h / 2, 3],
-            [x + w, y + h / 2, 4],
-            [x, y + h, 5],
-            [x + w / 2, y + h, 6],
-            [x + w, y + h, 7]
-        ];
-        pts.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i, cursors[i] || 'pointer'));
-        appendShapeAdjustAnchors(svgUI, shape);
-    } else if (tag === 'polygon' && shape.getAttribute('data-illu-quad-preset')) {
-        const st =
-            typeof window.illuQuadPresetReadState === 'function'
-                ? window.illuQuadPresetReadState(shape)
-                : null;
-        if (st) {
-            const { x, y, w, h } = st;
-            const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'w-resize', 'e-resize', 'sw-resize', 's-resize', 'se-resize'];
-            const pts = [
-                [x, y, 0],
-                [x + w / 2, y, 1],
-                [x + w, y, 2],
-                [x, y + h / 2, 3],
-                [x + w, y + h / 2, 4],
-                [x, y + h, 5],
-                [x + w / 2, y + h, 6],
-                [x + w, y + h, 7]
-            ];
-            pts.forEach(([cx, cy, i]) => rootAnchor(cx, cy, i, cursors[i] || 'pointer'));
-            return;
-        }
-    } else if (tag === 'polygon' || tag === 'polyline') {
-        const pp = parseIlluPolygonPoints(shape.getAttribute('points') || '').slice(0, VECTOR_POLY_ANCHOR_CAP);
-        pp.forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
-    } else if (tag === 'path') {
-        const d = shape.getAttribute('d') || '';
-        if (shape.getAttribute('data-illu-quad-3') === '1') {
-            const pq = parseIlluQuadPath(d);
-            if (pq) {
-                [
-                    [pq.x0, pq.y0],
-                    [pq.qx, pq.qy],
-                    [pq.x1, pq.y1]
-                ].forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
-                return;
-            }
-        }
-        if (shape.getAttribute('data-illu-line-straight') === '1') {
-            const p = parseIlluStraightLinePath(d);
-            if (p) {
-                [[p.x1, p.y1], [p.x2, p.y2]].forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
-                return;
-            }
-        }
-        if (shape.getAttribute('data-illu-stroke-only') === '1') {
-            illuNormalizeImportedStrokePath(shape);
-            const d2 = shape.getAttribute('d') || '';
-            if (shape.getAttribute('data-illu-line-straight') === '1') {
-                const p = parseIlluStraightLinePath(d2);
-                if (p) {
-                    [[p.x1, p.y1], [p.x2, p.y2]].forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
-                    return;
-                }
-            }
-        }
-        if (shape.getAttribute('data-illu-line-cubic') === '1') {
-            const p = parseIlluLinePath(d);
-            if (p) {
-                [
-                    [p.x1, p.y1],
-                    [p.c1x, p.c1y],
-                    [p.c2x, p.c2y],
-                    [p.x2, p.y2]
-                ].forEach(([cx, cy], i) => rootAnchor(cx, cy, i));
-                return;
-            }
-        }
-        if (illuVectorIsComplexPath(shape)) {
-            appendPathBBoxAnchors(svgUI, shape);
-        } else {
-            collectSvgPathAnchorPoints(d).forEach(([px, py], idx) => rootAnchor(px, py, idx));
-        }
-    } else if (tag === 'text') {
-        const x = parseFloat(shape.getAttribute('x')) || 0;
-        const y = parseFloat(shape.getAttribute('y')) || 0;
-        rootAnchor(x, y, 0);
-    }
-    appendVectorRotationHandle(svgUI, shape);
-    appendVectorCenterMoveHandle(svgUI, shape);
+    // Obsolete - handled by SvgEditor
 }
 
 function generateAnchors(shape) {
-    const svgUI = document.getElementById('svg-ui');
-    if (!svgUI || !shape) return;
-    // Keep boxes and anchors separate so multi-selection visuals persist.
-    let boxesG = svgUI.querySelector('#svg-ui-boxes');
-    let anchorsG = svgUI.querySelector('#svg-ui-anchors');
-    if (!boxesG) {
-        boxesG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        boxesG.setAttribute('id', 'svg-ui-boxes');
-        svgUI.appendChild(boxesG);
+    if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+        window.VectorEngine.refreshSelectionUI();
     }
-    if (!anchorsG) {
-        anchorsG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        anchorsG.setAttribute('id', 'svg-ui-anchors');
-        svgUI.appendChild(anchorsG);
-    }
-    anchorsG.innerHTML = '';
-    illuVectorBeginSelectionPreview(shape);
-    appendAnchorsForShape(anchorsG, shape);
-    window._activeVectorShapeEl = shape;
 }
 
 window.regenerateVectorAnchorsOnly = function (shape) {
-    const svgUI = document.getElementById('svg-ui');
-    if (!svgUI || !shape) return;
-    let anchorsG = svgUI.querySelector('#svg-ui-anchors');
-    if (!anchorsG) {
-        anchorsG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        anchorsG.setAttribute('id', 'svg-ui-anchors');
-        svgUI.appendChild(anchorsG);
+    if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+        window.VectorEngine.refreshSelectionUI();
     }
-    anchorsG.innerHTML = '';
-    appendAnchorsForShape(anchorsG, shape);
-    window._activeVectorShapeEl = shape;
 };
 
 window.syncVectorSelectionAfterUiRedraw = function () {
@@ -6763,11 +6344,6 @@ function syncAnchors() {
                 if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
             });
         }
-    } else if (tag === 'polygon' || tag === 'polyline') {
-        const pp = parseIlluPolygonPoints(sh.getAttribute('points') || '').slice(0, VECTOR_POLY_ANCHOR_CAP);
-        pp.forEach((pt, i) => {
-            if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
-        });
     } else if (tag === 'path') {
         const dAttr = sh.getAttribute('d') || '';
         if (sh.getAttribute('data-illu-quad-3') === '1') {
@@ -6802,29 +6378,6 @@ function syncAnchors() {
                     if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
                 });
             }
-        } else if (illuVectorIsComplexPath(sh)) {
-            const bb = illuGetElementBBox(sh);
-            if (bb) {
-                const { x, y, width: w, height: h } = bb;
-                const pts = [
-                    [x, y],
-                    [x + w / 2, y],
-                    [x + w, y],
-                    [x, y + h / 2],
-                    [x + w, y + h / 2],
-                    [x, y + h],
-                    [x + w / 2, y + h],
-                    [x + w, y + h]
-                ];
-                pts.forEach((pt, i) => {
-                    if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
-                });
-            }
-        } else {
-            const pathPts = collectSvgPathAnchorPoints(dAttr);
-            pathPts.forEach((pt, i) => {
-                if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
-            });
         }
     } else if (tag === 'text') {
         const x = parseFloat(sh.getAttribute('x')) || 0;
@@ -7944,6 +7497,10 @@ function illuRefreshVectorElementPaint(el) {
                 : parseFloat(el.getAttribute('rx') || '0');
         const ry = t === 'circle' ? rx : parseFloat(el.getAttribute('ry') || '0');
         syncVectorGradientOnShape(el, 'rect', cx - rx, cy - ry, cx + rx, cy + ry);
+        return;
+    }
+    if (kind === 'polygon' || kind === 'shape') {
+        window.syncVectorGradientBoundsForEl(el);
     }
 }
 window.illuRefreshVectorElementPaint = illuRefreshVectorElementPaint;
@@ -7977,6 +7534,15 @@ window.syncVectorGradientBoundsForEl = function (el) {
                 return;
             }
         }
+        try {
+            const box = el.getBBox();
+            if (box && (box.width > 0 || box.height > 0)) {
+                syncVectorGradientOnShape(el, 'rect', box.x, box.y, box.x + box.width, box.y + box.height);
+            }
+        } catch (err) {
+            // getBBox fails if not in DOM
+        }
+        return;
     }
     if (tag === 'polygon' || tag === 'polyline' || tag === 'rect') {
         let minX = Infinity;
@@ -8590,33 +8156,7 @@ function handleMouseDown(e) {
                     return;
                 }
             }
-            if (
-                t &&
-                (t.classList.contains('illu-vector-selection-move-btn') ||
-                    (t.closest && t.closest('.illu-vector-move-fo')))
-            ) {
-                if (typeof window.illuVectorSelectionMoveButtonMouseDown === 'function') {
-                    window.illuVectorSelectionMoveButtonMouseDown(e);
-                }
-                e.preventDefault();
-                return;
-            }
-            if (t && t.classList && t.classList.contains('svg-rotation-handle')) {
-                activeVectorRotationDrag = true;
-                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
-                if (activeVectorShape) {
-                    const pivot = illuVectorShapePivotLocal(activeVectorShape);
-                    if (pivot) {
-                        const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
-                        vectorRotationStartPointerAngle = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
-                        vectorRotationStartAngle =
-                            parseFloat(activeVectorShape.getAttribute('data-illu-rotation-rad')) || 0;
-                    }
-                    isDrawing = true;
-                    e.preventDefault();
-                    return;
-                }
-            }
+            /* rotation intercept removed */
             if (t && t.classList && t.classList.contains('svg-anchor')) {
                 activeAnchor = t;
                 activeAnchorIndex = parseInt(t.dataset.index, 10);
@@ -9339,6 +8879,7 @@ function startVector(pos, e) {
                 window._activeVectorShapeEl = null;
                 activeVectorShape = null;
                 clearAnchors();
+                window._illuForceNodeMode = false;
             }
             VE.startRubberBand(pos);
         }
@@ -9605,19 +9146,7 @@ function updateVector(pos) {
         illuScheduleVectorShapeEditVisual();
         return;
     }
-    if (activeVectorRotationDrag && activeVectorShape) {
-        const pivot = illuVectorShapePivotLocal(activeVectorShape);
-        if (pivot) {
-            const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
-            const a = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
-            const da = a - vectorRotationStartPointerAngle;
-            let ang = vectorRotationStartAngle + da;
-            ang = constrainRotationAngleRad(ang, window._shiftConstraintProportions);
-            illuWriteVectorShapeRotation(activeVectorShape, ang);
-            illuScheduleVectorShapeEditVisual();
-        }
-        return;
-    }
+    /* removed old rotation drag logic */
     if (activeAnchor && activeVectorShape) {
         window._illuVectorShapeEditFast = true;
         const lp = vectorDocToShapeAttrPoint(activeVectorShape, pos.x, pos.y);
@@ -14836,7 +14365,7 @@ function handleMouseUp(e) {
         return;
     }
     if (activeVectorRotationDrag) {
-        activeVectorRotationDrag = false;
+        /* activeVectorRotationDrag removed */
         window._illuVectorDragActive = false;
         if (activeVectorShape) {
             EditorManager.syncActiveVectorSvg();
@@ -17217,164 +16746,25 @@ function floodFill(startX, startY) {
     EditorManager.render();
 }
 
-window.FileQueueManager = {
-    queue: [],
-    isProcessing: false,
-    globalImportOpts: null,
-    totalFiles: 0,
-    processedCount: 0,
-    currentTask: null,
-
-    cancelAll() {
-        this.queue = [];
-        this.isProcessing = false;
-        if (this.currentTask) {
-            this.currentTask.done();
-            this.currentTask = null;
-        } else {
-            this._updateProgress();
-        }
-    },
-
-    addFiles(files, opts) {
-        if (!files || files.length === 0) return;
-        for (let i = 0; i < files.length; i++) {
-            if (files[i].size > 0) {
-                this.queue.push({ file: files[i], opts: Object.assign({}, opts) });
-            }
-        }
-        if (this.queue.length > 0 && !this.isProcessing) {
-            this.totalFiles = this.queue.length;
-            this.processedCount = 0;
-            this.globalImportOpts = null;
-            this.processNext();
-        } else if (this.isProcessing) {
-            this.totalFiles += files.length;
-            this._updateProgress();
-        }
-    },
-
-    _updateProgress() {
-        if (window.IlluProgress && window.IlluProgress.registerTask) {
-            if (this.queue.length > 0 || this.isProcessing) {
-                if (!this.currentTask) {
-                    this.currentTask = window.IlluProgress.registerTask('Ouverture de fichiers', {
-                        onCancel: () => {
-                            this.cancelAll();
-                        }
-                    });
-                }
-                const pct = Math.round((this.processedCount / this.totalFiles) * 100);
-                this.currentTask.progress(pct, `Fichier ${this.processedCount + 1} sur ${this.totalFiles}...`);
-            } else {
-                if (this.currentTask) {
-                    this.currentTask.done();
-                    this.currentTask = null;
-                }
-            }
-        } else if (window.IlluProgress && window.IlluProgress.instantEffectStart) {
-            if (this.queue.length > 0 || this.isProcessing) {
-                if (this.processedCount === 0) {
-                    window.IlluProgress.instantEffectStart('Ouverture de fichiers');
-                }
-                const pct = Math.round((this.processedCount / this.totalFiles) * 100);
-                window.IlluProgress.instantEffectProgress(pct, `Fichier ${this.processedCount + 1} sur ${this.totalFiles}...`);
-            } else {
-                if (window.IlluProgress.instantEffectDone) window.IlluProgress.instantEffectDone();
-            }
-        }
-    },
-
-    async processNext() {
-        if (this.queue.length === 0) {
-            this.isProcessing = false;
-            this._updateProgress();
-            return;
-        }
-
-        if (this.totalFiles > 1 && this.processedCount === 0 && !this.globalImportOpts && typeof EditorManager !== 'undefined' && EditorManager.isPixelMode) {
-            const choice = await new Promise(resolve => {
-                const overlay = document.getElementById('import-choice-overlay');
-                if (!overlay) return resolve(null);
-
-                const btnLayer = document.getElementById('btn-import-layer');
-                const btnCur = document.getElementById('btn-import-current');
-                const btnTab = document.getElementById('btn-import-tab');
-
-                const finish = (val) => {
-                    overlay.style.display = 'none';
-                    resolve(val);
-                };
-
-                if (btnLayer) btnLayer.onclick = () => finish('layer');
-                if (btnCur) btnCur.onclick = () => finish('current');
-                if (btnTab) btnTab.onclick = () => finish('tab');
-
-                const btnCancelList = overlay.querySelectorAll('button[onclick*="display=\'none\'"]');
-                btnCancelList.forEach(btn => {
-                    const oldOnClick = btn.onclick;
-                    btn.onclick = (e) => {
-                        if (oldOnClick) oldOnClick.call(btn, e);
-                        finish('abort');
-                    };
-                });
-
-                overlay.style.display = 'flex';
-            });
-
-            if (choice === 'abort') {
-                this.cancelAll();
-                return;
-            }
-
-            if (choice) {
-                this.globalImportOpts = {};
-                if (choice === 'layer') this.globalImportOpts.autoNewLayer = true;
-                if (choice === 'tab') this.globalImportOpts.autoNewProject = true;
-                if (choice === 'current') this.globalImportOpts.autoCurrentLayer = true;
-            }
-        }
-        
-        this.isProcessing = true;
-        this._updateProgress();
-        
-        const item = this.queue.shift();
-        
-        if (this.globalImportOpts) {
-            Object.assign(item.opts, this.globalImportOpts);
-        }
-
-        new Promise(resolve => {
-            item.opts.onComplete = () => {
-                if (window._illuGlobalImportChoice) {
-                    this.globalImportOpts = this.globalImportOpts || {};
-                    if (window._illuGlobalImportChoice === 'layer') this.globalImportOpts.autoNewLayer = true;
-                    if (window._illuGlobalImportChoice === 'tab') this.globalImportOpts.autoNewProject = true;
-                    if (window._illuGlobalImportChoice === 'current') this.globalImportOpts.autoCurrentLayer = true;
-                    window._illuGlobalImportChoice = null;
-                }
-                resolve();
-            };
-            window._illuProcessFileImportInternal(item.file, item.opts);
-        }).then(() => {
-            this.processedCount++;
-            this.processNext();
-        });
-    }
-};
-
 window.illuProcessFileImport = function (file, opts) {
-    if (file instanceof FileList || Array.isArray(file)) {
-        window.FileQueueManager.addFiles(file, opts);
-    } else if (file) {
-        window.FileQueueManager.addFiles([file], opts);
-    }
-};
-
-window._illuProcessFileImportInternal = function (file, opts) {
     if (!file) return;
     const options = opts || {};
     const inputEl = options.inputElement;
+
+    // Handle Array or FileList for multiple files
+    if (file instanceof FileList || Array.isArray(file)) {
+        const filesArray = Array.from(file);
+        if (filesArray.length === 0) return;
+        if (filesArray.length > 1) {
+            opts = opts || {};
+            opts.multiImport = true;
+            window._illuGlobalImportChoice = null;
+            if (window.EditorManager) EditorManager._illuPendingMultiImports = [];
+        }
+        filesArray.forEach(f => window.illuProcessFileImport(f, opts));
+        if (inputEl) inputEl.value = '';
+        return;
+    }
 
     const lower = (file.name || '').toLowerCase();
     if (lower.endsWith('.pdn') && typeof window.PdnFile !== 'undefined') {
@@ -17391,7 +16781,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                     }
                     if (inputEl) inputEl.value = '';
                     if (P && P.statusDone) P.statusDone();
-                    if (options.onComplete) options.onComplete();
                     return;
                 }
                 if (typeof EditorManager.importPdnDocument === 'function') {
@@ -17478,7 +16867,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                     await WorkspaceIO.applyWorkspaceFromJsonText(data, { busy: openBusy });
                     openBusy = null;
                     if (inputEl) inputEl.value = '';
-                    if (options.onComplete) options.onComplete();
                     return;
                 }
             } catch (err) {
@@ -17495,7 +16883,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                     );
                 }
                 if (inputEl) inputEl.value = '';
-                if (options.onComplete) options.onComplete();
                 return;
             }
             if (openBusy) {
@@ -17506,7 +16893,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                 window.showIlluAlert('Ce fichier n’est pas un projet Illu valide (.illu).');
             }
             if (inputEl) inputEl.value = '';
-            if (options.onComplete) options.onComplete();
         };
         reader.onerror = () => {
             if (openBusy) openBusy.done();
@@ -17531,7 +16917,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                 } else {
                     runImport({ target: 'new', layerMode: 'split' });
                 }
-                if (options.onComplete) options.onComplete();
             } catch (err) {
                 console.warn(err);
                 if (window.showIlluAlert) {
@@ -17541,7 +16926,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                             : 'Impossible d’importer ce fichier SVG.'
                     );
                 }
-                if (options.onComplete) options.onComplete();
             }
         };
         reader.readAsText(file);
@@ -17551,10 +16935,7 @@ window._illuProcessFileImportInternal = function (file, opts) {
 
     if (typeof window.illuIsRawFileName === 'function' && window.illuIsRawFileName(file.name || lower)) {
         if (typeof window.openCameraRawAfterRawImport === 'function') {
-            window.openCameraRawAfterRawImport(file, inputEl || null)
-                .finally(() => {
-                    if (options.onComplete) options.onComplete();
-                });
+            window.openCameraRawAfterRawImport(file, inputEl || null);
         } else {
             if (window.showIlluAlert) {
                 window.showIlluAlert(
@@ -17562,7 +16943,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                 );
             }
             if (inputEl) inputEl.value = '';
-            if (options.onComplete) options.onComplete();
         }
         return;
     }
@@ -17574,38 +16954,24 @@ window._illuProcessFileImportInternal = function (file, opts) {
             if (EditorManager.isPixelMode) {
                 if (options.autoNewLayer) {
                     EditorManager.importImageAsNewLayer(img, file.name || 'Image importée', {
-                        layerName: (file.name || 'Image importée').replace(/\.[^.]+$/, '')
+                        layerName: (file.name || 'Image importée').replace(/\.[^.]+$/, ''),
+                        multiImport: options.multiImport
                     });
-                    if (options.onComplete) options.onComplete();
-                } else if (options.autoNewProject) {
-                    EditorManager.handleNewProjectFromImage(img, file.name || 'Image importée');
-                    if (options.onComplete) options.onComplete();
-                } else if (options.autoCurrentLayer) {
-                    EditorManager.drawImportedImageOnActiveLayer(img, options);
-                    if (options.onComplete) options.onComplete();
                 } else {
-                    // promptImport displays UI overlays.
-                    // It doesn't block, so we MUST call onComplete from within promptImport
-                    // once the user clicks a choice.
-                    EditorManager.promptImport(img, options);
+                    const importOpts = Object.assign({}, options, { layerName: (file.name || '').replace(/\.[^.]+$/, '') });
+                    EditorManager.promptImport(img, importOpts);
                 }
-            } else if (typeof window.illuPromptVectorBitmapImport === 'function') {
+            } else if (typeof window.illuPromptVectorBitmapImport === 'function' && !options.multiImport && EditorManager.mode === 'vector') {
                 window.illuPromptVectorBitmapImport(img);
-                if (options.onComplete) options.onComplete();
-            } else if (typeof EditorManager.embedBitmapInVectorProject === 'function') {
+            } else if (typeof EditorManager.embedBitmapInVectorProject === 'function' && EditorManager.mode === 'vector') {
                 EditorManager.embedBitmapInVectorProject(img);
-                if (options.onComplete) options.onComplete();
             } else if (typeof EditorManager.handleNewProjectFromImage === 'function') {
                 EditorManager.handleNewProjectFromImage(img);
-                if (options.onComplete) options.onComplete();
             } else if (window.showIlluAlert) {
                 window.showIlluAlert(
                     window.IlluI18n?.t('msg.importBitmapNeedsPixel') ||
                         'Image bitmap : ouvrez ou créez un projet pixel, ou l’import sera converti automatiquement.'
                 );
-                if (options.onComplete) options.onComplete();
-            } else {
-                if (options.onComplete) options.onComplete();
             }
         };
         img.onerror = () => {
@@ -17614,7 +16980,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
                     `Impossible de lire l’image « ${file.name || 'fichier'} » (format ou fichier endommagé).`
                 );
             }
-            if (options.onComplete) options.onComplete();
         };
         img.src = ev.target.result;
     };
@@ -17622,7 +16987,6 @@ window._illuProcessFileImportInternal = function (file, opts) {
         if (window.showIlluAlert) {
             window.showIlluAlert(`Lecture du fichier « ${file.name || 'fichier'} » impossible.`);
         }
-        if (options.onComplete) options.onComplete();
     };
     reader.readAsDataURL(file);
     if (inputEl) inputEl.value = '';
@@ -17631,7 +16995,7 @@ window._illuProcessFileImportInternal = function (file, opts) {
 window.importFile = function (e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    window.FileQueueManager.addFiles(files, { inputElement: e.target });
+    window.illuProcessFileImport(files, { inputElement: e.target });
 };
 
 // --- CONTEXT MENU ---

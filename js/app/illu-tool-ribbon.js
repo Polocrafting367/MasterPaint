@@ -570,18 +570,18 @@
                         window.illuShouldShowShapePickerRibbon();
                 } else if (id === 'selection') {
                     active =
-                        (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
+                        !isVectorDoc && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
                 } else if (id === 'clipboard') {
                     active =
-                        !isMobileRibbon &&
+                        !isVectorDoc && !isMobileRibbon &&
                         SELECT_ACTION_TOOLS.has(tool);
                 } else if (id === 'selection-extra') {
                     /* Téléphone : alvéole « Outils » (4 coins si pertinent + Désélectionner) pour tous les outils sélection/déplacement. */
                     active =
-                        isMobileRibbon &&
+                        !isVectorDoc && isMobileRibbon &&
                         SELECT_ACTION_TOOLS.has(tool);
                 } else if (id === 'adjustments') {
-                    active = SELECT_ACTION_TOOLS.has(tool) && tool !== 'wand' && !isMobileRibbon;
+                    active = !isVectorDoc && SELECT_ACTION_TOOLS.has(tool) && tool !== 'wand' && !isMobileRibbon;
                 } else if (id === 'view') {
                     /* Alvéole Affichage : uniquement en mode document pixel (pas SVG / vecteur).
                      * Mobile : masqué (Grille / Règles via menu Fenêtre). */
@@ -1219,3 +1219,34 @@
         queueMicrotask(() => window.illuInitToolbarRibbon());
     }
 })();
+
+    window.illuToggleVectorPopover = function (id, btn) {
+        const all = document.querySelectorAll('.illu-popover-menu');
+        let wasOpen = false;
+        all.forEach(p => {
+            if (p.id === id && p.style.display === 'flex') {
+                wasOpen = true;
+            }
+            p.style.display = 'none';
+        });
+
+        if (wasOpen) return;
+
+        const pop = document.getElementById(id);
+        if (!pop) return;
+        
+        pop.style.display = 'flex';
+        const rect = btn.getBoundingClientRect();
+        pop.style.position = 'fixed';
+        pop.style.top = (rect.bottom + 2) + 'px';
+        pop.style.left = rect.left + 'px';
+        pop.style.margin = '0';
+        
+        const closeListener = (e) => {
+            if (!pop.contains(e.target) && !btn.contains(e.target)) {
+                pop.style.display = 'none';
+                document.removeEventListener('pointerdown', closeListener);
+            }
+        };
+        setTimeout(() => document.addEventListener('pointerdown', closeListener), 0);
+    };

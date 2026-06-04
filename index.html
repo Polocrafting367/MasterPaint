@@ -1930,54 +1930,50 @@
                                     </button>
                                 </span>
                             </span>
-                            <span id="opt-grp-vector-ops" class="illu-vector-ops-group">
-                                <span class="illu-chip" id="vector-selection-count">1 sélection</span>
-                                <div class="opt-sep"></div>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.moveSelectedVectorElement(1)"
-                                    data-i18n-title="props.moveForward"><i class="fa-solid fa-angle-up"></i></button>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.moveSelectedVectorElement(-1)"
-                                    data-i18n-title="props.moveBackward"><i class="fa-solid fa-angle-down"></i></button>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.moveSelectedVectorElement('front')"
-                                    data-i18n-title="props.bringToFront" title="Premier plan"><i
-                                        class="fa-solid fa-angles-up"></i></button>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.moveSelectedVectorElement('back')"
-                                    data-i18n-title="props.sendToBack" title="Arrière-plan"><i
-                                        class="fa-solid fa-angles-down"></i></button>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.duplicateActiveVectorSelection()"
-                                    data-i18n-title="tools.duplicate"><i class="fa-solid fa-clone"></i></button>
-                                <button type="button" class="illu-btn-mini"
-                                    onclick="EditorManager.createNewLayerFromActiveVectorSelection()"
-                                    data-i18n-title="props.newLayerFromSelection"
-                                    title="Nouveau calque avec la sélection"><i
-                                        class="fa-solid fa-layer-group"></i></button>
-                                <div class="opt-sep"></div>
-                                <span id="vector-group-actions" style="display:flex;gap:2px;">
-                                    <button type="button" class="illu-btn-mini"
-                                        onclick="EditorManager.groupActiveVectorSelection()"
-                                        data-i18n-title="tools.group"><i class="fa-solid fa-object-group"></i></button>
-                                    <button type="button" class="illu-btn-mini"
-                                        onclick="EditorManager.ungroupActiveVectorSelection()"
-                                        data-i18n-title="tools.ungroup"><i
-                                            class="fa-solid fa-object-ungroup"></i></button>
+                            <span id="opt-grp-vector-ops" class="illu-icon-toggle-group illu-mode-toggle-group">
+                                <span class="illu-mode-toggle-item">
+                                    <span class="illu-chip" id="vector-selection-count" style="margin: 4px;">1 sél.</span>
                                 </span>
                                 <div class="opt-sep"></div>
-                                <span id="vector-bool-actions" style="display:flex;gap:2px;">
-                                    <button type="button" class="illu-btn-mini"
-                                        onclick="EditorManager.applyVectorBoolean('union')"
-                                        data-i18n-title="props.union">+</button>
-                                    <button type="button" class="illu-btn-mini"
-                                        onclick="EditorManager.applyVectorBoolean('subtract')"
-                                        data-i18n-title="props.subtract">-</button>
+                                
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle illu-popover-trigger" onclick="window.illuToggleVectorPopover('vector-popover-arrange', this)" data-i18n-title="props.arrange" title="Arranger">
+                                        <i class="fa-solid fa-layer-group"></i>
+                                    </button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="props.arrangeShort">Plans</span>
+                                    <div id="vector-popover-arrange" class="illu-popover-menu" style="display: none;">
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.moveSelectedVectorElement(1)"><i class="fa-solid fa-angle-up"></i> Avancer</button>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.moveSelectedVectorElement(-1)"><i class="fa-solid fa-angle-down"></i> Reculer</button>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.moveSelectedVectorElement('front')"><i class="fa-solid fa-angles-up"></i> Premier plan</button>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.moveSelectedVectorElement('back')"><i class="fa-solid fa-angles-down"></i> Arrière-plan</button>
+                                        <div class="illu-popover-sep"></div>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.createNewLayerFromActiveVectorSelection()"><i class="fa-solid fa-layer-plus"></i> Nouveau calque</button>
+                                    </div>
                                 </span>
+
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle illu-popover-trigger" onclick="window.illuToggleVectorPopover('vector-popover-combine', this)" data-i18n-title="props.combine" title="Combiner">
+                                        <i class="fa-solid fa-object-group"></i>
+                                    </button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="props.combineShort">Groupe</span>
+                                    <div id="vector-popover-combine" class="illu-popover-menu" style="display: none;">
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.groupActiveVectorSelection()"><i class="fa-solid fa-object-group"></i> Associer</button>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.ungroupActiveVectorSelection()"><i class="fa-solid fa-object-ungroup"></i> Dissocier</button>
+                                        <div class="illu-popover-sep"></div>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.applyVectorBoolean('union')"><b>+</b> Union</button>
+                                        <button type="button" class="illu-popover-item" onclick="EditorManager.applyVectorBoolean('subtract')"><b>-</b> Soustraction</button>
+                                    </div>
+                                </span>
+
                                 <div class="opt-sep"></div>
-                                <button type="button" class="illu-btn-mini illu-btn-mini--danger"
-                                    onclick="EditorManager.deleteActiveVectorSelection()"
-                                    data-i18n-title="tools.delete"><i class="fa-solid fa-trash"></i></button>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" onclick="EditorManager.duplicateActiveVectorSelection()" data-i18n-title="tools.duplicate"><i class="fa-solid fa-clone"></i></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.duplicateShort">Dupl.</span>
+                                </span>
+                                <span class="illu-mode-toggle-item">
+                                    <button type="button" class="illu-icon-toggle" onclick="EditorManager.deleteActiveVectorSelection()" data-i18n-title="tools.delete" style="color: #ff453a;"><i class="fa-solid fa-trash"></i></button>
+                                    <span class="illu-mode-toggle-lbl" data-i18n="tools.deleteShort" style="color: #ff453a;">Suppr.</span>
+                                </span>
                             </span>
                         </div>
                     </div>
@@ -2525,7 +2521,7 @@
                         </div>
                     </div>
 
-                    <div id="win-properties" class="window palette-panel" style="display: none;">
+                    <div id="win-properties" class="window palette-panel">
                         <div class="title-bar">
                             <div class="title-bar-text" data-i18n="panel.properties">Propriétés</div>
                             <div class="title-bar-controls illu-palette-float-close">
@@ -2536,39 +2532,50 @@
                         </div>
                         <div class="window-body">
                             <!-- Vector Section -->
-                            <div id="props-vector-section" hidden>
+                            <div id="props-vector-section">
                                 <fieldset>
-                                    <legend data-i18n="props.duplication">Duplication</legend>
-                                    <div class="field-row" style="flex-direction: column; align-items: flex-start;">
-                                        <label for="props-radial-count" data-i18n="props.radialCount">Nombre de copies
-                                            :</label>
-                                        <div style="display: flex; width: 100%; gap: 4px; margin-top: 4px;">
-                                            <input type="number" id="props-radial-count" value="8" min="2" max="100"
-                                                style="flex: 1;">
-                                            <button type="button"
-                                                onclick="EditorManager.duplicateActiveVectorElementRadial(parseInt(document.getElementById('props-radial-count').value))"
-                                                data-i18n="props.apply">Appliquer</button>
-                                        </div>
+                                    <legend>Remplissage (Fill)</legend>
+                                    <div class="field-row">
+                                        <input type="color" id="prop-fill-color" title="Couleur de remplissage">
+                                        <input type="range" id="prop-fill-opacity" min="0" max="100" value="100" style="flex:1" title="Opacité">
+                                        <span id="prop-fill-opacity-val" style="width: 24px; text-align:right;">100%</span>
                                     </div>
-                                    <div class="field-row" style="gap: 4px; margin-top: 8px;">
-                                        <button type="button" onclick="EditorManager.moveSelectedVectorElement(1)"
-                                            style="flex: 1;" data-i18n="props.moveForward">Avancer (N+1)</button>
-                                        <button type="button" onclick="EditorManager.moveSelectedVectorElement(-1)"
-                                            style="flex: 1;" data-i18n="props.moveBackward">Reculer (N-1)</button>
+                                    <div class="field-row" style="margin-top:4px;">
+                                        <button type="button" id="prop-fill-none" class="illu-btn-mini" style="flex:1;">Aucun</button>
+                                        <button type="button" id="prop-fill-gradient" class="illu-btn-mini" style="flex:1;" title="Activer l'outil dégradé">Dégradé</button>
                                     </div>
                                 </fieldset>
 
                                 <fieldset style="margin-top: 8px;">
-                                    <legend data-i18n="props.fusion">Fusion des Formes</legend>
-                                    <div class="field-row" style="flex-direction: column; gap: 8px;">
-                                        <button type="button" onclick="EditorManager.applyVectorBoolean('union')"
-                                            style="width: 100%;" data-i18n="props.union">Fusionner (Unir)</button>
-                                        <button type="button" onclick="EditorManager.applyVectorBoolean('subtract')"
-                                            style="width: 100%;" data-i18n="props.subtract">Soustraire (Couper)</button>
-                                        <button type="button" onclick="EditorManager.applyVectorBoolean('intersect')"
-                                            style="width: 100%;" data-i18n="props.intersect">Intersection</button>
-                                        <button type="button" onclick="EditorManager.applyVectorBoolean('exclude')"
-                                            style="width: 100%;" data-i18n="props.exclude">Exclure (XOR)</button>
+                                    <legend>Contour (Stroke)</legend>
+                                    <div class="field-row">
+                                        <input type="color" id="prop-stroke-color" title="Couleur du contour">
+                                        <input type="range" id="prop-stroke-opacity" min="0" max="100" value="100" style="flex:1" title="Opacité">
+                                        <span id="prop-stroke-opacity-val" style="width: 24px; text-align:right;">100%</span>
+                                    </div>
+                                    <div class="field-row" style="margin-top:4px;">
+                                        <label style="width: 60px;">Épaisseur:</label>
+                                        <input type="range" id="prop-stroke-width" min="0" max="50" value="1" style="flex:1">
+                                        <input type="number" id="prop-stroke-width-val" min="0" max="100" value="1" style="width: 40px;">
+                                    </div>
+                                    <div class="field-row" style="margin-top:4px;">
+                                        <button type="button" id="prop-stroke-none" class="illu-btn-mini" style="width:100%;">Aucun contour</button>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset style="margin-top: 8px;">
+                                    <legend><label><input type="checkbox" id="prop-shadow-enable"> Ombre Portée</label></legend>
+                                    <div id="prop-shadow-controls" style="opacity: 0.5; pointer-events: none;">
+                                        <div class="field-row">
+                                            <input type="color" id="prop-shadow-color" value="#000000">
+                                            <label style="margin-left:8px;">Flou:</label>
+                                            <input type="range" id="prop-shadow-blur" min="0" max="50" value="5" style="flex:1">
+                                            <span id="prop-shadow-blur-val" style="width:20px; text-align:right;">5</span>
+                                        </div>
+                                        <div class="field-row" style="margin-top:4px;">
+                                            <label>X:</label> <input type="number" id="prop-shadow-x" value="2" style="width:40px; margin-right:8px;">
+                                            <label>Y:</label> <input type="number" id="prop-shadow-y" value="2" style="width:40px;">
+                                        </div>
                                     </div>
                                 </fieldset>
                             </div>
@@ -4252,7 +4259,7 @@
     <script src="js/app/IlluVectorize.js"></script>
     <script src="js/app/illu-bitmap-vector-import.js"></script>
     <script src="js/EditorManager.js"></script>
-    <script src="js/VectorEngine.js"></script>
+    <script src="js/tools/VectorEngine.js"></script>
     <script src="js/tools/SelectionModel.js"></script>
     <script src="js/tools/SelectionChrome.js"></script>
     <script src="js/tools/SelectionTouchLoupe.js"></script>
@@ -4603,7 +4610,38 @@
             window.illuDrawSnapGridPreview();
         };
     </script>
+    <script>
+        window.addEventListener('load', () => {
+            if (typeof window.illuInitVectorProperties === 'function') {
+                window.illuInitVectorProperties();
+            }
+        });
+    </script>
     <script src="js/contact.js"></script>
+    <script src="js/VectorProperties.js"></script>
+    <script id="popover-fallback-script">
+        document.addEventListener('beforetoggle', (e) => {
+            if (e.newState === 'open' && e.target.classList.contains('illu-popover-menu')) {
+                if (!CSS.supports('anchor-name: --test')) {
+                    const btn = document.querySelector(`[popovertarget="${e.target.id}"]`);
+                    if (btn) {
+                        const rect = btn.getBoundingClientRect();
+                        e.target.style.top = `${rect.bottom + 2}px`;
+                        e.target.style.left = `${rect.left}px`;
+                        e.target.style.margin = '0';
+                    }
+                }
+            }
+        });
+        
+        // Also close popovers when clicking items
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.illu-popover-item')) {
+                const popover = e.target.closest('.illu-popover-menu');
+                if (popover && popover.hidePopover) popover.hidePopover();
+            }
+        });
+    </script>
 </body>
 
 </html>
