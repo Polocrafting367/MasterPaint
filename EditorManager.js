@@ -585,11 +585,7 @@ const EditorManager = {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         const p = this.activeProject;
-        if (!p || p.mode === 'pixel') {
-            ctx.putImageData(this._originalColorWheelImageData, 0, 0);
-            return;
-        }
-
+        if (!p) return;
         const img = new ImageData(new Uint8ClampedArray(this._originalColorWheelImageData.data), canvas.width, canvas.height);
         const d_ = img.data;
 
@@ -8236,13 +8232,34 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
     handleColorPick(e) {
         const canvas = document.getElementById('color-wheel');
+        if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        try {
-            const data = canvas.getContext('2d', { willReadFrequently: true }).getImageData(x, y, 1, 1).data;
-            if (data[3] > 0) this.setColorFromRGB(data[0], data[1], data[2]);
-        } catch(e) {}
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+
+        if (this.isColorPickerGridMode()) {
+            // Dans la grille (Grid), on utilise getImageData, mais on clamp les coordonnées
+            x = Math.max(0, Math.min(canvas.width - 1, x));
+            y = Math.max(0, Math.min(canvas.height - 1, y));
+            try {
+                const data = canvas.getContext('2d', { willReadFrequently: true }).getImageData(x, y, 1, 1).data;
+                this.setColorFromRGB(data[0], data[1], data[2]);
+            } catch(err) {}
+        } else {
+            // Dans la roue (Wheel), on calcule mathématiquement pour que le glisser hors du cercle accroche le bord
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const r = canvas.width / 2;
+            const dx = x - cx;
+            const dy = y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy) / r;
+
+            const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+            const sat = Math.min(100, dist * 100); // Saturation capée à 100% au bord
+            
+            const rgb = this.hsvToRgb(hue, sat, 100);
+            this.setColorFromRGB(rgb.r, rgb.g, rgb.b);
+        }
     },
 
     setColorFromRGB(r, g, b, a = null) {

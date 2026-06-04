@@ -1,5 +1,11 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.120 (03/06/26)
+- Amélioration theme type win10/11
+- Correction photo raw, camera photo pro...
+- Visuel photo mode pro et tactil pris en compe pour zoom/sliders
+- En plus de cmjn et ral ajouter bouleblanche dans le cerlce crhomatique
+
 2.8.116,3 (03/06/26)
 - Correction visuel divers
        > Bouton W11/W10, 

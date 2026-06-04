@@ -3522,6 +3522,8 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
         // Évite le bord blanc (effet de halo) créé par le flou sur les bords
         bgDiv.style.transform = 'scale(1.05)';
         bgDiv.style.transformOrigin = 'top center';
+        // Transition douce pour éviter les clignotements intempestifs
+        bgDiv.style.transition = 'filter 0.4s ease-out';
         document.body.appendChild(bgDiv);
     }
 
@@ -3535,6 +3537,7 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
         overlay.style.left = '0';
         overlay.style.width = '100%';
         overlay.style.height = '100%';
+        overlay.style.transition = 'background-color 0.4s ease-out';
         bgDiv.appendChild(overlay);
     }
 
@@ -3551,7 +3554,7 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
         overlay.style.backgroundColor = 'color-mix(in srgb, rgba(var(--mp-accent-rgb), 0.3), white 40%)';
         
         // --- Calcul de l'intensité (Luminosité + Couleurs vives) ---
-        let brightnessFilter = 1; // Valeur par défaut
+        let brightnessFilter = window._lastValidBgBrightness != null ? window._lastValidBgBrightness : 1; 
         try {
             // Création d'un mini-canvas pour lire les pixels rapidement
             if (!window._bgPreviewAnalyzerCanvas) {
@@ -3591,10 +3594,16 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
                 count++;
             }
             
-            if (count > 0) {
+            // On ne met à jour la luminosité que si l'image contient un minimum de pixels opaques (ex: 2%)
+            // Cela évite le clignotement ("paf ça assombrit") quand on crée un nouveau calque (l'image devient brièvement vide/transparente)
+            if (count > (canvas.width * canvas.height * 0.02)) {
                 const avgIntensity = intensitySum / count; // Moyenne de l'intensité entre 0 et 255
                 // Ajustement dynamique : une intensité élevée va vers MIN_BRIGHTNESS (assombrit)
                 brightnessFilter = MAX_BRIGHTNESS - (avgIntensity / 255) * (MAX_BRIGHTNESS - MIN_BRIGHTNESS);
+                window._lastValidBgBrightness = brightnessFilter;
+            } else if (count === 0 && window._lastValidBgBrightness == null) {
+                // Si l'image est totalement vide et qu'on n'a pas d'historique
+                brightnessFilter = 1;
             }
         } catch (e) {
             // Si l'image ne peut pas être lue (ex: blocage CORS), on ignore l'erreur

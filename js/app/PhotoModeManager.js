@@ -251,6 +251,11 @@
                 state.activeHandle = h.dataset.handle;
                 e.preventDefault();
             });
+            h.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                state.activeHandle = h.dataset.handle;
+                e.preventDefault();
+            }, { passive: false });
         });
 
         // Section Toggles & RAZ
@@ -375,6 +380,11 @@
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
 
+        area.addEventListener('touchstart', handleTouchStart, { passive: false });
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleTouchEnd);
+        window.addEventListener('touchcancel', handleTouchEnd);
+
         // Keyboard shortcuts
         window.addEventListener('keydown', handleGlobalKeyDown);
 
@@ -467,6 +477,99 @@
         state.activeHandle = null;
         document.body.style.cursor = '';
     }
+
+    let pinchState = null;
+
+    function touchCentroid(t0, t1) {
+        return { cx: (t0.clientX + t1.clientX) / 2, cy: (t0.clientY + t1.clientY) / 2 };
+    }
+    function touchDistance(t0, t1) {
+        const dx = t0.clientX - t1.clientX;
+        const dy = t0.clientY - t1.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function handleTouchStart(e) {
+        if (!state.activeId) return;
+        if (state.isCropMode && e.target.classList.contains('illu-pm-crop-handle')) return;
+
+        if (e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault();
+            const t0 = e.touches[0];
+            const t1 = e.touches[1];
+            const { cx, cy } = touchCentroid(t0, t1);
+            pinchState = {
+                d0: Math.max(1e-3, touchDistance(t0, t1)),
+                z0: state.zoom,
+                panX0: state.panX,
+                panY0: state.panY,
+                cx0: cx,
+                cy0: cy
+            };
+            state.isDragging = false;
+        } else if (e.touches.length === 1) {
+            // Uniquement si on ne touche pas un bouton de l'UI
+            if (e.target.closest('button, input, select, .illu-pm-sec')) return;
+            if (e.cancelable) e.preventDefault();
+            state.isDragging = true;
+            state.startDragX = e.touches[0].clientX;
+            state.startDragY = e.touches[0].clientY;
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (state.isCropMode && state.activeHandle) {
+            if (e.cancelable) e.preventDefault();
+            handleMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+            return;
+        }
+        if (!state.activeId) return;
+
+        if (e.touches.length === 2 && pinchState) {
+            if (e.cancelable) e.preventDefault();
+            const t0 = e.touches[0];
+            const t1 = e.touches[1];
+            const d1 = touchDistance(t0, t1);
+            const { cx, cy } = touchCentroid(t0, t1);
+
+            const scale = d1 / pinchState.d0;
+            const newZoom = Math.max(0.1, Math.min(10, pinchState.z0 * scale));
+            
+            const area = document.getElementById('pm-canvas-area');
+            if (area) {
+                const rect = area.getBoundingClientRect();
+                const originX = pinchState.cx0 - rect.left - rect.width / 2;
+                const originY = pinchState.cy0 - rect.top - rect.height / 2;
+                
+                state.panX = pinchState.panX0 + (cx - pinchState.cx0) - originX * (newZoom / pinchState.z0 - 1);
+                state.panY = pinchState.panY0 + (cy - pinchState.cy0) - originY * (newZoom / pinchState.z0 - 1);
+                state.zoom = newZoom;
+                
+                renderActivePhoto('highres');
+                updateZoomBadge();
+            }
+        } else if (e.touches.length === 1 && state.isDragging) {
+            if (e.cancelable) e.preventDefault();
+            const dx = e.touches[0].clientX - state.startDragX;
+            const dy = e.touches[0].clientY - state.startDragY;
+            state.panX += dx;
+            state.panY += dy;
+            state.startDragX = e.touches[0].clientX;
+            state.startDragY = e.touches[0].clientY;
+            renderActivePhoto('highres');
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (e.touches.length < 2) {
+            pinchState = null;
+        }
+        if (e.touches.length === 0) {
+            state.isDragging = false;
+            state.activeHandle = null;
+        }
+    }
+
 
 
     function handleGlobalKeyDown(e) {

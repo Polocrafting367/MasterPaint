@@ -2939,45 +2939,7 @@ html:has(body.theme-dark) .settings-action-btn--danger:hover {
     opacity: 1 !important;
 }
 
-/* Classic Win98 Mode close button styling override */
-.iview-window .title-bar-controls .title-bar-close-btn {
-    width: 18px !important;
-    height: 18px !important;
-    background: linear-gradient(180deg, #c8d4e8 0%, #7a8fb0 45%, #5a6d8a 100%) !important;
-    border: 1px solid !important;
-    border-color: #ffffff #404040 #404040 #ffffff !important;
-    box-shadow: none !important;
-}
 
-.iview-window .title-bar-controls .title-bar-close-btn::before {
-    content: "" !important;
-    position: absolute !important;
-    left: 50% !important;
-    top: 50% !important;
-    width: 10px !important;
-    height: 2px !important;
-    background: #000000 !important;
-    transform: translate(-50%, -50%) rotate(45deg) !important;
-}
-
-.iview-window .title-bar-controls .title-bar-close-btn::after {
-    content: "" !important;
-    position: absolute !important;
-    left: 50% !important;
-    top: 50% !important;
-    width: 10px !important;
-    height: 2px !important;
-    background: #000000 !important;
-    transform: translate(-50%, -50%) rotate(-45deg) !important;
-}
-
-body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::before {
-    background: #ffffff !important;
-}
-
-body.theme-dark .iview-window .title-bar-controls .title-bar-close-btn::after {
-    background: #ffffff !important;
-}
 
 /* 5. Icônes dégradé (mode « Dégradé » — illu-colored-icons ; voir icons-flat-colored.css pour « Colorés ») */
 body.illu-colored-icons .fa-solid::before {

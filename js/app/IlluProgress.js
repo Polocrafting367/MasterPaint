@@ -385,15 +385,8 @@
                 if (options.onCancel) {
                     const cancelBtn = document.createElement('button');
                     cancelBtn.type = 'button';
-                    cancelBtn.innerHTML = '✕';
-                    cancelBtn.style.padding = '2px 6px';
-                    cancelBtn.style.fontSize = '10px';
-                    cancelBtn.style.background = '#444';
-                    cancelBtn.style.color = '#fff';
-                    cancelBtn.style.border = '1px solid #555';
-                    cancelBtn.style.borderRadius = '3px';
-                    cancelBtn.style.cursor = 'pointer';
-                    cancelBtn.title = 'Annuler';
+                    cancelBtn.textContent = window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t('dlg.cancel') : 'Annuler';
+                    cancelBtn.setAttribute('data-i18n', 'dlg.cancel');
                     cancelBtn.onclick = () => {
                         if (options.onCancel) options.onCancel();
                         this.finishTask(taskId);

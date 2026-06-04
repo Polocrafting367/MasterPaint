@@ -16,7 +16,7 @@
         return RAW_EXT.has(name.slice(i + 1).toLowerCase());
     };
 
-    const PREVIEW_MAX = 960;
+    const PREVIEW_MAX = 320;
 
     let METADATA = { DEFAULT_PARAMS: {}, RANGES: {}, PRESETS: {} };
     let CR_RANGE = METADATA.RANGES;
@@ -209,7 +209,6 @@
         }
         return out;
     }
-
     window.illuApplyCameraRawParams = function (imageData, params) {
         const w = imageData.width;
         const h = imageData.height;
@@ -217,7 +216,7 @@
 
         let skipWebGL = false;
         const curveChanged = (c) => c && (c.length > 2 || (c.length === 2 && (c[0].x !== 0 || c[0].y !== 0 || c[1].x !== 255 || c[1].y !== 255)));
-        if (p.clarity !== 0 || p.dehaze !== 0 || p.vignette !== 0) skipWebGL = true;
+        if (p.clarity !== 0 || p.dehaze !== 0 || p.vignette !== 0 || p.grain !== 0 || p.sharpen !== 0) skipWebGL = true;
         if (curveChanged(p.curveMaster)) skipWebGL = true;
         if (curveChanged(p.curveR)) skipWebGL = true;
         if (curveChanged(p.curveG)) skipWebGL = true;
@@ -233,7 +232,6 @@
             try {
                 if (w <= window.WebGLFilterEngine.maxTextureSize && h <= window.WebGLFilterEngine.maxTextureSize) {
                     if (params.isLivePreview) {
-                        // Return the GPU canvas directly to avoid readPixels overhead (SUPER FAST)
                         return window.WebGLFilterEngine.renderToInternalCanvas(imageData, 'camera_raw', p);
                     }
                     const gpuRes = window.WebGLFilterEngine.applyFilter(imageData, 'camera_raw', p);
@@ -243,14 +241,16 @@
                 console.error('[CameraRaw] WebGL failed, falling back to CPU:', err);
             }
         }
-
         // CPU fallback — handles both Uint8ClampedArray and Float32Array
         let srcBuf = (p.isRawMode && imageData.rawFloatData) ? imageData.rawFloatData : imageData.data;
         const core = typeof window.IlluImageAdjustCore !== 'undefined' ? window.IlluImageAdjustCore : null;
-        const d =
+        let d =
             core && typeof core.applyCameraRawBuffer === 'function'
                 ? core.applyCameraRawBuffer(srcBuf, w, h, p)
                 : applyToneColor(srcBuf, w, h, p);
+        if (core && typeof core.applyPostCameraRaw === 'function') {
+            d = core.applyPostCameraRaw(d, w, h, p);
+        }
         return new ImageData(d, w, h);
     };
 
@@ -357,12 +357,15 @@
             width: imageData.width,
             height: imageData.height,
             params: params || {},
-            buffer: new Uint8ClampedArray(imageData.data).buffer
+            buffer: new Uint8ClampedArray(imageData.data).buffer,
+            floatBuffer: (params && params.isRawMode && imageData.rawFloatData) ? new Float32Array(imageData.rawFloatData).buffer : null
         };
         return new Promise((resolve, reject) => {
             workerPending.set(jobId, { resolve, reject });
             try {
-                wk.postMessage(payload, [payload.buffer]);
+                const transferables = [payload.buffer];
+                if (payload.floatBuffer) transferables.push(payload.floatBuffer);
+                wk.postMessage(payload, transferables);
             } catch (err) {
                 workerPending.delete(jobId);
                 reject(err);

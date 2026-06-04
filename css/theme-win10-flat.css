@@ -2719,8 +2719,8 @@ body.theme-dark #settings-overlay kbd {
 }
 
 #color-wheel-container {
-    background: var(--mp-surface-deep) !important;
-    border: 1px solid var(--mp-inset-top) !important;
+    background: transparent !important;
+    border: none !important;
     border-radius: 0;
 }
 
@@ -3032,7 +3032,7 @@ body.theme-dark .list-item.active {
 }
 
 body.theme-dark #color-wheel-container {
-    background: var(--mp-surface-deep) !important;
+    background: transparent !important;
 }
 
 body.theme-dark #palette-grid {
@@ -5350,18 +5350,58 @@ body.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) .settings-g
     background: #555555 !important;
 }
 
-/* Ensure title-bar close button is always red and smaller padding */
+/* Ensure title-bar close button has transparent background by default */
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"] {
-    background-color: #C75050 !important;
+    background-color: transparent !important;
     padding: 0px 0px !important;
-    margin: 5px 1px;
+    margin: 0px 0px;
+    width: 50px;
+    height: 32px;
+border-top-right-radius: calc(var(--mp-radius) * 2);
 }
 
-body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::before,
-body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
-body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::before,
-body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+/* Force red background at rest ONLY for specified windows */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"],
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button[aria-label="Close"],
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button[aria-label="Close"],
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button[aria-label="Close"],
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button[aria-label="Close"] {
+    background-color: #C75050 !important;
+    margin: 5px 1px;
+     width: 20px;
+    height: 20px;
+        border-top-right-radius: 0px;
+
+
+}
+
+/* For those specific windows, cross is ALWAYS white at rest */
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"]::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button[aria-label="Close"]::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button[aria-label="Close"]::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button[aria-label="Close"]::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button[aria-label="Close"]::after {
     background: #ffffff !important;
 }
 
@@ -5582,7 +5622,7 @@ body.win11-effects .window {
 body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.win11-effects .floating-window, body.win11-effects .illu-instant-effect-busy__box  {
     border-top-right-radius: var(--radius);
     border-top-left-radius: var(--radius);
-    background: color-mix(in srgb, var(--mp-surface) 60%, transparent) !important;
+    background: color-mix(in srgb, var(--mp-surface) 80%, transparent) !important;
 }
 
 body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window {

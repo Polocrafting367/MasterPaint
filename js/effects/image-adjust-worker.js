@@ -3,7 +3,9 @@ self.importScripts('../WasmManager.js');
 
 // Removed auto-init: settings must be passed via message
 
-self.onmessage = function (ev) {
+let wasmInitPromise = null;
+
+self.onmessage = async function (ev) {
     const msg = ev.data || {};
     const jobId = msg.jobId | 0;
     try {
@@ -11,23 +13,40 @@ self.onmessage = function (ev) {
              if (typeof MasterPaintWasm !== 'undefined') {
                  MasterPaintWasm.setSettings(msg.settings || {});
                  if (msg.settings && msg.settings.wasmEnabled) {
-                     MasterPaintWasm.init();
+                     wasmInitPromise = MasterPaintWasm.init().catch(err => console.error("WASM Init error:", err));
                  }
              }
              return;
         }
         if (msg.type === 'cameraRaw') {
+            if (wasmInitPromise) {
+                await wasmInitPromise;
+            }
             const width = msg.width | 0;
             const height = msg.height | 0;
-            const src = new Uint8ClampedArray(msg.buffer);
+            let src;
+            if (msg.floatBuffer) {
+                src = new Float32Array(msg.floatBuffer);
+            } else {
+                src = new Uint8ClampedArray(msg.buffer);
+            }
             let out;
             
             if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-                const res = MasterPaintWasm.applyCameraRaw(new ImageData(src, width, height), msg.params || {});
-                out = res ? res.data : self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
+                const imgData = msg.floatBuffer ? src : new ImageData(src, width, height);
+                const res = MasterPaintWasm.applyCameraRaw(imgData, msg.params || {}, width, height);
+                let wasmOut = res ? (res.data ? res.data : res) : null;
+                if (wasmOut) {
+                    out = self.IlluImageAdjustCore.applyPostCameraRaw(wasmOut, width, height, msg.params || {});
+                } else {
+                    let d = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
+                    out = self.IlluImageAdjustCore.applyPostCameraRaw(d, width, height, msg.params || {});
+                }
             } else {
-                out = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
+                let d = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
+                out = self.IlluImageAdjustCore.applyPostCameraRaw(d, width, height, msg.params || {});
             }
+
 
             self.postMessage(
                 {

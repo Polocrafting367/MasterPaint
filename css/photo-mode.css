@@ -789,7 +789,7 @@ display: none;
     /* Sidebar : 60% de la hauteur d'écran */
     .illu-pm-sidebar {
         width: 100% !important;
-        height: 60dvh;
+        height: 45dvh;
         min-height: 220px;
         max-height: 60dvh;
         flex: none;
