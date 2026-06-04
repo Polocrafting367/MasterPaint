@@ -652,14 +652,28 @@
         const work = async () => {
             try {
                 em.syncActiveVectorSvg();
-                const payload = em.serializeWorkspacePayload();
+                let projectsToSerialize = null;
+                if (opts.currentProjectOnly && em.activeProject) {
+                    projectsToSerialize = [em.activeProject];
+                    if (em.isPixelMode && Array.isArray(em.activeProject.layers)) {
+                        em.activeProject.layers.forEach(l => {
+                            if (l && l.alphaMaskProjectId) {
+                                const maskProj = em.projects.find(p => p.id === l.alphaMaskProjectId);
+                                if (maskProj && maskProj.role === 'layerAlphaMask' && !projectsToSerialize.includes(maskProj)) {
+                                    projectsToSerialize.push(maskProj);
+                                }
+                            }
+                        });
+                    }
+                }
+                const payload = em.serializeWorkspacePayload(projectsToSerialize);
                 let s;
                 if (window.indexedDB) {
                     try {
                         s = await persistWithIdb(payload);
                     } catch (idbErr) {
                         console.warn('IndexedDB (sauvegarde auto) :', idbErr);
-                        const fresh = em.serializeWorkspacePayload();
+                        const fresh = em.serializeWorkspacePayload(projectsToSerialize);
                         s = persistLegacyInline(fresh);
                         if (s == null) return;
                     }
@@ -730,7 +744,7 @@
         if (opts.force) {
             if (!opts.manual && !shouldPersistOnExit()) return;
             const reason = opts.manual ? 'manual' : 'exit';
-            queuePersistForced({ ignoreBusy: true, persistReason: opts.persistReason || reason });
+            queuePersistForced({ ignoreBusy: true, persistReason: opts.persistReason || reason, currentProjectOnly: opts.currentProjectOnly });
             return;
         }
         queuePersistToLocalStorage();
@@ -863,9 +877,10 @@
             await window.EditorManager.replaceWorkspaceFromPayload(data, opts.append !== false, {
                 loadProgress: (pct, detail) => progress(Math.min(98, 22 + pct * 0.76), detail)
             });
-            if (getAutoSaveMode() !== 'off') {
-                queuePersistForced();
-            }
+            // Prevent saving directly to local storage right after loading
+            // if (getAutoSaveMode() !== 'off') {
+            //     queuePersistForced();
+            // }
         } finally {
             if (busy) {
                 busy.progress(100);
@@ -1441,8 +1456,8 @@ if (fmt === 'png' || fmt === 'gif') {
                     P.instantEffectProgress(10);
                 }
                 try {
-                    // Manual trigger of all local backup systems
-                    persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                    // Manual trigger of all local backup systems, restricted to the current project
+                    persistToLocalStorage({ force: true, manual: true, persistReason: 'manual', currentProjectOnly: true });
 
                     // Simple confirm
                     window.setTimeout(() => {

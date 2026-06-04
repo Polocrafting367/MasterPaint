@@ -3139,7 +3139,9 @@ window.clearIlluLocalStorage = async function () {
         const keys = [];
         for (let i = 0; i < store.length; i++) {
             const k = store.key(i);
-            if (k && k.startsWith('illu_')) keys.push(k);
+            if (k && (k.startsWith('illu_') || k.startsWith('settings-') || k === 'app_device_id')) {
+                keys.push(k);
+            }
         }
         keys.forEach((k) => {
             try {
