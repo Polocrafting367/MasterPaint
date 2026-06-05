@@ -1163,7 +1163,10 @@ window.FilterManager = {
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-vig" min="0" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vig-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vig-val" style="width:25px; text-align:right;">50</span></div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
                         <label style="width:70px;" data-i18n="effect.param.color">Couleur</label>
-                        <input type="color" id="ef-vig-color" value="#000000" oninput="FilterManager.preview()">
+                        <button type="button" id="ef-vig-open-colors" onclick="window.toggleFloatingPaletteVisibility('win-colors')" style="flex-grow:1; font-size:11px; padding:3px 6px;">
+                            <i class="fa-solid fa-palette"></i> Palette de Couleurs (Primaire)
+                        </button>
+                        <div id="ef-vig-swatch" style="width:24px;height:18px;border:1px solid #888;margin-left:8px;flex-shrink:0;background:#000000;"></div>
                     </div>
                     <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
                         <label style="width:70px;" data-i18n="effect.param.blend">Fusion</label>
@@ -2390,13 +2393,15 @@ window.FilterManager = {
         }
         
         // Inject global colors for effects that use the palette instead of inputs
-        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette') {
             const rgbToHex = (c) => "#" + (1 << 24 | c.r << 16 | c.g << 8 | c.b).toString(16).slice(1);
             if (this.currentEffect === 'contour') {
                 vals['ef-contour-color'] = rgbToHex(window.EditorManager.primaryColor);
             } else if (this.currentEffect === 'duotone') {
                 vals['ef-duo-c1'] = rgbToHex(window.EditorManager.primaryColor);
                 vals['ef-duo-c2'] = rgbToHex(window.EditorManager.secondaryColor);
+            } else if (this.currentEffect === 'vignette') {
+                vals['ef-vig-color'] = rgbToHex(window.EditorManager.primaryColor);
             }
         }
 

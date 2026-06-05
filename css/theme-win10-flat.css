@@ -5655,22 +5655,41 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
 }
 
 
-body.win11-effects .window {
-    --radius: 8px; /* Ta variable unique est ici */
-    border-radius: calc(var(--radius) + 1px);
+/* 1. On configure la fenêtre globale avec son arrondi ET sa couleur semi-transparente */
+/* 1. On applique la couleur semi-transparente UNIQUEMENT sur les conteneurs principaux */
+body.win11-effects .window,
+body.win11-effects .welcome-dialog-window,
+body.win11-effects .floating-window,
+body.win11-effects .illu-instant-effect-busy__box {
+    --radius: 8px;
+    border-radius: calc(var(--radius) + 1px) !important;
+    
+    /* La couleur est appliquée ici, une seule fois pour toute la structure */
+    background: color-mix(in srgb, color-mix(in srgb, var(--mp-accent) 4%, var(--mp-surface)) 90%, transparent) !important;
+}
+
+/* 2. On force la barre de titre à être transparente pour éviter l'effet "double couche" */
+body.win11-effects .title-bar {
     background: transparent !important;
+    /* On s'assure qu'elle n'a pas de bordure ou d'ombre qui recréerait un décalage */
+    border: none !important; 
+    box-shadow: none !important;
 }
 
-body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.win11-effects .floating-window, body.win11-effects .illu-instant-effect-busy__box  {
-    border-top-right-radius: var(--radius);
-    border-top-left-radius: var(--radius);
-    background: color-mix(in srgb, var(--mp-surface) 80%, transparent) !important;
+/* 2. On applique le flou (uniquement sur la title-bar et le welcome-dialog) */
+body.win11-effects .title-bar, 
+body.win11-effects .welcome-dialog-window {
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
 }
 
-body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window {
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    background-color: color-mix(in srgb, var(--mp-accent) 10%, var(--mp-surface)) !important;
+/* 3. Les arrondis pour tout le monde */
+body.win11-effects .title-bar, 
+body.win11-effects .welcome-dialog-window, 
+body.win11-effects .floating-window, 
+body.win11-effects .illu-instant-effect-busy__box {
+    border-top-right-radius: calc(var(--radius) + 1px) !important;
+    border-top-left-radius: calc(var(--radius) + 1px) !important;
 }
 
 body.win11-effects .title-bar .title-bar-icon {

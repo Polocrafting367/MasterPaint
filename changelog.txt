@@ -1,6 +1,6 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.132,2 (05/06/26)
+2.8.133,2 (05/06/26)
 - Optimisation du mode SVG (reste très aléatoime mais je travaille dessus)
 - Correction des forme type bulles
 - Ajout d'une obtion pour avoir les 4 point de tortion sur une ligne
@@ -12,6 +12,7 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - mise en place de décoration du trais de contour sur toutes les formes
        >pointillé trias pointillé...
 - Continuer ressemblance a w10/11 via css
+- Modification de la fenetre vignetage pour utiliser la fenetre couleur du logitiel
 
 2.8.123 (04/06/26)
 - Amélioration theme type win10/11
