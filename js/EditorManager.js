@@ -49,6 +49,7 @@ const EditorManager = {
     toolProps: {
         size: 2,
         antialias: true,
+        lineMode: 'straight',
         fillType: 'solid',
         wandTolerance: 32,
         /** Baguette : `contiguous` = zone connexe (cadre) ; `similar` = couleur + tolérance (masque / contour). */
@@ -1154,16 +1155,30 @@ const EditorManager = {
         const capStart = document.getElementById('tool-line-cap-start');
         const capEnd = document.getElementById('tool-line-cap-end');
         const refreshLineEndpointCaps = () => {
-            const el = window._activeVectorShapeEl;
-            if (el && typeof window.vectorApplyLineEndpointMarkers === 'function') {
-                const isLine =
-                    typeof window.illuVectorPathHasLineEndpoints === 'function' &&
-                    window.illuVectorPathHasLineEndpoints(el);
-                if (isLine) {
-                    window.vectorApplyLineEndpointMarkers(el);
-                    this.render();
+            const processed = new Set();
+            const refreshEl = (el) => {
+                if (!el || processed.has(el)) return;
+                processed.add(el);
+                if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
+                    const isLine =
+                        typeof window.illuVectorPathHasLineEndpoints === 'function' &&
+                        window.illuVectorPathHasLineEndpoints(el);
+                    if (isLine) {
+                        window.vectorApplyLineEndpointMarkers(el);
+                    }
                 }
+            };
+
+            if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                EditorManager.activeVectorSelection.forEach(refreshEl);
             }
+            if (window._activeVectorShapeEl) {
+                refreshEl(window._activeVectorShapeEl);
+            }
+            if (typeof activeVectorShape !== 'undefined' && activeVectorShape) {
+                refreshEl(activeVectorShape);
+            }
+
             if (
                 window.pixelShapeEdit &&
                 (window.pixelShapeEdit.kind === 'line' || window.pixelShapeEdit.kind === 'quadcurve') &&
@@ -6346,6 +6361,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (ed.x1 != null) parts.push('l' + ed.x1 + ',' + ed.y1 + ',' + ed.x2 + ',' + ed.y2);
             if (ed.r != null) parts.push('cr' + ed.r);
             if (ed.adj != null) parts.push('adj' + ed.adj);
+            if (ed.tailT != null) parts.push('tlt' + ed.tailT);
+            if (ed.tipOffsetX != null) parts.push('tox' + ed.tipOffsetX + 'toy' + ed.tipOffsetY);
         }
         if (window.vectorQuadBezierClickState) {
             const st = window.vectorQuadBezierClickState;
@@ -14070,19 +14087,34 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 }
             } else if (prop === 'corner-radius') {
                 const tag = (el.tagName || '').toLowerCase();
-                if (tag !== 'rect') return;
-                const w = parseFloat(el.getAttribute('width')) || 0;
-                const h = parseFloat(el.getAttribute('height')) || 0;
                 const want = Math.max(0, parseFloat(value) || 0);
-                const rr = Math.max(0, Math.min(w / 2, h / 2, want));
-                if (rr > 0.5) {
-                    el.setAttribute('rx', String(rr));
-                    el.setAttribute('ry', String(rr));
-                    el.setAttribute('data-illu-round', '1');
-                } else {
-                    el.removeAttribute('rx');
-                    el.removeAttribute('ry');
-                    el.removeAttribute('data-illu-round');
+                if (tag === 'rect') {
+                    const w = parseFloat(el.getAttribute('width')) || 0;
+                    const h = parseFloat(el.getAttribute('height')) || 0;
+                    const rr = Math.max(0, Math.min(w / 2, h / 2, want));
+                    if (rr > 0.5) {
+                        el.setAttribute('rx', String(rr));
+                        el.setAttribute('ry', String(rr));
+                        el.setAttribute('data-illu-round', '1');
+                    } else {
+                        el.removeAttribute('rx');
+                        el.removeAttribute('ry');
+                        el.removeAttribute('data-illu-round');
+                    }
+                } else if (tag === 'path' && el.getAttribute('data-illu-callout-style') != null) {
+                    el.setAttribute('data-illu-callout-round', String(want));
+                    if (typeof window.illuCalloutPathOptsFromShape === 'function') {
+                        const style = el.getAttribute('data-illu-callout-style') || 'rect';
+                        const cOpts = window.illuCalloutPathOptsFromShape(el);
+                        if (typeof window.illuCalloutPathD === 'function') {
+                            const bb = typeof window.illuGetElementBBox === 'function' 
+                                ? window.illuGetElementBBox(el) 
+                                : { x: 0, y: 0, width: 100, height: 100 };
+                            if (bb && bb.width > 0) {
+                                el.setAttribute('d', window.illuCalloutPathD(style, bb.x, bb.y, bb.width, bb.height, cOpts));
+                            }
+                        }
+                    }
                 }
             } else if (prop === 'font-family') {
                 const tag = (el.tagName || '').toLowerCase();

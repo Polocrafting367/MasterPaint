@@ -78,7 +78,7 @@
             return { kind: ed.kind, cx: ed.cx, cy: ed.cy };
         }
         if (ed.kind === 'line') {
-            return { kind: ed.kind, x1: ed.x1, y1: ed.y1, x2: ed.x2, y2: ed.y2 };
+            return { kind: ed.kind, x1: ed.x1, y1: ed.y1, x2: ed.x2, y2: ed.y2, cx1: ed.cx1, cy1: ed.cy1, cx2: ed.cx2, cy2: ed.cy2, isCubic: ed.isCubic };
         }
         if (ed.kind === 'quadcurve') {
             return {
@@ -116,6 +116,12 @@
             ed.y1 = snap.y1 + dy;
             ed.x2 = snap.x2 + dx;
             ed.y2 = snap.y2 + dy;
+            if (ed.isCubic && snap.cx1 != null) {
+                ed.cx1 = snap.cx1 + dx;
+                ed.cy1 = snap.cy1 + dy;
+                ed.cx2 = snap.cx2 + dx;
+                ed.cy2 = snap.cy2 + dy;
+            }
         } else if (ed.kind === 'quadcurve') {
             ed.x0 = snap.x0 + dx;
             ed.y0 = snap.y0 + dy;
@@ -181,6 +187,17 @@
             ed.docY1 = ed.y1 + oy;
             ed.docX2 = ed.x2 + ox;
             ed.docY2 = ed.y2 + oy;
+            if (ed.cx1 != null) {
+                ed.docCx1 = ed.cx1 + ox;
+                ed.docCy1 = ed.cy1 + oy;
+                ed.docCx2 = ed.cx2 + ox;
+                ed.docCy2 = ed.cy2 + oy;
+            } else {
+                delete ed.docCx1;
+                delete ed.docCy1;
+                delete ed.docCx2;
+                delete ed.docCy2;
+            }
         } else if (ed.kind === 'quadcurve' && ed.x0 != null) {
             ed.docX0 = ed.x0 + ox;
             ed.docY0 = ed.y0 + oy;
@@ -212,6 +229,12 @@
             ed.y1 = ed.docY1 - oy;
             ed.x2 = ed.docX2 - ox;
             ed.y2 = ed.docY2 - oy;
+            if (ed.docCx1 != null) {
+                ed.cx1 = ed.docCx1 - ox;
+                ed.cy1 = ed.docCy1 - oy;
+                ed.cx2 = ed.docCx2 - ox;
+                ed.cy2 = ed.docCy2 - oy;
+            }
         } else if (ed.docX0 != null) {
             ed.x0 = ed.docX0 - ox;
             ed.y0 = ed.docY0 - oy;
@@ -456,6 +479,24 @@
             const y1 = ed.docY1 != null ? ed.docY1 : ed.y1 + ly;
             const x2 = ed.docX2 != null ? ed.docX2 : ed.x2 + lx;
             const y2 = ed.docY2 != null ? ed.docY2 : ed.y2 + ly;
+            if (ed.isCubic && ed.cx1 != null) {
+                const cx1 = ed.docCx1 != null ? ed.docCx1 : ed.cx1 + lx;
+                const cy1 = ed.docCy1 != null ? ed.docCy1 : ed.cy1 + ly;
+                const cx2 = ed.docCx2 != null ? ed.docCx2 : ed.cx2 + lx;
+                const cy2 = ed.docCy2 != null ? ed.docCy2 : ed.cy2 + ly;
+                const fn = window.illuInterpolateCubicControlPoints || (typeof illuInterpolateCubicControlPoints === 'function' ? illuInterpolateCubicControlPoints : null);
+                if (fn) {
+                    const cp = fn(x1, y1, cx1, cy1, cx2, cy2, x2, y2);
+                    return {
+                        d: `M ${x1} ${y1} C ${cp.b1x} ${cp.b1y} ${cp.b2x} ${cp.b2y} ${x2} ${y2}`,
+                        closed: false
+                    };
+                }
+                return {
+                    d: `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`,
+                    closed: false
+                };
+            }
             return {
                 d: `M ${x1} ${y1} L ${x2} ${y2}`,
                 closed: false
@@ -835,6 +876,18 @@
                     y: ed.docY2 != null ? ed.docY2 : ed.y2 + ly
                 }
             ];
+            if (ed.isCubic && ed.cx1 != null) {
+                pts.push(
+                    {
+                        x: ed.docCx1 != null ? ed.docCx1 : ed.cx1 + lx,
+                        y: ed.docCy1 != null ? ed.docCy1 : ed.cy1 + ly
+                    },
+                    {
+                        x: ed.docCx2 != null ? ed.docCx2 : ed.cx2 + lx,
+                        y: ed.docCy2 != null ? ed.docCy2 : ed.cy2 + ly
+                    }
+                );
+            }
         } else if (ed.kind === 'quadcurve') {
             const lx = EditorManager.activeLayer.x;
             const ly = EditorManager.activeLayer.y;
@@ -911,7 +964,12 @@
         if (doStroke) {
             ctx.lineWidth = strokeW;
             ctx.strokeStyle = shapeStrokeCss();
+            const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+            if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, strokeW * 2), Math.max(4, strokeW * 1.5)]);
+            else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, strokeW * 0.5), Math.max(4, strokeW * 1.5)]);
+            else ctx.setLineDash([]);
             drawStrokeFn();
+            ctx.setLineDash([]);
         }
     }
 
@@ -974,11 +1032,15 @@
                 const r = Math.max(rx, ry, 4);
                 grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
             }
+            const c0 = typeof window.shapePrimaryFillCss === 'function' ? window.shapePrimaryFillCss() : fillCss;
+            const c1 = typeof window.makeShapeSecondaryColor === 'function'
+                ? window.makeShapeSecondaryColor()
+                : (typeof window.shapeSecondaryStrokeCss === 'function' ? window.shapeSecondaryStrokeCss() : strokeCss);
             if (typeof window.illuApplyGradientColorStops === 'function') {
-                window.illuApplyGradientColorStops(grad, fillCss, strokeCss, gradMethod);
+                window.illuApplyGradientColorStops(grad, c0, c1, gradMethod);
             } else {
-                grad.addColorStop(0, fillCss);
-                grad.addColorStop(1, strokeCss);
+                grad.addColorStop(0, c0);
+                grad.addColorStop(1, c1);
             }
             return grad;
         };
@@ -1064,10 +1126,7 @@
                 fillType
             );
         } else if (ed.kind === 'callout') {
-            const x = ed.docX != null ? ed.docX : ed.lx + lx;
-            const y = ed.docY != null ? ed.docY : ed.ly + ly;
-            const w = ed.docW != null ? ed.docW : ed.w;
-            const h = ed.docH != null ? ed.docH : ed.h;
+            const { lx, ly, w, h } = ed;
             const style = ed.style || 'rect';
             const cOpts =
                 typeof window.illuCalloutPathOptsFromEdit === 'function'
@@ -1075,7 +1134,7 @@
                     : {};
             const d =
                 typeof window.illuCalloutPathD === 'function'
-                    ? window.illuCalloutPathD(style, x, y, w, h, cOpts)
+                    ? window.illuCalloutPathD(style, lx, ly, w, h, cOpts)
                     : '';
             const fillGrad = fillType === 'gradient'
                 ? mkGradientFill(lx, ly, lx + w, ly + h, lx + w / 2, ly + h / 2, w / 2, h / 2)
@@ -1222,8 +1281,14 @@
                 strokeMode: mode,
                 fillType
             };
-            if (typeof window.illuDrawPixelLineSegment === 'function') {
-                window.illuDrawPixelLineSegment(ctx, ed.x1, ed.y1, ed.x2, ed.y2, lineOpts);
+            if (ed.isCubic && ed.cx1 != null) {
+                if (typeof window.illuDrawPixelCubicCurveWithBorder === 'function') {
+                    window.illuDrawPixelCubicCurveWithBorder(ctx, ed.x1, ed.y1, ed.cx1, ed.cy1, ed.cx2, ed.cy2, ed.x2, ed.y2, lineOpts);
+                }
+            } else {
+                if (typeof window.illuDrawPixelLineSegment === 'function') {
+                    window.illuDrawPixelLineSegment(ctx, ed.x1, ed.y1, ed.x2, ed.y2, lineOpts);
+                }
             }
         } else if (ed.kind === 'quadcurve') {
             const { x0, y0, qx, qy, x1, y1 } = ed;
@@ -1277,7 +1342,13 @@
 
     window.redrawShapeFromEditLive = function () {
         window.redrawShapeFromEdit();
-        window.schedulePixelShapeEditChromeRefresh();
+        if (typeof window.refreshPixelShapeEditOverlay === 'function') {
+            window.refreshPixelShapeEditOverlay();
+        }
+        if (typeof EditorManager !== 'undefined' && typeof EditorManager.drawUI === 'function') {
+            EditorManager.drawUI(true);
+        }
+        scheduleShapeEditPreviewRefresh();
     };
 
     window.updateShapeEditFromHandle = function (handleIndex, worldX, worldY) {
@@ -1352,7 +1423,9 @@
             }
         } else if (ed.kind === 'line') {
             if (handleIndex === 0) { ed.x1 = wx; ed.y1 = wy; }
-            else { ed.x2 = wx; ed.y2 = wy; }
+            else if (handleIndex === 1) { ed.x2 = wx; ed.y2 = wy; }
+            else if (handleIndex === 2) { ed.cx1 = wx; ed.cy1 = wy; }
+            else if (handleIndex === 3) { ed.cx2 = wx; ed.cy2 = wy; }
         } else if (ed.kind === 'quadcurve') {
             if (handleIndex === 0) {
                 ed.x0 = wx;
@@ -1518,6 +1591,17 @@
                     shapeAdjustHandleToWorld(ed, window.illuCalloutTailHandleLocal(m), 'adj-callout-tail')
                 );
             }
+            if (m && typeof window.illuCalloutTipHandleLocal === 'function') {
+                out.push(
+                    shapeAdjustHandleToWorld(ed, window.illuCalloutTipHandleLocal(m), 'adj-callout-tip')
+                );
+            }
+            if (ed.style === 'round' && typeof window.illuCalloutRoundHandleLocal === 'function') {
+                const r = ed.r != null ? ed.r : EditorManager.toolProps.shapeCornerRadius ?? 12;
+                out.push(
+                    shapeAdjustHandleToWorld(ed, window.illuCalloutRoundHandleLocal(ed.lx, ed.ly, ed.w, ed.h, r), 'adj-callout-round')
+                );
+            }
         }
         return out;
     };
@@ -1580,6 +1664,25 @@
             if (typeof window.illuCalloutSetTailFromWorld === 'function') {
                 window.illuCalloutSetTailFromWorld(ed, wx, wy);
             }
+        } else if (adjustType === 'adj-callout-tip' && ed.kind === 'callout') {
+            if (typeof window.illuCalloutSetTipFromWorld === 'function') {
+                window.illuCalloutSetTipFromWorld(ed, wx, wy);
+            }
+        } else if (adjustType === 'adj-callout-round' && ed.kind === 'callout' && ed.style === 'round') {
+            const r =
+                typeof window.illuRoundRectRadiusFromLocalDrag === 'function'
+                    ? window.illuRoundRectRadiusFromLocalDrag(ed.lx, ed.ly, ed.w, ed.h, wx, wy)
+                    : Math.max(0, Math.min(wx - ed.lx, wy - ed.ly, ed.w / 2, ed.h / 2));
+            ed.r = r;
+            EditorManager.toolProps.shapeCornerRadius = r;
+            const sc = document.getElementById('tool-shape-corner-radius');
+            const scv = document.getElementById('tool-shape-corner-radius-val');
+            const crCap =
+                typeof window.illuClampShapeCornerRadius === 'function'
+                    ? window.illuClampShapeCornerRadius(r)
+                    : Math.max(0, Math.min(256, r));
+            if (sc) sc.value = String(crCap);
+            if (scv) scv.textContent = String(crCap);
         }
         window.redrawShapeFromEditLive();
     };
@@ -1620,6 +1723,10 @@
             ed.y1 += dy;
             ed.x2 += dx;
             ed.y2 += dy;
+            if (ed.isCubic && ed.cx1 != null) {
+                ed.cx1 += dx; ed.cy1 += dy;
+                ed.cx2 += dx; ed.cy2 += dy;
+            }
         } else if (ed.kind === 'ellipse') {
             ed.cx += dx;
             ed.cy += dy;

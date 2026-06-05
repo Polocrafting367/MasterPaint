@@ -182,9 +182,18 @@
         let ny;
         let tx;
         let ty;
+        
+        // Use corner radius logic if style is round to clamp the anchor
+        let r = 0;
+        if (style === 'round') {
+            // we don't have opts here, so we approximate or use the default
+            r = Math.min(12, w / 4, bodyH / 3);
+        }
+        
         if (d <= w) {
             x = lx + d;
             y = ly + bodyH;
+            if (style === 'round') x = Math.max(lx + r, Math.min(lx + w - r, x));
             nx = 0;
             ny = 1;
             tx = 1;
@@ -192,6 +201,7 @@
         } else if ((d -= w) <= bodyH) {
             x = lx + w;
             y = ly + bodyH - d;
+            if (style === 'round') y = Math.max(ly + r, Math.min(ly + bodyH - r, y));
             nx = 1;
             ny = 0;
             tx = 0;
@@ -199,6 +209,7 @@
         } else if ((d -= bodyH) <= w) {
             x = lx + w - d;
             y = ly;
+            if (style === 'round') x = Math.max(lx + r, Math.min(lx + w - r, x));
             nx = 0;
             ny = -1;
             tx = -1;
@@ -207,6 +218,7 @@
             d -= w;
             x = lx;
             y = ly + d;
+            if (style === 'round') y = Math.max(ly + r, Math.min(ly + bodyH - r, y));
             nx = -1;
             ny = 0;
             tx = 0;
@@ -237,14 +249,22 @@
     window.illuCalloutSetTailFromWorld = function (ed, wx, wy) {
         if (!ed) return;
         const style = ed.style || 'rect';
-        const opts =
-            ed.tailT != null
-                ? { tailT: ed.tailT, tailX: ed.tailX }
-                : { tailX: ed.tailX != null ? ed.tailX : 0.5 };
+        const opts = window.illuCalloutPathOptsFromEdit(ed);
         const t = illuCalloutWorldToTailT(style, ed.lx, ed.ly, ed.w, ed.h, wx, wy, opts);
         ed.tailT = t;
         if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
             EditorManager.toolProps.calloutTailT = t;
+        }
+    };
+
+    window.illuCalloutSetTipFromWorld = function (ed, wx, wy) {
+        if (!ed) return;
+        const m = window.illuCalloutMetrics(ed.style || 'rect', ed.lx, ed.ly, ed.w, ed.h, window.illuCalloutPathOptsFromEdit(ed));
+        ed.tipOffsetX = wx - m.anchor.x;
+        ed.tipOffsetY = wy - m.anchor.y;
+        if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+            EditorManager.toolProps.calloutTipOffsetX = ed.tipOffsetX;
+            EditorManager.toolProps.calloutTipOffsetY = ed.tipOffsetY;
         }
     };
 
@@ -276,23 +296,16 @@
         const cx = lx + w / 2;
         const tailW = Math.max(8, Math.min(w * 0.35, w * 0.55));
         const bodyBottom = ly + bodyH;
-        const tipX = anchor.x + anchor.nx * tailH;
-        const tipY = anchor.y + anchor.ny * tailH;
+        let tipX = anchor.x + anchor.nx * tailH;
+        let tipY = anchor.y + anchor.ny * tailH;
+        
+        if (opts.tipOffsetX != null && opts.tipOffsetY != null) {
+            tipX = anchor.x + opts.tipOffsetX;
+            tipY = anchor.y + opts.tipOffsetY;
+        }
+        
         return {
-            style,
-            lx,
-            ly,
-            w,
-            h,
-            tailH,
-            bodyH,
-            tailT,
-            tailW,
-            cx,
-            anchor,
-            tipX,
-            tipY,
-            bodyBottom
+            style, lx, ly, w, h, tailH, bodyH, tailT, tailW, cx, anchor, tipX, tipY, bodyBottom
         };
     };
 
@@ -301,10 +314,18 @@
         if (!m || !m.anchor) return '';
         const a = m.anchor;
         const half = m.tailW / 2;
-        const bx = a.x - a.tx * half;
-        const by = a.y - a.ty * half;
-        const cx = a.x + a.tx * half;
-        const cy = a.y + a.ty * half;
+        let bx = a.x - a.tx * half;
+        let by = a.y - a.ty * half;
+        let cx = a.x + a.tx * half;
+        let cy = a.y + a.ty * half;
+        
+        if (m.style === 'rect' || m.style === 'round' || m.style === 'cloud') {
+            bx = Math.max(m.lx, Math.min(m.lx + m.w, bx));
+            by = Math.max(m.ly, Math.min(m.ly + m.bodyH, by));
+            cx = Math.max(m.lx, Math.min(m.lx + m.w, cx));
+            cy = Math.max(m.ly, Math.min(m.ly + m.bodyH, cy));
+        }
+        
         return `M ${bx} ${by} L ${m.tipX} ${m.tipY} L ${cx} ${cy} Z`;
     };
 
@@ -333,7 +354,15 @@
                 ` L ${bx + bw * 0.18} ${by + bh} Z`
             );
         }
-        const r = style === 'round' ? Math.min(12, w / 4, bodyH / 3) : 2;
+        
+        let r = 0;
+        if (style === 'round') {
+            const rawR = opts.cornerRadius != null ? opts.cornerRadius : 12;
+            r = Math.max(0, Math.min(rawR, w / 2, bodyH / 2));
+        } else if (style !== 'rect') {
+            r = 2;
+        }
+        
         const x = lx;
         const y = ly;
         const bw = w;
@@ -354,28 +383,164 @@
         return { x: m.anchor.x, y: m.anchor.y };
     };
 
+    /** Poignée jaune pour diriger la queue. */
+    window.illuCalloutTipHandleLocal = function (m) {
+        if (!m) return { x: 0, y: 0 };
+        return { x: m.tipX, y: m.tipY };
+    };
+
+    /** Poignée jaune pour diriger l'arrondi (pour style round). */
+    window.illuCalloutRoundHandleLocal = function (lx, ly, w, h, r) {
+        return { x: lx + r, y: ly + r * 0.35 };
+    };
+
     window.illuCalloutPathOptsFromEdit = function (ed) {
         if (!ed) return {};
-        if (ed.tailT != null && Number.isFinite(Number(ed.tailT))) return { tailT: ed.tailT };
-        return { tailX: ed.tailX != null ? ed.tailX : 0.5 };
+        const opts = {};
+        if (ed.tailT != null && Number.isFinite(Number(ed.tailT))) opts.tailT = ed.tailT;
+        else opts.tailX = ed.tailX != null ? ed.tailX : 0.5;
+        if (ed.tipOffsetX != null) opts.tipOffsetX = ed.tipOffsetX;
+        if (ed.tipOffsetY != null) opts.tipOffsetY = ed.tipOffsetY;
+        if (ed.r != null) opts.cornerRadius = ed.r;
+        return opts;
     };
 
     window.illuCalloutPathOptsFromShape = function (shape) {
         if (!shape || !shape.getAttribute) return {};
+        const opts = {};
         const rawT = shape.getAttribute('data-illu-callout-tail-t');
         if (rawT != null) {
             const t = parseFloat(rawT);
-            if (Number.isFinite(t)) return { tailT: t };
+            if (Number.isFinite(t)) opts.tailT = t;
+        } else {
+            const rawX = shape.getAttribute('data-illu-callout-tail-x');
+            opts.tailX = rawX != null ? parseFloat(rawX) : 0.5;
         }
-        const rawX = shape.getAttribute('data-illu-callout-tail-x');
-        return { tailX: rawX != null ? parseFloat(rawX) : 0.5 };
+        const rawTipX = shape.getAttribute('data-illu-callout-tip-x');
+        const rawTipY = shape.getAttribute('data-illu-callout-tip-y');
+        if (rawTipX != null && rawTipY != null) {
+            opts.tipOffsetX = parseFloat(rawTipX);
+            opts.tipOffsetY = parseFloat(rawTipY);
+        }
+        const rawCorner = shape.getAttribute('data-illu-callout-round');
+        if (rawCorner != null) {
+            opts.cornerRadius = parseFloat(rawCorner);
+        }
+        return opts;
     };
 
     /**
-     * Deux sous-chemins fermés (tige puis corps) : pas de traits internes dans le rectangle.
+     * Unified continuous path to remove the inner stroke overlapping line,
+     * except for cloud style which uses a dream tail of floating circles.
      */
     window.illuCalloutPathD = function (style, lx, ly, w, h, opts) {
         const m = window.illuCalloutMetrics(style, lx, ly, w, h, opts);
+        
+        if (style === 'cloud') {
+            // Dream bubble tail
+            const dx = m.tipX - m.anchor.x;
+            const dy = m.tipY - m.anchor.y;
+            const dist = Math.hypot(dx, dy);
+            
+            let tailPath = '';
+            if (dist > 8) {
+                const count = Math.max(1, Math.min(8, Math.floor(dist / 24)));
+                const stepX = dx / (count + 1);
+                const stepY = dy / (count + 1);
+                
+                let cx = m.anchor.x;
+                let cy = m.anchor.y;
+                for (let i = 1; i <= count; i++) {
+                    cx += stepX;
+                    cy += stepY;
+                    const r = 2.5 + (7.5 * (count - i + 1)) / count;
+                    tailPath += ` M ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy}`;
+                }
+            }
+            return window.illuCalloutBodyPathD(m) + tailPath;
+        }
+        
+        const a = m.anchor;
+        const half = m.tailW / 2;
+        let bx = a.x - a.tx * half;
+        let by = a.y - a.ty * half;
+        let cx = a.x + a.tx * half;
+        let cy = a.y + a.ty * half;
+        
+        if (style === 'rect' || style === 'round') {
+            bx = Math.max(lx, Math.min(lx + w, bx));
+            by = Math.max(ly, Math.min(ly + m.bodyH, by));
+            cx = Math.max(lx, Math.min(lx + w, cx));
+            cy = Math.max(ly, Math.min(ly + m.bodyH, cy));
+            
+            let r = 0;
+            if (style === 'round') {
+                const rawR = opts.cornerRadius != null ? opts.cornerRadius : 12;
+                r = Math.max(0, Math.min(rawR, w / 2, m.bodyH / 2));
+                
+                if (a.ny !== 0) {
+                    const minX = Math.min(lx + r, lx + w / 2);
+                    const maxX = Math.max(lx + w - r, lx + w / 2);
+                    bx = Math.max(minX, Math.min(maxX, bx));
+                    cx = Math.max(minX, Math.min(maxX, cx));
+                } else if (a.nx !== 0) {
+                    const minY = Math.min(ly + r, ly + m.bodyH / 2);
+                    const maxY = Math.max(ly + m.bodyH - r, ly + m.bodyH / 2);
+                    by = Math.max(minY, Math.min(maxY, by));
+                    cy = Math.max(minY, Math.min(maxY, cy));
+                }
+            }
+
+            if (style === 'rect' || style === 'round') {
+                let path = `M ${cx} ${cy} `;
+                if (a.ny === 1) {
+                    path += `L ${lx+w-r} ${ly+m.bodyH} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w} ${ly+m.bodyH-r} `;
+                    path += `L ${lx+w} ${ly+r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w-r} ${ly} `;
+                    path += `L ${lx+r} ${ly} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx} ${ly+r} `;
+                    path += `L ${lx} ${ly+m.bodyH-r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+r} ${ly+m.bodyH} `;
+                }
+                else if (a.nx === 1) {
+                    path += `L ${lx+w} ${ly+r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w-r} ${ly} `;
+                    path += `L ${lx+r} ${ly} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx} ${ly+r} `;
+                    path += `L ${lx} ${ly+m.bodyH-r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+r} ${ly+m.bodyH} `;
+                    path += `L ${lx+w-r} ${ly+m.bodyH} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w} ${ly+m.bodyH-r} `;
+                }
+                else if (a.ny === -1) {
+                    path += `L ${lx+r} ${ly} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx} ${ly+r} `;
+                    path += `L ${lx} ${ly+m.bodyH-r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+r} ${ly+m.bodyH} `;
+                    path += `L ${lx+w-r} ${ly+m.bodyH} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w} ${ly+m.bodyH-r} `;
+                    path += `L ${lx+w} ${ly+r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w-r} ${ly} `;
+                }
+                else if (a.nx === -1) {
+                    path += `L ${lx} ${ly+m.bodyH-r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+r} ${ly+m.bodyH} `;
+                    path += `L ${lx+w-r} ${ly+m.bodyH} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w} ${ly+m.bodyH-r} `;
+                    path += `L ${lx+w} ${ly+r} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx+w-r} ${ly} `;
+                    path += `L ${lx+r} ${ly} `; if (r>0) path += `A ${r} ${r} 0 0 0 ${lx} ${ly+r} `;
+                }
+                path += `L ${bx} ${by} `;
+                path += `L ${m.tipX} ${m.tipY} Z`;
+                return path;
+            }
+        } else if (style === 'oval') {
+            const rx = w / 2;
+            const ry = m.bodyH / 2;
+            const ovalCx = lx + rx;
+            const ovalCy = ly + ry;
+            const perimeter = 2 * Math.PI * Math.sqrt((rx*rx + ry*ry) / 2);
+            const deltaT = half / Math.max(1, perimeter);
+            
+            const getPt = (t) => {
+                const theta = t * Math.PI * 2 - Math.PI / 2;
+                return { x: ovalCx + rx * Math.cos(theta), y: ovalCy + ry * Math.sin(theta) };
+            };
+            
+            // For oval, t is CW.
+            const ptB = getPt(m.tailT - deltaT);
+            const ptC = getPt(m.tailT + deltaT);
+            
+            return `M ${ptC.x} ${ptC.y} A ${rx} ${ry} 0 1 1 ${ptB.x} ${ptB.y} L ${m.tipX} ${m.tipY} Z`;
+        }
+        
         return window.illuCalloutTailPathD(m) + ' ' + window.illuCalloutBodyPathD(m);
     };
 

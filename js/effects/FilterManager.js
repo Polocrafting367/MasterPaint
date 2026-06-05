@@ -105,6 +105,50 @@ function illuFxT(key, fb) {
 function illuEffectTitle(id, fb) {
     return illuFxT('effect.title.' + id, fb);
 }
+function illuEffectIconKey(id) {
+    const map = {
+        brightness: 'menu.adjBrightness',
+        hsv: 'menu.adjHsv',
+        temperature: 'menu.adjHsv',
+        blur: 'menu.fxBlurSimple',
+        gaussian: 'menu.fxGaussian',
+        argenticgrain: 'menu.fxArgenticGrain',
+        digitalpattern: 'menu.fxDigitalPattern',
+        pixelate: 'menu.fxPixelate',
+        posterize: 'menu.adjPosterize',
+        addnoise: 'menu.fxAddNoise',
+        bulge: 'menu.fxBulge',
+        pinch: 'menu.fxPinch',
+        cabossage: 'menu.fxCabossage',
+        crystallize: 'menu.fxCrystallize',
+        polarInvert: 'menu.fxPolarInvert',
+        tileReflect: 'menu.fxTileReflect',
+        twist: 'menu.fxTwist',
+        wave: 'menu.fxWave',
+        mirrorquad: 'menu.fxMirrorQuad',
+        frosted: 'menu.fxFrosted',
+        radialblur: 'menu.fxRadialBlur',
+        zoomblur: 'menu.fxZoomBlur',
+        redeyeremove: 'menu.fxRedEyeRemove',
+        vignette: 'menu.fxVignette',
+        softglow: 'menu.fxSoftGlow',
+        dropshadow: 'menu.fxDropShadow',
+        edges: 'menu.fxEdges',
+        contour: 'menu.fxContour',
+        emboss: 'menu.fxEmboss',
+        solarize: 'menu.fxSolarize',
+        halftone: 'menu.fxHalftone',
+        chromatic: 'menu.fxChromatic',
+        duotone: 'menu.fxDuotone',
+        ral: 'menu.fxRal',
+        cmjn: 'menu.fxCmjn',
+        sketch: 'menu.fxSketch',
+        oil: 'menu.fxOil',
+        vhs: 'menu.fxVhs',
+        median: 'menu.fxMedian'
+    };
+    return map[id] || null;
+}
 function illuEffectHistoryLabel(id) {
     const fb = EFFECT_HISTORY_LABELS[id] || id;
     return illuFxT('effect.title.' + id, fb);
@@ -1518,7 +1562,19 @@ window.FilterManager = {
         if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
             document.body.classList.add('effect-allows-colors');
         }
-        document.getElementById('effect-dialog-title').innerText = title;
+        const titleEl = document.getElementById('effect-dialog-title');
+        if (titleEl) {
+            titleEl.textContent = title;
+            const iconKey = illuEffectIconKey(this.currentEffect);
+            if (iconKey) {
+                titleEl.setAttribute('data-icon-key', iconKey);
+                if (window.IlluI18n && typeof window.IlluI18n.applyIcons === 'function') {
+                    window.IlluI18n.applyIcons(titleEl);
+                }
+            } else {
+                titleEl.removeAttribute('data-icon-key');
+            }
+        }
         const scope = this._readEffectScope();
         const scopeRow = `<div class="effect-scope-bar illu-effect-scope-bar field-row" style="flex-wrap:nowrap;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #808080;font-size:11px;align-items:stretch;">
             <span class="illu-scope-bar-label" style="font-weight:600;flex-shrink:0;align-self:center;" data-i18n="effect.scopeLabel">Portée :</span>

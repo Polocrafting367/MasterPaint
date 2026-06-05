@@ -642,6 +642,26 @@ function illuUpdateVectorAdjustFromPointer(shape, adjustType, docPos) {
         }
         return;
     }
+    if (adjustType === 'callout-round-adj') {
+        const bb = illuGetElementBBox(shape);
+        if (!bb || bb.width < 2) return;
+        const r = illuRoundRectRadiusFromLocalDrag(bb.x, bb.y, bb.width, bb.height, lp.x, lp.y);
+        shape.setAttribute('data-illu-callout-round', String(r));
+        const style = shape.getAttribute('data-illu-callout-style') || 'rect';
+        const cOpts = typeof window.illuCalloutPathOptsFromShape === 'function' ? window.illuCalloutPathOptsFromShape(shape) : {};
+        if (typeof window.illuCalloutPathD === 'function') {
+            shape.setAttribute('d', window.illuCalloutPathD(style, bb.x, bb.y, bb.width, bb.height, cOpts));
+        }
+        if (EditorManager.toolProps) EditorManager.toolProps.shapeCornerRadius = r;
+        const sc = document.getElementById('tool-shape-corner-radius');
+        const scv = document.getElementById('tool-shape-corner-radius-val');
+        if (sc) {
+            sc.value = String(r);
+            if (scv) scv.textContent = String(r);
+            if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(sc);
+        }
+        return;
+    }
     if (adjustType === 'round-adj') {
         const x = parseFloat(shape.getAttribute('x')) || 0;
         const y = parseFloat(shape.getAttribute('y')) || 0;
@@ -922,47 +942,47 @@ const TOOL_OPTIONS_UI = {
     },
 
     gradient: { label: 'Dégradé', actionGroups: ['opt-grp-gradient-actions'], paramGroups: [] },
-    rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    rect: { label: 'Rectangle', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    circle: { label: 'Ellipse', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     line: {
         label: 'Ligne',
-        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-endpoints'],
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-cap-start', 'opt-grp-line-dash', 'opt-grp-line-cap-end'],
         paramGroups: ['opt-grp-size-params']
     },
     fill: { label: 'Pot de peinture', actionGroups: [], paramGroups: ['opt-grp-fill-params'] },
     zoom: { label: 'Loupe', actionGroups: [], paramGroups: [] },
-    text: { label: 'Texte', actionGroups: ['opt-grp-text-actions'], paramGroups: ['opt-grp-text-params'] },
+    text: { label: 'Texte', actionGroups: ['opt-grp-text-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-text-params'] },
     'direct-select': { label: 'Sélection à la volée', actionGroups: [], paramGroups: [] },
     deform: { label: 'Déformation', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'warp-4': { label: 'Déformation 4 coins', actionGroups: [], paramGroups: ['opt-grp-warp-params'] },
     'cubic-3': {
         label: 'Courbe (3 clics, Q)',
-        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-endpoints'],
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-cap-start', 'opt-grp-line-dash', 'opt-grp-line-cap-end'],
         paramGroups: ['opt-grp-size-params']
     },
-    'pen': { label: 'Plume', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
-    'polygon': { label: 'Polygone', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params'] },
-    'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    triangle: { label: 'Triangle', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    star: { label: 'Étoile', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    'pen': { label: 'Plume', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params'] },
+    'polygon': { label: 'Polygone', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params'] },
+    'round-3': { label: 'Rectangle à coins arrondis', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    triangle: { label: 'Triangle', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    star: { label: 'Étoile', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     'reg-poly': {
         label: 'Polygone',
-        actionGroups: ['opt-grp-shapes-actions'],
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'],
         paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params']
     },
-    diamond: { label: 'Losange', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    trapezoid: { label: 'Trapèze', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    diamond: { label: 'Losange', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    trapezoid: { label: 'Trapèze', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     parallelogram: {
         label: 'Parallélogramme',
-        actionGroups: ['opt-grp-shapes-actions'],
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'],
         paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params']
     },
     'triangle-right': {
         label: 'Triangle rectangle',
-        actionGroups: ['opt-grp-shapes-actions'],
+        actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'],
         paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params']
     },
-    callout: { label: 'Légende', actionGroups: ['opt-grp-shapes-actions'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
+    callout: { label: 'Légende', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
     shadow: { label: 'Ombre portée', actionGroups: [], paramGroups: [] }
 };
 
@@ -1340,6 +1360,8 @@ window.updateToolOptionsBar = function () {
         });
     }
 
+
+
     const SELECT_ACTION_TOOLS = new Set(['select', 'move', 'wand', 'direct-select', 'deform', 'warp-4']);
     const selActsPin = document.getElementById('tool-pinned-select-actions');
     if (selActsPin) selActsPin.hidden = !SELECT_ACTION_TOOLS.has(t);
@@ -1548,6 +1570,19 @@ window.updateToolOptionsBar = function () {
         lineContourSl.value = String(Math.max(0, Math.min(128, lc)));
         if (lineContourVal) lineContourVal.textContent = lineContourSl.value;
         if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(lineContourSl);
+    }
+    const lineModeRow = document.getElementById('tool-line-mode-row');
+    if (lineModeRow) lineModeRow.hidden = t !== 'line';
+    if (t === 'line') {
+        const modeStraight = document.getElementById('line-mode-straight-btn');
+        const modeCubic = document.getElementById('line-mode-cubic-btn');
+        if (modeStraight && modeCubic) {
+            const isCubic = EditorManager.toolProps.lineMode === 'cubic';
+            modeStraight.classList.toggle('illu-scope-btn--active', !isCubic);
+            modeStraight.setAttribute('aria-pressed', !isCubic ? 'true' : 'false');
+            modeCubic.classList.toggle('illu-scope-btn--active', isCubic);
+            modeCubic.setAttribute('aria-pressed', isCubic ? 'true' : 'false');
+        }
     }
     const pat = document.getElementById('tool-brush-pattern');
     if (pat) pat.value = EditorManager.toolProps.brushPattern || 'round';
@@ -5819,7 +5854,15 @@ window.illuVectorBakeSelectionTransforms = function (sel) {
 
 /** En mode vecteur : une seule UI de sélection (poignées blanches), sauf édition de nœuds. */
 window.illuVectorPreferBitmapSelectionUI = function () {
-    return false; // Use native VectorEngine SVG UI
+    if (typeof EditorManager === 'undefined' || !EditorManager.activeVectorSelection) return false;
+    const sel = EditorManager.activeVectorSelection;
+    if (sel.length === 1) {
+        const el = sel[0];
+        if (typeof illuVectorIsEditableStrokeElement === 'function' && illuVectorIsEditableStrokeElement(el)) {
+            return true;
+        }
+    }
+    return false;
 };
 
 window.illuVectorSnapshotForDrag = function (el) {
@@ -5924,9 +5967,7 @@ function illuScheduleVectorLiveDrawVisual() {
 
 /** Édition forme existante : recale les poignées uniquement, sans render ni sync SVG. */
 function illuScheduleVectorShapeEditVisual() {
-    illuScheduleVectorLiveThrottled('shapeEdit', () => {
-        if (typeof syncAnchors === 'function') syncAnchors();
-    });
+    if (typeof syncAnchors === 'function') syncAnchors();
 }
 window.illuScheduleVectorShapeEditVisual = illuScheduleVectorShapeEditVisual;
 window.illuScheduleVectorLiveThrottled = illuScheduleVectorLiveThrottled;
@@ -6183,6 +6224,16 @@ function appendShapeAdjustAnchors(svgUI, shape) {
                     : { x: m.tipX, y: m.bodyBottom + m.tailH * 0.45 };
             const r = vectorShapeAttrPointToRoot(shape, local.x, local.y);
             svgUI.appendChild(createSvgAdjustAnchor(r.x, r.y, 'callout-tail-adj'));
+            
+            if (style === 'round') {
+                const rawR = shape.getAttribute('data-illu-callout-round');
+                const cornerR = rawR != null ? parseFloat(rawR) : (cOpts.cornerRadius || 12);
+                const localR = typeof window.illuCalloutRoundHandleLocal === 'function' 
+                               ? window.illuCalloutRoundHandleLocal(bb.x, bb.y, bb.width, bb.height, cornerR)
+                               : { x: bb.x + cornerR, y: bb.y + cornerR * 0.35 };
+                const rootR = vectorShapeAttrPointToRoot(shape, localR.x, localR.y);
+                svgUI.appendChild(createSvgAdjustAnchor(rootR.x, rootR.y, 'callout-round-adj'));
+            }
         }
     }
 }
@@ -6248,7 +6299,22 @@ function syncAnchors() {
 
     const hz = EditorManager.svgUiHandleSizeDoc() / 2;
     const tag = primary.tagName.toLowerCase();
-    const anchors = [...anchorsG.querySelectorAll('.svg-anchor')];
+
+    function ensureAnchorsCount(count) {
+        let currentAnchors = [...anchorsG.querySelectorAll('.svg-anchor')];
+        while (currentAnchors.length < count) {
+            const index = currentAnchors.length;
+            const a = createSvgAnchor(0, 0, index, 'pointer');
+            anchorsG.appendChild(a);
+            currentAnchors.push(a);
+        }
+        while (currentAnchors.length > count) {
+            const a = currentAnchors.pop();
+            a.remove();
+        }
+        return currentAnchors;
+    }
+
     if (tag === 'rect' || tag === 'foreignobject' || tag === 'image') {
         const x = parseFloat(sh.getAttribute('x')) || 0;
         const y = parseFloat(sh.getAttribute('y')) || 0;
@@ -6272,8 +6338,9 @@ function syncAnchors() {
                     [x + w / 2, y + h],
                     [x + w, y + h]
                 ];
+        const anchorsList = ensureAnchorsCount(pts.length);
         pts.forEach((pt, i) => {
-            if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+            vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
         });
         if (tag === 'rect') syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'line') {
@@ -6281,8 +6348,9 @@ function syncAnchors() {
         const y1 = parseFloat(sh.getAttribute('y1')) || 0;
         const x2 = parseFloat(sh.getAttribute('x2')) || 0;
         const y2 = parseFloat(sh.getAttribute('y2')) || 0;
-        if (anchors[0]) vectorPlaceAnchorRoot(sh, anchors[0], x1, y1, hz);
-        if (anchors[1]) vectorPlaceAnchorRoot(sh, anchors[1], x2, y2, hz);
+        const anchorsList = ensureAnchorsCount(2);
+        vectorPlaceAnchorRoot(sh, anchorsList[0], x1, y1, hz);
+        vectorPlaceAnchorRoot(sh, anchorsList[1], x2, y2, hz);
     } else if (tag === 'ellipse' || tag === 'circle') {
         const cx = parseFloat(sh.getAttribute('cx')) || 0;
         const cy = parseFloat(sh.getAttribute('cy')) || 0;
@@ -6302,8 +6370,9 @@ function syncAnchors() {
             [x + w / 2, y + h],
             [x + w, y + h]
         ];
+        const anchorsList = ensureAnchorsCount(pts.length);
         pts.forEach((pt, i) => {
-            if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+            vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
         });
         syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'polygon' && sh.getAttribute('data-illu-triangle') === '1') {
@@ -6319,8 +6388,9 @@ function syncAnchors() {
             [x + w / 2, y + h],
             [x + w, y + h]
         ];
+        const anchorsList = ensureAnchorsCount(pts.length);
         pts.forEach((pt, i) => {
-            if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+            vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
         });
         syncShapeAdjustAnchorPosition(anchorsG, sh);
     } else if (tag === 'polygon' && sh.getAttribute('data-illu-quad-preset')) {
@@ -6340,49 +6410,54 @@ function syncAnchors() {
                 [x + w / 2, y + h],
                 [x + w, y + h]
             ];
+            const anchorsList = ensureAnchorsCount(pts.length);
             pts.forEach((pt, i) => {
-                if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+                vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
             });
         }
     } else if (tag === 'path') {
         const dAttr = sh.getAttribute('d') || '';
         if (sh.getAttribute('data-illu-quad-3') === '1') {
             const pq = parseIlluQuadPath(dAttr);
-            if (pq && anchors.length >= 3) {
+            if (pq) {
                 const pts = [
                     [pq.x0, pq.y0],
                     [pq.qx, pq.qy],
                     [pq.x1, pq.y1]
                 ];
+                const anchorsList = ensureAnchorsCount(pts.length);
                 pts.forEach((pt, i) => {
-                    if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+                    vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
                 });
             }
         } else if (sh.getAttribute('data-illu-line-straight') === '1') {
             const p = parseIlluStraightLinePath(dAttr);
             if (p) {
+                const anchorsList = ensureAnchorsCount(2);
                 [[p.x1, p.y1], [p.x2, p.y2]].forEach((pt, i) => {
-                    if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+                    vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
                 });
             }
         } else if (sh.getAttribute('data-illu-line-cubic') === '1') {
             const p = parseIlluLinePath(dAttr);
-            if (p && anchors.length >= 4) {
+            if (p) {
                 const pts = [
                     [p.x1, p.y1],
                     [p.c1x, p.c1y],
                     [p.c2x, p.c2y],
                     [p.x2, p.y2]
                 ];
+                const anchorsList = ensureAnchorsCount(pts.length);
                 pts.forEach((pt, i) => {
-                    if (anchors[i]) vectorPlaceAnchorRoot(sh, anchors[i], pt[0], pt[1], hz);
+                    vectorPlaceAnchorRoot(sh, anchorsList[i], pt[0], pt[1], hz);
                 });
             }
         }
     } else if (tag === 'text') {
         const x = parseFloat(sh.getAttribute('x')) || 0;
         const y = parseFloat(sh.getAttribute('y')) || 0;
-        if (anchors[0]) vectorPlaceAnchorRoot(sh, anchors[0], x, y, hz);
+        const anchorsList = ensureAnchorsCount(1);
+        vectorPlaceAnchorRoot(sh, anchorsList[0], x, y, hz);
     }
     syncVectorRotationHandlePosition(anchorsG, sh);
     syncVectorCenterMoveHandlePosition(anchorsG, sh);
@@ -6547,20 +6622,42 @@ function parseIlluLinePath(d) {
             /^M\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s+C\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s*$/i
         );
     if (!m) return null;
+    const p0x = parseFloat(m[1]), p0y = parseFloat(m[2]);
+    const b1x = parseFloat(m[3]), b1y = parseFloat(m[4]);
+    const b2x = parseFloat(m[5]), b2y = parseFloat(m[6]);
+    const p3x = parseFloat(m[7]), p3y = parseFloat(m[8]);
+    
+    // Reverse math to get the ON-CURVE points (the interpolation points P1, P2 that the user dragged)
+    const p1x = (8*p0x + 12*b1x + 6*b2x + p3x) / 27;
+    const p1y = (8*p0y + 12*b1y + 6*b2y + p3y) / 27;
+    const p2x = (p0x + 6*b1x + 12*b2x + 8*p3x) / 27;
+    const p2y = (p0y + 6*b1y + 12*b2y + 8*p3y) / 27;
+
     return {
-        x1: parseFloat(m[1]),
-        y1: parseFloat(m[2]),
-        c1x: parseFloat(m[3]),
-        c1y: parseFloat(m[4]),
-        c2x: parseFloat(m[5]),
-        c2y: parseFloat(m[6]),
-        x2: parseFloat(m[7]),
-        y2: parseFloat(m[8])
+        x1: p0x, y1: p0y,
+        c1x: p1x, c1y: p1y,
+        c2x: p2x, c2y: p2y,
+        x2: p3x, y2: p3y
+    };
+}
+
+function illuInterpolateCubicControlPoints(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+    const Ax = 27 * p1x - 8 * p0x - p3x;
+    const Ay = 27 * p1y - 8 * p0y - p3y;
+    const Bx = 27 * p2x - p0x - 8 * p3x;
+    const By = 27 * p2y - p0y - 8 * p3y;
+    return {
+        b1x: (2 * Ax - Bx) / 18,
+        b1y: (2 * Ay - By) / 18,
+        b2x: (2 * Bx - Ax) / 18,
+        b2y: (2 * By - Ay) / 18
     };
 }
 
 function formatIlluLinePath(p) {
-    return `M ${p.x1} ${p.y1} C ${p.c1x} ${p.c1y} ${p.c2x} ${p.c2y} ${p.x2} ${p.y2}`;
+    // Generate true Bezier control points so the curve passes EXACTLY through p.c1 and p.c2
+    const cp = illuInterpolateCubicControlPoints(p.x1, p.y1, p.c1x, p.c1y, p.c2x, p.c2y, p.x2, p.y2);
+    return `M ${p.x1} ${p.y1} C ${cp.b1x} ${cp.b1y} ${cp.b2x} ${cp.b2y} ${p.x2} ${p.y2}`;
 }
 
 /** Segment droit M…L… (outil trait + Shift, imports SVG). */
@@ -7247,8 +7344,8 @@ function syncVectorGradientOnShape(el, kind, sx, sy, px, py) {
                 ? EditorManager.cssRgbaFromPart(EditorManager.secondaryColor)
                 : shapeEffectiveFillCss(mode);
     } else {
-        c1 = shapeEffectiveFillCss(mode);
-        c2 = shapePrimaryFillCss();
+        c1 = shapePrimaryFillCss();
+        c2 = makeShapeSecondaryColor();
     }
     const gradType = isGradientTool
         ? EditorManager.toolProps.gradientType || 'linear'
@@ -7357,11 +7454,12 @@ function applyVectorShapePaint(el, kind) {
         };
         el.setAttribute('fill', 'none');
         const drawContour = doStroke && (lw.contourW > 0 || mode === 'stroke');
-        const drawTrace = doFill;
+        let drawTrace = doFill;
+        if (kind === 'line' || kind === 'brush') drawTrace = true; // For lines, the trace is always drawn regardless of fillType
         const tp = EditorManager.toolProps;
         const cap0 = tp.lineCapStart || 'none';
         const cap1 = tp.lineCapEnd || 'none';
-        const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+        const hasArrowDecor = cap0 === 'arrow' || cap0 === 'arrow-hollow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'arrow-hollow' || cap1 === 'diamond';
         const pathLineCap = illuLineBodyStrokeCap(cap0, cap1, hasArrowDecor);
         let lineOutline = null;
         if (drawContour && lw.contourW > 0 && parent) {
@@ -7408,6 +7506,36 @@ function applyVectorShapePaint(el, kind) {
             removeOutline();
         }
         el.setAttribute('stroke-linecap', pathLineCap);
+        
+        // Apply dash style to stroke elements
+        const dashStyle = tp.lineDash || 'solid';
+        const traceW = drawTrace ? lw.fillW : lw.fillW;
+        if (dashStyle === 'dashed') {
+            const dashW = Math.max(6, traceW * 2);
+            const gapW = Math.max(4, traceW * 1.5);
+            el.setAttribute('stroke-dasharray', `${dashW},${gapW}`);
+            if (lineOutline) {
+                const odashW = Math.max(6, lw.outerW * 2);
+                const ogapW = Math.max(4, lw.outerW * 1.5);
+                lineOutline.setAttribute('stroke-dasharray', `${odashW},${ogapW}`);
+            }
+        } else if (dashStyle === 'dotted') {
+            const dashW = Math.max(2, traceW * 0.5);
+            const gapW = Math.max(4, traceW * 1.5);
+            el.setAttribute('stroke-dasharray', `${dashW},${gapW}`);
+            // Ensure dotted appearance uses round line caps for circular dots
+            el.setAttribute('stroke-linecap', 'round');
+            if (lineOutline) {
+                const odashW = Math.max(2, lw.outerW * 0.5);
+                const ogapW = Math.max(4, lw.outerW * 1.5);
+                lineOutline.setAttribute('stroke-dasharray', `${odashW},${ogapW}`);
+                lineOutline.setAttribute('stroke-linecap', 'round');
+            }
+        } else {
+            el.removeAttribute('stroke-dasharray');
+            if (lineOutline) lineOutline.removeAttribute('stroke-dasharray');
+        }
+
         if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
             window.vectorApplyLineEndpointMarkers(el);
         }
@@ -9842,11 +9970,15 @@ function updateVector(pos) {
                 typeof window.illuCalloutPathOptsFromShape === 'function'
                     ? window.illuCalloutPathOptsFromShape(currentElement)
                     : {};
-            if (cOpts.tailT == null && EditorManager.toolProps.calloutTailT != null) {
+            if (cOpts.tailT == null && cOpts.tailX == null && EditorManager.toolProps.calloutTailT != null) {
                 cOpts.tailT = EditorManager.toolProps.calloutTailT;
             }
             if (cOpts.tailT == null && cOpts.tailX == null) {
                 cOpts.tailX = EditorManager.toolProps.calloutTailX ?? 0.5;
+            }
+            if (EditorManager.toolProps.shapeCornerRadius != null) {
+                cOpts.cornerRadius = EditorManager.toolProps.shapeCornerRadius;
+                currentElement.setAttribute('data-illu-callout-round', String(cOpts.cornerRadius));
             }
             if (typeof window.illuCalloutPathD === 'function') {
                 currentElement.setAttribute('d', window.illuCalloutPathD(style, x, y, w, h, cOpts));
@@ -15180,7 +15312,7 @@ window.illuLineBodyStrokeCap = illuLineBodyStrokeCap;
 
 function lineCapDecorExtent(cap, strokeW) {
     const sw = Math.max(1, strokeW || 1);
-    if (cap === 'arrow') return Math.max(4, sw * 2.5);
+    if (cap === 'arrow' || cap === 'arrow-hollow') return Math.max(4, sw * 2.5);
     if (cap === 'diamond') return Math.max(4, sw * 1.8); // Rapproché par rapport au trait
     if (cap === 'round') return 0; // Pas de rétrécissement pour le rond afin de s'aligner par rapport à la largeur
     return 0;
@@ -15198,10 +15330,10 @@ function trimLineSegmentForPixelCaps(x1, y1, x2, y2, fillW, startCap, endCap, co
     let inset1 = lineCapDecorExtent(startCap, fillW);
     let inset2 = lineCapDecorExtent(endCap, fillW);
     if (startCap === 'diamond') inset1 = Math.max(0, fillW * 1.1); // Décalage proportionnel pour alignement parfait
-    else if (startCap === 'arrow') inset1 = Math.max(0, inset1 - fillW * 0.4); // Décalage proportionnel pour éviter les trous
+    else if (startCap === 'arrow' || startCap === 'arrow-hollow') inset1 = Math.max(0, inset1 - fillW * 0.4); // Décalage proportionnel pour éviter les trous
     else if (inset1 > 0) inset1 = Math.max(0, inset1 - 1.5);
     if (endCap === 'diamond') inset2 = Math.max(0, fillW * 1.1); // Décalage proportionnel pour alignement parfait
-    else if (endCap === 'arrow') inset2 = Math.max(0, inset2 - fillW * 0.4); // Décalage proportionnel pour éviter les trous
+    else if (endCap === 'arrow' || endCap === 'arrow-hollow') inset2 = Math.max(0, inset2 - fillW * 0.4); // Décalage proportionnel pour éviter les trous
     else if (inset2 > 0) inset2 = Math.max(0, inset2 - 1.5);
     const maxTrim = L * 0.48;
     if (inset1 + inset2 > maxTrim) {
@@ -15257,7 +15389,7 @@ function illuDrawPixelLineSegment(ctx, x1, y1, x2, y2, o) {
     const cap0 = o.cap0 != null ? o.cap0 : EditorManager.toolProps.lineCapStart || 'none';
     const cap1 = o.cap1 != null ? o.cap1 : EditorManager.toolProps.lineCapEnd || 'none';
     const bothRound = cap0 === 'round' && cap1 === 'round';
-    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'arrow-hollow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'arrow-hollow' || cap1 === 'diamond';
     const hasDecor = hasArrowDecor || ((cap0 === 'round' || cap1 === 'round') && !bothRound);
     const fillCss =
         fillType === 'gradient'
@@ -15275,6 +15407,12 @@ function illuDrawPixelLineSegment(ctx, x1, y1, x2, y2, o) {
 
     const strokeOnSegment = (trim, sw, color, lineCap, isContour) => {
         if (sw < 1) return;
+        
+        const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, sw * 2), Math.max(4, sw * 1.5)]);
+        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, sw * 0.5), Math.max(4, sw * 1.5)]);
+        else ctx.setLineDash([]);
+        
         if (isContour && lineCap === 'butt' && contourW > 0) {
             const dx = trim.x2 - trim.x1;
             const dy = trim.y2 - trim.y1;
@@ -15339,6 +15477,7 @@ function illuDrawPixelLineSegment(ctx, x1, y1, x2, y2, o) {
             ctx.strokeStyle = color;
             ctx.stroke();
         }
+        ctx.setLineDash([]);
     };
 
     const drawContourLayer = doStroke && (contourW > 0 || mode === 'stroke');
@@ -15394,7 +15533,7 @@ function illuDrawPixelQuadCurveWithBorder(ctx, x0, y0, qx, qy, x1, y1, o) {
     const cap0 = o.cap0 != null ? o.cap0 : EditorManager.toolProps.lineCapStart || 'none';
     const cap1 = o.cap1 != null ? o.cap1 : EditorManager.toolProps.lineCapEnd || 'none';
     const bothRound = cap0 === 'round' && cap1 === 'round';
-    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'diamond';
+    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'arrow-hollow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'arrow-hollow' || cap1 === 'diamond';
     const hasDecor = hasArrowDecor || ((cap0 === 'round' || cap1 === 'round') && !bothRound);
     const strokeCss =
         fillType === 'gradient'
@@ -15461,6 +15600,61 @@ function illuDrawPixelQuadCurveWithBorder(ctx, x0, y0, qx, qy, x1, y1, o) {
 }
 window.illuDrawPixelQuadCurveWithBorder = illuDrawPixelQuadCurveWithBorder;
 
+function illuDrawPixelCubicCurveWithBorder(ctx, x0, y0, cx1, cy1, cx2, cy2, x1, y1, o) {
+    if (!ctx) return;
+    o = o || {};
+    const mode = o.strokeMode || EditorManager.toolProps.shapeStrokeMode || 'both';
+    const fillType = o.fillType || EditorManager.toolProps.fillType || 'solid';
+    const { fillW, contourW, outerW } = illuLineLikeWidthsFromOpts(o);
+    const doFill = mode !== 'stroke';
+    const doStroke = mode !== 'fill';
+
+    const strokeCss = fillType === 'gradient'
+        ? createShapeFillGradient(ctx, 'line', 0, 0, 0, 0, x0, y0, 0, 0, x1, y1)
+        : shapePrimaryFillCss();
+    const contourCss = shapeSecondaryStrokeCss();
+
+    const contourSw = contourW > 0 ? outerW : fillW;
+    const drawContour = doStroke && (contourW > 0 || mode === 'stroke');
+    const drawFill = doFill;
+    
+    // Generate true Bezier control points so the curve passes EXACTLY through cx1,cy1 and cx2,cy2
+    const cp = illuInterpolateCubicControlPoints(x0, y0, cx1, cy1, cx2, cy2, x1, y1);
+
+    if (drawContour) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.bezierCurveTo(cp.b1x, cp.b1y, cp.b2x, cp.b2y, x1, y1);
+        ctx.lineWidth = contourSw;
+        ctx.strokeStyle = contourCss;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, contourSw * 2), Math.max(4, contourSw * 1.5)]);
+        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, contourSw * 0.5), Math.max(4, contourSw * 1.5)]);
+        else ctx.setLineDash([]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    if (drawFill) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.bezierCurveTo(cp.b1x, cp.b1y, cp.b2x, cp.b2y, x1, y1);
+        ctx.lineWidth = fillW;
+        ctx.strokeStyle = strokeCss;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, fillW * 2), Math.max(4, fillW * 1.5)]);
+        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, fillW * 0.5), Math.max(4, fillW * 1.5)]);
+        else ctx.setLineDash([]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+}
+window.illuDrawPixelCubicCurveWithBorder = illuDrawPixelCubicCurveWithBorder;
+
 /** Contour fermé d’une flèche / losange (3 ou 4 arêtes visibles). */
 function illuStrokeLineCapOutlineEdges(ctx, cap, W, lineW, color, fillW) {
     if (!lineW || lineW < 0.5 || !color) return;
@@ -15505,8 +15699,8 @@ function drawPixelLineCapShapeContour(ctx, x, y, angleRad, cap, fillW, contourW,
         ctx.restore();
         return;
     }
-    if (cap !== 'arrow' && cap !== 'diamond') return;
-    const W = cap === 'arrow' ? Math.max(4, fw * 2.5) : Math.max(4, fw * 1.8);
+    if (cap !== 'arrow' && cap !== 'arrow-hollow' && cap !== 'diamond') return;
+    const W = (cap === 'arrow' || cap === 'arrow-hollow') ? Math.max(4, fw * 2.5) : Math.max(4, fw * 1.8);
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angleRad);
@@ -15527,16 +15721,19 @@ function drawPixelLineCapShapeFill(ctx, x, y, angleRad, cap, fillW, fillColor) {
         ctx.restore();
         return;
     }
-    if (cap !== 'arrow' && cap !== 'diamond') return;
-    const W = cap === 'arrow' ? Math.max(4, fw * 2.5) : Math.max(4, fw * 1.8);
+    if (cap !== 'arrow' && cap !== 'arrow-hollow' && cap !== 'diamond') return;
+    const W = (cap === 'arrow' || cap === 'arrow-hollow') ? Math.max(4, fw * 2.5) : Math.max(4, fw * 1.8);
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angleRad);
     ctx.fillStyle = fillColor;
     ctx.beginPath();
-    if (cap === 'arrow') {
+    if (cap === 'arrow' || cap === 'arrow-hollow') {
         ctx.moveTo(0, 0);
         ctx.lineTo(-W, -W * 0.42);
+        if (cap === 'arrow-hollow') {
+            ctx.lineTo(-W + fw, 0);
+        }
         ctx.lineTo(-W, W * 0.42);
     } else {
         ctx.moveTo(0, 0);
@@ -15563,10 +15760,10 @@ function drawPixelLineEndpointDecorContours(ctx, x1, y1, x2, y2, fillW, contourW
     const s0 = startCap || 'none';
     const s1 = endCap || 'none';
     const bothRound = s0 === 'round' && s1 === 'round';
-    if (s0 === 'arrow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) {
+    if (s0 === 'arrow' || s0 === 'arrow-hollow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) {
         drawPixelLineCapShapeContour(ctx, x1, y1, ang + Math.PI, s0, fillW, contourW, contourColor);
     }
-    if (s1 === 'arrow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) {
+    if (s1 === 'arrow' || s1 === 'arrow-hollow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) {
         drawPixelLineCapShapeContour(ctx, x2, y2, ang, s1, fillW, contourW, contourColor);
     }
 }
@@ -15577,10 +15774,10 @@ function drawPixelLineEndpointDecorFills(ctx, x1, y1, x2, y2, fillW, fillColor, 
     const s0 = startCap || 'none';
     const s1 = endCap || 'none';
     const bothRound = s0 === 'round' && s1 === 'round';
-    if (s0 === 'arrow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) {
+    if (s0 === 'arrow' || s0 === 'arrow-hollow' || s0 === 'diamond' || (!bothRound && s0 === 'round')) {
         drawPixelLineCapShapeFill(ctx, x1, y1, ang + Math.PI, s0, fillW, fillColor);
     }
-    if (s1 === 'arrow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) {
+    if (s1 === 'arrow' || s1 === 'arrow-hollow' || s1 === 'diamond' || (!bothRound && s1 === 'round')) {
         drawPixelLineCapShapeFill(ctx, x2, y2, ang, s1, fillW, fillColor);
     }
 }
@@ -15874,9 +16071,8 @@ function createShapeFillGradient(ctx, kind, lx, ly, w, h, lsx, lsy, rx, ry, lpx,
     const gradShapeType = document.getElementById('tool-shape-grad-type')?.value || 'linear';
     const angleDeg = EditorManager.toolProps.shapeGradAngle ?? 0;
     const rad = (angleDeg * Math.PI) / 180;
-    const mode = EditorManager.toolProps.shapeStrokeMode || 'both';
-    const c1 = shapeEffectiveFillCss(mode);
-    const sec = shapePrimaryFillCss();
+    const c0 = shapePrimaryFillCss();
+    const c1 = makeShapeSecondaryColor();
 
     if (kind === 'line') {
         const lc = shapeLineStrokeCss();
@@ -15899,12 +16095,12 @@ function createShapeFillGradient(ctx, kind, lx, ly, w, h, lsx, lsy, rx, ry, lpx,
             cx + Math.cos(rad) * L,
             cy + Math.sin(rad) * L
         );
-        window.illuApplyGradientColorStops(g, c1, sec);
+        window.illuApplyGradientColorStops(g, c0, c1);
         return g;
     }
     const rmax = Math.max(rrx, rry, 2);
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rmax);
-    window.illuApplyGradientColorStops(g, c1, sec);
+    window.illuApplyGradientColorStops(g, c0, c1);
     return g;
 }
 
@@ -16030,321 +16226,345 @@ function paintPixelShapeAt(ctx, pos, startXp, startYp, shiftKey, angleRad) {
             : shapeEffectiveStrokeCss(mode, 'shape');
     ctx.lineWidth = strokeW;
     ctx.save();
-
-    const ang = angleRad || 0;
-    if (Math.abs(ang) > 1e-8) {
-        const b = computeLiveShapeDocBounds(pos, startXp, startYp, shift);
-        const cx = b.x + b.w / 2 - EditorManager.activeLayer.x;
-        const cy = b.y + b.h / 2 - EditorManager.activeLayer.y;
-        ctx.translate(cx, cy);
-        ctx.rotate(ang);
-        ctx.translate(-cx, -cy);
-    }
-
-    const applyShapeFillStyle = () => {
-        if (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') {
-            const isPrimary = fillCss === window.shapePrimaryFillCss();
-            const ditherId = isPrimary ? EditorManager.primaryDitherPatternId : EditorManager.secondaryDitherPatternId;
-            const canv = EditorManager._ditherPatternCanvases[ditherId || 'black'];
-            if (canv) {
-                const pat = ctx.createPattern(canv, 'repeat');
-                ctx.fillStyle = pat;
-                return;
-            }
+    try {
+        const ang = angleRad || 0;
+        if (Math.abs(ang) > 1e-8) {
+            const b = computeLiveShapeDocBounds(pos, startXp, startYp, shift);
+            const cx = b.x + b.w / 2 - EditorManager.activeLayer.x;
+            const cy = b.y + b.h / 2 - EditorManager.activeLayer.y;
+            ctx.translate(cx, cy);
+            ctx.rotate(ang);
+            ctx.translate(-cx, -cy);
         }
-        ctx.fillStyle = fillCss;
-    };
-    const applyShapeStrokeStyle = () => {
-        if (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') {
-            const isPrimary = strokeCss === window.shapePrimaryFillCss() || strokeCss === window.shapeLineStrokeCss();
-            const ditherId = isPrimary ? EditorManager.primaryDitherPatternId : EditorManager.secondaryDitherPatternId;
-            const canv = EditorManager._ditherPatternCanvases[ditherId || 'black'];
-            if (canv) {
-                const pat = ctx.createPattern(canv, 'repeat');
-                ctx.strokeStyle = pat;
-                return;
+
+        const applyShapeFillStyle = () => {
+            if (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') {
+                const isPrimary = fillCss === window.shapePrimaryFillCss();
+                const ditherId = isPrimary ? EditorManager.primaryDitherPatternId : EditorManager.secondaryDitherPatternId;
+                const canv = EditorManager._ditherPatternCanvases[ditherId || 'black'];
+                if (canv) {
+                    const pat = ctx.createPattern(canv, 'repeat');
+                    ctx.fillStyle = pat;
+                    return;
+                }
             }
-        }
-        ctx.strokeStyle = strokeCss;
-    };
-
-    let w = Math.abs(pos.x - startXp);
-    let h = Math.abs(pos.y - startYp);
-    let lx = Math.min(pos.x, startXp) - EditorManager.activeLayer.x;
-    let ly = Math.min(pos.y, startYp) - EditorManager.activeLayer.y;
-    const illuShiftBoxTools = new Set([
-        'rect',
-        'round-3',
-        'triangle',
-        'star',
-        'reg-poly',
-        'diamond',
-        'trapezoid',
-        'parallelogram',
-        'triangle-right',
-        'callout'
-    ]);
-    if (illuShiftBoxTools.has(window.activeTool) && shift) {
-        const b = constrainRectSelectionDraw(startXp, startYp, pos.x, pos.y, true);
-        w = b.w;
-        h = b.h;
-        lx = b.x - EditorManager.activeLayer.x;
-        ly = b.y - EditorManager.activeLayer.y;
-    }
-    const lsx = startXp - EditorManager.activeLayer.x;
-    const lsy = startYp - EditorManager.activeLayer.y;
-    let endDocX = pos.x;
-    let endDocY = pos.y;
-    if (window.activeTool === 'line' && shift) {
-        const ep = constrainLineEndpoint(startXp, startYp, pos.x, pos.y, true);
-        endDocX = ep.x;
-        endDocY = ep.y;
-    }
-    const lpx = endDocX - EditorManager.activeLayer.x;
-    const lpy = endDocY - EditorManager.activeLayer.y;
-
-    const doFill = mode !== 'stroke' && fillType !== 'none';
-    const doStroke = mode !== 'fill';
-
-    const opts = {
-        strokeMode: mode,
-        fillType,
-        gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
-        gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
-        gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
-        strokeWidth: strokeW,
-        lineContourWidth: lineContourW
-    };
-
-    if (window.activeTool === 'rect') {
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+            ctx.fillStyle = fillCss;
+        };
+        const applyShapeStrokeStyle = () => {
+            if (EditorManager.activeProject && EditorManager.activeProject.mode === 'pixel-dither') {
+                const isPrimary = strokeCss === window.shapePrimaryFillCss() || strokeCss === window.shapeLineStrokeCss();
+                const ditherId = isPrimary ? EditorManager.primaryDitherPatternId : EditorManager.secondaryDitherPatternId;
+                const canv = EditorManager._ditherPatternCanvases[ditherId || 'black'];
+                if (canv) {
+                    const pat = ctx.createPattern(canv, 'repeat');
+                    ctx.strokeStyle = pat;
+                } else {
+                    ctx.strokeStyle = strokeCss;
+                }
             } else {
-                applyShapeFillStyle();
+                ctx.strokeStyle = strokeCss;
             }
-            ctx.fillRect(lx, ly, w, h);
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            ctx.strokeRect(lx, ly, w, h);
-        }
-        return { kind: 'rect', params: { lx, ly, w, h }, opts };
-    }
-    if (window.activeTool === 'circle') {
-        let x0 = Math.min(pos.x, startXp);
-        let y0 = Math.min(pos.y, startYp);
-        let x1 = Math.max(pos.x, startXp);
-        let y1 = Math.max(pos.y, startYp);
-        if (shift) {
+            const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+            if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, strokeW * 2), Math.max(4, strokeW * 1.5)]);
+            else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, strokeW * 0.5), Math.max(4, strokeW * 1.5)]);
+            else ctx.setLineDash([]);
+        };
+
+        let w = Math.abs(pos.x - startXp);
+        let h = Math.abs(pos.y - startYp);
+        let lx = Math.min(pos.x, startXp) - EditorManager.activeLayer.x;
+        let ly = Math.min(pos.y, startYp) - EditorManager.activeLayer.y;
+        const illuShiftBoxTools = new Set([
+            'rect',
+            'round-3',
+            'triangle',
+            'star',
+            'reg-poly',
+            'diamond',
+            'trapezoid',
+            'parallelogram',
+            'triangle-right',
+            'callout'
+        ]);
+        if (illuShiftBoxTools.has(window.activeTool) && shift) {
             const b = constrainRectSelectionDraw(startXp, startYp, pos.x, pos.y, true);
-            x0 = b.x;
-            y0 = b.y;
-            x1 = b.x + b.w;
-            y1 = b.y + b.h;
+            w = b.w;
+            h = b.h;
+            lx = b.x - EditorManager.activeLayer.x;
+            ly = b.y - EditorManager.activeLayer.y;
         }
-        const rw = (x1 - x0) / 2;
-        const rh = (y1 - y0) / 2;
-        const ecxDoc = x0 + rw;
-        const ecyDoc = y0 + rh;
-        const ecx = ecxDoc - EditorManager.activeLayer.x;
-        const ecy = ecyDoc - EditorManager.activeLayer.y;
-        ctx.beginPath();
-        ctx.ellipse(ecx, ecy, Math.max(0, rw), Math.max(0, rh), 0, 0, Math.PI * 2);
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'ellipse', ecx - rw, ecy - rh, rw * 2, rh * 2, ecx, ecy, rw, rh, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            ctx.fill();
+        const lsx = startXp - EditorManager.activeLayer.x;
+        const lsy = startYp - EditorManager.activeLayer.y;
+        let endDocX = pos.x;
+        let endDocY = pos.y;
+        if (window.activeTool === 'line' && shift) {
+            const ep = constrainLineEndpoint(startXp, startYp, pos.x, pos.y, true);
+            endDocX = ep.x;
+            endDocY = ep.y;
         }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            ctx.stroke();
-        }
-        return { kind: 'ellipse', params: { cx: ecx, cy: ecy, rx: rw, ry: rh }, opts };
-    }
-    if (window.activeTool === 'line') {
-        illuDrawPixelLineSegment(ctx, lsx, lsy, lpx, lpy, opts);
-        return { kind: 'line', params: { x1: lsx, y1: lsy, x2: lpx, y2: lpy }, opts };
-    }
-    if (window.activeTool === 'round-3') {
-        const want = EditorManager.toolProps.shapeCornerRadius ?? 12;
-        const rInt = Math.round(clampRoundRectCornerRadius(want, w, h));
-        ctx.beginPath();
-        if (typeof ctx.roundRect === 'function') {
-            ctx.roundRect(lx, ly, w, h, rInt);
-        } else {
-            ctx.rect(lx, ly, w, h);
-        }
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            ctx.fill();
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            ctx.stroke();
-        }
-        return { kind: 'roundrect', params: { lx, ly, w, h, r: rInt }, opts };
-    }
-    if (window.activeTool === 'triangle') {
-        const triPts = illuTriangleCanvasPoints(lx, ly, w, h, 0.5, 0);
-        const drawShapePath = () => {
-            if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
-                window.illuDrawCanvasPolygonFromPoints(ctx, triPts);
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(triPts[0].x, triPts[0].y);
-                for (let i = 1; i < triPts.length; i++) ctx.lineTo(triPts[i].x, triPts[i].y);
-                ctx.closePath();
-            }
+        const lpx = endDocX - EditorManager.activeLayer.x;
+        const lpy = endDocY - EditorManager.activeLayer.y;
+
+        const doFill = mode !== 'stroke' && fillType !== 'none';
+        const doStroke = mode !== 'fill';
+
+        const opts = {
+            strokeMode: mode,
+            fillType,
+            gradType: document.getElementById('tool-shape-grad-type')?.value || 'linear',
+            gradMethod: typeof window.illuGetGradientMethod === 'function' ? window.illuGetGradientMethod() : 'simple',
+            gradAngle: EditorManager.toolProps.shapeGradAngle ?? 0,
+            strokeWidth: strokeW,
+            lineContourWidth: lineContourW
         };
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            drawShapePath();
-            ctx.fill();
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            drawShapePath();
-            ctx.stroke();
-        }
-        return { kind: 'triangle', params: { lx, ly, w, h, adj: 0.5, vf: 0 }, opts };
-    }
-    if (window.activeTool === 'star') {
-        const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 5);
-        const starPts = illuStarCanvasPoints(lx, ly, w, h, branches);
-        const drawShapePath = () => {
-            if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
-                window.illuDrawCanvasPolygonFromPoints(ctx, starPts);
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(starPts[0].x, starPts[0].y);
-                for (let i = 1; i < starPts.length; i++) ctx.lineTo(starPts[i].x, starPts[i].y);
-                ctx.closePath();
-            }
-        };
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            drawShapePath();
-            ctx.fill();
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            drawShapePath();
-            ctx.stroke();
-        }
-        return { kind: 'star', params: { lx, ly, w, h, branches }, opts };
-    }
-    if (window.activeTool === 'reg-poly') {
-        const sides =
-            typeof window.illuClampPolygonSides === 'function'
-                ? window.illuClampPolygonSides(EditorManager.toolProps.polygonSides ?? 6)
-                : 6;
-        const polyPts =
-            typeof window.illuRegularPolygonPoints === 'function'
-                ? window.illuRegularPolygonPoints(lx, ly, w, h, sides)
-                : [];
-        const drawShapePath = () => {
-            if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
-                window.illuDrawCanvasPolygonFromPoints(ctx, polyPts);
-            }
-        };
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            drawShapePath();
-            ctx.fill();
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            drawShapePath();
-            ctx.stroke();
-        }
-        return { kind: 'poly', params: { lx, ly, w, h, sides }, opts };
-    }
-    const quadPreset =
-        typeof window.illuShapeToolQuadPreset === 'function' ? window.illuShapeToolQuadPreset(window.activeTool) : null;
-    if (quadPreset) {
-        const pts =
-            typeof window.illuQuadPointsForPreset === 'function'
-                ? window.illuQuadPointsForPreset(quadPreset, lx, ly, w, h)
-                : [];
-        const drawShapePath = () => {
-            if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
-                window.illuDrawCanvasPolygonFromPoints(ctx, pts);
-            }
-        };
-        if (doFill) {
-            if (fillType === 'gradient') {
-                ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
-            } else {
-                applyShapeFillStyle();
-            }
-            drawShapePath();
-            ctx.fill();
-        }
-        if (doStroke) {
-            applyShapeStrokeStyle();
-            drawShapePath();
-            ctx.stroke();
-        }
-        return { kind: 'quad', params: { lx, ly, w, h, pts, quadPreset }, opts };
-    }
-    if (window.activeTool === 'callout') {
-        const style = EditorManager.toolProps.calloutStyle || 'rect';
-        const cOpts = {};
-        if (EditorManager.toolProps.calloutTailT != null && Number.isFinite(Number(EditorManager.toolProps.calloutTailT))) {
-            cOpts.tailT = EditorManager.toolProps.calloutTailT;
-        } else {
-            cOpts.tailX = EditorManager.toolProps.calloutTailX != null ? EditorManager.toolProps.calloutTailX : 0.5;
-        }
-        const d =
-            typeof window.illuCalloutPathD === 'function'
-                ? window.illuCalloutPathD(style, lx, ly, w, h, cOpts)
-                : '';
-        const m =
-            typeof window.illuCalloutMetrics === 'function'
-                ? window.illuCalloutMetrics(style, lx, ly, w, h, cOpts)
-                : null;
-        if (d) {
+
+        if (window.activeTool === 'rect') {
             if (doFill) {
                 if (fillType === 'gradient') {
                     ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
                 } else {
                     applyShapeFillStyle();
                 }
-                const p2d = new Path2D(d);
-                ctx.fill(p2d);
+                ctx.fillRect(lx, ly, w, h);
             }
             if (doStroke) {
                 applyShapeStrokeStyle();
-                const p2d = new Path2D(d);
-                ctx.stroke(p2d);
+                ctx.strokeRect(lx, ly, w, h);
+            }
+            return { kind: 'rect', params: { lx, ly, w, h }, opts };
+        }
+        if (window.activeTool === 'circle') {
+            let x0 = Math.min(pos.x, startXp);
+            let y0 = Math.min(pos.y, startYp);
+            let x1 = Math.max(pos.x, startXp);
+            let y1 = Math.max(pos.y, startYp);
+            if (shift) {
+                const b = constrainRectSelectionDraw(startXp, startYp, pos.x, pos.y, true);
+                x0 = b.x;
+                y0 = b.y;
+                x1 = b.x + b.w;
+                y1 = b.y + b.h;
+            }
+            const rw = (x1 - x0) / 2;
+            const rh = (y1 - y0) / 2;
+            const ecxDoc = x0 + rw;
+            const ecyDoc = y0 + rh;
+            const ecx = ecxDoc - EditorManager.activeLayer.x;
+            const ecy = ecyDoc - EditorManager.activeLayer.y;
+            ctx.beginPath();
+            ctx.ellipse(ecx, ecy, Math.max(0, rw), Math.max(0, rh), 0, 0, Math.PI * 2);
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'ellipse', ecx - rw, ecy - rh, rw * 2, rh * 2, ecx, ecy, rw, rh, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                ctx.stroke();
+            }
+            return { kind: 'ellipse', params: { cx: ecx, cy: ecy, rx: rw, ry: rh }, opts };
+        }
+        if (window.activeTool === 'line') {
+            const isCubic = EditorManager.toolProps && EditorManager.toolProps.lineMode === 'cubic';
+            if (isCubic) {
+                const cx1 = lsx + (lpx - lsx) / 3;
+                const cy1 = lsy + (lpy - lsy) / 3;
+                const cx2 = lsx + 2 * (lpx - lsx) / 3;
+                const cy2 = lsy + 2 * (lpy - lsy) / 3;
+                if (typeof window.illuDrawPixelCubicCurveWithBorder === 'function') {
+                    window.illuDrawPixelCubicCurveWithBorder(ctx, lsx, lsy, cx1, cy1, cx2, cy2, lpx, lpy, opts);
+                }
+                return { kind: 'line', isCubic: true, params: { x1: lsx, y1: lsy, cx1, cy1, cx2, cy2, x2: lpx, y2: lpy, isCubic: true }, opts };
+            } else {
+                illuDrawPixelLineSegment(ctx, lsx, lsy, lpx, lpy, opts);
+                return { kind: 'line', params: { x1: lsx, y1: lsy, x2: lpx, y2: lpy }, opts };
             }
         }
-        const params = { lx, ly, w, h, style };
-        if (m && m.tailT != null) params.tailT = m.tailT;
-        else params.tailX = cOpts.tailX != null ? cOpts.tailX : 0.5;
-        return { kind: 'callout', params, opts };
+        if (window.activeTool === 'round-3') {
+            const want = EditorManager.toolProps.shapeCornerRadius ?? 12;
+            const rInt = Math.round(clampRoundRectCornerRadius(want, w, h));
+            ctx.beginPath();
+            if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(lx, ly, w, h, rInt);
+            } else {
+                ctx.rect(lx, ly, w, h);
+            }
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                ctx.stroke();
+            }
+            return { kind: 'roundrect', params: { lx, ly, w, h, r: rInt }, opts };
+        }
+        if (window.activeTool === 'triangle') {
+            const triPts = illuTriangleCanvasPoints(lx, ly, w, h, 0.5, 0);
+            const drawShapePath = () => {
+                if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
+                    window.illuDrawCanvasPolygonFromPoints(ctx, triPts);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(triPts[0].x, triPts[0].y);
+                    for (let i = 1; i < triPts.length; i++) ctx.lineTo(triPts[i].x, triPts[i].y);
+                    ctx.closePath();
+                }
+            };
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                drawShapePath();
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                drawShapePath();
+                ctx.stroke();
+            }
+            return { kind: 'triangle', params: { lx, ly, w, h, adj: 0.5, vf: 0 }, opts };
+        }
+        if (window.activeTool === 'star') {
+            const branches = illuClampTriangleBranches(EditorManager.toolProps.triangleBranches ?? 5);
+            const starPts = illuStarCanvasPoints(lx, ly, w, h, branches);
+            const drawShapePath = () => {
+                if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
+                    window.illuDrawCanvasPolygonFromPoints(ctx, starPts);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(starPts[0].x, starPts[0].y);
+                    for (let i = 1; i < starPts.length; i++) ctx.lineTo(starPts[i].x, starPts[i].y);
+                    ctx.closePath();
+                }
+            };
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                drawShapePath();
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                drawShapePath();
+                ctx.stroke();
+            }
+            return { kind: 'star', params: { lx, ly, w, h, branches }, opts };
+        }
+        if (window.activeTool === 'reg-poly') {
+            const sides =
+                typeof window.illuClampPolygonSides === 'function'
+                    ? window.illuClampPolygonSides(EditorManager.toolProps.polygonSides ?? 6)
+                    : 6;
+            const polyPts =
+                typeof window.illuRegularPolygonPoints === 'function'
+                    ? window.illuRegularPolygonPoints(lx, ly, w, h, sides)
+                    : [];
+            const drawShapePath = () => {
+                if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
+                    window.illuDrawCanvasPolygonFromPoints(ctx, polyPts);
+                }
+            };
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                drawShapePath();
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                drawShapePath();
+                ctx.stroke();
+            }
+            return { kind: 'poly', params: { lx, ly, w, h, sides }, opts };
+        }
+        const quadPreset =
+            typeof window.illuShapeToolQuadPreset === 'function' ? window.illuShapeToolQuadPreset(window.activeTool) : null;
+        if (quadPreset) {
+            const pts =
+                typeof window.illuQuadPointsForPreset === 'function'
+                    ? window.illuQuadPointsForPreset(quadPreset, lx, ly, w, h)
+                    : [];
+            const drawShapePath = () => {
+                if (typeof window.illuDrawCanvasPolygonFromPoints === 'function') {
+                    window.illuDrawCanvasPolygonFromPoints(ctx, pts);
+                }
+            };
+            if (doFill) {
+                if (fillType === 'gradient') {
+                    ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                } else {
+                    applyShapeFillStyle();
+                }
+                drawShapePath();
+                ctx.fill();
+            }
+            if (doStroke) {
+                applyShapeStrokeStyle();
+                drawShapePath();
+                ctx.stroke();
+            }
+            return { kind: 'quad', params: { lx, ly, w, h, pts, quadPreset }, opts };
+        }
+        if (window.activeTool === 'callout') {
+            const style = EditorManager.toolProps.calloutStyle || 'rect';
+            const cOpts = {};
+            if (EditorManager.toolProps.calloutTailT != null && Number.isFinite(Number(EditorManager.toolProps.calloutTailT))) {
+                cOpts.tailT = EditorManager.toolProps.calloutTailT;
+            } else {
+                cOpts.tailX = EditorManager.toolProps.calloutTailX != null ? EditorManager.toolProps.calloutTailX : 0.5;
+            }
+            if (EditorManager.toolProps.shapeCornerRadius != null) {
+                cOpts.cornerRadius = EditorManager.toolProps.shapeCornerRadius;
+            }
+            const d =
+                typeof window.illuCalloutPathD === 'function'
+                    ? window.illuCalloutPathD(style, lx, ly, w, h, cOpts)
+                    : '';
+            const m =
+                typeof window.illuCalloutMetrics === 'function'
+                    ? window.illuCalloutMetrics(style, lx, ly, w, h, cOpts)
+                    : null;
+            if (d) {
+                if (doFill) {
+                    if (fillType === 'gradient') {
+                        ctx.fillStyle = createShapeFillGradient(ctx, 'rect', lx, ly, w, h, lsx, lsy, 0, 0, lpx, lpy);
+                    } else {
+                        applyShapeFillStyle();
+                    }
+                    const p2d = new Path2D(d);
+                    ctx.fill(p2d);
+                }
+                if (doStroke) {
+                    applyShapeStrokeStyle();
+                    const p2d = new Path2D(d);
+                    ctx.stroke(p2d);
+                }
+            }
+            const params = { lx, ly, w, h, style };
+            if (m && m.tailT != null) params.tailT = m.tailT;
+            else params.tailX = cOpts.tailX != null ? cOpts.tailX : 0.5;
+            return { kind: 'callout', params, opts };
+        }
+        return null;
+    } finally {
+        ctx.restore();
     }
-    return null;
 }
 
 function drawFinalShapeOnCanvas(pos, shiftKey) {
@@ -17901,4 +18121,205 @@ document.addEventListener('DOMContentLoaded', () => {
         rulerLeft.addEventListener('pointerup', handleUp);
         rulerLeft.addEventListener('pointercancel', handleUp);
     }
+    
+    // Line Mode live conversion helper
+    function illuConvertLineLive(el, targetMode) {
+        if (!el) return;
+        const tag = el.tagName.toLowerCase();
+        if (tag !== 'path' && tag !== 'line') return;
+        
+        let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        let c1x = 0, c1y = 0, c2x = 0, c2y = 0;
+        let hasCoords = false;
+        
+        if (tag === 'line') {
+            x1 = parseFloat(el.getAttribute('x1')) || 0;
+            y1 = parseFloat(el.getAttribute('y1')) || 0;
+            x2 = parseFloat(el.getAttribute('x2')) || 0;
+            y2 = parseFloat(el.getAttribute('y2')) || 0;
+            hasCoords = true;
+        } else if (tag === 'path') {
+            const d = el.getAttribute('d') || '';
+            if (el.getAttribute('data-illu-line-cubic') === '1') {
+                const p = parseIlluLinePath(d);
+                if (p) {
+                    x1 = p.x1; y1 = p.y1;
+                    x2 = p.x2; y2 = p.y2;
+                    c1x = p.c1x; c1y = p.c1y;
+                    c2x = p.c2x; c2y = p.c2y;
+                    hasCoords = true;
+                }
+            } else {
+                const p = parseIlluStraightLinePath(d);
+                if (p) {
+                    x1 = p.x1; y1 = p.y1;
+                    x2 = p.x2; y2 = p.y2;
+                    hasCoords = true;
+                }
+            }
+        }
+        
+        if (!hasCoords) return;
+        
+        let targetEl = el;
+        if (tag === 'line') {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            for (let i = 0; i < el.attributes.length; i++) {
+                const attr = el.attributes[i];
+                if (!['x1', 'y1', 'x2', 'y2', 'id'].includes(attr.name)) {
+                    path.setAttribute(attr.name, attr.value);
+                }
+            }
+            path.setAttribute('id', el.getAttribute('id'));
+            el.parentNode.replaceChild(path, el);
+            targetEl = path;
+            
+            if (typeof EditorManager !== 'undefined' && EditorManager.activeVectorSelection) {
+                const idx = EditorManager.activeVectorSelection.indexOf(el);
+                if (idx !== -1) {
+                    EditorManager.activeVectorSelection[idx] = targetEl;
+                }
+            }
+            if (window._activeVectorShapeEl === el) {
+                window._activeVectorShapeEl = targetEl;
+            }
+            if (typeof activeVectorShape !== 'undefined' && activeVectorShape === el) {
+                activeVectorShape = targetEl;
+            }
+            if (typeof currentElement !== 'undefined' && currentElement === el) {
+                currentElement = targetEl;
+            }
+        }
+        
+        if (targetMode === 'straight') {
+            targetEl.removeAttribute('data-illu-line-cubic');
+            targetEl.setAttribute('data-illu-line-straight', '1');
+            targetEl.setAttribute('d', formatIlluStraightLinePath(x1, y1, x2, y2));
+        } else if (targetMode === 'cubic') {
+            targetEl.removeAttribute('data-illu-line-straight');
+            targetEl.setAttribute('data-illu-line-cubic', '1');
+            if (c1x === 0 && c1y === 0 && c2x === 0 && c2y === 0) {
+                c1x = x1 + (x2 - x1) / 3;
+                c1y = y1 + (y2 - y1) / 3;
+                c2x = x1 + 2 * (x2 - x1) / 3;
+                c2y = y1 + 2 * (y2 - y1) / 3;
+            }
+            targetEl.setAttribute('d', formatIlluLinePath({
+                x1, y1,
+                c1x, c1y,
+                c2x, c2y,
+                x2, y2
+            }));
+        }
+        
+        if (typeof window.vectorApplyLineEndpointMarkers === 'function') {
+            window.vectorApplyLineEndpointMarkers(targetEl);
+        }
+        if (typeof illuRefreshVectorElementPaint === 'function') {
+            illuRefreshVectorElementPaint(targetEl);
+        }
+        
+        if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
+            window.VectorEngine.refreshSelectionUI();
+        }
+    }
+    
+    function applyLiveLineModeChange(targetMode) {
+        if (typeof EditorManager === 'undefined') return;
+        
+        // 1. Pixel mode shape live conversion
+        if (window.pixelShapeEdit && window.pixelShapeEdit.kind === 'line') {
+            const ed = window.pixelShapeEdit;
+            const wasCubic = !!ed.isCubic;
+            const wantCubic = targetMode === 'cubic';
+            if (wasCubic !== wantCubic) {
+                if (typeof EditorManager.saveHistory === 'function') {
+                    EditorManager.saveHistory('Changer mode de ligne', { patchActiveLayer: true });
+                }
+                ed.isCubic = wantCubic;
+                if (wantCubic && ed.cx1 == null) {
+                    ed.cx1 = ed.x1 + (ed.x2 - ed.x1) / 3;
+                    ed.cy1 = ed.y1 + (ed.y2 - ed.y1) / 3;
+                    ed.cx2 = ed.x1 + 2 * (ed.x2 - ed.x1) / 3;
+                    ed.cy2 = ed.y1 + 2 * (ed.y2 - ed.y1) / 3;
+                }
+                if (typeof window.illuSyncPixelShapeEditDocFromLocals === 'function') {
+                    window.illuSyncPixelShapeEditDocFromLocals(ed);
+                }
+                if (typeof window.redrawShapeFromEditLive === 'function') {
+                    window.redrawShapeFromEditLive();
+                }
+            }
+        }
+
+        // 2. Vector mode shape live conversion
+        const targets = [];
+        if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+            EditorManager.activeVectorSelection.forEach(el => {
+                if (!targets.includes(el)) targets.push(el);
+            });
+        }
+        if (typeof activeVectorShape !== 'undefined' && activeVectorShape && !targets.includes(activeVectorShape)) {
+            targets.push(activeVectorShape);
+        }
+        if (typeof currentElement !== 'undefined' && currentElement && !targets.includes(currentElement)) {
+            targets.push(currentElement);
+        }
+        if (window._activeVectorShapeEl && !targets.includes(window._activeVectorShapeEl)) {
+            targets.push(window._activeVectorShapeEl);
+        }
+        
+        let anyConverted = false;
+        targets.forEach(el => {
+            if (illuVectorIsEditableStrokeElement(el)) {
+                if (!anyConverted) {
+                    if (typeof EditorManager.saveHistory === 'function') {
+                        EditorManager.saveHistory('Changer mode de ligne');
+                    }
+                    anyConverted = true;
+                }
+                illuConvertLineLive(el, targetMode);
+            }
+        });
+        
+        if (anyConverted) {
+            if (typeof EditorManager.render === 'function') {
+                EditorManager.render();
+            }
+        }
+    }
+
+    // Line Mode buttons
+    const modeStraight = document.getElementById('line-mode-straight-btn');
+    const modeCubic = document.getElementById('line-mode-cubic-btn');
+    if (modeStraight) {
+        modeStraight.addEventListener('click', () => {
+            if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+                EditorManager.toolProps.lineMode = 'straight';
+            }
+            applyLiveLineModeChange('straight');
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        });
+    }
+    if (modeCubic) {
+        modeCubic.addEventListener('click', () => {
+            if (typeof EditorManager !== 'undefined' && EditorManager.toolProps) {
+                EditorManager.toolProps.lineMode = 'cubic';
+            }
+            applyLiveLineModeChange('cubic');
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        });
+    }
+
+    // Auto-close shape picker popup
+    document.addEventListener('pointerdown', (e) => {
+        const popup = document.getElementById('illu-shape-picker-popup');
+        const trigger = document.getElementById('illu-shape-picker-header');
+        if (popup && !popup.hidden) {
+            if (!popup.contains(e.target) && (!trigger || !trigger.contains(e.target))) {
+                popup.hidden = true;
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
 });

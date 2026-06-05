@@ -1199,7 +1199,15 @@ window.applySavedFloatingPalettePositions = function () {
     PALETTE_WINDOW_IDS.forEach((id) => {
         const el = document.getElementById(id);
         const pos = map[id];
-        if (!el || !pos || typeof pos !== 'object') return;
+        if (!el) return;
+
+        if (id === 'win-history') {
+            el.style.width = '200px';
+            el.style.minWidth = '200px';
+            el.style.maxWidth = '200px';
+        }
+
+        if (!pos || typeof pos !== 'object') return;
 
         // Reset all before applying saved ones to avoid conflicts (e.g. top + bottom)
         el.style.top = 'auto';
@@ -1208,9 +1216,16 @@ window.applySavedFloatingPalettePositions = function () {
         el.style.right = 'auto';
 
         keys.forEach((k) => {
+            if (id === 'win-history' && (k === 'width' || k === 'maxWidth')) return;
             const v = pos[k];
             if (v != null && String(v).trim() !== '' && v !== 'auto') el.style[k] = String(v);
         });
+
+        if (id === 'win-history') {
+            el.style.width = '200px';
+            el.style.minWidth = '200px';
+            el.style.maxWidth = '200px';
+        }
     });
 };
 
@@ -1226,6 +1241,7 @@ window.saveIlluWindowPositionAfterDrag = function (win) {
     if (!PALETTE_WINDOW_IDS.includes(win.id)) return;
     const o = {};
     ['left', 'top', 'right', 'bottom', 'width', 'maxWidth'].forEach((k) => {
+        if (win.id === 'win-history' && (k === 'width' || k === 'maxWidth')) return;
         const v = win.style[k];
         if (v != null && String(v).trim() !== '' && v !== 'auto') o[k] = v;
     });
@@ -2491,6 +2507,11 @@ function mountPalettesFloating() {
         el.style.removeProperty('maxWidth');
         el.style.removeProperty('box-sizing');
         el.style.removeProperty('boxSizing');
+        if (id === 'win-history') {
+            el.style.width = '200px';
+            el.style.minWidth = '200px';
+            el.style.maxWidth = '200px';
+        }
         el.querySelectorAll('.title-bar').forEach((tb) => {
             tb.style.cursor = 'move';
         });
@@ -2666,8 +2687,9 @@ function mountPalettesDocked() {
         historyHost.appendChild(hist);
         hist.classList.remove('floating-window');
         stripPaletteInlinePosition(hist);
-        hist.style.width = '';
-        hist.style.maxWidth = '';
+        hist.style.width = '200px';
+        hist.style.minWidth = '200px';
+        hist.style.maxWidth = '200px';
         const tb = hist.querySelector('.title-bar');
         if (tb) tb.style.cursor = 'default';
     }

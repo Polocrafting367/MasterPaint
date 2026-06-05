@@ -5361,3 +5361,18 @@ body.theme-dark .illu-menubar-icon-btn {
   background: var(--mp-surface, #c0c0c0) !important; 
 }
 }
+
+/* Win98 coherent style for shape picker and dropdown popups */
+.illu-shape-picker-popup {
+    background: var(--mp-surface, #f4f2ef) !important;
+    border: 2px solid !important;
+    border-color: var(--mp-raised-top, #ffffff) var(--mp-raised-bot, #808080) var(--mp-raised-bot, #808080) var(--mp-raised-top, #ffffff) !important;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.25) !important;
+    border-radius: var(--mp-radius, 0px) !important;
+}
+
+body.theme-dark:not(.theme-aero):not(.theme-luna) .illu-shape-picker-popup {
+    background: var(--mp-surface-deep, #2a2a2a) !important;
+    border-color: var(--mp-raised-top, #555) var(--mp-raised-bot, #111) var(--mp-raised-bot, #111) var(--mp-raised-top, #555) !important;
+    box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.5) !important;
+}

@@ -691,6 +691,15 @@
         'ribbon.groupBrush': 'Pinceau',
         'ribbon.groupShapeMode': 'Contour',
         'ribbon.groupShapeStyleFill': 'Contour / rempl.',
+        'ribbon.groupLineEndpoints': 'Ligne / Extrémités',
+        'ribbon.groupLineCapStart': 'Début',
+        'ribbon.groupLineDash': 'Trait',
+        'ribbon.groupLineCapEnd': 'Fin',
+        'opt-grp-line-cap-start': 'Début',
+        'opt-grp-line-dash': 'Trait',
+        'opt-grp-line-cap-end': 'Fin',
+        'line.modeStraight': 'Droite',
+        'line.modeCubic': '4 points',
         'ribbon.groupTextStyle': 'Style',
         'ribbon.groupTextStyleFill': 'Style / Remplissage',
         'ribbon.groupGradientMethod': 'Méthode',
@@ -1431,7 +1440,16 @@
         'contact.error': 'Erreur serveur : {msg}',
         'contact.errorNetwork': 'Impossible de contacter le serveur.',
         'contact.emptyMessage': 'Veuillez écrire un message.',
-        'common.githubProject': 'Projet sur GitHub'
+        'common.githubProject': 'Projet sur GitHub',
+        'icon.save': 'Enregistrer',
+        'icon.open': 'Ouvrir',
+        'icon.close': 'Fermer',
+        'icon.undo': 'Annuler',
+        'icon.redo': 'Rétablir',
+        'icon.settings': 'Paramètres',
+        'icon.layers': 'Calques',
+        'icon.history': 'Historique',
+        'icon.preview': 'Aperçu'
     };
 
     const en = {
@@ -2096,6 +2114,15 @@
         'ribbon.groupBrush': 'Brush',
         'ribbon.groupShapeMode': 'Stroke',
         'ribbon.groupShapeStyleFill': 'Stroke / fill',
+        'ribbon.groupLineEndpoints': 'Line / Endpoints',
+        'ribbon.groupLineCapStart': 'start',
+        'ribbon.groupLineDash': 'Line',
+        'ribbon.groupLineCapEnd': 'End',
+        'opt-grp-line-cap-start': 'Start',
+        'opt-grp-line-dash': 'Line',
+        'opt-grp-line-cap-end': 'End',
+        'line.modeStraight': 'Straight',
+        'line.modeCubic': '4 points',
         'ribbon.groupTextStyle': 'Style',
         'ribbon.groupTextStyleFill': 'Style / Fill',
         'ribbon.groupGradientMethod': 'Method',
@@ -2877,10 +2904,101 @@
         'contact.error': 'Server error: {msg}',
         'contact.errorNetwork': 'Unable to contact the server.',
         'contact.emptyMessage': 'Please write a message.',
-        'common.githubProject': 'Project on GitHub'
+        'common.githubProject': 'Project on GitHub',
+        'icon.save': 'Save',
+        'icon.open': 'Open',
+        'icon.close': 'Close',
+        'icon.undo': 'Undo',
+        'icon.redo': 'Redo',
+        'icon.settings': 'Settings',
+        'icon.layers': 'Layers',
+        'icon.history': 'History',
+        'icon.preview': 'Preview'
     };
 
     const BUNDLES = { fr, en };
+
+    const ICON_MAP = {
+        'menu.fileNew': { cls: 'fa-solid fa-file-circle-plus' },
+        'menu.fileExport': { cls: 'fa-solid fa-download' },
+        'menu.photoModePro': { cls: 'fa-solid fa-camera' },
+        'menu.convertCmjn': { cls: 'fa-solid fa-print' },
+        'menu.convertPhotoModePro': { cls: 'fa-solid fa-camera' },
+        'menu.fileCloseProject': { cls: 'fa-solid fa-file-circle-xmark' },
+        'menu.fileSettings': { cls: 'fa-solid fa-gear' },
+        'photo.importTitle': { cls: 'fa-solid fa-plus' },
+        'photo.applyAll': { cls: 'fa-solid fa-copy' },
+        'photo.exportBtn': { cls: 'fa-solid fa-file-export' },
+        'photo.closeTitle': { cls: 'fa-solid fa-xmark' },
+        'menu.editUndo': { cls: 'fa-solid fa-rotate-left' },
+        'menu.editRedo': { cls: 'fa-solid fa-rotate-right' },
+        'menu.imageCropLive': { cls: 'fa-solid fa-crop' },
+        'menu.imageExtendWork': { cls: 'fa-solid fa-square-plus' },
+        'menu.imageTransform': { cls: 'fa-solid fa-rotate' },
+        'menu.imageLayerBounds': { cls: 'fa-solid fa-expand' },
+        'menu.imageAlignLayerWidth': { cls: 'fa-solid fa-arrows-left-right' },
+        'menu.imageRemoveBg': { cls: 'fa-solid fa-eraser' },
+        'menu.layerAdd': { cls: 'fa-solid fa-layer-group' },
+        'menu.layerDelete': { cls: 'fa-regular fa-trash-can' },
+        'menu.layerCenterSelH': { svg: '#illu-icon-sel-center-h' },
+        'menu.layerCenterSelV': { svg: '#illu-icon-sel-center-v' },
+        'menu.layerCenterSelBoth': { svg: '#illu-icon-sel-center-both' },
+        'menu.adjAutolevel': { cls: 'fa-solid fa-sliders' },
+        'menu.adjSepia': { cls: 'fa-solid fa-image-portrait' },
+        'menu.adjPosterize': { cls: 'fa-solid fa-swatchbook' },
+        'menu.adjBrightness': { cls: 'fa-solid fa-sun' },
+        'menu.adjHsv': { cls: 'fa-solid fa-palette' },
+        'menu.adjExposure': { cls: 'fa-solid fa-bolt' },
+        'menu.adjSharpen': { cls: 'fa-solid fa-eye' },
+        'menu.adjCurves': { cls: 'fa-solid fa-chart-line' },
+        'menu.winPixelGrid': { cls: 'fa-solid fa-border-all' },
+        'menu.winRulers': { cls: 'fa-solid fa-ruler' },
+        'menu.winSnapEdges': { cls: 'fa-solid fa-magnet' },
+        'menu.winShowAllRibbonOptions': { cls: 'fa-solid fa-eye' },
+        'menu.floatPalTools': { cls: 'fa-solid fa-paintbrush' },
+        'menu.floatPalColors': { cls: 'fa-solid fa-palette' },
+        'menu.floatPalLayers': { cls: 'fa-solid fa-layer-group' },
+        'menu.floatPalHistory': { cls: 'fa-solid fa-clock-rotate-left' },
+        'tools.allowOutsideCanvasShort': { cls: 'fa-solid fa-expand' },
+        'menu.fxSketch': { cls: 'fa-solid fa-pencil' },
+        'menu.fxAddNoise': { cls: 'fa-solid fa-plus' },
+        'menu.fxArgenticGrain': { cls: 'fa-solid fa-film' },
+        'menu.fxDigitalPattern': { cls: 'fa-solid fa-border-all' },
+        'menu.fxVhs': { cls: 'fa-solid fa-tape' },
+        'menu.fxMedian': { cls: 'fa-solid fa-minus' },
+        'menu.fxBulge': { cls: 'fa-solid fa-circle-dot' },
+        'menu.fxPinch': { cls: 'fa-solid fa-compress' },
+        'menu.fxCabossage': { cls: 'fa-solid fa-mountain' },
+        'menu.fxCrystallize': { cls: 'fa-solid fa-gem' },
+        'menu.fxPolarInvert': { cls: 'fa-solid fa-arrows-rotate' },
+        'menu.fxPixelate': { cls: 'fa-solid fa-border-none' },
+        'menu.fxTileReflect': { cls: 'fa-solid fa-table-cells-large' },
+        'menu.fxTwist': { cls: 'fa-solid fa-hurricane' },
+        'menu.fxWave': { cls: 'fa-solid fa-water' },
+        'menu.fxMirrorQuad': { cls: 'fa-solid fa-clover' },
+        'menu.fxFrosted': { cls: 'fa-solid fa-snowflake' },
+        'menu.fxBlurSimple': { cls: 'fa-solid fa-droplet' },
+        'menu.fxGaussian': { cls: 'fa-solid fa-smog' },
+        'menu.fxRadialBlur': { cls: 'fa-solid fa-circle-notch' },
+        'menu.fxZoomBlur': { cls: 'fa-solid fa-forward' },
+        'menu.fxRedEyeRemove': { cls: 'fa-solid fa-eye-slash' },
+        'menu.fxVignette': { cls: 'fa-solid fa-camera' },
+        'menu.fxSoftGlow': { cls: 'fa-solid fa-lightbulb' },
+        'menu.fxDropShadow': { cls: 'fa-solid fa-clone' },
+        'menu.fxEdges': { cls: 'fa-solid fa-pen-nib' },
+        'menu.fxContour': { cls: 'fa-solid fa-border-style' },
+        'menu.fxEmboss': { cls: 'fa-solid fa-stamp' },
+        'menu.fxSolarize': { cls: 'fa-solid fa-sun' },
+        'menu.fxHalftone': { cls: 'fa-solid fa-braille' },
+        'menu.fxChromatic': { cls: 'fa-solid fa-glasses' },
+        'menu.fxDuotone': { cls: 'fa-solid fa-circle-half-stroke' },
+        'menu.fxRal': { cls: 'fa-solid fa-palette' },
+        'menu.fxCmjn': { cls: 'fa-solid fa-print' },
+        'menu.windrop': { cls: 'fa-solid fa-check' },
+        'menu.winReset': { cls: 'fa-solid fa-desktop' },
+        'menu.winChangelog': { cls: 'fa-solid fa-clipboard-list' },
+        'menu.winWelcomeInfo': { cls: 'fa-solid fa-circle-info' },
+    };
 
     function getLang() {
         try {
@@ -2919,6 +3037,55 @@
         return s;
     }
 
+    function iconName(key, vars, fallback) {
+        const id = key == null ? '' : String(key).trim();
+        if (!id) return fallback || '';
+        const iconKey = id.startsWith('icon.') ? id : `icon.${id}`;
+        if (hasKey(iconKey)) return t(iconKey, vars);
+        if (hasKey(id)) return t(id, vars);
+        return fallback || id;
+    }
+
+    function getIconSpec(key) {
+        const k = key == null ? '' : String(key).trim();
+        return ICON_MAP[k] || null;
+    }
+
+    function renderIcon(key) {
+        const spec = getIconSpec(key);
+        if (!spec) return '';
+        if (spec.svg) {
+            return `<svg class="illu-menu-sprite-icon" width="16" height="16" aria-hidden="true"><use href="${spec.svg}" /></svg>`;
+        }
+        if (spec.cls) {
+            return `<i class="${spec.cls}" aria-hidden="true"></i>`;
+        }
+        if (spec.html) {
+            return spec.html;
+        }
+        return '';
+    }
+
+    function applyIcons(doc) {
+        doc.querySelectorAll('[data-icon-key]').forEach((el) => {
+            const key = (el.getAttribute('data-icon-key') || '').trim();
+            if (!key) return;
+            const iconHtml = renderIcon(key);
+            if (!iconHtml) return;
+
+            const isIconOnly = el.classList.contains('menu-icon') || el.classList.contains('title-bar-icon') || !el.textContent.trim();
+            if (isIconOnly) {
+                el.innerHTML = iconHtml;
+                return;
+            }
+
+            if (!el.querySelector('.title-bar-icon')) {
+                const wrapperHtml = `<span class="title-bar-icon" aria-hidden="true">${iconHtml}</span>`;
+                el.insertAdjacentHTML('afterbegin', wrapperHtml);
+            }
+        });
+    }
+
     function apply(root) {
         const doc = root || document;
         if (!doc || typeof doc.querySelectorAll !== 'function') return;
@@ -2937,6 +3104,16 @@
             if (!key || !hasKey(key)) return;
             el.setAttribute('placeholder', t(key));
         });
+        doc.querySelectorAll('[data-i18n-icon]').forEach((el) => {
+            const key = (el.getAttribute('data-i18n-icon') || '').trim();
+            if (!key) return;
+            el.textContent = iconName(key);
+        });
+        doc.querySelectorAll('[data-i18n-icon-title]').forEach((el) => {
+            const key = (el.getAttribute('data-i18n-icon-title') || '').trim();
+            if (!key) return;
+            el.setAttribute('title', iconName(key));
+        });
         doc.querySelectorAll('option[data-i18n]').forEach((el) => {
             const key = (el.getAttribute('data-i18n') || '').trim();
             if (!key || !hasKey(key)) return;
@@ -2952,6 +3129,7 @@
             if (!key || !hasKey(key)) return;
             el.setAttribute('aria-label', t(key));
         });
+        applyIcons(doc);
         if (!root) {
             document.documentElement.setAttribute('lang', getLang() === 'en' ? 'en' : 'fr');
         }
@@ -2965,7 +3143,12 @@
         setLang,
         hasKey,
         t,
+        iconName,
+        getIconSpec,
+        renderIcon,
+        applyIcons,
         apply,
+        ICON_MAP,
         BUNDLES
     };
 

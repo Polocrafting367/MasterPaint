@@ -198,8 +198,8 @@
                         <li role="menuitem" aria-haspopup="true" id="menu-file-standard"><span
                                 data-i18n="menu.file">Fichier</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="showNewProjectDialog()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileNew"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="showNewProjectDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span><span
                                         data-i18n="menu.fileNew">Nouveau...</span></li>
                                 <li role="menuitem" class="menu-row-icon"
                                     onclick="typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()"><span
@@ -212,13 +212,13 @@
                                     accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/*" aria-hidden="true"
                                     tabindex="-1">
                                 <li role="menuitem" class="menu-row-icon" onclick="WorkspaceIO&&WorkspaceIO.showExportDialog()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileExport"></span>
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-download"></i></span>
                                     <span data-i18n="menu.fileExport">Exporter…</span>
                                 </li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon"
                                     onclick="typeof PhotoModeManager !== 'undefined' && PhotoModeManager.open()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.photoModePro"></span>
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
                                     <span data-i18n="menu.photoModePro">Mode Photo Pro…</span>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true">
@@ -244,23 +244,23 @@
                                         </li>
                                         <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
                                             onclick="EditorManager.convertActiveProjectToCmjn()">
-                                            <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.convertCmjn"></span>
+                                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-print"></i></span>
                                             <span data-i18n="menu.convertCmjn">Espace de travail CMJN</span>
                                         </li>
                                         <li role="menuitem" class="menu-row-icon" id="menu-convert-photomodepro"
                                             onclick="(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()">
-                                            <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.convertPhotoModePro"></span>
+                                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
                                             <span data-i18n="menu.convertPhotoModePro">Photo Mode Pro</span>
                                         </li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon"
-                                    onclick="EditorManager.requestCloseActiveDocumentFromMenu()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileCloseProject"></span><span
+                                    onclick="EditorManager.requestCloseActiveDocumentFromMenu()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-file-circle-xmark"></i></span><span
                                         data-i18n="menu.fileCloseProject">Fermer le projet actif…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileSettings"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
                                         data-i18n="menu.fileSettings">Paramètres…</span></li>
                             </ul>
                         </li>
@@ -268,36 +268,36 @@
                                 data-i18n="menu.file">Fichier</span>
                             <ul role="menu">
                                 <li role="menuitem" class="menu-row-icon"
-                                    onclick="document.getElementById('pm-file-input').click()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="photo.importTitle"></span><span
+                                    onclick="document.getElementById('pm-file-input').click()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span
                                         data-i18n="photo.importTitle">Importer Photos</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.applyToAll()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="photo.applyAll"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.applyToAll()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-copy"></i></span><span
                                         data-i18n="photo.applyAll">Appliquer à toutes</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.openActiveInEditor()"><span
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-up-right-from-square"></i></span><span
                                         data-i18n="photo.openInEditor">Ouvrir Image</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.showExportOptions()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="photo.exportBtn"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.showExportOptions()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-file-export"></i></span><span
                                         data-i18n="photo.exportBtn">Exporter...</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileSettings"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span><span
                                         data-i18n="menu.fileSettings">Paramètres…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.close()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="photo.closeTitle"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="PhotoModeManager.close()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span><span
                                         data-i18n="photo.closeTitle">Fermer Photo Pro</span></li>
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.edit">Édition</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="undo()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.editUndo"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="undo()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-rotate-left"></i></span><span
                                         data-i18n="menu.editUndo">Annuler</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="redo()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.editRedo"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="redo()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-rotate-right"></i></span><span
                                         data-i18n="menu.editRedo">Rétablir</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
@@ -327,43 +327,43 @@
                                     </ul>
                                 </li>
 
-                                <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageCropLive"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="startIlluInteractiveCrop()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-crop"></i></span><span
                                         data-i18n="menu.imageCropLive">Recadrer (sélection sur la toile)…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageExtendWork"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-square-plus"></i></span><span
                                         data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageTransform"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span><span
                                         data-i18n="menu.imageTransform">Rotation et retournement…</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.openImageLayerBoundsDialog()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageLayerBounds"></span><span
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-expand"></i></span><span
                                         data-i18n="menu.imageLayerBounds">Calque actif…</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon"
-                                    onclick="EditorManager.alignActiveLayerWidthToCanvas()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageAlignLayerWidth"></span><span
+                                    onclick="EditorManager.alignActiveLayerWidthToCanvas()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-arrows-left-right"></i></span><span
                                         data-i18n="menu.imageAlignLayerWidth">Calque à la largeur de la toile</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.expandCanvasToLayers()"><span
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-object-group"></i></span><span
                                         data-i18n="menu.imageExpand">Ajuster la page…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageRemoveBg"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser"></i></span><span
                                         data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
 
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.layers">Calques</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.addLayer()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerAdd"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.addLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span><span
                                         data-i18n="menu.layerAdd">Ajouter un calque</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.deleteLayer()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerDelete"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.deleteLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-regular fa-trash-can"></i></span><span
                                         data-i18n="menu.layerDelete">Supprimer</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.mergeLayers()"><span
@@ -378,15 +378,24 @@
                                 </li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('h')">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerCenterSelH"></span><span data-i18n="menu.layerCenterSelH">Centrer la sélection
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-h" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelH">Centrer la sélection
                                         horizontalement</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('v')">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerCenterSelV"></span><span data-i18n="menu.layerCenterSelV">Centrer la sélection
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-v" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelV">Centrer la sélection
                                         verticalement</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.centerSelection('both')">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerCenterSelBoth"></span><span data-i18n="menu.layerCenterSelBoth">Centrer la sélection (H +
+                                    <span class="menu-icon" aria-hidden="true"><svg class="illu-menu-sprite-icon" width="16"
+                                            height="16" aria-hidden="true">
+                                            <use href="#illu-icon-sel-center-both" />
+                                        </svg></span><span data-i18n="menu.layerCenterSelBoth">Centrer la sélection (H +
                                         V)</span>
                                 </li>
                             </ul>
@@ -399,8 +408,8 @@
                                         data-i18n="menu.instFiltersGallery">Galerie de Filtres…</span>
                                 </li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjAutolevel"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span><span
                                         data-i18n="menu.adjAutolevel">Auto-niveau</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="openLevelsForActiveLayer()"><span
                                         class="menu-icon" aria-hidden="true"><i
@@ -414,32 +423,32 @@
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-droplet-slash"></i></span><span
                                         data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjSepia"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span
+                                        class="menu-icon"><i class="fa-solid fa-image-portrait"></i></span><span
                                         data-i18n="menu.adjSepia">Sépia</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjPosterize"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span
+                                        class="menu-icon"><i class="fa-solid fa-swatchbook"></i></span><span
                                         data-i18n="menu.adjPosterize">Postériser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjBrightness"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span><span
                                         data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjHsv"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-palette"></i></span><span
                                         data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-camera-retro"></i></span><span
                                         data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjExposure"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span
+                                        class="menu-icon"><i class="fa-solid fa-bolt"></i></span><span
                                         data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjSharpen"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span
+                                        class="menu-icon"><i class="fa-solid fa-eye"></i></span><span
                                         data-i18n="menu.adjSharpen">Netteté…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjCurves"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span
+                                        class="menu-icon"><i class="fa-solid fa-chart-line"></i></span><span
                                         data-i18n="menu.adjCurves">Courbes…</span></li>
                             </ul>
                         </li>
@@ -447,68 +456,68 @@
                             <ul role="menu">
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSketch"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span
+                                                class="menu-icon"><i class="fa-solid fa-pencil"></i></span><span
                                                 data-i18n="menu.fxSketch">Esquisse…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxOil"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span
+                                                class="menu-icon"><i class="fa-solid fa-paintbrush"></i></span><span
                                                 data-i18n="menu.fxOil">Peinture…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxAddNoise"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span
+                                                class="menu-icon"><i class="fa-solid fa-plus"></i></span><span
                                                 data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxArgenticGrain"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span
+                                                class="menu-icon"><i class="fa-solid fa-film"></i></span><span
                                                 data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDigitalPattern"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-all"></i></span><span
                                                 data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxVhs"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span
+                                                class="menu-icon"><i class="fa-solid fa-tape"></i></span><span
                                                 data-i18n="menu.fxVhs">Effet
                                                 VHS…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxMedian"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span
+                                                class="menu-icon"><i class="fa-solid fa-minus"></i></span><span
                                                 data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxBulge"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-dot"></i></span><span
                                                 data-i18n="menu.fxBulge">Bosse…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPinch"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span
+                                                class="menu-icon"><i class="fa-solid fa-compress"></i></span><span
                                                 data-i18n="menu.fxPinch">Pincement…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cabossage')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCabossage"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cabossage')"><span
+                                                class="menu-icon"><i class="fa-solid fa-mountain"></i></span><span
                                                 data-i18n="menu.fxCabossage">Cabossage…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCrystallize"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span
+                                                class="menu-icon"><i class="fa-solid fa-gem"></i></span><span
                                                 data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span
+                                                class="menu-icon"><i class="fa-solid fa-arrows-rotate"></i></span><span
                                                 data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-none"></i></span><span
                                                 data-i18n="menu.fxPixelate">Pixéliser…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span
+                                                class="menu-icon"><i class="fa-solid fa-table-cells-large"></i></span><span
                                                 data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxTwist"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span
+                                                class="menu-icon"><i class="fa-solid fa-hurricane"></i></span><span
                                                 data-i18n="menu.fxTwist">Torsion…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxWave"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span
+                                                class="menu-icon"><i class="fa-solid fa-water"></i></span><span
                                                 data-i18n="menu.fxWave">Onde…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxMirrorQuad"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span
+                                                class="menu-icon"><i class="fa-solid fa-clover"></i></span><span
                                                 data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxFrosted"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span
+                                                class="menu-icon"><i class="fa-solid fa-snowflake"></i></span><span
                                                 data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span
                                                 class="menu-icon" aria-hidden="true"><i
@@ -518,17 +527,17 @@
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxBlurSimple"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-droplet"></i></span><span
                                                 data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxGaussian"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span
+                                                class="menu-icon"><i class="fa-solid fa-smog"></i></span><span
                                                 data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRadialBlur"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-notch"></i></span><span
                                                 data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxZoomBlur"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span
+                                                class="menu-icon"><i class="fa-solid fa-forward"></i></span><span
                                                 data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span
                                                 class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou
@@ -540,40 +549,40 @@
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRedEyeRemove"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span
+                                                class="menu-icon"><i class="fa-solid fa-eye-slash"></i></span><span
                                                 data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxVignette"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span
+                                                class="menu-icon"><i class="fa-solid fa-camera"></i></span><span
                                                 data-i18n="menu.fxVignette">Vignettage…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSoftGlow"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span
+                                                class="menu-icon"><i class="fa-solid fa-lightbulb"></i></span><span
                                                 data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span
+                                                class="menu-icon"><i class="fa-solid fa-clone"></i></span><span
                                                 data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxEdges"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span
+                                                class="menu-icon"><i class="fa-solid fa-pen-nib"></i></span><span
                                                 data-i18n="menu.fxEdges">Contours…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxContour"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span
+                                                class="menu-icon"><i class="fa-solid fa-border-style"></i></span><span
                                                 data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
                                     <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxEmboss"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span
+                                                class="menu-icon"><i class="fa-solid fa-stamp"></i></span><span
                                                 data-i18n="menu.fxEmboss">Relief…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSolarize"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span
+                                                class="menu-icon"><i class="fa-solid fa-sun"></i></span><span
                                                 data-i18n="menu.fxSolarize">Solariser…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxHalftone"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span
+                                                class="menu-icon"><i class="fa-solid fa-braille"></i></span><span
                                                 data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
                                     </ul>
                                 </li>
@@ -583,18 +592,18 @@
                                                 class="menu-icon" aria-hidden="true"><i
                                                     class="fa-solid fa-fill-drip"></i></span><span
                                                 data-i18n="menu.fxChroma">Incrustation…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxChromatic"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span
+                                                class="menu-icon"><i class="fa-solid fa-glasses"></i></span><span
                                                 data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDuotone"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span
+                                                class="menu-icon"><i class="fa-solid fa-circle-half-stroke"></i></span><span
                                                 data-i18n="menu.fxDuotone">Duo-tone…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRal"></span><span
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span
+                                                class="menu-icon"><i class="fa-solid fa-palette"></i></span><span
                                                 data-i18n="menu.fxRal">Conversion de couleur RAL…</span></li>
                                         <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
-                                            onclick="applyEffect('cmjn')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCmjn"></span><span
+                                            onclick="applyEffect('cmjn')"><span
+                                                class="menu-icon"><i class="fa-solid fa-print"></i></span><span
                                                 data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
                                     </ul>
                                 </li>
@@ -608,15 +617,21 @@
                                         data-i18n="menu.winLivePreview">Aperçu toile 1:1 (fenêtre)…</span></li>
                                 <li role="menuitem" class="divider"></li>
 
-                                <li role="menuitem" class="menu-row-icon menu-toggle-check" onclick="window.toggleIlluPixelGrid()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.winPixelGrid"></span><i id="menu-win-pixel-grid-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluPixelGrid()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-pixel-grid-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-border-all" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.winPixelGrid">Grille de pixels</span></li>
-                                <li role="menuitem" class="menu-row-icon menu-toggle-check" onclick="window.toggleIlluRulers()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.winRulers"></span><i id="menu-win-rulers-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluRulers()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-rulers-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-ruler" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.winRulers">Règles</span></li>
-                                <li role="menuitem" class="menu-row-icon menu-toggle-check"
+                                <li role="menuitem" class="menu-row-icon"
                                     onclick="window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winSnapEdges"></span><i id="menu-win-snap-edges-check" class="menu-check fa-solid fa-check"></i><span
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-snap-edges-check" style="visibility: hidden;"></i></span><i
+                                        class="fa-solid fa-magnet" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.winSnapEdges">Aimantation des bords</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon"
@@ -624,27 +639,35 @@
                                     <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-sliders"></i></span>
                                     <span>Paramètres aimantation…</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon menu-toggle-check" onclick="window.toggleIlluShowAllRibbonOptions()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winShowAllRibbonOptions"></span><i id="menu-win-show-all-ribbon-options-check" class="menu-check fa-solid fa-check"></i><span data-i18n="menu.winShowAllRibbonOptions">Toutes les
+                                <li role="menuitem" class="menu-row-icon" onclick="window.toggleIlluShowAllRibbonOptions()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-show-all-ribbon-options-check"
+                                            style="visibility: hidden;"></i></span><i class="fa-solid fa-eye"
+                                        style="margin-right: 6px;"></i><span data-i18n="menu.winShowAllRibbonOptions">Toutes les
                                         options du ruban</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon menu-toggle-check"
+                                <li role="menuitem" class="menu-row-icon"
                                     onclick="window.toggleIlluAllowOutsideCanvas && window.toggleIlluAllowOutsideCanvas()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="tools.allowOutsideCanvasShort"></span><i id="menu-win-outside-canvas-check" class="menu-check fa-solid fa-check"></i><span data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-check"
+                                            id="menu-win-outside-canvas-check" style="visibility: hidden;"></i></span><svg
+                                        class="illu-shape-ico" width="14" height="14"
+                                        style="margin-right: 6px; vertical-align: middle;" aria-hidden="true">
+                                        <use href="#illu-icon-outside-canvas" />
+                                    </svg><span data-i18n="tools.allowOutsideCanvasShort">Hors toile</span>
                                 </li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.winReset"></span><span
+                                <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-desktop"></i></span><span
                                         data-i18n="menu.winReset">Réinitialiser le bureau</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon"
                                     onclick="window.showChangelog && window.showChangelog()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winChangelog"></span>
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></span>
                                     <span data-i18n="menu.winChangelog">Changelog…</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon"
                                     onclick="window.showWelcomeDialog && window.showWelcomeDialog(true)">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winWelcomeInfo"></span>
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
                                     <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
                                 </li>
                                 <li role="menuitem" class="menu-row-icon"
@@ -664,24 +687,32 @@
                                 <li role="menuitem" class="menu-floating-only menu-win-pdn-sep"
                                     style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
                                         data-i18n="menu.winPalSep">Palettes volantes (Paint.NET)</span></li>
-                                <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
-                                    onclick="window.toggleFloatingPaletteVisibility('win-tools')"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalTools"></span><i id="menu-win-tools-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-tools')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-tools-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-paintbrush" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.floatPalTools">Outils</span>
                                 </li>
-                                <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
-                                    onclick="window.toggleFloatingPaletteVisibility('win-colors')"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalColors"></span><i id="menu-win-colors-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-colors')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-colors-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-palette" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.floatPalColors">Couleurs</span>
                                 </li>
-                                <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
-                                    onclick="window.toggleFloatingPaletteVisibility('win-layers')"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalLayers"></span><i id="menu-win-layers-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-layers')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-layers-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-layer-group" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.floatPalLayers">Calques</span>
                                 </li>
-                                <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
-                                    onclick="window.toggleFloatingPaletteVisibility('win-history')"><span class="menu-icon" 
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalHistory"></span><i id="menu-win-history-check" class="menu-check fa-solid fa-check"></i><span
+                                <li role="menuitem" class="menu-floating-only menu-row-icon"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-history')"><span class="menu-icon"
+                                        aria-hidden="true"><i class="fa-solid fa-check" id="menu-win-history-check"
+                                            style="visibility: visible;"></i></span>
+                                    <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i><span
                                         data-i18n="menu.floatPalHistory">Historique</span>
                                 </li>
                             </ul>
@@ -852,10 +883,10 @@
                                     value="0">
                             </span>
                         </span>
-                        <span id="tool-line-mode-row" class="field-row illu-size-extra-row" hidden style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span id="tool-line-mode-row" class="field-row illu-size-extra-row" hidden style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; width: 100%;">
                             <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="line-mode-btn-row" role="group" style="display: flex; width: 100%; opacity: 1; pointer-events: auto;" title="Mode de rendu de la ligne">
-                                <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="straight" id="line-mode-straight-btn" data-i18n="line.modeStraight" aria-pressed="true" style="flex: 1; padding: 4px 8px; font-size: 11px;">Droite</button>
-                                <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="cubic" id="line-mode-cubic-btn" data-i18n="line.modeCubic" aria-pressed="false" style="flex: 1; padding: 4px 8px; font-size: 11px;">4 points</button>
+                                <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="straight" id="line-mode-straight-btn" aria-pressed="true" style="flex: 1; padding: 4px 8px; font-size: 11px;">Droite</button>
+                                <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="cubic" id="line-mode-cubic-btn" aria-pressed="false" style="flex: 1; padding: 4px 8px; font-size: 11px;">Courbe (Bézier)</button>
                             </div>
                         </span>
                         <span id="tool-brush-hardness-row" class="field-row illu-gauge-field" hidden>
@@ -1599,102 +1630,115 @@
                             </span>
                         </div>
 
-                        <div id="line-cap-start-wrap" class="opt-grp illu-shape-picker-wrap" hidden>
-                            <div id="line-cap-start-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Début de ligne">
-                                <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
-                                    <span class="illu-tool-header-icon" id="line-cap-start-icon"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></span>
-                                    <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
-                                </span>
-                            </div>
-                            <div id="line-cap-start-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
-                                <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="none" title="Droit"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="round" title="Rond"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-round" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="arrow" title="Flèche pleine"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="arrow-hollow" title="Flèche vide"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow-hollow" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="diamond" title="Losange"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-diamond" /></svg></button>
+                        <div id="opt-grp-line-endpoints" class="opt-grp" hidden>
+                            <span class="illu-line-endpoints-group" style="display: flex; align-items: center; gap: 4px;">
+                                <div class="illu-shape-picker-wrap">
+                                    <div id="line-cap-start-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Début de ligne">
+                                        <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
+                                            <span class="illu-tool-header-icon" id="line-cap-start-icon"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></span>
+                                            <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
+                                        </span>
+                                    </div>
+                                    <div id="line-cap-start-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
+                                        <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="none" title="Droit"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="round" title="Rond"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-round" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="arrow" title="Flèche pleine"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="arrow-hollow" title="Flèche vide"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow-hollow" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-start" data-illu-value="diamond" title="Losange"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-diamond" /></svg></button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div id="line-dash-style-wrap" class="opt-grp illu-shape-picker-wrap" hidden>
-                            <div id="line-dash-style-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Style de trait">
-                                <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
-                                    <span class="illu-tool-header-icon" id="line-dash-style-icon"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2"/></svg></span>
-                                    <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
-                                </span>
-                            </div>
-                            <div id="line-dash-style-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
-                                <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="solid" title="Continu"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2"/></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="dashed" title="Tirets"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4"/></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="dotted" title="Pointillés"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2" stroke-dasharray="2,4" stroke-linecap="round"/></svg></button>
+                                
+                                <div class="illu-shape-picker-wrap">
+                                    <div id="line-dash-style-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Style de trait">
+                                        <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
+                                            <span class="illu-tool-header-icon" id="line-dash-style-icon"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2"/></svg></span>
+                                            <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
+                                        </span>
+                                    </div>
+                                    <div id="line-dash-style-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
+                                        <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="solid" title="Continu"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2"/></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="dashed" title="Tirets"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4"/></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-dash" data-illu-value="dotted" title="Pointillés"><svg class="illu-shape-ico" width="32" height="16" viewBox="0 0 32 16"><path d="M2 8 h28" stroke="currentColor" stroke-width="2" stroke-dasharray="2,4" stroke-linecap="round"/></svg></button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div id="line-cap-end-wrap" class="opt-grp illu-shape-picker-wrap" hidden>
-                            <div id="line-cap-end-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Fin de ligne">
-                                <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
-                                    <span class="illu-tool-header-icon" id="line-cap-end-icon"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></span>
-                                    <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
-                                </span>
-                            </div>
-                            <div id="line-cap-end-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
-                                <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="none" title="Droit"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="round" title="Rond"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-round" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="arrow" title="Flèche pleine"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="arrow-hollow" title="Flèche vide"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow-hollow" /></svg></button>
-                                    <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="diamond" title="Losange"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-diamond" /></svg></button>
+                                <div class="illu-shape-picker-wrap">
+                                    <div id="line-cap-end-header" class="illu-tool-header illu-shape-picker-header illu-generic-dropdown-header" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" title="Fin de ligne">
+                                        <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
+                                            <span class="illu-tool-header-icon" id="line-cap-end-icon"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></span>
+                                            <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
+                                        </span>
+                                    </div>
+                                    <div id="line-cap-end-popup" class="illu-shape-picker-popup illu-generic-dropdown-popup" hidden>
+                                        <div class="illu-shape-picker-grid" style="grid-template-columns: 1fr;">
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="none" title="Droit"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-none" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="round" title="Rond"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-round" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="arrow" title="Flèche pleine"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="arrow-hollow" title="Flèche vide"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-arrow-hollow" /></svg></button>
+                                            <button type="button" class="illu-shape-picker-item" data-illu-sync="tool-line-cap-end" data-illu-value="diamond" title="Losange"><svg class="illu-shape-ico" width="16" height="16"><use href="#illu-icon-cap-diamond" /></svg></button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </span>
                         </div>
 
                         <div id="opt-grp-text-actions" class="opt-grp" hidden>
                             <span class="illu-text-style-fill-group illu-ribbon-grid-3x2">
                                 <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-style-group"
                                     data-i18n-title="title.textStyleGroup">
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" id="btn-text-bold" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" id="btn-text-bold" class="illu-icon-toggle"
                                             data-illu-toggle-check="tool-text-bold" data-i18n-title="tools.textBold"><i
                                                 class="fa-solid fa-bold"></i></button>
+                                        <span class="illu-mode-toggle-lbl" data-i18n="tools.textBoldShort">Gras</span>
                                     </span>
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" id="btn-text-italic" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" id="btn-text-italic" class="illu-icon-toggle"
                                             data-illu-toggle-check="tool-text-italic"
                                             data-i18n-title="tools.textItalic"><i
                                                 class="fa-solid fa-italic"></i></button>
+                                        <span class="illu-mode-toggle-lbl"
+                                            data-i18n="tools.textItalicShort">Ital.</span>
                                     </span>
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" id="btn-text-stroke" class="illu-icon-toggle illu-mode-toggle-btn"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" id="btn-text-stroke" class="illu-icon-toggle"
                                             data-illu-toggle-check="tool-text-stroke"
                                             data-i18n-title="tools.textStroke"><i
                                                 class="fa-solid fa-border-all"></i></button>
+                                        <span class="illu-mode-toggle-lbl"
+                                            data-i18n="tools.textStrokeShort">Trait</span>
                                     </span>
                                 </span>
                                 <span class="illu-icon-toggle-group illu-mode-toggle-group illu-text-fill-group"
                                     data-i18n-title="title.textFillGroup">
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="tool-text-fill"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
                                             data-illu-value="solid" data-i18n-title="shape.fill.solid"><svg
                                                 class="illu-shape-ico" width="16" height="16">
                                                 <use href="#illu-icon-fill-solid" />
                                             </svg></button>
+                                        <span class="illu-mode-toggle-lbl" data-i18n="shape.fill.solidShort">Uni</span>
                                     </span>
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="tool-text-fill"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
                                             data-illu-value="gradient" data-i18n-title="shape.fill.gradient"><svg
                                                 class="illu-shape-ico" width="16" height="16">
                                                 <use href="#illu-icon-fill-gradient" />
                                             </svg></button>
+                                        <span class="illu-mode-toggle-lbl"
+                                            data-i18n="shape.fill.gradientShort">Dégr.</span>
                                     </span>
-                                    <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--stack">
-                                        <button type="button" class="illu-icon-toggle illu-mode-toggle-btn" data-illu-sync="tool-text-fill"
+                                    <span class="illu-mode-toggle-item">
+                                        <button type="button" class="illu-icon-toggle" data-illu-sync="tool-text-fill"
                                             data-illu-value="none" data-i18n-title="tools.textFillNone"><svg
                                                 class="illu-shape-ico" width="16" height="16">
                                                 <use href="#illu-icon-shape-stroke" />
                                             </svg></button>
+                                        <span class="illu-mode-toggle-lbl" data-i18n="text.fill.noneShort">Vide</span>
                                     </span>
                                 </span>
                             </span>

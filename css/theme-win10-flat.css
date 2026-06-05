@@ -511,7 +511,7 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar {
     flex-shrink: 0;
     cursor: default;
     user-select: none;
-    height: 32px;
+    height: 27px;
 }
 
 body:not(.theme-modern):not(.theme-aero):not(.theme-luna) .title-bar-text {
@@ -2406,6 +2406,48 @@ body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role=
     text-align: center;
     color: var(--mp-text);
     font-size: var(--mp-ui-font-small);
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check {
+    padding-left: 52px !important;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-icon {
+    left: 32px;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-check,
+body.theme-dark ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-check {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    text-align: center;
+    color: var(--mp-menu-icon);
+    font-size: var(--mp-ui-font-small);
+    visibility: hidden;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-icon,
+body.theme-dark ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-icon {
+    left: 32px;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-check,
+body.theme-dark ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-check {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    text-align: center;
+    color: var(--mp-menu-icon);
+    font-size: var(--mp-ui-font-small);
+    line-height: 1;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check,
+body.theme-dark ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check {
+    padding-left: 52px !important;
 }
 
 body:not(.theme-dark):not(.theme-aero):not(.theme-luna) ul[role="menu"] li[role="menuitem"]:hover .menu-icon {
@@ -5356,8 +5398,8 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls bu
     background-color: transparent !important;
     padding: 0px 0px !important;
     margin: 0px 0px;
-    width: 50px;
-    height: 32px;
+    width: 27px;
+    height: 27px;
 border-top-right-radius: calc(var(--mp-radius) * 2);
 }
 
@@ -5604,7 +5646,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
 }
 
 .title-bar-text {
-    transform: translateX(10px); /* Déplace le texte de 5px vers la droite */
+    transform: translateX(10px) !important; /* Déplace le texte de 5px vers la droite */
 }
 
 
@@ -5628,7 +5670,34 @@ body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window, body.w
 body.win11-effects .title-bar, body.win11-effects .welcome-dialog-window {
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    background-color: var(--mp-surface);
+    background-color: color-mix(in srgb, var(--mp-accent) 10%, var(--mp-surface)) !important;
+}
+
+body.win11-effects .title-bar .title-bar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    width: 20px;
+    min-width: 20px;
+}
+
+body.win11-effects .title-bar .title-bar-text {
+    transform: none;
+}
+
+.title-bar-text > .title-bar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.title-bar-text > .title-bar-icon > svg,
+.title-bar-text > .title-bar-icon > i {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
 }
 
 body.win11-effects .window-body, body.win11-effects .status-bar, body.win11-effects .illu-cr-foot {
@@ -5647,4 +5716,18 @@ body.win11-effects button {
   #tab-bar-outer { 
   background: var(--mp-surface, #c0c0c0) !important; 
 }
+}
+
+/* Win10 coherent style for shape picker and dropdown popups */
+.illu-shape-picker-popup {
+    background: var(--mp-surface, #ffffff) !important;
+    border: 1px solid var(--mp-border, #cccccc) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    border-radius: var(--mp-radius, 0px) !important;
+}
+
+body.theme-dark .illu-shape-picker-popup {
+    background: var(--mp-surface-deep, #1e1e1e) !important;
+    border: 1px solid var(--mp-border, #444444) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
 }

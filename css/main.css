@@ -11,9 +11,10 @@ html {
 }
 
 #win-history {
-    width: 146px !important;
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
 }
-
 #app-window {
     width: 100vw;
     width: 100dvw;
@@ -585,8 +586,8 @@ body.ui-layout-floating #win-layers #layers-list.list-box--flex {
 
 body.ui-layout-floating #win-history.window.palette-panel {
     width: 200px !important;
-    min-width: 200px;
-    max-width: min(200px, 96vw);
+    min-width: 200px !important;
+    max-width: 200px !important;
     box-sizing: border-box;
 }
 
@@ -1464,7 +1465,7 @@ body.theme-dark #welcome-overlay .welcome-dialog-start-btn {
 
 #settings-overlay .illu-settings-toggle-row {
     flex-wrap: nowrap;
-    min-width: 104px;
+    max-width: 104px;
 }
 
 #settings-overlay .illu-settings-toggle-row .illu-scope-btn {
@@ -4133,10 +4134,11 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
   .tab-bar-outer {
     /* On annule tes anciennes contraintes */
     position: static !important; 
-        width: 100% !important;
+    width: 100% !important;
     max-width: 100% !important;
     height: 40px !important;
-min-height: 40px !important;
+    min-height: 40px !important;
+    z-index: 40 !important;
   }
 
   #tab-bar {
@@ -4158,4 +4160,30 @@ width: 40px !important;
   .tab-bar-inner .tab span {
     color: black !important;
   }
+}
+
+/* Ensure settings scope button rows take 100% width of their containers */
+#settings-overlay .settings-table-control:has(.illu-settings-scope-btn-row),
+#welcome-overlay .settings-table-control:has(.illu-settings-scope-btn-row) {
+    width: 100% !important;
+}
+
+#tool-line-mode-row .illu-scope-btn-row {
+    max-height: 18px;
+}
+
+#tool-line-mode-row button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    line-height: 1 !important;       
+    padding-top: 0 !important;       
+    padding-bottom: 0 !important;    
+    
+    /* LA CORRECTION ICI : */
+    height: 18px !important;         /* Tu demandes 18px */
+    min-height: 0 !important;        /* Tu annules la barrière des 22px */
 }

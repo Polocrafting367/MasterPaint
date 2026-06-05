@@ -834,20 +834,113 @@ document.addEventListener('contextmenu', (e) => {
         'tool-line-cap-start': (val) => {
             if (typeof EditorManager !== 'undefined') {
                 EditorManager.toolProps.lineCapStart = val || 'none';
+                const targets = new Set();
+                if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                    try {
+                        EditorManager.activeVectorSelection.forEach((el) => targets.add(el));
+                        if (typeof EditorManager.applyVectorProperty === 'function') {
+                            EditorManager.applyVectorProperty('line-cap-start', val, { livePreview: true });
+                        }
+                    } catch (e) {
+                        console.warn('applyVectorProperty(line-cap-start) failed', e);
+                    }
+                }
+                if (window._activeVectorShapeEl) targets.add(window._activeVectorShapeEl);
+                if (typeof activeVectorShape !== 'undefined' && activeVectorShape) targets.add(activeVectorShape);
+                if (targets.size) {
+                    targets.forEach((el) => {
+                        const kind = typeof illuVectorPaintKindForEl === 'function' ? illuVectorPaintKindForEl(el) : null;
+                        if (kind) window.applyVectorShapePaint(el, kind);
+                    });
+                    if (typeof EditorManager.render === 'function') {
+                        EditorManager.render();
+                    }
+                }
             }
             if (typeof window.illuRefreshActiveLineEndpointCaps === 'function') {
                 window.illuRefreshActiveLineEndpointCaps();
+            }
+            if (typeof window.illuSyncGenericDropdowns === 'function') {
+                window.illuSyncGenericDropdowns();
             }
         },
         'tool-line-cap-end': (val) => {
             if (typeof EditorManager !== 'undefined') {
                 EditorManager.toolProps.lineCapEnd = val || 'none';
+                const targets = new Set();
+                if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                    try {
+                        EditorManager.activeVectorSelection.forEach((el) => targets.add(el));
+                        if (typeof EditorManager.applyVectorProperty === 'function') {
+                            EditorManager.applyVectorProperty('line-cap-end', val, { livePreview: true });
+                        }
+                    } catch (e) {
+                        console.warn('applyVectorProperty(line-cap-end) failed', e);
+                    }
+                }
+                if (window._activeVectorShapeEl) targets.add(window._activeVectorShapeEl);
+                if (typeof activeVectorShape !== 'undefined' && activeVectorShape) targets.add(activeVectorShape);
+                if (targets.size) {
+                    targets.forEach((el) => {
+                        const kind = typeof illuVectorPaintKindForEl === 'function' ? illuVectorPaintKindForEl(el) : null;
+                        if (kind) window.applyVectorShapePaint(el, kind);
+                    });
+                    if (typeof EditorManager.render === 'function') {
+                        EditorManager.render();
+                    }
+                }
             }
             if (typeof window.illuRefreshActiveLineEndpointCaps === 'function') {
                 window.illuRefreshActiveLineEndpointCaps();
             }
+            if (typeof window.illuSyncGenericDropdowns === 'function') {
+                window.illuSyncGenericDropdowns();
+            }
+        },
+        'tool-line-dash': (val) => {
+            if (typeof EditorManager !== 'undefined') {
+                EditorManager.toolProps.lineDash = val || 'solid';
+                if (EditorManager.isPixelMode && window.pixelShapeEdit) {
+                    if (typeof window.redrawShapeFromEditLive === 'function') {
+                        window.redrawShapeFromEditLive();
+                    } else if (typeof window.redrawShapeFromEdit === 'function') {
+                        window.redrawShapeFromEdit();
+                    }
+                    if (typeof EditorManager.render === 'function') {
+                        EditorManager.render({ skipUiThumbnails: true });
+                    }
+                }
+                const targets = new Set();
+                if (EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                    // Apply property to selected vector elements via EditorManager helper
+                    try {
+                        EditorManager.activeVectorSelection.forEach((el) => targets.add(el));
+                        if (typeof EditorManager.applyVectorProperty === 'function') {
+                            EditorManager.applyVectorProperty('line-dash', val, { livePreview: true });
+                        }
+                    } catch (e) {
+                        console.warn('applyVectorProperty(line-dash) failed', e);
+                    }
+                }
+                if (window._activeVectorShapeEl) targets.add(window._activeVectorShapeEl);
+                if (typeof activeVectorShape !== 'undefined' && activeVectorShape) targets.add(activeVectorShape);
+                if (targets.size) {
+                    targets.forEach((el) => {
+                        const kind = typeof illuVectorPaintKindForEl === 'function' ? illuVectorPaintKindForEl(el) : null;
+                        if (kind) window.applyVectorShapePaint(el, kind);
+                    });
+                    if (typeof EditorManager.render === 'function') {
+                        EditorManager.render();
+                    }
+                }
+            }
+            if (typeof window.illuSyncGenericDropdowns === 'function') {
+                window.illuSyncGenericDropdowns();
+            }
         }
     };
+
+    window.ILLU_ICON_SYNC_TOOL_PROPS = ILLU_ICON_SYNC_TOOL_PROPS;
 
     function resolveToolbarToggleButton(target) {
         if (!target || typeof target.closest !== 'function') return null;
@@ -937,6 +1030,9 @@ document.addEventListener('contextmenu', (e) => {
                 window.syncAllToolbarToggles();
                 if (typeof window.updateToolOptionsBar === 'function') {
                     window.updateToolOptionsBar();
+                }
+                if (typeof window.illuSyncGenericDropdowns === 'function') {
+                    window.illuSyncGenericDropdowns();
                 }
             }
         });

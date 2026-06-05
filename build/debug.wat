@@ -36,9 +36,10 @@
  (type $34 (func (result f64)))
  (type $35 (func (param i32 i32 i32 i32 f32 f32 i32 i32 i32)))
  (type $36 (func (param i32 i32 i32 i32 i32 f32 i32 i32)))
- (type $37 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
- (type $38 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
- (type $39 (func (param i32 i32 i32 i32) (result i32)))
+ (type $37 (func (param i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
+ (type $38 (func (param i32 i32 i32 i32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 f32 i32 i32 i32 i32)))
+ (type $39 (func (param i32 i32 i32 i32 i32 i32 i32 i32 i32 i32 f32)))
+ (type $40 (func (param i32 i32 i32 i32) (result i32)))
  (import "env" "abort" (func $~lib/builtins/abort (param i32 i32 i32 i32)))
  (global $~lib/rt/itcms/total (mut i32) (i32.const 0))
  (global $~lib/rt/itcms/threshold (mut i32) (i32.const 0))
@@ -103,6 +104,7 @@
  (export "ALPHA_ARRAY_ID" (global $assembly/index/ALPHA_ARRAY_ID))
  (export "createBuffer" (func $assembly/index/createBuffer))
  (export "applyCameraRaw" (func $assembly/camera_raw/applyCameraRaw))
+ (export "applyCameraRawFloat" (func $assembly/camera_raw/applyCameraRawFloat))
  (export "generateThumbnail" (func $assembly/camera_raw/generateThumbnail))
  (export "chromatic" (func $assembly/filters/chromatic))
  (export "wave" (func $assembly/filters/wave))
@@ -4132,7 +4134,7 @@
       i32.add
       local.set $idx
       local.get $row
-      block $~lib/math/NativeMath.max|inlined.11 (result f64)
+      block $~lib/math/NativeMath.max|inlined.46 (result f64)
        f64.const 0
        local.set $value1
        local.get $x
@@ -4143,7 +4145,7 @@
        local.get $value1
        local.get $value2
        f64.max
-       br $~lib/math/NativeMath.max|inlined.11
+       br $~lib/math/NativeMath.max|inlined.46
       end
       i32.trunc_sat_f64_u
       i32.const 2
@@ -4151,7 +4153,7 @@
       i32.add
       local.set $rIdx
       local.get $row
-      block $~lib/math/NativeMath.min|inlined.4 (result f64)
+      block $~lib/math/NativeMath.min|inlined.10 (result f64)
        local.get $w
        i32.const 1
        i32.sub
@@ -4165,7 +4167,7 @@
        local.get $value1|14
        local.get $value2|15
        f64.min
-       br $~lib/math/NativeMath.min|inlined.4
+       br $~lib/math/NativeMath.min|inlined.10
       end
       i32.trunc_sat_f64_u
       i32.const 2
@@ -5916,24 +5918,24 @@
        local.set $x|17
        local.get $sy
        local.set $y|18
-       block $assembly/math/isNaN|inlined.12 (result i32)
+       block $assembly/math/isNaN|inlined.25 (result i32)
         local.get $x|17
         local.set $val
         local.get $val
         local.get $val
         f32.ne
-        br $assembly/math/isNaN|inlined.12
+        br $assembly/math/isNaN|inlined.25
        end
        if (result i32)
         i32.const 1
        else
-        block $assembly/math/isNaN|inlined.13 (result i32)
+        block $assembly/math/isNaN|inlined.26 (result i32)
          local.get $y|18
          local.set $val|20
          local.get $val|20
          local.get $val|20
          f32.ne
-         br $assembly/math/isNaN|inlined.13
+         br $assembly/math/isNaN|inlined.26
         end
        end
        if
@@ -5982,23 +5984,23 @@
         f32.demote_f64
         local.set $y|18
        end
-       block $~lib/math/NativeMath.floor|inlined.1 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.2 (result f64)
         local.get $x|17
         f64.promote_f32
         local.set $x|21
         local.get $x|21
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.1
+        br $~lib/math/NativeMath.floor|inlined.2
        end
        i32.trunc_sat_f64_s
        local.set $x0
-       block $~lib/math/NativeMath.floor|inlined.2 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.3 (result f64)
         local.get $y|18
         f64.promote_f32
         local.set $x|23
         local.get $x|23
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.2
+        br $~lib/math/NativeMath.floor|inlined.3
        end
        i32.trunc_sat_f64_s
        local.set $y0
@@ -6328,149 +6330,149 @@
         br $assembly/math/lerp|inlined.11
        end
        local.set $a|72
-       block $assembly/math/clamp255|inlined.9 (result i32)
+       block $assembly/math/clamp255|inlined.19 (result i32)
         local.get $r
         local.set $val|73
-        block $assembly/math/isNaN|inlined.14 (result i32)
+        block $assembly/math/isNaN|inlined.27 (result i32)
          local.get $val|73
          local.set $val|74
          local.get $val|74
          local.get $val|74
          f32.ne
-         br $assembly/math/isNaN|inlined.14
+         br $assembly/math/isNaN|inlined.27
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.9
+         br $assembly/math/clamp255|inlined.19
         end
         local.get $val|73
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.9
+         br $assembly/math/clamp255|inlined.19
         end
         local.get $val|73
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.9
+         br $assembly/math/clamp255|inlined.19
         end
         local.get $val|73
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.9
+        br $assembly/math/clamp255|inlined.19
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.10 (result i32)
+       block $assembly/math/clamp255|inlined.20 (result i32)
         local.get $g
         local.set $val|75
-        block $assembly/math/isNaN|inlined.15 (result i32)
+        block $assembly/math/isNaN|inlined.28 (result i32)
          local.get $val|75
          local.set $val|76
          local.get $val|76
          local.get $val|76
          f32.ne
-         br $assembly/math/isNaN|inlined.15
+         br $assembly/math/isNaN|inlined.28
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.10
+         br $assembly/math/clamp255|inlined.20
         end
         local.get $val|75
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.10
+         br $assembly/math/clamp255|inlined.20
         end
         local.get $val|75
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.10
+         br $assembly/math/clamp255|inlined.20
         end
         local.get $val|75
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.10
+        br $assembly/math/clamp255|inlined.20
        end
        i32.const 255
        i32.and
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.11 (result i32)
+       block $assembly/math/clamp255|inlined.21 (result i32)
         local.get $b|62
         local.set $val|77
-        block $assembly/math/isNaN|inlined.16 (result i32)
+        block $assembly/math/isNaN|inlined.29 (result i32)
          local.get $val|77
          local.set $val|78
          local.get $val|78
          local.get $val|78
          f32.ne
-         br $assembly/math/isNaN|inlined.16
+         br $assembly/math/isNaN|inlined.29
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.11
+         br $assembly/math/clamp255|inlined.21
         end
         local.get $val|77
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.11
+         br $assembly/math/clamp255|inlined.21
         end
         local.get $val|77
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.11
+         br $assembly/math/clamp255|inlined.21
         end
         local.get $val|77
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.11
+        br $assembly/math/clamp255|inlined.21
        end
        i32.const 255
        i32.and
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.12 (result i32)
+       block $assembly/math/clamp255|inlined.22 (result i32)
         local.get $a|72
         local.set $val|79
-        block $assembly/math/isNaN|inlined.17 (result i32)
+        block $assembly/math/isNaN|inlined.30 (result i32)
          local.get $val|79
          local.set $val|80
          local.get $val|80
          local.get $val|80
          f32.ne
-         br $assembly/math/isNaN|inlined.17
+         br $assembly/math/isNaN|inlined.30
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.12
+         br $assembly/math/clamp255|inlined.22
         end
         local.get $val|79
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.12
+         br $assembly/math/clamp255|inlined.22
         end
         local.get $val|79
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.12
+         br $assembly/math/clamp255|inlined.22
         end
         local.get $val|79
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.12
+        br $assembly/math/clamp255|inlined.22
        end
        i32.const 255
        i32.and
@@ -7150,7 +7152,7 @@
   f32.const 2
   f32.div
   local.set $cy
-  block $~lib/math/NativeMath.sqrt|inlined.1 (result f64)
+  block $~lib/math/NativeMath.sqrt|inlined.0 (result f64)
    local.get $cx
    local.get $cx
    f32.mul
@@ -7162,7 +7164,7 @@
    local.set $x
    local.get $x
    f64.sqrt
-   br $~lib/math/NativeMath.sqrt|inlined.1
+   br $~lib/math/NativeMath.sqrt|inlined.0
   end
   f32.demote_f64
   local.set $maxR
@@ -7196,7 +7198,7 @@
       local.get $cx
       f32.sub
       local.set $dx
-      block $~lib/math/NativeMath.sqrt|inlined.2 (result f64)
+      block $~lib/math/NativeMath.sqrt|inlined.1 (result f64)
        local.get $dx
        local.get $dx
        f32.mul
@@ -7208,7 +7210,7 @@
        local.set $x|16
        local.get $x|16
        f64.sqrt
-       br $~lib/math/NativeMath.sqrt|inlined.2
+       br $~lib/math/NativeMath.sqrt|inlined.1
       end
       f32.demote_f64
       local.set $r
@@ -7259,24 +7261,24 @@
        f32.mul
        f32.add
        local.set $y|23
-       block $assembly/math/isNaN|inlined.18 (result i32)
+       block $assembly/math/isNaN|inlined.31 (result i32)
         local.get $x|22
         local.set $val
         local.get $val
         local.get $val
         f32.ne
-        br $assembly/math/isNaN|inlined.18
+        br $assembly/math/isNaN|inlined.31
        end
        if (result i32)
         i32.const 1
        else
-        block $assembly/math/isNaN|inlined.19 (result i32)
+        block $assembly/math/isNaN|inlined.32 (result i32)
          local.get $y|23
          local.set $val|25
          local.get $val|25
          local.get $val|25
          f32.ne
-         br $assembly/math/isNaN|inlined.19
+         br $assembly/math/isNaN|inlined.32
         end
        end
        if
@@ -7325,23 +7327,23 @@
         f32.demote_f64
         local.set $y|23
        end
-       block $~lib/math/NativeMath.floor|inlined.3 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.4 (result f64)
         local.get $x|22
         f64.promote_f32
         local.set $x|26
         local.get $x|26
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.3
+        br $~lib/math/NativeMath.floor|inlined.4
        end
        i32.trunc_sat_f64_s
        local.set $x0
-       block $~lib/math/NativeMath.floor|inlined.4 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.5 (result f64)
         local.get $y|23
         f64.promote_f32
         local.set $x|28
         local.get $x|28
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.4
+        br $~lib/math/NativeMath.floor|inlined.5
        end
        i32.trunc_sat_f64_s
        local.set $y0
@@ -7671,149 +7673,149 @@
         br $assembly/math/lerp|inlined.23
        end
        local.set $a|77
-       block $assembly/math/clamp255|inlined.13 (result i32)
+       block $assembly/math/clamp255|inlined.23 (result i32)
         local.get $r|47
         local.set $val|78
-        block $assembly/math/isNaN|inlined.20 (result i32)
+        block $assembly/math/isNaN|inlined.33 (result i32)
          local.get $val|78
          local.set $val|79
          local.get $val|79
          local.get $val|79
          f32.ne
-         br $assembly/math/isNaN|inlined.20
+         br $assembly/math/isNaN|inlined.33
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.13
+         br $assembly/math/clamp255|inlined.23
         end
         local.get $val|78
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.13
+         br $assembly/math/clamp255|inlined.23
         end
         local.get $val|78
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.13
+         br $assembly/math/clamp255|inlined.23
         end
         local.get $val|78
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.13
+        br $assembly/math/clamp255|inlined.23
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.14 (result i32)
+       block $assembly/math/clamp255|inlined.24 (result i32)
         local.get $g
         local.set $val|80
-        block $assembly/math/isNaN|inlined.21 (result i32)
+        block $assembly/math/isNaN|inlined.34 (result i32)
          local.get $val|80
          local.set $val|81
          local.get $val|81
          local.get $val|81
          f32.ne
-         br $assembly/math/isNaN|inlined.21
+         br $assembly/math/isNaN|inlined.34
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.14
+         br $assembly/math/clamp255|inlined.24
         end
         local.get $val|80
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.14
+         br $assembly/math/clamp255|inlined.24
         end
         local.get $val|80
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.14
+         br $assembly/math/clamp255|inlined.24
         end
         local.get $val|80
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.14
+        br $assembly/math/clamp255|inlined.24
        end
        i32.const 255
        i32.and
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.15 (result i32)
+       block $assembly/math/clamp255|inlined.25 (result i32)
         local.get $b|67
         local.set $val|82
-        block $assembly/math/isNaN|inlined.22 (result i32)
+        block $assembly/math/isNaN|inlined.35 (result i32)
          local.get $val|82
          local.set $val|83
          local.get $val|83
          local.get $val|83
          f32.ne
-         br $assembly/math/isNaN|inlined.22
+         br $assembly/math/isNaN|inlined.35
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.15
+         br $assembly/math/clamp255|inlined.25
         end
         local.get $val|82
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.15
+         br $assembly/math/clamp255|inlined.25
         end
         local.get $val|82
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.15
+         br $assembly/math/clamp255|inlined.25
         end
         local.get $val|82
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.15
+        br $assembly/math/clamp255|inlined.25
        end
        i32.const 255
        i32.and
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.16 (result i32)
+       block $assembly/math/clamp255|inlined.26 (result i32)
         local.get $a|77
         local.set $val|84
-        block $assembly/math/isNaN|inlined.23 (result i32)
+        block $assembly/math/isNaN|inlined.36 (result i32)
          local.get $val|84
          local.set $val|85
          local.get $val|85
          local.get $val|85
          f32.ne
-         br $assembly/math/isNaN|inlined.23
+         br $assembly/math/isNaN|inlined.36
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.16
+         br $assembly/math/clamp255|inlined.26
         end
         local.get $val|84
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.16
+         br $assembly/math/clamp255|inlined.26
         end
         local.get $val|84
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.16
+         br $assembly/math/clamp255|inlined.26
         end
         local.get $val|84
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.16
+        br $assembly/math/clamp255|inlined.26
        end
        i32.const 255
        i32.and
@@ -7930,7 +7932,7 @@
   f32.const 2
   f32.div
   local.set $cy
-  block $~lib/math/NativeMath.min|inlined.5 (result f64)
+  block $~lib/math/NativeMath.min|inlined.11 (result f64)
    local.get $w
    f64.convert_i32_s
    local.set $value1
@@ -7940,7 +7942,7 @@
    local.get $value1
    local.get $value2
    f64.min
-   br $~lib/math/NativeMath.min|inlined.5
+   br $~lib/math/NativeMath.min|inlined.11
   end
   f32.demote_f64
   f32.const 2
@@ -7984,13 +7986,13 @@
       f32.mul
       f32.add
       local.set $d2
-      block $~lib/math/NativeMath.sqrt|inlined.3 (result f64)
+      block $~lib/math/NativeMath.sqrt|inlined.2 (result f64)
        local.get $d2
        f64.promote_f32
        local.set $x|18
        local.get $x|18
        f64.sqrt
-       br $~lib/math/NativeMath.sqrt|inlined.3
+       br $~lib/math/NativeMath.sqrt|inlined.2
       end
       f32.demote_f64
       local.set $r
@@ -8033,24 +8035,24 @@
         f32.mul
         f32.add
         local.set $y|25
-        block $assembly/math/isNaN|inlined.24 (result i32)
+        block $assembly/math/isNaN|inlined.37 (result i32)
          local.get $x|24
          local.set $val
          local.get $val
          local.get $val
          f32.ne
-         br $assembly/math/isNaN|inlined.24
+         br $assembly/math/isNaN|inlined.37
         end
         if (result i32)
          i32.const 1
         else
-         block $assembly/math/isNaN|inlined.25 (result i32)
+         block $assembly/math/isNaN|inlined.38 (result i32)
           local.get $y|25
           local.set $val|27
           local.get $val|27
           local.get $val|27
           f32.ne
-          br $assembly/math/isNaN|inlined.25
+          br $assembly/math/isNaN|inlined.38
          end
         end
         if
@@ -8099,23 +8101,23 @@
          f32.demote_f64
          local.set $y|25
         end
-        block $~lib/math/NativeMath.floor|inlined.5 (result f64)
+        block $~lib/math/NativeMath.floor|inlined.6 (result f64)
          local.get $x|24
          f64.promote_f32
          local.set $x|28
          local.get $x|28
          f64.floor
-         br $~lib/math/NativeMath.floor|inlined.5
+         br $~lib/math/NativeMath.floor|inlined.6
         end
         i32.trunc_sat_f64_s
         local.set $x0
-        block $~lib/math/NativeMath.floor|inlined.6 (result f64)
+        block $~lib/math/NativeMath.floor|inlined.7 (result f64)
          local.get $y|25
          f64.promote_f32
          local.set $x|30
          local.get $x|30
          f64.floor
-         br $~lib/math/NativeMath.floor|inlined.6
+         br $~lib/math/NativeMath.floor|inlined.7
         end
         i32.trunc_sat_f64_s
         local.set $y0
@@ -8445,149 +8447,149 @@
          br $assembly/math/lerp|inlined.35
         end
         local.set $a|79
-        block $assembly/math/clamp255|inlined.17 (result i32)
+        block $assembly/math/clamp255|inlined.27 (result i32)
          local.get $r|49
          local.set $val|80
-         block $assembly/math/isNaN|inlined.26 (result i32)
+         block $assembly/math/isNaN|inlined.39 (result i32)
           local.get $val|80
           local.set $val|81
           local.get $val|81
           local.get $val|81
           f32.ne
-          br $assembly/math/isNaN|inlined.26
+          br $assembly/math/isNaN|inlined.39
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.17
+          br $assembly/math/clamp255|inlined.27
          end
          local.get $val|80
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.17
+          br $assembly/math/clamp255|inlined.27
          end
          local.get $val|80
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.17
+          br $assembly/math/clamp255|inlined.27
          end
          local.get $val|80
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.17
+         br $assembly/math/clamp255|inlined.27
         end
         i32.const 255
         i32.and
-        block $assembly/math/clamp255|inlined.18 (result i32)
+        block $assembly/math/clamp255|inlined.28 (result i32)
          local.get $g
          local.set $val|82
-         block $assembly/math/isNaN|inlined.27 (result i32)
+         block $assembly/math/isNaN|inlined.40 (result i32)
           local.get $val|82
           local.set $val|83
           local.get $val|83
           local.get $val|83
           f32.ne
-          br $assembly/math/isNaN|inlined.27
+          br $assembly/math/isNaN|inlined.40
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.18
+          br $assembly/math/clamp255|inlined.28
          end
          local.get $val|82
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.18
+          br $assembly/math/clamp255|inlined.28
          end
          local.get $val|82
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.18
+          br $assembly/math/clamp255|inlined.28
          end
          local.get $val|82
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.18
+         br $assembly/math/clamp255|inlined.28
         end
         i32.const 255
         i32.and
         i32.const 8
         i32.shl
         i32.or
-        block $assembly/math/clamp255|inlined.19 (result i32)
+        block $assembly/math/clamp255|inlined.29 (result i32)
          local.get $b|69
          local.set $val|84
-         block $assembly/math/isNaN|inlined.28 (result i32)
+         block $assembly/math/isNaN|inlined.41 (result i32)
           local.get $val|84
           local.set $val|85
           local.get $val|85
           local.get $val|85
           f32.ne
-          br $assembly/math/isNaN|inlined.28
+          br $assembly/math/isNaN|inlined.41
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.19
+          br $assembly/math/clamp255|inlined.29
          end
          local.get $val|84
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.19
+          br $assembly/math/clamp255|inlined.29
          end
          local.get $val|84
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.19
+          br $assembly/math/clamp255|inlined.29
          end
          local.get $val|84
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.19
+         br $assembly/math/clamp255|inlined.29
         end
         i32.const 255
         i32.and
         i32.const 16
         i32.shl
         i32.or
-        block $assembly/math/clamp255|inlined.20 (result i32)
+        block $assembly/math/clamp255|inlined.30 (result i32)
          local.get $a|79
          local.set $val|86
-         block $assembly/math/isNaN|inlined.29 (result i32)
+         block $assembly/math/isNaN|inlined.42 (result i32)
           local.get $val|86
           local.set $val|87
           local.get $val|87
           local.get $val|87
           f32.ne
-          br $assembly/math/isNaN|inlined.29
+          br $assembly/math/isNaN|inlined.42
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.20
+          br $assembly/math/clamp255|inlined.30
          end
          local.get $val|86
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.20
+          br $assembly/math/clamp255|inlined.30
          end
          local.get $val|86
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.20
+          br $assembly/math/clamp255|inlined.30
          end
          local.get $val|86
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.20
+         br $assembly/math/clamp255|inlined.30
         end
         i32.const 255
         i32.and
@@ -8671,7 +8673,7 @@
   f32.const 2
   f32.div
   local.set $cy
-  block $~lib/math/NativeMath.sqrt|inlined.4 (result f64)
+  block $~lib/math/NativeMath.sqrt|inlined.3 (result f64)
    local.get $cx
    local.get $cx
    f32.mul
@@ -8683,7 +8685,7 @@
    local.set $x
    local.get $x
    f64.sqrt
-   br $~lib/math/NativeMath.sqrt|inlined.4
+   br $~lib/math/NativeMath.sqrt|inlined.3
   end
   f32.demote_f64
   local.set $maxD
@@ -8754,7 +8756,7 @@
       f32.sub
       f32.mul
       local.set $dx2
-      block $~lib/math/NativeMath.sqrt|inlined.5 (result f64)
+      block $~lib/math/NativeMath.sqrt|inlined.4 (result f64)
        local.get $dx2
        local.get $dy2
        f32.add
@@ -8762,7 +8764,7 @@
        local.set $x|23
        local.get $x|23
        f64.sqrt
-       br $~lib/math/NativeMath.sqrt|inlined.5
+       br $~lib/math/NativeMath.sqrt|inlined.4
       end
       f32.demote_f64
       local.get $maxD
@@ -8982,7 +8984,7 @@
       local.get $srcPtr
       local.get $idx
       i32.add
-      block $assembly/math/clamp255|inlined.21 (result i32)
+      block $assembly/math/clamp255|inlined.31 (result i32)
        local.get $oR
        local.get $mask
        f32.mul
@@ -8995,35 +8997,35 @@
        f32.const 255
        f32.mul
        local.set $val
-       block $assembly/math/isNaN|inlined.30 (result i32)
+       block $assembly/math/isNaN|inlined.43 (result i32)
         local.get $val
         local.set $val|35
         local.get $val|35
         local.get $val|35
         f32.ne
-        br $assembly/math/isNaN|inlined.30
+        br $assembly/math/isNaN|inlined.43
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.21
+        br $assembly/math/clamp255|inlined.31
        end
        local.get $val
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.21
+        br $assembly/math/clamp255|inlined.31
        end
        local.get $val
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.21
+        br $assembly/math/clamp255|inlined.31
        end
        local.get $val
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.21
+       br $assembly/math/clamp255|inlined.31
       end
       i32.store8
       local.get $srcPtr
@@ -9031,7 +9033,7 @@
       i32.add
       i32.const 1
       i32.add
-      block $assembly/math/clamp255|inlined.22 (result i32)
+      block $assembly/math/clamp255|inlined.32 (result i32)
        local.get $oG
        local.get $mask
        f32.mul
@@ -9044,35 +9046,35 @@
        f32.const 255
        f32.mul
        local.set $val|36
-       block $assembly/math/isNaN|inlined.31 (result i32)
+       block $assembly/math/isNaN|inlined.44 (result i32)
         local.get $val|36
         local.set $val|37
         local.get $val|37
         local.get $val|37
         f32.ne
-        br $assembly/math/isNaN|inlined.31
+        br $assembly/math/isNaN|inlined.44
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.22
+        br $assembly/math/clamp255|inlined.32
        end
        local.get $val|36
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.22
+        br $assembly/math/clamp255|inlined.32
        end
        local.get $val|36
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.22
+        br $assembly/math/clamp255|inlined.32
        end
        local.get $val|36
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.22
+       br $assembly/math/clamp255|inlined.32
       end
       i32.store8
       local.get $srcPtr
@@ -9080,7 +9082,7 @@
       i32.add
       i32.const 2
       i32.add
-      block $assembly/math/clamp255|inlined.23 (result i32)
+      block $assembly/math/clamp255|inlined.33 (result i32)
        local.get $oB
        local.get $mask
        f32.mul
@@ -9093,35 +9095,35 @@
        f32.const 255
        f32.mul
        local.set $val|38
-       block $assembly/math/isNaN|inlined.32 (result i32)
+       block $assembly/math/isNaN|inlined.45 (result i32)
         local.get $val|38
         local.set $val|39
         local.get $val|39
         local.get $val|39
         f32.ne
-        br $assembly/math/isNaN|inlined.32
+        br $assembly/math/isNaN|inlined.45
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.23
+        br $assembly/math/clamp255|inlined.33
        end
        local.get $val|38
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.23
+        br $assembly/math/clamp255|inlined.33
        end
        local.get $val|38
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.23
+        br $assembly/math/clamp255|inlined.33
        end
        local.get $val|38
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.23
+       br $assembly/math/clamp255|inlined.33
       end
       i32.store8
       local.get $x|20
@@ -9218,40 +9220,40 @@
         i32.add
         local.get $i
         i32.add
-        block $assembly/math/clamp255|inlined.24 (result i32)
+        block $assembly/math/clamp255|inlined.34 (result i32)
          local.get $v
          f32.const 255
          f32.mul
          local.set $val
-         block $assembly/math/isNaN|inlined.33 (result i32)
+         block $assembly/math/isNaN|inlined.46 (result i32)
           local.get $val
           local.set $val|16
           local.get $val|16
           local.get $val|16
           f32.ne
-          br $assembly/math/isNaN|inlined.33
+          br $assembly/math/isNaN|inlined.46
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.24
+          br $assembly/math/clamp255|inlined.34
          end
          local.get $val
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.24
+          br $assembly/math/clamp255|inlined.34
          end
          local.get $val
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.24
+          br $assembly/math/clamp255|inlined.34
          end
          local.get $val
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.24
+         br $assembly/math/clamp255|inlined.34
         end
         i32.store8
         local.get $i
@@ -9512,7 +9514,7 @@
       local.get $srcPtr
       local.get $idx
       i32.add
-      block $~lib/math/NativeMath.floor|inlined.7 (result f64)
+      block $~lib/math/NativeMath.floor|inlined.8 (result f64)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -9523,7 +9525,7 @@
        local.set $x|11
        local.get $x|11
        f64.floor
-       br $~lib/math/NativeMath.floor|inlined.7
+       br $~lib/math/NativeMath.floor|inlined.8
       end
       local.get $step
       f64.mul
@@ -9534,7 +9536,7 @@
       i32.add
       i32.const 1
       i32.add
-      block $~lib/math/NativeMath.floor|inlined.8 (result f64)
+      block $~lib/math/NativeMath.floor|inlined.9 (result f64)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -9547,7 +9549,7 @@
        local.set $x|12
        local.get $x|12
        f64.floor
-       br $~lib/math/NativeMath.floor|inlined.8
+       br $~lib/math/NativeMath.floor|inlined.9
       end
       local.get $step
       f64.mul
@@ -9558,7 +9560,7 @@
       i32.add
       i32.const 2
       i32.add
-      block $~lib/math/NativeMath.floor|inlined.9 (result f64)
+      block $~lib/math/NativeMath.floor|inlined.10 (result f64)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -9571,7 +9573,7 @@
        local.set $x|13
        local.get $x|13
        f64.floor
-       br $~lib/math/NativeMath.floor|inlined.9
+       br $~lib/math/NativeMath.floor|inlined.10
       end
       local.get $step
       f64.mul
@@ -9847,7 +9849,7 @@
     i32.const 4
     i32.mul
     local.set $row
-    block $~lib/math/NativeMath.floor|inlined.10 (result f64)
+    block $~lib/math/NativeMath.floor|inlined.11 (result f64)
      local.get $y
      f64.convert_i32_s
      local.get $size
@@ -9856,7 +9858,7 @@
      local.set $x
      local.get $x
      f64.floor
-     br $~lib/math/NativeMath.floor|inlined.10
+     br $~lib/math/NativeMath.floor|inlined.11
     end
     local.get $size
     f64.promote_f32
@@ -9868,7 +9870,7 @@
     f64.add
     i32.trunc_sat_f64_s
     local.set $cy
-    block $~lib/math/NativeMath.min|inlined.6 (result f64)
+    block $~lib/math/NativeMath.min|inlined.12 (result f64)
      local.get $h
      f64.convert_i32_s
      f64.const 1
@@ -9880,7 +9882,7 @@
      local.get $value1
      local.get $value2
      f64.min
-     br $~lib/math/NativeMath.min|inlined.6
+     br $~lib/math/NativeMath.min|inlined.12
     end
     i32.trunc_sat_f64_u
     local.set $cyClamped
@@ -9891,7 +9893,7 @@
      local.get $w
      i32.lt_s
      if
-      block $~lib/math/NativeMath.floor|inlined.11 (result f64)
+      block $~lib/math/NativeMath.floor|inlined.12 (result f64)
        local.get $x|14
        f64.convert_i32_s
        local.get $size
@@ -9900,7 +9902,7 @@
        local.set $x|15
        local.get $x|15
        f64.floor
-       br $~lib/math/NativeMath.floor|inlined.11
+       br $~lib/math/NativeMath.floor|inlined.12
       end
       local.get $size
       f64.promote_f32
@@ -9912,7 +9914,7 @@
       f64.add
       i32.trunc_sat_f64_s
       local.set $cx
-      block $~lib/math/NativeMath.min|inlined.7 (result f64)
+      block $~lib/math/NativeMath.min|inlined.13 (result f64)
        local.get $w
        f64.convert_i32_s
        f64.const 1
@@ -9924,7 +9926,7 @@
        local.get $value1|17
        local.get $value2|18
        f64.min
-       br $~lib/math/NativeMath.min|inlined.7
+       br $~lib/math/NativeMath.min|inlined.13
       end
       i32.trunc_sat_f64_u
       local.set $cxClamped
@@ -10073,38 +10075,38 @@
       local.get $srcPtr
       local.get $idx
       i32.add
-      block $assembly/math/clamp255|inlined.25 (result i32)
+      block $assembly/math/clamp255|inlined.35 (result i32)
        local.get $r
        local.set $val
-       block $assembly/math/isNaN|inlined.34 (result i32)
+       block $assembly/math/isNaN|inlined.47 (result i32)
         local.get $val
         local.set $val|16
         local.get $val|16
         local.get $val|16
         f32.ne
-        br $assembly/math/isNaN|inlined.34
+        br $assembly/math/isNaN|inlined.47
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.25
+        br $assembly/math/clamp255|inlined.35
        end
        local.get $val
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.25
+        br $assembly/math/clamp255|inlined.35
        end
        local.get $val
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.25
+        br $assembly/math/clamp255|inlined.35
        end
        local.get $val
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.25
+       br $assembly/math/clamp255|inlined.35
       end
       i32.store8
       local.get $srcPtr
@@ -10112,38 +10114,38 @@
       i32.add
       i32.const 1
       i32.add
-      block $assembly/math/clamp255|inlined.26 (result i32)
+      block $assembly/math/clamp255|inlined.36 (result i32)
        local.get $g
        local.set $val|17
-       block $assembly/math/isNaN|inlined.35 (result i32)
+       block $assembly/math/isNaN|inlined.48 (result i32)
         local.get $val|17
         local.set $val|18
         local.get $val|18
         local.get $val|18
         f32.ne
-        br $assembly/math/isNaN|inlined.35
+        br $assembly/math/isNaN|inlined.48
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.26
+        br $assembly/math/clamp255|inlined.36
        end
        local.get $val|17
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.26
+        br $assembly/math/clamp255|inlined.36
        end
        local.get $val|17
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.26
+        br $assembly/math/clamp255|inlined.36
        end
        local.get $val|17
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.26
+       br $assembly/math/clamp255|inlined.36
       end
       i32.store8
       local.get $srcPtr
@@ -10151,38 +10153,38 @@
       i32.add
       i32.const 2
       i32.add
-      block $assembly/math/clamp255|inlined.27 (result i32)
+      block $assembly/math/clamp255|inlined.37 (result i32)
        local.get $b
        local.set $val|19
-       block $assembly/math/isNaN|inlined.36 (result i32)
+       block $assembly/math/isNaN|inlined.49 (result i32)
         local.get $val|19
         local.set $val|20
         local.get $val|20
         local.get $val|20
         f32.ne
-        br $assembly/math/isNaN|inlined.36
+        br $assembly/math/isNaN|inlined.49
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.27
+        br $assembly/math/clamp255|inlined.37
        end
        local.get $val|19
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.27
+        br $assembly/math/clamp255|inlined.37
        end
        local.get $val|19
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.27
+        br $assembly/math/clamp255|inlined.37
        end
        local.get $val|19
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.27
+       br $assembly/math/clamp255|inlined.37
       end
       i32.store8
       local.get $x
@@ -10335,24 +10337,24 @@
        local.set $x|16
        local.get $py
        local.set $y|17
-       block $assembly/math/isNaN|inlined.37 (result i32)
+       block $assembly/math/isNaN|inlined.50 (result i32)
         local.get $x|16
         local.set $val
         local.get $val
         local.get $val
         f32.ne
-        br $assembly/math/isNaN|inlined.37
+        br $assembly/math/isNaN|inlined.50
        end
        if (result i32)
         i32.const 1
        else
-        block $assembly/math/isNaN|inlined.38 (result i32)
+        block $assembly/math/isNaN|inlined.51 (result i32)
          local.get $y|17
          local.set $val|19
          local.get $val|19
          local.get $val|19
          f32.ne
-         br $assembly/math/isNaN|inlined.38
+         br $assembly/math/isNaN|inlined.51
         end
        end
        if
@@ -10401,23 +10403,23 @@
         f32.demote_f64
         local.set $y|17
        end
-       block $~lib/math/NativeMath.floor|inlined.12 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.13 (result f64)
         local.get $x|16
         f64.promote_f32
         local.set $x|20
         local.get $x|20
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.12
+        br $~lib/math/NativeMath.floor|inlined.13
        end
        i32.trunc_sat_f64_s
        local.set $x0
-       block $~lib/math/NativeMath.floor|inlined.13 (result f64)
+       block $~lib/math/NativeMath.floor|inlined.14 (result f64)
         local.get $y|17
         f64.promote_f32
         local.set $x|22
         local.get $x|22
         f64.floor
-        br $~lib/math/NativeMath.floor|inlined.13
+        br $~lib/math/NativeMath.floor|inlined.14
        end
        i32.trunc_sat_f64_s
        local.set $y0
@@ -10747,149 +10749,149 @@
         br $assembly/math/lerp|inlined.47
        end
        local.set $a|71
-       block $assembly/math/clamp255|inlined.28 (result i32)
+       block $assembly/math/clamp255|inlined.38 (result i32)
         local.get $r
         local.set $val|72
-        block $assembly/math/isNaN|inlined.39 (result i32)
+        block $assembly/math/isNaN|inlined.52 (result i32)
          local.get $val|72
          local.set $val|73
          local.get $val|73
          local.get $val|73
          f32.ne
-         br $assembly/math/isNaN|inlined.39
+         br $assembly/math/isNaN|inlined.52
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.28
+         br $assembly/math/clamp255|inlined.38
         end
         local.get $val|72
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.28
+         br $assembly/math/clamp255|inlined.38
         end
         local.get $val|72
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.28
+         br $assembly/math/clamp255|inlined.38
         end
         local.get $val|72
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.28
+        br $assembly/math/clamp255|inlined.38
        end
        i32.const 255
        i32.and
-       block $assembly/math/clamp255|inlined.29 (result i32)
+       block $assembly/math/clamp255|inlined.39 (result i32)
         local.get $g
         local.set $val|74
-        block $assembly/math/isNaN|inlined.40 (result i32)
+        block $assembly/math/isNaN|inlined.53 (result i32)
          local.get $val|74
          local.set $val|75
          local.get $val|75
          local.get $val|75
          f32.ne
-         br $assembly/math/isNaN|inlined.40
+         br $assembly/math/isNaN|inlined.53
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.29
+         br $assembly/math/clamp255|inlined.39
         end
         local.get $val|74
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.29
+         br $assembly/math/clamp255|inlined.39
         end
         local.get $val|74
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.29
+         br $assembly/math/clamp255|inlined.39
         end
         local.get $val|74
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.29
+        br $assembly/math/clamp255|inlined.39
        end
        i32.const 255
        i32.and
        i32.const 8
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.30 (result i32)
+       block $assembly/math/clamp255|inlined.40 (result i32)
         local.get $b|61
         local.set $val|76
-        block $assembly/math/isNaN|inlined.41 (result i32)
+        block $assembly/math/isNaN|inlined.54 (result i32)
          local.get $val|76
          local.set $val|77
          local.get $val|77
          local.get $val|77
          f32.ne
-         br $assembly/math/isNaN|inlined.41
+         br $assembly/math/isNaN|inlined.54
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.30
+         br $assembly/math/clamp255|inlined.40
         end
         local.get $val|76
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.30
+         br $assembly/math/clamp255|inlined.40
         end
         local.get $val|76
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.30
+         br $assembly/math/clamp255|inlined.40
         end
         local.get $val|76
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.30
+        br $assembly/math/clamp255|inlined.40
        end
        i32.const 255
        i32.and
        i32.const 16
        i32.shl
        i32.or
-       block $assembly/math/clamp255|inlined.31 (result i32)
+       block $assembly/math/clamp255|inlined.41 (result i32)
         local.get $a|71
         local.set $val|78
-        block $assembly/math/isNaN|inlined.42 (result i32)
+        block $assembly/math/isNaN|inlined.55 (result i32)
          local.get $val|78
          local.set $val|79
          local.get $val|79
          local.get $val|79
          f32.ne
-         br $assembly/math/isNaN|inlined.42
+         br $assembly/math/isNaN|inlined.55
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.31
+         br $assembly/math/clamp255|inlined.41
         end
         local.get $val|78
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.31
+         br $assembly/math/clamp255|inlined.41
         end
         local.get $val|78
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.31
+         br $assembly/math/clamp255|inlined.41
         end
         local.get $val|78
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.31
+        br $assembly/math/clamp255|inlined.41
        end
        i32.const 255
        i32.and
@@ -10960,7 +10962,7 @@
     local.get $s
     i32.mul
     local.set $py
-    block $~lib/math/NativeMath.min|inlined.8 (result f64)
+    block $~lib/math/NativeMath.min|inlined.14 (result f64)
      local.get $h
      f64.convert_i32_s
      f64.const 1
@@ -10972,7 +10974,7 @@
      local.get $value1
      local.get $value2
      f64.min
-     br $~lib/math/NativeMath.min|inlined.8
+     br $~lib/math/NativeMath.min|inlined.14
     end
     i32.trunc_sat_f64_u
     local.set $pyClamped
@@ -10989,7 +10991,7 @@
       local.get $s
       i32.mul
       local.set $px
-      block $~lib/math/NativeMath.min|inlined.9 (result f64)
+      block $~lib/math/NativeMath.min|inlined.15 (result f64)
        local.get $w
        f64.convert_i32_s
        f64.const 1
@@ -11001,7 +11003,7 @@
        local.get $value1|16
        local.get $value2|17
        f64.min
-       br $~lib/math/NativeMath.min|inlined.9
+       br $~lib/math/NativeMath.min|inlined.15
       end
       i32.trunc_sat_f64_u
       local.set $pxClamped
@@ -11105,7 +11107,7 @@
       local.get $srcPtr
       local.get $idx
       i32.add
-      block $assembly/math/clamp255|inlined.32 (result i32)
+      block $assembly/math/clamp255|inlined.42 (result i32)
        local.get $r
        f32.const 0.3930000066757202
        f32.mul
@@ -11118,35 +11120,35 @@
        f32.mul
        f32.add
        local.set $val
-       block $assembly/math/isNaN|inlined.43 (result i32)
+       block $assembly/math/isNaN|inlined.56 (result i32)
         local.get $val
         local.set $val|13
         local.get $val|13
         local.get $val|13
         f32.ne
-        br $assembly/math/isNaN|inlined.43
+        br $assembly/math/isNaN|inlined.56
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.32
+        br $assembly/math/clamp255|inlined.42
        end
        local.get $val
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.32
+        br $assembly/math/clamp255|inlined.42
        end
        local.get $val
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.32
+        br $assembly/math/clamp255|inlined.42
        end
        local.get $val
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.32
+       br $assembly/math/clamp255|inlined.42
       end
       i32.store8
       local.get $srcPtr
@@ -11154,7 +11156,7 @@
       i32.add
       i32.const 1
       i32.add
-      block $assembly/math/clamp255|inlined.33 (result i32)
+      block $assembly/math/clamp255|inlined.43 (result i32)
        local.get $r
        f32.const 0.3490000069141388
        f32.mul
@@ -11167,35 +11169,35 @@
        f32.mul
        f32.add
        local.set $val|14
-       block $assembly/math/isNaN|inlined.44 (result i32)
+       block $assembly/math/isNaN|inlined.57 (result i32)
         local.get $val|14
         local.set $val|15
         local.get $val|15
         local.get $val|15
         f32.ne
-        br $assembly/math/isNaN|inlined.44
+        br $assembly/math/isNaN|inlined.57
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.33
+        br $assembly/math/clamp255|inlined.43
        end
        local.get $val|14
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.33
+        br $assembly/math/clamp255|inlined.43
        end
        local.get $val|14
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.33
+        br $assembly/math/clamp255|inlined.43
        end
        local.get $val|14
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.33
+       br $assembly/math/clamp255|inlined.43
       end
       i32.store8
       local.get $srcPtr
@@ -11203,7 +11205,7 @@
       i32.add
       i32.const 2
       i32.add
-      block $assembly/math/clamp255|inlined.34 (result i32)
+      block $assembly/math/clamp255|inlined.44 (result i32)
        local.get $r
        f32.const 0.2720000147819519
        f32.mul
@@ -11216,35 +11218,35 @@
        f32.mul
        f32.add
        local.set $val|16
-       block $assembly/math/isNaN|inlined.45 (result i32)
+       block $assembly/math/isNaN|inlined.58 (result i32)
         local.get $val|16
         local.set $val|17
         local.get $val|17
         local.get $val|17
         f32.ne
-        br $assembly/math/isNaN|inlined.45
+        br $assembly/math/isNaN|inlined.58
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.34
+        br $assembly/math/clamp255|inlined.44
        end
        local.get $val|16
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.34
+        br $assembly/math/clamp255|inlined.44
        end
        local.get $val|16
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.34
+        br $assembly/math/clamp255|inlined.44
        end
        local.get $val|16
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.34
+       br $assembly/math/clamp255|inlined.44
       end
       i32.store8
       local.get $x
@@ -11343,38 +11345,38 @@
         i32.add
         local.get $c
         i32.add
-        block $assembly/math/clamp255|inlined.35 (result i32)
+        block $assembly/math/clamp255|inlined.45 (result i32)
          local.get $res
          local.set $val
-         block $assembly/math/isNaN|inlined.46 (result i32)
+         block $assembly/math/isNaN|inlined.59 (result i32)
           local.get $val
           local.set $val|16
           local.get $val|16
           local.get $val|16
           f32.ne
-          br $assembly/math/isNaN|inlined.46
+          br $assembly/math/isNaN|inlined.59
          end
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.35
+          br $assembly/math/clamp255|inlined.45
          end
          local.get $val
          f32.const 0
          f32.lt
          if
           i32.const 0
-          br $assembly/math/clamp255|inlined.35
+          br $assembly/math/clamp255|inlined.45
          end
          local.get $val
          f32.const 255
          f32.gt
          if
           i32.const 255
-          br $assembly/math/clamp255|inlined.35
+          br $assembly/math/clamp255|inlined.45
          end
          local.get $val
          i32.trunc_sat_f32_u
-         br $assembly/math/clamp255|inlined.35
+         br $assembly/math/clamp255|inlined.45
         end
         i32.store8
         local.get $c
@@ -12329,7 +12331,7 @@
        f32.add
        f32.sub
        local.set $v_
-       block $~lib/math/NativeMath.sqrt|inlined.6 (result f64)
+       block $~lib/math/NativeMath.sqrt|inlined.5 (result f64)
         local.get $h_
         local.get $h_
         f32.mul
@@ -12341,46 +12343,46 @@
         local.set $x|72
         local.get $x|72
         f64.sqrt
-        br $~lib/math/NativeMath.sqrt|inlined.6
+        br $~lib/math/NativeMath.sqrt|inlined.5
        end
        f32.demote_f64
        local.set $edge
-       block $assembly/math/clamp255|inlined.36 (result i32)
+       block $assembly/math/clamp255|inlined.46 (result i32)
         local.get $edge
         local.get $sensitivity
         f32.mul
         f32.const 4
         f32.mul
         local.set $val
-        block $assembly/math/isNaN|inlined.47 (result i32)
+        block $assembly/math/isNaN|inlined.60 (result i32)
          local.get $val
          local.set $val|75
          local.get $val|75
          local.get $val|75
          f32.ne
-         br $assembly/math/isNaN|inlined.47
+         br $assembly/math/isNaN|inlined.60
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.36
+         br $assembly/math/clamp255|inlined.46
         end
         local.get $val
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.36
+         br $assembly/math/clamp255|inlined.46
         end
         local.get $val
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.36
+         br $assembly/math/clamp255|inlined.46
         end
         local.get $val
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.36
+        br $assembly/math/clamp255|inlined.46
        end
        local.set $v
        local.get $row
@@ -12500,7 +12502,7 @@
       local.get $srcPtr
       local.get $idx
       i32.add
-      block $assembly/math/clamp255|inlined.37 (result i32)
+      block $assembly/math/clamp255|inlined.47 (result i32)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -12509,35 +12511,35 @@
        local.get $factor
        f32.mul
        local.set $val
-       block $assembly/math/isNaN|inlined.48 (result i32)
+       block $assembly/math/isNaN|inlined.61 (result i32)
         local.get $val
         local.set $val|14
         local.get $val|14
         local.get $val|14
         f32.ne
-        br $assembly/math/isNaN|inlined.48
+        br $assembly/math/isNaN|inlined.61
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.37
+        br $assembly/math/clamp255|inlined.47
        end
        local.get $val
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.37
+        br $assembly/math/clamp255|inlined.47
        end
        local.get $val
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.37
+        br $assembly/math/clamp255|inlined.47
        end
        local.get $val
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.37
+       br $assembly/math/clamp255|inlined.47
       end
       i32.store8
       local.get $srcPtr
@@ -12545,7 +12547,7 @@
       i32.add
       i32.const 1
       i32.add
-      block $assembly/math/clamp255|inlined.38 (result i32)
+      block $assembly/math/clamp255|inlined.48 (result i32)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -12556,35 +12558,35 @@
        local.get $factor
        f32.mul
        local.set $val|15
-       block $assembly/math/isNaN|inlined.49 (result i32)
+       block $assembly/math/isNaN|inlined.62 (result i32)
         local.get $val|15
         local.set $val|16
         local.get $val|16
         local.get $val|16
         f32.ne
-        br $assembly/math/isNaN|inlined.49
+        br $assembly/math/isNaN|inlined.62
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.38
+        br $assembly/math/clamp255|inlined.48
        end
        local.get $val|15
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.38
+        br $assembly/math/clamp255|inlined.48
        end
        local.get $val|15
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.38
+        br $assembly/math/clamp255|inlined.48
        end
        local.get $val|15
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.38
+       br $assembly/math/clamp255|inlined.48
       end
       i32.store8
       local.get $srcPtr
@@ -12592,7 +12594,7 @@
       i32.add
       i32.const 2
       i32.add
-      block $assembly/math/clamp255|inlined.39 (result i32)
+      block $assembly/math/clamp255|inlined.49 (result i32)
        local.get $srcPtr
        local.get $idx
        i32.add
@@ -12603,35 +12605,35 @@
        local.get $factor
        f32.mul
        local.set $val|17
-       block $assembly/math/isNaN|inlined.50 (result i32)
+       block $assembly/math/isNaN|inlined.63 (result i32)
         local.get $val|17
         local.set $val|18
         local.get $val|18
         local.get $val|18
         f32.ne
-        br $assembly/math/isNaN|inlined.50
+        br $assembly/math/isNaN|inlined.63
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.39
+        br $assembly/math/clamp255|inlined.49
        end
        local.get $val|17
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.39
+        br $assembly/math/clamp255|inlined.49
        end
        local.get $val|17
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.39
+        br $assembly/math/clamp255|inlined.49
        end
        local.get $val|17
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.39
+       br $assembly/math/clamp255|inlined.49
       end
       i32.store8
       local.get $x
@@ -12941,7 +12943,7 @@
        f64.const 255
        f64.div
        local.set $lum
-       block $assembly/math/clamp255|inlined.40 (result i32)
+       block $assembly/math/clamp255|inlined.50 (result i32)
         local.get $lum
         local.get $a
         f64.promote_f32
@@ -12953,35 +12955,35 @@
         f64.mul
         f32.demote_f64
         local.set $val
-        block $assembly/math/isNaN|inlined.51 (result i32)
+        block $assembly/math/isNaN|inlined.64 (result i32)
          local.get $val
          local.set $val|22
          local.get $val|22
          local.get $val|22
          f32.ne
-         br $assembly/math/isNaN|inlined.51
+         br $assembly/math/isNaN|inlined.64
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.40
+         br $assembly/math/clamp255|inlined.50
         end
         local.get $val
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.40
+         br $assembly/math/clamp255|inlined.50
         end
         local.get $val
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.40
+         br $assembly/math/clamp255|inlined.50
         end
         local.get $val
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.40
+        br $assembly/math/clamp255|inlined.50
        end
        local.set $val|23
        local.get $maskPtr
@@ -16232,41 +16234,41 @@
       local.get $dstPtr
       local.get $outIdx
       i32.add
-      block $assembly/math/clamp255|inlined.41 (result i32)
+      block $assembly/math/clamp255|inlined.51 (result i32)
        local.get $sumR
        f64.const 128
        f64.add
        f32.demote_f64
        local.set $val
-       block $assembly/math/isNaN|inlined.52 (result i32)
+       block $assembly/math/isNaN|inlined.65 (result i32)
         local.get $val
         local.set $val|31
         local.get $val|31
         local.get $val|31
         f32.ne
-        br $assembly/math/isNaN|inlined.52
+        br $assembly/math/isNaN|inlined.65
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.41
+        br $assembly/math/clamp255|inlined.51
        end
        local.get $val
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.41
+        br $assembly/math/clamp255|inlined.51
        end
        local.get $val
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.41
+        br $assembly/math/clamp255|inlined.51
        end
        local.get $val
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.41
+       br $assembly/math/clamp255|inlined.51
       end
       i32.store8
       local.get $dstPtr
@@ -16274,41 +16276,41 @@
       i32.add
       i32.const 1
       i32.add
-      block $assembly/math/clamp255|inlined.42 (result i32)
+      block $assembly/math/clamp255|inlined.52 (result i32)
        local.get $sumG
        f64.const 128
        f64.add
        f32.demote_f64
        local.set $val|32
-       block $assembly/math/isNaN|inlined.53 (result i32)
+       block $assembly/math/isNaN|inlined.66 (result i32)
         local.get $val|32
         local.set $val|33
         local.get $val|33
         local.get $val|33
         f32.ne
-        br $assembly/math/isNaN|inlined.53
+        br $assembly/math/isNaN|inlined.66
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.42
+        br $assembly/math/clamp255|inlined.52
        end
        local.get $val|32
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.42
+        br $assembly/math/clamp255|inlined.52
        end
        local.get $val|32
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.42
+        br $assembly/math/clamp255|inlined.52
        end
        local.get $val|32
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.42
+       br $assembly/math/clamp255|inlined.52
       end
       i32.store8
       local.get $dstPtr
@@ -16316,41 +16318,41 @@
       i32.add
       i32.const 2
       i32.add
-      block $assembly/math/clamp255|inlined.43 (result i32)
+      block $assembly/math/clamp255|inlined.53 (result i32)
        local.get $sumB
        f64.const 128
        f64.add
        f32.demote_f64
        local.set $val|34
-       block $assembly/math/isNaN|inlined.54 (result i32)
+       block $assembly/math/isNaN|inlined.67 (result i32)
         local.get $val|34
         local.set $val|35
         local.get $val|35
         local.get $val|35
         f32.ne
-        br $assembly/math/isNaN|inlined.54
+        br $assembly/math/isNaN|inlined.67
        end
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.43
+        br $assembly/math/clamp255|inlined.53
        end
        local.get $val|34
        f32.const 0
        f32.lt
        if
         i32.const 0
-        br $assembly/math/clamp255|inlined.43
+        br $assembly/math/clamp255|inlined.53
        end
        local.get $val|34
        f32.const 255
        f32.gt
        if
         i32.const 255
-        br $assembly/math/clamp255|inlined.43
+        br $assembly/math/clamp255|inlined.53
        end
        local.get $val|34
        i32.trunc_sat_f32_u
-       br $assembly/math/clamp255|inlined.43
+       br $assembly/math/clamp255|inlined.53
       end
       i32.store8
       local.get $dstPtr
@@ -16555,14 +16557,14 @@
          f32.convert_i32_s
          local.set $srcY
         end
-        block $~lib/math/NativeMath.min|inlined.12 (result f64)
+        block $~lib/math/NativeMath.min|inlined.18 (result f64)
          local.get $w
          i32.const 1
          i32.sub
          f32.convert_i32_s
          f64.promote_f32
          local.set $value1|26
-         block $~lib/math/NativeMath.max|inlined.14 (result f64)
+         block $~lib/math/NativeMath.max|inlined.49 (result f64)
           f64.const 0
           local.set $value1
           local.get $srcX
@@ -16571,24 +16573,24 @@
           local.get $value1
           local.get $value2
           f64.max
-          br $~lib/math/NativeMath.max|inlined.14
+          br $~lib/math/NativeMath.max|inlined.49
          end
          local.set $value2|27
          local.get $value1|26
          local.get $value2|27
          f64.min
-         br $~lib/math/NativeMath.min|inlined.12
+         br $~lib/math/NativeMath.min|inlined.18
         end
         i32.trunc_sat_f64_s
         local.set $px
-        block $~lib/math/NativeMath.min|inlined.13 (result f64)
+        block $~lib/math/NativeMath.min|inlined.19 (result f64)
          local.get $h
          i32.const 1
          i32.sub
          f32.convert_i32_s
          f64.promote_f32
          local.set $value1|31
-         block $~lib/math/NativeMath.max|inlined.15 (result f64)
+         block $~lib/math/NativeMath.max|inlined.50 (result f64)
           f64.const 0
           local.set $value1|29
           local.get $srcY
@@ -16597,13 +16599,13 @@
           local.get $value1|29
           local.get $value2|30
           f64.max
-          br $~lib/math/NativeMath.max|inlined.15
+          br $~lib/math/NativeMath.max|inlined.50
          end
          local.set $value2|32
          local.get $value1|31
          local.get $value2|32
          f64.min
-         br $~lib/math/NativeMath.min|inlined.13
+         br $~lib/math/NativeMath.min|inlined.19
         end
         i32.trunc_sat_f64_s
         local.set $py
@@ -16794,8 +16796,8 @@
       local.set $a
       f32.const 0
       local.set $s
-      block $~lib/math/NativeMath.min|inlined.15 (result f64)
-       block $~lib/math/NativeMath.min|inlined.14 (result f64)
+      block $~lib/math/NativeMath.min|inlined.21 (result f64)
+       block $~lib/math/NativeMath.min|inlined.20 (result f64)
         local.get $r
         f64.convert_i32_u
         local.set $value1
@@ -16805,7 +16807,7 @@
         local.get $value1
         local.get $value2
         f64.min
-        br $~lib/math/NativeMath.min|inlined.14
+        br $~lib/math/NativeMath.min|inlined.20
        end
        local.set $value1|19
        local.get $b
@@ -16814,11 +16816,11 @@
        local.get $value1|19
        local.get $value2|20
        f64.min
-       br $~lib/math/NativeMath.min|inlined.15
+       br $~lib/math/NativeMath.min|inlined.21
       end
       local.set $minColor
-      block $~lib/math/NativeMath.max|inlined.17 (result f64)
-       block $~lib/math/NativeMath.max|inlined.16 (result f64)
+      block $~lib/math/NativeMath.max|inlined.52 (result f64)
+       block $~lib/math/NativeMath.max|inlined.51 (result f64)
         local.get $r
         f64.convert_i32_u
         local.set $value1|22
@@ -16828,7 +16830,7 @@
         local.get $value1|22
         local.get $value2|23
         f64.max
-        br $~lib/math/NativeMath.max|inlined.16
+        br $~lib/math/NativeMath.max|inlined.51
        end
        local.set $value1|24
        local.get $b
@@ -16837,7 +16839,7 @@
        local.get $value1|24
        local.get $value2|25
        f64.max
-       br $~lib/math/NativeMath.max|inlined.17
+       br $~lib/math/NativeMath.max|inlined.52
       end
       local.set $maxColor
       local.get $maxColor
@@ -16869,7 +16871,7 @@
       local.set $saturationVal
       local.get $r
       f64.convert_i32_u
-      block $~lib/math/NativeMath.max|inlined.18 (result f64)
+      block $~lib/math/NativeMath.max|inlined.53 (result f64)
        local.get $b
        f64.convert_i32_u
        local.set $value1|29
@@ -16879,7 +16881,7 @@
        local.get $value1|29
        local.get $value2|30
        f64.max
-       br $~lib/math/NativeMath.max|inlined.18
+       br $~lib/math/NativeMath.max|inlined.53
       end
       f64.sub
       local.set $difference
@@ -16910,40 +16912,40 @@
        f32.mul
        f32.add
        local.set $intensity
-       block $assembly/math/clamp255|inlined.44 (result i32)
+       block $assembly/math/clamp255|inlined.54 (result i32)
         local.get $intensity
         local.get $saturation
         f32.mul
         local.set $val
-        block $assembly/math/isNaN|inlined.55 (result i32)
+        block $assembly/math/isNaN|inlined.68 (result i32)
          local.get $val
          local.set $val|34
          local.get $val|34
          local.get $val|34
          f32.ne
-         br $assembly/math/isNaN|inlined.55
+         br $assembly/math/isNaN|inlined.68
         end
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.44
+         br $assembly/math/clamp255|inlined.54
         end
         local.get $val
         f32.const 0
         f32.lt
         if
          i32.const 0
-         br $assembly/math/clamp255|inlined.44
+         br $assembly/math/clamp255|inlined.54
         end
         local.get $val
         f32.const 255
         f32.gt
         if
          i32.const 255
-         br $assembly/math/clamp255|inlined.44
+         br $assembly/math/clamp255|inlined.54
         end
         local.get $val
         i32.trunc_sat_f32_u
-        br $assembly/math/clamp255|inlined.44
+        br $assembly/math/clamp255|inlined.54
        end
        local.set $newR
        local.get $dstPtr
@@ -17643,7 +17645,7 @@
   global.set $~lib/memory/__stack_pointer
   local.get $2
  )
- (func $assembly/camera_raw/applyCameraRaw (param $dataPtr i32) (param $width i32) (param $height i32) (param $exposure f32) (param $contrast f32) (param $highlights f32) (param $shadows f32) (param $temperature f32) (param $tint f32) (param $vibrance f32) (param $saturation f32) (param $red f32) (param $redHi f32) (param $redSh f32) (param $green f32) (param $greenHi f32) (param $greenSh f32) (param $blue f32) (param $blueHi f32) (param $blueSh f32) (param $hslPtr i32) (param $lutPtr i32) (param $startY i32) (param $endY i32)
+ (func $assembly/camera_raw/applyCameraRaw (param $dataPtr i32) (param $width i32) (param $height i32) (param $exposure f32) (param $contrast f32) (param $highlights f32) (param $shadows f32) (param $whites f32) (param $blacks f32) (param $temperature f32) (param $tint f32) (param $vibrance f32) (param $saturation f32) (param $red f32) (param $redHi f32) (param $redSh f32) (param $green f32) (param $greenHi f32) (param $greenSh f32) (param $blue f32) (param $blueHi f32) (param $blueSh f32) (param $hslPtr i32) (param $lutPtr i32) (param $startY i32) (param $endY i32)
   (local $expStops f32)
   (local $mult f32)
   (local $contrastF f32)
@@ -17666,84 +17668,120 @@
   (local $c f32)
   (local $cf f32)
   (local $r f32)
-  (local $c|46 f32)
-  (local $cf|47 f32)
+  (local $c|48 f32)
+  (local $cf|49 f32)
   (local $g f32)
-  (local $c|49 f32)
-  (local $cf|50 f32)
+  (local $c|51 f32)
+  (local $cf|52 f32)
   (local $b f32)
-  (local $Y f32)
-  (local $yNew f32)
-  (local $sh f32)
+  (local $Y_orig f32)
   (local $value1 f64)
   (local $value2 f64)
-  (local $weight f32)
-  (local $x|58 f64)
-  (local $hi f32)
-  (local $value1|60 f64)
-  (local $value2|61 f64)
-  (local $weight|62 f32)
-  (local $value1|63 f64)
-  (local $value2|64 f64)
-  (local $multLuma f32)
+  (local $value1|57 f64)
+  (local $value2|58 f64)
+  (local $Y_clamp f32)
+  (local $wZone f32)
+  (local $tAdj f32)
+  (local $value1|62 f64)
+  (local $value2|63 f64)
+  (local $value1|64 f64)
+  (local $value2|65 f64)
   (local $value1|66 f64)
   (local $value2|67 f64)
-  (local $wHi f32)
+  (local $tnAdj f32)
   (local $value1|69 f64)
   (local $value2|70 f64)
+  (local $value1|71 f64)
+  (local $value2|72 f64)
+  (local $value1|73 f64)
+  (local $value2|74 f64)
+  (local $Y f32)
+  (local $yNew f32)
+  (local $hi f32)
+  (local $value1|78 f64)
+  (local $value2|79 f64)
+  (local $w f32)
+  (local $over f32)
+  (local $wh f32)
+  (local $value1|83 f64)
+  (local $value2|84 f64)
+  (local $w|85 f32)
+  (local $over|86 f32)
+  (local $value1|87 f64)
+  (local $value2|88 f64)
+  (local $multLuma f32)
+  (local $sh f32)
+  (local $value1|91 f64)
+  (local $value2|92 f64)
+  (local $w|93 f32)
+  (local $value1|94 f64)
+  (local $value2|95 f64)
+  (local $factor f32)
+  (local $bl f32)
+  (local $value1|98 f64)
+  (local $value2|99 f64)
+  (local $w|100 f32)
+  (local $value1|101 f64)
+  (local $value2|102 f64)
+  (local $factor|103 f32)
+  (local $value1|104 f64)
+  (local $value2|105 f64)
+  (local $wHi f32)
+  (local $value1|107 f64)
+  (local $value2|108 f64)
   (local $wSh f32)
-  (local $c|72 f32)
-  (local $cf|73 f32)
+  (local $c|110 f32)
+  (local $cf|111 f32)
   (local $r8 f32)
-  (local $c|75 f32)
-  (local $cf|76 f32)
+  (local $c|113 f32)
+  (local $cf|114 f32)
   (local $g8 f32)
-  (local $c|78 f32)
-  (local $cf|79 f32)
+  (local $c|116 f32)
+  (local $cf|117 f32)
   (local $b8 f32)
   (local $lr f32)
   (local $lg f32)
   (local $lb f32)
   (local $val f32)
-  (local $val|85 f32)
-  (local $val|86 f32)
-  (local $val|87 f32)
-  (local $val|88 f32)
-  (local $val|89 f32)
-  (local $val|90 f32)
-  (local $val|91 f32)
-  (local $val|92 f32)
-  (local $val|93 f32)
-  (local $val|94 f32)
-  (local $val|95 f32)
-  (local $val|96 f32)
-  (local $val|97 f32)
-  (local $val|98 f32)
-  (local $val|99 f32)
-  (local $val|100 f32)
-  (local $val|101 f32)
-  (local $r|102 f32)
-  (local $g|103 f32)
-  (local $b|104 f32)
+  (local $val|123 f32)
+  (local $val|124 f32)
+  (local $val|125 f32)
+  (local $val|126 f32)
+  (local $val|127 f32)
+  (local $val|128 f32)
+  (local $val|129 f32)
+  (local $val|130 f32)
+  (local $val|131 f32)
+  (local $val|132 f32)
+  (local $val|133 f32)
+  (local $val|134 f32)
+  (local $val|135 f32)
+  (local $val|136 f32)
+  (local $val|137 f32)
+  (local $val|138 f32)
+  (local $val|139 f32)
+  (local $r|140 f32)
+  (local $g|141 f32)
+  (local $b|142 f32)
   (local $rf f32)
   (local $gf f32)
   (local $bf f32)
-  (local $value1|108 f64)
-  (local $value2|109 f64)
-  (local $value1|110 f64)
-  (local $value2|111 f64)
+  (local $value1|146 f64)
+  (local $value2|147 f64)
+  (local $value1|148 f64)
+  (local $value2|149 f64)
   (local $max f32)
-  (local $value1|113 f64)
-  (local $value2|114 f64)
-  (local $value1|115 f64)
-  (local $value2|116 f64)
+  (local $value1|151 f64)
+  (local $value2|152 f64)
+  (local $value1|153 f64)
+  (local $value2|154 f64)
   (local $min f32)
   (local $d f32)
   (local $h f32)
   (local $s f32)
   (local $v f32)
   (local $hsv i32)
-  (local $h|123 f32)
+  (local $h|161 f32)
   (local $i1 i32)
   (local $i2 i32)
   (local $w1 f32)
@@ -17757,46 +17795,46 @@
   (local $mixH f32)
   (local $mixS f32)
   (local $mixV f32)
-  (local $value1|137 f64)
-  (local $value2|138 f64)
-  (local $value1|139 f64)
-  (local $value2|140 f64)
-  (local $value1|141 f64)
-  (local $value2|142 f64)
-  (local $value1|143 f64)
-  (local $value2|144 f64)
-  (local $h|145 f32)
-  (local $s|146 f32)
-  (local $v|147 f32)
+  (local $value1|175 f64)
+  (local $value2|176 f64)
+  (local $value1|177 f64)
+  (local $value2|178 f64)
+  (local $value1|179 f64)
+  (local $value2|180 f64)
+  (local $value1|181 f64)
+  (local $value2|182 f64)
+  (local $h|183 f32)
+  (local $s|184 f32)
+  (local $v|185 f32)
   (local $hf f32)
   (local $sf f32)
   (local $vf f32)
-  (local $x|151 f64)
+  (local $x|189 f64)
   (local $i i32)
   (local $f f32)
   (local $p f32)
   (local $q f32)
-  (local $t|156 f32)
-  (local $r|157 f32)
-  (local $g|158 f32)
-  (local $b|159 f32)
-  (local $160 i32)
+  (local $t|194 f32)
+  (local $r|195 f32)
+  (local $g|196 f32)
+  (local $b|197 f32)
+  (local $198 i32)
   (local $rgb i32)
   (local $avg f32)
-  (local $value1|163 f64)
-  (local $value2|164 f64)
-  (local $value1|165 f64)
-  (local $value2|166 f64)
+  (local $value1|201 f64)
+  (local $value2|202 f64)
+  (local $value1|203 f64)
+  (local $value2|204 f64)
   (local $max_val f32)
   (local $amt f32)
   (local $gray f32)
-  (local $val|170 f32)
-  (local $val|171 f32)
-  (local $val|172 f32)
-  (local $val|173 f32)
-  (local $val|174 f32)
-  (local $val|175 f32)
-  (local $176 i32)
+  (local $val|208 f32)
+  (local $val|209 f32)
+  (local $val|210 f32)
+  (local $val|211 f32)
+  (local $val|212 f32)
+  (local $val|213 f32)
+  (local $214 i32)
   global.get $~lib/memory/__stack_pointer
   i32.const 16
   i32.sub
@@ -17985,34 +18023,34 @@
        local.set $r
        block $assembly/camera_raw/srgbToLinear|inlined.1 (result f32)
         local.get $gRaw
-        local.set $c|46
-        local.get $c|46
+        local.set $c|48
+        local.get $c|48
         f32.const 255
         f32.div
-        local.set $cf|47
-        local.get $cf|47
+        local.set $cf|49
+        local.get $cf|49
         f32.const 0
         f32.le
         if
          f32.const 0
          br $assembly/camera_raw/srgbToLinear|inlined.1
         end
-        local.get $cf|47
+        local.get $cf|49
         f32.const 1
         f32.ge
         if
          f32.const 1
          br $assembly/camera_raw/srgbToLinear|inlined.1
         end
-        local.get $cf|47
+        local.get $cf|49
         f32.const 0.040449999272823334
         f32.le
         if (result f32)
-         local.get $cf|47
+         local.get $cf|49
          f32.const 12.920000076293945
          f32.div
         else
-         local.get $cf|47
+         local.get $cf|49
          f32.const 0.054999999701976776
          f32.add
          f64.promote_f32
@@ -18027,34 +18065,34 @@
        local.set $g
        block $assembly/camera_raw/srgbToLinear|inlined.2 (result f32)
         local.get $bRaw
-        local.set $c|49
-        local.get $c|49
+        local.set $c|51
+        local.get $c|51
         f32.const 255
         f32.div
-        local.set $cf|50
-        local.get $cf|50
+        local.set $cf|52
+        local.get $cf|52
         f32.const 0
         f32.le
         if
          f32.const 0
          br $assembly/camera_raw/srgbToLinear|inlined.2
         end
-        local.get $cf|50
+        local.get $cf|52
         f32.const 1
         f32.ge
         if
          f32.const 1
          br $assembly/camera_raw/srgbToLinear|inlined.2
         end
-        local.get $cf|50
+        local.get $cf|52
         f32.const 0.040449999272823334
         f32.le
         if (result f32)
-         local.get $cf|50
+         local.get $cf|52
          f32.const 12.920000076293945
          f32.div
         else
-         local.get $cf|50
+         local.get $cf|52
          f32.const 0.054999999701976776
          f32.add
          f64.promote_f32
@@ -18079,32 +18117,111 @@
        local.get $mult
        f32.mul
        local.set $b
+       f32.const 0.2125999927520752
+       local.get $r
+       f32.mul
+       f32.const 0.7152000069618225
+       local.get $g
+       f32.mul
+       f32.add
+       f32.const 0.0722000002861023
+       local.get $b
+       f32.mul
+       f32.add
+       local.set $Y_orig
+       block $~lib/math/NativeMath.max|inlined.0 (result f64)
+        f64.const 0
+        local.set $value1|57
+        block $~lib/math/NativeMath.min|inlined.0 (result f64)
+         f64.const 1
+         local.set $value1
+         local.get $Y_orig
+         f64.promote_f32
+         local.set $value2
+         local.get $value1
+         local.get $value2
+         f64.min
+         br $~lib/math/NativeMath.min|inlined.0
+        end
+        local.set $value2|58
+        local.get $value1|57
+        local.get $value2|58
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.0
+       end
+       f32.demote_f64
+       local.set $Y_clamp
+       local.get $Y_clamp
+       f32.const 1
+       local.get $Y_clamp
+       f32.sub
+       f32.mul
+       f32.const 4
+       f32.mul
+       local.set $wZone
        local.get $t
        f32.const 0
        f32.ne
        if
-        local.get $r
-        f32.const 1
         local.get $t
-        f32.const 0.11999999731779099
+        local.get $wZone
         f32.mul
-        f32.add
+        local.set $tAdj
+        local.get $r
+        block $~lib/math/NativeMath.max|inlined.1 (result f64)
+         f64.const 0
+         local.set $value1|62
+         f32.const 1
+         local.get $tAdj
+         f32.const 0.11999999731779099
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|63
+         local.get $value1|62
+         local.get $value2|63
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.1
+        end
+        f32.demote_f64
         f32.mul
         local.set $r
         local.get $b
-        f32.const 1
-        local.get $t
-        f32.const 0.11999999731779099
-        f32.mul
-        f32.sub
+        block $~lib/math/NativeMath.max|inlined.2 (result f64)
+         f64.const 0
+         local.set $value1|64
+         f32.const 1
+         local.get $tAdj
+         f32.const 0.11999999731779099
+         f32.mul
+         f32.sub
+         f64.promote_f32
+         local.set $value2|65
+         local.get $value1|64
+         local.get $value2|65
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.2
+        end
+        f32.demote_f64
         f32.mul
         local.set $b
         local.get $g
-        f32.const 1
-        local.get $t
-        f32.const 0.019999999552965164
-        f32.mul
-        f32.add
+        block $~lib/math/NativeMath.max|inlined.3 (result f64)
+         f64.const 0
+         local.set $value1|66
+         f32.const 1
+         local.get $tAdj
+         f32.const 0.019999999552965164
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|67
+         local.get $value1|66
+         local.get $value2|67
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.3
+        end
+        f32.demote_f64
         f32.mul
         local.set $g
        end
@@ -18112,28 +18229,65 @@
        f32.const 0
        f32.ne
        if
-        local.get $r
-        f32.const 1
         local.get $tn
-        f32.const 0.05999999865889549
+        local.get $wZone
         f32.mul
-        f32.add
+        local.set $tnAdj
+        local.get $r
+        block $~lib/math/NativeMath.max|inlined.4 (result f64)
+         f64.const 0
+         local.set $value1|69
+         f32.const 1
+         local.get $tnAdj
+         f32.const 0.05999999865889549
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|70
+         local.get $value1|69
+         local.get $value2|70
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.4
+        end
+        f32.demote_f64
         f32.mul
         local.set $r
         local.get $b
-        f32.const 1
-        local.get $tn
-        f32.const 0.05999999865889549
-        f32.mul
-        f32.add
+        block $~lib/math/NativeMath.max|inlined.5 (result f64)
+         f64.const 0
+         local.set $value1|71
+         f32.const 1
+         local.get $tnAdj
+         f32.const 0.05999999865889549
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|72
+         local.get $value1|71
+         local.get $value2|72
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.5
+        end
+        f32.demote_f64
         f32.mul
         local.set $b
         local.get $g
-        f32.const 1
-        local.get $tn
-        f32.const 0.07999999821186066
-        f32.mul
-        f32.sub
+        block $~lib/math/NativeMath.max|inlined.6 (result f64)
+         f64.const 0
+         local.set $value1|73
+         f32.const 1
+         local.get $tnAdj
+         f32.const 0.07999999821186066
+         f32.mul
+         f32.sub
+         f64.promote_f32
+         local.set $value2|74
+         local.get $value1|73
+         local.get $value2|74
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.6
+        end
+        f32.demote_f64
         f32.mul
         local.set $g
        end
@@ -18155,51 +18309,6 @@
        if
         local.get $Y
         local.set $yNew
-        local.get $shadows
-        f32.const 0
-        f32.ne
-        if
-         local.get $shadows
-         f32.const 100
-         f32.div
-         local.set $sh
-         block $~lib/math/NativeMath.max|inlined.0 (result f64)
-          f32.const 0
-          f64.promote_f32
-          local.set $value1
-          f32.const 1
-          local.get $Y
-          f32.const 0.5
-          f32.div
-          f32.sub
-          f64.promote_f32
-          local.set $value2
-          local.get $value1
-          local.get $value2
-          f64.max
-          br $~lib/math/NativeMath.max|inlined.0
-         end
-         f32.demote_f64
-         local.set $weight
-         local.get $yNew
-         local.get $sh
-         local.get $weight
-         f32.mul
-         f32.const 0.4000000059604645
-         f32.mul
-         block $~lib/math/NativeMath.sqrt|inlined.0 (result f64)
-          local.get $Y
-          f64.promote_f32
-          local.set $x|58
-          local.get $x|58
-          f64.sqrt
-          br $~lib/math/NativeMath.sqrt|inlined.0
-         end
-         f32.demote_f64
-         f32.mul
-         f32.add
-         local.set $yNew
-        end
         local.get $highlights
         f32.const 0
         f32.ne
@@ -18208,48 +18317,145 @@
          f32.const 100
          f32.div
          local.set $hi
-         block $~lib/math/NativeMath.max|inlined.1 (result f64)
-          f32.const 0
-          f64.promote_f32
-          local.set $value1|60
-          local.get $Y
+         block $~lib/math/NativeMath.max|inlined.7 (result f64)
+          f64.const 0
+          local.set $value1|78
+          local.get $yNew
           f32.const 0.5
           f32.sub
           f32.const 0.5
           f32.div
           f64.promote_f32
-          local.set $value2|61
-          local.get $value1|60
-          local.get $value2|61
+          local.set $value2|79
+          local.get $value1|78
+          local.get $value2|79
           f64.max
-          br $~lib/math/NativeMath.max|inlined.1
+          br $~lib/math/NativeMath.max|inlined.7
          end
          f32.demote_f64
-         local.set $weight|62
-         local.get $yNew
+         local.set $w
+         local.get $w
+         local.get $w
+         f32.mul
+         local.set $w
          local.get $hi
-         local.get $weight|62
-         f32.mul
-         f32.const 0.6000000238418579
-         f32.mul
-         f32.const 1.100000023841858
-         local.get $Y
-         f32.sub
-         f32.mul
-         f32.add
-         local.set $yNew
+         f32.const 0
+         f32.lt
+         if (result i32)
+          local.get $yNew
+          f32.const 0.5
+          f32.gt
+         else
+          i32.const 0
+         end
+         if
+          local.get $yNew
+          f32.const 0.5
+          f32.sub
+          local.set $over
+          f32.const 0.5
+          local.get $over
+          local.get $over
+          f32.const 1
+          f32.add
+          f64.promote_f32
+          local.get $hi
+          f32.const 0.5
+          f32.mul
+          f64.promote_f32
+          call $~lib/math/NativeMath.pow
+          f32.demote_f64
+          f32.mul
+          f32.add
+          local.set $yNew
+         else
+          local.get $yNew
+          local.get $hi
+          local.get $w
+          f32.mul
+          f32.const 1.5
+          f32.mul
+          f32.add
+          local.set $yNew
+         end
         end
-        block $~lib/math/NativeMath.max|inlined.2 (result f64)
+        local.get $whites
+        f32.const 0
+        f32.ne
+        if
+         local.get $whites
+         f32.const 100
+         f32.div
+         local.set $wh
+         block $~lib/math/NativeMath.max|inlined.8 (result f64)
+          f64.const 0
+          local.set $value1|83
+          local.get $yNew
+          f32.const 0.699999988079071
+          f32.sub
+          f32.const 0.30000001192092896
+          f32.div
+          f64.promote_f32
+          local.set $value2|84
+          local.get $value1|83
+          local.get $value2|84
+          f64.max
+          br $~lib/math/NativeMath.max|inlined.8
+         end
+         f32.demote_f64
+         local.set $w|85
+         local.get $wh
+         f32.const 0
+         f32.lt
+         if (result i32)
+          local.get $yNew
+          f32.const 0.699999988079071
+          f32.gt
+         else
+          i32.const 0
+         end
+         if
+          local.get $yNew
+          f32.const 0.699999988079071
+          f32.sub
+          local.set $over|86
+          f32.const 0.699999988079071
+          local.get $over|86
+          local.get $over|86
+          f32.const 1
+          f32.add
+          f64.promote_f32
+          local.get $wh
+          f32.const 0.6000000238418579
+          f32.mul
+          f64.promote_f32
+          call $~lib/math/NativeMath.pow
+          f32.demote_f64
+          f32.mul
+          f32.add
+          local.set $yNew
+         else
+          local.get $yNew
+          local.get $wh
+          local.get $w|85
+          f32.mul
+          f32.const 2
+          f32.mul
+          f32.add
+          local.set $yNew
+         end
+        end
+        block $~lib/math/NativeMath.max|inlined.9 (result f64)
          f32.const 0
          f64.promote_f32
-         local.set $value1|63
+         local.set $value1|87
          local.get $yNew
          f64.promote_f32
-         local.set $value2|64
-         local.get $value1|63
-         local.get $value2|64
+         local.set $value2|88
+         local.get $value1|87
+         local.get $value2|88
          f64.max
-         br $~lib/math/NativeMath.max|inlined.2
+         br $~lib/math/NativeMath.max|inlined.9
         end
         f32.demote_f64
         local.set $yNew
@@ -18267,6 +18473,126 @@
         local.set $g
         local.get $b
         local.get $multLuma
+        f32.mul
+        local.set $b
+        local.get $yNew
+        local.set $Y
+       end
+       local.get $shadows
+       f32.const 0
+       f32.ne
+       if
+        local.get $shadows
+        f32.const 100
+        f32.div
+        local.set $sh
+        block $~lib/math/NativeMath.max|inlined.10 (result f64)
+         f64.const 0
+         local.set $value1|91
+         f32.const 1
+         local.get $Y
+         f32.const 0.5
+         f32.div
+         f32.sub
+         f64.promote_f32
+         local.set $value2|92
+         local.get $value1|91
+         local.get $value2|92
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.10
+        end
+        f32.demote_f64
+        local.set $w|93
+        block $~lib/math/NativeMath.max|inlined.11 (result f64)
+         f64.const 0
+         local.set $value1|94
+         f32.const 1
+         local.get $sh
+         local.get $w|93
+         f32.mul
+         local.get $w|93
+         f32.mul
+         f32.const 1.2000000476837158
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|95
+         local.get $value1|94
+         local.get $value2|95
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.11
+        end
+        f32.demote_f64
+        local.set $factor
+        local.get $r
+        local.get $factor
+        f32.mul
+        local.set $r
+        local.get $g
+        local.get $factor
+        f32.mul
+        local.set $g
+        local.get $b
+        local.get $factor
+        f32.mul
+        local.set $b
+       end
+       local.get $blacks
+       f32.const 0
+       f32.ne
+       if
+        local.get $blacks
+        f32.const 100
+        f32.div
+        local.set $bl
+        block $~lib/math/NativeMath.max|inlined.12 (result f64)
+         f64.const 0
+         local.set $value1|98
+         f32.const 1
+         local.get $Y
+         f32.const 0.30000001192092896
+         f32.div
+         f32.sub
+         f64.promote_f32
+         local.set $value2|99
+         local.get $value1|98
+         local.get $value2|99
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.12
+        end
+        f32.demote_f64
+        local.set $w|100
+        block $~lib/math/NativeMath.max|inlined.13 (result f64)
+         f64.const 0
+         local.set $value1|101
+         f32.const 1
+         local.get $bl
+         local.get $w|100
+         f32.mul
+         local.get $w|100
+         f32.mul
+         f32.const 1.5
+         f32.mul
+         f32.add
+         f64.promote_f32
+         local.set $value2|102
+         local.get $value1|101
+         local.get $value2|102
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.13
+        end
+        f32.demote_f64
+        local.set $factor|103
+        local.get $r
+        local.get $factor|103
+        f32.mul
+        local.set $r
+        local.get $g
+        local.get $factor|103
+        f32.mul
+        local.set $g
+        local.get $b
+        local.get $factor|103
         f32.mul
         local.set $b
        end
@@ -18330,37 +18656,37 @@
         f32.ne
        end
        if
-        block $~lib/math/NativeMath.max|inlined.3 (result f64)
+        block $~lib/math/NativeMath.max|inlined.14 (result f64)
          f32.const 0
          f64.promote_f32
-         local.set $value1|66
+         local.set $value1|104
          local.get $Y
          f32.const 0.5
          f32.sub
          f64.promote_f32
-         local.set $value2|67
-         local.get $value1|66
-         local.get $value2|67
+         local.set $value2|105
+         local.get $value1|104
+         local.get $value2|105
          f64.max
-         br $~lib/math/NativeMath.max|inlined.3
+         br $~lib/math/NativeMath.max|inlined.14
         end
         f32.demote_f64
         f32.const 0.5
         f32.div
         local.set $wHi
-        block $~lib/math/NativeMath.max|inlined.4 (result f64)
+        block $~lib/math/NativeMath.max|inlined.15 (result f64)
          f32.const 0
          f64.promote_f32
-         local.set $value1|69
+         local.set $value1|107
          f32.const 0.5
          local.get $Y
          f32.sub
          f64.promote_f32
-         local.set $value2|70
-         local.get $value1|69
-         local.get $value2|70
+         local.set $value2|108
+         local.get $value1|107
+         local.get $value2|108
          f64.max
-         br $~lib/math/NativeMath.max|inlined.4
+         br $~lib/math/NativeMath.max|inlined.15
         end
         f32.demote_f64
         f32.const 0.5
@@ -18510,31 +18836,31 @@
        end
        block $assembly/camera_raw/linearToSrgb|inlined.0 (result f32)
         local.get $r
-        local.set $c|72
-        local.get $c|72
+        local.set $c|110
+        local.get $c|110
         f32.const 0
         f32.le
         if
          f32.const 0
          br $assembly/camera_raw/linearToSrgb|inlined.0
         end
-        local.get $c|72
+        local.get $c|110
         f32.const 1
         f32.ge
         if
          f32.const 255
          br $assembly/camera_raw/linearToSrgb|inlined.0
         end
-        local.get $c|72
+        local.get $c|110
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
          f32.const 12.920000076293945
-         local.get $c|72
+         local.get $c|110
          f32.mul
         else
          f32.const 1.0549999475479126
-         local.get $c|72
+         local.get $c|110
          f64.promote_f32
          f64.const 1
          f64.const 2.4
@@ -18545,8 +18871,8 @@
          f32.const 0.054999999701976776
          f32.sub
         end
-        local.set $cf|73
-        local.get $cf|73
+        local.set $cf|111
+        local.get $cf|111
         f32.const 255
         f32.mul
         br $assembly/camera_raw/linearToSrgb|inlined.0
@@ -18554,31 +18880,31 @@
        local.set $r8
        block $assembly/camera_raw/linearToSrgb|inlined.1 (result f32)
         local.get $g
-        local.set $c|75
-        local.get $c|75
+        local.set $c|113
+        local.get $c|113
         f32.const 0
         f32.le
         if
          f32.const 0
          br $assembly/camera_raw/linearToSrgb|inlined.1
         end
-        local.get $c|75
+        local.get $c|113
         f32.const 1
         f32.ge
         if
          f32.const 255
          br $assembly/camera_raw/linearToSrgb|inlined.1
         end
-        local.get $c|75
+        local.get $c|113
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
          f32.const 12.920000076293945
-         local.get $c|75
+         local.get $c|113
          f32.mul
         else
          f32.const 1.0549999475479126
-         local.get $c|75
+         local.get $c|113
          f64.promote_f32
          f64.const 1
          f64.const 2.4
@@ -18589,8 +18915,8 @@
          f32.const 0.054999999701976776
          f32.sub
         end
-        local.set $cf|76
-        local.get $cf|76
+        local.set $cf|114
+        local.get $cf|114
         f32.const 255
         f32.mul
         br $assembly/camera_raw/linearToSrgb|inlined.1
@@ -18598,31 +18924,31 @@
        local.set $g8
        block $assembly/camera_raw/linearToSrgb|inlined.2 (result f32)
         local.get $b
-        local.set $c|78
-        local.get $c|78
+        local.set $c|116
+        local.get $c|116
         f32.const 0
         f32.le
         if
          f32.const 0
          br $assembly/camera_raw/linearToSrgb|inlined.2
         end
-        local.get $c|78
+        local.get $c|116
         f32.const 1
         f32.ge
         if
          f32.const 255
          br $assembly/camera_raw/linearToSrgb|inlined.2
         end
-        local.get $c|78
+        local.get $c|116
         f32.const 3.1308000907301903e-03
         f32.le
         if (result f32)
          f32.const 12.920000076293945
-         local.get $c|78
+         local.get $c|116
          f32.mul
         else
          f32.const 1.0549999475479126
-         local.get $c|78
+         local.get $c|116
          f64.promote_f32
          f64.const 1
          f64.const 2.4
@@ -18633,8 +18959,8 @@
          f32.const 0.054999999701976776
          f32.sub
         end
-        local.set $cf|79
-        local.get $cf|79
+        local.set $cf|117
+        local.get $cf|117
         f32.const 255
         f32.mul
         br $assembly/camera_raw/linearToSrgb|inlined.2
@@ -18663,9 +18989,9 @@
         local.set $val
         block $assembly/math/isNaN|inlined.0 (result i32)
          local.get $val
-         local.set $val|85
-         local.get $val|85
-         local.get $val|85
+         local.set $val|123
+         local.get $val|123
+         local.get $val|123
          f32.ne
          br $assembly/math/isNaN|inlined.0
         end
@@ -18699,12 +19025,12 @@
         local.get $contrastF
         f32.mul
         f32.add
-        local.set $val|86
+        local.set $val|124
         block $assembly/math/isNaN|inlined.1 (result i32)
-         local.get $val|86
-         local.set $val|87
-         local.get $val|87
-         local.get $val|87
+         local.get $val|124
+         local.set $val|125
+         local.get $val|125
+         local.get $val|125
          f32.ne
          br $assembly/math/isNaN|inlined.1
         end
@@ -18712,21 +19038,21 @@
          f32.const 0
          br $assembly/math/clamp01|inlined.1
         end
-        local.get $val|86
+        local.get $val|124
         f32.const 0
         f32.lt
         if
          f32.const 0
          br $assembly/math/clamp01|inlined.1
         end
-        local.get $val|86
+        local.get $val|124
         f32.const 1
         f32.gt
         if
          f32.const 1
          br $assembly/math/clamp01|inlined.1
         end
-        local.get $val|86
+        local.get $val|124
         br $assembly/math/clamp01|inlined.1
        end
        local.set $lg
@@ -18738,12 +19064,12 @@
         local.get $contrastF
         f32.mul
         f32.add
-        local.set $val|88
+        local.set $val|126
         block $assembly/math/isNaN|inlined.2 (result i32)
-         local.get $val|88
-         local.set $val|89
-         local.get $val|89
-         local.get $val|89
+         local.get $val|126
+         local.set $val|127
+         local.get $val|127
+         local.get $val|127
          f32.ne
          br $assembly/math/isNaN|inlined.2
         end
@@ -18751,21 +19077,21 @@
          f32.const 0
          br $assembly/math/clamp01|inlined.2
         end
-        local.get $val|88
+        local.get $val|126
         f32.const 0
         f32.lt
         if
          f32.const 0
          br $assembly/math/clamp01|inlined.2
         end
-        local.get $val|88
+        local.get $val|126
         f32.const 1
         f32.gt
         if
          f32.const 1
          br $assembly/math/clamp01|inlined.2
         end
-        local.get $val|88
+        local.get $val|126
         br $assembly/math/clamp01|inlined.2
        end
        local.set $lb
@@ -18788,12 +19114,12 @@
         local.get $lutR
         block $assembly/math/clamp255|inlined.0 (result i32)
          local.get $r8
-         local.set $val|90
+         local.set $val|128
          block $assembly/math/isNaN|inlined.3 (result i32)
-          local.get $val|90
-          local.set $val|91
-          local.get $val|91
-          local.get $val|91
+          local.get $val|128
+          local.set $val|129
+          local.get $val|129
+          local.get $val|129
           f32.ne
           br $assembly/math/isNaN|inlined.3
          end
@@ -18801,21 +19127,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.0
          end
-         local.get $val|90
+         local.get $val|128
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.0
          end
-         local.get $val|90
+         local.get $val|128
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.0
          end
-         local.get $val|90
+         local.get $val|128
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.0
         end
@@ -18828,12 +19154,12 @@
         local.get $lutG
         block $assembly/math/clamp255|inlined.1 (result i32)
          local.get $g8
-         local.set $val|92
+         local.set $val|130
          block $assembly/math/isNaN|inlined.4 (result i32)
-          local.get $val|92
-          local.set $val|93
-          local.get $val|93
-          local.get $val|93
+          local.get $val|130
+          local.set $val|131
+          local.get $val|131
+          local.get $val|131
           f32.ne
           br $assembly/math/isNaN|inlined.4
          end
@@ -18841,21 +19167,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.1
          end
-         local.get $val|92
+         local.get $val|130
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.1
          end
-         local.get $val|92
+         local.get $val|130
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.1
          end
-         local.get $val|92
+         local.get $val|130
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.1
         end
@@ -18868,12 +19194,12 @@
         local.get $lutB
         block $assembly/math/clamp255|inlined.2 (result i32)
          local.get $b8
-         local.set $val|94
+         local.set $val|132
          block $assembly/math/isNaN|inlined.5 (result i32)
-          local.get $val|94
-          local.set $val|95
-          local.get $val|95
-          local.get $val|95
+          local.get $val|132
+          local.set $val|133
+          local.get $val|133
+          local.get $val|133
           f32.ne
           br $assembly/math/isNaN|inlined.5
          end
@@ -18881,21 +19207,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.2
          end
-         local.get $val|94
+         local.get $val|132
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.2
          end
-         local.get $val|94
+         local.get $val|132
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.2
          end
-         local.get $val|94
+         local.get $val|132
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.2
         end
@@ -18908,12 +19234,12 @@
         local.get $lutRGB
         block $assembly/math/clamp255|inlined.3 (result i32)
          local.get $r8
-         local.set $val|96
+         local.set $val|134
          block $assembly/math/isNaN|inlined.6 (result i32)
-          local.get $val|96
-          local.set $val|97
-          local.get $val|97
-          local.get $val|97
+          local.get $val|134
+          local.set $val|135
+          local.get $val|135
+          local.get $val|135
           f32.ne
           br $assembly/math/isNaN|inlined.6
          end
@@ -18921,21 +19247,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.3
          end
-         local.get $val|96
+         local.get $val|134
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.3
          end
-         local.get $val|96
+         local.get $val|134
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.3
          end
-         local.get $val|96
+         local.get $val|134
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.3
         end
@@ -18948,12 +19274,12 @@
         local.get $lutRGB
         block $assembly/math/clamp255|inlined.4 (result i32)
          local.get $g8
-         local.set $val|98
+         local.set $val|136
          block $assembly/math/isNaN|inlined.7 (result i32)
-          local.get $val|98
-          local.set $val|99
-          local.get $val|99
-          local.get $val|99
+          local.get $val|136
+          local.set $val|137
+          local.get $val|137
+          local.get $val|137
           f32.ne
           br $assembly/math/isNaN|inlined.7
          end
@@ -18961,21 +19287,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.4
          end
-         local.get $val|98
+         local.get $val|136
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.4
          end
-         local.get $val|98
+         local.get $val|136
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.4
          end
-         local.get $val|98
+         local.get $val|136
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.4
         end
@@ -18988,12 +19314,12 @@
         local.get $lutRGB
         block $assembly/math/clamp255|inlined.5 (result i32)
          local.get $b8
-         local.set $val|100
+         local.set $val|138
          block $assembly/math/isNaN|inlined.8 (result i32)
-          local.get $val|100
-          local.set $val|101
-          local.get $val|101
-          local.get $val|101
+          local.get $val|138
+          local.set $val|139
+          local.get $val|139
+          local.get $val|139
           f32.ne
           br $assembly/math/isNaN|inlined.8
          end
@@ -19001,21 +19327,21 @@
           i32.const 0
           br $assembly/math/clamp255|inlined.5
          end
-         local.get $val|100
+         local.get $val|138
          f32.const 0
          f32.lt
          if
           i32.const 0
           br $assembly/math/clamp255|inlined.5
          end
-         local.get $val|100
+         local.get $val|138
          f32.const 255
          f32.gt
          if
           i32.const 255
           br $assembly/math/clamp255|inlined.5
          end
-         local.get $val|100
+         local.get $val|138
          i32.trunc_sat_f32_u
          br $assembly/math/clamp255|inlined.5
         end
@@ -19033,72 +19359,72 @@
         global.get $~lib/memory/__stack_pointer
         block $assembly/math/rgbToHsv|inlined.0 (result i32)
          local.get $r8
-         local.set $r|102
+         local.set $r|140
          local.get $g8
-         local.set $g|103
+         local.set $g|141
          local.get $b8
-         local.set $b|104
-         local.get $r|102
+         local.set $b|142
+         local.get $r|140
          f32.const 255
          f32.div
          local.set $rf
-         local.get $g|103
+         local.get $g|141
          f32.const 255
          f32.div
          local.set $gf
-         local.get $b|104
+         local.get $b|142
          f32.const 255
          f32.div
          local.set $bf
-         block $~lib/math/NativeMath.max|inlined.6 (result f64)
+         block $~lib/math/NativeMath.max|inlined.17 (result f64)
           local.get $rf
           f64.promote_f32
-          local.set $value1|110
-          block $~lib/math/NativeMath.max|inlined.5 (result f64)
+          local.set $value1|148
+          block $~lib/math/NativeMath.max|inlined.16 (result f64)
            local.get $gf
            f64.promote_f32
-           local.set $value1|108
+           local.set $value1|146
            local.get $bf
            f64.promote_f32
-           local.set $value2|109
-           local.get $value1|108
-           local.get $value2|109
+           local.set $value2|147
+           local.get $value1|146
+           local.get $value2|147
            f64.max
-           br $~lib/math/NativeMath.max|inlined.5
+           br $~lib/math/NativeMath.max|inlined.16
           end
           f32.demote_f64
           f64.promote_f32
-          local.set $value2|111
-          local.get $value1|110
-          local.get $value2|111
+          local.set $value2|149
+          local.get $value1|148
+          local.get $value2|149
           f64.max
-          br $~lib/math/NativeMath.max|inlined.6
+          br $~lib/math/NativeMath.max|inlined.17
          end
          f32.demote_f64
          local.set $max
-         block $~lib/math/NativeMath.min|inlined.1 (result f64)
+         block $~lib/math/NativeMath.min|inlined.2 (result f64)
           local.get $rf
           f64.promote_f32
-          local.set $value1|115
-          block $~lib/math/NativeMath.min|inlined.0 (result f64)
+          local.set $value1|153
+          block $~lib/math/NativeMath.min|inlined.1 (result f64)
            local.get $gf
            f64.promote_f32
-           local.set $value1|113
+           local.set $value1|151
            local.get $bf
            f64.promote_f32
-           local.set $value2|114
-           local.get $value1|113
-           local.get $value2|114
+           local.set $value2|152
+           local.get $value1|151
+           local.get $value2|152
            f64.min
-           br $~lib/math/NativeMath.min|inlined.0
+           br $~lib/math/NativeMath.min|inlined.1
           end
           f32.demote_f64
           f64.promote_f32
-          local.set $value2|116
-          local.get $value1|115
-          local.get $value2|116
+          local.set $value2|154
+          local.get $value1|153
+          local.get $value2|154
           f64.min
-          br $~lib/math/NativeMath.min|inlined.1
+          br $~lib/math/NativeMath.min|inlined.2
          end
          f32.demote_f64
          local.set $min
@@ -19186,31 +19512,31 @@
           local.set $h
          end
          global.get $assembly/math/_hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          local.get $h
          f32.const 360
          f32.mul
          call $assembly/math/HSV#set:h
          global.get $assembly/math/_hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          local.get $s
          f32.const 100
          f32.mul
          call $assembly/math/HSV#set:s
          global.get $assembly/math/_hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          local.get $v
          f32.const 100
          f32.mul
@@ -19221,13 +19547,13 @@
         local.tee $hsv
         i32.store offset=4
         local.get $hsv
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
+        local.get $214
         call $assembly/math/HSV#get:h
-        local.set $h|123
+        local.set $h|161
         i32.const 0
         local.set $i1
         i32.const 0
@@ -19236,7 +19562,7 @@
         local.set $w1
         f32.const 0
         local.set $w2
-        local.get $h|123
+        local.get $h|161
         f32.const 30
         f32.lt
         if
@@ -19245,17 +19571,17 @@
          i32.const 1
          local.set $i2
          f32.const 1
-         local.get $h|123
+         local.get $h|161
          f32.const 30
          f32.div
          f32.sub
          local.set $w1
-         local.get $h|123
+         local.get $h|161
          f32.const 30
          f32.div
          local.set $w2
         else
-         local.get $h|123
+         local.get $h|161
          f32.const 60
          f32.lt
          if
@@ -19264,21 +19590,21 @@
           i32.const 2
           local.set $i2
           f32.const 1
-          local.get $h|123
+          local.get $h|161
           f32.const 30
           f32.sub
           f32.const 30
           f32.div
           f32.sub
           local.set $w1
-          local.get $h|123
+          local.get $h|161
           f32.const 30
           f32.sub
           f32.const 30
           f32.div
           local.set $w2
          else
-          local.get $h|123
+          local.get $h|161
           f32.const 120
           f32.lt
           if
@@ -19287,21 +19613,21 @@
            i32.const 3
            local.set $i2
            f32.const 1
-           local.get $h|123
+           local.get $h|161
            f32.const 60
            f32.sub
            f32.const 60
            f32.div
            f32.sub
            local.set $w1
-           local.get $h|123
+           local.get $h|161
            f32.const 60
            f32.sub
            f32.const 60
            f32.div
            local.set $w2
           else
-           local.get $h|123
+           local.get $h|161
            f32.const 180
            f32.lt
            if
@@ -19310,21 +19636,21 @@
             i32.const 4
             local.set $i2
             f32.const 1
-            local.get $h|123
+            local.get $h|161
             f32.const 120
             f32.sub
             f32.const 60
             f32.div
             f32.sub
             local.set $w1
-            local.get $h|123
+            local.get $h|161
             f32.const 120
             f32.sub
             f32.const 60
             f32.div
             local.set $w2
            else
-            local.get $h|123
+            local.get $h|161
             f32.const 240
             f32.lt
             if
@@ -19333,21 +19659,21 @@
              i32.const 5
              local.set $i2
              f32.const 1
-             local.get $h|123
+             local.get $h|161
              f32.const 180
              f32.sub
              f32.const 60
              f32.div
              f32.sub
              local.set $w1
-             local.get $h|123
+             local.get $h|161
              f32.const 180
              f32.sub
              f32.const 60
              f32.div
              local.set $w2
             else
-             local.get $h|123
+             local.get $h|161
              f32.const 280
              f32.lt
              if
@@ -19356,21 +19682,21 @@
               i32.const 6
               local.set $i2
               f32.const 1
-              local.get $h|123
+              local.get $h|161
               f32.const 240
               f32.sub
               f32.const 40
               f32.div
               f32.sub
               local.set $w1
-              local.get $h|123
+              local.get $h|161
               f32.const 240
               f32.sub
               f32.const 40
               f32.div
               local.set $w2
              else
-              local.get $h|123
+              local.get $h|161
               f32.const 320
               f32.lt
               if
@@ -19379,14 +19705,14 @@
                i32.const 7
                local.set $i2
                f32.const 1
-               local.get $h|123
+               local.get $h|161
                f32.const 280
                f32.sub
                f32.const 40
                f32.div
                f32.sub
                local.set $w1
-               local.get $h|123
+               local.get $h|161
                f32.const 280
                f32.sub
                f32.const 40
@@ -19398,14 +19724,14 @@
                i32.const 0
                local.set $i2
                f32.const 1
-               local.get $h|123
+               local.get $h|161
                f32.const 320
                f32.sub
                f32.const 40
                f32.div
                f32.sub
                local.set $w1
-               local.get $h|123
+               local.get $h|161
                f32.const 320
                f32.sub
                f32.const 40
@@ -19493,17 +19819,17 @@
         f32.add
         local.set $mixV
         local.get $hsv
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
+        local.get $214
         local.get $hsv
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store offset=8
-        local.get $176
+        local.get $214
         call $assembly/math/HSV#get:h
         local.get $mixH
         f32.add
@@ -19513,112 +19839,112 @@
         call $~lib/math/NativeMathf.mod
         call $assembly/math/HSV#set:h
         local.get $hsv
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
-        block $~lib/math/NativeMath.max|inlined.7 (result f64)
+        local.get $214
+        block $~lib/math/NativeMath.max|inlined.18 (result f64)
          f64.const 0
-         local.set $value1|139
-         block $~lib/math/NativeMath.min|inlined.2 (result f64)
+         local.set $value1|177
+         block $~lib/math/NativeMath.min|inlined.3 (result f64)
           f64.const 100
-          local.set $value1|137
+          local.set $value1|175
           local.get $hsv
-          local.set $176
+          local.set $214
           global.get $~lib/memory/__stack_pointer
-          local.get $176
+          local.get $214
           i32.store offset=8
-          local.get $176
+          local.get $214
           call $assembly/math/HSV#get:s
           local.get $mixS
           f32.add
           f64.promote_f32
-          local.set $value2|138
-          local.get $value1|137
-          local.get $value2|138
+          local.set $value2|176
+          local.get $value1|175
+          local.get $value2|176
           f64.min
-          br $~lib/math/NativeMath.min|inlined.2
+          br $~lib/math/NativeMath.min|inlined.3
          end
-         local.set $value2|140
-         local.get $value1|139
-         local.get $value2|140
+         local.set $value2|178
+         local.get $value1|177
+         local.get $value2|178
          f64.max
-         br $~lib/math/NativeMath.max|inlined.7
+         br $~lib/math/NativeMath.max|inlined.18
         end
         f32.demote_f64
         call $assembly/math/HSV#set:s
         local.get $hsv
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
-        block $~lib/math/NativeMath.max|inlined.8 (result f64)
+        local.get $214
+        block $~lib/math/NativeMath.max|inlined.19 (result f64)
          f64.const 0
-         local.set $value1|143
-         block $~lib/math/NativeMath.min|inlined.3 (result f64)
+         local.set $value1|181
+         block $~lib/math/NativeMath.min|inlined.4 (result f64)
           f64.const 100
-          local.set $value1|141
+          local.set $value1|179
           local.get $hsv
-          local.set $176
+          local.set $214
           global.get $~lib/memory/__stack_pointer
-          local.get $176
+          local.get $214
           i32.store offset=8
-          local.get $176
+          local.get $214
           call $assembly/math/HSV#get:v
           local.get $mixV
           f32.add
           f64.promote_f32
-          local.set $value2|142
-          local.get $value1|141
-          local.get $value2|142
+          local.set $value2|180
+          local.get $value1|179
+          local.get $value2|180
           f64.min
-          br $~lib/math/NativeMath.min|inlined.3
+          br $~lib/math/NativeMath.min|inlined.4
          end
-         local.set $value2|144
-         local.get $value1|143
-         local.get $value2|144
+         local.set $value2|182
+         local.get $value1|181
+         local.get $value2|182
          f64.max
-         br $~lib/math/NativeMath.max|inlined.8
+         br $~lib/math/NativeMath.max|inlined.19
         end
         f32.demote_f64
         call $assembly/math/HSV#set:v
         global.get $~lib/memory/__stack_pointer
         block $assembly/math/hsvToRgb|inlined.0 (result i32)
          local.get $hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          call $assembly/math/HSV#get:h
-         local.set $h|145
+         local.set $h|183
          local.get $hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          call $assembly/math/HSV#get:s
-         local.set $s|146
+         local.set $s|184
          local.get $hsv
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
+         local.get $214
          call $assembly/math/HSV#get:v
-         local.set $v|147
-         local.get $h|145
+         local.set $v|185
+         local.get $h|183
          f32.const 360
          f32.div
          local.set $hf
-         local.get $s|146
+         local.get $s|184
          f32.const 100
          f32.div
          local.set $sf
-         local.get $v|147
+         local.get $v|185
          f32.const 100
          f32.div
          local.set $vf
@@ -19669,8 +19995,8 @@
           f32.const 6
           f32.mul
           f64.promote_f32
-          local.set $x|151
-          local.get $x|151
+          local.set $x|189
+          local.get $x|189
           f64.floor
           br $~lib/math/NativeMath.floor|inlined.0
          end
@@ -19706,13 +20032,13 @@
          f32.mul
          f32.sub
          f32.mul
-         local.set $t|156
+         local.set $t|194
          f32.const 0
-         local.set $r|157
+         local.set $r|195
          f32.const 0
-         local.set $g|158
+         local.set $g|196
          f32.const 0
-         local.set $b|159
+         local.set $b|197
          block $break|2
           block $case5|2
            block $case4|2
@@ -19723,104 +20049,104 @@
                 local.get $i
                 i32.const 6
                 i32.rem_s
-                local.set $160
-                local.get $160
+                local.set $198
+                local.get $198
                 i32.const 0
                 i32.eq
                 br_if $case0|2
-                local.get $160
+                local.get $198
                 i32.const 1
                 i32.eq
                 br_if $case1|2
-                local.get $160
+                local.get $198
                 i32.const 2
                 i32.eq
                 br_if $case2|2
-                local.get $160
+                local.get $198
                 i32.const 3
                 i32.eq
                 br_if $case3|2
-                local.get $160
+                local.get $198
                 i32.const 4
                 i32.eq
                 br_if $case4|2
                 br $case5|2
                end
                local.get $vf
-               local.set $r|157
-               local.get $t|156
-               local.set $g|158
+               local.set $r|195
+               local.get $t|194
+               local.set $g|196
                local.get $p
-               local.set $b|159
+               local.set $b|197
                br $break|2
               end
               local.get $q
-              local.set $r|157
+              local.set $r|195
               local.get $vf
-              local.set $g|158
+              local.set $g|196
               local.get $p
-              local.set $b|159
+              local.set $b|197
               br $break|2
              end
              local.get $p
-             local.set $r|157
+             local.set $r|195
              local.get $vf
-             local.set $g|158
-             local.get $t|156
-             local.set $b|159
+             local.set $g|196
+             local.get $t|194
+             local.set $b|197
              br $break|2
             end
             local.get $p
-            local.set $r|157
+            local.set $r|195
             local.get $q
-            local.set $g|158
+            local.set $g|196
             local.get $vf
-            local.set $b|159
+            local.set $b|197
             br $break|2
            end
-           local.get $t|156
-           local.set $r|157
+           local.get $t|194
+           local.set $r|195
            local.get $p
-           local.set $g|158
+           local.set $g|196
            local.get $vf
-           local.set $b|159
+           local.set $b|197
            br $break|2
           end
           local.get $vf
-          local.set $r|157
+          local.set $r|195
           local.get $p
-          local.set $g|158
+          local.set $g|196
           local.get $q
-          local.set $b|159
+          local.set $b|197
           br $break|2
          end
          global.get $assembly/math/_rgb
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
-         local.get $r|157
+         local.get $214
+         local.get $r|195
          f32.const 255
          f32.mul
          call $assembly/math/RGB#set:r
          global.get $assembly/math/_rgb
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
-         local.get $g|158
+         local.get $214
+         local.get $g|196
          f32.const 255
          f32.mul
          call $assembly/math/RGB#set:g
          global.get $assembly/math/_rgb
-         local.set $176
+         local.set $214
          global.get $~lib/memory/__stack_pointer
-         local.get $176
+         local.get $214
          i32.store
-         local.get $176
-         local.get $b|159
+         local.get $214
+         local.get $b|197
          f32.const 255
          f32.mul
          call $assembly/math/RGB#set:b
@@ -19830,27 +20156,27 @@
         local.tee $rgb
         i32.store offset=12
         local.get $rgb
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
+        local.get $214
         call $assembly/math/RGB#get:r
         local.set $r8
         local.get $rgb
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
+        local.get $214
         call $assembly/math/RGB#get:g
         local.set $g8
         local.get $rgb
-        local.set $176
+        local.set $214
         global.get $~lib/memory/__stack_pointer
-        local.get $176
+        local.get $214
         i32.store
-        local.get $176
+        local.get $214
         call $assembly/math/RGB#get:b
         local.set $b8
        end
@@ -19873,29 +20199,29 @@
         f32.const 3
         f32.div
         local.set $avg
-        block $~lib/math/NativeMath.max|inlined.10 (result f64)
+        block $~lib/math/NativeMath.max|inlined.21 (result f64)
          local.get $r8
          f64.promote_f32
-         local.set $value1|165
-         block $~lib/math/NativeMath.max|inlined.9 (result f64)
+         local.set $value1|203
+         block $~lib/math/NativeMath.max|inlined.20 (result f64)
           local.get $g8
           f64.promote_f32
-          local.set $value1|163
+          local.set $value1|201
           local.get $b8
           f64.promote_f32
-          local.set $value2|164
-          local.get $value1|163
-          local.get $value2|164
+          local.set $value2|202
+          local.get $value1|201
+          local.get $value2|202
           f64.max
-          br $~lib/math/NativeMath.max|inlined.9
+          br $~lib/math/NativeMath.max|inlined.20
          end
          f32.demote_f64
          f64.promote_f32
-         local.set $value2|166
-         local.get $value1|165
-         local.get $value2|166
+         local.set $value2|204
+         local.get $value1|203
+         local.get $value2|204
          f64.max
-         br $~lib/math/NativeMath.max|inlined.10
+         br $~lib/math/NativeMath.max|inlined.21
         end
         f32.demote_f64
         local.set $max_val
@@ -19973,12 +20299,12 @@
        i32.add
        block $assembly/math/clamp255|inlined.6 (result i32)
         local.get $r8
-        local.set $val|170
+        local.set $val|208
         block $assembly/math/isNaN|inlined.9 (result i32)
-         local.get $val|170
-         local.set $val|171
-         local.get $val|171
-         local.get $val|171
+         local.get $val|208
+         local.set $val|209
+         local.get $val|209
+         local.get $val|209
          f32.ne
          br $assembly/math/isNaN|inlined.9
         end
@@ -19986,21 +20312,21 @@
          i32.const 0
          br $assembly/math/clamp255|inlined.6
         end
-        local.get $val|170
+        local.get $val|208
         f32.const 0
         f32.lt
         if
          i32.const 0
          br $assembly/math/clamp255|inlined.6
         end
-        local.get $val|170
+        local.get $val|208
         f32.const 255
         f32.gt
         if
          i32.const 255
          br $assembly/math/clamp255|inlined.6
         end
-        local.get $val|170
+        local.get $val|208
         i32.trunc_sat_f32_u
         br $assembly/math/clamp255|inlined.6
        end
@@ -20012,12 +20338,12 @@
        i32.add
        block $assembly/math/clamp255|inlined.7 (result i32)
         local.get $g8
-        local.set $val|172
+        local.set $val|210
         block $assembly/math/isNaN|inlined.10 (result i32)
-         local.get $val|172
-         local.set $val|173
-         local.get $val|173
-         local.get $val|173
+         local.get $val|210
+         local.set $val|211
+         local.get $val|211
+         local.get $val|211
          f32.ne
          br $assembly/math/isNaN|inlined.10
         end
@@ -20025,21 +20351,21 @@
          i32.const 0
          br $assembly/math/clamp255|inlined.7
         end
-        local.get $val|172
+        local.get $val|210
         f32.const 0
         f32.lt
         if
          i32.const 0
          br $assembly/math/clamp255|inlined.7
         end
-        local.get $val|172
+        local.get $val|210
         f32.const 255
         f32.gt
         if
          i32.const 255
          br $assembly/math/clamp255|inlined.7
         end
-        local.get $val|172
+        local.get $val|210
         i32.trunc_sat_f32_u
         br $assembly/math/clamp255|inlined.7
        end
@@ -20051,12 +20377,12 @@
        i32.add
        block $assembly/math/clamp255|inlined.8 (result i32)
         local.get $b8
-        local.set $val|174
+        local.set $val|212
         block $assembly/math/isNaN|inlined.11 (result i32)
-         local.get $val|174
-         local.set $val|175
-         local.get $val|175
-         local.get $val|175
+         local.get $val|212
+         local.set $val|213
+         local.get $val|213
+         local.get $val|213
          f32.ne
          br $assembly/math/isNaN|inlined.11
         end
@@ -20064,26 +20390,2778 @@
          i32.const 0
          br $assembly/math/clamp255|inlined.8
         end
-        local.get $val|174
+        local.get $val|212
         f32.const 0
         f32.lt
         if
          i32.const 0
          br $assembly/math/clamp255|inlined.8
         end
-        local.get $val|174
+        local.get $val|212
         f32.const 255
         f32.gt
         if
          i32.const 255
          br $assembly/math/clamp255|inlined.8
         end
-        local.get $val|174
+        local.get $val|212
         i32.trunc_sat_f32_u
         br $assembly/math/clamp255|inlined.8
        end
        i32.store8
       end
+      local.get $x
+      i32.const 1
+      i32.add
+      local.set $x
+      br $for-loop|1
+     end
+    end
+    local.get $y
+    i32.const 1
+    i32.add
+    local.set $y
+    br $for-loop|0
+   end
+  end
+  global.get $~lib/memory/__stack_pointer
+  i32.const 16
+  i32.add
+  global.set $~lib/memory/__stack_pointer
+ )
+ (func $assembly/camera_raw/applyCameraRawFloat (param $inputPtr i32) (param $outputPtr i32) (param $width i32) (param $height i32) (param $exposure f32) (param $contrast f32) (param $highlights f32) (param $shadows f32) (param $whites f32) (param $blacks f32) (param $temperature f32) (param $tint f32) (param $vibrance f32) (param $saturation f32) (param $red f32) (param $redHi f32) (param $redSh f32) (param $green f32) (param $greenHi f32) (param $greenSh f32) (param $blue f32) (param $blueHi f32) (param $blueSh f32) (param $hslPtr i32) (param $lutPtr i32) (param $startY i32) (param $endY i32)
+  (local $expStops f32)
+  (local $mult f32)
+  (local $contrastF f32)
+  (local $t f32)
+  (local $tn f32)
+  (local $saturationF f32)
+  (local $vibranceF f32)
+  (local $lutRGB i32)
+  (local $lutR i32)
+  (local $lutG i32)
+  (local $lutB i32)
+  (local $y i32)
+  (local $rowOffset i32)
+  (local $x i32)
+  (local $idx i32)
+  (local $idxFloat i32)
+  (local $r f32)
+  (local $g f32)
+  (local $b f32)
+  (local $aVal f32)
+  (local $Y_orig f32)
+  (local $value1 f64)
+  (local $value2 f64)
+  (local $value1|50 f64)
+  (local $value2|51 f64)
+  (local $Y_clamp f32)
+  (local $wZone f32)
+  (local $tAdj f32)
+  (local $value1|55 f64)
+  (local $value2|56 f64)
+  (local $value1|57 f64)
+  (local $value2|58 f64)
+  (local $value1|59 f64)
+  (local $value2|60 f64)
+  (local $tnAdj f32)
+  (local $value1|62 f64)
+  (local $value2|63 f64)
+  (local $value1|64 f64)
+  (local $value2|65 f64)
+  (local $value1|66 f64)
+  (local $value2|67 f64)
+  (local $Y f32)
+  (local $yNew f32)
+  (local $hi f32)
+  (local $value1|71 f64)
+  (local $value2|72 f64)
+  (local $w f32)
+  (local $over f32)
+  (local $wh f32)
+  (local $value1|76 f64)
+  (local $value2|77 f64)
+  (local $w|78 f32)
+  (local $over|79 f32)
+  (local $value1|80 f64)
+  (local $value2|81 f64)
+  (local $multLuma f32)
+  (local $sh f32)
+  (local $value1|84 f64)
+  (local $value2|85 f64)
+  (local $w|86 f32)
+  (local $value1|87 f64)
+  (local $value2|88 f64)
+  (local $factor f32)
+  (local $bl f32)
+  (local $value1|91 f64)
+  (local $value2|92 f64)
+  (local $w|93 f32)
+  (local $value1|94 f64)
+  (local $value2|95 f64)
+  (local $factor|96 f32)
+  (local $value1|97 f64)
+  (local $value2|98 f64)
+  (local $value1|99 f64)
+  (local $value2|100 f64)
+  (local $maxC f32)
+  (local $mappedMax f32)
+  (local $ratio f32)
+  (local $value1|104 f64)
+  (local $value2|105 f64)
+  (local $wHi f32)
+  (local $value1|107 f64)
+  (local $value2|108 f64)
+  (local $wSh f32)
+  (local $c f32)
+  (local $cf f32)
+  (local $r8 f32)
+  (local $c|113 f32)
+  (local $cf|114 f32)
+  (local $g8 f32)
+  (local $c|116 f32)
+  (local $cf|117 f32)
+  (local $b8 f32)
+  (local $lr f32)
+  (local $lg f32)
+  (local $lb f32)
+  (local $val f32)
+  (local $val|123 f32)
+  (local $val|124 f32)
+  (local $val|125 f32)
+  (local $val|126 f32)
+  (local $val|127 f32)
+  (local $val|128 f32)
+  (local $val|129 f32)
+  (local $val|130 f32)
+  (local $val|131 f32)
+  (local $val|132 f32)
+  (local $val|133 f32)
+  (local $val|134 f32)
+  (local $val|135 f32)
+  (local $val|136 f32)
+  (local $val|137 f32)
+  (local $val|138 f32)
+  (local $val|139 f32)
+  (local $r|140 f32)
+  (local $g|141 f32)
+  (local $b|142 f32)
+  (local $rf f32)
+  (local $gf f32)
+  (local $bf f32)
+  (local $value1|146 f64)
+  (local $value2|147 f64)
+  (local $value1|148 f64)
+  (local $value2|149 f64)
+  (local $max f32)
+  (local $value1|151 f64)
+  (local $value2|152 f64)
+  (local $value1|153 f64)
+  (local $value2|154 f64)
+  (local $min f32)
+  (local $d f32)
+  (local $h f32)
+  (local $s f32)
+  (local $v f32)
+  (local $hsv i32)
+  (local $h|161 f32)
+  (local $i1 i32)
+  (local $i2 i32)
+  (local $w1 f32)
+  (local $w2 f32)
+  (local $h1 f32)
+  (local $s1 f32)
+  (local $l1 f32)
+  (local $h2 f32)
+  (local $s2 f32)
+  (local $l2 f32)
+  (local $mixH f32)
+  (local $mixS f32)
+  (local $mixV f32)
+  (local $value1|175 f64)
+  (local $value2|176 f64)
+  (local $value1|177 f64)
+  (local $value2|178 f64)
+  (local $value1|179 f64)
+  (local $value2|180 f64)
+  (local $value1|181 f64)
+  (local $value2|182 f64)
+  (local $h|183 f32)
+  (local $s|184 f32)
+  (local $v|185 f32)
+  (local $hf f32)
+  (local $sf f32)
+  (local $vf f32)
+  (local $x|189 f64)
+  (local $i i32)
+  (local $f f32)
+  (local $p f32)
+  (local $q f32)
+  (local $t|194 f32)
+  (local $r|195 f32)
+  (local $g|196 f32)
+  (local $b|197 f32)
+  (local $198 i32)
+  (local $rgb i32)
+  (local $avg f32)
+  (local $value1|201 f64)
+  (local $value2|202 f64)
+  (local $value1|203 f64)
+  (local $value2|204 f64)
+  (local $max_val f32)
+  (local $amt f32)
+  (local $gray f32)
+  (local $val|208 f32)
+  (local $val|209 f32)
+  (local $val|210 f32)
+  (local $val|211 f32)
+  (local $val|212 f32)
+  (local $val|213 f32)
+  (local $val|214 f32)
+  (local $val|215 f32)
+  (local $216 i32)
+  global.get $~lib/memory/__stack_pointer
+  i32.const 16
+  i32.sub
+  global.set $~lib/memory/__stack_pointer
+  call $~stack_check
+  global.get $~lib/memory/__stack_pointer
+  i64.const 0
+  i64.store
+  global.get $~lib/memory/__stack_pointer
+  i64.const 0
+  i64.store offset=8
+  local.get $endY
+  i32.const 0
+  i32.lt_s
+  if
+   local.get $height
+   local.set $endY
+  end
+  local.get $startY
+  i32.const 0
+  i32.lt_s
+  if
+   i32.const 0
+   local.set $startY
+  end
+  local.get $endY
+  local.get $height
+  i32.gt_s
+  if
+   local.get $height
+   local.set $endY
+  end
+  local.get $exposure
+  f32.const 100
+  f32.div
+  f32.const 2
+  f32.mul
+  local.set $expStops
+  f64.const 2
+  local.get $expStops
+  f64.promote_f32
+  call $~lib/math/NativeMath.pow
+  f32.demote_f64
+  local.set $mult
+  f32.const 100
+  local.get $contrast
+  f32.add
+  f32.const 100
+  f32.div
+  local.set $contrastF
+  local.get $temperature
+  f32.const 1e3
+  f32.div
+  local.set $t
+  local.get $tint
+  f32.const 1e3
+  f32.div
+  local.set $tn
+  f32.const 100
+  local.get $saturation
+  f32.add
+  f32.const 100
+  f32.div
+  local.set $saturationF
+  local.get $vibrance
+  f32.const 100
+  f32.div
+  local.set $vibranceF
+  local.get $lutPtr
+  local.set $lutRGB
+  local.get $lutPtr
+  i32.const 256
+  i32.add
+  local.set $lutR
+  local.get $lutPtr
+  i32.const 512
+  i32.add
+  local.set $lutG
+  local.get $lutPtr
+  i32.const 768
+  i32.add
+  local.set $lutB
+  local.get $startY
+  local.set $y
+  loop $for-loop|0
+   local.get $y
+   local.get $endY
+   i32.lt_s
+   if
+    local.get $y
+    local.get $width
+    i32.mul
+    i32.const 4
+    i32.mul
+    local.set $rowOffset
+    i32.const 0
+    local.set $x
+    loop $for-loop|1
+     local.get $x
+     local.get $width
+     i32.lt_s
+     if
+      local.get $rowOffset
+      local.get $x
+      i32.const 2
+      i32.shl
+      i32.add
+      local.set $idx
+      local.get $idx
+      i32.const 2
+      i32.shl
+      local.set $idxFloat
+      local.get $inputPtr
+      local.get $idxFloat
+      i32.add
+      f32.load
+      local.set $r
+      local.get $inputPtr
+      local.get $idxFloat
+      i32.add
+      i32.const 4
+      i32.add
+      f32.load
+      local.set $g
+      local.get $inputPtr
+      local.get $idxFloat
+      i32.add
+      i32.const 8
+      i32.add
+      f32.load
+      local.set $b
+      local.get $inputPtr
+      local.get $idxFloat
+      i32.add
+      i32.const 12
+      i32.add
+      f32.load
+      local.set $aVal
+      local.get $r
+      local.get $mult
+      f32.mul
+      local.set $r
+      local.get $g
+      local.get $mult
+      f32.mul
+      local.set $g
+      local.get $b
+      local.get $mult
+      f32.mul
+      local.set $b
+      f32.const 0.2125999927520752
+      local.get $r
+      f32.mul
+      f32.const 0.7152000069618225
+      local.get $g
+      f32.mul
+      f32.add
+      f32.const 0.0722000002861023
+      local.get $b
+      f32.mul
+      f32.add
+      local.set $Y_orig
+      block $~lib/math/NativeMath.max|inlined.22 (result f64)
+       f64.const 0
+       local.set $value1|50
+       block $~lib/math/NativeMath.min|inlined.5 (result f64)
+        f64.const 1
+        local.set $value1
+        local.get $Y_orig
+        f64.promote_f32
+        local.set $value2
+        local.get $value1
+        local.get $value2
+        f64.min
+        br $~lib/math/NativeMath.min|inlined.5
+       end
+       local.set $value2|51
+       local.get $value1|50
+       local.get $value2|51
+       f64.max
+       br $~lib/math/NativeMath.max|inlined.22
+      end
+      f32.demote_f64
+      local.set $Y_clamp
+      local.get $Y_clamp
+      f32.const 1
+      local.get $Y_clamp
+      f32.sub
+      f32.mul
+      f32.const 4
+      f32.mul
+      local.set $wZone
+      local.get $t
+      f32.const 0
+      f32.ne
+      if
+       local.get $t
+       local.get $wZone
+       f32.mul
+       local.set $tAdj
+       local.get $r
+       block $~lib/math/NativeMath.max|inlined.23 (result f64)
+        f64.const 0
+        local.set $value1|55
+        f32.const 1
+        local.get $tAdj
+        f32.const 0.11999999731779099
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|56
+        local.get $value1|55
+        local.get $value2|56
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.23
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $r
+       local.get $b
+       block $~lib/math/NativeMath.max|inlined.24 (result f64)
+        f64.const 0
+        local.set $value1|57
+        f32.const 1
+        local.get $tAdj
+        f32.const 0.11999999731779099
+        f32.mul
+        f32.sub
+        f64.promote_f32
+        local.set $value2|58
+        local.get $value1|57
+        local.get $value2|58
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.24
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $b
+       local.get $g
+       block $~lib/math/NativeMath.max|inlined.25 (result f64)
+        f64.const 0
+        local.set $value1|59
+        f32.const 1
+        local.get $tAdj
+        f32.const 0.019999999552965164
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|60
+        local.get $value1|59
+        local.get $value2|60
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.25
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $g
+      end
+      local.get $tn
+      f32.const 0
+      f32.ne
+      if
+       local.get $tn
+       local.get $wZone
+       f32.mul
+       local.set $tnAdj
+       local.get $r
+       block $~lib/math/NativeMath.max|inlined.26 (result f64)
+        f64.const 0
+        local.set $value1|62
+        f32.const 1
+        local.get $tnAdj
+        f32.const 0.05999999865889549
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|63
+        local.get $value1|62
+        local.get $value2|63
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.26
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $r
+       local.get $b
+       block $~lib/math/NativeMath.max|inlined.27 (result f64)
+        f64.const 0
+        local.set $value1|64
+        f32.const 1
+        local.get $tnAdj
+        f32.const 0.05999999865889549
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|65
+        local.get $value1|64
+        local.get $value2|65
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.27
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $b
+       local.get $g
+       block $~lib/math/NativeMath.max|inlined.28 (result f64)
+        f64.const 0
+        local.set $value1|66
+        f32.const 1
+        local.get $tnAdj
+        f32.const 0.07999999821186066
+        f32.mul
+        f32.sub
+        f64.promote_f32
+        local.set $value2|67
+        local.get $value1|66
+        local.get $value2|67
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.28
+       end
+       f32.demote_f64
+       f32.mul
+       local.set $g
+      end
+      f32.const 0.2125999927520752
+      local.get $r
+      f32.mul
+      f32.const 0.7152000069618225
+      local.get $g
+      f32.mul
+      f32.add
+      f32.const 0.0722000002861023
+      local.get $b
+      f32.mul
+      f32.add
+      local.set $Y
+      local.get $Y
+      f32.const 1.0000000474974513e-03
+      f32.gt
+      if
+       local.get $Y
+       local.set $yNew
+       local.get $highlights
+       f32.const 0
+       f32.ne
+       if
+        local.get $highlights
+        f32.const 100
+        f32.div
+        local.set $hi
+        block $~lib/math/NativeMath.max|inlined.29 (result f64)
+         f64.const 0
+         local.set $value1|71
+         local.get $yNew
+         f32.const 0.5
+         f32.sub
+         f32.const 0.5
+         f32.div
+         f64.promote_f32
+         local.set $value2|72
+         local.get $value1|71
+         local.get $value2|72
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.29
+        end
+        f32.demote_f64
+        local.set $w
+        local.get $w
+        local.get $w
+        f32.mul
+        local.set $w
+        local.get $hi
+        f32.const 0
+        f32.lt
+        if (result i32)
+         local.get $yNew
+         f32.const 0.5
+         f32.gt
+        else
+         i32.const 0
+        end
+        if
+         local.get $yNew
+         f32.const 0.5
+         f32.sub
+         local.set $over
+         f32.const 0.5
+         local.get $over
+         local.get $over
+         f32.const 1
+         f32.add
+         f64.promote_f32
+         local.get $hi
+         f32.const 0.5
+         f32.mul
+         f64.promote_f32
+         call $~lib/math/NativeMath.pow
+         f32.demote_f64
+         f32.mul
+         f32.add
+         local.set $yNew
+        else
+         local.get $yNew
+         local.get $hi
+         local.get $w
+         f32.mul
+         f32.const 1.5
+         f32.mul
+         f32.add
+         local.set $yNew
+        end
+       end
+       local.get $whites
+       f32.const 0
+       f32.ne
+       if
+        local.get $whites
+        f32.const 100
+        f32.div
+        local.set $wh
+        block $~lib/math/NativeMath.max|inlined.30 (result f64)
+         f64.const 0
+         local.set $value1|76
+         local.get $yNew
+         f32.const 0.699999988079071
+         f32.sub
+         f32.const 0.30000001192092896
+         f32.div
+         f64.promote_f32
+         local.set $value2|77
+         local.get $value1|76
+         local.get $value2|77
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.30
+        end
+        f32.demote_f64
+        local.set $w|78
+        local.get $wh
+        f32.const 0
+        f32.lt
+        if (result i32)
+         local.get $yNew
+         f32.const 0.699999988079071
+         f32.gt
+        else
+         i32.const 0
+        end
+        if
+         local.get $yNew
+         f32.const 0.699999988079071
+         f32.sub
+         local.set $over|79
+         f32.const 0.699999988079071
+         local.get $over|79
+         local.get $over|79
+         f32.const 1
+         f32.add
+         f64.promote_f32
+         local.get $wh
+         f32.const 0.6000000238418579
+         f32.mul
+         f64.promote_f32
+         call $~lib/math/NativeMath.pow
+         f32.demote_f64
+         f32.mul
+         f32.add
+         local.set $yNew
+        else
+         local.get $yNew
+         local.get $wh
+         local.get $w|78
+         f32.mul
+         f32.const 2
+         f32.mul
+         f32.add
+         local.set $yNew
+        end
+       end
+       block $~lib/math/NativeMath.max|inlined.31 (result f64)
+        f32.const 0
+        f64.promote_f32
+        local.set $value1|80
+        local.get $yNew
+        f64.promote_f32
+        local.set $value2|81
+        local.get $value1|80
+        local.get $value2|81
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.31
+       end
+       f32.demote_f64
+       local.set $yNew
+       local.get $yNew
+       local.get $Y
+       f32.div
+       local.set $multLuma
+       local.get $r
+       local.get $multLuma
+       f32.mul
+       local.set $r
+       local.get $g
+       local.get $multLuma
+       f32.mul
+       local.set $g
+       local.get $b
+       local.get $multLuma
+       f32.mul
+       local.set $b
+       local.get $yNew
+       local.set $Y
+      end
+      local.get $shadows
+      f32.const 0
+      f32.ne
+      if
+       local.get $shadows
+       f32.const 100
+       f32.div
+       local.set $sh
+       block $~lib/math/NativeMath.max|inlined.32 (result f64)
+        f64.const 0
+        local.set $value1|84
+        f32.const 1
+        local.get $Y
+        f32.const 0.5
+        f32.div
+        f32.sub
+        f64.promote_f32
+        local.set $value2|85
+        local.get $value1|84
+        local.get $value2|85
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.32
+       end
+       f32.demote_f64
+       local.set $w|86
+       block $~lib/math/NativeMath.max|inlined.33 (result f64)
+        f64.const 0
+        local.set $value1|87
+        f32.const 1
+        local.get $sh
+        local.get $w|86
+        f32.mul
+        local.get $w|86
+        f32.mul
+        f32.const 1.2000000476837158
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|88
+        local.get $value1|87
+        local.get $value2|88
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.33
+       end
+       f32.demote_f64
+       local.set $factor
+       local.get $r
+       local.get $factor
+       f32.mul
+       local.set $r
+       local.get $g
+       local.get $factor
+       f32.mul
+       local.set $g
+       local.get $b
+       local.get $factor
+       f32.mul
+       local.set $b
+      end
+      local.get $blacks
+      f32.const 0
+      f32.ne
+      if
+       local.get $blacks
+       f32.const 100
+       f32.div
+       local.set $bl
+       block $~lib/math/NativeMath.max|inlined.34 (result f64)
+        f64.const 0
+        local.set $value1|91
+        f32.const 1
+        local.get $Y
+        f32.const 0.30000001192092896
+        f32.div
+        f32.sub
+        f64.promote_f32
+        local.set $value2|92
+        local.get $value1|91
+        local.get $value2|92
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.34
+       end
+       f32.demote_f64
+       local.set $w|93
+       block $~lib/math/NativeMath.max|inlined.35 (result f64)
+        f64.const 0
+        local.set $value1|94
+        f32.const 1
+        local.get $bl
+        local.get $w|93
+        f32.mul
+        local.get $w|93
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f64.promote_f32
+        local.set $value2|95
+        local.get $value1|94
+        local.get $value2|95
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.35
+       end
+       f32.demote_f64
+       local.set $factor|96
+       local.get $r
+       local.get $factor|96
+       f32.mul
+       local.set $r
+       local.get $g
+       local.get $factor|96
+       f32.mul
+       local.set $g
+       local.get $b
+       local.get $factor|96
+       f32.mul
+       local.set $b
+      end
+      block $~lib/math/NativeMath.max|inlined.37 (result f64)
+       local.get $r
+       f64.promote_f32
+       local.set $value1|99
+       block $~lib/math/NativeMath.max|inlined.36 (result f64)
+        local.get $g
+        f64.promote_f32
+        local.set $value1|97
+        local.get $b
+        f64.promote_f32
+        local.set $value2|98
+        local.get $value1|97
+        local.get $value2|98
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.36
+       end
+       local.set $value2|100
+       local.get $value1|99
+       local.get $value2|100
+       f64.max
+       br $~lib/math/NativeMath.max|inlined.37
+      end
+      f32.demote_f64
+      local.set $maxC
+      local.get $maxC
+      f32.const 0
+      f32.gt
+      if
+       local.get $maxC
+       f32.const 1
+       local.get $maxC
+       f32.const 4
+       f32.const 4
+       f32.mul
+       f32.div
+       f32.add
+       f32.mul
+       f32.const 1
+       local.get $maxC
+       f32.add
+       f32.div
+       local.set $mappedMax
+       local.get $mappedMax
+       local.get $maxC
+       f32.div
+       local.set $ratio
+       local.get $r
+       local.get $ratio
+       f32.mul
+       local.set $r
+       local.get $g
+       local.get $ratio
+       f32.mul
+       local.set $g
+       local.get $b
+       local.get $ratio
+       f32.mul
+       local.set $b
+      end
+      local.get $red
+      f32.const 0
+      f32.ne
+      if (result i32)
+       i32.const 1
+      else
+       local.get $redHi
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $redSh
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $green
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $greenHi
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $greenSh
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $blue
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $blueHi
+       f32.const 0
+       f32.ne
+      end
+      if (result i32)
+       i32.const 1
+      else
+       local.get $blueSh
+       f32.const 0
+       f32.ne
+      end
+      if
+       block $~lib/math/NativeMath.max|inlined.38 (result f64)
+        f32.const 0
+        f64.promote_f32
+        local.set $value1|104
+        local.get $Y
+        f32.const 0.5
+        f32.sub
+        f64.promote_f32
+        local.set $value2|105
+        local.get $value1|104
+        local.get $value2|105
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.38
+       end
+       f32.demote_f64
+       f32.const 0.5
+       f32.div
+       local.set $wHi
+       block $~lib/math/NativeMath.max|inlined.39 (result f64)
+        f32.const 0
+        f64.promote_f32
+        local.set $value1|107
+        f32.const 0.5
+        local.get $Y
+        f32.sub
+        f64.promote_f32
+        local.set $value2|108
+        local.get $value1|107
+        local.get $value2|108
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.39
+       end
+       f32.demote_f64
+       f32.const 0.5
+       f32.div
+       local.set $wSh
+       local.get $red
+       f32.const 0
+       f32.ne
+       if
+        local.get $r
+        f32.const 1
+        local.get $red
+        f32.const 100
+        f32.div
+        f32.add
+        f32.mul
+        local.set $r
+       end
+       local.get $redHi
+       f32.const 0
+       f32.ne
+       if
+        local.get $r
+        f32.const 1
+        local.get $redHi
+        f32.const 100
+        f32.div
+        local.get $wHi
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $r
+       end
+       local.get $redSh
+       f32.const 0
+       f32.ne
+       if
+        local.get $r
+        f32.const 1
+        local.get $redSh
+        f32.const 100
+        f32.div
+        local.get $wSh
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $r
+       end
+       local.get $green
+       f32.const 0
+       f32.ne
+       if
+        local.get $g
+        f32.const 1
+        local.get $green
+        f32.const 100
+        f32.div
+        f32.add
+        f32.mul
+        local.set $g
+       end
+       local.get $greenHi
+       f32.const 0
+       f32.ne
+       if
+        local.get $g
+        f32.const 1
+        local.get $greenHi
+        f32.const 100
+        f32.div
+        local.get $wHi
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $g
+       end
+       local.get $greenSh
+       f32.const 0
+       f32.ne
+       if
+        local.get $g
+        f32.const 1
+        local.get $greenSh
+        f32.const 100
+        f32.div
+        local.get $wSh
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $g
+       end
+       local.get $blue
+       f32.const 0
+       f32.ne
+       if
+        local.get $b
+        f32.const 1
+        local.get $blue
+        f32.const 100
+        f32.div
+        f32.add
+        f32.mul
+        local.set $b
+       end
+       local.get $blueHi
+       f32.const 0
+       f32.ne
+       if
+        local.get $b
+        f32.const 1
+        local.get $blueHi
+        f32.const 100
+        f32.div
+        local.get $wHi
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $b
+       end
+       local.get $blueSh
+       f32.const 0
+       f32.ne
+       if
+        local.get $b
+        f32.const 1
+        local.get $blueSh
+        f32.const 100
+        f32.div
+        local.get $wSh
+        f32.mul
+        f32.const 1.5
+        f32.mul
+        f32.add
+        f32.mul
+        local.set $b
+       end
+      end
+      block $assembly/camera_raw/linearToSrgb|inlined.3 (result f32)
+       local.get $r
+       local.set $c
+       local.get $c
+       f32.const 0
+       f32.le
+       if
+        f32.const 0
+        br $assembly/camera_raw/linearToSrgb|inlined.3
+       end
+       local.get $c
+       f32.const 1
+       f32.ge
+       if
+        f32.const 255
+        br $assembly/camera_raw/linearToSrgb|inlined.3
+       end
+       local.get $c
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        f32.const 12.920000076293945
+        local.get $c
+        f32.mul
+       else
+        f32.const 1.0549999475479126
+        local.get $c
+        f64.promote_f32
+        f64.const 1
+        f64.const 2.4
+        f64.div
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.mul
+        f32.const 0.054999999701976776
+        f32.sub
+       end
+       local.set $cf
+       local.get $cf
+       f32.const 255
+       f32.mul
+       br $assembly/camera_raw/linearToSrgb|inlined.3
+      end
+      local.set $r8
+      block $assembly/camera_raw/linearToSrgb|inlined.4 (result f32)
+       local.get $g
+       local.set $c|113
+       local.get $c|113
+       f32.const 0
+       f32.le
+       if
+        f32.const 0
+        br $assembly/camera_raw/linearToSrgb|inlined.4
+       end
+       local.get $c|113
+       f32.const 1
+       f32.ge
+       if
+        f32.const 255
+        br $assembly/camera_raw/linearToSrgb|inlined.4
+       end
+       local.get $c|113
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        f32.const 12.920000076293945
+        local.get $c|113
+        f32.mul
+       else
+        f32.const 1.0549999475479126
+        local.get $c|113
+        f64.promote_f32
+        f64.const 1
+        f64.const 2.4
+        f64.div
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.mul
+        f32.const 0.054999999701976776
+        f32.sub
+       end
+       local.set $cf|114
+       local.get $cf|114
+       f32.const 255
+       f32.mul
+       br $assembly/camera_raw/linearToSrgb|inlined.4
+      end
+      local.set $g8
+      block $assembly/camera_raw/linearToSrgb|inlined.5 (result f32)
+       local.get $b
+       local.set $c|116
+       local.get $c|116
+       f32.const 0
+       f32.le
+       if
+        f32.const 0
+        br $assembly/camera_raw/linearToSrgb|inlined.5
+       end
+       local.get $c|116
+       f32.const 1
+       f32.ge
+       if
+        f32.const 255
+        br $assembly/camera_raw/linearToSrgb|inlined.5
+       end
+       local.get $c|116
+       f32.const 3.1308000907301903e-03
+       f32.le
+       if (result f32)
+        f32.const 12.920000076293945
+        local.get $c|116
+        f32.mul
+       else
+        f32.const 1.0549999475479126
+        local.get $c|116
+        f64.promote_f32
+        f64.const 1
+        f64.const 2.4
+        f64.div
+        call $~lib/math/NativeMath.pow
+        f32.demote_f64
+        f32.mul
+        f32.const 0.054999999701976776
+        f32.sub
+       end
+       local.set $cf|117
+       local.get $cf|117
+       f32.const 255
+       f32.mul
+       br $assembly/camera_raw/linearToSrgb|inlined.5
+      end
+      local.set $b8
+      local.get $r8
+      f32.const 255
+      f32.div
+      local.set $lr
+      local.get $g8
+      f32.const 255
+      f32.div
+      local.set $lg
+      local.get $b8
+      f32.const 255
+      f32.div
+      local.set $lb
+      block $assembly/math/clamp01|inlined.3 (result f32)
+       f32.const 0.5
+       local.get $lr
+       f32.const 0.5
+       f32.sub
+       local.get $contrastF
+       f32.mul
+       f32.add
+       local.set $val
+       block $assembly/math/isNaN|inlined.12 (result i32)
+        local.get $val
+        local.set $val|123
+        local.get $val|123
+        local.get $val|123
+        f32.ne
+        br $assembly/math/isNaN|inlined.12
+       end
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.3
+       end
+       local.get $val
+       f32.const 0
+       f32.lt
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.3
+       end
+       local.get $val
+       f32.const 1
+       f32.gt
+       if
+        f32.const 1
+        br $assembly/math/clamp01|inlined.3
+       end
+       local.get $val
+       br $assembly/math/clamp01|inlined.3
+      end
+      local.set $lr
+      block $assembly/math/clamp01|inlined.4 (result f32)
+       f32.const 0.5
+       local.get $lg
+       f32.const 0.5
+       f32.sub
+       local.get $contrastF
+       f32.mul
+       f32.add
+       local.set $val|124
+       block $assembly/math/isNaN|inlined.13 (result i32)
+        local.get $val|124
+        local.set $val|125
+        local.get $val|125
+        local.get $val|125
+        f32.ne
+        br $assembly/math/isNaN|inlined.13
+       end
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.4
+       end
+       local.get $val|124
+       f32.const 0
+       f32.lt
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.4
+       end
+       local.get $val|124
+       f32.const 1
+       f32.gt
+       if
+        f32.const 1
+        br $assembly/math/clamp01|inlined.4
+       end
+       local.get $val|124
+       br $assembly/math/clamp01|inlined.4
+      end
+      local.set $lg
+      block $assembly/math/clamp01|inlined.5 (result f32)
+       f32.const 0.5
+       local.get $lb
+       f32.const 0.5
+       f32.sub
+       local.get $contrastF
+       f32.mul
+       f32.add
+       local.set $val|126
+       block $assembly/math/isNaN|inlined.14 (result i32)
+        local.get $val|126
+        local.set $val|127
+        local.get $val|127
+        local.get $val|127
+        f32.ne
+        br $assembly/math/isNaN|inlined.14
+       end
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.5
+       end
+       local.get $val|126
+       f32.const 0
+       f32.lt
+       if
+        f32.const 0
+        br $assembly/math/clamp01|inlined.5
+       end
+       local.get $val|126
+       f32.const 1
+       f32.gt
+       if
+        f32.const 1
+        br $assembly/math/clamp01|inlined.5
+       end
+       local.get $val|126
+       br $assembly/math/clamp01|inlined.5
+      end
+      local.set $lb
+      local.get $lr
+      f32.const 255
+      f32.mul
+      local.set $r8
+      local.get $lg
+      f32.const 255
+      f32.mul
+      local.set $g8
+      local.get $lb
+      f32.const 255
+      f32.mul
+      local.set $b8
+      local.get $lutPtr
+      i32.const 0
+      i32.ne
+      if
+       local.get $lutR
+       block $assembly/math/clamp255|inlined.9 (result i32)
+        local.get $r8
+        local.set $val|128
+        block $assembly/math/isNaN|inlined.15 (result i32)
+         local.get $val|128
+         local.set $val|129
+         local.get $val|129
+         local.get $val|129
+         f32.ne
+         br $assembly/math/isNaN|inlined.15
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.9
+        end
+        local.get $val|128
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.9
+        end
+        local.get $val|128
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.9
+        end
+        local.get $val|128
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.9
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $r8
+       local.get $lutG
+       block $assembly/math/clamp255|inlined.10 (result i32)
+        local.get $g8
+        local.set $val|130
+        block $assembly/math/isNaN|inlined.16 (result i32)
+         local.get $val|130
+         local.set $val|131
+         local.get $val|131
+         local.get $val|131
+         f32.ne
+         br $assembly/math/isNaN|inlined.16
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.10
+        end
+        local.get $val|130
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.10
+        end
+        local.get $val|130
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.10
+        end
+        local.get $val|130
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.10
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $g8
+       local.get $lutB
+       block $assembly/math/clamp255|inlined.11 (result i32)
+        local.get $b8
+        local.set $val|132
+        block $assembly/math/isNaN|inlined.17 (result i32)
+         local.get $val|132
+         local.set $val|133
+         local.get $val|133
+         local.get $val|133
+         f32.ne
+         br $assembly/math/isNaN|inlined.17
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.11
+        end
+        local.get $val|132
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.11
+        end
+        local.get $val|132
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.11
+        end
+        local.get $val|132
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.11
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $b8
+       local.get $lutRGB
+       block $assembly/math/clamp255|inlined.12 (result i32)
+        local.get $r8
+        local.set $val|134
+        block $assembly/math/isNaN|inlined.18 (result i32)
+         local.get $val|134
+         local.set $val|135
+         local.get $val|135
+         local.get $val|135
+         f32.ne
+         br $assembly/math/isNaN|inlined.18
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.12
+        end
+        local.get $val|134
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.12
+        end
+        local.get $val|134
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.12
+        end
+        local.get $val|134
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.12
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $r8
+       local.get $lutRGB
+       block $assembly/math/clamp255|inlined.13 (result i32)
+        local.get $g8
+        local.set $val|136
+        block $assembly/math/isNaN|inlined.19 (result i32)
+         local.get $val|136
+         local.set $val|137
+         local.get $val|137
+         local.get $val|137
+         f32.ne
+         br $assembly/math/isNaN|inlined.19
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.13
+        end
+        local.get $val|136
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.13
+        end
+        local.get $val|136
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.13
+        end
+        local.get $val|136
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.13
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $g8
+       local.get $lutRGB
+       block $assembly/math/clamp255|inlined.14 (result i32)
+        local.get $b8
+        local.set $val|138
+        block $assembly/math/isNaN|inlined.20 (result i32)
+         local.get $val|138
+         local.set $val|139
+         local.get $val|139
+         local.get $val|139
+         f32.ne
+         br $assembly/math/isNaN|inlined.20
+        end
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.14
+        end
+        local.get $val|138
+        f32.const 0
+        f32.lt
+        if
+         i32.const 0
+         br $assembly/math/clamp255|inlined.14
+        end
+        local.get $val|138
+        f32.const 255
+        f32.gt
+        if
+         i32.const 255
+         br $assembly/math/clamp255|inlined.14
+        end
+        local.get $val|138
+        i32.trunc_sat_f32_u
+        br $assembly/math/clamp255|inlined.14
+       end
+       i32.const 255
+       i32.and
+       i32.add
+       i32.load8_u
+       f32.convert_i32_u
+       local.set $b8
+      end
+      local.get $hslPtr
+      i32.const 0
+      i32.ne
+      if
+       global.get $~lib/memory/__stack_pointer
+       block $assembly/math/rgbToHsv|inlined.1 (result i32)
+        local.get $r8
+        local.set $r|140
+        local.get $g8
+        local.set $g|141
+        local.get $b8
+        local.set $b|142
+        local.get $r|140
+        f32.const 255
+        f32.div
+        local.set $rf
+        local.get $g|141
+        f32.const 255
+        f32.div
+        local.set $gf
+        local.get $b|142
+        f32.const 255
+        f32.div
+        local.set $bf
+        block $~lib/math/NativeMath.max|inlined.41 (result f64)
+         local.get $rf
+         f64.promote_f32
+         local.set $value1|148
+         block $~lib/math/NativeMath.max|inlined.40 (result f64)
+          local.get $gf
+          f64.promote_f32
+          local.set $value1|146
+          local.get $bf
+          f64.promote_f32
+          local.set $value2|147
+          local.get $value1|146
+          local.get $value2|147
+          f64.max
+          br $~lib/math/NativeMath.max|inlined.40
+         end
+         f32.demote_f64
+         f64.promote_f32
+         local.set $value2|149
+         local.get $value1|148
+         local.get $value2|149
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.41
+        end
+        f32.demote_f64
+        local.set $max
+        block $~lib/math/NativeMath.min|inlined.7 (result f64)
+         local.get $rf
+         f64.promote_f32
+         local.set $value1|153
+         block $~lib/math/NativeMath.min|inlined.6 (result f64)
+          local.get $gf
+          f64.promote_f32
+          local.set $value1|151
+          local.get $bf
+          f64.promote_f32
+          local.set $value2|152
+          local.get $value1|151
+          local.get $value2|152
+          f64.min
+          br $~lib/math/NativeMath.min|inlined.6
+         end
+         f32.demote_f64
+         f64.promote_f32
+         local.set $value2|154
+         local.get $value1|153
+         local.get $value2|154
+         f64.min
+         br $~lib/math/NativeMath.min|inlined.7
+        end
+        f32.demote_f64
+        local.set $min
+        local.get $max
+        local.get $min
+        f32.sub
+        local.set $d
+        f32.const 0
+        local.set $h
+        f32.const 0
+        local.set $s
+        local.get $max
+        local.set $v
+        local.get $max
+        f32.const 0
+        f32.eq
+        if (result f32)
+         f32.const 0
+        else
+         local.get $d
+         local.get $max
+         f32.div
+        end
+        local.set $s
+        local.get $max
+        local.get $min
+        f32.eq
+        if (result i32)
+         i32.const 1
+        else
+         local.get $d
+         f32.const 9.999999747378752e-06
+         f32.lt
+        end
+        if
+         f32.const 0
+         local.set $h
+        else
+         local.get $max
+         local.get $rf
+         f32.eq
+         if
+          local.get $gf
+          local.get $bf
+          f32.sub
+          local.get $d
+          f32.div
+          local.get $gf
+          local.get $bf
+          f32.lt
+          if (result f32)
+           f32.const 6
+          else
+           f32.const 0
+          end
+          f32.add
+          local.set $h
+         else
+          local.get $max
+          local.get $gf
+          f32.eq
+          if
+           local.get $bf
+           local.get $rf
+           f32.sub
+           local.get $d
+           f32.div
+           f32.const 2
+           f32.add
+           local.set $h
+          else
+           local.get $rf
+           local.get $gf
+           f32.sub
+           local.get $d
+           f32.div
+           f32.const 4
+           f32.add
+           local.set $h
+          end
+         end
+         local.get $h
+         f32.const 6
+         f32.div
+         local.set $h
+        end
+        global.get $assembly/math/_hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $h
+        f32.const 360
+        f32.mul
+        call $assembly/math/HSV#set:h
+        global.get $assembly/math/_hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $s
+        f32.const 100
+        f32.mul
+        call $assembly/math/HSV#set:s
+        global.get $assembly/math/_hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $v
+        f32.const 100
+        f32.mul
+        call $assembly/math/HSV#set:v
+        global.get $assembly/math/_hsv
+        br $assembly/math/rgbToHsv|inlined.1
+       end
+       local.tee $hsv
+       i32.store offset=4
+       local.get $hsv
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       call $assembly/math/HSV#get:h
+       local.set $h|161
+       i32.const 0
+       local.set $i1
+       i32.const 0
+       local.set $i2
+       f32.const 0
+       local.set $w1
+       f32.const 0
+       local.set $w2
+       local.get $h|161
+       f32.const 30
+       f32.lt
+       if
+        i32.const 0
+        local.set $i1
+        i32.const 1
+        local.set $i2
+        f32.const 1
+        local.get $h|161
+        f32.const 30
+        f32.div
+        f32.sub
+        local.set $w1
+        local.get $h|161
+        f32.const 30
+        f32.div
+        local.set $w2
+       else
+        local.get $h|161
+        f32.const 60
+        f32.lt
+        if
+         i32.const 1
+         local.set $i1
+         i32.const 2
+         local.set $i2
+         f32.const 1
+         local.get $h|161
+         f32.const 30
+         f32.sub
+         f32.const 30
+         f32.div
+         f32.sub
+         local.set $w1
+         local.get $h|161
+         f32.const 30
+         f32.sub
+         f32.const 30
+         f32.div
+         local.set $w2
+        else
+         local.get $h|161
+         f32.const 120
+         f32.lt
+         if
+          i32.const 2
+          local.set $i1
+          i32.const 3
+          local.set $i2
+          f32.const 1
+          local.get $h|161
+          f32.const 60
+          f32.sub
+          f32.const 60
+          f32.div
+          f32.sub
+          local.set $w1
+          local.get $h|161
+          f32.const 60
+          f32.sub
+          f32.const 60
+          f32.div
+          local.set $w2
+         else
+          local.get $h|161
+          f32.const 180
+          f32.lt
+          if
+           i32.const 3
+           local.set $i1
+           i32.const 4
+           local.set $i2
+           f32.const 1
+           local.get $h|161
+           f32.const 120
+           f32.sub
+           f32.const 60
+           f32.div
+           f32.sub
+           local.set $w1
+           local.get $h|161
+           f32.const 120
+           f32.sub
+           f32.const 60
+           f32.div
+           local.set $w2
+          else
+           local.get $h|161
+           f32.const 240
+           f32.lt
+           if
+            i32.const 4
+            local.set $i1
+            i32.const 5
+            local.set $i2
+            f32.const 1
+            local.get $h|161
+            f32.const 180
+            f32.sub
+            f32.const 60
+            f32.div
+            f32.sub
+            local.set $w1
+            local.get $h|161
+            f32.const 180
+            f32.sub
+            f32.const 60
+            f32.div
+            local.set $w2
+           else
+            local.get $h|161
+            f32.const 280
+            f32.lt
+            if
+             i32.const 5
+             local.set $i1
+             i32.const 6
+             local.set $i2
+             f32.const 1
+             local.get $h|161
+             f32.const 240
+             f32.sub
+             f32.const 40
+             f32.div
+             f32.sub
+             local.set $w1
+             local.get $h|161
+             f32.const 240
+             f32.sub
+             f32.const 40
+             f32.div
+             local.set $w2
+            else
+             local.get $h|161
+             f32.const 320
+             f32.lt
+             if
+              i32.const 6
+              local.set $i1
+              i32.const 7
+              local.set $i2
+              f32.const 1
+              local.get $h|161
+              f32.const 280
+              f32.sub
+              f32.const 40
+              f32.div
+              f32.sub
+              local.set $w1
+              local.get $h|161
+              f32.const 280
+              f32.sub
+              f32.const 40
+              f32.div
+              local.set $w2
+             else
+              i32.const 7
+              local.set $i1
+              i32.const 0
+              local.set $i2
+              f32.const 1
+              local.get $h|161
+              f32.const 320
+              f32.sub
+              f32.const 40
+              f32.div
+              f32.sub
+              local.set $w1
+              local.get $h|161
+              f32.const 320
+              f32.sub
+              f32.const 40
+              f32.div
+              local.set $w2
+             end
+            end
+           end
+          end
+         end
+        end
+       end
+       local.get $hslPtr
+       local.get $i1
+       i32.const 12
+       i32.mul
+       i32.add
+       f32.load
+       local.set $h1
+       local.get $hslPtr
+       local.get $i1
+       i32.const 12
+       i32.mul
+       i32.add
+       i32.const 4
+       i32.add
+       f32.load
+       local.set $s1
+       local.get $hslPtr
+       local.get $i1
+       i32.const 12
+       i32.mul
+       i32.add
+       i32.const 8
+       i32.add
+       f32.load
+       local.set $l1
+       local.get $hslPtr
+       local.get $i2
+       i32.const 12
+       i32.mul
+       i32.add
+       f32.load
+       local.set $h2
+       local.get $hslPtr
+       local.get $i2
+       i32.const 12
+       i32.mul
+       i32.add
+       i32.const 4
+       i32.add
+       f32.load
+       local.set $s2
+       local.get $hslPtr
+       local.get $i2
+       i32.const 12
+       i32.mul
+       i32.add
+       i32.const 8
+       i32.add
+       f32.load
+       local.set $l2
+       local.get $h1
+       local.get $w1
+       f32.mul
+       local.get $h2
+       local.get $w2
+       f32.mul
+       f32.add
+       local.set $mixH
+       local.get $s1
+       local.get $w1
+       f32.mul
+       local.get $s2
+       local.get $w2
+       f32.mul
+       f32.add
+       local.set $mixS
+       local.get $l1
+       local.get $w1
+       f32.mul
+       local.get $l2
+       local.get $w2
+       f32.mul
+       f32.add
+       local.set $mixV
+       local.get $hsv
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       local.get $hsv
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store offset=8
+       local.get $216
+       call $assembly/math/HSV#get:h
+       local.get $mixH
+       f32.add
+       f32.const 3600
+       f32.add
+       f32.const 360
+       call $~lib/math/NativeMathf.mod
+       call $assembly/math/HSV#set:h
+       local.get $hsv
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       block $~lib/math/NativeMath.max|inlined.42 (result f64)
+        f64.const 0
+        local.set $value1|177
+        block $~lib/math/NativeMath.min|inlined.8 (result f64)
+         f64.const 100
+         local.set $value1|175
+         local.get $hsv
+         local.set $216
+         global.get $~lib/memory/__stack_pointer
+         local.get $216
+         i32.store offset=8
+         local.get $216
+         call $assembly/math/HSV#get:s
+         local.get $mixS
+         f32.add
+         f64.promote_f32
+         local.set $value2|176
+         local.get $value1|175
+         local.get $value2|176
+         f64.min
+         br $~lib/math/NativeMath.min|inlined.8
+        end
+        local.set $value2|178
+        local.get $value1|177
+        local.get $value2|178
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.42
+       end
+       f32.demote_f64
+       call $assembly/math/HSV#set:s
+       local.get $hsv
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       block $~lib/math/NativeMath.max|inlined.43 (result f64)
+        f64.const 0
+        local.set $value1|181
+        block $~lib/math/NativeMath.min|inlined.9 (result f64)
+         f64.const 100
+         local.set $value1|179
+         local.get $hsv
+         local.set $216
+         global.get $~lib/memory/__stack_pointer
+         local.get $216
+         i32.store offset=8
+         local.get $216
+         call $assembly/math/HSV#get:v
+         local.get $mixV
+         f32.add
+         f64.promote_f32
+         local.set $value2|180
+         local.get $value1|179
+         local.get $value2|180
+         f64.min
+         br $~lib/math/NativeMath.min|inlined.9
+        end
+        local.set $value2|182
+        local.get $value1|181
+        local.get $value2|182
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.43
+       end
+       f32.demote_f64
+       call $assembly/math/HSV#set:v
+       global.get $~lib/memory/__stack_pointer
+       block $assembly/math/hsvToRgb|inlined.1 (result i32)
+        local.get $hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        call $assembly/math/HSV#get:h
+        local.set $h|183
+        local.get $hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        call $assembly/math/HSV#get:s
+        local.set $s|184
+        local.get $hsv
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        call $assembly/math/HSV#get:v
+        local.set $v|185
+        local.get $h|183
+        f32.const 360
+        f32.div
+        local.set $hf
+        local.get $s|184
+        f32.const 100
+        f32.div
+        local.set $sf
+        local.get $v|185
+        f32.const 100
+        f32.div
+        local.set $vf
+        local.get $hf
+        f32.const 0
+        f32.lt
+        if
+         f32.const 0
+         local.set $hf
+        end
+        local.get $hf
+        f32.const 1
+        f32.gt
+        if
+         f32.const 1
+         local.set $hf
+        end
+        local.get $sf
+        f32.const 0
+        f32.lt
+        if
+         f32.const 0
+         local.set $sf
+        end
+        local.get $sf
+        f32.const 1
+        f32.gt
+        if
+         f32.const 1
+         local.set $sf
+        end
+        local.get $vf
+        f32.const 0
+        f32.lt
+        if
+         f32.const 0
+         local.set $vf
+        end
+        local.get $vf
+        f32.const 1
+        f32.gt
+        if
+         f32.const 1
+         local.set $vf
+        end
+        block $~lib/math/NativeMath.floor|inlined.1 (result f64)
+         local.get $hf
+         f32.const 6
+         f32.mul
+         f64.promote_f32
+         local.set $x|189
+         local.get $x|189
+         f64.floor
+         br $~lib/math/NativeMath.floor|inlined.1
+        end
+        i32.trunc_sat_f64_s
+        local.set $i
+        local.get $hf
+        f32.const 6
+        f32.mul
+        local.get $i
+        f32.convert_i32_s
+        f32.sub
+        local.set $f
+        local.get $vf
+        f32.const 1
+        local.get $sf
+        f32.sub
+        f32.mul
+        local.set $p
+        local.get $vf
+        f32.const 1
+        local.get $f
+        local.get $sf
+        f32.mul
+        f32.sub
+        f32.mul
+        local.set $q
+        local.get $vf
+        f32.const 1
+        f32.const 1
+        local.get $f
+        f32.sub
+        local.get $sf
+        f32.mul
+        f32.sub
+        f32.mul
+        local.set $t|194
+        f32.const 0
+        local.set $r|195
+        f32.const 0
+        local.set $g|196
+        f32.const 0
+        local.set $b|197
+        block $break|2
+         block $case5|2
+          block $case4|2
+           block $case3|2
+            block $case2|2
+             block $case1|2
+              block $case0|2
+               local.get $i
+               i32.const 6
+               i32.rem_s
+               local.set $198
+               local.get $198
+               i32.const 0
+               i32.eq
+               br_if $case0|2
+               local.get $198
+               i32.const 1
+               i32.eq
+               br_if $case1|2
+               local.get $198
+               i32.const 2
+               i32.eq
+               br_if $case2|2
+               local.get $198
+               i32.const 3
+               i32.eq
+               br_if $case3|2
+               local.get $198
+               i32.const 4
+               i32.eq
+               br_if $case4|2
+               br $case5|2
+              end
+              local.get $vf
+              local.set $r|195
+              local.get $t|194
+              local.set $g|196
+              local.get $p
+              local.set $b|197
+              br $break|2
+             end
+             local.get $q
+             local.set $r|195
+             local.get $vf
+             local.set $g|196
+             local.get $p
+             local.set $b|197
+             br $break|2
+            end
+            local.get $p
+            local.set $r|195
+            local.get $vf
+            local.set $g|196
+            local.get $t|194
+            local.set $b|197
+            br $break|2
+           end
+           local.get $p
+           local.set $r|195
+           local.get $q
+           local.set $g|196
+           local.get $vf
+           local.set $b|197
+           br $break|2
+          end
+          local.get $t|194
+          local.set $r|195
+          local.get $p
+          local.set $g|196
+          local.get $vf
+          local.set $b|197
+          br $break|2
+         end
+         local.get $vf
+         local.set $r|195
+         local.get $p
+         local.set $g|196
+         local.get $q
+         local.set $b|197
+         br $break|2
+        end
+        global.get $assembly/math/_rgb
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $r|195
+        f32.const 255
+        f32.mul
+        call $assembly/math/RGB#set:r
+        global.get $assembly/math/_rgb
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $g|196
+        f32.const 255
+        f32.mul
+        call $assembly/math/RGB#set:g
+        global.get $assembly/math/_rgb
+        local.set $216
+        global.get $~lib/memory/__stack_pointer
+        local.get $216
+        i32.store
+        local.get $216
+        local.get $b|197
+        f32.const 255
+        f32.mul
+        call $assembly/math/RGB#set:b
+        global.get $assembly/math/_rgb
+        br $assembly/math/hsvToRgb|inlined.1
+       end
+       local.tee $rgb
+       i32.store offset=12
+       local.get $rgb
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       call $assembly/math/RGB#get:r
+       local.set $r8
+       local.get $rgb
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       call $assembly/math/RGB#get:g
+       local.set $g8
+       local.get $rgb
+       local.set $216
+       global.get $~lib/memory/__stack_pointer
+       local.get $216
+       i32.store
+       local.get $216
+       call $assembly/math/RGB#get:b
+       local.set $b8
+      end
+      local.get $vibranceF
+      f32.const 0
+      f32.ne
+      if (result i32)
+       i32.const 1
+      else
+       local.get $saturationF
+       f32.const 1
+       f32.ne
+      end
+      if
+       local.get $r8
+       local.get $g8
+       f32.add
+       local.get $b8
+       f32.add
+       f32.const 3
+       f32.div
+       local.set $avg
+       block $~lib/math/NativeMath.max|inlined.45 (result f64)
+        local.get $r8
+        f64.promote_f32
+        local.set $value1|203
+        block $~lib/math/NativeMath.max|inlined.44 (result f64)
+         local.get $g8
+         f64.promote_f32
+         local.set $value1|201
+         local.get $b8
+         f64.promote_f32
+         local.set $value2|202
+         local.get $value1|201
+         local.get $value2|202
+         f64.max
+         br $~lib/math/NativeMath.max|inlined.44
+        end
+        f32.demote_f64
+        f64.promote_f32
+        local.set $value2|204
+        local.get $value1|203
+        local.get $value2|204
+        f64.max
+        br $~lib/math/NativeMath.max|inlined.45
+       end
+       f32.demote_f64
+       local.set $max_val
+       local.get $max_val
+       local.get $avg
+       f32.sub
+       f32.const 255
+       f32.div
+       local.get $vibranceF
+       f32.mul
+       local.set $amt
+       local.get $r8
+       local.get $max_val
+       local.get $r8
+       f32.sub
+       local.get $amt
+       f32.mul
+       f32.add
+       local.set $r8
+       local.get $g8
+       local.get $max_val
+       local.get $g8
+       f32.sub
+       local.get $amt
+       f32.mul
+       f32.add
+       local.set $g8
+       local.get $b8
+       local.get $max_val
+       local.get $b8
+       f32.sub
+       local.get $amt
+       f32.mul
+       f32.add
+       local.set $b8
+       f32.const 0.29899999499320984
+       local.get $r8
+       f32.mul
+       f32.const 0.5870000123977661
+       local.get $g8
+       f32.mul
+       f32.add
+       f32.const 0.11400000005960464
+       local.get $b8
+       f32.mul
+       f32.add
+       local.set $gray
+       local.get $gray
+       local.get $r8
+       local.get $gray
+       f32.sub
+       local.get $saturationF
+       f32.mul
+       f32.add
+       local.set $r8
+       local.get $gray
+       local.get $g8
+       local.get $gray
+       f32.sub
+       local.get $saturationF
+       f32.mul
+       f32.add
+       local.set $g8
+       local.get $gray
+       local.get $b8
+       local.get $gray
+       f32.sub
+       local.get $saturationF
+       f32.mul
+       f32.add
+       local.set $b8
+      end
+      local.get $outputPtr
+      local.get $idx
+      i32.add
+      block $assembly/math/clamp255|inlined.15 (result i32)
+       local.get $r8
+       local.set $val|208
+       block $assembly/math/isNaN|inlined.21 (result i32)
+        local.get $val|208
+        local.set $val|209
+        local.get $val|209
+        local.get $val|209
+        f32.ne
+        br $assembly/math/isNaN|inlined.21
+       end
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.15
+       end
+       local.get $val|208
+       f32.const 0
+       f32.lt
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.15
+       end
+       local.get $val|208
+       f32.const 255
+       f32.gt
+       if
+        i32.const 255
+        br $assembly/math/clamp255|inlined.15
+       end
+       local.get $val|208
+       i32.trunc_sat_f32_u
+       br $assembly/math/clamp255|inlined.15
+      end
+      i32.store8
+      local.get $outputPtr
+      local.get $idx
+      i32.add
+      i32.const 1
+      i32.add
+      block $assembly/math/clamp255|inlined.16 (result i32)
+       local.get $g8
+       local.set $val|210
+       block $assembly/math/isNaN|inlined.22 (result i32)
+        local.get $val|210
+        local.set $val|211
+        local.get $val|211
+        local.get $val|211
+        f32.ne
+        br $assembly/math/isNaN|inlined.22
+       end
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.16
+       end
+       local.get $val|210
+       f32.const 0
+       f32.lt
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.16
+       end
+       local.get $val|210
+       f32.const 255
+       f32.gt
+       if
+        i32.const 255
+        br $assembly/math/clamp255|inlined.16
+       end
+       local.get $val|210
+       i32.trunc_sat_f32_u
+       br $assembly/math/clamp255|inlined.16
+      end
+      i32.store8
+      local.get $outputPtr
+      local.get $idx
+      i32.add
+      i32.const 2
+      i32.add
+      block $assembly/math/clamp255|inlined.17 (result i32)
+       local.get $b8
+       local.set $val|212
+       block $assembly/math/isNaN|inlined.23 (result i32)
+        local.get $val|212
+        local.set $val|213
+        local.get $val|213
+        local.get $val|213
+        f32.ne
+        br $assembly/math/isNaN|inlined.23
+       end
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.17
+       end
+       local.get $val|212
+       f32.const 0
+       f32.lt
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.17
+       end
+       local.get $val|212
+       f32.const 255
+       f32.gt
+       if
+        i32.const 255
+        br $assembly/math/clamp255|inlined.17
+       end
+       local.get $val|212
+       i32.trunc_sat_f32_u
+       br $assembly/math/clamp255|inlined.17
+      end
+      i32.store8
+      local.get $outputPtr
+      local.get $idx
+      i32.add
+      i32.const 3
+      i32.add
+      block $assembly/math/clamp255|inlined.18 (result i32)
+       local.get $aVal
+       f32.const 255
+       f32.mul
+       local.set $val|214
+       block $assembly/math/isNaN|inlined.24 (result i32)
+        local.get $val|214
+        local.set $val|215
+        local.get $val|215
+        local.get $val|215
+        f32.ne
+        br $assembly/math/isNaN|inlined.24
+       end
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.18
+       end
+       local.get $val|214
+       f32.const 0
+       f32.lt
+       if
+        i32.const 0
+        br $assembly/math/clamp255|inlined.18
+       end
+       local.get $val|214
+       f32.const 255
+       f32.gt
+       if
+        i32.const 255
+        br $assembly/math/clamp255|inlined.18
+       end
+       local.get $val|214
+       i32.trunc_sat_f32_u
+       br $assembly/math/clamp255|inlined.18
+      end
+      i32.store8
       local.get $x
       i32.const 1
       i32.add
@@ -21233,7 +24311,7 @@
     i32.const 4
     i32.mul
     local.set $row
-    block $~lib/math/NativeMath.max|inlined.12 (result f64)
+    block $~lib/math/NativeMath.max|inlined.47 (result f64)
      f64.const 0
      local.set $value1
      local.get $y
@@ -21244,10 +24322,10 @@
      local.get $value1
      local.get $value2
      f64.max
-     br $~lib/math/NativeMath.max|inlined.12
+     br $~lib/math/NativeMath.max|inlined.47
     end
     local.set $top
-    block $~lib/math/NativeMath.min|inlined.10 (result f64)
+    block $~lib/math/NativeMath.min|inlined.16 (result f64)
      local.get $h
      f64.convert_i32_s
      local.set $value1|19
@@ -21261,7 +24339,7 @@
      local.get $value1|19
      local.get $value2|20
      f64.min
-     br $~lib/math/NativeMath.min|inlined.10
+     br $~lib/math/NativeMath.min|inlined.16
     end
     local.set $bottom
     i32.const 0
@@ -21271,7 +24349,7 @@
      local.get $w
      i32.lt_s
      if
-      block $~lib/math/NativeMath.max|inlined.13 (result f64)
+      block $~lib/math/NativeMath.max|inlined.48 (result f64)
        f64.const 0
        local.set $value1|23
        local.get $x
@@ -21282,10 +24360,10 @@
        local.get $value1|23
        local.get $value2|24
        f64.max
-       br $~lib/math/NativeMath.max|inlined.13
+       br $~lib/math/NativeMath.max|inlined.48
       end
       local.set $left
-      block $~lib/math/NativeMath.min|inlined.11 (result f64)
+      block $~lib/math/NativeMath.min|inlined.17 (result f64)
        local.get $w
        f64.convert_i32_s
        local.set $value1|26
@@ -21299,7 +24377,7 @@
        local.get $value1|26
        local.get $value2|27
        f64.min
-       br $~lib/math/NativeMath.min|inlined.11
+       br $~lib/math/NativeMath.min|inlined.17
       end
       local.set $right
       i32.const 0

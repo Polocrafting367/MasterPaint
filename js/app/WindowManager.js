@@ -43,6 +43,11 @@ const WindowManager = {
         win.style.inset = 'auto';
         win.style.bottom = 'auto';
         win.style.right = 'auto';
+        if (win.id === 'win-history') {
+            win.style.width = '200px';
+            win.style.minWidth = '200px';
+            win.style.maxWidth = '200px';
+        }
 
         if (useViewport) {
             win.style.left = rect.left + 'px';
@@ -89,6 +94,11 @@ const WindowManager = {
             win.style.top = newY + 'px';
             win.style.bottom = 'auto';
             win.style.right = 'auto';
+            if (win.id === 'win-history') {
+                win.style.width = '200px';
+                win.style.minWidth = '200px';
+                win.style.maxWidth = '200px';
+            }
 
             const pad = 2;
             const paletteIds = ['win-tools', 'win-colors', 'win-layers', 'win-history'];
@@ -171,6 +181,11 @@ const WindowManager = {
                 win.style.right = 'auto';
             }
 
+            if (win.id === 'win-history') {
+                win.style.width = '200px';
+                win.style.minWidth = '200px';
+                win.style.maxWidth = '200px';
+            }
             if (typeof window.saveIlluWindowPositionAfterDrag === 'function') {
                 window.saveIlluWindowPositionAfterDrag(win);
             }

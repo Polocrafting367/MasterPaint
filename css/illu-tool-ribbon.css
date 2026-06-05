@@ -362,37 +362,6 @@ body.illu-toolbar-ribbon .illu-shape-style-fill-group.illu-ribbon-grid-3x2 #tool
     display: none !important;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-style-fill"] .illu-ribbon-grid-3x2 .illu-mode-toggle-item,
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-style-fill"] .illu-ribbon-grid-3x2 .illu-mode-toggle-item--unified {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-}
-
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-style-fill"] .illu-ribbon-grid-3x2 .illu-mode-toggle-btn,
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-style-fill"] .illu-ribbon-grid-3x2 .illu-icon-toggle.illu-mode-toggle-btn {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    height: 27px !important;
-    min-height: 27px !important;
-    padding: 2px 6px !important;
-    gap: 5px !important;
-    box-sizing: border-box !important;
-}
-
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-style-fill"] .illu-ribbon-grid-3x2 .illu-mode-toggle-lbl {
-    display: inline !important;
-    font-size: 11px !important;
-    white-space: nowrap !important;
-    text-align: left !important;
-}
-
 /* Taille / trait : la dureté n’apparaît que pour pinceau et gomme (pas les formes) */
 body.illu-toolbar-ribbon .illu-ribbon-param-pack:not(.illu-size-pack--brush-only) #tool-brush-hardness-row {
     display: none !important;
@@ -589,9 +558,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp.illu-ribbon-param-pack
     min-width: 0;
 }
 
-body.illu-toolbar-ribbon .illu-ribbon-group-body .opt-grp[hidden] {
-    display: none !important;
-}
+
 
 body.illu-toolbar-ribbon #tool-pinned-select-actions {
     display: contents;
@@ -1553,7 +1520,7 @@ body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inlin
 body.illu-toolbar-ribbon .illu-shape-fill-group.illu-toggle-group--compact-inline-row .illu-mode-toggle-item--unified {
     flex: 0 0 auto;
     width: auto;
-    min-width: 52px;
+    min-width: 36px;
     max-width: none;
 }
 
@@ -2321,9 +2288,7 @@ body.illu-toolbar-ribbon:not(.illu-mobile-ui)
 
 body.illu-toolbar-ribbon:not(.illu-mobile-ui)
     .illu-ribbon-group[data-illu-ribbon-group="shape-mode"]
-    .illu-shape-mode-group .illu-mode-toggle-lbl,
-body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-fill"]
-    .illu-shape-fill-group .illu-mode-toggle-lbl {
+    .illu-shape-mode-group .illu-mode-toggle-lbl {
     display: block !important;
     font-size: 10px !important;
     text-align: center !important;
@@ -2334,8 +2299,13 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-fill"]
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-fill"]
+    .illu-shape-fill-group .illu-mode-toggle-lbl {
+    display: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-fill"]
     .illu-shape-fill-group .illu-mode-toggle-item--unified {
-    min-width: 52px !important;
+    min-width: unset !important;
     max-width: none !important;
 }
 
@@ -2431,7 +2401,6 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="selection"] 
     align-self: stretch;
     min-width: 0;
     width: 100%;
-    height: 100%;
 }
 
 body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-picker"] {
@@ -2441,7 +2410,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="shape-picker
 }
 
 /* Même présentation que #tool-main-header (déclencheur visuel + popup) */
-body.illu-toolbar-ribbon #illu-shape-picker-header.illu-shape-picker-header {
+body.illu-toolbar-ribbon .illu-shape-picker-header {
     position: relative;
     display: block;
     align-self: stretch;
@@ -2457,8 +2426,8 @@ body.illu-toolbar-ribbon #illu-shape-picker-header.illu-shape-picker-header {
     overflow: visible;
 }
 
-body.illu-toolbar-ribbon #illu-shape-picker-header .illu-shape-picker-trigger,
-body.illu-toolbar-ribbon #illu-shape-picker-header .illu-tool-picker {
+body.illu-toolbar-ribbon .illu-shape-picker-header .illu-shape-picker-trigger,
+body.illu-toolbar-ribbon .illu-shape-picker-header .illu-tool-picker {
     position: absolute;
     top: 0;
     right: 0;
@@ -2487,12 +2456,12 @@ body.illu-toolbar-ribbon #illu-shape-picker-icon.illu-tool-header-icon svg {
     height: 20px;
 }
 
-body.illu-toolbar-ribbon #illu-shape-picker-header:focus {
+body.illu-toolbar-ribbon .illu-shape-picker-header:focus {
     outline: 1px dotted var(--mp-accent, #806020);
     outline-offset: 1px;
 }
 
-body.illu-toolbar-ribbon #illu-shape-picker-header:focus .illu-tool-picker {
+body.illu-toolbar-ribbon .illu-shape-picker-header:focus .illu-tool-picker {
     border-color: var(--mp-accent, #806020);
 }
 
@@ -2671,3 +2640,59 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body > .field-row {
     background: var(--border-light, #ccc);
     margin: 2px 0;
 }
+
+/* Custom Overrides for Line Endpoints and Shape Style Fill groups */
+body.illu-toolbar-ribbon #line-cap-start-wrap,
+body.illu-toolbar-ribbon #line-dash-style-wrap,
+body.illu-toolbar-ribbon #line-cap-end-wrap {
+    height: 100% !important;
+    align-self: stretch !important;
+    width: auto !important;
+}
+
+body.illu-toolbar-ribbon #line-cap-start-wrap .illu-shape-picker-header,
+body.illu-toolbar-ribbon #line-cap-end-wrap .illu-shape-picker-header {
+    min-width: unset !important;
+    width: 40px !important;
+    height: 100% !important;
+    align-self: stretch !important;
+}
+
+body.illu-toolbar-ribbon #line-dash-style-wrap .illu-shape-picker-header {
+    min-width: unset !important;
+    width: 56px !important;
+    height: 100% !important;
+    align-self: stretch !important;
+}
+
+/* Compact layout for shape/text fill grids (icons only) */
+body.illu-toolbar-ribbon .illu-shape-style-fill-group.illu-ribbon-grid-3x2,
+body.illu-toolbar-ribbon .illu-text-style-fill-group.illu-ribbon-grid-3x2 {
+    display: grid !important;
+    grid-template-columns: repeat(3, 27px) !important;
+    grid-template-rows: repeat(2, 27px) !important;
+    gap: 2px !important;
+    width: max-content !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-shape-style-fill-group.illu-ribbon-grid-3x2 .illu-mode-toggle-item--unified,
+body.illu-toolbar-ribbon #tool-options-container .illu-text-style-fill-group.illu-ribbon-grid-3x2 .illu-mode-toggle-item--unified {
+    min-width: unset !important;
+    max-width: unset !important;
+    width: 27px !important;
+    height: 27px !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-shape-style-fill-group.illu-ribbon-grid-3x2 .illu-mode-toggle-btn,
+body.illu-toolbar-ribbon #tool-options-container .illu-text-style-fill-group.illu-ribbon-grid-3x2 .illu-mode-toggle-btn {
+    width: 27px !important;
+    height: 27px !important;
+    min-width: 27px !important;
+    min-height: 27px !important;
+    max-width: 27px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+

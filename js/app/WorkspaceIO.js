@@ -1456,8 +1456,13 @@ if (fmt === 'png' || fmt === 'gif') {
                     P.instantEffectProgress(10);
                 }
                 try {
-                    // Manual trigger of all local backup systems, restricted to the current project
-                    persistToLocalStorage({ force: true, manual: true, persistReason: 'manual', currentProjectOnly: true });
+                    // Manual save: merge only the current project into the stored workspace
+                    try {
+                        mergeSaveCurrentProject();
+                    } catch (e) {
+                        console.warn('mergeSaveCurrentProject failed, falling back to full persist:', e);
+                        persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                    }
 
                     // Simple confirm
                     window.setTimeout(() => {
@@ -1480,6 +1485,49 @@ if (fmt === 'png' || fmt === 'gif') {
                 }
             };
         }
+
+    // Merge current project into existing saved workspace in localStorage without overwriting other projects.
+    function mergeSaveCurrentProject() {
+        const em = window.EditorManager;
+        if (!em || !em.activeProject) return;
+        const proj = em.serializeWorkspacePayload([em.activeProject]);
+        // Load existing workspace manifest
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                // No existing workspace: persist full payload for safety
+                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                return;
+            }
+            let existing = null;
+            try {
+                existing = JSON.parse(raw);
+            } catch (e) {
+                // if parsing fails, fallback to full persist
+                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                return;
+            }
+            if (!existing || !Array.isArray(existing.projects)) {
+                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                return;
+            }
+            // Replace or append the active project by id
+            const incomingProj = proj.projects && proj.projects[0];
+            if (!incomingProj) {
+                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                return;
+            }
+            const idx = existing.projects.findIndex(p => p.id === incomingProj.id);
+            if (idx >= 0) existing.projects[idx] = incomingProj;
+            else existing.projects.push(incomingProj);
+            // Do not alter other projects or activeProjectIndex (leave as-is)
+            const s = JSON.stringify(existing);
+            localStorage.setItem(STORAGE_KEY, s);
+        } catch (err) {
+            console.error('mergeSaveCurrentProject error:', err);
+            throw err;
+        }
+    }
 
         const jq = document.getElementById('export-jpeg-quality');
         const jqv = document.getElementById('export-jpeg-quality-val');

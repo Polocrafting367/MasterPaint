@@ -290,6 +290,11 @@
   <path d="M 9 4.5 L 14 8 L 9 11.5 Z" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>
 </symbol>
 
+<symbol id="illu-icon-cap-arrow-hollow" viewBox="0 0 16 16">
+  <line x1="2" y1="8" x2="9" y2="8" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2" stroke-linecap="butt"/>
+  <path d="M 9 4.5 L 14 8 L 9 11.5" fill="none" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+</symbol>
+
 <symbol id="illu-icon-cap-diamond" viewBox="0 0 16 16">
   <line x1="2" y1="8" x2="8.5" y2="8" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2" stroke-linecap="butt"/>
   <path d="M 9.5 5 L 13 8 L 9.5 11 L 6 8 Z" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linejoin="round"/>

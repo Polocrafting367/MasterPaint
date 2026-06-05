@@ -54,15 +54,21 @@
             labelKey: 'ribbon.groupGradientMethod',
             selectors: ['#tool-shape-grad-method-actions']
         },
+
         {
-            id: 'line-cap-start',
-            labelKey: 'tools.lineCapStart',
-            selectors: ['#opt-grp-line-endpoints .illu-line-cap-start-group']
+            id: 'opt-grp-line-cap-start',
+            labelKey: 'ribbon.groupLineCapStart',
+            selectors: ['#line-cap-start-wrap']
         },
         {
-            id: 'line-cap-end',
-            labelKey: 'tools.lineCapEnd',
-            selectors: ['#opt-grp-line-endpoints .illu-line-cap-end-group']
+            id: 'opt-grp-line-dash',
+            labelKey: 'ribbon.groupLineDash',
+            selectors: ['#line-dash-style-wrap']
+        },
+        {
+            id: 'opt-grp-line-cap-end',
+            labelKey: 'ribbon.groupLineCapEnd',
+            selectors: ['#line-cap-end-wrap']
         },
         {
             id: 'text-style-fill',
@@ -511,9 +517,7 @@
         return actionIds.has('opt-grp-shapes-actions');
     }
 
-    function lineEndpointsActive(actionIds) {
-        return actionIds.has('opt-grp-line-endpoints');
-    }
+
 
     window.illuApplyRibbonGroupsForTool = function (toolId, cfg, ctx) {
         if (!window.illuIsRibbonToolbarActive()) return;
@@ -609,14 +613,15 @@
                     active =
                         isPixelDoc && !isShapeTool && !isMobileRibbon;
                 } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
+                else if (id === 'opt-grp-line-dash') active = actionIds.has('opt-grp-line-dash');
+                else if (id === 'opt-grp-line-cap-start') active = actionIds.has('opt-grp-line-cap-start');
+                else if (id === 'opt-grp-line-cap-end') active = actionIds.has('opt-grp-line-cap-end');
                 else if (id === 'shape-style-fill') {
                     active = shapesActionsActive(actionIds) && !['line', 'cubic-3', 'pen'].includes(tool);
                 } else if (id === 'shape-grad') {
                     active = shapesActionsActive(actionIds) && gradTypeEl && !gradTypeEl.hidden;
                 } else if (id === 'shape-grad-method') {
                     active = shapesActionsActive(actionIds) && shapeGradMethodEl && !shapeGradMethodEl.hidden;
-                } else if (id === 'line-cap-start' || id === 'line-cap-end') {
-                    active = lineEndpointsActive(actionIds);
                 } else if (id === 'text-style-fill') {
                     active = actionIds.has('opt-grp-text-actions');
                 } else if (id === 'text-grad') {
@@ -688,14 +693,18 @@
         }
     };
 
-    /** Branches = triangle ; arrondi = rect. à coins arrondis (round-3) uniquement. */
+    /** Branches = triangle ; arrondi = rect. à coins arrondis (round-3) ou bulle arrondie. */
     window.illuShapeExtraGaugeFlags = function (tool, shapesOn) {
         const on = !!shapesOn;
+        const calloutStyle =
+            tool === 'callout' && typeof EditorManager !== 'undefined' && EditorManager.toolProps
+                ? EditorManager.toolProps.calloutStyle
+                : document.getElementById('tool-callout-style')?.value;
         return {
             showBranches: on && tool === 'star',
             showPolygonSides: on && tool === 'reg-poly',
             showCalloutStyle: on && tool === 'callout',
-            showCorner: on && tool === 'round-3'
+            showCorner: on && (tool === 'round-3' || (tool === 'callout' && calloutStyle === 'round'))
         };
     };
 
@@ -1250,3 +1259,194 @@
         };
         setTimeout(() => document.addEventListener('pointerdown', closeListener), 0);
     };
+
+    window.illuSyncGenericDropdowns = function () {
+        if (typeof EditorManager === 'undefined' || !EditorManager.toolProps) return;
+        document.querySelectorAll('.illu-generic-dropdown-header').forEach((header) => {
+            const popup = document.getElementById(header.id.replace('-header', '-popup'));
+            if (!popup) return;
+            const syncBtn = popup.querySelector('.illu-shape-picker-item[data-illu-sync]');
+            if (!syncBtn) return;
+            const syncId = syncBtn.getAttribute('data-illu-sync');
+            
+            let propKey = syncId.replace(/^tool-/, '');
+            propKey = propKey.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+            
+            let activeVal = EditorManager.toolProps[propKey];
+            if (!activeVal) {
+                if (propKey === 'lineDash') activeVal = 'solid';
+                else activeVal = 'none';
+            }
+            
+            const activeBtn = popup.querySelector(`[data-illu-value="${activeVal}"]`);
+            if (activeBtn) {
+                const icon = activeBtn.querySelector('.illu-shape-ico');
+                const headerIcon = header.querySelector('.illu-tool-header-icon');
+                if (icon && headerIcon) {
+                    headerIcon.innerHTML = icon.cloneNode(true).outerHTML;
+                }
+                popup.querySelectorAll('.illu-shape-picker-item').forEach(btn => {
+                    const isActive = btn === activeBtn;
+                    btn.classList.toggle('active', isActive);
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
+        });
+    };
+
+    function bindGenericDropdowns() {
+        document.querySelectorAll('.illu-generic-dropdown-header').forEach((header) => {
+            if (header.dataset.illuBound === '1') return;
+            header.dataset.illuBound = '1';
+            const popup = document.getElementById(header.id.replace('-header', '-popup'));
+            if (!popup) return;
+            
+            function toggle() {
+                const hidden = popup.hidden;
+                document.querySelectorAll('.illu-generic-dropdown-popup').forEach(p => p.hidden = true);
+                document.querySelectorAll('.illu-generic-dropdown-header').forEach(h => h.setAttribute('aria-expanded', 'false'));
+                popup.hidden = !hidden;
+                header.setAttribute('aria-expanded', popup.hidden ? 'false' : 'true');
+            }
+            
+            header.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggle();
+            });
+            header.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    toggle();
+                }
+            });
+        });
+        
+        document.addEventListener('mousedown', (e) => {
+            document.querySelectorAll('.illu-generic-dropdown-popup').forEach((pop) => {
+                if (pop.hidden) return;
+                const wrap = pop.closest('.illu-shape-picker-wrap');
+                if (wrap && wrap.contains(e.target)) return;
+                pop.hidden = true;
+                const h = document.getElementById(pop.id.replace('-popup', '-header'));
+                if (h) h.setAttribute('aria-expanded', 'false');
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.illu-generic-dropdown-popup').forEach(p => p.hidden = true);
+            }
+        });
+        
+        document.querySelectorAll('.illu-generic-dropdown-popup').forEach(pop => {
+            pop.addEventListener('click', (e) => {
+                const btn = e.target.closest('.illu-shape-picker-item');
+                if (btn) {
+                    // Apply synced value if present (mimic toolbar button behavior)
+                    const sid = btn.getAttribute('data-illu-sync') || btn.getAttribute('data-illu-brush-sync');
+                    const val = btn.getAttribute('data-illu-value');
+                        if (sid && val != null) {
+                            const sel = document.getElementById(sid);
+                            if (sel) {
+                                sel.value = val;
+                                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            // Mark button active
+                            pop.querySelectorAll('.illu-shape-picker-item').forEach(b => {
+                                b.classList.toggle('active', b === btn);
+                                b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+                            });
+
+                            // Prefer the shared sync handler if available
+                            try {
+                                if (typeof ILLU_ICON_SYNC_TOOL_PROPS !== 'undefined' && ILLU_ICON_SYNC_TOOL_PROPS[sid]) {
+                                    ILLU_ICON_SYNC_TOOL_PROPS[sid](val);
+                                } else if (window.ILLU_ICON_SYNC_TOOL_PROPS && window.ILLU_ICON_SYNC_TOOL_PROPS[sid]) {
+                                    window.ILLU_ICON_SYNC_TOOL_PROPS[sid](val);
+                                } else {
+                                    // Fallback: apply common tool props directly for known ids
+                                    if (sid === 'tool-line-dash') {
+                                        if (typeof EditorManager !== 'undefined') {
+                                            EditorManager.toolProps.lineDash = val || 'solid';
+                                        }
+                                        const targets = new Set();
+                                        if (typeof EditorManager !== 'undefined' && EditorManager.activeVectorSelection && EditorManager.activeVectorSelection.length) {
+                                            EditorManager.activeVectorSelection.forEach((el) => targets.add(el));
+                                        }
+                                        if (window._activeVectorShapeEl) targets.add(window._activeVectorShapeEl);
+                                        if (typeof activeVectorShape !== 'undefined' && activeVectorShape) targets.add(activeVectorShape);
+                                        if (targets.size) {
+                                            targets.forEach((el) => {
+                                                const kind = typeof illuVectorPaintKindForEl === 'function' ? illuVectorPaintKindForEl(el) : null;
+                                                if (kind) window.applyVectorShapePaint(el, kind);
+                                            });
+                                            if (typeof EditorManager !== 'undefined' && typeof EditorManager.render === 'function') EditorManager.render();
+                                        }
+                                    } else if (sid === 'tool-line-cap-start' || sid === 'tool-line-cap-end') {
+                                        if (typeof EditorManager !== 'undefined') {
+                                            if (sid === 'tool-line-cap-start') EditorManager.toolProps.lineCapStart = val || 'none';
+                                            else EditorManager.toolProps.lineCapEnd = val || 'none';
+                                        }
+                                        if (typeof window.illuRefreshActiveLineEndpointCaps === 'function') {
+                                            window.illuRefreshActiveLineEndpointCaps();
+                                        }
+                                    }
+                                }
+                            } catch (ex) {
+                                console.warn('shape-picker apply error', ex);
+                            }
+                            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+                            if (typeof window.syncAllToolbarToggles === 'function') window.syncAllToolbarToggles();
+                        }
+
+                    pop.hidden = true;
+                    const h = document.getElementById(pop.id.replace('-popup', '-header'));
+                    if (h) h.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+        // Delegated click handler to ensure headers toggle popups even if moved dynamically
+        document.addEventListener('click', (e) => {
+            const header = e.target.closest('.illu-generic-dropdown-header');
+            if (!header) return;
+            const popup = document.getElementById(header.id.replace('-header', '-popup'));
+            if (!popup) return;
+            // toggle visibility
+            const hidden = !!popup.hidden;
+            document.querySelectorAll('.illu-generic-dropdown-popup').forEach(p => p.hidden = true);
+            document.querySelectorAll('.illu-generic-dropdown-header').forEach(h => h.setAttribute('aria-expanded', 'false'));
+            popup.hidden = !hidden;
+            header.setAttribute('aria-expanded', popup.hidden ? 'false' : 'true');
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => bindGenericDropdowns());
+    } else {
+        queueMicrotask(() => bindGenericDropdowns());
+    }
+
+    // Hook updateToolOptionsBar to sync generic dropdowns
+    if (typeof window.updateToolOptionsBar === 'function') {
+        const _origUpdateToolOptionsBar = window.updateToolOptionsBar;
+        window.updateToolOptionsBar = function () {
+            _origUpdateToolOptionsBar.apply(this, arguments);
+            if (typeof window.illuSyncGenericDropdowns === 'function') {
+                window.illuSyncGenericDropdowns();
+            }
+        };
+    } else {
+        // Fallback if not defined yet
+        setTimeout(() => {
+            if (typeof window.updateToolOptionsBar === 'function' && !window._genericDropdownHooked) {
+                window._genericDropdownHooked = true;
+                const _origUpdateToolOptionsBar = window.updateToolOptionsBar;
+                window.updateToolOptionsBar = function () {
+                    _origUpdateToolOptionsBar.apply(this, arguments);
+                    if (typeof window.illuSyncGenericDropdowns === 'function') {
+                        window.illuSyncGenericDropdowns();
+                    }
+                };
+            }
+        }, 500);
+    }
