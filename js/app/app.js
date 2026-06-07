@@ -1510,9 +1510,14 @@ window.applyFloatingPaletteVisibility = function () {
         return;
     }
     const map = readFloatingPaletteVisibilityMap();
+    const isVector = typeof EditorManager !== 'undefined' && !EditorManager.isPixelMode;
     PALETTE_WINDOW_IDS.forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
+        if (id === 'win-svg-objects' && !isVector) {
+            el.classList.add('illu-floating-window-hidden');
+            return;
+        }
         const vis = map[id] !== false;
         el.classList.toggle('illu-floating-window-hidden', !vis);
     });
