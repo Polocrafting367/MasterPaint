@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="http://polocrafting.fr/Illu"><strong>▶ Démo en ligne</strong></a>
-  &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; 100 % local &nbsp;·&nbsp; Thème Win98 Modern
+  <a href="http://polocrafting.fr/Illu"><strong>▶ Voir en fonctionnement</strong></a>
+  &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; 100 % local &nbsp;·&nbsp; Thème Win98/10/11 Like
 </p>
 
 <p align="center">
