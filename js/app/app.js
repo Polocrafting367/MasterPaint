@@ -1087,7 +1087,7 @@ const ILLU_PALETTE_WINDOWS_POS_KEY = 'illu_palette_windows_pos';
 const ILLU_FLOATING_PALETTE_VIS_KEY = 'illu_floating_palette_visibility';
 const ILLU_PDN_OPEN_KEY = 'illu_pdn_slot_open';
 
-const PALETTE_WINDOW_IDS = ['win-tools', 'win-colors', 'win-layers', 'win-history'];
+const PALETTE_WINDOW_IDS = ['win-tools', 'win-colors', 'win-layers', 'win-history', 'win-svg-objects'];
 /** Mode téléphone + dock bas : seules ces palettes ont un emplacement repliable en bas (les outils sont sous les onglets). */
 const ILLU_PDN_BOTTOM_SLOT_IDS = ['win-colors', 'win-layers', 'win-history'];
 
@@ -1650,7 +1650,8 @@ window.refreshFloatingPaletteMenuLabels = function () {
         { id: 'win-tools', el: 'menu-win-tools-check' },
         { id: 'win-colors', el: 'menu-win-colors-check' },
         { id: 'win-layers', el: 'menu-win-layers-check' },
-        { id: 'win-history', el: 'menu-win-history-check' }
+        { id: 'win-history', el: 'menu-win-history-check' },
+        { id: 'win-svg-objects', el: 'menu-win-svg-objects-check' }
     ];
     rows.forEach((r) => {
         const check = document.getElementById(r.el);
@@ -2317,14 +2318,14 @@ window.applyFloatingPaletteDefaults = function () {
             c.style.bottom = `${pad}px`;
             c.style.top = 'auto';
             c.style.right = 'auto';
-            c.style.width = '240px';
+            c.style.width = '200px';
         }
         if (h) {
             h.style.right = `${pad}px`;
             h.style.top = `${pad + 88}px`;
             h.style.left = 'auto';
             h.style.bottom = 'auto';
-            h.style.width = '200px';
+            h.style.width = '150px';
         }
         if (l) {
             l.style.right = `${pad}px`;
@@ -2349,7 +2350,7 @@ window.applyFloatingPaletteDefaults = function () {
         c.style.top = 'auto';
         c.style.right = 'auto';
         c.style.bottom = `${Math.round(ih - r.bottom + pad)}px`;
-        c.style.width = '240px';
+        c.style.width = '200px';
         c.style.maxWidth = '';
     }
     if (h) {
@@ -2357,7 +2358,7 @@ window.applyFloatingPaletteDefaults = function () {
         h.style.top = `${Math.round(r.top + pad)}px`;
         h.style.left = 'auto';
         h.style.bottom = 'auto';
-        h.style.width = '200px';
+        h.style.width = '150px';
         h.style.maxWidth = '';
     }
     if (l) {
@@ -2517,10 +2518,10 @@ function mountPalettesFloating() {
         });
     });
 
-    window.applyFloatingPaletteDefaults();
     if (typeof window.applySavedFloatingPalettePositions === 'function') {
         window.applySavedFloatingPalettePositions();
     }
+    window.applyFloatingPaletteDefaults();
     if (window.EditorManager && typeof window.EditorManager.syncFloatingPalettesPosition === 'function') {
         window.EditorManager.syncFloatingPalettesPosition();
     }

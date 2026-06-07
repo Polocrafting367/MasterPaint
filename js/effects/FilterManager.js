@@ -1562,7 +1562,7 @@ window.FilterManager = {
             win.style.position = 'fixed';
         }
         document.body.classList.add('effect-dialog-open');
-        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette') {
             document.body.classList.add('effect-allows-colors');
         }
         const titleEl = document.getElementById('effect-dialog-title');
@@ -1631,7 +1631,7 @@ window.FilterManager = {
                 };
             }
         }
-        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone') {
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette') {
             if (this._colorPollInterval) clearInterval(this._colorPollInterval);
             let lastP = window.EditorManager ? JSON.stringify(window.EditorManager.primaryColor) : '';
             let lastS = window.EditorManager ? JSON.stringify(window.EditorManager.secondaryColor) : '';
@@ -1646,9 +1646,17 @@ window.FilterManager = {
                 if (curP !== lastP || curS !== lastS) {
                     lastP = curP;
                     lastS = curS;
+                    // Update vignette swatch
+                    if (this.currentEffect === 'vignette') {
+                        const sw = document.getElementById('ef-vig-swatch');
+                        if (sw && window.EditorManager.primaryColor) {
+                            const c = window.EditorManager.primaryColor;
+                            sw.style.background = `rgb(${c.r},${c.g},${c.b})`;
+                        }
+                    }
                     this.preview();
                 }
-            }, 100);
+            }, 200);
         }
         if (this.currentEffect === 'vhs') {
             document.querySelectorAll('#effect-dialog-content [data-illu-vhs-toggle]').forEach((h) => {
@@ -2126,6 +2134,15 @@ window.FilterManager = {
             this.previewInstantFilter(this._galleryPresetId || 'none');
             return;
         }
+        // Throttle ~5fps (200ms) pour éviter la saturation des Workers
+        const now = performance.now();
+        if (this._lastPreviewTime && (now - this._lastPreviewTime) < 200) {
+            if (this._previewThrottleTid) clearTimeout(this._previewThrottleTid);
+            this._previewThrottleTid = setTimeout(() => { this._lastPreviewTime = 0; this.preview(); }, 200 - (now - this._lastPreviewTime));
+            return;
+        }
+        this._lastPreviewTime = now;
+        if (this._previewThrottleTid) { clearTimeout(this._previewThrottleTid); this._previewThrottleTid = null; }
         this._previewRunSeq++;
         if (this._previewActive) {
             this._cancelActiveWorkerPreview();

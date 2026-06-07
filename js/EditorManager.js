@@ -9962,14 +9962,6 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         binder('btn-move-down', () => this.moveLayer(-1));
         binder('btn-dup-layer', () => this.duplicateActiveLayer());
 
-        // Props panel update on tab open
-        document.querySelectorAll('.illu-pdn-tab[data-illu-pdn-tab="win-properties"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (btn.getAttribute('aria-pressed') === 'true') {
-                    this.updatePropertiesPanel();
-                }
-            });
-        });
         binder('btn-layer-solo', () => this.illuContextLayerSolo(this.activeLayerIndex));
         binder('btn-layer-show-all', () => this.illuContextLayerShowAll());
         binder('btn-merge-layers', () => this.mergeLayers());

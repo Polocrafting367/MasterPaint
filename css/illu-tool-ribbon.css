@@ -2641,6 +2641,173 @@ body.illu-toolbar-ribbon .illu-ribbon-group-body > .field-row {
     margin: 2px 0;
 }
 
+/* ── Plans / Groupe : même visuel que illu-tool-picker / illu-shape-picker-trigger ─ */
+body.illu-toolbar-ribbon .illu-mode-toggle-item:has(.illu-generic-dropdown-header) {
+    position: relative;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+    min-width: 56px;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    margin: 0;
+    border: 2px dashed color-mix(in srgb, var(--mp-accent, #806020) 55%, transparent);
+    border-radius: var(--mp-radius, 2px);
+    background: color-mix(in srgb, var(--mp-accent, #806020) 6%, transparent);
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--mp-accent, #806020);
+    line-height: 1.2;
+    min-height: 27px;
+    height: auto;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-header:hover {
+    border-color: var(--mp-accent, #806020);
+    background: color-mix(in srgb, var(--mp-accent, #806020) 10%, transparent);
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-header:focus-visible {
+    outline: 1px dotted var(--mp-accent, #806020);
+    outline-offset: 1px;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-value {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-value i {
+    font-size: 13px;
+    flex-shrink: 0;
+    opacity: 0.65;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-value span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-arrow {
+    font-size: 7px;
+    line-height: 1;
+    opacity: 0.5;
+    flex-shrink: 0;
+    margin-left: auto;
+    transition: transform 0.15s ease;
+}
+
+body.illu-toolbar-ribbon .illu-generic-dropdown-header[aria-expanded="true"] .illu-generic-dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+body.illu-toolbar-ribbon.theme-dark .illu-generic-dropdown-header {
+    color: var(--mp-accent, #c9a227);
+}
+
+/* ── Groupe Vecteur : layout Plans/Groupe côte à côte, Dupl./Suppr. à droite empilés ─ */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] {
+    padding-left: 4px;
+    padding-right: 6px;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] .illu-ribbon-group-body {
+    width: 100%;
+    min-width: 0;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr minmax(44px, auto);
+    grid-template-rows: auto auto;
+    grid-auto-flow: row;
+    align-items: stretch !important;
+    justify-items: stretch !important;
+    gap: 2px 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+}
+
+/* Plans : colonne 1, ligne 1 */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item:has(#vector-arrange-dropdown) {
+    grid-column: 1;
+    grid-row: 1;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+/* Groupe : colonne 2, ligne 1 */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item:has(#vector-combine-dropdown) {
+    grid-column: 2;
+    grid-row: 1;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+/* Dupliqué : colonne 3, ligne 1 */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item--unified:first-of-type {
+    grid-column: 3;
+    grid-row: 1;
+    display: block !important;
+    width: auto !important;
+    min-width: 44px !important;
+    max-width: none !important;
+    flex: none !important;
+}
+
+/* Supprimé : colonne 3, ligne 2 */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item--unified:last-of-type {
+    grid-column: 3;
+    grid-row: 2;
+    display: block !important;
+    width: auto !important;
+    min-width: 44px !important;
+    max-width: none !important;
+    flex: none !important;
+}
+
+/* Boutons Dupliqué / Supprimé : pleine largeur de la cellule */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item--unified .illu-mode-toggle-btn {
+    width: 100% !important;
+    min-width: 44px !important;
+    justify-content: flex-start !important;
+    padding: 2px 4px !important;
+    white-space: nowrap;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item--unified .illu-mode-toggle-lbl {
+    font-size: 10px !important;
+    white-space: nowrap !important;
+}
+
+/* Masquer les séparateurs et le compteur dans le layout ruban */
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .opt-sep,
+body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="vector"] #opt-grp-vector-ops > .illu-mode-toggle-item:first-child:has(#vector-selection-count) {
+    display: none !important;
+}
+
 /* Custom Overrides for Line Endpoints and Shape Style Fill groups */
 body.illu-toolbar-ribbon #line-cap-start-wrap,
 body.illu-toolbar-ribbon #line-dash-style-wrap,

@@ -3005,6 +3005,12 @@
             const v = localStorage.getItem(STORAGE_KEY);
             if (v === 'en' || v === 'fr') return v;
         } catch (e) { /* ignore */ }
+        // Détection automatique : anglais si le navigateur est en anglais,
+        // sinon français (défaut). L'utilisateur peut changer dans Paramètres.
+        try {
+            const navLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+            if (navLang.startsWith('en')) return 'en';
+        } catch (e) { /* ignore */ }
         return 'fr';
     }
 

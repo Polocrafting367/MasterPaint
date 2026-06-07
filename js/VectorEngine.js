@@ -231,6 +231,10 @@ window.VectorEngine = (() => {
             _uiBuiltForDrag = false;
             return;
         }
+        
+        if (typeof window.illuSyncVectorPropertiesBar === 'function') {
+            window.illuSyncVectorPropertiesBar();
+        }
 
         const z = zoom();
         const hz = _hz();
@@ -402,6 +406,32 @@ window.VectorEngine = (() => {
     function _drawHandles(ui, bb, hz, z, parentKey) {
         const { x, y, width: w, height: h } = bb;
         const pk = parentKey || 'primary';
+        
+        // Ligne et poignée de rotation
+        const rotY = y - 24 / z;
+        const rotLine = document.createElementNS(NS, 'line');
+        rotLine.setAttribute('x1', String(x + w / 2));
+        rotLine.setAttribute('y1', String(y));
+        rotLine.setAttribute('x2', String(x + w / 2));
+        rotLine.setAttribute('y2', String(rotY));
+        rotLine.setAttribute('stroke', SEL_PRIMARY);
+        rotLine.setAttribute('stroke-width', String(1 / z));
+        rotLine.setAttribute('vector-effect', 'non-scaling-stroke');
+        ui.appendChild(rotLine);
+
+        const rotHandle = document.createElementNS(NS, 'circle');
+        rotHandle.setAttribute('cx', String(x + w / 2));
+        rotHandle.setAttribute('cy', String(rotY));
+        rotHandle.setAttribute('r', String(hz * 1.2));
+        rotHandle.setAttribute('fill', '#ffffff');
+        rotHandle.setAttribute('stroke', SEL_PRIMARY);
+        rotHandle.setAttribute('stroke-width', String(1.2 / z));
+        rotHandle.setAttribute('vector-effect', 'non-scaling-stroke');
+        rotHandle.setAttribute('class', 'svg-rotation-handle');
+        rotHandle.setAttribute('pointer-events', 'auto');
+        rotHandle.style.cursor = 'crosshair';
+        ui.appendChild(rotHandle);
+
         [
             { cx: x, cy: y, cur: 'nw-resize' },
             { cx: x + w / 2, cy: y, cur: 'n-resize' },
@@ -669,6 +699,11 @@ window.VectorEngine = (() => {
             }
         } else {
             const target = evt?.target;
+            const rotationHandle = target?.closest('.svg-rotation-handle');
+            if (rotationHandle) {
+                beginTransform(sel, pos, 'rotate');
+                return;
+            }
             const resizeHandle = target?.closest('.svg-resize-handle');
             if (resizeHandle) {
                 const cursors = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
@@ -713,9 +748,18 @@ window.VectorEngine = (() => {
                 } catch(e) {}
             });
             if (minX === Infinity) { minX=0; minY=0; maxX=100; maxY=100; }
+            
+            const pivotX = (minX + maxX) / 2;
+            const pivotY = (minY + maxY) / 2;
+            let startAngle = 0;
+            if (mode === 'rotate') {
+                startAngle = Math.atan2(pos.y - pivotY, pos.x - pivotX);
+            }
+            
             _transformData = {
                 boxStart: { x: minX, y: minY, w: maxX - minX, h: maxY - minY },
-                pivot: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }
+                pivot: { x: pivotX, y: pivotY },
+                startAngle: startAngle
             };
         }
     }
@@ -794,6 +838,27 @@ window.VectorEngine = (() => {
         if (!_transformData || _snapshots.length === 0) return;
         const { boxStart } = _transformData;
         const mode = _transformMode;
+
+        if (mode === 'rotate') {
+            const pivot = _transformData.pivot;
+            let currentAngle = Math.atan2(pos.y - pivot.y, pos.x - pivot.x);
+            let angleDiff = currentAngle - _transformData.startAngle;
+            let deg = angleDiff * 180 / Math.PI;
+
+            if (window._shiftConstraintProportions) {
+                const snap = 15;
+                deg = Math.round(deg / snap) * snap;
+            }
+
+            _snapshots.forEach(snap => {
+                const el = snap.el;
+                const baseTr = snap.base.transform;
+                const m = `rotate(${deg} ${pivot.x} ${pivot.y})`;
+                el.setAttribute('transform', `${m} ${baseTr}`.trim());
+            });
+            refreshSelectionUI();
+            return;
+        }
 
         if (!['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'].includes(mode)) return;
 
@@ -992,6 +1057,30 @@ window.VectorEngine = (() => {
         ui.querySelectorAll('.ve-pen-dot').forEach(n => n.remove());
         const z = zoom();
         _penState.points.forEach((p, i) => {
+            if (p.cp1 || p.cp2) {
+                const cp1 = p.cp1 || p;
+                const cp2 = p.cp2 || p;
+                const line = document.createElementNS(NS, 'line');
+                line.setAttribute('x1', String(cp1.x)); line.setAttribute('y1', String(cp1.y));
+                line.setAttribute('x2', String(cp2.x)); line.setAttribute('y2', String(cp2.y));
+                line.setAttribute('stroke', '#a0a0a0'); line.setAttribute('stroke-width', String(1/z));
+                line.setAttribute('pointer-events', 'none');
+                line.classList.add('ve-pen-dot');
+                ui.appendChild(line);
+                
+                [p.cp1, p.cp2].forEach(cp => {
+                    if (!cp) return;
+                    const c = document.createElementNS(NS, 'circle');
+                    c.setAttribute('cx', String(cp.x)); c.setAttribute('cy', String(cp.y));
+                    c.setAttribute('r', String(3 / z));
+                    c.setAttribute('fill', '#ffffff');
+                    c.setAttribute('stroke', '#a0a0a0'); c.setAttribute('stroke-width', String(1/z));
+                    c.setAttribute('pointer-events', 'none');
+                    c.classList.add('ve-pen-dot');
+                    ui.appendChild(c);
+                });
+            }
+            
             const c = document.createElementNS(NS, 'circle');
             c.setAttribute('cx', String(p.x)); c.setAttribute('cy', String(p.y));
             c.setAttribute('r', String(4 / z));
@@ -1241,3 +1330,74 @@ window.VectorEngine = (() => {
         polygonCommitToCanvas,
     };
 })();
+
+// -- Vector Properties Bar --
+window.illuSyncVectorPropertiesBar = function() {
+    const pX = document.getElementById('vec-prop-x');
+    if (!pX) return;
+    const sel = EditorManager.activeVectorSelection;
+    if (!sel || sel.length === 0) return;
+    
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    sel.forEach(el => {
+        try {
+            const b = el.getBBox();
+            if (b.x < minX) minX = b.x;
+            if (b.y < minY) minY = b.y;
+            if (b.x + b.width > maxX) maxX = b.x + b.width;
+            if (b.y + b.height > maxY) maxY = b.y + b.height;
+        } catch(e) {}
+    });
+    
+    if (minX === Infinity) return;
+    
+    let angle = 0;
+    const primary = sel[sel.length - 1];
+    if (primary && primary.transform && primary.transform.baseVal) {
+        for (let i = 0; i < primary.transform.baseVal.numberOfItems; i++) {
+            const tr = primary.transform.baseVal.getItem(i);
+            if (tr.type === SVGTransform.SVG_TRANSFORM_ROTATE) {
+                angle += tr.angle;
+            }
+        }
+    }
+    angle = angle % 360;
+
+    pX.value = Math.round(minX);
+    document.getElementById('vec-prop-y').value = Math.round(minY);
+    document.getElementById('vec-prop-w').value = Math.round(maxX - minX);
+    document.getElementById('vec-prop-h').value = Math.round(maxY - minY);
+    document.getElementById('vec-prop-angle').value = Math.round(angle);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['x', 'y', 'w', 'h', 'angle'].forEach(prop => {
+        const input = document.getElementById('vec-prop-' + prop);
+        if (input) {
+            input.addEventListener('change', (e) => {
+                const sel = EditorManager.activeVectorSelection;
+                if (!sel || !sel.length) return;
+                const val = parseFloat(e.target.value);
+                if (isNaN(val)) return;
+                
+                const primary = sel[sel.length - 1];
+                if (prop === 'x') primary.setAttribute('x', val);
+                if (prop === 'y') primary.setAttribute('y', val);
+                if (prop === 'w') primary.setAttribute('width', val);
+                if (prop === 'h') primary.setAttribute('height', val);
+                if (prop === 'angle') {
+                    let cx = parseFloat(primary.getAttribute('x')) || 0;
+                    let cy = parseFloat(primary.getAttribute('y')) || 0;
+                    let cw = parseFloat(primary.getAttribute('width')) || 0;
+                    let ch = parseFloat(primary.getAttribute('height')) || 0;
+                    cx += cw/2;
+                    cy += ch/2;
+                    const baseTr = (primary.getAttribute('transform') || '').replace(/rotate\([^)]+\)/g, '').trim();
+                    primary.setAttribute('transform', `rotate(${val} ${cx} ${cy}) ${baseTr}`.trim());
+                }
+                if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+                EditorManager.render();
+            });
+        }
+    });
+});

@@ -662,7 +662,6 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) .window-body {
 
 body.ui-layout-floating #floating-palette-host>.window.palette-panel:not(#win-layers) {
     position: fixed !important;
-    width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
     flex-shrink: 0 !important;
@@ -5408,11 +5407,13 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button.title-bar-close-btn,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button.title-bar-close-btn,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button.title-bar-close-btn,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-svg-objects .title-bar-controls button.title-bar-close-btn,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"],
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button[aria-label="Close"],
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-tools .title-bar-controls button[aria-label="Close"],
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button[aria-label="Close"],
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-svg-objects .title-bar-controls button[aria-label="Close"],
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button[aria-label="Close"] {
     background-color: #C75050 !important;
     margin: 5px 1px;
@@ -5434,6 +5435,10 @@ body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-ba
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-history .title-bar-controls button.title-bar-close-btn::after,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn::before,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .iview-window .title-bar-controls button.title-bar-close-btn::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-svg-objects .title-bar-controls button[aria-label="Close"]::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .win-svg-objects .title-bar-controls button.title-bar-close-btn::before,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-svg-objects .title-bar-controls button[aria-label="Close"]::after,
+body:not(.theme-aero):not(.theme-luna):not(.theme-modern) .win-svg-objects .title-bar-controls button.title-bar-close-btn::after,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"]::before,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .title-bar-controls button[aria-label="Close"]::after,
 body:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-colors .title-bar-controls button[aria-label="Close"]::before,

@@ -793,12 +793,15 @@ ul[role="menu"] li[role="menuitem"] .menu-icon .illu-menu-sprite-icon {
     box-shadow: inset 1px 1px #000, inset -1px -1px #fff;
 }
 
-.tool-btn:disabled,
-.tool-btn.tool-btn--mode-lock:disabled {
+.tool-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
     filter: grayscale(0.85);
     box-shadow: none;
+}
+
+#win-tools .tool-btn.tool-btn--mode-lock:disabled {
+    display: none !important;
 }
 
 .tool-btn.tool-btn--planned:disabled {
@@ -1556,4 +1559,8 @@ body:not(.theme-dark) #context-menu .ctx-item:hover * {
 
 #win-history {
     width: 146px !important ;
+}
+
+#win-properties {
+    display: none !important;
 }

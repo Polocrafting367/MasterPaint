@@ -1,0 +1,25 @@
+# Instructions Fondamentales pour Cline
+
+## 1. Gestion des Écritures de Fichiers (Surgical Edits)
+- **Règle absolue :** Ne jamais réécrire un fichier entier si sa taille dépasse 100 lignes.
+- **Approche Chirurgicale :** Utilise exclusivement des blocs de remplacement ciblés (search-replace) pour les modifications.
+- **Gestion des erreurs :** Si une opération de remplacement échoue (conflit de matching), ARRÊTE immédiatement. Ne tente jamais de réécrire le fichier complet. Demande le contenu du fichier (`read_file`) pour valider le contexte avant de réessayer.
+
+## 2. Développement Web & Vérification (HTML/CSS/JS/PHP)
+- **Validation post-modification :** Après toute modification importante ou ajout de fonctionnalité, exécute systématiquement une vérification via le terminal (ex: `php -l fichier.php` pour la syntaxe, ou exécution d'un script de test si disponible).
+- **Consistance des standards :** Priorise un code propre, modulaire et sécurisé. En PHP, évite les fuites de données ; en JS, privilégie les standards modernes.
+- **Auto-correction :** Si le terminal renvoie une erreur, analyse-la, localise le problème avec `read_file` si nécessaire, et corrige uniquement la section fautive.
+
+## 3. Communication & Style (Concision)
+- **Ne sois pas verbeux :** Va droit au but. Évite les phrases de politesse inutiles ou les explications longues si elles n'apportent pas de valeur technique.
+- **Réponses condensées :** Si tu dois expliquer, fais-le en un paragraphe court ou en listant les points clés.
+- **Priorité au code :** La valeur réside dans la modification. Les explications textuelles doivent être secondaires.
+
+## 4. Recherche et Contexte
+- **Usage des outils :** N'utilise JAMAIS ta mémoire interne pour localiser des fonctions, variables ou classes.
+- **Recherche systématique :** Avant toute modification complexe, utilise systématiquement l'outil de recherche (`grep` / `search`) pour identifier TOUTES les occurrences.
+- **Validation :** Liste les fichiers impactés avant de commencer toute modification pour confirmer le périmètre.
+
+## 5. Optimisation des Jetons et Coût
+- **Précision avant tout :** N'inclus dans tes réponses que les blocs de code modifiés et le contexte minimal nécessaire.
+- **Planification :** Prends une seconde pour planifier l'édition la plus courte possible avant de générer le bloc de code.

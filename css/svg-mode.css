@@ -1,0 +1,407 @@
+/**
+ * svg-mode.css — Styles du Mode SVG Pro (MasterPaint)
+ * Activé via body.illu-svg-mode-active
+ * N'affecte RIEN en mode bitmap (toutes les règles sont préfixées).
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 2 — Menubar SVG : menus pixel-only masqués
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Masquer les menus pixel-only dans la menubar */
+body.illu-svg-mode-active .illu-menubar-root > li[data-pixel-only-menu] {
+    display: none !important;
+}
+
+/* Afficher les menus SVG-only */
+body.illu-svg-mode-active .illu-menubar-root > li[data-svg-only-menu] {
+    display: list-item !important;
+}
+
+/* Menus SVG cachés par défaut */
+.illu-menubar-root > li[data-svg-only-menu] {
+    display: none !important;
+}
+
+/* Items de menu pixel-only dans un menu générique (Effets, Image, etc.) */
+body.illu-svg-mode-active [data-pixel-only-item] {
+    display: none !important;
+}
+
+/* Items SVG-only dans un menu générique */
+[data-svg-only-item] {
+    display: none !important;
+}
+body.illu-svg-mode-active [data-svg-only-item] {
+    display: block !important;
+}
+
+/* Sous-menu SVG "Objet" */
+body.illu-svg-mode-active #menu-svg-object {
+    display: list-item !important;
+}
+#menu-svg-object {
+    display: none !important;
+}
+
+/* Sous-menu SVG "Chemin" */
+body.illu-svg-mode-active #menu-svg-path {
+    display: list-item !important;
+}
+#menu-svg-path {
+    display: none !important;
+}
+
+/* Sous-menu SVG "Effets SVG" */
+body.illu-svg-mode-active #menu-svg-effects {
+    display: list-item !important;
+}
+#menu-svg-effects {
+    display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 3 — tool-options-container contextuel SVG
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Groupes d'options SVG-only cachés par défaut */
+.opt-grp[data-svg-only-group] {
+    display: none !important;
+}
+body.illu-svg-mode-active .opt-grp[data-svg-only-group] {
+    display: flex !important;
+}
+
+/* Groupes pixel-only cachés en mode SVG */
+body.illu-svg-mode-active .opt-grp[data-pixel-only-group] {
+    display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 4 — Barre d'outils SVG de contexte (Transform, Align…)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Barre d'options SVG insérée au-dessus du canvas */
+#svg-context-toolbar {
+    display: none;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    background: var(--mp-surface, #c0c0c0);
+    border-bottom: 1px solid var(--mp-raised-bot, #888);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    z-index: 200;
+}
+
+body.illu-svg-mode-active #svg-context-toolbar {
+    display: flex;
+}
+
+#svg-context-toolbar .svg-ctx-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--mp-raised-bot, #888);
+    margin: 0 3px;
+    opacity: 0.5;
+}
+
+#svg-context-toolbar label {
+    font-size: 11px;
+    color: var(--mp-opt-bar-text, #333);
+    margin-right: 2px;
+}
+
+#svg-context-toolbar input[type="number"] {
+    width: 52px;
+    font-size: 11px;
+    padding: 1px 3px;
+    border: 1px solid var(--mp-raised-bot, #888);
+    background: var(--mp-surface, #fff);
+    color: var(--mp-opt-bar-text, #333);
+    border-radius: 2px;
+}
+
+#svg-context-toolbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    background: var(--mp-surface, #c0c0c0);
+    border: 2px solid;
+    border-color: var(--mp-raised-top, #fff) var(--mp-raised-bot, #888) var(--mp-raised-bot, #888) var(--mp-raised-top, #fff);
+    cursor: pointer;
+    color: var(--mp-opt-bar-text, #333);
+    flex-shrink: 0;
+}
+
+#svg-context-toolbar button:hover {
+    filter: brightness(1.08);
+}
+
+#svg-context-toolbar button:active,
+#svg-context-toolbar button.active {
+    border-color: var(--mp-raised-bot, #888) var(--mp-raised-top, #fff) var(--mp-raised-top, #fff) var(--mp-raised-bot, #888);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 5 — Panneau Objets SVG (palette-panel standard)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Le panneau #win-svg-objects utilise la structure window palette-panel floating-window */
+/* Hérite de tous les styles palette-panel de main.css + theme-win98-modern.css */
+/* Seuls les surcharges spécifiques au contenu SVG sont ici */
+
+/* Taille minimale en mode SVG pour une bonne visibilité (plus large que haute) */
+body.illu-svg-mode-active #win-svg-objects {
+    min-width: 280px;
+    min-height: 200px;
+    width: 195px;
+}
+
+/* Ne pas réduire win-layers en mode SVG */
+body.illu-svg-mode-active #win-layers {
+    min-width: 196px;
+}
+
+#win-svg-objects .svg-panel-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 0;
+}
+
+#win-svg-objects .svg-obj-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    color: var(--mp-opt-bar-text, #000);
+}
+
+#win-svg-objects .svg-obj-item:hover {
+    background: var(--mp-accent-muted, #e8eeff);
+}
+
+#win-svg-objects .svg-obj-item.selected {
+    background: var(--mp-accent, #0078d4);
+    color: #fff;
+}
+
+#win-svg-objects .svg-obj-item .svg-obj-icon {
+    font-size: 10px;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+#win-svg-objects .svg-obj-item .svg-obj-name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#win-svg-objects .svg-obj-item .svg-obj-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+#win-svg-objects .svg-obj-item:hover .svg-obj-actions {
+    opacity: 1;
+}
+
+#win-svg-objects .svg-obj-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    color: inherit;
+    padding: 0;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#win-svg-objects .svg-obj-item.locked .svg-obj-name {
+    opacity: 0.5;
+}
+
+#win-svg-objects .svg-obj-item.hidden-obj .svg-obj-name {
+    opacity: 0.35;
+    text-decoration: line-through;
+}
+
+/* indentation groupes */
+#win-svg-objects .svg-obj-item[data-depth="1"] { padding-left: 20px; }
+#win-svg-objects .svg-obj-item[data-depth="2"] { padding-left: 34px; }
+#win-svg-objects .svg-obj-item[data-depth="3"] { padding-left: 48px; }
+
+#win-svg-objects .title-bar-controls .illu-title-bar-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 18px;
+    padding: 0;
+    margin: 0 2px 0 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    vertical-align: middle;
+    color: inherit;
+}
+
+#win-svg-objects .title-bar-controls .illu-title-bar-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 6 — Barre d'alignement SVG
+   ═══════════════════════════════════════════════════════════════ */
+
+#svg-align-bar {
+    display: none;
+    align-items: center;
+    gap: 1px;
+    padding: 0 4px;
+}
+
+body.illu-svg-mode-active .illu-vector-multi-selected #svg-align-bar,
+body.illu-svg-mode-active #svg-align-bar.visible {
+    display: inline-flex;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Panneau propriétés SVG (dock droit contextuel)
+   ═══════════════════════════════════════════════════════════════ */
+
+#svg-props-dock {
+    display: none;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    background: var(--mp-surface, #c0c0c0);
+    border-left: 2px solid var(--mp-raised-bot, #888);
+    z-index: 4700;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* Désactivé par défaut - activable via menu Affichage > Propriétés SVG */
+body.illu-svg-mode-active.svg-props-dock-open #svg-props-dock {
+    display: flex;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Styles transformations numériques (barre contexte sélection)
+   ═══════════════════════════════════════════════════════════════ */
+
+#svg-transform-inputs {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+body.illu-svg-mode-active #svg-transform-inputs.visible {
+    display: inline-flex;
+}
+
+#svg-transform-inputs .svg-num-field {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+#svg-transform-inputs .svg-num-field label {
+    font-size: 10px;
+    color: var(--mp-opt-bar-text, #333);
+    min-width: 10px;
+}
+
+#svg-transform-inputs .svg-num-field input {
+    width: 50px;
+    font-size: 11px;
+    padding: 1px 3px;
+    border: 1px solid var(--mp-raised-bot, #888);
+    background: var(--mp-surface, #fff);
+    color: var(--mp-opt-bar-text, #333);
+    border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE 8 — Overlay éditeur texte SVG inline
+   ═══════════════════════════════════════════════════════════════ */
+
+#svg-text-overlay {
+    position: absolute;
+    display: none;
+    border: 1px dashed #0a84ff;
+    outline: none;
+    background: transparent;
+    min-width: 20px;
+    min-height: 1em;
+    font-family: inherit;
+    font-size: 18px;
+    color: transparent; /* masqué pour ne pas doubler le SVG */
+    caret-color: #0a84ff;
+    z-index: 9999;
+    pointer-events: auto;
+    resize: none;
+    white-space: pre;
+    padding: 0;
+    margin: 0;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+body.illu-svg-mode-active #svg-text-overlay.editing {
+    display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Séparateurs menu SVG spécifiques
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-svg-menu-sep] {
+    display: none !important;
+}
+
+body.illu-svg-mode-active [data-svg-menu-sep] {
+    display: block !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Dark mode overrides
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Le thème sombre est géré par theme-win98-modern.css pour .palette-panel */
+
+body.theme-dark #win-svg-objects .svg-obj-item {
+    color: var(--mp-opt-bar-text, #e8e8e8);
+}
+
+body.theme-dark #svg-context-toolbar input[type="number"],
+body.theme-dark #svg-transform-inputs .svg-num-field input {
+    background: var(--mp-surface-deep, #1e2228);
+    color: #e8e8e8;
+    border-color: #555;
+}
+
+body.theme-dark #svg-context-toolbar button {
+    color: #e8e8e8;
+}

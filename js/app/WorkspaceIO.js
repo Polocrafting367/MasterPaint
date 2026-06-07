@@ -23,7 +23,8 @@
      * continuous = après chaque action (avec pause si la toile est manipulée) ;
      * interval = sauvegarde planifiée + fenêtre ;
      * off = rien en local (rafraîchir = perte).
-     * Si la clé est absente : off (choix explicite dans Paramètres).
+     * Si la clé est absente : continuous sur téléphone (UI mobile) car le navigateur
+     * y vide agressivement les pages en arrière-plan ; off sinon (choix explicite dans Paramètres).
      */
     function getAutoSaveMode() {
         try {
@@ -32,7 +33,10 @@
         } catch (e) {
             /* ignore */
         }
-        return 'off';
+        // Par défaut, sur mobile/téléphone on active la sauvegarde continue pour éviter
+        // la perte totale quand le navigateur recharge la page en arrière-plan.
+        const isPhone = typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
+        return isPhone ? 'continuous' : 'off';
     }
 
     function shouldPersistOnExit() {

@@ -1,6 +1,24 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.133,2 (05/06/26)
+2.8.144 (07/06/26) Refonte SVG (toujours en BETA) :
+- Ajoute menu objet, chemin pour les outil 
+- Modification des outil affiché ne mode svg
+- Ajout d'une fenetre "objet SVG"
+- Correction de bug sur les différent outil 
+- Correction des performance en svg
+- Correction bug sauvegarde svg
+- Outil ligne correction des contour sur une ligne en pointillé
+- Outil ligne correction des décoration en mode 4 pts qui ne fonctionnait pas 
+
+2.8.136,2 (06/06/26)
+- Modification de la fenetre vignetage pour utiliser la fenetre couleur du logitiel
+       > couleur aussi dispo en mode photoshop sur ces 2 outil spécifiques
+- Sur téléphone passé le faut de gardé en mémoir les modification par défaut
+       > car il suffisait de réduir le navigateur pour rechargé la page complet (chiant)
+- Suppresion code innutile "win-properties" venant du mode svg mais cassand d'autre interface
+- Switch de langue auto via info du navigateur
+
+2.8.132,2 (05/06/26)
 - Optimisation du mode SVG (reste très aléatoime mais je travaille dessus)
 - Correction des forme type bulles
 - Ajout d'une obtion pour avoir les 4 point de tortion sur une ligne
@@ -12,7 +30,6 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - mise en place de décoration du trais de contour sur toutes les formes
        >pointillé trias pointillé...
 - Continuer ressemblance a w10/11 via css
-- Modification de la fenetre vignetage pour utiliser la fenetre couleur du logitiel
 
 2.8.123 (04/06/26)
 - Amélioration theme type win10/11
@@ -332,7 +349,7 @@ En vracs non trié (2.1.14)
        > Augmentation du timeout à 5 minutes pour les grandes zones
        > Correction du bug de buffer détaché après traitement
 
-V2.0.X
+V2.0.X (travail complet sur l'interface, revu antièrement le fonctionnement du site)
 - Ajout d'un système de fenetre volante, menu, effet, ajustement...
        > Exportation de fichiers, .illu, png, jpg....
        > Mise en place du system de calc
@@ -340,6 +357,6 @@ V2.0.X
 
 ==========================================================
 
-Changelog indisponible avant ça ! 
+V1.X.X Changelog indisponible avant ça ! 
 
 Basé sur un projet de vecteur uniquement : couleur, forme et remplissage simple sur un theme visuel w98.css, le pitch de base n'étais pas plus compliqué (v1.0.0)

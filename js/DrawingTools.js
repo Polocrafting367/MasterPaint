@@ -1406,6 +1406,11 @@ window.updateToolOptionsBar = function () {
             }
         });
     }
+    
+    if (hasVectorSelection && document.getElementById('opt-grp-vector-props')) {
+        document.getElementById('opt-grp-vector-props').hidden = false;
+        hasParams = true;
+    }
 
     const bar2 = document.getElementById('tool-options-bar-2');
 
@@ -6178,6 +6183,37 @@ function syncShapeAdjustAnchorPosition(anchorsG, shape) {
     illuSetSvgAdjustAnchorPoints(adjEl, r.x, r.y);
 }
 
+function syncVectorRotationHandlePosition(anchorsG, shape) {
+    if (!anchorsG || !shape) return;
+    const rotateHandles = anchorsG.querySelectorAll('.svg-rotation-handle');
+    if (!rotateHandles.length) return;
+    const bb = illuGetElementBBox(shape);
+    if (!bb) return;
+    rotateHandles.forEach((rh) => {
+        const cx = bb.x + bb.width / 2;
+        const cy = bb.y + bb.height / 2;
+        const offsetY = -24 - (bb.height / 2);
+        rh.setAttribute('cx', String(cx));
+        rh.setAttribute('cy', String(cy + offsetY));
+        rh.setAttribute('r', String(Math.max(4, EditorManager.svgUiHandleSizeDoc() * 0.4)));
+    });
+}
+
+function syncVectorCenterMoveHandlePosition(anchorsG, shape) {
+    if (!anchorsG || !shape) return;
+    const centerHandles = anchorsG.querySelectorAll('.svg-center-move-handle');
+    if (!centerHandles.length) return;
+    const bb = illuGetElementBBox(shape);
+    if (!bb) return;
+    centerHandles.forEach((ch) => {
+        const cx = bb.x + bb.width / 2;
+        const cy = bb.y + bb.height / 2;
+        ch.setAttribute('cx', String(cx));
+        ch.setAttribute('cy', String(cy));
+        ch.setAttribute('r', String(Math.max(3, EditorManager.svgUiHandleSizeDoc() * 0.35)));
+    });
+}
+
 function createSvgAdjustAnchor(rootX, rootY, adjustType) {
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     illuSetSvgAdjustAnchorPoints(p, rootX, rootY);
@@ -6243,8 +6279,15 @@ function appendAnchorsForShape(svgUI, shape) {
 }
 
 function generateAnchors(shape) {
-    if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUI === 'function') {
-        window.VectorEngine.refreshSelectionUI();
+    // Éviter la récursion infinie : refreshSelectionUI → illuSyncVectorSelectionAnchors → generateAnchors → refreshSelectionUI
+    if (window._illuGeneratingAnchors) return;
+    window._illuGeneratingAnchors = true;
+    try {
+        if (window.VectorEngine && typeof window.VectorEngine.refreshSelectionUIImpl === 'function') {
+            window.VectorEngine.refreshSelectionUIImpl();
+        }
+    } finally {
+        window._illuGeneratingAnchors = false;
     }
 }
 
@@ -8764,11 +8807,7 @@ function handleMouseMove(e) {
             return;
         }
 
-        // ► PRIORITÉ : Rotation forme vecteur (rect / triangle)
-        if (activeVectorRotationDrag) {
-            updateVector(pos);
-            return;
-        }
+
 
         // ► PRIORITÉ : Déplacement d'un point (ancre)
         if (activeAnchor) {
@@ -8802,9 +8841,6 @@ function handleMouseMove(e) {
 let activeVectorShape = null;
 let activeAnchor = null;
 let activeAdjustDrag = null;
-let activeVectorRotationDrag = false;
-let vectorRotationStartPointerAngle = 0;
-let vectorRotationStartAngle = 0;
 let anchorOffset = { x: 0, y: 0 };
 let activeAnchorIndex = -1;
 
@@ -8870,22 +8906,7 @@ function startVector(pos, e) {
                 isDrawing = !!activeVectorShape;
                 return;
             }
-            if (t.classList.contains('svg-rotation-handle')) {
-                activeVectorRotationDrag = true;
-                window._illuVectorDragActive = true;
-                activeVectorShape = window._activeVectorShapeEl || activeVectorShape;
-                if (activeVectorShape) {
-                    const pivot = illuVectorShapePivotLocal(activeVectorShape);
-                    if (pivot) {
-                        const rootPivot = vectorShapeAttrPointToRoot(activeVectorShape, pivot.cx, pivot.cy);
-                        vectorRotationStartPointerAngle = Math.atan2(pos.y - rootPivot.y, pos.x - rootPivot.x);
-                        vectorRotationStartAngle =
-                            parseFloat(activeVectorShape.getAttribute('data-illu-rotation-rad')) || 0;
-                    }
-                    isDrawing = true;
-                }
-                return;
-            }
+
             if (t.classList.contains('svg-anchor')) {
                 activeAnchor = t;
                 activeAnchorIndex = parseInt(t.dataset.index, 10);
@@ -8917,7 +8938,7 @@ function startVector(pos, e) {
         } else {
             VE.penStart(pos, layer, color, Math.max(1, EditorManager.toolProps.size || 2), 'cubic');
         }
-        isDrawing = false; // pas de mouseMove continu
+        isDrawing = true;
         return;
     }
 
@@ -9266,6 +9287,12 @@ function updateVector(pos) {
         illuScheduleVectorEyedropperSample(pos, hit, (rgb) => {
             if (rgb) EditorManager.setColorFromRGB(rgb.r, rgb.g, rgb.b, rgb.a);
         });
+        return;
+    }
+    if (window.activeTool === 'pen') {
+        if (window.VectorEngine && window.VectorEngine.isPenActive()) {
+            window.VectorEngine.penUpdateDrag(pos);
+        }
         return;
     }
     if (activeAdjustDrag && activeVectorShape) {
@@ -14483,6 +14510,9 @@ function updatePixel(pos, pointerEv) {
 
 function handleMouseUp(e) {
     if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
+    if (window.activeTool === 'pen' && window.VectorEngine && window.VectorEngine.isPenActive()) {
+        window.VectorEngine.penEndDrag();
+    }
     illuFlushInteractiveVisualRefresh();
     if (typeof EditorManager.setStrokeLightPixelRender === 'function') {
         EditorManager.setStrokeLightPixelRender(false);
@@ -14496,19 +14526,7 @@ function handleMouseUp(e) {
         EditorManager.render();
         return;
     }
-    if (activeVectorRotationDrag) {
-        /* activeVectorRotationDrag removed */
-        window._illuVectorDragActive = false;
-        if (activeVectorShape) {
-            EditorManager.syncActiveVectorSvg();
-            EditorManager.saveHistory('Rotation forme (vecteur)', { patchActiveLayer: true });
-            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
-            EditorManager.render({ flushUiThumbnails: true });
-        }
-        activeVectorShape = null;
-        isDrawing = false;
-        return;
-    }
+
     if (window._shapeRotDragActive) {
         const wasEdit = window._shapeRotDragMode === 'edit';
         window._shapeRotDragActive = false;
@@ -15409,8 +15427,10 @@ function illuDrawPixelLineSegment(ctx, x1, y1, x2, y2, o) {
         if (sw < 1) return;
         
         const dashStyle = EditorManager.toolProps.lineDash || 'solid';
-        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, sw * 2), Math.max(4, sw * 1.5)]);
-        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, sw * 0.5), Math.max(4, sw * 1.5)]);
+        // Dash arrays based on fillW (not sw) for consistent alignment contour↔fill
+        const baseW = fillW;
+        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, baseW * 2), Math.max(4, baseW * 1.5)]);
+        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, baseW * 0.5), Math.max(4, baseW * 1.5)]);
         else ctx.setLineDash([]);
         
         if (isContour && lineCap === 'butt' && contourW > 0) {
@@ -15617,9 +15637,22 @@ function illuDrawPixelCubicCurveWithBorder(ctx, x0, y0, cx1, cy1, cx2, cy2, x1, 
     const contourSw = contourW > 0 ? outerW : fillW;
     const drawContour = doStroke && (contourW > 0 || mode === 'stroke');
     const drawFill = doFill;
+    const cap0 = o.cap0 != null ? o.cap0 : EditorManager.toolProps.lineCapStart || 'none';
+    const cap1 = o.cap1 != null ? o.cap1 : EditorManager.toolProps.lineCapEnd || 'none';
+    const hasArrowDecor = cap0 === 'arrow' || cap0 === 'arrow-hollow' || cap0 === 'diamond' || cap1 === 'arrow' || cap1 === 'arrow-hollow' || cap1 === 'diamond';
+    const bothRound = cap0 === 'round' && cap1 === 'round';
+    const hasDecor = hasArrowDecor || ((cap0 === 'round' || cap1 === 'round') && !bothRound);
+    const bodyCap = illuLineBodyStrokeCap(cap0, cap1, hasArrowDecor);
     
     // Generate true Bezier control points so the curve passes EXACTLY through cx1,cy1 and cx2,cy2
     const cp = illuInterpolateCubicControlPoints(x0, y0, cx1, cy1, cx2, cy2, x1, y1);
+
+    const dashStyle = EditorManager.toolProps.lineDash || 'solid';
+    // Dash arrays based on fillW for consistent alignment contour↔fill
+    const dashSolid = [];
+    const dashDashed = [Math.max(6, fillW * 2), Math.max(4, fillW * 1.5)];
+    const dashDotted = [Math.max(2, fillW * 0.5), Math.max(4, fillW * 1.5)];
+    const getDash = () => dashStyle === 'dashed' ? dashDashed : dashStyle === 'dotted' ? dashDotted : dashSolid;
 
     if (drawContour) {
         ctx.beginPath();
@@ -15627,14 +15660,14 @@ function illuDrawPixelCubicCurveWithBorder(ctx, x0, y0, cx1, cy1, cx2, cy2, x1, 
         ctx.bezierCurveTo(cp.b1x, cp.b1y, cp.b2x, cp.b2y, x1, y1);
         ctx.lineWidth = contourSw;
         ctx.strokeStyle = contourCss;
-        ctx.lineCap = 'round';
+        ctx.lineCap = bodyCap;
         ctx.lineJoin = 'round';
-        const dashStyle = EditorManager.toolProps.lineDash || 'solid';
-        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, contourSw * 2), Math.max(4, contourSw * 1.5)]);
-        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, contourSw * 0.5), Math.max(4, contourSw * 1.5)]);
-        else ctx.setLineDash([]);
+        ctx.setLineDash(getDash());
         ctx.stroke();
         ctx.setLineDash([]);
+        if (hasDecor) {
+            drawPixelLineEndpointDecorContours(ctx, x0, y0, x1, y1, fillW, contourW, contourCss, cap0, cap1);
+        }
     }
 
     if (drawFill) {
@@ -15643,14 +15676,14 @@ function illuDrawPixelCubicCurveWithBorder(ctx, x0, y0, cx1, cy1, cx2, cy2, x1, 
         ctx.bezierCurveTo(cp.b1x, cp.b1y, cp.b2x, cp.b2y, x1, y1);
         ctx.lineWidth = fillW;
         ctx.strokeStyle = strokeCss;
-        ctx.lineCap = 'round';
+        ctx.lineCap = bodyCap;
         ctx.lineJoin = 'round';
-        const dashStyle = EditorManager.toolProps.lineDash || 'solid';
-        if (dashStyle === 'dashed') ctx.setLineDash([Math.max(6, fillW * 2), Math.max(4, fillW * 1.5)]);
-        else if (dashStyle === 'dotted') ctx.setLineDash([Math.max(2, fillW * 0.5), Math.max(4, fillW * 1.5)]);
-        else ctx.setLineDash([]);
+        ctx.setLineDash(getDash());
         ctx.stroke();
         ctx.setLineDash([]);
+        if (hasDecor) {
+            drawPixelLineEndpointDecorFills(ctx, x0, y0, x1, y1, fillW, strokeCss, cap0, cap1);
+        }
     }
 }
 window.illuDrawPixelCubicCurveWithBorder = illuDrawPixelCubicCurveWithBorder;

@@ -680,7 +680,6 @@ body:not(.theme-aero):not(.theme-luna) .window-body {
 /* Outils / Couleurs / Historique : largeur au contenu. Calques exclus : sinon width:auto !important écrase le inline (~240px) et la fenêtre rétrécit (~183px). */
 body.ui-layout-floating #floating-palette-host>.window.palette-panel:not(#win-layers) {
     position: fixed !important;
-    width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
     flex-shrink: 0 !important;

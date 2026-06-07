@@ -48,6 +48,7 @@
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/photo-mode.css">
+    <link rel="stylesheet" href="css/svg-mode.css">
     <link rel="stylesheet" href="css/illu-mobile-shell.css">
     <link rel="stylesheet" href="css/illu-tool-ribbon.css">
     <style>
@@ -684,6 +685,11 @@
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalHistory"></span><i id="menu-win-history-check" class="menu-check fa-solid fa-check"></i><span
                                         data-i18n="menu.floatPalHistory">Historique</span>
                                 </li>
+                                <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
+                                    onclick="window.toggleFloatingPaletteVisibility('win-svg-objects')"><span class="menu-icon" 
+                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalSvgObjects"></span><i id="menu-win-svg-objects-check" class="menu-check fa-solid fa-check"></i><span
+                                        >Objets SVG</span>
+                                </li>
                             </ul>
                         </li>
                     </menu>
@@ -875,6 +881,38 @@
                                 <span data-i18n="tools.optClosePath">Fermer</span>
                             </label>
                         </span>
+                    </div>
+
+                    <div id="opt-grp-vector-props" class="opt-grp illu-ribbon-group" hidden>
+                        <div class="illu-ribbon-group-body" style="display: flex; gap: 8px;">
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span class="field-row">
+                                    <label class="illu-opt-lbl" style="width: 12px; display: inline-block;">X</label>
+                                    <input type="number" id="vec-prop-x" class="illu-txt-input illu-gauge-input" step="1" style="width: 45px; height: 18px; padding: 0 4px; border: 1px solid var(--illu-border, #a0a0a0); border-radius: 2px;">
+                                </span>
+                                <span class="field-row">
+                                    <label class="illu-opt-lbl" style="width: 12px; display: inline-block;">Y</label>
+                                    <input type="number" id="vec-prop-y" class="illu-txt-input illu-gauge-input" step="1" style="width: 45px; height: 18px; padding: 0 4px; border: 1px solid var(--illu-border, #a0a0a0); border-radius: 2px;">
+                                </span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span class="field-row">
+                                    <label class="illu-opt-lbl" style="width: 12px; display: inline-block;">W</label>
+                                    <input type="number" id="vec-prop-w" class="illu-txt-input illu-gauge-input" step="1" min="0" style="width: 45px; height: 18px; padding: 0 4px; border: 1px solid var(--illu-border, #a0a0a0); border-radius: 2px;">
+                                </span>
+                                <span class="field-row">
+                                    <label class="illu-opt-lbl" style="width: 12px; display: inline-block;">H</label>
+                                    <input type="number" id="vec-prop-h" class="illu-txt-input illu-gauge-input" step="1" min="0" style="width: 45px; height: 18px; padding: 0 4px; border: 1px solid var(--illu-border, #a0a0a0); border-radius: 2px;">
+                                </span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span class="field-row">
+                                    <label class="illu-opt-lbl" style="width: 12px; display: inline-block;">θ°</label>
+                                    <input type="number" id="vec-prop-angle" class="illu-txt-input illu-gauge-input" step="1" style="width: 45px; height: 18px; padding: 0 4px; border: 1px solid var(--illu-border, #a0a0a0); border-radius: 2px;">
+                                </span>
+                            </div>
+                        </div>
+                        <span class="illu-ribbon-group-label" data-i18n="ribbon.groupVectorProps">Propriétés</span>
                     </div>
                     <div id="opt-grp-symmetry-params" class="opt-grp illu-ribbon-group"
                         data-illu-ribbon-group="symmetry" hidden>
@@ -1913,9 +1951,115 @@
                                 </span>
                             </span>
                         </div>
-                    </div>
+                        <!-- ═══ BARRE TYPOGRAPHIE SVG (visible uniquement en mode SVG + outil texte actif) ═══ -->
+                        <div id="opt-grp-svg-text" class="opt-grp" aria-label="Typographie texte SVG">
+                            <span class="opt-sep"></span>
+                            <span style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                                <select id="svg-text-font-family" title="Famille de police"
+                                    style="font-size:11px;height:22px;max-width:120px;border:1px solid #999;">
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="Verdana, sans-serif">Verdana</option>
+                                    <option value="Impact, sans-serif">Impact</option>
+                                    <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                                    <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+                                    <option value="Tahoma, sans-serif">Tahoma</option>
+                                    <option value="Trebuchet MS, sans-serif">Trebuchet MS</option>
+                                </select>
+                                <input type="number" id="svg-text-font-size" min="6" max="500" value="18" step="1"
+                                    title="Taille de police"
+                                    style="width:50px;font-size:11px;height:22px;border:1px solid #999;padding:0 2px;">
+                                <button type="button" id="svg-text-bold" class="illu-icon-toggle" title="Gras"
+                                    style="font-weight:bold;width:24px;height:22px;font-size:12px;">B</button>
+                                <button type="button" id="svg-text-italic" class="illu-icon-toggle" title="Italique"
+                                    style="font-style:italic;width:24px;height:22px;font-size:12px;">I</button>
+                                <select id="svg-text-align" title="Alignement du texte"
+                                    style="font-size:11px;height:22px;border:1px solid #999;">
+                                    <option value="start">⬅ Gauche</option>
+                                    <option value="middle">⬛ Centre</option>
+                                    <option value="end">➡ Droite</option>
+                                </select>
+                                <button type="button" id="svg-text-on-path" class="illu-icon-toggle" title="Texte sur chemin"
+                                    style="font-size:11px;height:22px;padding:0 6px;">
+                                    <i class="fa-solid fa-bezier-curve"></i> Sur chemin
+                                </button>
+                            </span>
+                        </div>
 
-                    <div id="tool-row1-hidden-sync" hidden aria-hidden="true">
+                        <!-- ═══ BARRE ALIGNEMENT SVG (visible uniquement en mode SVG) ═══ -->
+                        <div id="opt-grp-svg-align" class="opt-grp" aria-label="Alignement SVG">
+                            <span class="opt-sep"></span>
+                            <span style="display:flex;align-items:center;gap:2px;">
+                                <button type="button" class="svg-align-btn" title="Aligner à gauche"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignLeft()">
+                                    <i class="fa-solid fa-align-left"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Centrer horizontalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignCenterH()">
+                                    <i class="fa-solid fa-align-center"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Aligner à droite"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignRight()">
+                                    <i class="fa-solid fa-align-right"></i>
+                                </button>
+                                <span class="svg-align-sep"></span>
+                                <button type="button" class="svg-align-btn" title="Aligner en haut"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignTop()">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Centrer verticalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignCenterV()">
+                                    <i class="fa-solid fa-arrows-up-down"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Aligner en bas"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.alignBottom()">
+                                    <i class="fa-solid fa-arrow-down"></i>
+                                </button>
+                                <span class="svg-align-sep"></span>
+                                <button type="button" class="svg-align-btn" title="Distribuer horizontalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.distributeH()">
+                                    <i class="fa-solid fa-distribute-column"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Distribuer verticalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.distributeV()">
+                                    <i class="fa-solid fa-distribute-spacing-vertical"></i>
+                                </button>
+                                <span class="svg-align-sep"></span>
+                                <button type="button" class="svg-align-btn" title="Réfléchir horizontalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.flipH()">
+                                    <i class="fa-solid fa-left-right"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Réfléchir verticalement"
+                                    onclick="window.illuSvgAlign&&window.illuSvgAlign.flipV()">
+                                    <i class="fa-solid fa-up-down"></i>
+                                </button>
+                                <span class="svg-align-sep"></span>
+                                <button type="button" class="svg-align-btn" title="Pipette vectorielle"
+                                    onclick="window.illuSvgColors&&window.illuSvgColors.startEyedropper()">
+                                    <i class="fa-solid fa-eye-dropper"></i>
+                                </button>
+                                <button type="button" class="svg-align-btn" title="Panneau Objets"
+                                    onclick="window.illuSvgObjectsPanel&&window.illuSvgObjectsPanel.toggle()">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </button>
+                                <span class="svg-align-sep"></span>
+                                <button type="button" class="svg-align-btn" title="Union (Ctrl+Shift+F)"
+                                    onclick="window.illuBooleanOps&&window.illuBooleanOps.apply('union')"
+                                    style="font-weight:bold;font-size:11px;">∪</button>
+                                <button type="button" class="svg-align-btn" title="Soustraire"
+                                    onclick="window.illuBooleanOps&&window.illuBooleanOps.apply('subtract')"
+                                    style="font-weight:bold;font-size:11px;">∖</button>
+                                <button type="button" class="svg-align-btn" title="Intersecter (Ctrl+Shift+I)"
+                                    onclick="window.illuBooleanOps&&window.illuBooleanOps.apply('intersect')"
+                                    style="font-weight:bold;font-size:11px;">∩</button>
+                                <button type="button" class="svg-align-btn" title="Exclure / XOR (Ctrl+Shift+X)"
+                                    onclick="window.illuBooleanOps&&window.illuBooleanOps.apply('exclude')"
+                                    style="font-weight:bold;font-size:11px;">⊻</button>
+                            </span>
+                        </div>
+
                         <input type="hidden" id="vector-prop-fill-model" value="solid">
                         <select id="tool-brush-pattern" style="display:none !important;">
                             <option value="round">Round</option>
@@ -2065,22 +2209,22 @@
                                         onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
                                             class="fa-solid fa-expand"></i></button>
                                 </div>
-                                <div class="tool-group">
-                                    <button class="tool-btn" id="tool-brush" data-i18n-title="title.toolBrush"><i
+                                <div class="tool-group" data-pixel-only-group="">
+                                    <button class="tool-btn" data-pixel-only="" id="tool-brush" data-i18n-title="title.toolBrush"><i
                                             class="fa-solid fa-paintbrush"></i></button>
-                                    <button class="tool-btn" id="tool-pencil" data-i18n-title="title.toolPencil"><i
+                                    <button class="tool-btn" data-pixel-only="" id="tool-pencil" data-i18n-title="title.toolPencil"><i
                                             class="fa-solid fa-pencil"></i></button>
 
-                                    <button class="tool-btn" id="tool-gradient"
+                                    <button class="tool-btn" data-pixel-only="" id="tool-gradient"
                                         data-i18n-title="title.toolGradient"><svg class="tool-icon"
                                             style="width: 16px; height: 16px;" viewBox="0 0 16 16" aria-hidden="true">
                                             <use href="#illu-icon-tool-gradient" />
                                         </svg></button>
-                                    <button class="tool-btn" id="tool-fill" data-i18n-title="title.toolFill"><i
+                                    <button class="tool-btn" data-pixel-only="" id="tool-fill" data-i18n-title="title.toolFill"><i
                                             class="fa-solid fa-fill-drip"></i></button>
-                                    <button class="tool-btn" id="tool-eraser" data-i18n-title="title.toolEraser"><i
+                                    <button class="tool-btn" data-pixel-only="" id="tool-eraser" data-i18n-title="title.toolEraser"><i
                                             class="fa-solid fa-eraser"></i></button>
-                                    <button class="tool-btn" id="tool-text" data-i18n-title="title.toolText"><i
+                                    <button class="tool-btn" data-pixel-only="" id="tool-text" data-i18n-title="title.toolText"><i
                                             class="fa-solid fa-font"></i></button>
                                 </div>
                                 <div class="tool-group tool-group--grid2 tool-group--shapes">
@@ -2461,6 +2605,23 @@
                         </div>
                         <div class="window-body palette-panel-body--fill">
                             <div id="history-list" class="list-box list-box--flex"></div>
+                        </div>
+                    </div>
+
+                    <div id="win-svg-objects" class="window palette-panel floating-window illu-floating-window-hidden">
+                        <div class="title-bar">
+                            <div class="title-bar-text">Objets SVG</div>
+                            <div class="title-bar-controls illu-palette-float-close">
+                                <button type="button" class="title-bar-btn illu-title-bar-icon-btn" title="Actualiser" aria-label="Actualiser"
+                                    onclick="window.illuSvgObjectsPanel && window.illuSvgObjectsPanel.refresh()">
+                                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><use href="icons/illu-sprite.svg#illu-icon-svg-obj-refresh"/></svg>
+                                </button>
+                                <button type="button" class="title-bar-close-btn" aria-label="Close"
+                                    onclick="window.illuSvgObjectsPanel && window.illuSvgObjectsPanel.hide()"></button>
+                            </div>
+                        </div>
+                        <div class="window-body palette-panel-body--fill">
+                            <div class="svg-panel-body"></div>
                         </div>
                     </div>
 
@@ -4236,6 +4397,13 @@
     <script src="js/app/WorkspaceIO.js"></script>
     <script src="js/app/i18n.js"></script>
     <script src="js/app/PhotoModeManager.js"></script>
+    <script src="js/app/illu-svg-mode.js"></script>
+    <script src="js/app/illu-svg-menubar.js"></script>
+    <script src="js/app/illu-vector-align.js"></script>
+    <script src="js/app/illu-boolean-ops.js"></script>
+    <script src="js/app/illu-svg-text.js"></script>
+    <script src="js/app/illu-svg-objects-panel.js"></script>
+    <script src="js/app/illu-svg-colors.js"></script>
     <script src="js/app/app.js"></script>
     <script src="js/app/Listener.js"></script>
     <script src="js/app/illu-mobile.js"></script>
@@ -4581,7 +4749,13 @@
         document.addEventListener('click', (e) => {
             if (e.target.closest('.illu-popover-item')) {
                 const popover = e.target.closest('.illu-popover-menu');
-                if (popover && popover.hidePopover) popover.hidePopover();
+                if (popover) {
+                    if (typeof popover.hidePopover === 'function') {
+                        popover.hidePopover();
+                    } else {
+                        popover.style.display = 'none';
+                    }
+                }
             }
         });
     </script>
