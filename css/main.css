@@ -937,6 +937,11 @@ body.ui-layout-floating #win-colors.color-window-expanded .color-picker-body {
     min-height: 0;
 }
 
+body.ui-layout-floating #win-colors.color-window-expanded {
+width: auto !important;
+}
+
+
 body.ui-layout-floating #win-colors.color-window-expanded .color-top-row {
     grid-column: 1;
     grid-row: 1;
