@@ -923,40 +923,39 @@ window.showContentAwareFillDialog = function () {
     const labNormal = t ? t('dlg.cafModeNormal') : 'Normal';
 
     document.getElementById('effect-dialog-content').innerHTML = `
-        <p style="margin:0 0 ${blendHint ? '8' : '10'}px;font-size:11px;opacity:0.9;line-height:1.35;">${hint}</p>
-        ${blendHint
-            ? `<p style="margin:0 0 10px;font-size:10px;opacity:0.85;line-height:1.35;">${blendHint}</p>`
-            : ''
-        }
+        <p style="margin:0 0 8px;font-size:11px;opacity:0.9;line-height:1.35;">Sélectionner une zone, puis appliquer pour la remplir intelligemment par clonage de texture.</p>
         <div class="field-row" style="align-items:center;">
-            <label style="width:120px;flex-shrink:0;">${labExpand}</label>
-            <input type="range" id="caf-expand-range" min="0" max="128" value="8" style="flex:1;min-width:0;">
-            <input type="number" id="caf-expand" value="8" min="0" max="128" style="width:52px;margin-left:8px;">
+            <label style="width:130px;flex-shrink:0;" title="Élargit la sélection avant le remplissage pour mieux couvrir les bords">${labExpand}</label>
+            <input type="range" id="caf-expand-range" min="0" max="64" value="4" style="flex:1;min-width:0;">
+            <input type="number" id="caf-expand" value="4" min="0" max="64" style="width:46px;margin-left:8px;">
             <span style="margin-left:4px;font-size:11px;">px</span>
         </div>
-        <div class="field-row" style="margin-top:10px;align-items:center;">
-            <label style="width:120px;flex-shrink:0;">${labBlend}</label>
+        <div class="field-row" style="margin-top:8px;align-items:center;">
+            <label style="width:130px;flex-shrink:0;" title="Fondu progressif sur le bord de la sélection : 0 = bord net, valeur haute = fondu large">Fondu de bord (innerRadius)</label>
+            <input type="range" id="caf-inner-range" min="0" max="80" value="8" style="flex:1;min-width:0;">
+            <input type="number" id="caf-inner" value="8" min="0" max="80" style="width:46px;margin-left:8px;">
+            <span style="margin-left:4px;font-size:11px;">px</span>
+        </div>
+        <div class="field-row" style="margin-top:8px;align-items:center;">
+            <label style="width:130px;flex-shrink:0;">${labBlend}</label>
             <input type="range" id="caf-opacity-range" min="0" max="100" value="100" style="flex:1;min-width:0;">
-            <input type="number" id="caf-opacity" value="100" min="0" max="100" style="width:52px;margin-left:8px;">
+            <input type="number" id="caf-opacity" value="100" min="0" max="100" style="width:46px;margin-left:8px;">
             <span style="margin-left:4px;font-size:11px;">%</span>
         </div>
-        <div class="field-row" style="margin-top:10px;">
-            <label style="width:120px;flex-shrink:0;">${labMode}</label>
+        <div class="field-row" style="margin-top:8px;">
+            <label style="width:130px;flex-shrink:0;">${labMode}</label>
             <select id="caf-mode" style="flex:1;">
-                <option value="texture" selected>Texture (Clonage haute qualité)</option>
-                <option value="smart">Étoile / 4 Bords lissé (Structurel)</option>
-                <option value="stretch">Remplissage simple (Plat / Dégradé)</option>
-                <option value="stretch-h">Étirement Horizontal (Gauche/Droite)</option>
-                <option value="stretch-v">Étirement Vertical (Haut/Bas)</option>
-                <option value="harmonic">Harmonique (Diffusion / Flou)</option>
+                <option value="texture" selected>Texture (clonage PatchMatch)</option>
+                <option value="stretch">Dégradé (rapide, zones unies)</option>
             </select>
         </div>
-        <div class="field-row" style="margin-top:10px;">
+        <div class="field-row" style="margin-top:8px;">
             <label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;">
                 <input type="checkbox" id="caf-preserve">
                 <span>${labPreserve}</span>
             </label>
         </div>
+        <p style="margin:8px 0 0;font-size:10px;opacity:0.7;line-height:1.3;">Fondu de bord : les pixels au bord de la sélection sont progressivement mélangés avec l'original sur la distance indiquée.</p>
     `;
 
     const exR = document.getElementById('caf-expand-range');
@@ -984,6 +983,20 @@ window.showContentAwareFillDialog = function () {
     exR.addEventListener('input', syncExFromRange);
     exN.addEventListener('input', syncEx);
     syncEx();
+    const irR = document.getElementById('caf-inner-range');
+    const irN = document.getElementById('caf-inner');
+    function syncIr() {
+        if (!irR || !irN) return;
+        let v = parseInt(irN.value, 10);
+        if (!Number.isFinite(v)) v = 0;
+        v = Math.max(0, Math.min(80, v));
+        irN.value = String(v);
+        if (parseInt(irR.value, 10) !== v) irR.value = String(v);
+    }
+    function syncIrFromRange() { if (!irR || !irN) return; irN.value = irR.value; syncIr(); }
+    if (irR) irR.addEventListener('input', syncIrFromRange);
+    if (irN) irN.addEventListener('input', syncIr);
+
     function syncOp() {
         if (!opR || !opN) return;
         let v = parseInt(opN.value, 10);
@@ -1044,13 +1057,15 @@ window.showContentAwareFillDialog = function () {
                 window.showIlluAlert(alertMsg('msg.cafFailed', 'Impossible d’appliquer le remplissage.'));
                 return;
             }
+            const innerRadius = parseInt(document.getElementById('caf-inner')?.value, 10) || 0;
             let ok = false;
             try {
                 ok = await window.applyContentAwareFillAsync({
                     expandPx,
                     opacity: opacityPct,
                     preserveTransparency: preserve,
-                    mode: document.getElementById('caf-mode')?.value || 'harmonic'
+                    innerRadius: Math.max(0, Math.min(80, innerRadius)),
+                    mode: document.getElementById('caf-mode')?.value || 'texture'
                 });
             } catch (err) {
                 console.warn(err);

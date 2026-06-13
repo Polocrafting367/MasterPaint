@@ -5379,3 +5379,63 @@ body.theme-dark:not(.theme-aero):not(.theme-luna) .illu-shape-picker-popup {
     border-color: var(--mp-raised-top, #555) var(--mp-raised-bot, #111) var(--mp-raised-bot, #111) var(--mp-raised-top, #555) !important;
     box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.5) !important;
 }
+/* ══ Détourage guidé (RemoveBgGuided) ══ */
+.illu-rbg-guided-overlay {
+    display: none; position: fixed; inset: 0; z-index: 14000;
+    align-items: center; justify-content: center;
+}
+.illu-rbgg-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+}
+.illu-rbgg-window {
+    position: relative; z-index: 1; width: min(860px, 98vw);
+    max-height: 96vh; display: flex; flex-direction: column;
+}
+.illu-rbgg-body {
+    display: flex; flex-direction: column; gap: 8px;
+    overflow: hidden; padding: 10px;
+}
+.illu-rbgg-toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding-bottom: 6px; border-bottom: 1px solid #808080;
+}
+.illu-rbgg-tool-group { display: flex; gap: 4px; align-items: center; }
+.illu-rbgg-brush-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; font-size: 11px; cursor: pointer;
+    border: 2px solid; border-color: #ffffff #808080 #808080 #ffffff;
+    background: #c0c0c0;
+}
+.illu-rbgg-brush-btn.is-active {
+    border-color: #808080 #ffffff #ffffff #808080;
+    background: #a0a0a0;
+}
+.illu-rbgg-swatch {
+    display: inline-block; width: 10px; height: 10px;
+    border: 1px solid #000; flex-shrink: 0;
+}
+.illu-rbgg-swatch--keep   { background: rgba(0,200,60,0.9); }
+.illu-rbgg-swatch--remove { background: rgba(220,30,30,0.9); }
+.illu-rbgg-canvas-wrap {
+    position: relative; max-height: 55vh; overflow: auto;
+    border: 2px inset #c0c0c0;
+    background: repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 0 0 / 16px 16px;
+    display: flex; align-items: flex-start;
+}
+.illu-rbgg-canvas { display: block; }
+.illu-rbgg-hint-canvas {
+    position: absolute; top: 0; left: 0; cursor: crosshair;
+}
+.illu-rbgg-legend {
+    margin: 0; font-size: 11px; display: flex; gap: 8px; align-items: center;
+    flex-wrap: wrap;
+}
+.illu-rbgg-mode-row {
+    display: flex; gap: 10px; align-items: center; font-size: 11px;
+    flex-wrap: wrap;
+}
+.illu-rbgg-radio-lbl { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.illu-rbgg-actions {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;
+}
+.illu-rbgg-apply-btn { font-weight: bold; }

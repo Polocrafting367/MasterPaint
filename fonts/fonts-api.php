@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-$dir = __DIR__ . '/fonts';
+$dir = __DIR__;
 $fonts = [];
 
 if (is_dir($dir)) {

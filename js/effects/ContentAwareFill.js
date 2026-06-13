@@ -286,7 +286,8 @@
                 height: roiH,
                 expandPx: expandPx,
                 opacity: opts.opacity ?? 100,
-                mode: opts.mode || 'texture', // On force texture comme défaut car on l'a rendu "Smart"
+                mode: opts.mode || 'texture',
+                innerRadius: Math.max(0, Math.min(200, parseInt(String(opts.innerRadius || 0), 10) || 0)),
                 preserveTransparency: preserveTransparency,
                 sourceBuffer: source.buffer,
                 maskBuffer: selectionMask.buffer

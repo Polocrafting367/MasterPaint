@@ -1564,3 +1564,140 @@ body:not(.theme-dark) #context-menu .ctx-item:hover * {
 #win-properties {
     display: none !important;
 }
+/* ═══ Groupe Détourage guidé ═══ */
+.illu-cutout-ribbon-body {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.illu-cutout-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-self: stretch;
+    justify-content: center;
+}
+
+/* Boutons de mode pinceau — style win98/win10 : sans bordure au repos */
+.illu-cutout-mode-btn {
+    max-height: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 7px;
+    font-size: 11px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 2px;
+    white-space: nowrap;
+    color: inherit;
+    box-shadow: none;
+    transition: background 0.08s, border-color 0.08s;
+}
+.illu-cutout-mode-btn:hover {
+    background: var(--mp-surface, #d4d0c8);
+    border-color: #a0a0a0;
+    box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 rgba(0,0,0,0.15) inset;
+}
+.illu-cutout-mode-btn:active {
+    background: var(--mp-surface, #d4d0c8);
+    border-color: #808080;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.15) inset, -1px -1px 0 #fff inset;
+}
+
+/* État ACTIF : contour coloré + fond teinté */
+.illu-cutout-mode-btn--keep.is-active {
+    border-color: #2e7d32;
+    background: #d4edda;
+    color: #1b5e20;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
+}
+.illu-cutout-mode-btn--remove.is-active {
+    border-color: #c62828;
+    background: #fde8e8;
+    color: #b71c1c;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
+}
+.illu-cutout-mode-btn--erase.is-active {
+    border-color: #757575;
+    background: #ebebeb;
+    color: #424242;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
+}
+
+.illu-cutout-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.3);
+}
+
+/* Gauge pinceau en colonne (label au-dessus) */
+.illu-cutout-gauge {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-self: center;
+    margin-left: 4px;
+}
+.illu-cutout-gauge .illu-opt-lbl {
+    font-size: 10px;
+    opacity: 0.75;
+    line-height: 1;
+}
+
+/* Boutons actions (Effacer tout / Appliquer / Annuler) */
+.illu-cutout-stack--actions {
+    min-width: 82px;
+}
+
+.illu-cutout-action-btn {
+    max-height: 22px;
+    height: 22px;
+    font-size: 11px;
+    padding: 0 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+    /* Bordure au repos : petite couleur subtile win98 */
+    border: 1px solid #b0b0b0;
+    border-top-color: #e0e0e0;
+    border-left-color: #e0e0e0;
+    background: var(--mp-surface, #d4d0c8);
+    color: inherit;
+    border-radius: 2px;
+    box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 rgba(0,0,0,0.1) inset;
+    transition: background 0.08s;
+}
+.illu-cutout-action-btn:hover {
+    background: #c8c4ba;
+    border-color: #808080;
+    border-top-color: #d0d0d0;
+    border-left-color: #d0d0d0;
+}
+.illu-cutout-action-btn:active {
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.12) inset, -1px -1px 0 #fff inset;
+    border-color: #808080;
+    border-top-color: #808080;
+    border-left-color: #808080;
+    border-bottom-color: #e0e0e0;
+    border-right-color: #e0e0e0;
+}
+.illu-cutout-action-btn--apply {
+    background: var(--mp-accent, #0d7a7a);
+    color: #fff;
+    border-color: #005f5f;
+    border-top-color: #1a9a9a;
+    border-left-color: #1a9a9a;
+    font-weight: bold;
+    box-shadow: 1px 1px 0 rgba(255,255,255,0.2) inset, -1px -1px 0 rgba(0,0,0,0.2) inset;
+}
+.illu-cutout-action-btn--apply:hover {
+    filter: brightness(1.1);
+}

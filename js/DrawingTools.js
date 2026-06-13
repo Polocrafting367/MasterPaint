@@ -983,7 +983,8 @@ const TOOL_OPTIONS_UI = {
         paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params']
     },
     callout: { label: 'Légende', actionGroups: ['opt-grp-shapes-actions', 'opt-grp-line-dash'], paramGroups: ['opt-grp-size-params', 'opt-grp-shapes-params'] },
-    shadow: { label: 'Ombre portée', actionGroups: [], paramGroups: [] }
+    shadow: { label: 'Ombre portée', actionGroups: [], paramGroups: [] },
+    cutout: { label: 'Détourage', actionGroups: [], paramGroups: [] }
 };
 
 window.TOOL_OPTIONS_UI = TOOL_OPTIONS_UI;
@@ -1975,6 +1976,16 @@ window.updateToolOptionsBar = function () {
         });
     }
     /* Après mise à jour des groupes ruban : Affichage pixel-only + cohérence mobile. */
+    // Gestion du groupe ribon cutout
+    const cutoutRibbon = document.getElementById('opt-grp-cutout-guided');
+    if (cutoutRibbon) {
+        cutoutRibbon.hidden = (t !== 'cutout');
+    }
+    if (t === 'cutout' && bar2) {
+        bar2.hidden = true;
+        hasParams = false;
+    }
+
     if (typeof window.illuSyncRibbonViewGroupForDocumentMode === 'function') {
         window.illuSyncRibbonViewGroupForDocumentMode();
     }
@@ -4731,6 +4742,28 @@ function initTools() {
     if (toolSelect) {
         toolSelect.addEventListener('change', () => {
             const val = toolSelect.value;
+
+            // Arrêter l'outil cutout si on change d'outil
+            if (typeof window.illuGuidedCutoutToolStop === 'function' && window._illuCutoutActive) {
+                window.illuGuidedCutoutToolStop();
+            }
+
+            // Outil Détourage spécial
+            if (val === 'cutout') {
+                // Désactiver tous les boutons d'outils
+                toolBtns.forEach((b) => b.classList.remove('active'));
+                window.activeTool = 'cutout';
+                if (typeof window.illuGuidedCutoutToolStart === 'function') {
+                    window.illuGuidedCutoutToolStart();
+                }
+                window._illuCutoutActive = true;
+                window.updateToolOptionsBar();
+                EditorManager.render();
+                return;
+            } else {
+                window._illuCutoutActive = false;
+            }
+
             const btnId = 'tool-' + val;
             const btn = document.getElementById(btnId);
             if (btn) btn.click();

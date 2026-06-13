@@ -5,12 +5,6 @@
  * Implémentation du système de synthèse de texture intelligente (PatchMatch hybride)
  */
 
-self.Module = {
-    onRuntimeInitialized: function () {
-        self.cvReady = true;
-    }
-};
-self.importScripts('https://docs.opencv.org/4.8.0/opencv.js');
 
 self.onmessage = async function (ev) {
     const msg = ev && ev.data ? ev.data : {};
@@ -323,59 +317,43 @@ self.onmessage = async function (ev) {
             }
         }
 
-        // --- MODE SMART OPENCV (NAVIER-STOKES - Préserve les lignes) ---
-        else if (mode === 'smart') {
-            emitProgress(10, 'Chargement du moteur IA (OpenCV)…');
-
-            if (!self.cvReady && (!self.cv || !self.cv.Mat)) {
-                await new Promise(resolve => {
-                    const check = setInterval(() => {
-                        if (self.cvReady || (self.cv && self.cv.Mat)) {
-                            self.cvReady = true;
-                            clearInterval(check);
-                            resolve();
-                        }
-                    }, 50);
-                });
-            }
-
-            emitProgress(30, 'Analyse structurelle de l\'image…');
-
-            let srcRgba = self.cv.matFromArray(h, w, self.cv.CV_8UC4, new Uint8Array(source));
-            let srcRgb = new self.cv.Mat();
-            self.cv.cvtColor(srcRgba, srcRgb, self.cv.COLOR_RGBA2RGB);
-
-            let maskMat = new self.cv.Mat(h, w, self.cv.CV_8UC1);
-            for (let i = 0; i < w * h; i++) {
-                maskMat.data[i] = hasWork[i] ? 255 : 0;
-            }
-
-            let dstRgb = new self.cv.Mat();
-            let radius = Math.max(1, Math.floor(power * 8));
-
-            // CHANGEMENT OPENCV : INPAINT_NS (Navier-Stokes) préserve bien mieux les lignes 
-            // que INPAINT_TELEA (qui ne fait que du flou).
-            let cvFlag = self.cv.INPAINT_NS;
-
-            emitProgress(60, 'Reconstruction structurelle via fluide Navier-Stokes…');
-
-            self.cv.inpaint(srcRgb, maskMat, dstRgb, radius, cvFlag);
-
-            emitProgress(90, 'Finalisation…');
-
-            let dstRgba = new self.cv.Mat();
-            self.cv.cvtColor(dstRgb, dstRgba, self.cv.COLOR_RGB2RGBA);
-
-            out.set(dstRgba.data);
-            for (let i = 0; i < w * h; i++) {
-                if (hasWork[i]) {
-                    out[i * 4 + 3] = 255;
-                } else {
-                    out[i * 4 + 3] = source[i * 4 + 3];
+        // --- FONDU DE BORD (innerRadius) ---
+        const innerRadius = Math.max(0, Math.min(200, msg.innerRadius | 0));
+        if (innerRadius > 0) {
+            emitProgress(96, 'Fondu de bord (innerRadius)…');
+            // Distance transform chamfer (approx BFS) : dist[i] = distance du px rempli au bord (non-rempli)
+            const dist = new Float32Array(w * h);
+            for (let i = 0; i < w * h; i++) dist[i] = hasWork[i] ? 999999 : 0;
+            // Passe avant (↘)
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const i = y * w + x;
+                    if (!hasWork[i]) continue;
+                    if (x > 0) dist[i] = Math.min(dist[i], dist[i - 1] + 1);
+                    if (y > 0) dist[i] = Math.min(dist[i], dist[i - w] + 1);
                 }
             }
-
-            srcRgba.delete(); srcRgb.delete(); maskMat.delete(); dstRgb.delete(); dstRgba.delete();
+            // Passe arrière (↖)
+            for (let y = h - 1; y >= 0; y--) {
+                for (let x = w - 1; x >= 0; x--) {
+                    const i = y * w + x;
+                    if (!hasWork[i]) continue;
+                    if (x < w - 1) dist[i] = Math.min(dist[i], dist[i + 1] + 1);
+                    if (y < h - 1) dist[i] = Math.min(dist[i], dist[i + w] + 1);
+                }
+            }
+            // Blending : pixels proches du bord (dist < innerRadius) → mélangés avec l'original
+            for (let i = 0; i < w * h; i++) {
+                if (!hasWork[i]) continue;
+                const d = dist[i];
+                const alpha = d >= innerRadius ? 1.0 : d / innerRadius;
+                if (alpha >= 1.0) continue;
+                const si = i * 4;
+                out[si]   = Math.round(source[si]   * (1 - alpha) + out[si]   * alpha);
+                out[si+1] = Math.round(source[si+1] * (1 - alpha) + out[si+1] * alpha);
+                out[si+2] = Math.round(source[si+2] * (1 - alpha) + out[si+2] * alpha);
+                out[si+3] = Math.round(source[si+3] * (1 - alpha) + out[si+3] * alpha);
+            }
         }
 
         self.postMessage({ type: 'result', jobId, resultBuffer: out.buffer }, [out.buffer]);

@@ -222,11 +222,9 @@
             input.style.color = 'var(--mp-text, #000)';
 
             listDiv = document.createElement('div');
+            listDiv.id = 'tool-text-font-list';
             listDiv.className = 'illu-font-combo-list illu-win-panel';
-            listDiv.style.position = 'absolute';
-            listDiv.style.top = '100%';
-            listDiv.style.left = '0';
-            listDiv.style.right = '0';
+            listDiv.style.position = 'fixed';
             listDiv.style.maxHeight = '450px';
             listDiv.style.overflowY = 'auto';
             listDiv.style.overflowX = 'hidden';
@@ -238,7 +236,15 @@
             listDiv.style.borderRadius = 'var(--mp-radius, 4px)';
 
             wrap.appendChild(input);
-            wrap.appendChild(listDiv);
+            document.body.appendChild(listDiv);
+            wrap._listDiv = listDiv;
+
+            function positionList() {
+                const rect = input.getBoundingClientRect();
+                listDiv.style.top = (rect.bottom + 2) + 'px';
+                listDiv.style.left = rect.left + 'px';
+                listDiv.style.width = rect.width + 'px';
+            }
 
             function closeList() {
                 listDiv.style.display = 'none';
@@ -305,11 +311,13 @@
 
             input.addEventListener('focus', () => {
                 input.select();
+                positionList();
                 renderList('');
                 listDiv.style.display = 'block';
             });
 
             input.addEventListener('input', () => {
+                positionList();
                 renderList(input.value);
                 listDiv.style.display = 'block';
             });
@@ -341,6 +349,9 @@
             wrap._allFonts = allFonts;
             input = wrap.querySelector('input');
         }
+
+        // Toujours s'assurer que le select natif reste caché
+        sel.style.setProperty('display', 'none', 'important');
 
         const opt = sel.options[sel.selectedIndex];
         if (opt && input) {

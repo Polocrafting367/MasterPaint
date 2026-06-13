@@ -301,10 +301,6 @@
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.editRedo"></span><span
                                         data-i18n="menu.editRedo">Rétablir</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-wand-magic-sparkles"></i></span><span
-                                        data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
                                 <li role="menuitem" class="menu-row-icon" id="menu-edit-vectorize" aria-disabled="true"
                                     onclick="illuMenuVectorizeBitmap()"><span class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-bezier-curve"></i></span><span
@@ -351,11 +347,6 @@
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-object-group"></i></span><span
                                         data-i18n="menu.imageExpand">Ajuster la page…</span></li>
-                                <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageRemoveBg"></span><span
-                                        data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
-
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.layers">Calques</span>
@@ -446,6 +437,22 @@
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.effects">Effets</span>
                             <ul role="menu">
+                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCutout">Détourage</span>
+                                    <ul role="menu">
+                                        <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon"
+                                                 aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span
+                                                data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="illuGuidedCutoutToolStart()"><span class="menu-icon"
+                                                 aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span
+                                                data-i18n="menu.imageCutoutGuided">Détourage par sélection…</span></li>
+                                        <li role="menuitem" class="divider"></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
+                                                class="menu-icon" aria-hidden="true"><i
+                                                    class="fa-solid fa-wand-magic-sparkles"></i></span><span
+                                                data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
+                                    </ul>
+                                </li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
                                     <ul role="menu">
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon"
@@ -806,6 +813,7 @@
                                 <option value="polygon" data-i18n="tool.polygon">Polygone</option>
                                 <option value="text" data-i18n="tool.text">Texte</option>
                                 <option value="shadow" data-i18n="tool.shadow">Ombre portée</option>
+                                <option value="cutout" data-i18n="tool.cutout">Détourage</option>
                             </select>
                             <label class="illu-tool-picker" for="illu-tool-list-select" aria-hidden="true">
                                 <span id="tool-icon-preview" class="illu-tool-header-icon" aria-hidden="true"></span>
@@ -836,6 +844,43 @@
                     <span class="illu-ribbon-group-label" data-i18n="ribbon.groupShapePicker">Forme</span>
                 </div>
 
+
+                <!-- Groupe Détourage par sélection (outil indépendant) -->
+                <div class="illu-ribbon-group" data-illu-ribbon-group="cutout" id="opt-grp-cutout-guided" hidden>
+                    <div class="illu-ribbon-group-body illu-cutout-ribbon-body">
+                        <!-- Pinceaux empilés -->
+                        <div class="illu-cutout-stack">
+                            <button type="button" id="illu-cutout-btn-keep" class="illu-cutout-mode-btn illu-cutout-mode-btn--keep is-active" title="Conserver (pinceau vert)">
+                                <span class="illu-cutout-dot" style="background:#4caf50;"></span>
+                                Conserver
+                            </button>
+                            <button type="button" id="illu-cutout-btn-remove" class="illu-cutout-mode-btn illu-cutout-mode-btn--remove" title="Supprimer (pinceau rouge)">
+                                <span class="illu-cutout-dot" style="background:#f44336;"></span>
+                                Supprimer
+                            </button>
+                            <button type="button" id="illu-cutout-btn-erase" class="illu-cutout-mode-btn illu-cutout-mode-btn--erase" title="Effacer les marques">
+                                <span class="illu-cutout-dot" style="background:#9e9e9e;"></span>
+                                Effacer
+                            </button>
+                        </div>
+                        <!-- Slider pinceau : label au-dessus -->
+                        <div class="illu-cutout-gauge">
+                            <label for="illu-cutout-brush-size" class="illu-opt-lbl">Pinceau</label>
+                            <span class="illu-gauge-wrap illu-gauge-wrap--low">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="illu-cutout-brush-size-val">12</span>
+                                <input type="range" id="illu-cutout-brush-size" class="illu-gauge-input" min="3" max="120" value="12">
+                            </span>
+                        </div>
+                        <!-- Actions empilées -->
+                        <div class="illu-cutout-stack illu-cutout-stack--actions">
+                            <button type="button" id="illu-cutout-btn-clear" class="illu-cutout-action-btn">🗑 Effacer tout</button>
+                            <button type="button" id="illu-cutout-btn-apply" class="illu-cutout-action-btn illu-cutout-action-btn--apply">Appliquer</button>
+                            <button type="button" id="illu-cutout-btn-cancel" class="illu-cutout-action-btn">Annuler</button>
+                        </div>
+                    </div>
+                    <span class="illu-ribbon-group-label">Détourage</span>
+                </div>
 
                 <!-- BAR 2: Consolidated Parameters (Bottom) -->
                 <div id="tool-options-bar-2" class="tool-options-bar illu-toolbar-ribbon-row" hidden>
@@ -1329,7 +1374,7 @@
                                         aria-pressed="false" data-i18n-title="tools.selectFreeCorners"><svg
                                             class="illu-shape-ico" width="16" height="16">
                                             <use href="#illu-icon-sel-free-corners" />
-                                        </svg></button>
+                                        </svg><span class="illu-mode-toggle-lbl" data-i18n="tools.selectFreeCornersShort">4 coins</span></button>
                                 </span>
                                 <span class="illu-mode-toggle-item illu-mobile-ribbon-only"
                                     id="illu-mobile-ribbon-deselect-wrap" hidden>
@@ -3604,8 +3649,9 @@
                                     </div>
                                 </div>
                                 <div class="settings-table-row">
-                                    <div class="settings-table-main">
+                                    <div class="settings-table-main" style="display: flex; align-items: center; gap: 4px;">
                                         <div class="settings-table-title" data-i18n="settings.dark">Thème sombre</div>
+                                        <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
                                     </div>
                                     <div class="settings-table-control">
                                         <input type="checkbox" id="welcome-theme-dark" class="settings-toggle-input"
@@ -3883,8 +3929,9 @@
                                     </div>
                                 </div>
                                 <div class="settings-table-row">
-                                    <div class="settings-table-main">
+                                    <div class="settings-table-main" style="display: flex; align-items: center; gap: 4px;">
                                         <div class="settings-table-title" data-i18n="settings.dark">Thème sombre</div>
+                                        <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
                                     </div>
                                     <div class="settings-table-control">
                                         <input type="checkbox" id="settings-theme-dark" class="settings-toggle-input"
@@ -4375,6 +4422,7 @@
     <script src="js/app/illu-tool-ribbon.js"></script>
     <script src="js/app/illu-ribbon-overflow.js"></script>
     <script src="js/effects/RemoveBgIntelligent.js"></script>
+    <script src="js/effects/RemoveBgGuided.js"></script>
     <script src="js/effects/vhs-core.js"></script>
     <script src="js/effects/VhsEffect.js"></script>
     <script src="js/effects/ChromaKeyer.js"></script>
@@ -4391,6 +4439,7 @@
     <script src="js/tools/warp-core.js"></script>
     <script src="js/tools/IlluCropInteractive.js"></script>
     <script src="js/effects/ContentAwareFill.js"></script>
+    <script src="js/tools/GuidedCutoutTool.js"></script>
     <script src="js/io/PdnFile.js"></script>
     <script src="js/openpdn/PdnBlendModes.js"></script>
     <script src="js/openpdn/OpenPdnCatalog.js"></script>

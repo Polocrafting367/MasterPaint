@@ -79,6 +79,11 @@
         root.querySelector('#illu-rmbg-cancel').addEventListener('click', close);
         root.querySelector('#illu-rmbg-abort-job').addEventListener('click', () => {
             window.__illuRmbgAbort = true;
+            const btn = root.querySelector('#illu-rmbg-abort-job');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = tKey('dlg.cancelling', 'Annulation en cours…');
+            }
         });
         const fR = root.querySelector('#illu-rmbg-feather');
         const fN = root.querySelector('#illu-rmbg-feather-n');

@@ -418,6 +418,9 @@
         'msg.removeBgFailGeneric':
             'Impossible de supprimer le fond. Vérifiez la connexion (premier usage), un bloqueur de script, ou utilisez un navigateur récent avec import dynamique.',
         'history.removeBg': 'Supprimer le fond (IA)',
+        'history.guidedRemoveBg': 'Détourage guidé',
+        'menu.imageCutout': 'Détourage',
+        'menu.imageCutoutGuided': 'Détourage par sélection…',
         'effect.hsvPresetsAria': 'Teinte rouge / vert / bleu (curseur + dégradé saturation)',
         'effect.hsvPresetR':
             'Teinte +0° : curseur teinte à 0, bandeau saturation sur le rouge',
@@ -1190,6 +1193,7 @@
         'tool.deform': 'Déformation',
         'tool.warp-4': 'Déform. 4 coins',
         'tool.shadow': 'Ombre portée',
+        'tool.cutout': 'Détourage',
         'tool.round-3': 'Rectangle arrondi',
         'tool.triangle': 'Triangle',
         'tool.cubic-3': 'Courbe Bézier',
@@ -1841,6 +1845,9 @@
         'msg.removeBgFailGeneric':
             'Could not remove the background. Check your connection (first run), ad blockers, or use a recent browser with dynamic import.',
         'history.removeBg': 'Remove background (AI)',
+        'history.guidedRemoveBg': 'Guided cutout',
+        'menu.imageCutout': 'Cutout',
+        'menu.imageCutoutGuided': 'Cutout by selection…',
         'effect.hsvPresetsAria': 'Red / green / blue hue (slider + saturation strip)',
         'effect.hsvPresetR':
             'Hue +0°: sets hue slider to 0, saturation strip anchored on red',
