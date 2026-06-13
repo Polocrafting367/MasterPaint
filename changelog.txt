@@ -1,5 +1,13 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.146 (13/06/26)
+- Mise a jours de la disposition des projet ouvert.
+- Ajout paramètre pour réduire largeur de manière automatique le tool-options-container
+
+2.8.145 (08/06/26)
+- Ajout position d'origine nouvelle fenetre objet svg
+- SVG : Nettoyage des outil/réglage non fonctionnel pour un outil affiché dans le ruban des obtions
+
 2.8.144 (07/06/26) Refonte SVG (toujours en BETA) :
 - Ajoute menu objet, chemin pour les outil 
 - Modification des outil affiché ne mode svg

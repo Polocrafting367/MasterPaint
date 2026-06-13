@@ -3859,13 +3859,13 @@ body.theme-dark .illu-sub-menubar {
 /* Styling tab-bar-outer on the right of the headers - elevated and self-adjusting width */
 .tab-bar-outer {
     position: absolute !important;
-    top: 10px !important;
+    top: 0px !important;
     right: 5px !important;
     z-index: 4800 !important;
     background: transparent !important;
     border: none !important;
-    min-height: 70px !important;
-    height: 70px !important;
+    min-height: 56px !important;
+    height: 56px !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: row !important;
@@ -3895,11 +3895,12 @@ body.theme-dark .illu-sub-menubar {
 
 /* Beautiful scroll navigation buttons styling */
 .tab-scroll-btn {
+    display: none !important;
     flex: 0 0 16px !important;
     width: 16px !important;
-    height: 60px !important;
+    height: 40px !important;
     min-width: 16px !important;
-    min-height: 60px !important;
+    min-height: 40px !important;
     border: none !important;
     background: rgba(var(--mp-accent-rgb), 0.2) !important;
     color: var(--mp-text, #ffffff) !important;
@@ -3992,9 +3993,9 @@ body.theme-dark .illu-menubar-toolbar .illu-menubar-icon-btn:hover {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    width: 72px !important;
-    height: 70px !important;
-    /* Reduced height to bring title closer to preview */
+    width: 56px !important;
+    height: 56px !important;
+    /* Reducd height to bring title closer to preview */
     padding: 2px !important;
     box-sizing: border-box !important;
     border: none !important;
@@ -4134,7 +4135,7 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
     box-shadow: 0 1px 4px rgba(245, 176, 65, 0.25) !important;
 }
 
-@media (max-width: 770px) {
+@media (max-width: 590px) {
   
 
   .tab-bar-outer {
@@ -4153,18 +4154,23 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
   }
   .tab-bar-inner .tab {
     width: 100px !important;
-          height: 40px !important;
-        display: flex !important;
-        flex-direction: row !important;
-        
+    height: 40px !important;
+    display: flex !important;
+    flex-direction: row !important;
   }
-  .tab-bar-inner .tab .tab-thumb {
-width: 40px !important;
+  .tab-bar-inner .tab .tab-thumb,
+  .tab-bar-inner .tab:hover .tab-thumb {
+    width: 40px !important;
     height: 25px !important;
-        margin-bottom:0px;
+    margin: 0 !important;
+    transition: none !important;
   }
-  .tab-bar-inner .tab span {
+  .tab-bar-inner .tab span,
+  .tab-bar-inner .tab:hover span {
+    display: block !important;
     color: black !important;
+    padding-top: 0 !important;
+    margin: 0 !important;
   }
 }
 
@@ -4465,4 +4471,25 @@ body.illu-svg-mode-active .svg-rotation-handle {
     border-left: 1px dashed rgba(0,120,212,0.5);
     cursor: ew-resize;
     pointer-events: auto;
+}
+
+@media (min-width: 591px) {
+  /* Custom tab hover effect - hides title at rest, shrinks thumbnail to show title on hover */
+  .tab-bar-inner .tab span {
+      display: none !important;
+  }
+  .tab-bar-inner .tab:hover span {
+      display: block !important;
+      padding-top: 0 !important;
+      margin: 0 !important;
+  }
+  .tab-bar-inner .tab .tab-thumb {
+      height: 52px !important;
+      margin: 2px 0 2px 0 !important;
+      transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1), margin 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .tab-bar-inner .tab:hover .tab-thumb {
+      height: 34px !important;
+      margin: 2px 0 2px 0 !important;
+  }
 }

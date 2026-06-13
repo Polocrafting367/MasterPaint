@@ -1353,8 +1353,13 @@ window.updateToolOptionsBar = function () {
         else cloneTxt.textContent = 'Zone définie. Prêt (dessinez).';
     }
 
+    // Pixel-only action groups (masqués en mode SVG/vecteur)
+    const PIXEL_ONLY_ACTION_GROUPS = new Set(['opt-grp-brush-actions', 'opt-grp-gradient-actions']);
+    const isSvgMode = EditorManager.mode === 'vector';
+
     if (cfg.actionGroups) {
         cfg.actionGroups.forEach((id) => {
+            if (isSvgMode && PIXEL_ONLY_ACTION_GROUPS.has(id)) return;
             const el = document.getElementById(id);
             if (el) el.hidden = false;
         });
@@ -1397,8 +1402,17 @@ window.updateToolOptionsBar = function () {
 
     // Show param groups (Bar 2)
     let hasParams = false;
+    // Pixel-only param groups (masqués en mode SVG/vecteur)
+    const PIXEL_ONLY_PARAM_GROUPS = new Set([
+        'opt-grp-wand-params',
+        'opt-grp-eyedropper-params',
+        'opt-grp-fill-params',
+        'opt-grp-warp-params',
+        'opt-grp-symmetry-params'
+    ]);
     if (cfg.paramGroups) {
         cfg.paramGroups.forEach((id) => {
+            if (isSvgMode && PIXEL_ONLY_PARAM_GROUPS.has(id)) return;
             const el = document.getElementById(id);
             if (el) {
                 el.hidden = false;
@@ -4850,6 +4864,26 @@ function initTools() {
     };
     window.addEventListener('keydown', syncShiftConstraintFromKey);
     window.addEventListener('keyup', syncShiftConstraintFromKey);
+
+    // Escape : désélectionner la forme SVG sans changer d'outil
+    const VECTOR_KEEP_SELECTION_TOOLS = new Set([
+        'rect', 'circle', 'line', 'round-3', 'triangle', 'star', 'reg-poly',
+        'diamond', 'trapezoid', 'parallelogram', 'triangle-right', 'callout',
+        'cubic-3', 'pen', 'polygon', 'brush', 'text', 'shadow', 'gradient'
+    ]);
+    window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
+        if (EditorManager.mode !== 'vector') return;
+        if (!VECTOR_KEEP_SELECTION_TOOLS.has(window.activeTool)) return;
+        const sel = EditorManager.activeVectorSelection;
+        if (!sel || !sel.length) return;
+        // Ne pas désélectionner si on est en train de dessiner (currentElement != null)
+        if (currentElement) return;
+        e.preventDefault();
+        EditorManager.deselectAll();
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+    });
     const onPointerUpWin = (e) => {
         if (e.isPrimary === false) return;
         try {
@@ -7956,18 +7990,21 @@ window.commitVectorTextSession = function(lx, ly, text, existingNode) {
     const layer = getVectorActiveLayerContainer();
     if (!layer) return;
     const tp = EditorManager.toolProps;
+    const offsetX = EditorManager.activeLayer ? EditorManager.activeLayer.x : 0;
+    const offsetY = EditorManager.activeLayer ? EditorManager.activeLayer.y : 0;
     
+    const size = tp.textSize || 18;
     const t = existingNode || document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    t.setAttribute('x', String(lx));
-    t.setAttribute('y', String(ly));
-    
+    // SVG y = baseline, on ajoute font-size pour aligner le haut du texte avec le point cliqué
+    t.setAttribute('x', String(lx + offsetX));
+    t.setAttribute('y', String(ly + offsetY + size));
+
     t.innerHTML = '';
     const lines = text.split('\n');
-    const size = tp.textSize || 18;
     const lh = Math.round(size * 1.25);
     lines.forEach((line, i) => {
         const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.setAttribute('x', String(lx));
+        tspan.setAttribute('x', String(lx + offsetX));
         if (i > 0) tspan.setAttribute('dy', String(lh));
         tspan.textContent = line || ' '; 
         t.appendChild(tspan);
@@ -8148,29 +8185,31 @@ function illuVectorDrawToolResumeHit(hit, tool) {
     if (!hit || !hit.tagName) return false;
     const tag = (hit.tagName || '').toLowerCase();
     if (tag === 'g' && !hit.getAttribute('data-illu-group')) return false;
-    if (tool === 'text') return tag === 'foreignobject' || tag === 'text';
-    if (tool === 'line' || tool === 'cubic-3' || tool === 'brush') {
-        return typeof illuVectorIsEditableStrokeElement === 'function' && illuVectorIsEditableStrokeElement(hit);
-    }
-    const drawList =
-        window.ILLU_DRAG_SHAPE_TOOLS ||
-        (typeof ILLU_SHAPE_DRAW_TOOLS !== 'undefined' ? ILLU_SHAPE_DRAW_TOOLS : []);
-    const shapeTools = new Set([...drawList, 'shadow', 'brush', 'cubic-3']);
-    if (!shapeTools.has(tool)) return false;
     if (typeof illuVectorIsEmbeddedBitmap === 'function' && illuVectorIsEmbeddedBitmap(hit)) {
         return true;
     }
+
+    // Tool-specific matching: only resume if the shape type matches the active tool
+    if (tool === 'rect') return tag === 'rect' && !hit.getAttribute('data-illu-round');
+    if (tool === 'round-3') return tag === 'rect' && hit.getAttribute('data-illu-round') === '1';
+    if (tool === 'circle') return tag === 'ellipse' || tag === 'circle';
+    if (tool === 'triangle') return tag === 'polygon' && hit.getAttribute('data-illu-triangle') === '1';
+    if (tool === 'star') return tag === 'polygon' && !!hit.getAttribute('data-illu-star-branches');
+    if (tool === 'reg-poly') return tag === 'polygon' && !!hit.getAttribute('data-illu-regular-sides');
+    if (tool === 'diamond') return tag === 'polygon' && hit.getAttribute('data-illu-quad-preset') === 'diamond';
+    if (tool === 'trapezoid') return tag === 'polygon' && hit.getAttribute('data-illu-quad-preset') === 'trapezoid';
+    if (tool === 'parallelogram') return tag === 'polygon' && hit.getAttribute('data-illu-quad-preset') === 'parallelogram';
+    if (tool === 'triangle-right') return tag === 'polygon' && hit.getAttribute('data-illu-quad-preset') === 'triangle-right';
+    if (tool === 'callout') return tag === 'path' && !!hit.getAttribute('data-illu-callout-style');
+    if (tool === 'line') return tag === 'path' && (hit.getAttribute('data-illu-line-straight') === '1' || hit.getAttribute('data-illu-line-cubic') === '1' || hit.getAttribute('data-illu-stroke-only') === '1');
+    if (tool === 'cubic-3') return tag === 'path' && (hit.getAttribute('data-illu-line-cubic') === '1' || hit.getAttribute('data-illu-stroke-only') === '1');
+    if (tool === 'brush') return tag === 'path' && hit.getAttribute('stroke') && (!hit.getAttribute('data-illu-line-straight') && !hit.getAttribute('data-illu-line-cubic') && !hit.getAttribute('data-illu-stroke-only'));
+    if (tool === 'shadow') return false; // shadow tool has its own handling
+    if (tool === 'text') return tag === 'foreignobject' || tag === 'text';
+
+    // Generic shape tools: default to allowing rect, ellipse, circle, path, polygon, polyline, image
     return new Set([
-        'rect',
-        'circle',
-        'ellipse',
-        'line',
-        'path',
-        'polygon',
-        'polyline',
-        'image',
-        'text',
-        'foreignobject'
+        'rect', 'circle', 'ellipse', 'line', 'path', 'polygon', 'polyline', 'image', 'text', 'foreignobject'
     ]).has(tag);
 }
 
@@ -8915,10 +8954,23 @@ function startVector(pos, e) {
                 isDrawing = !!activeVectorShape;
                 return;
             }
-            // Si c'est un resize handle, laisser VE gérer dans la suite ?
-            // En fait non, VE attend beginDrag. Mais les resize handles sont sur l'UI overlay.
-            // On va laisser VE gérer les resize handles plus tard si nécessaire, 
-            // mais les ancres de TRACÉ (svg-anchor) sont prioritaires ici.
+
+            // Resize/rotation handles: keep current selection and let VE begin drag/transform
+            if (t.classList.contains('svg-resize-handle') || t.classList.contains('svg-rotation-handle')) {
+                const sel = EditorManager.activeVectorSelection;
+                const VE = window.VectorEngine;
+                if (sel && sel.length && VE) {
+                    window._illuVectorDragActive = true;
+                    isDrawing = true;
+                    if (t.classList.contains('svg-rotation-handle')) {
+                        VE.beginTransform(sel, pos, 'rotate');
+                    } else {
+                        VE.beginDrag(sel, pos, e);
+                    }
+                    e && e.preventDefault && e.preventDefault();
+                    return;
+                }
+            }
         }
     } catch (err) { }
 
@@ -9121,13 +9173,14 @@ function startVector(pos, e) {
     }
 
     // ── Outils de dessin standards (rect, circle, line, brush, round-3, cubic-3, text, shadow) ──
-    // Avant de créer une nouvelle forme, on désélectionne l'ancienne
+    // Ne plus désélectionner prématurément : on garde la forme précédente sélectionnée
+    // avec ses 8 poignées tant que la nouvelle forme n'est pas posée (mouseup).
+    // La désélection se fera uniquement au mouseup quand la nouvelle forme remplace l'ancienne,
+    // ou via Escape / changement d'outil non-shape.
     if (!(e && (e.shiftKey || e.ctrlKey || e.metaKey))) {
-        EditorManager.deselectAll();
+        // On garde activeVectorShape et les ancres de l'ancienne forme.
+        // On ne fait PAS de deselectAll/clearAnchors/VE.clearUI ici.
     }
-    clearAnchors();
-    activeVectorShape = null;
-    VE.clearUI();
 
     switch (window.activeTool) {
         case 'rect':
@@ -14696,10 +14749,13 @@ function handleMouseUp(e) {
         }
 
         const hadNewShape = currentElement !== null;
+        // Réinitialiser le flag AVANT d'appeler illuSyncVectorSelectionUI
+        // pour que refreshSelectionUI() passe en mode immédiat (pas différé).
+        window._illuVectorDragActive = false;
         if (
             hadNewShape &&
             currentElement &&
-            ['rect', 'circle', 'line', 'round-3', 'triangle', 'text'].includes(tool)
+            ['rect', 'circle', 'line', 'round-3', 'triangle', 'star', 'reg-poly', 'diamond', 'trapezoid', 'parallelogram', 'triangle-right', 'callout', 'text'].includes(tool)
         ) {
             let created = currentElement;
             if (

@@ -256,7 +256,11 @@ window.VectorEngine = (() => {
 
                 const b = _elementScreenBounds(el);
                 if (b) cachedBounds.set(el, b);
-                if (!b || b.rw < 0.1 || b.rh < 0.1) return;
+                if (!b) return;
+                if (b.rw < 0.1 && b.rh < 0.1) return;
+                // Garantir des dimensions minimales (ligne parfaitement horizontale/verticale a rh=0 ou rw=0)
+                b.rw = Math.max(b.rw, 1);
+                b.rh = Math.max(b.rh, 1);
 
                 if (!skipIndividualBoxes) {
                     const rect = document.createElementNS(NS, 'rect');
@@ -644,9 +648,16 @@ window.VectorEngine = (() => {
     function _snapshot(el) {
         if (typeof window.illuVectorSnapshotForDrag === 'function') {
             const geo = window.illuVectorSnapshotForDrag(el);
-            if (geo) return geo;
+            if (geo) {
+                // S'assurer que l'objet a toujours une propriété transform (manquant pour text, foreignobject…)
+                if (geo.transform == null) {
+                    geo.transform = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
+                }
+                return geo;
+            }
         }
-        return { tag: 'transform', transform: el.getAttribute('transform') || '' };
+        const tr = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
+        return { tag: 'transform', transform: tr };
     }
 
     function _applyDrag(el, base, dx, dy) {
@@ -671,8 +682,10 @@ window.VectorEngine = (() => {
         } catch (e) {
             /* ignore */
         }
-        const baseTr = base && base.transform != null ? base.transform : '';
-        const newTr = `translate(${ldx},${ldy}) ${baseTr}`.trim();
+        let baseTr = (base && base.transform != null) ? String(base.transform) : '';
+        if (baseTr === 'undefined' || baseTr === 'null') baseTr = '';
+        const curTr = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
+        const newTr = [curTr ? `translate(${ldx},${ldy})` : `translate(${ldx},${ldy})`, baseTr].filter(Boolean).join(' ').trim();
         el.setAttribute('transform', newTr);
     }
 
@@ -852,9 +865,9 @@ window.VectorEngine = (() => {
 
             _snapshots.forEach(snap => {
                 const el = snap.el;
-                const baseTr = snap.base.transform;
+                const baseTr = (snap.base && snap.base.transform) || '';
                 const m = `rotate(${deg} ${pivot.x} ${pivot.y})`;
-                el.setAttribute('transform', `${m} ${baseTr}`.trim());
+                el.setAttribute('transform', [m, baseTr].filter(Boolean).join(' '));
             });
             refreshSelectionUI();
             return;
@@ -894,11 +907,11 @@ window.VectorEngine = (() => {
         
         _snapshots.forEach(snap => {
             const el = snap.el;
-            const baseTr = snap.base.transform;
+            const baseTr = (snap.base && snap.base.transform) || '';
             const tx = pivot.x - pivot.x * scaleX;
             const ty = pivot.y - pivot.y * scaleY;
             const m = `matrix(${scaleX} 0 0 ${scaleY} ${tx} ${ty})`;
-            el.setAttribute('transform', `${m} ${baseTr}`.trim());
+            el.setAttribute('transform', [m, baseTr].filter(Boolean).join(' '));
         });
         refreshSelectionUI();
     }

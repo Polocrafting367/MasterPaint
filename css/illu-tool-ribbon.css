@@ -253,6 +253,9 @@ body.illu-toolbar-ribbon .illu-ribbon-group-label {
     color: rgba(0, 0, 0, 0.55);
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 9ch;
     padding: 2px 4px 4px;
     margin-top: auto;
 }
@@ -499,6 +502,53 @@ body.illu-toolbar-ribbon #opt-grp-text-params {
 
 body.illu-toolbar-ribbon .illu-text-font-size-stack.illu-ribbon-gauge-stack {
     min-width: 108px;
+}
+
+/* Contraindre la largeur du sélecteur de fonte (#tool-text-font-size-stack
+ * n'a PAS la classe illu-ribbon-gauge-stack → règles non scoped nécessaires) */
+body.illu-toolbar-ribbon #tool-text-font-size-stack {
+    display: grid !important;
+    grid-template-columns: minmax(108px, 1fr) !important;
+    grid-auto-rows: auto !important;
+    gap: 3px 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 200px !important;   /* empêche la croissance libre via <select> */
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+body.illu-toolbar-ribbon #tool-text-font-size-stack > .illu-text-font-row:not([hidden]) {
+    display: grid !important;
+    grid-template-columns: var(--illu-ribbon-gauge-label-col) minmax(0, 1fr) !important;
+    column-gap: 6px !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+}
+
+body.illu-toolbar-ribbon #tool-text-font-size-stack > .illu-text-font-row > .illu-opt-lbl {
+    grid-column: 1 !important;
+    justify-self: start !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+body.illu-toolbar-ribbon #tool-text-font-size-stack > .illu-text-font-row > .illu-text-font-select,
+body.illu-toolbar-ribbon #tool-text-font-size-stack > .illu-text-font-row > .illu-select-mini {
+    grid-column: 2 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 body.illu-toolbar-ribbon .illu-text-stroke-w-row--disabled {
@@ -2445,7 +2495,6 @@ body.illu-toolbar-ribbon .illu-shape-picker-header .illu-tool-picker {
     padding: 2px 3px;
     margin: 0;
     box-sizing: border-box;
-    border: 2px dashed color-mix(in srgb, var(--mp-accent, #806020) 55%, transparent);
     border-radius: var(--mp-radius, 2px);
     background: color-mix(in srgb, var(--mp-accent, #806020) 6%, transparent);
     overflow: hidden;
@@ -2861,5 +2910,424 @@ body.illu-toolbar-ribbon #tool-options-container .illu-text-style-fill-group.ill
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+}
+
+/* ==========================================================================
+   SYSTÈME D'OVERFLOW AUTOMATIQUE DES ALVÉOLES (illu-ribbon-overflow.js)
+   ========================================================================== */
+
+/* ── État COMPACT : icône seule, bien centrée ─────────────────────────────── */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact {
+    --lbl-display: none;
+    --btn-padding: 2px !important;
+    --btn-justify-content: center;
+    --btn-align-items: center;
+}
+
+/* Forcer le centrage des boutons en mode compact
+ * Spécificité élevée pour battre les règles inline (--inline, #tool-options-container) */
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-mode-toggle-btn,
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-icon-toggle.illu-mode-toggle-btn,
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-layout--inline > .illu-mode-toggle-btn,
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-layout--stack > .illu-mode-toggle-btn {
+    justify-content: center !important;
+    padding: 2px 3px !important;
+    min-width: 28px !important;
+    width: 28px !important;
+    max-width: 28px !important;
+    flex-direction: row !important;
+}
+
+/* Items en mode compact : largeur fixe icône seule */
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-mode-toggle-item--unified,
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-mode-toggle-item {
+    flex: 0 0 28px !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+}
+
+/* Compact : grilles compact-grid → colonnes 28px (écrase minmax(52px,1fr)) */
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-group--compact-grid {
+    grid-template-columns: repeat(auto-fill, 28px) !important;
+    width: max-content !important;
+    min-width: 0 !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-group--compact-cols-1 {
+    grid-template-columns: repeat(1, 28px) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-group--compact-cols-2 {
+    grid-template-columns: repeat(2, 28px) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-group--compact-cols-3 {
+    grid-template-columns: repeat(3, 28px) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-ribbon-group--compact .illu-toggle-group--compact-cols-4 {
+    grid-template-columns: repeat(4, 28px) !important;
+}
+
+/* Masquer les labels en mode compact */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact .illu-mode-toggle-lbl {
+    display: none !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Compact : grilles line-cap → icône seule 2×2 */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="opt-grp-line-cap-start"]
+    .illu-line-cap-start-group,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="opt-grp-line-cap-end"]
+    .illu-line-cap-end-group {
+    grid-template-columns: repeat(2, 28px) !important;
+    gap: 2px !important;
+    width: max-content !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="opt-grp-line-cap-start"]
+    .illu-line-cap-start-group .illu-icon-toggle,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="opt-grp-line-cap-end"]
+    .illu-line-cap-end-group .illu-icon-toggle {
+    min-width: 28px !important;
+    width: 28px !important;
+    height: 27px !important;
+    padding: 2px !important;
+    justify-content: center !important;
+}
+
+/* Compact : grille sélection → icône seule 3×2 */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack {
+    grid-template-columns: repeat(1, max-content) !important;
+}
+
+/* Sélection compact : cibler explicitement chaque classe/id pour battre
+ * la spécificité ID (#selection-mode-group) du parent (1,2,1 → ici 1,4,1) */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > .illu-sel-actions-primary:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > #selection-mode-group:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > .illu-icon-toggle-group:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > .illu-mode-toggle-group:not([hidden]),
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > .illu-toggle-group--compact-grid:not([hidden]) {
+    display: grid !important;
+    grid-template-columns: repeat(3, 28px) !important;
+    grid-template-rows: repeat(2, auto) !important;
+    gap: 2px !important;
+    width: max-content !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-mode-toggle-btn {
+    min-width: 28px !important;
+    width: 28px !important;
+    height: 27px !important;
+    padding: 2px !important;
+    justify-content: center !important;
+}
+
+/* Compact : shape-style-fill / text-style-fill → grille 3×2 icônes seules */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="shape-style-fill"]
+    .illu-ribbon-grid-3x2,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="text-style-fill"]
+    .illu-ribbon-grid-3x2 {
+    grid-template-columns: repeat(3, 27px) !important;
+    grid-template-rows: repeat(2, 27px) !important;
+    gap: 2px !important;
+}
+
+/* Compact : clipboard → icône seule, colonne */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="clipboard"]
+    .illu-ribbon-clipboard-desktop {
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="clipboard"]
+    .illu-ribbon-clipboard-desktop .illu-mode-toggle-btn {
+    min-height: 24px !important;
+    height: 24px !important;
+    min-width: 28px !important;
+    width: 28px !important;
+    padding: 2px !important;
+    justify-content: center !important;
+}
+
+/* ── État HIDDEN : groupe masqué (ex: clipboard quand trop peu d'espace) ──── */
+body.illu-toolbar-ribbon .illu-ribbon-group--hidden {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* ── État COLLAPSED : seul le trigger est visible ─────────────────────────── */
+body.illu-toolbar-ribbon .illu-ribbon-group--collapsed .illu-ribbon-group-body {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+}
+
+/* Trigger collapsed — visuel identique à illu-tool-picker :
+ * colonne → icône → label → chevron, tout centré.
+ * illu-generic-dropdown-header fournit la bordure pointillée et le fond accent. */
+body.illu-toolbar-ribbon .illu-ribbon-group-collapse-trigger {
+    display: none;                      /* masqué par défaut */
+    flex-shrink: 0;
+    align-self: stretch;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    min-width: 52px !important;
+    max-width: 80px !important;
+    padding: 2px 4px !important;
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+}
+
+/* Le label dans le trigger : tronqué comme illu-tool-picker-label */
+body.illu-toolbar-ribbon .illu-ribbon-group-collapse-label {
+    display: block !important;
+    width: 100% !important;
+    max-width: 72px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    line-height: 1.15 !important;
+    color: var(--mp-accent, #806020) !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--collapsed > .illu-ribbon-group-collapse-trigger:not([hidden]) {
+    display: flex !important;
+}
+
+/* Icône interne */
+body.illu-toolbar-ribbon .illu-ribbon-group-collapse-icon {
+    width: 20px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px;
+}
+
+body.illu-toolbar-ribbon.theme-dark .illu-ribbon-group-collapse-trigger {
+    color: var(--mp-opt-bar-text, #e0e0e0);
+}
+
+/* ── Popup overflow (liste des outils du groupe collapsed) ───────────────── */
+#illu-ribbon-overflow-popup {
+    position: fixed;
+    z-index: 15000;
+    background: var(--panel-bg, #f0f0f0);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.22);
+    padding: 3px 0;
+    min-width: 120px;
+    max-width: 260px;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 2px;
+}
+
+#illu-ribbon-overflow-popup[hidden] {
+    display: none !important;
+}
+
+.illu-ribbon-overflow-row {
+    /* Reset button */
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-family: inherit !important;
+    text-align: left !important;
+    width: 100% !important;
+    /* Layout */
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding: 4px 10px 4px 8px !important;
+    cursor: default !important;
+    font-size: 11px !important;
+    color: var(--mp-opt-bar-text, #333) !important;
+    white-space: nowrap !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
+    min-height: 26px !important;
+}
+
+.illu-ribbon-overflow-row:hover {
+    background: var(--mp-accent, #0078d7) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+.illu-ribbon-overflow-row--active {
+    font-weight: 600 !important;
+    background: color-mix(in srgb, var(--mp-accent, #0078d7) 12%, transparent) !important;
+    border-color: color-mix(in srgb, var(--mp-accent, #0078d7) 30%, transparent) !important;
+}
+
+.illu-ribbon-overflow-row--active:hover {
+    background: var(--mp-accent, #0078d7) !important;
+    color: #fff !important;
+}
+
+.illu-ribbon-overflow-row i,
+.illu-ribbon-overflow-row svg,
+.illu-ribbon-overflow-row .illu-shape-ico {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 13px;
+    flex-shrink: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.illu-ribbon-overflow-lbl {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Dark theme popup */
+body.theme-dark #illu-ribbon-overflow-popup {
+    background: #2a2d36;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+body.theme-dark .illu-ribbon-overflow-row {
+    color: #e0e0e0;
+}
+
+/* Corps cloné (groupes sans items unifiés) */
+.illu-ribbon-overflow-body-clone {
+    padding: 6px 8px;
+    display: flex !important;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+/* ── Gauge track : réductible dans le ruban, minimum 60px ─────────────────── */
+/* Normal : track s'étire librement dans le ribbon */
+body.illu-toolbar-ribbon .illu-gauge-track {
+    min-width: 60px;
+}
+
+/* Compact : groupe de jauges réduit → track forcé à 60px de large */
+body.illu-toolbar-ribbon .illu-ribbon-group--compact .illu-gauge-track {
+    width: 60px !important;
+    min-width: 0 !important;
+    max-width: 60px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact .illu-ribbon-param-pack,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact .illu-text-font-size-stack {
+    grid-template-columns: minmax(60px, 1fr) !important;
+    min-width: 80px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="size"] .illu-ribbon-param-pack,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="text-params"] .illu-ribbon-param-pack,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="text-params"] .illu-text-font-size-stack {
+    --illu-ribbon-gauge-label-col: 2rem;
+    min-width: 90px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="size"] .illu-ribbon-group-body,
+body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="text-params"] .illu-ribbon-group-body {
+    min-width: 90px;
+}
+
+/* ── Stack de collapsed : colonne quand l'espace est encore trop réduit ───── */
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    flex-shrink: 0;
+    align-self: stretch;
+    border-right: 1px solid rgba(0, 0, 0, 0.14);
+    padding: 2px 3px;
+    box-sizing: border-box;
+    width: max-content;
+}
+
+/* Groupes dans le stack : pas de bordure, pas de padding */
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack .illu-ribbon-group {
+    border-right: none !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    width: 100%;
+    flex-shrink: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+}
+
+/* Label caché dans le stack */
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack .illu-ribbon-group-label {
+    display: none !important;
+}
+
+/* Trigger dans le stack : compact 22px, icône + chevron côte à côte */
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack .illu-ribbon-group-collapse-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 22px !important;
+    height: 22px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 2px 4px !important;
+}
+
+/* Icône plus petite dans le stack */
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack .illu-ribbon-group-collapse-icon {
+    width: 14px !important;
+    height: 14px !important;
+    font-size: 12px !important;
+}
+
+body.illu-toolbar-ribbon .illu-ribbon-collapsed-stack .illu-generic-dropdown-arrow {
+    font-size: 6px !important;
+}
+
+body.illu-toolbar-ribbon.theme-dark .illu-ribbon-collapsed-stack {
+    border-color: rgba(255, 255, 255, 0.1);
 }
 

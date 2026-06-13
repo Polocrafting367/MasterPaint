@@ -5273,6 +5273,10 @@ body.ui-layout-floating #floating-palette-host>#win-colors {
     bottom: 30px;
     left: 10px;
 }
+body.ui-layout-floating #floating-palette-host>#win-svg-objects {
+    top: 280px;
+    right: 10px;
+}
 
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] {
     padding: 4px 0 !important;
@@ -5734,7 +5738,7 @@ body.win11-effects button {
     border-radius: 4px;
 }
 
-@media (max-width: 770px) {
+@media (max-width: 590px) {
   
 
   #tab-bar-outer { 
@@ -5754,4 +5758,25 @@ body.theme-dark .illu-shape-picker-popup {
     background: var(--mp-surface-deep, #1e1e1e) !important;
     border: 1px solid var(--mp-border, #444444) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+@media (min-width: 591px) {
+  /* Win10 Flat specific active tab hover sizes */
+  .tab-bar-inner .tab span {
+      display: none !important;
+  }
+  .tab-bar-inner .tab:hover span {
+      display: block !important;
+      padding-top: 0 !important;
+      margin: 0 !important;
+  }
+  .tab-bar-inner .tab .tab-thumb {
+      height: 52px !important;
+      margin: 2px 0 2px 0 !important;
+      transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1), margin 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .tab-bar-inner .tab:hover .tab-thumb {
+      height: 34px !important;
+      margin: 2px 0 2px 0 !important;
+  }
 }

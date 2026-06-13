@@ -1238,60 +1238,31 @@ if (document.readyState === 'loading') {
 
 // Dynamic calculation of tab-bar-outer available width based on visible options in tool-options-container
 window.illuRecalculateTabBarWidth = function () {
+    const tabBarOuter = document.getElementById('tab-bar-outer');
+    if (!tabBarOuter) return;
 
-if (window.innerWidth <= 770) {
-        const tabBarOuter = document.getElementById('tab-bar-outer');
-        if (tabBarOuter) {
+    if (window.innerWidth <= 590) {
+        tabBarOuter.style.removeProperty('width');
+        tabBarOuter.style.removeProperty('max-width');
+    } else {
+        const menuWrapper = document.querySelector('.illu-menu-and-sub-wrapper');
+        if (menuWrapper) {
+            const menuRect = menuWrapper.getBoundingClientRect();
+            const availableWidth = window.innerWidth - menuRect.right - 25;
+            const finalWidth = Math.max(76, availableWidth);
+            tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
+            tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
+        } else {
             tabBarOuter.style.removeProperty('width');
             tabBarOuter.style.removeProperty('max-width');
         }
-        return; 
     }
-
-
-    const container = document.getElementById('tool-options-container');
-    const tabBarOuter = document.getElementById('tab-bar-outer');
-    if (!container || !tabBarOuter) return;
-
-    // Find all visible ribbon groups inside the options container
-    const groups = Array.from(container.querySelectorAll('.illu-ribbon-group'));
-    let rightmost = 0;
-    
-    // Also check the menus and sub-menus wrapper on the same row to avoid overlapping
-    const menuWrapper = document.querySelector('.illu-menu-and-sub-wrapper');
-    if (menuWrapper) {
-        const menuRect = menuWrapper.getBoundingClientRect();
-        rightmost = Math.max(rightmost, menuRect.right);
-    }
-    
-    groups.forEach(group => {
-        if (group.offsetParent !== null && group.offsetHeight > 0) {
-            const rect = group.getBoundingClientRect();
-            if (rect.right > rightmost) {
-                rightmost = rect.right;
-            }
-        }
-    });
-
-    // Total available viewport width
-    const viewportWidth = window.innerWidth;
-
-    // Calculate remaining width on the right of the rightmost element
-    // Leave a safe margin
-    const margin = 24;
-    const occupiedWidth = rightmost + margin;
-    const availableWidth = viewportWidth - occupiedWidth;
-
-    // Set the max-width and width of the MDI tab bar container dynamically!
-    // Minimum width is 76px (1 tab card)
-    const finalWidth = Math.max(76, availableWidth) + 5;
-    tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
-    tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
 
     // Detect overflow and toggle navigation buttons visibility after layout settles
     requestAnimationFrame(() => {
         const scrollBox = document.getElementById('tab-bar-scroll');
-        if (scrollBox) {
+        const tabBarOuter = document.getElementById('tab-bar-outer');
+        if (scrollBox && tabBarOuter) {
             const hasOverflow = scrollBox.scrollWidth > scrollBox.clientWidth;
             tabBarOuter.classList.toggle('tab-bar-has-overflow', hasOverflow);
         }

@@ -5322,6 +5322,10 @@ body.ui-layout-floating #floating-palette-host>#win-colors {
     bottom: 30px;
     left: 10px;
 }
+body.ui-layout-floating #floating-palette-host>#win-svg-objects {
+    top: 280px;
+    right: 10px;
+}
 
 /* Thème sombre classique : même espacement menus / barre que en clair */
 body.theme-dark:not(.theme-aero):not(.theme-luna) ul[role="menu"] {
@@ -5353,7 +5357,7 @@ body.theme-dark .illu-menubar-icon-btn {
     transform: none !important;
 }
 
-@media (max-width: 770px) {
+@media (max-width: 590px) {
   
 
   #tab-bar-outer { 

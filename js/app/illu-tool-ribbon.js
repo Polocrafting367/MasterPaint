@@ -612,7 +612,10 @@
                               ].includes(tool);
                     active =
                         isPixelDoc && !isShapeTool && !isMobileRibbon;
-                } else if (id === 'brush') active = actionIds.has('opt-grp-brush-actions');
+                } else if (id === 'brush') {
+                    /* Pinceau/Gomme : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && actionIds.has('opt-grp-brush-actions');
+                }
                 else if (id === 'opt-grp-line-dash') active = actionIds.has('opt-grp-line-dash');
                 else if (id === 'opt-grp-line-cap-start') active = actionIds.has('opt-grp-line-cap-start');
                 else if (id === 'opt-grp-line-cap-end') active = actionIds.has('opt-grp-line-cap-end');
@@ -629,7 +632,8 @@
                 } else if (id === 'text-grad-method') {
                     active = actionIds.has('opt-grp-text-actions') && textGradMethodEl && !textGradMethodEl.hidden;
                 } else if (id === 'gradient-type' || id === 'gradient-method') {
-                    active = actionIds.has('opt-grp-gradient-actions');
+                    /* Dégradé : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && actionIds.has('opt-grp-gradient-actions');
                 } else if (id === 'vector-fill' || id === 'vector' || id === 'vector-grad') {
                     active = isVectorSelect && !suppressVectorContext;
                 }
@@ -657,9 +661,16 @@
             } else {
                 if (id === 'size') active = paramIds.has('opt-grp-size-params');
                 else if (id === 'wand') {
-                    active = paramIds.has('opt-grp-wand-params');
-                } else if (id === 'eyedropper') active = paramIds.has('opt-grp-eyedropper-params');
-                else if (id === 'fill') active = paramIds.has('opt-grp-fill-params');
+                    /* Baguette : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && paramIds.has('opt-grp-wand-params');
+                } else if (id === 'eyedropper') {
+                    /* Pipette : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && paramIds.has('opt-grp-eyedropper-params');
+                }
+                else if (id === 'fill') {
+                    /* Pot de peinture : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && paramIds.has('opt-grp-fill-params');
+                }
                 else if (id === 'shape-angle') {
                     const lineGradAngle =
                         (tool === 'line' || tool === 'cubic-3') && angleRow && !angleRow.hidden;
@@ -670,9 +681,13 @@
                 } else if (id === 'text-grad-angle') {
                     active = paramIds.has('opt-grp-text-params') && textGradAngleRow && !textGradAngleRow.hidden;
                 } else if (id === 'warp') {
-                    active = (paramIds.has('opt-grp-warp-params') || warpActive);
+                    /* Déformation : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && (paramIds.has('opt-grp-warp-params') || warpActive);
                 } else if (id === 'vector-params') active = isVectorSelect && !suppressVectorContext;
-                else if (id === 'symmetry') active = paramIds.has('opt-grp-symmetry-params');
+                else if (id === 'symmetry') {
+                    /* Symétrie : pixel uniquement, masqué en mode SVG/vecteur */
+                    active = !isVectorDoc && paramIds.has('opt-grp-symmetry-params');
+                }
             }
             setGroupHidden(group, !active);
         });
