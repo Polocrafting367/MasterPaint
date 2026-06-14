@@ -3331,3 +3331,9 @@ body.illu-toolbar-ribbon.theme-dark .illu-ribbon-collapsed-stack {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+
+html #illu-cutout-mode-group, #illu-cutout-action-group {
+    /* On force le display flex, et on annule le grid en réinitialisant les variables */
+    --group-grid-cols: none !important;
+    --group-grid-rows: none !important;
+}

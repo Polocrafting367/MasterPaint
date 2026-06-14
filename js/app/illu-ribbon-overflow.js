@@ -4,9 +4,10 @@
  * quand l'espace disponible dans #tool-options-container est réduit.
  *
  * Niveaux :
- *   normal    → icône + texte
- *   compact   → icône seule, bien centrée
- *   collapsed → bouton trigger (style illu-tool-header) → popup liste
+ *   normal     → icône + texte
+ *   compact    → icône seule, bien centrée
+ *   compressed → bouton texte seul (sans icône)
+ *   collapsed  → bouton trigger (style illu-tool-header) → popup liste
  *
  * Anti-boucle : _updating flag + comparaison lastContainerWidth
  */
@@ -15,6 +16,8 @@
 
     /* ── Config des groupes compressibles ────────────────────────────────────── */
     const OVERFLOW_GROUPS = [
+        /* Groupe Détourage guidé : compact = icône seule → compressed = texte seul → collapsed (popup) */
+        { id: 'cutout',          order: 0,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-scissors' },
         /* Gros groupes avec texte → compact (icône seule) → collapsed (popup liste) */
         { id: 'selection',       order: 1,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-object-group' },
         { id: 'clipboard',       order: 2,  levels: ['hidden'],               icon: 'fa-solid fa-clipboard' },
@@ -233,12 +236,17 @@
         group.dataset.illuRibbonOverflow = level;
         group.classList.remove(
             'illu-ribbon-group--compact',
+            'illu-ribbon-group--compressed',
             'illu-ribbon-group--collapsed',
             'illu-ribbon-group--hidden'
         );
 
         if (level === 'compact') {
             group.classList.add('illu-ribbon-group--compact');
+            const t = group.querySelector(':scope > .illu-ribbon-group-collapse-trigger');
+            if (t) t.hidden = true;
+        } else if (level === 'compressed') {
+            group.classList.add('illu-ribbon-group--compressed');
             const t = group.querySelector(':scope > .illu-ribbon-group-collapse-trigger');
             if (t) t.hidden = true;
         } else if (level === 'collapsed') {
@@ -308,6 +316,20 @@
                 if (!cfg.levels.includes('compact')) continue;
                 const before = g.getBoundingClientRect().width;
                 setGroupLevel(g, 'compact');
+                const after = g.getBoundingClientRect().width;
+                total -= (before - after);
+            }
+
+            /* Passe 1.5 — compressed (texte seul, sans icône)
+             * Après le compact : on réduit encore en supprimant les icônes.
+             * Intermédiaire entre compact (icône seule) et collapsed (popup).   */
+            for (const g of overflowGroups) {
+                if (total <= containerWidth + 2) break;
+                const cfg = CONFIG_BY_ID[g.dataset.illuRibbonGroup];
+                if (!cfg.levels.includes('compressed')) continue;
+                if (g.dataset.illuRibbonOverflow === 'compressed') continue;
+                const before = g.getBoundingClientRect().width;
+                setGroupLevel(g, 'compressed');
                 const after = g.getBoundingClientRect().width;
                 total -= (before - after);
             }

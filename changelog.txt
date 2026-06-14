@@ -1,5 +1,11 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.154 (14/06/26)
+- Correction visuel outil de détourage
+- correction ralentissement grille de pixels
+- correction bug divers en mode svg
+- Remis slider dans %de zoom fonctionnel
+
 2.8.150 (13/06/26)
 - Mise a jours de la disposition des projet ouvert.
 - Ajout paramètre pour réduire largeur de manière automatique le tool-options-container

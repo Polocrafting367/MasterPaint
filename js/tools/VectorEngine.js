@@ -616,12 +616,21 @@ window.VectorEngine = (() => {
     }
 
     // ─── Multi-drag (snapshots) ──────────────────────────────────────────────
+    function _cleanTransformStr(tr) {
+        if (tr == null || tr === 'undefined' || tr === 'null') return '';
+        return String(tr).replace(/\bundefined\b/g, '').replace(/\bnull\b/g, '').replace(/\s+/g, ' ').trim();
+    }
+
     function _snapshot(el) {
         if (typeof window.illuVectorSnapshotForDrag === 'function') {
             const geo = window.illuVectorSnapshotForDrag(el);
-            if (geo) return geo;
+            if (geo) {
+                // S'assurer que geo.transform est toujours une string propre sans "undefined"
+                geo.transform = _cleanTransformStr(geo.transform);
+                return geo;
+            }
         }
-        return { tag: 'transform', transform: el.getAttribute('transform') || '' };
+        return { tag: 'transform', transform: _cleanTransformStr(el.getAttribute('transform')) };
     }
 
     function _applyDrag(el, base, dx, dy) {
@@ -646,8 +655,8 @@ window.VectorEngine = (() => {
         } catch (e) {
             /* ignore */
         }
-        const baseTr = base && base.transform != null ? base.transform : '';
-        const newTr = `translate(${ldx},${ldy}) ${baseTr}`.trim();
+        const baseTr = _cleanTransformStr(base && base.transform != null ? base.transform : '');
+        const newTr = [`translate(${ldx},${ldy})`, baseTr].filter(Boolean).join(' ').trim();
         el.setAttribute('transform', newTr);
     }
 
@@ -834,11 +843,11 @@ window.VectorEngine = (() => {
         
         _snapshots.forEach(snap => {
             const el = snap.el;
-            const baseTr = snap.base.transform;
+            const baseTr = _cleanTransformStr(snap.base && snap.base.transform);
             const tx = pivot.x - pivot.x * scaleX;
             const ty = pivot.y - pivot.y * scaleY;
             const m = `matrix(${scaleX} 0 0 ${scaleY} ${tx} ${ty})`;
-            el.setAttribute('transform', `${m} ${baseTr}`.trim());
+            el.setAttribute('transform', [m, baseTr].filter(Boolean).join(' ').trim());
         });
         refreshSelectionUI();
     }

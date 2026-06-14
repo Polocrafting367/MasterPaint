@@ -1568,66 +1568,38 @@ body:not(.theme-dark) #context-menu .ctx-item:hover * {
 .illu-cutout-ribbon-body {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
-.illu-cutout-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+/* Groupes de boutons (mode + actions) : colonne compacte */
+.illu-cutout-mode-group,
+.illu-cutout-action-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
     align-self: stretch;
     justify-content: center;
+    width: auto !important;
+    min-width: 0 !important;
 }
 
-/* Boutons de mode pinceau — style win98/win10 : sans bordure au repos */
-.illu-cutout-mode-btn {
-    max-height: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 0 7px;
+/* Override : les items cutout s'affichent en colonne (pas en ligne) */
+body.illu-toolbar-ribbon .illu-cutout-mode-group .illu-mode-toggle-item--unified,
+body.illu-toolbar-ribbon .illu-cutout-action-group .illu-mode-toggle-item--unified {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+/* Boutons ruban cutout : même base que les autres illu-mode-toggle-btn */
+body.illu-toolbar-ribbon #tool-options-container .illu-cutout-mode-btn.illu-icon-toggle,
+body.illu-toolbar-ribbon #tool-options-container .illu-cutout-action-btn.illu-icon-toggle {
     font-size: 11px;
-    border: 1px solid transparent;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 2px;
     white-space: nowrap;
-    color: inherit;
-    box-shadow: none;
-    transition: background 0.08s, border-color 0.08s;
-}
-.illu-cutout-mode-btn:hover {
-    background: var(--mp-surface, #d4d0c8);
-    border-color: #a0a0a0;
-    box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 rgba(0,0,0,0.15) inset;
-}
-.illu-cutout-mode-btn:active {
-    background: var(--mp-surface, #d4d0c8);
-    border-color: #808080;
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.15) inset, -1px -1px 0 #fff inset;
 }
 
-/* État ACTIF : contour coloré + fond teinté */
-.illu-cutout-mode-btn--keep.is-active {
-    border-color: #2e7d32;
-    background: #d4edda;
-    color: #1b5e20;
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
-}
-.illu-cutout-mode-btn--remove.is-active {
-    border-color: #c62828;
-    background: #fde8e8;
-    color: #b71c1c;
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
-}
-.illu-cutout-mode-btn--erase.is-active {
-    border-color: #757575;
-    background: #ebebeb;
-    color: #424242;
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.1) inset;
-}
-
+/* Points colorés (remplacent les icônes) */
 .illu-cutout-dot {
     display: inline-block;
     width: 10px;
@@ -1637,67 +1609,115 @@ body:not(.theme-dark) #context-menu .ctx-item:hover * {
     border: 1px solid rgba(0,0,0,0.3);
 }
 
+.illu-cutout-dot--keep  { background: #4caf50; }
+.illu-cutout-dot--remove { background: #f44336; }
+.illu-cutout-dot--erase  { background: #9e9e9e; }
+
+/* États actifs des modes pinceau : remplace le standard accent avec des couleurs sémantiques */
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-cutout-mode-btn--keep.illu-icon-toggle--on {
+    border-color: #2e7d32 #1b5e20 #1b5e20 #2e7d32 !important;
+    background: #d4edda !important;
+    color: #1b5e20 !important;
+    box-shadow: inset 1px 1px 1px rgba(0,0,0,0.1) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-cutout-mode-btn--remove.illu-icon-toggle--on {
+    border-color: #c62828 #b71c1c #b71c1c #c62828 !important;
+    background: #fde8e8 !important;
+    color: #b71c1c !important;
+    box-shadow: inset 1px 1px 1px rgba(0,0,0,0.1) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-cutout-mode-btn--erase.illu-icon-toggle--on {
+    border-color: #757575 #424242 #424242 #757575 !important;
+    background: #ebebeb !important;
+    color: #424242 !important;
+    box-shadow: inset 1px 1px 1px rgba(0,0,0,0.1) !important;
+}
+
+body.illu-toolbar-ribbon #tool-options-container .illu-cutout-action-btn--apply.illu-icon-toggle {
+    /* Utilisation de rgba pour la transparence (ex: 15% d'opacité) */
+    background: rgba(var(--mp-accent-rgb, 13, 122, 122), 0.15) !important;
+    
+    /* Couleur du texte un peu moins agressive que le blanc pur si nécessaire, 
+       ou gardez #fff si le fond est assez sombre */
+    color: var(--mp-accent, #0d7a7a) !important;
+    
+    /* Bordure plus fine (1px) et semi-transparente */
+    border: 1px solid rgba(var(--mp-accent-rgb, 13, 122, 122), 0.3) !important;
+    
+    font-weight: bold;
+}
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-cutout-action-btn--apply.illu-icon-toggle:hover {
+    filter: brightness(1.12);
+}
+
 /* Gauge pinceau en colonne (label au-dessus) */
 .illu-cutout-gauge {
     display: flex;
     flex-direction: column;
     gap: 2px;
     align-self: center;
-    margin-left: 4px;
+    margin: 0 4px;
 }
+
 .illu-cutout-gauge .illu-opt-lbl {
     font-size: 10px;
     opacity: 0.75;
     line-height: 1;
 }
 
-/* Boutons actions (Effacer tout / Appliquer / Annuler) */
-.illu-cutout-stack--actions {
-    min-width: 82px;
+/* ── Mode compact : point coloré seul, sans label ─── */
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compact[data-illu-ribbon-group="cutout"]
+    .illu-cutout-mode-group,
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compact[data-illu-ribbon-group="cutout"]
+    .illu-cutout-action-group {
+    flex-direction: column !important;
+    gap: 1px !important;
 }
 
-.illu-cutout-action-btn {
-    max-height: 22px;
-    height: 22px;
-    font-size: 11px;
-    padding: 0 8px;
-    cursor: pointer;
-    white-space: nowrap;
-    width: 100%;
-    text-align: center;
-    /* Bordure au repos : petite couleur subtile win98 */
-    border: 1px solid #b0b0b0;
-    border-top-color: #e0e0e0;
-    border-left-color: #e0e0e0;
-    background: var(--mp-surface, #d4d0c8);
-    color: inherit;
-    border-radius: 2px;
-    box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 rgba(0,0,0,0.1) inset;
-    transition: background 0.08s;
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compact[data-illu-ribbon-group="cutout"]
+    .illu-cutout-gauge {
+    display: none !important;
 }
-.illu-cutout-action-btn:hover {
-    background: #c8c4ba;
-    border-color: #808080;
-    border-top-color: #d0d0d0;
-    border-left-color: #d0d0d0;
+
+/* ── Mode compressé (sans icône) : juste le texte du label ─── */
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compressed[data-illu-ribbon-group="cutout"]
+    .illu-cutout-dot {
+    display: none !important;
 }
-.illu-cutout-action-btn:active {
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.12) inset, -1px -1px 0 #fff inset;
-    border-color: #808080;
-    border-top-color: #808080;
-    border-left-color: #808080;
-    border-bottom-color: #e0e0e0;
-    border-right-color: #e0e0e0;
+
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compressed[data-illu-ribbon-group="cutout"]
+    .illu-cutout-mode-btn.illu-icon-toggle,
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compressed[data-illu-ribbon-group="cutout"]
+    .illu-cutout-action-btn.illu-icon-toggle {
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-content: center !important;
+    padding: 2px 5px !important;
+    font-size: 10px !important;
 }
-.illu-cutout-action-btn--apply {
-    background: var(--mp-accent, #0d7a7a);
-    color: #fff;
-    border-color: #005f5f;
-    border-top-color: #1a9a9a;
-    border-left-color: #1a9a9a;
-    font-weight: bold;
-    box-shadow: 1px 1px 0 rgba(255,255,255,0.2) inset, -1px -1px 0 rgba(0,0,0,0.2) inset;
+
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compressed[data-illu-ribbon-group="cutout"]
+    .illu-cutout-action-btn i.fa-solid {
+    display: none !important;
 }
-.illu-cutout-action-btn--apply:hover {
-    filter: brightness(1.1);
+
+body.illu-toolbar-ribbon
+    .illu-ribbon-group--compressed[data-illu-ribbon-group="cutout"]
+    .illu-cutout-gauge {
+    display: none !important;
 }
+

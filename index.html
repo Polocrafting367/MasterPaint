@@ -848,22 +848,34 @@
                 <!-- Groupe Détourage par sélection (outil indépendant) -->
                 <div class="illu-ribbon-group" data-illu-ribbon-group="cutout" id="opt-grp-cutout-guided" hidden>
                     <div class="illu-ribbon-group-body illu-cutout-ribbon-body">
-                        <!-- Pinceaux empilés -->
-                        <div class="illu-cutout-stack">
-                            <button type="button" id="illu-cutout-btn-keep" class="illu-cutout-mode-btn illu-cutout-mode-btn--keep is-active" title="Conserver (pinceau vert)">
-                                <span class="illu-cutout-dot" style="background:#4caf50;"></span>
-                                Conserver
-                            </button>
-                            <button type="button" id="illu-cutout-btn-remove" class="illu-cutout-mode-btn illu-cutout-mode-btn--remove" title="Supprimer (pinceau rouge)">
-                                <span class="illu-cutout-dot" style="background:#f44336;"></span>
-                                Supprimer
-                            </button>
-                            <button type="button" id="illu-cutout-btn-erase" class="illu-cutout-mode-btn illu-cutout-mode-btn--erase" title="Effacer les marques">
-                                <span class="illu-cutout-dot" style="background:#9e9e9e;"></span>
-                                Effacer
-                            </button>
-                        </div>
-                        <!-- Slider pinceau : label au-dessus -->
+                        <!-- Mode pinceau : Conserver / Supprimer / Effacer — style ruban unifié -->
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-1 illu-cutout-mode-group" id="illu-cutout-mode-group">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-keep"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-mode-btn illu-cutout-mode-btn--keep illu-icon-toggle--on"
+                                    title="Conserver — pinceau vert" aria-pressed="true">
+                                    <span class="illu-cutout-dot illu-cutout-dot--keep" aria-hidden="true"></span>
+                                    <span class="illu-mode-toggle-lbl">Conserver</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-remove"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-mode-btn illu-cutout-mode-btn--remove"
+                                    title="Supprimer — pinceau rouge" aria-pressed="false">
+                                    <span class="illu-cutout-dot illu-cutout-dot--remove" aria-hidden="true"></span>
+                                    <span class="illu-mode-toggle-lbl">Supprimer</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-erase"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-mode-btn illu-cutout-mode-btn--erase"
+                                    title="Effacer les marques" aria-pressed="false">
+                                    <span class="illu-cutout-dot illu-cutout-dot--erase" aria-hidden="true"></span>
+                                    <span class="illu-mode-toggle-lbl">Effacer</span>
+                                </button>
+                            </span>
+                        </span>
+                        <!-- Slider pinceau -->
                         <div class="illu-cutout-gauge">
                             <label for="illu-cutout-brush-size" class="illu-opt-lbl">Pinceau</label>
                             <span class="illu-gauge-wrap illu-gauge-wrap--low">
@@ -872,12 +884,33 @@
                                 <input type="range" id="illu-cutout-brush-size" class="illu-gauge-input" min="3" max="120" value="12">
                             </span>
                         </div>
-                        <!-- Actions empilées -->
-                        <div class="illu-cutout-stack illu-cutout-stack--actions">
-                            <button type="button" id="illu-cutout-btn-clear" class="illu-cutout-action-btn">🗑 Effacer tout</button>
-                            <button type="button" id="illu-cutout-btn-apply" class="illu-cutout-action-btn illu-cutout-action-btn--apply">Appliquer</button>
-                            <button type="button" id="illu-cutout-btn-cancel" class="illu-cutout-action-btn">Annuler</button>
-                        </div>
+                        <!-- Actions : Effacer tout / Appliquer / Annuler — style ruban unifié -->
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group illu-toggle-group--compact-grid illu-toggle-group--compact-cols-1 illu-cutout-action-group" id="illu-cutout-action-group">
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-clear"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-action-btn"
+                                    title="Effacer toutes les marques">
+                                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                                    <span class="illu-mode-toggle-lbl">Effacer tout</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-apply"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-action-btn illu-cutout-action-btn--apply"
+                                    title="Appliquer le détourage">
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                                    <span class="illu-mode-toggle-lbl">Appliquer</span>
+                                </button>
+                            </span>
+                            <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline">
+                                <button type="button" id="illu-cutout-btn-cancel"
+                                    class="illu-icon-toggle illu-mode-toggle-btn illu-cutout-action-btn"
+                                    title="Annuler le détourage">
+                                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                    <span class="illu-mode-toggle-lbl">Annuler</span>
+                                </button>
+                            </span>
+                        </span>
                     </div>
                     <span class="illu-ribbon-group-label">Détourage</span>
                 </div>

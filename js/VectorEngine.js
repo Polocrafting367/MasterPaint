@@ -645,19 +645,25 @@ window.VectorEngine = (() => {
     }
 
     // ─── Multi-drag (snapshots) ──────────────────────────────────────────────
+    function _cleanTransformStr(tr) {
+        if (tr == null || tr === 'undefined' || tr === 'null') return '';
+        return String(tr).replace(/\bundefined\b/g, '').replace(/\bnull\b/g, '').replace(/\s+/g, ' ').trim();
+    }
+
     function _snapshot(el) {
         if (typeof window.illuVectorSnapshotForDrag === 'function') {
             const geo = window.illuVectorSnapshotForDrag(el);
             if (geo) {
-                // S'assurer que l'objet a toujours une propriété transform (manquant pour text, foreignobject…)
-                if (geo.transform == null) {
-                    geo.transform = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
+                // S'assurer que geo.transform est toujours une string propre sans "undefined"
+                geo.transform = _cleanTransformStr(geo.transform);
+                // Fallback si transform reste vide après nettoyage
+                if (!geo.transform) {
+                    geo.transform = _cleanTransformStr(el.getAttribute('transform'));
                 }
                 return geo;
             }
         }
-        const tr = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
-        return { tag: 'transform', transform: tr };
+        return { tag: 'transform', transform: _cleanTransformStr(el.getAttribute('transform')) };
     }
 
     function _applyDrag(el, base, dx, dy) {
@@ -682,10 +688,8 @@ window.VectorEngine = (() => {
         } catch (e) {
             /* ignore */
         }
-        let baseTr = (base && base.transform != null) ? String(base.transform) : '';
-        if (baseTr === 'undefined' || baseTr === 'null') baseTr = '';
-        const curTr = (el.getAttribute('transform') || '').replace(/\bundefined\b/g, '').trim();
-        const newTr = [curTr ? `translate(${ldx},${ldy})` : `translate(${ldx},${ldy})`, baseTr].filter(Boolean).join(' ').trim();
+        let baseTr = _cleanTransformStr((base && base.transform != null) ? String(base.transform) : '');
+        const newTr = [`translate(${ldx},${ldy})`, baseTr].filter(Boolean).join(' ').trim();
         el.setAttribute('transform', newTr);
     }
 
@@ -907,11 +911,11 @@ window.VectorEngine = (() => {
         
         _snapshots.forEach(snap => {
             const el = snap.el;
-            const baseTr = (snap.base && snap.base.transform) || '';
+            const baseTr = _cleanTransformStr(snap.base && snap.base.transform);
             const tx = pivot.x - pivot.x * scaleX;
             const ty = pivot.y - pivot.y * scaleY;
             const m = `matrix(${scaleX} 0 0 ${scaleY} ${tx} ${ty})`;
-            el.setAttribute('transform', [m, baseTr].filter(Boolean).join(' '));
+            el.setAttribute('transform', [m, baseTr].filter(Boolean).join(' ').trim());
         });
         refreshSelectionUI();
     }

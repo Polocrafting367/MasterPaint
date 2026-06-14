@@ -4631,6 +4631,15 @@ window.syncIlluRulersUI = function () {
     }
 };
 
+/**
+ * Cache des motifs de grille (patterns croisés) pour un alignement parfait.
+ * Un pattern horizontal pour les lignes verticales, un pattern vertical pour les lignes horizontales.
+ * Reconstruit uniquement quand w, h, zoom ou thème changent.
+ */
+let _illuGridVertPattern = null;   // pattern pour lignes verticales (répété Y)
+let _illuGridHorizPattern = null;  // pattern pour lignes horizontales (répété X)
+let _illuGridCacheKey = '';
+
 window.illuUpdatePixelGrid = function () {
     const overlay = document.getElementById('pixel-grid-overlay');
     const drawingCanvas = document.getElementById('drawing-canvas');
@@ -4639,6 +4648,9 @@ window.illuUpdatePixelGrid = function () {
     
     if (!window._illuShowPixelGrid) {
         overlay.style.display = 'none';
+        _illuGridVertPattern = null;
+        _illuGridHorizPattern = null;
+        _illuGridCacheKey = '';
         if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
@@ -4646,6 +4658,9 @@ window.illuUpdatePixelGrid = function () {
     const p = window.EditorManager && window.EditorManager.activeProject;
     if (!p) {
         overlay.style.display = 'none';
+        _illuGridVertPattern = null;
+        _illuGridHorizPattern = null;
+        _illuGridCacheKey = '';
         if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
@@ -4654,6 +4669,9 @@ window.illuUpdatePixelGrid = function () {
     // La grille de pixels s'affiche uniquement au-delà d'un zoom de 400% (zoomLevel >= 4)
     if (z < 4.0) {
         overlay.style.display = 'none';
+        _illuGridVertPattern = null;
+        _illuGridHorizPattern = null;
+        _illuGridCacheKey = '';
         if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
         return;
     }
@@ -4683,27 +4701,70 @@ window.illuUpdatePixelGrid = function () {
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     
-    const isDark = document.body.classList.contains('theme-dark');
-    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(128, 128, 128, 0.4)';
-    ctx.lineWidth = 1;
-    
     const w = p.width;
     const h = p.height;
+    const isDark = document.body.classList.contains('theme-dark');
+    const cacheKey = `${w}x${h}x${z}x${isDark}`;
     
-    ctx.beginPath();
-    // Lignes verticales
-    for (let x = 1; x < w; x++) {
-        const sx = Math.round(x * z);
-        ctx.moveTo(sx - 0.5, 0);
-        ctx.lineTo(sx - 0.5, overlay.height);
+    // Reconstruire les patterns seulement si nécessaire
+    if (cacheKey !== _illuGridCacheKey) {
+        _illuGridVertPattern = null;
+        _illuGridHorizPattern = null;
+        
+        const color = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(128, 128, 128, 0.4)';
+        
+        // --- Pattern pour les lignes verticales (répété verticalement) ---
+        // Canvas horizontal de 1px de haut contenant tous les traits verticaux
+        if (w > 1) {
+            const vertCanvas = document.createElement('canvas');
+            const vertW = Math.ceil(w * z);
+            vertCanvas.width = Math.max(1, vertW);
+            vertCanvas.height = 1;
+            const vCtx = vertCanvas.getContext('2d');
+            vCtx.strokeStyle = color;
+            vCtx.lineWidth = 1;
+            vCtx.beginPath();
+            for (let x = 1; x < w; x++) {
+                const sx = Math.round(x * z) - 0.5;
+                vCtx.moveTo(sx, 0);
+                vCtx.lineTo(sx, 1);
+            }
+            vCtx.stroke();
+            _illuGridVertPattern = ctx.createPattern(vertCanvas, 'repeat-y');
+        }
+        
+        // --- Pattern pour les lignes horizontales (répété horizontalement) ---
+        // Canvas vertical de 1px de large contenant tous les traits horizontaux
+        if (h > 1) {
+            const horizCanvas = document.createElement('canvas');
+            const horizH = Math.ceil(h * z);
+            horizCanvas.width = 1;
+            horizCanvas.height = Math.max(1, horizH);
+            const hCtx = horizCanvas.getContext('2d');
+            hCtx.strokeStyle = color;
+            hCtx.lineWidth = 1;
+            hCtx.beginPath();
+            for (let y = 1; y < h; y++) {
+                const sy = Math.round(y * z) - 0.5;
+                hCtx.moveTo(0, sy);
+                hCtx.lineTo(1, sy);
+            }
+            hCtx.stroke();
+            _illuGridHorizPattern = ctx.createPattern(horizCanvas, 'repeat-x');
+        }
+        
+        _illuGridCacheKey = cacheKey;
     }
-    // Lignes horizontales
-    for (let y = 1; y < h; y++) {
-        const sy = Math.round(y * z);
-        ctx.moveTo(0, sy - 0.5);
-        ctx.lineTo(overlay.width, sy - 0.5);
+    
+    // Appliquer les deux patterns croisés (ordre sans importance)
+    if (_illuGridVertPattern) {
+        ctx.fillStyle = _illuGridVertPattern;
+        ctx.fillRect(0, 0, overlay.width, overlay.height);
     }
-    ctx.stroke();
+    if (_illuGridHorizPattern) {
+        ctx.fillStyle = _illuGridHorizPattern;
+        ctx.fillRect(0, 0, overlay.width, overlay.height);
+    }
     
     if (typeof window.illuDrawSnapGridPreview === 'function') window.illuDrawSnapGridPreview();
 };

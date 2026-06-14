@@ -520,7 +520,11 @@ self.onmessage=function(e){
     function updateCutoutToolbarActiveBrush() {
         ['keep','remove','erase'].forEach(t => {
             const btn = document.getElementById('illu-cutout-btn-'+t);
-            if (btn) btn.classList.toggle('is-active', (t==='keep'&&G.brushType===HINT_KEEP)||(t==='remove'&&G.brushType===HINT_REMOVE)||(t==='erase'&&G.brushType===0));
+            if (!btn) return;
+            const isActive = (t==='keep'&&G.brushType===HINT_KEEP)||(t==='remove'&&G.brushType===HINT_REMOVE)||(t==='erase'&&G.brushType===0);
+            /* Style ruban standard : illu-icon-toggle--on + aria-pressed */
+            btn.classList.toggle('illu-icon-toggle--on', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
         const dc = document.getElementById('drawing-canvas');
         if (dc) dc.style.cursor = G.brushType===HINT_KEEP?'crosshair':G.brushType===HINT_REMOVE?'cell':'default';
