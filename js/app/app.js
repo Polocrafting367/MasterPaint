@@ -3452,7 +3452,7 @@ window.refreshChromeDocTitle = function () {
             ? window.IlluI18n.t(titleKey, { doc: name })
             : mobileUi
                 ? `MasterPaint 98 — ${name}`
-                : `MasterPaint 98 Pro — ${name}`;
+                : `MasterPaint  — ${name}`;
     if (typeof document !== 'undefined') document.title = titleText;
     if (typeof window.illuMobileSyncDocTitle === 'function') window.illuMobileSyncDocTitle();
 };
