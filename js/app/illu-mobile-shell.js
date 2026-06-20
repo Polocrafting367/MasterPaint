@@ -31,6 +31,7 @@
         layers: { id: 'win-layers', bodyId: 'illu-mobile-sheet-layers-body' },
         history: { id: 'win-history', bodyId: 'illu-mobile-sheet-history-body' },
         effects: { bodyId: 'illu-mobile-sheet-effects-body' },
+        effects2: { bodyId: 'illu-mobile-sheet-effects2-body' },
         adjust: { bodyId: 'illu-mobile-sheet-adjust-body' }
     };
 
@@ -200,33 +201,38 @@
 
         const out = [];
 
-        function walk(ul, section) {
+        function walk(ul, section, sectionI18nKey) {
             ul.querySelectorAll(':scope > li').forEach((li) => {
                 if (!isMenuLiVisible(li)) return;
                 const sub = li.querySelector(':scope > ul[role="menu"]');
                 const labelSpan = li.querySelector(':scope > span:not(.menu-icon)');
                 const sectionLabel = labelSpan ? labelSpan.textContent.trim() : '';
+                const spanI18n = labelSpan ? (labelSpan.dataset.i18n || '') : '';
                 if (sub) {
-                    walk(sub, sectionLabel || section);
+                    walk(sub, sectionLabel || section, spanI18n || sectionI18nKey);
                 } else if (li.classList.contains('menu-row-icon')) {
                     const meta = extractMenuLeafMeta(li);
                     out.push({
                         li,
                         section: section || '',
+                        sectionI18nKey: sectionI18nKey || '',
                         ...meta
                     });
                 }
             });
         }
 
-        walk(topUl, '');
+        walk(topUl, '', '');
         return out;
     }
 
-    function buildMenuSheet(bodyId, menuI18nKey) {
+    function buildMenuSheet(bodyId, menuI18nKey, includeSectionKeys) {
         const body = document.getElementById(bodyId);
         if (!body) return;
-        const leaves = illuMobileCollectMenuLeaves(menuI18nKey);
+        const allLeaves = illuMobileCollectMenuLeaves(menuI18nKey);
+        const leaves = includeSectionKeys
+            ? allLeaves.filter(l => includeSectionKeys.includes(l.sectionI18nKey))
+            : allLeaves;
         body.innerHTML = '';
         const wrap = document.createElement('div');
         wrap.className = 'illu-mobile-menu-sheet';
@@ -436,7 +442,13 @@
     }
 
     function buildEffectsSheet() {
-        buildMenuSheet('illu-mobile-sheet-effects-body', 'menu.effects');
+        buildMenuSheet('illu-mobile-sheet-effects-body', 'menu.effects',
+            ['menu.imageCutout', 'menu.fxArtistic', 'menu.fxNoise', 'menu.fxDistort']);
+    }
+
+    function buildEffects2Sheet() {
+        buildMenuSheet('illu-mobile-sheet-effects2-body', 'menu.effects',
+            ['menu.fxBlur', 'menu.fxPhoto', 'menu.fxRender', 'menu.fxStylize']);
     }
 
     function buildAdjustSheet() {
@@ -483,6 +495,7 @@
             layoutColorsSheetMobile();
         }
         if (sheetKey === 'effects') buildEffectsSheet();
+        if (sheetKey === 'effects2') buildEffects2Sheet();
         if (sheetKey === 'adjust') buildAdjustSheet();
 
         sheet.hidden = false;
@@ -748,6 +761,13 @@
                     }
                     return;
                 }
+                if (action === 'zoomfit') {
+                    closeMobileSheet();
+                    if (typeof fitActiveProjectZoomToWorkspace === 'function') {
+                        fitActiveProjectZoomToWorkspace();
+                    }
+                    return;
+                }
                 if (action === 'crop') {
                     closeMobileSheet();
                     if (typeof window.startIlluInteractiveCrop === 'function') window.startIlluInteractiveCrop();
@@ -803,6 +823,7 @@
             if (!isShellMode()) return;
             if (e && e.detail && e.detail.scoped) return;
             buildEffectsSheet();
+            buildEffects2Sheet();
             buildAdjustSheet();
             if (window.IlluI18n && typeof window.IlluI18n.apply === 'function') {
                 const dock = document.getElementById('illu-mobile-bottom-dock');

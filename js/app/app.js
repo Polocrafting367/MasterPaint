@@ -3542,6 +3542,17 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
     const bar = document.getElementById('tab-bar');
     if (!bar) return;
     
+    // Désactivé sur téléphone / shell mobile
+    const isMobile =
+        document.body.classList.contains('illu-mobile-ui') ||
+        document.body.classList.contains('illu-mobile-shell-active') ||
+        (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
+    if (isMobile) {
+        const bgDiv = document.getElementById('body-bg-preview');
+        if (bgDiv) bgDiv.style.display = 'none';
+        return;
+    }
+    
     let enabled = true;
     try {
         enabled = localStorage.getItem('settings-tab-bg-preview-enabled') !== '0';
@@ -3836,6 +3847,10 @@ window.illuWorkspaceFitAvailableSize = function () {
             if (topBarH > 0 || optRowH > 0) {
                 pt += topBarH + (optRowH > 0 ? 4 + optRowH : 0);
             }
+        }
+        /* Floating-window active (palette, effet) : réserver ~300px en bas pour que le canvas ne soit pas masqué. */
+        if (document.querySelector('.floating-window:not(.illu-floating-window-hidden)')) {
+            pb -= 100;
         }
         const innerW = Math.max(0, ws.clientWidth - pl - pr);
         const innerH = Math.max(0, ws.clientHeight - pt - pb);

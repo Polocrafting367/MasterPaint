@@ -74,7 +74,7 @@ body.effect-dialog-open.ui-layout-docked:not(.effect-allows-colors) #palette-doc
 
 #effect-dialog-window {
     pointer-events: auto;
-    z-index: 3001;
+    z-index: 4000;
 }
 
 :root {

@@ -161,10 +161,11 @@
         const chunkSize = readU32BE(bytes, start + 1);
         if (chunkSize < MIN_CHUNK || chunkSize > MAX_CHUNK) return null;
 
+        const maxChunks = expectedLen > 0 && chunkSize > 0 ? Math.ceil(expectedLen / chunkSize) : MAX_CHUNKS;
         let pos = start + 5;
         const chunkMap = new Map();
 
-        while (pos + 12 <= bytes.length && chunkMap.size < MAX_CHUNKS) {
+        while (pos + 12 <= bytes.length && chunkMap.size < maxChunks) {
             const chunkNumber = readU32BE(bytes, pos);
             pos += 4;
             const dataSize = readU32BE(bytes, pos);
@@ -565,11 +566,254 @@
         return out;
     }
 
+    // ─── Paint.NET native .pdn export (BinaryFormatter / NRBF format) ──────────
+
+    async function exportPaintDotNetNativePdn(editorManager) {
+        const em = editorManager;
+        if (!em || !em.isPixelMode || !em.layers.length)
+            throw new Error('Export .pdn natif : mode pixel requis.');
+
+        const W = Math.max(1, em.width | 0);
+        const H = Math.max(1, em.height | 0);
+        const pixelLayers = em.layers.filter((l) => l && l.buffer);
+        if (!pixelLayers.length) throw new Error('Aucun calque bitmap à exporter.');
+        const N = pixelLayers.length;
+        const pixLen = W * H * 4;
+
+        const bgraLayers = [];
+        for (const layer of pixelLayers) {
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, W, H);
+            ctx.drawImage(layer.buffer, layer.x | 0, layer.y | 0);
+            bgraLayers.push(imageDataToBgra(ctx.getImageData(0, 0, W, H)));
+        }
+
+        const bf = [];
+        const _enc = new TextEncoder();
+
+        function w7b(v) {
+            v = v >>> 0;
+            while (v >= 0x80) { bf.push((v & 0x7F) | 0x80); v >>>= 7; }
+            bf.push(v);
+        }
+        function wLPS(s) {
+            const b = _enc.encode(s);
+            w7b(b.length);
+            for (let k = 0; k < b.length; k++) bf.push(b[k]);
+        }
+        function wI32(v) {
+            const n = v | 0;
+            bf.push(n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255);
+        }
+        function wI64(v) {
+            const lo = v % 0x100000000;
+            const hi = Math.floor(v / 0x100000000);
+            bf.push(lo & 255, (lo >>> 8) & 255, (lo >>> 16) & 255, (lo >>> 24) & 255);
+            bf.push(hi & 255, (hi >>> 8) & 255, (hi >>> 16) & 255, (hi >>> 24) & 255);
+        }
+        function null_() { bf.push(0x0A); }
+        function ref_(id) { bf.push(0x09); wI32(id); }
+        function strObj(oid, s) { bf.push(0x06); wI32(oid); wLPS(s); }
+
+        function classWT(oid, cname, members, libId) {
+            bf.push(0x05); wI32(oid); wLPS(cname); wI32(members.length);
+            for (const m of members) wLPS(m.name);
+            for (const m of members) bf.push(m.te);
+            for (const m of members) {
+                if (m.te === 0) bf.push(m.ai);
+                else if (m.te === 3) wLPS(m.ai);
+                else if (m.te === 4) { wLPS(m.ai[0]); wI32(m.ai[1]); }
+            }
+            wI32(libId);
+        }
+
+        function sysClassWT(oid, cname, members) {
+            bf.push(0x04); wI32(oid); wLPS(cname); wI32(members.length);
+            for (const m of members) wLPS(m.name);
+            for (const m of members) bf.push(m.te);
+            for (const m of members) { if (m.te === 0) bf.push(m.ai); }
+        }
+
+        function cidStart(oid, metaId) { bf.push(0x01); wI32(oid); wI32(metaId); }
+
+        const PDN_LIB = 2, SYS_LIB = 3, CORE_LIB = 54;
+        const KVPAIR_T =
+            'System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]][]';
+
+        // Object IDs: 1=Doc, 2=LayerList, 3=Version, 4=ObjArray
+        // Layer i: BL=5+7i, BP=6+7i, BO=7+7i, SF=8+7i, MB=9+7i, LP=10+7i, NS=11+7i
+        function lids(i) {
+            const b = 5 + 7 * i;
+            return { BL: b, BP: b + 1, BO: b + 2, SF: b + 3, MB: b + 4, LP: b + 5, NS: b + 6 };
+        }
+        const L0 = lids(0);
+
+        const xmlStr = buildHeaderXml(W, H, N);
+        const xmlBytes = _enc.encode(xmlStr);
+        const parts = [
+            new Uint8Array([0x50, 0x44, 0x4E, 0x33]),
+            new Uint8Array([xmlBytes.length & 255, (xmlBytes.length >>> 8) & 255, (xmlBytes.length >>> 16) & 255]),
+            xmlBytes
+        ];
+
+        // Two-byte prefix present in all Paint.NET PDN files
+        bf.push(0x00, 0x01);
+        // SerializationHeaderRecord
+        bf.push(0x00); wI32(1); wI32(-1); wI32(1); wI32(0);
+        // BinaryLibrary records
+        bf.push(0x0C); wI32(PDN_LIB); wLPS('PaintDotNet.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null');
+        bf.push(0x0C); wI32(SYS_LIB); wLPS('System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089');
+        bf.push(0x0C); wI32(CORE_LIB); wLPS('PaintDotNet.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null');
+
+        // Document #1
+        classWT(1, 'PaintDotNet.Document', [
+            { name: 'isDisposed', te: 0, ai: 1 },
+            { name: 'layers', te: 4, ai: ['PaintDotNet.LayerList', PDN_LIB] },
+            { name: 'width', te: 0, ai: 8 },
+            { name: 'height', te: 0, ai: 8 },
+            { name: 'savedWith', te: 3, ai: 'System.Version' },
+            { name: 'userMetaData', te: 4, ai: ['System.Collections.Specialized.NameValueCollection', SYS_LIB] },
+            { name: 'userMetadataItems', te: 3, ai: KVPAIR_T },
+        ], PDN_LIB);
+        bf.push(0); ref_(2); wI32(W); wI32(H); ref_(3); null_(); null_();
+
+        // LayerList #2
+        classWT(2, 'PaintDotNet.LayerList', [
+            { name: 'parent', te: 4, ai: ['PaintDotNet.Document', PDN_LIB] },
+            { name: 'ArrayList+_items', te: 5, ai: null },
+            { name: 'ArrayList+_size', te: 0, ai: 8 },
+            { name: 'ArrayList+_version', te: 0, ai: 8 },
+        ], PDN_LIB);
+        ref_(1); ref_(4); wI32(N); wI32(0);
+
+        // System.Version #3
+        sysClassWT(3, 'System.Version', [
+            { name: '_Major', te: 0, ai: 8 }, { name: '_Minor', te: 0, ai: 8 },
+            { name: '_Build', te: 0, ai: 8 }, { name: '_Revision', te: 0, ai: 8 },
+        ]);
+        wI32(4); wI32(0); wI32(0); wI32(0);
+
+        // Object array #4
+        bf.push(0x10); wI32(4); wI32(N);
+        for (let i = 0; i < N; i++) ref_(lids(i).BL);
+
+        // BitmapLayer
+        classWT(L0.BL, 'PaintDotNet.BitmapLayer', [
+            { name: 'properties', te: 4, ai: ['PaintDotNet.BitmapLayer+BitmapLayerProperties', PDN_LIB] },
+            { name: 'surface', te: 4, ai: ['PaintDotNet.Surface', CORE_LIB] },
+            { name: 'Layer+isDisposed', te: 0, ai: 1 },
+            { name: 'Layer+width', te: 0, ai: 8 },
+            { name: 'Layer+height', te: 0, ai: 8 },
+            { name: 'Layer+properties', te: 4, ai: ['PaintDotNet.Layer+LayerProperties', PDN_LIB] },
+        ], PDN_LIB);
+        ref_(L0.BP); ref_(L0.SF); bf.push(0); wI32(W); wI32(H); ref_(L0.LP);
+        for (let i = 1; i < N; i++) {
+            const Li = lids(i);
+            cidStart(Li.BL, L0.BL);
+            ref_(Li.BP); ref_(Li.SF); bf.push(0); wI32(W); wI32(H); ref_(Li.LP);
+        }
+
+        // BitmapLayerProperties
+        classWT(L0.BP, 'PaintDotNet.BitmapLayer+BitmapLayerProperties', [
+            { name: 'blendOp', te: 4, ai: ['PaintDotNet.UserBlendOps+NormalBlendOp', PDN_LIB] },
+        ], PDN_LIB);
+        ref_(L0.BO);
+        for (let i = 1; i < N; i++) { cidStart(lids(i).BP, L0.BP); ref_(lids(i).BO); }
+
+        // Surface (PaintDotNet.Core)
+        classWT(L0.SF, 'PaintDotNet.Surface', [
+            { name: 'scan0', te: 4, ai: ['PaintDotNet.MemoryBlock', CORE_LIB] },
+            { name: 'width', te: 0, ai: 8 },
+            { name: 'height', te: 0, ai: 8 },
+            { name: 'stride', te: 0, ai: 8 },
+        ], CORE_LIB);
+        ref_(L0.MB); wI32(W); wI32(H); wI32(W * 4);
+        for (let i = 1; i < N; i++) {
+            cidStart(lids(i).SF, L0.SF);
+            ref_(lids(i).MB); wI32(W); wI32(H); wI32(W * 4);
+        }
+
+        // MemoryBlock (PaintDotNet.Core) — deferred=true → pixel data follows MessageEnd
+        classWT(L0.MB, 'PaintDotNet.MemoryBlock', [
+            { name: 'length64', te: 0, ai: 9 },
+            { name: 'hasParent', te: 0, ai: 1 },
+            { name: 'deferred', te: 0, ai: 1 },
+        ], CORE_LIB);
+        wI64(pixLen); bf.push(0); bf.push(1);
+        for (let i = 1; i < N; i++) {
+            cidStart(lids(i).MB, L0.MB);
+            wI64(pixLen); bf.push(0); bf.push(1);
+        }
+
+        // Layer+LayerProperties
+        classWT(L0.LP, 'PaintDotNet.Layer+LayerProperties', [
+            { name: 'name', te: 1, ai: null },
+            { name: 'userMetaData', te: 4, ai: ['System.Collections.Specialized.NameValueCollection', SYS_LIB] },
+            { name: 'userMetadataItems', te: 3, ai: KVPAIR_T },
+            { name: 'visible', te: 0, ai: 1 },
+            { name: 'isBackground', te: 0, ai: 1 },
+            { name: 'opacity', te: 0, ai: 2 },
+        ], PDN_LIB);
+        strObj(L0.NS, pixelLayers[0].name || 'Arrière-plan');
+        null_(); null_();
+        bf.push(1); bf.push(1); bf.push(255);
+        for (let i = 1; i < N; i++) {
+            cidStart(lids(i).LP, L0.LP);
+            strObj(lids(i).NS, pixelLayers[i].name || ('Calque ' + (i + 1)));
+            null_(); null_();
+            bf.push(1); bf.push(0); bf.push(255);
+        }
+
+        // UserBlendOps+NormalBlendOp — no fields
+        classWT(L0.BO, 'PaintDotNet.UserBlendOps+NormalBlendOp', [], PDN_LIB);
+        for (let i = 1; i < N; i++) cidStart(lids(i).BO, L0.BO);
+
+        // MessageEnd
+        bf.push(0x0B);
+        parts.push(new Uint8Array(bf));
+
+        // Deferred pixel data — one chunk block per MemoryBlock, in layer order
+        const CHUNK_SIZE = 65536;
+        const useGzip = typeof CompressionStream !== 'undefined';
+
+        for (let i = 0; i < N; i++) {
+            const bgra = bgraLayers[i];
+            const dHdr = new Uint8Array(5);
+            dHdr[0] = useGzip ? 0 : 1;
+            new DataView(dHdr.buffer).setUint32(1, CHUNK_SIZE, false);
+            parts.push(dHdr);
+
+            let offset = 0, chunkNum = 0;
+            while (offset < bgra.length) {
+                const end = Math.min(offset + CHUNK_SIZE, bgra.length);
+                const slice = bgra.subarray(offset, end);
+                const payload = useGzip ? (await gzip(slice) || slice) : slice;
+                const chunkHdr = new Uint8Array(8);
+                const dv = new DataView(chunkHdr.buffer);
+                dv.setUint32(0, chunkNum, false);
+                dv.setUint32(4, payload.length, false);
+                parts.push(chunkHdr, payload);
+                offset = end;
+                chunkNum++;
+            }
+        }
+
+        let total = 0;
+        for (const p of parts) total += p.length;
+        const result = new Uint8Array(total);
+        let off = 0;
+        for (const p of parts) { result.set(p, off); off += p.length; }
+        return result;
+    }
+
     const PdnFile = {
         loadFromFile,
         loadFromArrayBuffer,
         convertToMasterPaintBlob,
         exportMasterPaintPdn,
+        exportPaintDotNetNativePdn,
         bgraToImageData,
         imageDataToBgra
     };

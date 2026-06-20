@@ -46,7 +46,6 @@ body.illu-mobile-shell-active {
     --mp-raised-bot: transparent;
     --mp-inset-top:  transparent;
     --mp-inset-bot:  transparent;
-
     /* Surfaces */
     --mp-surface:      #f2f2f7;
     --mp-surface-deep: #e5e5ea;
@@ -96,7 +95,7 @@ body.illu-mobile-shell-active {
     --mob-topbar-h: 48px;
 
     /* Recalibrer le dock-h pour le dock flottant (+4px en bas + 4px gap dessus) */
-    --illu-mobile-dock-h: calc(64px + env(safe-area-inset-bottom, 0px) + 8px);
+    --illu-mobile-dock-h: 41px;
 
     /* Accent foncé dérivé de la couleur d'accent utilisateur (top bar, sheets) */
     --mob-accent-dark: color-mix(in srgb, var(--mp-accent, #0d7a7a) 62%, black 38%);
@@ -150,9 +149,11 @@ body.illu-mobile-shell-active #illu-mobile-top-bar {
 
 /* Burger gauche */
 .illu-mobile-top-bar__burger {
-    flex: 0 0 48px;
-    width: 48px;
+    flex: 0 0 auto;
+    min-width: 48px;
     height: 48px;
+    padding: 0 10px;
+    gap: 6px;
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -170,6 +171,14 @@ body.illu-mobile-shell-active #illu-mobile-top-bar {
     color: rgba(255, 255, 255, 0.92) !important;
 }
 
+.illu-mobile-top-bar__burger-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
 .illu-mobile-top-bar__burger:active {
     background: rgba(255, 255, 255, 0.14) !important;
     transform: scale(0.90) !important;
@@ -181,14 +190,14 @@ body.illu-mobile-shell-active #illu-mobile-top-bar {
     min-width: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     justify-content: center !important;
     gap: 1px !important;
+    text-align: center !important;
     border: none !important;
     background: transparent !important;
     color: #fff !important;
     padding: 6px 8px !important;
-    text-align: left !important;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent !important;
     transition: background var(--mob-dur-xs) var(--mob-ease-out) !important;
@@ -269,25 +278,13 @@ body.illu-mobile-shell-active .illu-mob-options-row {
     display: flex !important;
     flex-direction: row !important;
     align-items: stretch !important;
-    overflow: hidden !important;
     /* Flottante */
     position: fixed !important;
     top: calc(var(--mob-topbar-h, 48px) + env(safe-area-inset-top, 0px) + 4px) !important;
     left: 4px !important;
     right: 4px !important;
     z-index: 3500 !important;
-    /* Forme */
-    border-radius: 10px !important;
-    /* Verre dépoli */
-    background: rgba(242, 242, 247, 0.84) !important;
-    -webkit-backdrop-filter: var(--mob-blur-bar);
-    backdrop-filter: var(--mob-blur-bar);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06) !important;
-}
-
-body.illu-mobile-shell-active.theme-dark .illu-mob-options-row {
-    background: rgba(28, 28, 30, 0.88) !important;
-    box-shadow: 0 2px 14px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20) !important;
+    gap: 6px !important;
 }
 
 /* La capsule undo/redo */
@@ -299,23 +296,17 @@ body.illu-mobile-shell-active .illu-mob-undo-redo {
     flex: 0 0 36px !important;
     width: 36px !important;
     min-width: 36px !important;
-    background: transparent !important;
-    /* Gap visuel : espace + barre séparatrice via ::after */
+    background: color-mix(in srgb, var(--mp-accent, #806020) 6%, #ffffff) !important;
     gap: 0 !important;
     padding: 3px 4px 3px 3px !important;
-    position: relative;
+    border-radius: 10px !important;
+    -webkit-backdrop-filter: var(--mob-blur-bar);
+    backdrop-filter: var(--mob-blur-bar);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06) !important;
 }
 
-/* Séparateur vertical à droite de la capsule */
-body.illu-mobile-shell-active .illu-mob-undo-redo::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    top: 20%;
-    bottom: 20%;
-    width: 1px;
-    background: var(--mob-divider);
-    border-radius: 1px;
+body.illu-mobile-shell-active.theme-dark .illu-mob-undo-redo {
+    background: color-mix(in srgb, var(--mp-accent, #806020) 8%, #1c1c1e) !important;
 }
 
 .illu-mob-undo-redo__btn {
@@ -370,6 +361,16 @@ body.illu-mobile-shell-active #tool-options-container {
     /* Pas de wrapping : le ribbon overflow gère la compression */
     flex-wrap: nowrap !important;
     align-items: center !important;
+    border-radius: 10px !important;
+    background: rgba(242, 242, 247, 0.84) !important;
+    -webkit-backdrop-filter: var(--mob-blur-bar);
+    backdrop-filter: var(--mob-blur-bar);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+
+body.illu-mobile-shell-active.theme-dark #tool-options-container {
+    background: rgba(28, 28, 30, 0.88) !important;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20) !important;
 }
 
 /* Les barres internes : no-wrap aussi */
@@ -410,44 +411,36 @@ body.illu-mobile-shell-active #app-status-bar {
     display: none !important;
 }
 
-body.illu-mobile-shell-active .illu-mobile-bottom-dock {
-    background: var(--mp-dock-bg) !important;
-    -webkit-backdrop-filter: var(--mob-blur-dock);
-    backdrop-filter: var(--mob-blur-dock);
-    border-top: 1px solid var(--mp-dock-border) !important;
-    /* Flottant, centré, largeur collée au contenu */
-    left: 0 !important;
-    right: 0 !important;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 4px) !important;
-    padding-bottom: 0 !important;
-    width: -webkit-fit-content !important;
-    width: fit-content !important;
-    max-width: calc(100vw - 8px) !important;
-    margin-inline: auto !important;
-    border-radius: 16px !important;
-    box-shadow: 0 -1px 0 var(--mp-dock-border),
-                0 8px 32px rgba(0,0,0,0.14),
-                0 2px 8px rgba(0,0,0,0.08) !important;
-    align-items: center !important;
-    overflow: hidden !important;
-}
+
 
 /* Zone de scroll : ne force pas l'expansion */
 body.illu-mobile-shell-active .illu-mobile-dock-scroll {
-    background: transparent !important;
+background: rgba(242, 242, 247, 0.84) !important;
     flex: 0 0 auto !important;
     gap: 2px !important;
     padding: 5px 6px !important;
     align-items: center !important;
     max-width: calc(100vw - 8px) !important;
     overflow-x: auto !important;
+    border-radius: 10px;
+        -webkit-backdrop-filter: var(--mob-blur-bar);
+    backdrop-filter: var(--mob-blur-bar);
+margin: 0 8px 10px 8px;
+    height: 55px;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease,
+                margin 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                border-radius 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
 }
 
 /* ——— BOUTONS DOCK ——— */
 
 .illu-mobile-dock-btn {
     flex: 0 0 58px !important;
-    min-width: 58px !important;
+    min-width: 35px !important;
+min-height: 35px !important;
+
     border: none !important;
     border-radius: var(--mob-r-md) !important;
     background: transparent !important;
@@ -522,22 +515,25 @@ body.illu-mobile-shell-active.theme-dark .illu-mobile-dock-btn > *:not(i) {
    ================================================================ */
 
 .illu-mobile-sheet-backdrop {
-    background: rgba(0, 0, 0, 0.28) !important;
+    background: rgba(0, 0, 0, 0) !important;
     transition: opacity var(--mob-dur-md) var(--mob-ease-out) !important;
 }
 
 .illu-mobile-sheet {
     background: var(--mp-surface, #f2f2f7) !important;
     border: none !important;
-    border-radius: var(--mob-r-lg) var(--mob-r-lg) 0 0 !important;
+    border-radius: var(--mob-r-lg)  !important;
     box-shadow: var(--mob-shadow-sheet) !important;
     transition: transform var(--mob-dur-md) var(--mob-spring) !important;
     display: flex !important;
     flex-direction: column !important;
 }
 
+body.illu-mobile-shell-active .title-bar {
+    display: none !important;
+}
 /* Poignée (handle) */
-.illu-mobile-sheet::before {
+.illu-mobile-sheet::before, .floating-window:not(.palette-panel)::before {
     content: "";
     display: block;
     flex-shrink: 0;
@@ -545,11 +541,30 @@ body.illu-mobile-shell-active.theme-dark .illu-mobile-dock-btn > *:not(i) {
     height: 4px;
     border-radius: 2px;
     background: rgba(0, 0, 0, 0.14);
-    margin: 8px auto 0;
+    margin: 4px auto 5px;
 }
 
 body.illu-mobile-shell-active.theme-dark .illu-mobile-sheet::before {
     background: rgba(255, 255, 255, 0.18);
+}
+
+.illu-mobile-top-bar__burger i.fa-solid {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+body.win11-effects .window,
+body.win11-effects .welcome-dialog-window,
+body.win11-effects .floating-window,
+body.win11-effects .illu-instant-effect-busy__box {
+    border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+
+}
+
+body.win11-effects .window-body, body.win11-effects .status-bar, body.win11-effects .illu-cr-foot {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 8;
 }
 
 /* Header des sheets masqué — handle + footer Fermer suffisent */
@@ -886,9 +901,6 @@ body.illu-mobile-shell-active .illu-mobile-opt-strip {
 /* Boutons dans la barre d'options */
 body.illu-mobile-shell-active .illu-mobile-opt-strip button,
 body.illu-mobile-shell-active #tool-options-bar-row1 button {
-    border: 1px solid var(--mob-divider) !important;
-    border-radius: var(--mob-r-xs) !important;
-    background: var(--mob-card-bg) !important;
     box-shadow: none !important;
     -webkit-tap-highlight-color: transparent !important;
     transition:
@@ -914,9 +926,6 @@ body.illu-mobile-shell-active #tool-options-bar-row1 .illu-icon-toggle.is-active
 /* Selects */
 body.illu-mobile-shell-active .illu-mobile-opt-strip select,
 body.illu-mobile-shell-active #tool-options-bar-row1 select {
-    border: 1px solid var(--mob-divider) !important;
-    border-radius: var(--mob-r-xs) !important;
-    background: var(--mob-card-bg) !important;
     box-shadow: none !important;
     font-size: 13px !important;
 }
@@ -926,34 +935,60 @@ body.illu-mobile-shell-active.theme-dark #tool-options-bar-row1 select {
     color: #f2f2f7 !important;
 }
 
-/* Range slider */
-body.illu-mobile-shell-active .illu-mobile-opt-strip input[type="range"] {
+/* Range slider — TOUS les range dans le shell mobile (input global) */
+body.illu-mobile-shell-active input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    height: 3px !important;
-    border-radius: 2px !important;
-    background: rgba(13, 122, 122, 0.25) !important;
+    height: 5px !important;
+    min-height: 0 !important;
+    border-radius: 3px !important;
+    background: rgba(13, 122, 122, 0.40) !important;
     border: none !important;
     box-shadow: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-body.illu-mobile-shell-active .illu-mobile-opt-strip input[type="range"]::-webkit-slider-thumb {
+/* Track WebKit/Blink (Chrome, Safari, Edge) */
+body.illu-mobile-shell-active input[type="range"]::-webkit-slider-runnable-track {
     -webkit-appearance: none;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(13, 122, 122, 0.40);
+    border: none;
+}
+
+/* Track Firefox */
+body.illu-mobile-shell-active input[type="range"]::-moz-range-track {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(13, 122, 122, 0.40);
+    border: none;
+}
+
+/* Thumb WebKit */
+body.illu-mobile-shell-active input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2.5px solid var(--mp-accent, #0d7a7a);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.22);
+    cursor: pointer;
+}
+
+/* Thumb Firefox */
+body.illu-mobile-shell-active input[type="range"]::-moz-range-thumb {
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: #fff;
-    border: 2px solid var(--mp-accent, #0d7a7a);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-}
-
-body.illu-mobile-shell-active .illu-mobile-opt-strip input[type="range"]::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid var(--mp-accent, #0d7a7a);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    border: 2.5px solid var(--mp-accent, #0d7a7a);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.22);
+    cursor: pointer;
 }
 
 
@@ -1057,6 +1092,58 @@ body.illu-mobile-shell-active .illu-menubar-toolbar__sep {
     width: 1px !important;
     border: none !important;
     margin: 0 3px !important;
+}
+
+
+/* ================================================================
+   CHECKBOXES — style tactile mobile (survole le thème Win98/10)
+   ================================================================ */
+
+body.illu-mobile-shell-active input[type="checkbox"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1.5px solid rgba(0, 0, 0, 0.20) !important;
+    border-radius: 5px !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+    flex-shrink: 0;
+    position: relative;
+    transition: background var(--mob-dur-xs) var(--mob-ease-out),
+                border-color var(--mob-dur-xs) var(--mob-ease-out) !important;
+}
+
+body.illu-mobile-shell-active.theme-dark input[type="checkbox"] {
+    background: rgba(60, 60, 62, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.20) !important;
+}
+
+body.illu-mobile-shell-active input[type="checkbox"]:active {
+    transform: scale(0.90) !important;
+}
+
+body.illu-mobile-shell-active input[type="checkbox"]:checked {
+    background: var(--mp-accent, #0d7a7a) !important;
+    border-color: var(--mp-accent, #0d7a7a) !important;
+}
+
+body.illu-mobile-shell-active input[type="checkbox"]:checked::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 3px !important;
+    left: 6px !important;
+    width: 5px !important;
+    height: 9px !important;
+    border: solid #ffffff !important;
+    border-width: 0 2.5px 2.5px 0 !important;
+    transform: rotate(45deg) !important;
 }
 
 

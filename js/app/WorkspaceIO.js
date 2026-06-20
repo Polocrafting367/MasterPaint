@@ -1277,19 +1277,17 @@ function applyBitDepthReduction(ctx, width, height, bits) {
         const base = sanitizeFilename(em.activeProject?.name || 'image');
 
         if (fmt === 'pdn') {
-            if (!window.PdnFile || typeof window.PdnFile.exportMasterPaintPdn !== 'function') {
+            if (!window.PdnFile || typeof window.PdnFile.exportPaintDotNetNativePdn !== 'function') {
                 window.showIlluAlert('Export .pdn : chargez js/io/PdnFile.js.');
                 hideExportDialog();
                 return;
             }
-            window.PdnFile.exportMasterPaintPdn(em)
+            window.PdnFile.exportPaintDotNetNativePdn(em)
                 .then((bytes) => {
                     const blob = new Blob([bytes], { type: 'application/octet-stream' });
                     downloadBlob(blob, `${base}.pdn`);
                     hideExportDialog();
-                    window.showIlluAlert?.(
-                        'Projet enregistré au format .pdn MasterPaint (MPDN). Réouverture dans Illu ; Paint.NET officiel ne lit pas ce sous-format sans sérialisation .NET complète.'
-                    );
+                    window.showIlluAlert?.('Fichier .pdn exporté — compatible Paint.NET et MasterPaint.');
                 })
                 .catch((err) => {
                     console.warn(err);

@@ -17131,40 +17131,7 @@ window.illuProcessFileImport = function (file, opts) {
                         suppressWarnings: !!result.convertedFromPaintDotNet
                     });
                 }
-                if (result.convertedFromPaintDotNet && typeof window.PdnFile.convertToMasterPaintBlob === 'function') {
-                    try {
-                        const mpdn = await window.PdnFile.convertToMasterPaintBlob(buf);
-                        const blob = new Blob([mpdn], { type: 'application/octet-stream' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = baseName + '-illu.pdn';
-                        a.style.display = 'none';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(a.href);
-                            a.remove();
-                        }, 4000);
-                        if (window.showIlluAlert) {
-                            const wtxt =
-                                result.warnings && result.warnings.length
-                                    ? '\n\n' + result.warnings.join('\n')
-                                    : '';
-                            window.showIlluAlert(
-                                'Projet Paint.NET converti et ouvert.' +
-                                wtxt +
-                                '\n\nUne copie « ' +
-                                baseName +
-                                '-illu.pdn » a été téléchargée pour une réouverture plus fiable dans Illu.'
-                            );
-                        }
-                    } catch (convErr) {
-                        console.warn(convErr);
-                        if (window.showIlluAlert && result.warnings && result.warnings.length) {
-                            window.showIlluAlert(result.warnings.join('\n'));
-                        }
-                    }
-                } else if (window.showIlluAlert && result.warnings && result.warnings.length) {
+                if (window.showIlluAlert && result.warnings && result.warnings.length) {
                     window.showIlluAlert(result.warnings.join('\n'));
                 }
             } catch (err) {

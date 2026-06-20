@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd /home/polocrafting/Documents/LOGO_BIH_RVB.pdn)",
+      "Bash(xxd /home/polocrafting/Documents/Image_2.pdn)",
+      "Bash(python3 -c *)",
+      "Bash(python3)",
+      "Bash(node -e \"require\\('/opt/lampp/htdocs/MasterPaint/js/io/PdnFile.js'\\)\")"
+    ]
+  }
+}

@@ -2,7 +2,7 @@
 
 body.illu-mobile-shell-active {
     --illu-mobile-touch: 52px;
-    --illu-mobile-dock-h: calc(64px + env(safe-area-inset-bottom, 0px));
+    --illu-mobile-dock-h: 41px ;
     --illu-mobile-panel-bottom: calc(var(--illu-mobile-dock-h, 64px) + 4px);
     --illu-mobile-dock-btn-w: 68px;
     --illu-mobile-dock-menu-w: 50px;
@@ -444,14 +444,13 @@ body.illu-mobile-shell-active #app-window .window-body.illu-app-window-body {
     right: 0;
     bottom: 0;
     z-index: 4000;
-    height: var(--illu-mobile-dock-h);
+    height: auto;
+    max-height: 40vh;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-sizing: border-box;
-    flex-direction: row;
+    flex-direction: column;
     align-items: stretch;
-    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
-    border-top: 1px solid var(--mp-dock-border, #808080);
-    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.18);
+    background: transparent;
     overflow: hidden;
     gap: 0;
 }
@@ -473,8 +472,9 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     box-sizing: border-box;
 }
 
-.illu-mobile-dock-btn--fixed i {
-    font-size: 20px;
+.illu-mobile-dock-btn--fixed i,
+.illu-mobile-dock-top .illu-mobile-dock-btn i {
+    font-size: 14px;
 }
 
 .illu-mobile-dock-btn--fixed span {
@@ -484,11 +484,88 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     text-overflow: ellipsis;
 }
 
+.illu-mobile-dock-top {
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px 5px;
+    box-sizing: border-box;
+    background: transparent;
+    border-bottom: none;
+    pointer-events: none;
+    max-height: 48px;
+    overflow: hidden;
+    will-change: max-height;
+    transition: max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                padding    0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.illu-mobile-dock-top-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    pointer-events: auto;
+    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
+    border-radius: 10px;
+    padding: 3px 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity   0.18s ease;
+    will-change: transform, opacity;
+}
+
+.illu-mobile-dock-top-group--left,
+.illu-mobile-dock-top-group--right {
+    flex: 0 0 auto;
+}
+
+body.illu-mobile-shell-active .illu-mobile-dock-top {
+    display: flex;
+}
+
+/* ─── Animation sortie des pills quand effect-dialog / floating-window ─── */
+body.illu-mobile-shell-active.effect-dialog-open .illu-mobile-dock-top {
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+body.illu-mobile-shell-active.effect-dialog-open .illu-mobile-dock-top-group--left {
+    transform: translateX(-150%);
+    opacity: 0;
+}
+
+body.illu-mobile-shell-active.effect-dialog-open .illu-mobile-dock-top-group--right {
+    transform: translateX(150%);
+    opacity: 0;
+}
+
+body.illu-mobile-shell-active.effect-dialog-open .illu-mobile-dock-scroll {
+margin: 0;
+border-radius: 0;
+height:40px;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease,
+                margin 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                border-radius 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+
+body.illu-mobile-shell-active.effect-dialog-open {
+    --illu-mobile-panel-bottom: var(--illu-mobile-dock-h);
+}
+
 .illu-mobile-dock-scroll {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
+    justify-content: safe center;
     flex: 1 1 auto;
+    min-height: 0;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -499,8 +576,12 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     scroll-behavior: smooth;
     gap: 4px;
     padding: 4px 6px;
+    margin: 0;
+    border-radius: 0;
     box-sizing: border-box;
-    background: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0));
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 8%, var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0)));
+    border-top: 1px solid color-mix(in srgb, var(--mp-accent, #0d7a7a) 40%, var(--mp-dock-border, #808080));
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.18);
     scrollbar-width: thin;
     scrollbar-color: var(--illu-mobile-scroll-thumb) var(--illu-mobile-dock-scroll-bg);
 }
@@ -510,17 +591,17 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
 }
 
 .illu-mobile-dock-scroll::-webkit-scrollbar-track {
-    background-color: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0)) !important;
+    background-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 8%, var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0))) !important;
     background-image: none !important;
 }
 
 .illu-mobile-dock-scroll::-webkit-scrollbar-thumb {
-    background-color: var(--illu-mobile-scroll-thumb) !important;
+    background-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 35%, var(--illu-mobile-scroll-thumb)) !important;
     border-radius: 2px;
 }
 
 .illu-mobile-dock-scroll::-webkit-scrollbar-corner {
-    background: var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0)) !important;
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 8%, var(--illu-mobile-dock-scroll-bg, var(--mp-dock-bg, #c0c0c0))) !important;
 }
 
 .illu-mobile-dock-btn {
@@ -545,22 +626,65 @@ body.illu-mobile-shell-active .illu-mobile-bottom-dock {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
 }
 
+.illu-mobile-dock-top .illu-mobile-dock-btn {
+    flex: 0 0 28px;
+    min-width: 28px;
+    max-width: 28px;
+    height: 28px;
+    padding: 0;
+    gap: 0;
+    border: none;
+    font-size: 10px;
+}
+
 .illu-mobile-dock-btn i {
     font-size: 24px;
     line-height: 1;
     color: var(--mp-accent, #0d7a7a);
 }
 
+.illu-mobile-dock-top .illu-mobile-dock-btn i {
+    font-size: 15px;
+}
+
 .illu-mobile-dock-btn[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 18%, transparent);
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 22%, transparent);
+    border-color: color-mix(in srgb, var(--mp-accent, #0d7a7a) 55%, transparent) !important;
+}
+
+.illu-mobile-dock-btn[aria-pressed="true"] i {
+    color: var(--mp-accent, #0d7a7a);
+}
+
+.illu-mobile-dock-top .illu-mobile-dock-btn[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--mp-accent, #0d7a7a) 28%, transparent);
+    border-radius: 50%;
 }
 
 .illu-mobile-dock-btn:active {
     background: rgba(0, 0, 0, 0.08);
 }
 
+/* Cacher le texte uniquement pour les boutons de la barre du haut (icône seule) */
+.illu-mobile-dock-top .illu-mobile-dock-btn span {
+    display: none;
+}
+
+/* Transition du texte des boutons scroll : fondu vers icône seule lors d'effect-dialog */
+.illu-mobile-dock-scroll .illu-mobile-dock-btn span {
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+body.illu-mobile-shell-active.effect-dialog-open .illu-mobile-dock-scroll .illu-mobile-dock-btn span {
+    display: none;
+    pointer-events: none;
+}
+
 body.illu-mobile-shell-active #workspace {
-    padding-bottom: var(--illu-mobile-dock-h);
+    padding-bottom: max(var(--illu-mobile-dock-h), 120px);
 }
 
 body.illu-mobile-shell-active footer.status-bar,
@@ -607,9 +731,9 @@ body.illu-mobile-shell-active #app-status-bar {
 
 .illu-mobile-sheet {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: var(--illu-mobile-dock-h);
+    left: 5px;
+    right: 5px;
+    bottom: 71px;
     max-height: min(78dvh, calc(100dvh - var(--illu-mobile-dock-h) - 48px));
     display: flex;
     flex-direction: column;
