@@ -287,7 +287,9 @@ window.FilterManager = {
 
     /**
      * Ajuste la portée mémorisée selon le contexte : sélection visible → « Sélection » ;
-     * pas de sélection alors que « Sélection » était choisi → « Calque actif ».
+     * sinon on repart toujours sur « Calque actif » pour que la prévisualisation et l'effet
+     * ne touchent que le calque en cours. La portée « Tous les calques » reste un choix
+     * ponctuel (non collant) que l'utilisateur peut réactiver à chaque effet.
      */
     _syncEffectScopeToContext() {
         if (this._isMobilePhoneEffectUi()) return;
@@ -296,7 +298,8 @@ window.FilterManager = {
                 localStorage.setItem(EFFECT_SCOPE_STORAGE_KEY, 'selection');
                 return;
             }
-            if (this._readEffectScope() === 'selection') {
+            // Pas de sélection : on ne laisse pas « selection » ni « all » rester collés.
+            if (this._readEffectScope() !== 'active') {
                 localStorage.setItem(EFFECT_SCOPE_STORAGE_KEY, 'active');
             }
         } catch (e) {

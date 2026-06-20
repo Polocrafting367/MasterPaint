@@ -1,10 +1,13 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.158 (20/06/26)
+2.8.161 (20/06/26)
 - Mise a jours du theme visuel en mode téléphone
 - Revu fonctionnement de certai menu/disposition en mode téléphone
-- Correction bug import fichier pdn.
+- tentative de correction bug import fichier pdn.
 - revue barre d'outil en bas d'écran sur téléphone
+- Gros bug avec le centrage de la canvas sur téléphone quand fenetre effet ouvert
+- Correction bug rendu filtre sur tout les calc plustot que 1 seul
+- Ajustement de fenetre nécéssaire a l'usage mobile
 
 2.8.154 (14/06/26)
 - Correction visuel outil de détourage

@@ -1208,6 +1208,9 @@ window.illuPalettePositionsSaved = function () {
 };
 
 window.applySavedFloatingPalettePositions = function () {
+    // En shell mobile, les panneaux vivent dans les sheets pleine largeur :
+    // ne pas leur imposer de position/largeur flottante.
+    if (document.body.classList.contains('illu-mobile-shell-active')) return;
     const map = readPaletteWindowsPosMap();
     const keys = ['left', 'top', 'right', 'bottom', 'width', 'maxWidth'];
     PALETTE_WINDOW_IDS.forEach((id) => {
@@ -2085,10 +2088,11 @@ window.buildIlluCompactPaletteHex = function () {
 /**
  * 37×4 : 2 gris à gauche (comme compact) + 35 teintes ; L1 vif, L2 foncé, L3 pastel, L4 vif 50 %.
  */
-window.buildIlluExpandedPaletteSwatches = function () {
-    const COLS = 37;
+window.buildIlluExpandedPaletteSwatches = function (colorCols) {
     const GRAY_COLS = 2;
-    const COLOR_COLS = 35;
+    const COLOR_COLS =
+        typeof colorCols === 'number' && colorCols > 0 ? Math.round(colorCols) : 35;
+    const COLS = GRAY_COLS + COLOR_COLS;
     const cells = new Array(COLS * 4);
 
     for (let r = 0; r < 4; r++) {
@@ -2180,10 +2184,10 @@ function illuPaletteUsesFlowLayout() {
 
 function illuApplyPaletteGridFlow(grid, swatches, cellPx) {
     const mobileShell = document.body.classList.contains('illu-mobile-shell-active');
-    const cell = mobileShell ? 16 : cellPx || window.ILLU_PALETTE_CELL_PX || 13;
+    const cell = mobileShell ? 18 : cellPx || window.ILLU_PALETTE_CELL_PX || 13;
     const w = illuMeasurePaletteGridWidth(grid);
     const cols = mobileShell
-        ? Math.max(8, Math.min(16, Math.floor(w / cell)))
+        ? Math.max(10, Math.min(18, Math.floor(w / cell)))
         : Math.max(10, Math.min(20, Math.floor(w / cell)));
     const rows = Math.max(1, Math.ceil(swatches.length / cols));
     grid.classList.add('palette-grid--flow');
@@ -2221,9 +2225,29 @@ window.refreshPaletteGridLayout = function () {
     }
     grid.classList.remove('illu-palette-disabled');
     
-    const expanded = winColors.classList.contains('color-window-expanded');
+    // En shell mobile : toujours la palette étendue (type Paint.NET), plus riche et
+    // lisible au doigt, mise en page en flux sur toute la largeur de la sheet.
+    const expanded =
+        winColors.classList.contains('color-window-expanded') ||
+        document.body.classList.contains('illu-mobile-shell-active');
     const flow = illuPaletteUsesFlowLayout();
     const cell = window.ILLU_PALETTE_CELL_PX || 13;
+
+    // Mode téléphone : on calcule combien de colonnes tiennent dans l'espace
+    // dispo et on génère la palette étendue avec exactement ce nombre de
+    // colonnes-teintes (2 colonnes de gris + N teintes), chaque colonne portant
+    // ses 4 variantes verticalement alignées (vif / foncé / pastel / 50 %).
+    const mobileShell = document.body.classList.contains('illu-mobile-shell-active');
+    let mobileCols = null;        // total colonnes (gris inclus)
+    let mobileColorCols = null;   // colonnes de teintes
+    if (mobileShell) {
+        const cellM = 18;
+        const wM = illuMeasurePaletteGridWidth(grid);
+        // -1 colonne de marge pour éviter tout débordement ; pas de plafond haut.
+        mobileCols = Math.max(8, Math.floor(wM / cellM) - 1);
+        mobileColorCols = Math.max(6, mobileCols - 2);
+        mobileCols = mobileColorCols + 2;
+    }
 
     let baseSwatches = null;
     let isCmjn = p && em.isCmjnSimulationMode && em.isCmjnSimulationMode(p.mode) && em.applyCmjnFilter;
@@ -2257,7 +2281,7 @@ window.refreshPaletteGridLayout = function () {
 
     if (isCmjn || (isRestricted && !expanded)) {
         if (expanded) {
-            baseSwatches = window.buildIlluExpandedPaletteSwatches().map(isCmjn ? mapCmjnSwatch : mapRestrictedSwatch);
+            baseSwatches = window.buildIlluExpandedPaletteSwatches(mobileColorCols).map(isCmjn ? mapCmjnSwatch : mapRestrictedSwatch);
         } else {
             baseSwatches = window.buildIlluCompactPaletteSwatches().map(isCmjn ? mapCmjnSwatch : mapRestrictedSwatch);
         }
@@ -2265,7 +2289,7 @@ window.refreshPaletteGridLayout = function () {
         baseSwatches = em.buildModePaletteGridSwatches(p.mode);
     } else {
         if (expanded) {
-            window._illuExpandedPaletteSwatches = window.buildIlluExpandedPaletteSwatches();
+            window._illuExpandedPaletteSwatches = window.buildIlluExpandedPaletteSwatches(mobileColorCols);
             baseSwatches = window._illuExpandedPaletteSwatches;
         } else {
             window._illuCompactPaletteSwatches = window.buildIlluCompactPaletteSwatches();
@@ -2275,7 +2299,11 @@ window.refreshPaletteGridLayout = function () {
 
     if (!baseSwatches || !baseSwatches.length) return;
 
-    if (flow) {
+    // Téléphone : grille fixe colonne-par-teinte (4 variantes alignées) quand le
+    // nombre de pastilles correspond bien à mobileCols × 4. Sinon, flux générique.
+    if (flow && mobileShell && mobileCols && baseSwatches.length === mobileCols * 4) {
+        illuApplyPaletteGridFixed(grid, mobileCols, 4, baseSwatches, 18);
+    } else if (flow) {
         illuApplyPaletteGridFlow(grid, baseSwatches, cell);
     } else {
         if (expanded) {
@@ -3742,17 +3770,29 @@ window.illuMobileEffectDialogCanvasLayout = function () {
 };
 
 window.illuCanvasLayoutAnchors = function () {
-    if (window.illuMobileEffectDialogCanvasLayout()) {
-        const ins = window.illuMobileWorkspaceFitInsets();
-        return {
-            left: 50,
-            top: 0,
-            topPx: ins.top,
-            translateX: '-50%',
-            translateY: '0',
-            transformOrigin: '50% 0'
-        };
+    /* Shell / mobile (y compris dialogue d'effet / floating-window ouverte) :
+       centrer le canvas sur le milieu de la bande visible réelle (entre
+       options-row et dock, moins la floating-window), et non sur le milieu
+       géométrique de #workspace — sinon le canvas paraît trop haut, car le
+       padding-bottom du dock décale ce milieu vers le haut. On n'ancre plus le
+       canvas en haut quand une floating-window est ouverte : l'options-row
+       flotte au-dessus du workspace, le calage-haut le ferait passer dessous. */
+    const shell = window.illuIsMobileShellLayout && window.illuIsMobileShellLayout();
+    const phone = typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
+    if (shell || phone) {
+        const band = typeof window.illuMobileFitBand === 'function' ? window.illuMobileFitBand() : null;
+        if (band) {
+            return {
+                left: 50,
+                top: 0,
+                topPx: (band.topY + band.bottomY) / 2 - band.padBoxTop,
+                translateX: '-50%',
+                translateY: '-50%',
+                transformOrigin: '50% 50%'
+            };
+        }
     }
+
     return {
         left: 50,
         top: 50,
@@ -3812,51 +3852,91 @@ window.illuShouldClampCanvasPan = function () {
     return true;
 };
 
+/**
+ * Bande verticale libre réellement visible dans #workspace (coordonnées viewport),
+ * délimitée par le bas de l'options-row et le haut du dock (shell), moins une
+ * éventuelle floating-window. Sert à la fois au zoom « fit » et au centrage du
+ * canvas, pour que les deux restent cohérents.
+ * @returns {{padBoxTop:number, padBoxBottom:number, topY:number, bottomY:number}|null}
+ */
+window.illuMobileFitBand = function () {
+    const ws = document.getElementById('workspace');
+    if (!ws) return null;
+    const cs = getComputedStyle(ws);
+    const wsRect = ws.getBoundingClientRect();
+    const bt = parseFloat(cs.borderTopWidth) || 0;
+    const padBoxTop = wsRect.top + bt;
+    const padBoxBottom = padBoxTop + ws.clientHeight;
+    let topY = padBoxTop + (parseFloat(cs.paddingTop) || 0);
+    let bottomY = padBoxBottom - (parseFloat(cs.paddingBottom) || 0);
+
+    const shell = window.illuIsMobileShellLayout && window.illuIsMobileShellLayout();
+    if (shell) {
+        /* Top-bar + options-row sont en position:fixed (invisibles pour le
+           flux) : la borne haute = bas réel de l'options-row (gère le wrap
+           multi-lignes), sinon bas de la top-bar. */
+        const optRow = document.getElementById('illu-mob-options-row');
+        const topBar = document.getElementById('illu-mobile-top-bar');
+        if (optRow && !optRow.hidden) {
+            topY = Math.max(topY, optRow.getBoundingClientRect().bottom);
+        } else if (topBar && !topBar.hidden) {
+            topY = Math.max(topY, topBar.getBoundingClientRect().bottom);
+        }
+        /* Dock bas (fixed) : borne basse = haut de la zone scroll visible
+           (.illu-mobile-dock-scroll), pas le haut du dock entier — la barre de
+           boutons du dock peut surplomber le canvas. */
+        const dock = document.getElementById('illu-mobile-bottom-dock');
+        if (dock && !dock.hidden && dock.getAttribute('aria-hidden') !== 'true') {
+            const scroll = dock.querySelector('.illu-mobile-dock-scroll');
+            const dr = (scroll || dock).getBoundingClientRect();
+            if (dr.height > 0) bottomY = Math.min(bottomY, dr.top);
+        }
+        /* Barre d'options du dialogue d'effet (en bas) : la retirer aussi. */
+        const strip = document.getElementById('illu-mobile-opt-strip');
+        if (strip && !strip.hidden) {
+            const sr = strip.getBoundingClientRect();
+            if (sr.height > 0) bottomY = Math.min(bottomY, sr.top);
+        }
+    }
+
+    /* Fenêtre flottante visible (palette, effet…) : si elle recouvre la bande,
+       on la retire du côté où elle se trouve. */
+    const fw = document.querySelector('.floating-window:not(.illu-floating-window-hidden)');
+    if (fw) {
+        const r = fw.getBoundingClientRect();
+        if (r.height > 0 && r.bottom > topY && r.top < bottomY) {
+            const bandMid = (topY + bottomY) / 2;
+            if ((r.top + r.bottom) / 2 >= bandMid) {
+                bottomY = Math.min(bottomY, r.top);
+            } else {
+                topY = Math.max(topY, r.bottom);
+            }
+        }
+    }
+
+    if (bottomY < topY) bottomY = topY;
+    return { padBoxTop, padBoxBottom, topY, bottomY };
+};
+
 window.illuWorkspaceFitAvailableSize = function () {
     const ws = document.getElementById('workspace');
     if (!ws) return { availW: 1280, availH: 720 };
     const shell = window.illuIsMobileShellLayout && window.illuIsMobileShellLayout();
-    const effectTop =
-        typeof window.illuMobileEffectDialogCanvasLayout === 'function' &&
-        window.illuMobileEffectDialogCanvasLayout();
-    const phone =
-        effectTop ||
-        (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
+    const phone = typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
 
-    /* Mobile / shell : zone utile = client moins padding (dont dock bas via padding-bottom). */
+    /* Mobile / shell : zone utile = bande visible réelle (le canvas y est
+       centré via illuCanvasLayoutAnchors, donc toute la bande est exploitable). */
     if (shell || phone) {
         const pad = 8;
         const cs = getComputedStyle(ws);
-        let pt = parseFloat(cs.paddingTop) || 0;
-        let pb = parseFloat(cs.paddingBottom) || 0;
         const pl = parseFloat(cs.paddingLeft) || 0;
         const pr = parseFloat(cs.paddingRight) || 0;
-        if (shell && typeof window.illuMobileBottomDockHeight === 'function') {
-            const dockH = window.illuMobileBottomDockHeight();
-            if (dockH > 0) pb = Math.max(pb, dockH);
-        }
-        /* Shell mobile : la top bar et l'options-row sont en position:fixed,
-           donc invisibles pour clientHeight. On mesure leur hauteur réelle
-           et on l'ajoute au padding-top virtuel pour que le zoom fit les prenne en compte. */
-        if (shell) {
-            const topBar = document.getElementById('illu-mobile-top-bar');
-            const topBarH = topBar && !topBar.hidden ? topBar.getBoundingClientRect().height : 0;
-            const optRow = document.querySelector('.illu-mob-options-row');
-            const optRowH = optRow && !optRow.hidden ? optRow.getBoundingClientRect().height : 0;
-            /* La options-row est positionnée à topBarH + 4px du haut ; on prend la hauteur jusqu'en bas de l'option row + gap */
-            if (topBarH > 0 || optRowH > 0) {
-                pt += topBarH + (optRowH > 0 ? 4 + optRowH : 0);
-            }
-        }
-        /* Floating-window active (palette, effet) : réserver ~300px en bas pour que le canvas ne soit pas masqué. */
-        if (document.querySelector('.floating-window:not(.illu-floating-window-hidden)')) {
-            pb -= 100;
-        }
         const innerW = Math.max(0, ws.clientWidth - pl - pr);
-        const innerH = Math.max(0, ws.clientHeight - pt - pb);
+        const band = window.illuMobileFitBand();
+        const availH = band ? band.bottomY - band.topY : ws.clientHeight;
         return {
             availW: Math.max(80, innerW - pad * 2),
-            availH: Math.max(80, innerH - pad * 2)
+            availH: Math.max(80, availH - pad * 2)
         };
     }
 

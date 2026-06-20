@@ -592,7 +592,7 @@ body.ui-layout-floating #win-history.window.palette-panel {
     box-sizing: border-box;
 }
 
-body.ui-layout-floating #win-history #history-list.list-box--flex {
+body.ui-layout-floating:not(.illu-mobile-shell-active) #win-history #history-list.list-box--flex {
     width: 100%;
     max-width: 200px;
     box-sizing: border-box;
