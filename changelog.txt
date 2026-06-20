@@ -1,5 +1,9 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.156 (20/06/26)
+- Mise a jours du theme visuel en mode téléphone
+- Revu fonctionnement de certai menu/disposition en mode téléphone
+
 2.8.154 (14/06/26)
 - Correction visuel outil de détourage
 - correction ralentissement grille de pixels

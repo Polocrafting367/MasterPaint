@@ -134,10 +134,9 @@ window.showIlluConfirm = function (opts) {
     confirmBtn.focus();
 };
 
-/** Passage téléphone ↔ bureau : rechargement complet de la page requis. */
+/** Passage téléphone ↔ bureau : applyUILayoutFromPreference + teardownIlluMobileShell gèrent le switch sans rechargement. */
 window.illuLayoutRequiresFullReload = function (prev, next) {
-    const phone = (m) => m === 'phone';
-    return phone(prev) !== phone(next);
+    return false;
 };
 
 /** Modifications locales non exportées vers un fichier (historique d’édition). */
@@ -3698,7 +3697,15 @@ window.illuMobileWorkspaceFitInsets = function () {
     let bottom = 10;
     let left = 10;
     let right = 10;
-    if (
+    if (phone && !shell) {
+        // Mode téléphone (layout phone sans shell mobile) : bordure de 60px
+        // en haut et en bas pour le centrage via fitActiveProjectZoomToWorkspaceMobile
+        top = 60;
+        bottom = 60;
+        if (document.body.classList.contains('illu-pdn-dock-active')) {
+            bottom += 48;
+        }
+    } else if (
         shell &&
         typeof window.illuMobileEffectDialogCanvasLayout === 'function' &&
         window.illuMobileEffectDialogCanvasLayout()
@@ -3707,8 +3714,6 @@ window.illuMobileWorkspaceFitInsets = function () {
         if (strip && !strip.hidden) {
             bottom += Math.ceil(strip.getBoundingClientRect().height) || 0;
         }
-    } else if (phone && !shell && document.body.classList.contains('illu-pdn-dock-active')) {
-        bottom += 48;
     }
     return { top, bottom, left, right };
 };
@@ -3818,6 +3823,19 @@ window.illuWorkspaceFitAvailableSize = function () {
         if (shell && typeof window.illuMobileBottomDockHeight === 'function') {
             const dockH = window.illuMobileBottomDockHeight();
             if (dockH > 0) pb = Math.max(pb, dockH);
+        }
+        /* Shell mobile : la top bar et l'options-row sont en position:fixed,
+           donc invisibles pour clientHeight. On mesure leur hauteur réelle
+           et on l'ajoute au padding-top virtuel pour que le zoom fit les prenne en compte. */
+        if (shell) {
+            const topBar = document.getElementById('illu-mobile-top-bar');
+            const topBarH = topBar && !topBar.hidden ? topBar.getBoundingClientRect().height : 0;
+            const optRow = document.querySelector('.illu-mob-options-row');
+            const optRowH = optRow && !optRow.hidden ? optRow.getBoundingClientRect().height : 0;
+            /* La options-row est positionnée à topBarH + 4px du haut ; on prend la hauteur jusqu'en bas de l'option row + gap */
+            if (topBarH > 0 || optRowH > 0) {
+                pt += topBarH + (optRowH > 0 ? 4 + optRowH : 0);
+            }
         }
         const innerW = Math.max(0, ws.clientWidth - pl - pr);
         const innerH = Math.max(0, ws.clientHeight - pt - pb);
@@ -4346,17 +4364,17 @@ window.IlluTheme = {
             if (stored === 'classic') themeVariant = 'classic';
         } catch(e) {}
 
-        // Force classic Windows 98 theme on mobile/phone UI
-        const isMobileMode = (document.body && document.body.classList.contains('illu-mobile-ui')) || 
-                             (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'phone') ||
-                             (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
-        if (isMobileMode) {
-            themeVariant = 'classic';
-        }
-
+        // En mode mobile, theme-mobile-modern.css prend le relais visuellement.
+        // On force theme-win10-flat.css comme base desktop en parallèle du thème
+        // mobile, et on désactive theme-win98-modern.css (classic).
+        // En mode bureau, on rétablit la préférence utilisateur.
+        const isMobile = document.body.classList.contains('illu-mobile-ui');
         const classicLink = document.getElementById('theme-link-classic');
         const flatLink = document.getElementById('theme-link-flat');
-        if (classicLink && flatLink) {
+        if (isMobile) {
+            if (classicLink) classicLink.disabled = true;
+            if (flatLink) flatLink.disabled = false;
+        } else if (classicLink && flatLink) {
             if (themeVariant === 'flat') {
                 classicLink.disabled = true;
                 flatLink.disabled = false;

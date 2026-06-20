@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="css/photo-mode.css">
     <link rel="stylesheet" href="css/svg-mode.css">
     <link rel="stylesheet" href="css/illu-mobile-shell.css">
+    <link rel="stylesheet" href="css/theme-mobile-modern.css">
     <link rel="stylesheet" href="css/illu-tool-ribbon.css">
     <style>
         .menubar-contact-btn:hover {
@@ -760,19 +761,41 @@
         </div> <!-- End of app-header-container -->
 
             <header id="illu-mobile-top-bar" class="illu-mobile-top-bar" hidden aria-hidden="true">
-                <button type="button" class="illu-mobile-top-bar__btn" id="illu-mobile-undo"
-                    data-i18n-title="menubar.tbUndo" title="Annuler" aria-label="Annuler">
-                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                <!-- Gauche : burger ouvre le drawer -->
+                <button type="button" class="illu-mobile-top-bar__burger"
+                    data-illu-mobile-dock="menu"
+                    data-i18n-title="mobile.drawerOpenTitle" title="Menu" aria-label="Menu">
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="illu-mobile-top-bar__title-btn" id="illu-mobile-doc-title-btn"
+                <!-- Centre : titre du document + résolution -->
+                <button type="button" class="illu-mobile-top-bar__title-area" id="illu-mobile-doc-title-btn"
                     aria-haspopup="dialog" data-i18n-aria-label="mobile.activeDocument">
-                    <span id="illu-mobile-doc-title" data-i18n="app.untitled">Sans titre</span>
+                    <span class="illu-mobile-top-bar__title-name" id="illu-mobile-doc-title"
+                        data-i18n="app.untitled">Sans titre</span>
+                    <span class="illu-mobile-top-bar__title-res" id="illu-mobile-doc-res"
+                        aria-hidden="true"></span>
                 </button>
-                <button type="button" class="illu-mobile-top-bar__btn" id="illu-mobile-redo"
-                    data-i18n-title="menubar.tbRedo" title="Rétablir" aria-label="Rétablir">
-                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
-                </button>
+                <!-- Droite : branding -->
+                <div class="illu-mobile-top-bar__brand" aria-hidden="true">
+                    <span class="illu-mobile-top-bar__brand-name">MasterPaint</span>
+                    <span class="illu-mobile-top-bar__brand-by">by Polocrafting</span>
+                </div>
             </header>
+
+            <!-- Rangée capsule undo/redo + barre d'options outils -->
+            <div class="illu-mob-options-row" id="illu-mob-options-row">
+                <!-- Capsule undo/redo verticale -->
+                <div class="illu-mob-undo-redo" id="illu-mob-undo-redo">
+                    <button type="button" class="illu-mob-undo-redo__btn" id="illu-mobile-undo"
+                        data-i18n-title="menubar.tbUndo" title="Annuler" aria-label="Annuler">
+                        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    </button>
+                    <span class="illu-mob-undo-redo__sep" aria-hidden="true"></span>
+                    <button type="button" class="illu-mob-undo-redo__btn" id="illu-mobile-redo"
+                        data-i18n-title="menubar.tbRedo" title="Rétablir" aria-label="Rétablir">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                    </button>
+                </div>
 
             <!-- Tool Options Toolbars -->
             <div id="tool-options-container" class="illu-app-toolbars-container">
@@ -2216,6 +2239,7 @@
                 </div>
 
             </div>
+            </div><!-- /illu-mob-options-row -->
                             <div id="tab-bar-outer" class="tab-bar-outer">
                 <button type="button" id="tab-scroll-left-btn" class="tab-scroll-btn" title="Faire défiler à gauche">◀</button>
                 <div id="tab-bar-scroll" class="tab-bar-scroll">
@@ -2848,12 +2872,16 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-tools-title"
                         data-i18n="mobile.dockTools">Outils</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-tools-body">
                     <p id="illu-mobile-active-tool-lbl" class="illu-mobile-active-tool-lbl" hidden aria-live="polite">
                     </p>
                 </div>
+                <footer class="illu-mobile-sheet__foot">
+                    <button type="button" class="illu-mobile-sheet__foot-close" data-illu-mobile-sheet-close
+                        data-i18n-title="mobile.sheetClose" aria-label="Fermer">Fermer</button>
+                </footer>
             </section>
             <section id="illu-mobile-sheet-colors" class="illu-mobile-sheet" data-illu-mobile-sheet="colors" hidden
                 aria-labelledby="illu-mobile-sheet-colors-title">
@@ -2861,9 +2889,13 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-colors-title"
                         data-i18n="mobile.dockColors">Couleurs</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-colors-body"></div>
+                <footer class="illu-mobile-sheet__foot">
+                    <button type="button" class="illu-mobile-sheet__foot-close" data-illu-mobile-sheet-close
+                        data-i18n-title="mobile.sheetClose" aria-label="Fermer">Fermer</button>
+                </footer>
             </section>
             <section id="illu-mobile-sheet-layers" class="illu-mobile-sheet" data-illu-mobile-sheet="layers" hidden
                 aria-labelledby="illu-mobile-sheet-layers-title">
@@ -2871,9 +2903,13 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-layers-title"
                         data-i18n="mobile.dockLayers">Calques</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-layers-body"></div>
+                <footer class="illu-mobile-sheet__foot">
+                    <button type="button" class="illu-mobile-sheet__foot-close" data-illu-mobile-sheet-close
+                        data-i18n-title="mobile.sheetClose" aria-label="Fermer">Fermer</button>
+                </footer>
             </section>
             <section id="illu-mobile-sheet-history" class="illu-mobile-sheet" data-illu-mobile-sheet="history" hidden
                 aria-labelledby="illu-mobile-sheet-history-title">
@@ -2881,9 +2917,13 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-history-title" data-i18n="panel.history">
                         Historique</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-history-body"></div>
+                <footer class="illu-mobile-sheet__foot">
+                    <button type="button" class="illu-mobile-sheet__foot-close" data-illu-mobile-sheet-close
+                        data-i18n-title="mobile.sheetClose" aria-label="Fermer">Fermer</button>
+                </footer>
             </section>
             <section id="illu-mobile-sheet-effects" class="illu-mobile-sheet" data-illu-mobile-sheet="effects" hidden
                 aria-labelledby="illu-mobile-sheet-effects-title">
@@ -2891,7 +2931,7 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-effects-title"
                         data-i18n="mobile.dockEffects">Effets</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-effects-body"></div>
             </section>
@@ -2901,7 +2941,7 @@
                     <h3 class="illu-mobile-sheet__title" id="illu-mobile-sheet-adjust-title" data-i18n="menu.adjust">
                         Ajustements</h3>
                     <button type="button" class="illu-mobile-sheet__close" data-illu-mobile-sheet-close
-                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer"></button>
+                        data-i18n-title="mobile.sheetClose" title="Fermer" aria-label="Fermer" hidden></button>
                 </header>
                 <div class="illu-mobile-sheet__body" id="illu-mobile-sheet-adjust-body"></div>
             </section>
@@ -2909,11 +2949,6 @@
 
         <nav id="illu-mobile-bottom-dock" class="illu-mobile-bottom-dock" hidden aria-hidden="true"
             data-i18n-aria-label="mobile.dockAria">
-            <button type="button" class="illu-mobile-dock-btn illu-mobile-dock-btn--fixed" data-illu-mobile-dock="menu"
-                aria-pressed="false">
-                <i class="fa-solid fa-bars" aria-hidden="true"></i>
-                <span data-i18n="mobile.dockMenu">Menu</span>
-            </button>
             <div class="illu-mobile-dock-scroll">
                 <button type="button" class="illu-mobile-dock-btn" data-illu-mobile-dock-action="new"
                     aria-pressed="false">

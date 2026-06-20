@@ -625,6 +625,10 @@
         document.querySelectorAll('#illu-mobile-doc-title, .illu-mobile-menubar-doc-title-text').forEach((el) => {
             el.textContent = name;
         });
+        const resEl = document.getElementById('illu-mobile-doc-res');
+        if (resEl) {
+            resEl.textContent = (p && p.width && p.height) ? `${p.width}×${p.height}` : '';
+        }
     }
 
     function bindMobileTopBarOnce() {

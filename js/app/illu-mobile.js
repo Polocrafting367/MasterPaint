@@ -190,6 +190,25 @@
     window.applyIlluMobileUiClass = function () {
         const on = window.isIlluMobileUiActive();
         document.body.classList.toggle('illu-mobile-ui', on);
+
+        // Forcer le thème mobile en désactivant les feuilles de style desktop quand
+        // on est en mode téléphone, et les réactiver selon la préférence utilisateur
+        // quand on repasse en mode bureau. Cela garantit que theme-mobile-modern.css
+        // est bien le seul thème actif sur mobile (pas de conflit de spécificité CSS).
+        const classicLink = document.getElementById('theme-link-classic');
+        const flatLink = document.getElementById('theme-link-flat');
+        if (on) {
+            // Mode mobile : on force le thème flat (win10) comme base desktop
+            // en parallèle de theme-mobile-modern.css. Le classic (win98) est désactivé.
+            if (classicLink) classicLink.disabled = true;
+            if (flatLink) flatLink.disabled = false;
+        } else {
+            // Mode bureau → rétablir la préférence utilisateur via applyFromStorage
+            if (typeof window.IlluTheme?.applyFromStorage === 'function') {
+                window.IlluTheme.applyFromStorage();
+            }
+        }
+
         if (!on) {
             if (typeof window.teardownIlluMobileShell === 'function') window.teardownIlluMobileShell();
             if (typeof window.illuCloseMobileDrawer === 'function') window.illuCloseMobileDrawer();
