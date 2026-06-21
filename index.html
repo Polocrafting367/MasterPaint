@@ -2240,6 +2240,17 @@
                 </div>
 
             </div>
+
+            <!-- Sélecteur d'outil mobile : pastille rétractable (liste glissable de droite à gauche) -->
+            <div class="illu-mob-tool-switch" id="illu-mob-tool-switch" data-expanded="false" hidden>
+                <div class="illu-mob-tool-switch__list" id="illu-mob-tool-switch-list" role="listbox"
+                    aria-label="Choisir l'outil" aria-hidden="true"></div>
+                <button type="button" class="illu-mob-tool-switch__toggle" id="illu-mob-tool-switch-toggle"
+                    aria-expanded="false" aria-label="Changer d'outil" title="Changer d'outil">
+                    <span class="illu-mob-tool-switch__cur" id="illu-mob-tool-switch-icon" aria-hidden="true"></span>
+                    <i class="fa-solid fa-chevron-right illu-mob-tool-switch__chevron" aria-hidden="true"></i>
+                </button>
+            </div>
             </div><!-- /illu-mob-options-row -->
                             <div id="tab-bar-outer" class="tab-bar-outer">
                 <button type="button" id="tab-scroll-left-btn" class="tab-scroll-btn" title="Faire défiler à gauche">◀</button>
@@ -4565,6 +4576,7 @@
     <script src="js/app/Listener.js"></script>
     <script src="js/app/illu-mobile.js"></script>
     <script src="js/app/illu-mobile-shell.js"></script>
+    <script src="js/app/illu-mob-tool-switch.js"></script>
     <script src="js/app/illu-pwa.js"></script>
     <script src="js/app/IconViewer.js"></script>
     <script>

@@ -6,7 +6,22 @@
       "Bash(python3 -c *)",
       "Bash(python3)",
       "Bash(node -e \"require\\('/opt/lampp/htdocs/MasterPaint/js/io/PdnFile.js'\\)\")",
-      "Bash(node --check js/app/app.js)"
+      "Bash(node --check js/app/app.js)",
+      "Bash(node --check js/app/illu-ribbon-overflow.js)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost/MasterPaint/)",
+      "Bash(node -e \"try{require.resolve\\('playwright'\\);console.log\\('playwright OK'\\)}catch\\(e\\){console.log\\('no playwright'\\)}; try{require.resolve\\('puppeteer'\\);console.log\\('puppeteer OK'\\)}catch\\(e\\){console.log\\('no puppeteer'\\)}; try{require.resolve\\('puppeteer-core'\\);console.log\\('puppeteer-core OK'\\)}catch\\(e\\){console.log\\('no puppeteer-core'\\)}\")",
+      "Bash(node drive.js)",
+      "Bash(node probe2.js)",
+      "Bash(node probe3.js)",
+      "Bash(node probe4.js)",
+      "Bash(node --check js/app/illu-tool-ribbon.js)",
+      "Bash(awk 'NR>=1468{print NR\": \"$0}' js/app/illu-tool-ribbon.js)",
+      "Bash(xxd)",
+      "Bash(node --check js/app/illu-shape-picker.js)",
+      "Bash(node probe5.js)",
+      "Bash(node --check js/app/illu-mob-tool-switch.js)"
     ]
   }
 }

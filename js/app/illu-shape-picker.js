@@ -406,6 +406,9 @@
             const pop = document.getElementById('illu-shape-picker-popup');
             if (!pop || pop.hidden) return;
             if (e.target.closest('#illu-shape-picker-wrap')) return;
+            /* Le popup peut être portalisé dans <body> (anti-clip) → ses items ne
+             * sont plus dans le wrap. On garde ouvert si le clic est dans le popup. */
+            if (pop.contains(e.target)) return;
             window.illuCloseShapePickerPopup();
         });
         document.addEventListener('keydown', (e) => {

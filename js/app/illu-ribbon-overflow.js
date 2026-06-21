@@ -5,8 +5,10 @@
  *
  * Niveaux :
  *   normal     → icône + texte
- *   compact    → icône seule, bien centrée
- *   compressed → bouton texte seul (sans icône)
+ *   compact    → icône seule, bien centrée (label de groupe encore visible)
+ *   compressed → palier intermédiaire : hérite du compact MAIS retire le label
+ *                de groupe + resserre (jauges 40px, grilles repliées 2 colonnes).
+ *                Exception cutout : mode « texte seul » dédié (voir style.css).
  *   collapsed  → bouton trigger (style illu-tool-header) → popup liste
  *
  * Anti-boucle : _updating flag + comparaison lastContainerWidth
@@ -18,27 +20,28 @@
     const OVERFLOW_GROUPS = [
         /* Groupe Détourage guidé : compact = icône seule → compressed = texte seul → collapsed (popup) */
         { id: 'cutout',          order: 0,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-scissors' },
-        /* Gros groupes avec texte → compact (icône seule) → collapsed (popup liste) */
-        { id: 'selection',       order: 1,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-object-group' },
+        /* Gros groupes : compact (icône seule) → compressed (sans label, replié) → collapsed (popup) */
+        { id: 'selection',       order: 1,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-object-group' },
         { id: 'clipboard',       order: 2,  levels: ['hidden'],               icon: 'fa-solid fa-clipboard' },
-        { id: 'adjustments',     order: 3,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-arrows-up-down-left-right' },
-        { id: 'brush',           order: 4,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-paintbrush' },
-        { id: 'shape-style-fill',order: 5,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-shapes' },
+        { id: 'adjustments',     order: 3,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-arrows-up-down-left-right' },
+        { id: 'brush',           order: 4,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-paintbrush' },
+        { id: 'symmetry',        order: 16, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-arrows-left-right' },
+        { id: 'shape-style-fill',order: 5,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-shapes' },
         /* text-style-fill gardé large — pas dans la liste d'overflow */
-        { id: 'vector',          order: 6,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-bezier-curve' },
-        { id: 'vector-fill',     order: 7,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-fill' },
-        { id: 'shape-grad',      order: 8,  levels: ['compact', 'collapsed'], icon: 'fa-solid fa-circle-half-stroke' },
-        { id: 'shape-grad-method',  order: 9, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-sliders' },
-        { id: 'gradient-type',   order: 10, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-circle-half-stroke' },
-        { id: 'gradient-method', order: 11, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-sliders' },
-        { id: 'view',            order: 12, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-eye' },
+        { id: 'vector',          order: 6,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-bezier-curve' },
+        { id: 'vector-fill',     order: 7,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-fill' },
+        { id: 'shape-grad',      order: 8,  levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-circle-half-stroke' },
+        { id: 'shape-grad-method',  order: 9, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-sliders' },
+        { id: 'gradient-type',   order: 10, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-circle-half-stroke' },
+        { id: 'gradient-method', order: 11, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-sliders' },
+        { id: 'view',            order: 12, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-eye' },
         /* Groupes mixtes (boutons + jauges) : compact = boutons icône seule + piste 60px */
-        { id: 'fill',            order: 13, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-fill-drip' },
-        { id: 'wand',            order: 14, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-wand-magic-sparkles' },
-        { id: 'warp',            order: 15, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-up-down-left-right' },
+        { id: 'fill',            order: 13, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-fill-drip' },
+        { id: 'wand',            order: 14, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-wand-magic-sparkles' },
+        { id: 'warp',            order: 15, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-up-down-left-right' },
         /* Groupes jauges pures : compact = réduit la piste à 60px min */
-        { id: 'size',            order: 20, levels: ['compact', 'collapsed'], icon: 'fa-solid fa-ruler-horizontal' },
-        { id: 'text-params',     order: 21, levels: ['compact'], icon: 'fa-solid fa-text-height' },
+        { id: 'size',            order: 20, levels: ['compact', 'compressed', 'collapsed'], icon: 'fa-solid fa-ruler-horizontal' },
+        { id: 'text-params',     order: 21, levels: ['compact', 'compressed'], icon: 'fa-solid fa-text-height' },
         /* line-cap / line-dash : déjà des dropdowns → pas dans l'overflow */
     ];
 
@@ -247,6 +250,12 @@
             if (t) t.hidden = true;
         } else if (level === 'compressed') {
             group.classList.add('illu-ribbon-group--compressed');
+            /* Sauf cutout (qui a un mode « texte seul » dédié), compressed hérite
+             * du visuel compact (icône seule) PUIS retire le label de groupe et
+             * resserre encore → vrai palier intermédiaire entre compact et collapsed. */
+            if (group.dataset.illuRibbonGroup !== 'cutout') {
+                group.classList.add('illu-ribbon-group--compact');
+            }
             const t = group.querySelector(':scope > .illu-ribbon-group-collapse-trigger');
             if (t) t.hidden = true;
         } else if (level === 'collapsed') {
@@ -302,6 +311,14 @@
                 .filter(g => CONFIG_BY_ID[g.dataset.illuRibbonGroup])
                 .sort((a, b) => CONFIG_BY_ID[a.dataset.illuRibbonGroup].order - CONFIG_BY_ID[b.dataset.illuRibbonGroup].order);
 
+            /* Ordre de DÉGRADATION : on dégrade d'abord les groupes les moins
+             * prioritaires (paramètres / jauges = order élevé, à droite) et on
+             * garde les groupes d'action (cutout, selection, clipboard… = order
+             * bas) visibles le plus longtemps possible.
+             * → Sans ça, selection (order 1) collapsait AVANT d'avoir un état
+             *   compact stable sur téléphone (saut icône+texte → popup).        */
+            const degradeOrder = [...overflowGroups].reverse();
+
             /* Reset tous → normal pour mesurer depuis zéro */
             overflowGroups.forEach(g => setGroupLevel(g, 'normal'));
 
@@ -310,7 +327,7 @@
             let total = visibleAll.reduce((s, g) => s + g.getBoundingClientRect().width, 0);
 
             /* Passe 1 — compact */
-            for (const g of overflowGroups) {
+            for (const g of degradeOrder) {
                 if (total <= containerWidth + 2) break;
                 const cfg = CONFIG_BY_ID[g.dataset.illuRibbonGroup];
                 if (!cfg.levels.includes('compact')) continue;
@@ -323,7 +340,7 @@
             /* Passe 1.5 — compressed (texte seul, sans icône)
              * Après le compact : on réduit encore en supprimant les icônes.
              * Intermédiaire entre compact (icône seule) et collapsed (popup).   */
-            for (const g of overflowGroups) {
+            for (const g of degradeOrder) {
                 if (total <= containerWidth + 2) break;
                 const cfg = CONFIG_BY_ID[g.dataset.illuRibbonGroup];
                 if (!cfg.levels.includes('compressed')) continue;
@@ -335,7 +352,7 @@
             }
 
             /* Passe 2a — hidden (ex: clipboard) */
-            for (const g of overflowGroups) {
+            for (const g of degradeOrder) {
                 if (total <= containerWidth + 2) break;
                 const cfg = CONFIG_BY_ID[g.dataset.illuRibbonGroup];
                 if (!cfg.levels.includes('hidden')) continue;
@@ -345,7 +362,7 @@
             }
 
             /* Passe 2b — collapsed */
-            for (const g of overflowGroups) {
+            for (const g of degradeOrder) {
                 if (total <= containerWidth + 2) break;
                 const cfg = CONFIG_BY_ID[g.dataset.illuRibbonGroup];
                 if (!cfg.levels.includes('collapsed')) continue;

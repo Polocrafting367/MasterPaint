@@ -2922,6 +2922,13 @@ body.illu-toolbar-ribbon .illu-ribbon-group--compact {
     --btn-padding: 2px !important;
     --btn-justify-content: center;
     --btn-align-items: center;
+    /* Min de colonne des grilles compactes : 52px → 28px en compact.
+     * Les overrides directs (grid-template-columns: …28px) sont battus par la
+     * règle .illu-toggle-group--compact-grid:not()(:not()(:not()) (spécificité
+     * gonflée). On redéfinit donc la variable que CETTE règle consomme
+     * (--group-grid-cols → minmax(var(--illu-ribbon-grid-col-min), 1fr)).
+     * Effet : brushPatternGroup & co. passent vraiment en icône-seule serrée. */
+    --illu-ribbon-grid-col-min: 28px;
 }
 
 /* Forcer le centrage des boutons en mode compact
@@ -3030,6 +3037,20 @@ body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="sel
     height: 27px !important;
     padding: 2px !important;
     justify-content: center !important;
+}
+
+/* Sélection compact (mobile) — la sous-grille Effacer/Copier/Coller
+ * (#illu-mobile-sel-edit-actions) est forcée à 3×72px par une règle à base d'ID
+ * (cf. ~ligne 1851), que les sélecteurs de classe du compact ne battent pas.
+ * Résultat : selection restait à ~220px en compact et sautait directement au
+ * collapse sans jamais montrer l'état icônes-seules.
+ * On la ramène ici aux mêmes colonnes 28px icône-seule. Le sélecteur reprend
+ * l'ID + ajoute .illu-ribbon-group--compact → spécificité > règle 72px.
+ * S'applique aussi au palier compressed (qui ajoute la classe --compact). */
+body.illu-toolbar-ribbon.illu-mobile-ui
+    .illu-ribbon-group--compact[data-illu-ribbon-group="selection"]
+    .illu-ribbon-selection-stack > #illu-mobile-sel-edit-actions:not([hidden]) {
+    grid-template-columns: repeat(3, 28px) !important;
 }
 
 /* Compact : shape-style-fill / text-style-fill → grille 3×2 icônes seules */
@@ -3240,6 +3261,53 @@ body.theme-dark .illu-ribbon-overflow-row {
     width: 100%;
 }
 
+/* Le clone reproduit le body d'origine (grilles à colonnes fixes, jauges larges,
+ * largeurs max-content) qui débordait le popup et se faisait rogner (overflow-x
+ * hidden). Dans le popup, on neutralise ces grilles : tout passe en colonne
+ * pleine largeur pour TOUJOURS tenir, sans découpe par la largeur d'écran. */
+.illu-ribbon-overflow-body-clone .illu-icon-toggle-group,
+.illu-ribbon-overflow-body-clone .illu-mode-toggle-group,
+.illu-ribbon-overflow-body-clone .illu-toggle-group--compact-grid,
+.illu-ribbon-overflow-body-clone .illu-sel-actions-layout,
+.illu-ribbon-overflow-body-clone .illu-ribbon-param-pack,
+.illu-ribbon-overflow-body-clone .illu-text-font-size-stack,
+.illu-ribbon-overflow-body-clone .opt-grp {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    gap: 4px !important;
+}
+
+.illu-ribbon-overflow-body-clone .illu-mode-toggle-item,
+.illu-ribbon-overflow-body-clone .illu-mode-toggle-item--unified,
+.illu-ribbon-overflow-body-clone .illu-mode-toggle-btn,
+.illu-ribbon-overflow-body-clone .illu-icon-toggle {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+}
+
+/* Jauges : piste pleine largeur du popup (au lieu d'une largeur fixe rognée) */
+.illu-ribbon-overflow-body-clone .illu-gauge-track {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+/* Labels de boutons réaffichés dans le popup (le clone peut venir d'un compact) */
+.illu-ribbon-overflow-body-clone .illu-mode-toggle-lbl {
+    display: inline !important;
+    width: auto !important;
+    overflow: visible !important;
+}
+
 /* ── Gauge track : réductible dans le ruban, minimum 60px ─────────────────── */
 /* Normal : track s'étire librement dans le ribbon */
 body.illu-toolbar-ribbon .illu-gauge-track {
@@ -3269,6 +3337,36 @@ body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="tex
 body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="size"] .illu-ribbon-group-body,
 body.illu-toolbar-ribbon .illu-ribbon-group--compact[data-illu-ribbon-group="text-params"] .illu-ribbon-group-body {
     min-width: 90px;
+}
+
+/* ── Palier COMPRESSED générique (hors cutout) ──────────────────────────────
+ * Intermédiaire entre compact (icône seule + label de groupe) et collapsed
+ * (popup). Le JS ajoute aussi la classe --compact → on hérite de tout le visuel
+ * icône-seule, puis on retire le label de groupe et on resserre davantage.
+ * Objectif : lisser le saut compact → collapsed, surtout sur téléphone où l'on
+ * atteint presque toujours le collapse faute de largeur.                       */
+body.illu-toolbar-ribbon .illu-ribbon-group--compressed:not([data-illu-ribbon-group="cutout"])
+    > .illu-ribbon-group-label {
+    display: none !important;
+}
+
+/* Jauges : piste encore plus courte qu'en compact (60px → 40px) */
+body.illu-toolbar-ribbon .illu-ribbon-group--compressed:not([data-illu-ribbon-group="cutout"])
+    .illu-gauge-track {
+    width: 40px !important;
+    min-width: 0 !important;
+    max-width: 40px !important;
+}
+
+/* Multi-icônes : grille repliée sur 2 colonnes (la hauteur de 84px laisse la
+ * place à plusieurs rangées de 28px) → largeur ~halvée avant le collapse.
+ * #tool-options-container pour égaler la spécificité des règles --compact-cols-N
+ * et gagner par l'ordre source (ce bloc vient après).                          */
+body.illu-toolbar-ribbon #tool-options-container
+    .illu-ribbon-group--compressed:not([data-illu-ribbon-group="cutout"])
+    .illu-toggle-group--compact-grid {
+    grid-template-columns: repeat(2, 28px) !important;
+    width: max-content !important;
 }
 
 /* ── Stack de collapsed : colonne quand l'espace est encore trop réduit ───── */

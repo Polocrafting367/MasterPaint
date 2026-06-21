@@ -1342,6 +1342,11 @@
                 if (pop.hidden) return;
                 const wrap = pop.closest('.illu-shape-picker-wrap');
                 if (wrap && wrap.contains(e.target)) return;
+                /* Popup portalisé dans <body> (anti-clip) → plus dans le wrap.
+                 * On garde ouvert si le clic est dans le popup, ou sur son header. */
+                if (pop.contains(e.target)) return;
+                const hdr = document.getElementById(pop.id.replace('-popup', '-header'));
+                if (hdr && hdr.contains(e.target)) return;
                 pop.hidden = true;
                 const h = document.getElementById(pop.id.replace('-popup', '-header'));
                 if (h) h.setAttribute('aria-expanded', 'false');
@@ -1465,3 +1470,97 @@
             }
         }, 500);
     }
+
+/* ── Anti-clip : portal des popups dropdown hors de #tool-options-container ───
+ * Sur mobile le conteneur a overflow:hidden (compression ribbon sans wrap) → les
+ * popups en position:absolute (.illu-shape-picker-popup / .illu-generic-dropdown-
+ * popup) étaient rognés et invisibles. Quand un popup s'ouvre (attribut hidden
+ * retiré) on le déplace dans <body> en position:fixed, positionné sous son
+ * header ; à la fermeture on le remet à sa place d'origine. Un MutationObserver
+ * sur l'attribut hidden centralise tout, quel que soit le code qui ouvre/ferme. */
+(function illuRibbonDropdownPortal() {
+    'use strict';
+    const PORTAL_SEL = '.illu-generic-dropdown-popup, #illu-shape-picker-popup';
+
+    function headerFor(pop) {
+        if (pop.id === 'illu-shape-picker-popup') {
+            return document.getElementById('illu-shape-picker-header');
+        }
+        return document.getElementById(pop.id.replace('-popup', '-header'));
+    }
+
+    function place(pop) {
+        const header = headerFor(pop);
+        const anchor = header || (pop._portalHome && pop._portalHome.parent);
+        if (!anchor || typeof anchor.getBoundingClientRect !== 'function') return;
+        const r = anchor.getBoundingClientRect();
+        pop.style.position = 'fixed';
+        pop.style.top = (r.bottom + 2) + 'px';
+        pop.style.left = r.left + 'px';
+        pop.style.right = 'auto';
+        pop.style.bottom = 'auto';
+        pop.style.margin = '0';
+        requestAnimationFrame(() => {
+            if (pop.hidden) return;
+            const pr = pop.getBoundingClientRect();
+            if (pr.right > window.innerWidth - 4) {
+                pop.style.left = Math.max(4, window.innerWidth - pr.width - 4) + 'px';
+            }
+            if (pr.bottom > window.innerHeight - 4) {
+                pop.style.top = Math.max(4, r.top - pr.height - 2) + 'px';
+            }
+        });
+    }
+
+    function portalOut(pop) {
+        if (pop._portalHome) { place(pop); return; }
+        const parent = pop.parentNode;
+        if (!parent || parent === document.body) { place(pop); return; }
+        pop._portalHome = { parent, next: pop.nextSibling };
+        document.body.appendChild(pop);
+        place(pop);
+    }
+
+    function restore(pop) {
+        const home = pop._portalHome;
+        pop.style.position = '';
+        pop.style.top = '';
+        pop.style.left = '';
+        pop.style.right = '';
+        pop.style.bottom = '';
+        pop.style.margin = '';
+        if (!home) return;
+        pop._portalHome = null;
+        if (home.parent && home.parent.isConnected) {
+            home.parent.insertBefore(pop, home.next && home.next.isConnected ? home.next : null);
+        }
+    }
+
+    function sync(pop) {
+        if (pop.hidden) restore(pop);
+        else portalOut(pop);
+    }
+
+    function observe(pop) {
+        if (pop._portalBound) return;
+        pop._portalBound = true;
+        new MutationObserver(() => sync(pop)).observe(pop, {
+            attributes: true, attributeFilter: ['hidden']
+        });
+        if (!pop.hidden) sync(pop);
+    }
+
+    function scan() { document.querySelectorAll(PORTAL_SEL).forEach(observe); }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scan);
+    } else {
+        scan();
+    }
+    window.addEventListener('illu-mobile-ui-changed', scan);
+    window.addEventListener('resize', () => {
+        document.querySelectorAll(PORTAL_SEL).forEach((p) => {
+            if (!p.hidden && p._portalHome) place(p);
+        });
+    });
+})();

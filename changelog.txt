@@ -1,5 +1,10 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.8.164 (21/06/26)
+- Correction ruban d'obtion mal compatible avec le mode téléphone
+- Ajout d'une div flottante pour le choix des outils, plus complete que av
+- Correction pour lapp WAP web quand installé sur téléphone
+
 2.8.161 (20/06/26)
 - Mise a jours du theme visuel en mode téléphone
 - Revu fonctionnement de certai menu/disposition en mode téléphone

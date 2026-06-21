@@ -1,6 +1,4 @@
-/**
- * Boutons − / + pour les jauges de précision (taille texte, contour, etc.).
- */
+
 (function () {
     'use strict';
 

@@ -373,6 +373,169 @@ body.illu-mobile-shell-active.theme-dark #tool-options-container {
     box-shadow: 0 2px 14px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20) !important;
 }
 
+/* ================================================================
+   SÉLECTEUR D'OUTIL MOBILE — pastille rétractable
+   Masque le groupe ruban « Outil » + le bouton dock « Outils » et les
+   remplace par une pastille glissable dans la rangée d'options.
+   ================================================================ */
+
+/* Masque le groupe « Outil » du ruban en mode téléphone */
+body.illu-mobile-shell-active #tool-options-container
+    > .illu-ribbon-group[data-illu-ribbon-group="tool"] {
+    display: none !important;
+}
+
+/* Masque le bouton dock « Outils » (remplacé par la pastille) */
+body.illu-mobile-shell-active .illu-mobile-dock-btn[data-illu-mobile-dock="tools"] {
+    display: none !important;
+}
+
+/* Conteneur de la pastille : ancré sous la rangée d'options, à gauche,
+   avec le même style visuel que .illu-mobile-dock-top-group--right */
+.illu-mob-tool-switch {
+    display: none;
+}
+
+body.illu-mobile-shell-active .illu-mob-tool-switch:not([hidden]) {
+    display: flex !important;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+    z-index: 6;
+}
+
+/* Bouton-pastille : icône outil courant + chevron (style bouton dock) */
+.illu-mob-tool-switch__toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    height: 28px;
+    padding: 0 6px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mp-accent, #0d7a7a);
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+    transition: transform var(--mob-dur-xs) var(--mob-spring),
+                background var(--mob-dur-xs) var(--mob-ease-out);
+}
+
+.illu-mob-tool-switch__toggle:active {
+    transform: scale(0.92);
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.illu-mob-tool-switch__cur {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    font-size: 15px;
+    color: var(--mp-accent, #0d7a7a);
+}
+
+.illu-mob-tool-switch__cur i,
+.illu-mob-tool-switch__cur svg {
+    width: 16px;
+    height: 16px;
+    font-size: 15px;
+}
+
+.illu-mob-tool-switch__chevron {
+    font-size: 10px;
+    opacity: 0.7;
+    transition: transform var(--mob-dur-sm, 0.2s) var(--mob-ease-out, ease);
+}
+
+/* Chevron « > » → « < » lorsqu'on est déployé */
+.illu-mob-tool-switch[data-expanded="true"] .illu-mob-tool-switch__chevron {
+    transform: rotate(180deg);
+    opacity: 0.95;
+}
+
+/* Liste glissable : ancrée à droite de la pastille, se déploie vers la droite */
+.illu-mob-tool-switch__list {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    bottom: 0;
+    margin-left: 6px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    max-width: 0;
+    opacity: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    pointer-events: none;
+    border-radius: 10px;
+    background: var(--illu-mobile-dock-bg, var(--mp-dock-bg, #c0c0c0));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+    scrollbar-width: none;
+    transition: max-width var(--mob-dur-md, 0.28s) var(--mob-spring, cubic-bezier(.2,.8,.2,1)),
+                opacity var(--mob-dur-sm, 0.2s) var(--mob-ease-out, ease),
+                padding var(--mob-dur-md, 0.28s) var(--mob-spring, cubic-bezier(.2,.8,.2,1));
+}
+
+.illu-mob-tool-switch__list::-webkit-scrollbar {
+    display: none;
+}
+
+.illu-mob-tool-switch[data-expanded="true"] .illu-mob-tool-switch__list {
+    /* Largeur dispo : tout l'écran sauf la pastille et les marges */
+    max-width: calc(100vw - 80px);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Items d'outil dans la liste */
+.illu-mob-tool-switch__item {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mp-accent, #0d7a7a);
+    font-size: 15px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--mob-dur-xs) var(--mob-ease-out),
+                transform var(--mob-dur-xs) var(--mob-spring);
+}
+
+.illu-mob-tool-switch__item i,
+.illu-mob-tool-switch__item svg {
+    width: 18px;
+    height: 18px;
+    font-size: 15px;
+}
+
+.illu-mob-tool-switch__item:active {
+    transform: scale(0.86);
+    background: var(--mob-accent-tint2, rgba(0,0,0,0.06));
+}
+
+.illu-mob-tool-switch__item.is-active {
+    background: var(--mp-accent, #806020);
+    color: #fff;
+}
+
 /* Les barres internes : no-wrap aussi */
 body.illu-mobile-shell-active #tool-options-bar-row1 {
     flex-wrap: nowrap !important;
@@ -553,18 +716,20 @@ body.illu-mobile-shell-active.theme-dark .illu-mobile-sheet::before {
     padding-right: 5px !important;
 }
 
-body.win11-effects .window,
-body.win11-effects .welcome-dialog-window,
-body.win11-effects .floating-window,
-body.win11-effects .illu-instant-effect-busy__box {
+body.illu-mobile-shell-active body.win11-effects .window,
+body.illu-mobile-shell-active body.win11-effects .welcome-dialog-window,
+body.illu-mobile-shell-active body.win11-effects .floating-window,
+body.illu-mobile-shell-active body.win11-effects .illu-instant-effect-busy__box {
     border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
 
 }
 
-body.win11-effects .window-body, body.win11-effects .status-bar, body.win11-effects .illu-cr-foot {
+body.illu-mobile-shell-active body.win11-effects .window-body, 
+body.illu-mobile-shell-active body.win11-effects .status-bar, 
+body.illu-mobile-shell-active body.win11-effects .illu-cr-foot {
     border-bottom-right-radius: 0;
-    border-bottom-left-radius: 8;
+    border-bottom-left-radius: 0;
 }
 
 /* Header des sheets masqué — handle + footer Fermer suffisent */
