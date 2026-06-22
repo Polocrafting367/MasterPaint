@@ -641,6 +641,22 @@
         const PDN_LIB = 2, SYS_LIB = 3, CORE_LIB = 54;
         const KVPAIR_T =
             'System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]][]';
+        // Same generic type without the trailing "[]" (element type used inside the BinaryArray record)
+        const KVPAIR_ELEM =
+            'System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]';
+
+        // Empty KeyValuePair<string,string>[] (BinaryArray, single dim, length 0).
+        // Paint.NET rebuilds layer/document metadata via NameValueCollectionUtil.From(userMetadataItems);
+        // that helper iterates the value, so it MUST be a real (empty) array and never ObjectNull.
+        function emptyKvpArray(oid) {
+            bf.push(0x07);      // BinaryArray
+            wI32(oid);
+            bf.push(0x00);      // BinaryArrayTypeEnumeration.Single
+            wI32(1);            // rank
+            wI32(0);            // length
+            bf.push(0x03);      // BinaryTypeEnumeration.SystemClass
+            wLPS(KVPAIR_ELEM);  // element type name
+        }
 
         // Object IDs: 1=Doc, 2=LayerList, 3=Version, 4=ObjArray
         // Layer i: BL=5+7i, BP=6+7i, BO=7+7i, SF=8+7i, MB=9+7i, LP=10+7i, NS=11+7i
@@ -649,6 +665,11 @@
             return { BL: b, BP: b + 1, BO: b + 2, SF: b + 3, MB: b + 4, LP: b + 5, NS: b + 6 };
         }
         const L0 = lids(0);
+
+        // IDs for the empty metadata arrays, placed safely past the per-layer id range.
+        const META_BASE = 5 + 7 * N + 16;
+        const docMetaId = META_BASE;
+        const lpMetaId = (i) => META_BASE + 1 + i;
 
         const xmlStr = buildHeaderXml(W, H, N);
         const xmlBytes = _enc.encode(xmlStr);
@@ -677,7 +698,7 @@
             { name: 'userMetaData', te: 4, ai: ['System.Collections.Specialized.NameValueCollection', SYS_LIB] },
             { name: 'userMetadataItems', te: 3, ai: KVPAIR_T },
         ], PDN_LIB);
-        bf.push(0); ref_(2); wI32(W); wI32(H); ref_(3); null_(); null_();
+        bf.push(0); ref_(2); wI32(W); wI32(H); ref_(3); null_(); ref_(docMetaId);
 
         // LayerList #2
         classWT(2, 'PaintDotNet.LayerList', [
@@ -757,18 +778,22 @@
             { name: 'opacity', te: 0, ai: 2 },
         ], PDN_LIB);
         strObj(L0.NS, pixelLayers[0].name || 'Arrière-plan');
-        null_(); null_();
+        null_(); ref_(lpMetaId(0));
         bf.push(1); bf.push(1); bf.push(255);
         for (let i = 1; i < N; i++) {
             cidStart(lids(i).LP, L0.LP);
             strObj(lids(i).NS, pixelLayers[i].name || ('Calque ' + (i + 1)));
-            null_(); null_();
+            null_(); ref_(lpMetaId(i));
             bf.push(1); bf.push(0); bf.push(255);
         }
 
         // UserBlendOps+NormalBlendOp — no fields
         classWT(L0.BO, 'PaintDotNet.UserBlendOps+NormalBlendOp', [], PDN_LIB);
         for (let i = 1; i < N; i++) cidStart(lids(i).BO, L0.BO);
+
+        // Empty metadata arrays referenced above (document + one per layer)
+        emptyKvpArray(docMetaId);
+        for (let i = 0; i < N; i++) emptyKvpArray(lpMetaId(i));
 
         // MessageEnd
         bf.push(0x0B);

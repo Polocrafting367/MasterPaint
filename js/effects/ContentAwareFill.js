@@ -289,6 +289,7 @@
                 mode: opts.mode || 'texture',
                 innerRadius: Math.max(0, Math.min(200, parseInt(String(opts.innerRadius || 0), 10) || 0)),
                 preserveTransparency: preserveTransparency,
+                sourceBuffer: source.buffer,
                 maskBuffer: selectionMask.buffer
             }, [source.buffer, selectionMask.buffer]);
 

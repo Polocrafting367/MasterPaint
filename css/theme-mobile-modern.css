@@ -696,7 +696,7 @@ body.illu-mobile-shell-active .title-bar {
     display: none !important;
 }
 /* Poignée (handle) */
-.illu-mobile-sheet::before, .floating-window:not(.palette-panel)::before {
+body.illu-mobile-shell-active .illu-mobile-sheet::before, body.illu-mobile-shell-active .floating-window:not(.palette-panel)::before {
     content: "";
     display: block;
     flex-shrink: 0;
@@ -716,20 +716,22 @@ body.illu-mobile-shell-active.theme-dark .illu-mobile-sheet::before {
     padding-right: 5px !important;
 }
 
-body.illu-mobile-shell-active body.win11-effects .window,
-body.illu-mobile-shell-active body.win11-effects .welcome-dialog-window,
-body.illu-mobile-shell-active body.win11-effects .floating-window,
-body.illu-mobile-shell-active body.win11-effects .illu-instant-effect-busy__box {
+body.illu-mobile-shell-active .window,
+body.illu-mobile-shell-active .welcome-dialog-window,
+body.illu-mobile-shell-active .floating-window,
+body.illu-mobile-shell-active .illu-instant-effect-busy__box {
     border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
 
 }
 
-body.illu-mobile-shell-active body.win11-effects .window-body, 
-body.illu-mobile-shell-active body.win11-effects .status-bar, 
-body.illu-mobile-shell-active body.win11-effects .illu-cr-foot {
+body.illu-mobile-shell-active .window-body, 
+body.illu-mobile-shell-active .status-bar, 
+body.illu-mobile-shell-active .illu-cr-foot {
     border-bottom-right-radius: 0;
     border-bottom-left-radius: 0;
+    border-top-right-radius: var(--radius);
+    border-top-left-radius: var(--radius);
 }
 
 /* Header des sheets masqué — handle + footer Fermer suffisent */

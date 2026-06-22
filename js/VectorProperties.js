@@ -39,6 +39,30 @@ window.illuInitVectorProperties = function() {
         window._vectorStrokeNone = true;
         applyVectorProperties();
     });
+
+    // Style de trait (tirets) + extrémité — boutons image OpenPDN
+    const dashGroup = document.getElementById('prop-dash-style');
+    if (dashGroup) {
+        dashGroup.addEventListener('click', (e) => {
+            const btn = e.target.closest('.openpdn-imgbtn');
+            if (!btn) return;
+            dashGroup.querySelectorAll('.openpdn-imgbtn').forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+            window._vectorDashStyle = btn.getAttribute('data-dash') || '';
+            applyVectorProperties();
+        });
+    }
+    const capGroup = document.getElementById('prop-line-cap');
+    if (capGroup) {
+        capGroup.addEventListener('click', (e) => {
+            const btn = e.target.closest('.openpdn-imgbtn');
+            if (!btn) return;
+            capGroup.querySelectorAll('.openpdn-imgbtn').forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+            window._vectorLineCap = btn.getAttribute('data-cap') || 'butt';
+            applyVectorProperties();
+        });
+    }
     
     document.getElementById('prop-shadow-enable').addEventListener('change', (e) => {
         document.getElementById('prop-shadow-controls').style.opacity = e.target.checked ? '1' : '0.5';
@@ -129,6 +153,30 @@ window.illuUpdateVectorPropertiesUI = function() {
     
     window._vectorFillNone = fill === 'none';
     window._vectorStrokeNone = stroke === 'none' || strokeW === '0';
+
+    // Style de trait + extrémité (lecture inverse)
+    const dasharray = (el.getAttribute('stroke-dasharray') || '').trim();
+    const nDash = dasharray ? dasharray.split(/[\s,]+/).filter(Boolean).length : 0;
+    let dashStyle = '';
+    if (nDash >= 6) dashStyle = 'dashdotdot';
+    else if (nDash === 4) dashStyle = 'dashdot';
+    else if (nDash === 2) {
+        const parts = dasharray.split(/[\s,]+/).map(parseFloat);
+        dashStyle = parts[0] <= (parseFloat(strokeW) || 1) * 1.5 ? 'dot' : 'dash';
+    }
+    window._vectorDashStyle = dashStyle;
+    const dashGroup = document.getElementById('prop-dash-style');
+    if (dashGroup) {
+        dashGroup.querySelectorAll('.openpdn-imgbtn').forEach(b =>
+            b.classList.toggle('is-active', (b.getAttribute('data-dash') || '') === dashStyle));
+    }
+    const cap = el.getAttribute('stroke-linecap') || 'butt';
+    window._vectorLineCap = cap;
+    const capGroup = document.getElementById('prop-line-cap');
+    if (capGroup) {
+        capGroup.querySelectorAll('.openpdn-imgbtn').forEach(b =>
+            b.classList.toggle('is-active', (b.getAttribute('data-cap') || 'butt') === cap));
+    }
 };
 
 function applyVectorProperties() {
@@ -168,6 +216,16 @@ function applyVectorProperties() {
             el.setAttribute('stroke-width', sw);
         }
         el.setAttribute('stroke-opacity', so);
+
+        // Style de trait (tirets) — motif proportionnel à l'épaisseur (mapping OpenPDN DashStyle)
+        const dashPattern = illuDashArray(window._vectorDashStyle || '', parseFloat(sw) || 1);
+        if (dashPattern) el.setAttribute('stroke-dasharray', dashPattern);
+        else el.removeAttribute('stroke-dasharray');
+
+        // Extrémité (OpenPDN LineCap → SVG stroke-linecap)
+        const cap = window._vectorLineCap || 'butt';
+        if (cap && cap !== 'butt') el.setAttribute('stroke-linecap', cap);
+        else el.removeAttribute('stroke-linecap');
         
         if (shadowEnabled) {
             el.setAttribute('filter', `drop-shadow(${shX}px ${shY}px ${shB}px ${shC})`);
@@ -178,3 +236,16 @@ function applyVectorProperties() {
     
     if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
 }
+
+/** Convertit un style OpenPDN (Solid/Dash/Dot/DashDot/DashDotDot) en stroke-dasharray SVG, à l'échelle de l'épaisseur. */
+function illuDashArray(style, width) {
+    const w = Math.max(0.5, width || 1);
+    switch (style) {
+        case 'dash': return `${(3 * w).toFixed(2)},${(2 * w).toFixed(2)}`;
+        case 'dot': return `${(1 * w).toFixed(2)},${(2 * w).toFixed(2)}`;
+        case 'dashdot': return `${(3 * w).toFixed(2)},${(2 * w).toFixed(2)},${(1 * w).toFixed(2)},${(2 * w).toFixed(2)}`;
+        case 'dashdotdot': return `${(3 * w).toFixed(2)},${(2 * w).toFixed(2)},${(1 * w).toFixed(2)},${(2 * w).toFixed(2)},${(1 * w).toFixed(2)},${(2 * w).toFixed(2)}`;
+        default: return '';
+    }
+}
+window.illuDashArray = illuDashArray;

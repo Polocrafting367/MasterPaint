@@ -21,7 +21,22 @@
       "Bash(xxd)",
       "Bash(node --check js/app/illu-shape-picker.js)",
       "Bash(node probe5.js)",
-      "Bash(node --check js/app/illu-mob-tool-switch.js)"
+      "Bash(node --check js/app/illu-mob-tool-switch.js)",
+      "Bash(node -e \"try{require\\('playwright'\\);console.log\\('playwright ok'\\)}catch\\(e\\){console.log\\('no playwright'\\)}\")",
+      "Bash(node -e \"try{require\\('puppeteer'\\);console.log\\('puppeteer ok'\\)}catch\\(e\\){console.log\\('no puppeteer'\\)}\")",
+      "Bash(sed -n '/function rememberPanelHome/,/^    }/p' js/app/illu-mobile-shell.js)",
+      "Bash(sed -n '/function getPool/,/^    }/p' js/app/illu-mobile-shell.js)",
+      "Bash(timeout 120 npm install puppeteer-core@23 --no-save)",
+      "Bash(pip list *)",
+      "Read(//usr/lib/mono/**)",
+      "Bash(dpkg -l)",
+      "Read(//tmp/**)",
+      "Bash(sed -i \"s/const W=4,H=4,N=1, pixLen/const W=4,H=4,N=3, pixLen/; s/const names=\\\\['Arrière-plan'\\\\];/const names=['Arrière-plan','Calque 2','Calque 3'];/\" /tmp/gen.js)",
+      "Bash(node -e *)",
+      "Bash(node /tmp/parse2.js \"nouvelle versqion save.pdn\" 9879)",
+      "Bash(node /tmp/nrbf.js \"vielle version pdn.pdn\" 22147)",
+      "Bash(node /tmp/nrbf.js /tmp/body.bin 2)",
+      "Bash(node --check js/effects/FilterManager.js)"
     ]
   }
 }

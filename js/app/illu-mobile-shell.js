@@ -871,6 +871,11 @@
     };
 
     window.teardownIlluMobileShell = function () {
+        // No-op si le shell n'est pas actif : sans ce garde-fou, un second appel
+        // (ex. applyIlluMobileUiClass après mountPalettesFloating) re-déplacerait
+        // les palettes hors de #floating-palette-host vers les docks/pool, les
+        // rendant invisibles en disposition flottante jusqu'au rechargement.
+        if (!document.body.classList.contains('illu-mobile-shell-active')) return;
         closeMobileSheet();
         unbindMobileCanvasFitObservers();
         document.body.classList.remove('illu-mobile-shell-active');

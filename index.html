@@ -417,7 +417,10 @@
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjBrightness"></span><span
                                         data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon" 
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('temptint')"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjTempTint"></span><span
+                                        data-i18n="menu.adjTempTint">Température / Teinte…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjHsv"></span><span
                                         data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
@@ -462,6 +465,9 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxOil"></span><span
                                                 data-i18n="menu.fxOil">Peinture…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pencilsketch')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxPencilSketch"></span><span
+                                                data-i18n="menu.fxPencilSketch">Croquis au crayon…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
@@ -482,6 +488,9 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxMedian"></span><span
                                                 data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('reducenoise')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxReduceNoise"></span><span
+                                                data-i18n="menu.fxReduceNoise">Réduction du bruit (PDN)…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
@@ -492,18 +501,15 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxPinch"></span><span
                                                 data-i18n="menu.fxPinch">Pincement…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('cabossage')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCabossage"></span><span
-                                                data-i18n="menu.fxCabossage">Cabossage…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dents')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxDents"></span><span
+                                                data-i18n="menu.fxDents">Bosselage…</span></li>
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCrystallize"></span><span
-                                                data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
+                                                 aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span
+                                                data-i18n="menu.fxPixelate">Pixéliser…</span></li>
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span
                                                 data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span
-                                                data-i18n="menu.fxPixelate">Pixéliser…</span></li>
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span
                                                 data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
@@ -542,9 +548,10 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span
                                                 class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou
                                                 de mouvement…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span
-                                                class="menu-icon"><i class="fa-solid fa-water"></i></span><span>Flou de
-                                                surface…</span></li>
+
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unfocus')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxUnfocus"></span><span
+                                                data-i18n="menu.fxUnfocus">Flou de surface…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
@@ -561,6 +568,9 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span
                                                 data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softenportrait')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxSoftenPortrait"></span><span
+                                                data-i18n="menu.fxSoftenPortrait">Portrait adouci…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
@@ -571,6 +581,15 @@
                                         <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon"
                                                  aria-hidden="true" data-icon-key="menu.fxContour"></span><span
                                                 data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('clouds')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxClouds"></span><span
+                                                data-i18n="menu.fxClouds">Nuages…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mandelbrot')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxMandelbrot"></span><span
+                                                data-i18n="menu.fxMandelbrot">Fractale de Mandelbrot…</span></li>
+                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('julia')"><span class="menu-icon"
+                                                 aria-hidden="true" data-icon-key="menu.fxJulia"></span><span
+                                                data-i18n="menu.fxJulia">Fractale de Julia…</span></li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
@@ -2777,6 +2796,24 @@
                                         <input type="number" id="prop-stroke-width-val" min="0" max="100" value="1" style="width: 40px;">
                                     </div>
                                     <div class="field-row" style="margin-top:4px;">
+                                        <label style="width:60px;">Style:</label>
+                                        <div id="prop-dash-style" class="openpdn-btn-group" role="radiogroup" aria-label="Style de trait">
+                                            <button type="button" class="openpdn-imgbtn is-active" data-dash="" title="Continu"><img src="IMG/openpdn/DashStyleButton.Solid.png" alt="Continu"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-dash="dash" title="Tirets"><img src="IMG/openpdn/DashStyleButton.Dash.png" alt="Tirets"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-dash="dot" title="Pointillés"><img src="IMG/openpdn/DashStyleButton.Dot.png" alt="Pointillés"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-dash="dashdot" title="Tiret-point"><img src="IMG/openpdn/DashStyleButton.DashDot.png" alt="Tiret-point"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-dash="dashdotdot" title="Tiret-point-point"><img src="IMG/openpdn/DashStyleButton.DashDotDot.png" alt="Tiret-point-point"></button>
+                                        </div>
+                                    </div>
+                                    <div class="field-row" style="margin-top:4px;">
+                                        <label style="width:60px;">Extrémité:</label>
+                                        <div id="prop-line-cap" class="openpdn-btn-group" role="radiogroup" aria-label="Extrémité de trait">
+                                            <button type="button" class="openpdn-imgbtn is-active" data-cap="butt" title="Plat"><img src="IMG/openpdn/LineCapButton.Flat.End.png" alt="Plat"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-cap="round" title="Arrondi"><img src="IMG/openpdn/LineCapButton.Rounded.End.png" alt="Arrondi"></button>
+                                            <button type="button" class="openpdn-imgbtn" data-cap="square" title="Carré"><img src="IMG/openpdn/LineCapButton.Arrow.End.png" alt="Carré"></button>
+                                        </div>
+                                    </div>
+                                    <div class="field-row" style="margin-top:4px;">
                                         <button type="button" id="prop-stroke-none" class="illu-btn-mini" style="width:100%;">Aucun contour</button>
                                     </div>
                                 </fieldset>
@@ -4558,7 +4595,7 @@
     <script src="js/tools/IlluCropInteractive.js"></script>
     <script src="js/effects/ContentAwareFill.js"></script>
     <script src="js/tools/GuidedCutoutTool.js"></script>
-    <script src="js/io/PdnFile.js"></script>
+    <script src="js/io/PdnFile.js?v=20260621-pdn-meta-fix"></script>
     <script src="js/openpdn/PdnBlendModes.js"></script>
     <script src="js/openpdn/OpenPdnCatalog.js"></script>
     <script src="js/effects/pdn-effects.js"></script>
@@ -4566,6 +4603,7 @@
     <script src="js/app/i18n.js"></script>
     <script src="js/app/PhotoModeManager.js"></script>
     <script src="js/app/illu-svg-mode.js"></script>
+    <script src="js/app/illu-menu-safe-triangle.js"></script>
     <script src="js/app/illu-svg-menubar.js"></script>
     <script src="js/app/illu-vector-align.js"></script>
     <script src="js/app/illu-boolean-ops.js"></script>

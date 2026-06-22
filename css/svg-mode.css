@@ -405,3 +405,49 @@ body.theme-dark #svg-transform-inputs .svg-num-field input {
 body.theme-dark #svg-context-toolbar button {
     color: #e8e8e8;
 }
+/* --- Sélecteurs de style/extrémité de trait (assets OpenPDN) --- */
+.openpdn-btn-group {
+    display: inline-flex;
+    gap: 2px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+.openpdn-imgbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    min-width: 28px;
+    height: 22px;
+    background: #fff;
+    border: 1px solid #9a9a9a;
+    border-radius: 2px;
+    cursor: pointer;
+}
+.openpdn-imgbtn img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+    pointer-events: none;
+}
+.openpdn-imgbtn:hover {
+    border-color: #5a8fd6;
+    background: #eef4ff;
+}
+.openpdn-imgbtn.is-active {
+    border-color: #2b6fd6;
+    background: #d6e6ff;
+    box-shadow: inset 0 0 0 1px #2b6fd6;
+}
+body.theme-dark .openpdn-imgbtn {
+    background: #2a2a2a;
+    border-color: #555;
+}
+body.theme-dark .openpdn-imgbtn img {
+    filter: invert(1);
+}
+body.theme-dark .openpdn-imgbtn.is-active {
+    background: #1f3a5a;
+    border-color: #5a8fd6;
+}

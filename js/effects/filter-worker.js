@@ -335,6 +335,83 @@ const FilterManager = {
         return H;
     },
 
+    /* ---- Perlin 2D (port OpenPDN PerlinNoise2D.cs, MIT Ed Harvey) ---- */
+    _perlinInit() {
+        if (this._perlinLookup) return;
+        const perm = [
+            151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,
+            148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,
+            168,68,175,74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,
+            40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,
+            164,100,109,198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,
+            16,58,17,182,189,28,42,223,183,170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,39,
+            253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,
+            241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,204,176,115,121,50,45,127,4,150,
+            254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
+        ];
+        const lut = new Int32Array(512);
+        for (let i = 0; i < 256; i++) { lut[256 + i] = perm[i]; lut[i] = perm[i]; }
+        this._perlinLookup = lut;
+        const angle = (137.2 / 180.0) * Math.PI;
+        this._perlinRot = [Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)];
+    },
+    _perlinFade(t) { return t * t * t * (t * (t * 6 - 15) + 10); },
+    _perlinGrad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 4 ? y : (h === 12 || h === 14 ? x : 0);
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    },
+    _perlinRaw(x, y, seed) {
+        const lut = this._perlinLookup;
+        const xf = Math.floor(x), yf = Math.floor(y);
+        const ix = (xf | 0) & 255, iy = (yf | 0) & 255;
+        x -= xf; y -= yf;
+        const u = this._perlinFade(x), v = this._perlinFade(y);
+        const a = lut[ix + seed] + iy;
+        const aa = lut[a & 511], ab = lut[(a + 1) & 511];
+        const b = lut[(ix + 1 + seed) & 511] + iy;
+        const ba = lut[b & 511], bb = lut[(b + 1) & 511];
+        const edge1 = this._perlinLerp(this._perlinGrad(lut[aa & 511], x, y), this._perlinGrad(lut[ba & 511], x - 1, y), u);
+        const edge2 = this._perlinLerp(this._perlinGrad(lut[ab & 511], x, y - 1), this._perlinGrad(lut[bb & 511], x - 1, y - 1), u);
+        return this._perlinLerp(edge1, edge2, v);
+    },
+    _perlinLerp(a, b, t) { return a + t * (b - a); },
+    /** Variante CloudsEffect : indices entiers + fraction déjà séparés */
+    _perlinRaw2(ix, iy, x, y, seed) {
+        const lut = this._perlinLookup;
+        const u = this._perlinFade(x), v = this._perlinFade(y);
+        const a = lut[(ix + seed) & 511] + iy;
+        const aa = lut[a & 511], ab = lut[(a + 1) & 511];
+        const b = lut[(ix + 1 + seed) & 511] + iy;
+        const ba = lut[b & 511], bb = lut[(b + 1) & 511];
+        const edge1 = this._perlinLerp(this._perlinGrad(lut[aa & 511], x, y), this._perlinGrad(lut[ba & 511], x - 1, y), u);
+        const edge2 = this._perlinLerp(this._perlinGrad(lut[ab & 511], x, y - 1), this._perlinGrad(lut[bb & 511], x - 1, y - 1), u);
+        return this._perlinLerp(edge1, edge2, v);
+    },
+    /** Multi-octave Perlin (PerlinNoise2D.Noise) */
+    _perlinNoise(x, y, detail, roughness, seed) {
+        this._perlinInit();
+        const r = this._perlinRot;
+        let total = 0, frequency = 1, amplitude = 1;
+        let partial = detail;
+        const octaves = Math.ceil(detail);
+        for (let i = 0; i < octaves; i++) {
+            const xr = x * r[0] + y * r[1];
+            const yr = x * r[2] + y * r[3];
+            let noise = this._perlinRaw(xr * frequency, yr * frequency, seed) * amplitude;
+            if (partial < 1) noise *= partial;
+            total += noise;
+            amplitude *= roughness;
+            if (amplitude < 0.001) break;
+            frequency += frequency;
+            partial -= 1.0;
+            x = xr + 499;
+            y = yr + 506;
+        }
+        return total;
+    },
+
     _previewOneTarget(val, w, h, d) {
         const srcOrig = this.originalImageData.data;
         const ps = this._effectPreviewPxScale || 1;
@@ -361,7 +438,9 @@ const FilterManager = {
         const sy = FilterManager._startY || 0, ey = FilterManager._endY || h;
         
         // --- High Performance Wasm Path ---
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(this.currentEffect)) {
+        // brightness avec température/teinte : le Wasm ne les gère pas → forcer le chemin JS
+        const _bcExtra = this.currentEffect === 'brightness' && ((val('ef-bc-temp') || 0) !== 0 || (val('ef-bc-tint') || 0) !== 0);
+        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(this.currentEffect) && !_bcExtra) {
             try {
                 const res = MasterPaintWasm.applyFilter(this.currentEffect, new ImageData(new Uint8ClampedArray(srcOrig), w, h), {
                     ...vals,
@@ -404,15 +483,19 @@ const FilterManager = {
         }
 
         switch (this.currentEffect) {
-            case 'brightness': { 
-                const br=val('ef-b')||val('ef-br')||0, co=val('ef-c')||val('ef-co')||0; 
+            case 'brightness': {
+                const br=val('ef-b')||val('ef-br')||0, co=val('ef-c')||val('ef-co')||0;
+                const temp=(val('ef-bc-temp')||0)*0.5, tint=(val('ef-bc-tint')||0)*0.5;
                 const img=new ImageData(new Uint8ClampedArray(srcOrig),w,h), d_=img.data, f=(259*(co+255))/(255*(259-co));
                 const startIdx = sy*w*4, endIdx = ey*w*4, total = endIdx - startIdx || 1;
                 for(let i=startIdx; i<endIdx; i+=4){
                     if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Ajustement de la luminosité");
-                    for(let c=0; c<3; c++) d_[i+c]=Math.max(0, Math.min(255, f*(d_[i+c]+br-128)+128));
+                    let r=f*(d_[i]+br-128)+128, g=f*(d_[i+1]+br-128)+128, b=f*(d_[i+2]+br-128)+128;
+                    // Température : +chaud = +rouge / -bleu ; Teinte : +magenta = -vert
+                    r+=temp; b-=temp; g-=tint;
+                    d_[i]=Math.max(0,Math.min(255,r)); d_[i+1]=Math.max(0,Math.min(255,g)); d_[i+2]=Math.max(0,Math.min(255,b));
                 }
-                this.ctx.putImageData(img,0,0); return; 
+                this.ctx.putImageData(img,0,0); return;
             }
             case 'ral': {
                 const category = val('ef-ral-category') || 'all';
@@ -571,7 +654,7 @@ const FilterManager = {
                 const colorHex = vals['ef-contour-color'] || '#ff0000';
                 const opacity = (val('ef-contour-opacity') || 100) / 100;
                 const mode = val('ef-contour-mode') || 'outside';
-                const corner = vals['ef-contour-corner'] || 'round';
+                const corner = vals['ef-contour-corner'] || 'miter';
                 const color = this._parseHexColor(colorHex);
 
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h);
@@ -1157,6 +1240,243 @@ const FilterManager = {
                 }
                 this.ctx.putImageData(out, 0, 0);
                 return;
+            }
+            case 'clouds': {
+                // OpenPDN CloudsEffect — rendu procédural Perlin, primaire→secondaire
+                const hex2 = (s) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(s || '')); const n = m ? parseInt(m[1], 16) : 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+                const from = hex2(vals['ef-clouds-from'] || '#000000');
+                const to = hex2(vals['ef-clouds-to'] || '#ffffff');
+                const scale = Math.max(1, pxU(val('ef-clouds-scale') || 250));
+                const power = (val('ef-clouds-power') || 50) / 100;
+                const seed = (val('ef-clouds-seed') || 0) & 255;
+                this._perlinInit();
+                const out = new ImageData(w, h), od = out.data; const total = ey - sy || 1;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 16 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Nuages");
+                    const dy = 2 * y - h;
+                    for (let x = 0; x < w; x++) {
+                        const dx = 2 * x - w;
+                        let v = 0, mult = 1, div = scale;
+                        for (let i = 0; i < 12 && mult > 0.03 && div > 0; i++) {
+                            let dxr = 65536 + dx / div, dyr = 65536 + dy / div;
+                            const dxd = dxr | 0, dyd = dyr | 0;
+                            dxr -= dxd; dyr -= dyd;
+                            const noise = this._perlinRaw2((dxd & 255), (dyd & 255), dxr, dyr, (seed ^ i) & 255);
+                            v += noise * mult; div = Math.floor(div / 2); mult *= power;
+                        }
+                        let t = (v + 1) / 2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+                        const i4 = (y * w + x) * 4;
+                        od[i4] = from[0] + (to[0] - from[0]) * t;
+                        od[i4 + 1] = from[1] + (to[1] - from[1]) * t;
+                        od[i4 + 2] = from[2] + (to[2] - from[2]) * t;
+                        od[i4 + 3] = 255;
+                    }
+                }
+                this.ctx.putImageData(out, 0, 0); return;
+            }
+            case 'mandelbrot':
+            case 'julia': {
+                // OpenPDN Mandelbrot/Julia Fractal
+                const isJulia = this.currentEffect === 'julia';
+                const factor = Math.max(1, val(isJulia ? 'ef-jl-factor' : 'ef-mb-factor') || (isJulia ? 4 : 1));
+                const angle = val(isJulia ? 'ef-jl-angle' : 'ef-mb-angle') || 0;
+                const quality = Math.max(1, Math.min(5, val(isJulia ? 'ef-jl-quality' : 'ef-mb-quality') || 2));
+                const invert = !isJulia && (vals['ef-mb-invert'] === '1' || vals['ef-mb-invert'] === true);
+                const angleTheta = (angle * 2 * Math.PI) / 360;
+                const count = quality * quality + 1, invCount = 1 / count, invQuality = 1 / quality;
+                const invH = 1 / h, aspect = h / w;
+                const clampB = (v) => v < 0 ? 0 : v > 255 ? 255 : v | 0;
+                let zoom, invZoom, xOffset, yOffset;
+                const maxM = 100000, invLogMax = 1 / Math.log(maxM), log2_10000 = Math.log(10000);
+                if (isJulia) { zoom = Math.max(0.1, val('ef-jl-zoom') || 4); invZoom = 1 / zoom; }
+                else { zoom = 1 + 20 * (val('ef-mb-zoom') || 10); invZoom = 1 / zoom; xOffset = -0.7; yOffset = -0.29; }
+                const out = new ImageData(w, h), od = out.data; const total = ey - sy || 1;
+                const jr = 0.3125, ji = 0.03;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 8 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), isJulia ? "Fractale Julia" : "Fractale Mandelbrot");
+                    for (let x = 0; x < w; x++) {
+                        let r = 0, g = 0, b = 0, a = 0;
+                        for (let i = 0; i < count; i++) {
+                            const u = (2 * x - w + i * invCount) * invH;
+                            const v = (2 * y - h + ((i * invQuality) % 1)) * invH;
+                            const radius = Math.sqrt(u * u + v * v), theta = Math.atan2(v, u) + angleTheta;
+                            const uP = radius * Math.cos(theta), vP = radius * Math.sin(theta);
+                            let c;
+                            if (isJulia) {
+                                let jx = (uP - vP * aspect) * invZoom, jy = (vP + uP * aspect) * invZoom, cc = 0;
+                                while (cc < 256 && jx * jx + jy * jy < 10000) { const t = jx; jx = jx * jx - jy * jy + jr; jy = 2 * t * jy + ji; ++cc; }
+                                cc -= 2 - 2 * log2_10000 / Math.log(jx * jx + jy * jy);
+                                c = factor * cc;
+                                b += clampB(c - 768); g += clampB(c - 512); r += clampB(c - 256); a += clampB(c);
+                            } else {
+                                const mr = uP * invZoom + xOffset, mi = vP * invZoom + yOffset;
+                                let cc = 0, mx = 0, my = 0;
+                                while (cc * factor < 1024 && mx * mx + my * my < maxM) { const t = mx; mx = mx * mx - my * my + mr; my = 2 * t * my + mi; ++cc; }
+                                const m = cc - Math.log(my * my + mx * mx) * invLogMax;
+                                c = 64 + factor * m;
+                                r += clampB(c - 768); g += clampB(c - 512); b += clampB(c - 256); a += clampB(c);
+                            }
+                        }
+                        const i4 = (y * w + x) * 4;
+                        let R = clampB(r / count), G = clampB(g / count), B = clampB(b / count);
+                        if (invert) { R = 255 - R; G = 255 - G; B = 255 - B; }
+                        od[i4] = R; od[i4 + 1] = G; od[i4 + 2] = B; od[i4 + 3] = clampB(a / count);
+                    }
+                }
+                this.ctx.putImageData(out, 0, 0); return;
+            }
+            case 'pencilsketch': {
+                // OpenPDN PencilSketchEffect — grey ÷ blur(grey) (color dodge)
+                const tip = pxRad(val('ef-pencil-tip') || 2) || 1;
+                const range = val('ef-pencil-range') || 0;
+                const lum = (i) => (srcOrig[i] * 77 + srcOrig[i + 1] * 151 + srcOrig[i + 2] * 28) >> 8;
+                const grey = new Uint8ClampedArray(w * h * 4);
+                for (let p = 0, q = 0; p < w * h; p++, q += 4) { const g = lum(q); grey[q] = grey[q + 1] = grey[q + 2] = g; grey[q + 3] = 255; }
+                const blur = grey.slice(); this._boxBlurRGBA(blur, w, h, tip);
+                const cf = (259 * (-range + 255)) / (255 * (259 - (-range)));
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const total = ey - sy || 1;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 24 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Croquis crayon");
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+                        const g = (srcOrig[i] * 77 + srcOrig[i + 1] * 151 + srcOrig[i + 2] * 28) >> 8;
+                        let bg = cf * (blur[i] - 127) + 127 + range; bg = bg < 0 ? 0 : bg > 255 ? 255 : bg;
+                        const res = bg < 1 ? 255 : Math.min(255, (g * 255) / bg);
+                        d_[i] = d_[i + 1] = d_[i + 2] = res;
+                    }
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'softenportrait': {
+                // OpenPDN SoftenPortraitEffect
+                const softness = val('ef-soft-softness'); const sft = (softness === 0 ? 0 : softness || 5);
+                const lighting = val('ef-soft-lighting') || 0, warmth = val('ef-soft-warmth') || 10;
+                const blurRad = pxRad(sft * 3);
+                const blur = new Uint8ClampedArray(srcOrig); if (blurRad > 0) this._boxBlurRGBA(blur, w, h, blurRad);
+                const cf = (259 * (-(lighting / 2) + 255)) / (255 * (259 - (-(lighting / 2))));
+                const redAdj = 1 + warmth / 100, blueAdj = 1 - warmth / 100;
+                const ov = (base, top) => base < 128 ? (2 * base * top) / 255 : 255 - (2 * (255 - base) * (255 - top)) / 255;
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const total = ey - sy || 1;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 24 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Portrait adouci");
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+                        const g = (srcOrig[i] * 77 + srcOrig[i + 1] * 151 + srcOrig[i + 2] * 28) >> 8;
+                        const gr = Math.max(0, Math.min(255, g * redAdj)), gb = Math.max(0, Math.min(255, g * blueAdj));
+                        const bc = (c) => { let v = cf * (c - 127) + 127 + lighting; return v < 0 ? 0 : v > 255 ? 255 : v; };
+                        d_[i] = ov(bc(blur[i]), gr);
+                        d_[i + 1] = ov(bc(blur[i + 1]), g);
+                        d_[i + 2] = ov(bc(blur[i + 2]), gb);
+                    }
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'reducenoise': {
+                // OpenPDN ReduceNoiseEffect — percentile local (histogramme disque)
+                const radius = Math.min(20, pxRad(val('ef-rn-radius') || 10) || 1);
+                const strength = -0.2 * ((val('ef-rn-strength') || 40) / 100);
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const hr = new Int32Array(256), hg = new Int32Array(256), hb = new Int32Array(256);
+                const total = ey - sy || 1;
+                for (let y = sy; y < ey; y++) {
+                    if (y % 4 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Réduction du bruit");
+                    for (let x = 0; x < w; x++) {
+                        hr.fill(0); hg.fill(0); hb.fill(0); let area = 0;
+                        for (let dy = -radius; dy <= radius; dy++) {
+                            const yy = y + dy; if (yy < 0 || yy >= h) continue;
+                            const span = (radius * radius - dy * dy); if (span < 0) continue;
+                            const rx = Math.floor(Math.sqrt(span));
+                            for (let dx = -rx; dx <= rx; dx++) {
+                                const xx = x + dx; if (xx < 0 || xx >= w) continue;
+                                const j = (yy * w + xx) * 4; hr[srcOrig[j]]++; hg[srcOrig[j + 1]]++; hb[srcOrig[j + 2]]++; area++;
+                            }
+                        }
+                        if (area < 1) continue;
+                        const i = (y * w + x) * 4;
+                        const cr = srcOrig[i], cg = srcOrig[i + 1], cb = srcOrig[i + 2];
+                        let rc = 0, gc = 0, bc = 0;
+                        for (let k = 0; k < cr; k++) rc += hr[k];
+                        for (let k = 0; k < cg; k++) gc += hg[k];
+                        for (let k = 0; k < cb; k++) bc += hb[k];
+                        const nr = (rc * 255) / area, ng = (gc * 255) / area, nb = (bc * 255) / area;
+                        const intensity = ((cr * 77 + cg * 151 + cb * 28) >> 8) / 255;
+                        const t = strength * (1 - 0.75 * intensity);
+                        d_[i] = Math.max(0, Math.min(255, cr + (nr - cr) * t));
+                        d_[i + 1] = Math.max(0, Math.min(255, cg + (ng - cg) * t));
+                        d_[i + 2] = Math.max(0, Math.min(255, cb + (nb - cb) * t));
+                    }
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'dents': {
+                // OpenPDN DentsEffect — distorsion par bruit de Perlin
+                const scale = val('ef-dent-scale') || 25, refraction = val('ef-dent-refr') || 50;
+                const roughUi = val('ef-dent-rough') || 10, tension = val('ef-dent-tension') || 10;
+                const seed = (val('ef-dent-seed') || 0) & 255;
+                const defaultRadius = Math.sqrt(w * w + h * h) / 2;
+                const scaleR = (400 / defaultRadius) / Math.max(1, scale);
+                const refractionScale = (refraction / 100) / scaleR;
+                const theta = Math.PI * 2 * tension / 10;
+                const roughness = roughUi / 100;
+                let detail = 1 + roughUi / 10;
+                const maxDetail = Math.floor(Math.log(scaleR) / Math.log(0.5));
+                if (detail > maxDetail && maxDetail >= 1) detail = maxDetail;
+                this._perlinInit();
+                geometricOutput((x, y, cx, cy) => {
+                    const rx = x - cx, ry = y - cy;
+                    const bumpAngle = theta * this._perlinNoise(rx * scaleR, ry * scaleR, detail, roughness, seed);
+                    return [cx + rx + refractionScale * Math.sin(-bumpAngle), cy + ry + refractionScale * Math.cos(bumpAngle)];
+                }, "Bosselage");
+                return;
+            }
+            case 'unfocus': {
+                // OpenPDN UnfocusEffect — flou disque (moyenne prémultipliée séparable)
+                const radius = pxRad(val('ef-unfocus-r') || 4) || 1;
+                const pm = new Float32Array(w * h * 4);
+                for (let p = 0, q = 0; p < w * h; p++, q += 4) { const a = srcOrig[q + 3] / 255; pm[q] = srcOrig[q] * a; pm[q + 1] = srcOrig[q + 1] * a; pm[q + 2] = srcOrig[q + 2] * a; pm[q + 3] = srcOrig[q + 3]; }
+                const tmp = new Float32Array(w * h * 4);
+                const passBlur = (src, dst, horiz) => {
+                    const len = horiz ? w : h, lines = horiz ? h : w;
+                    for (let l = 0; l < lines; l++) {
+                        let sr = 0, sg = 0, sb = 0, sa = 0;
+                        const idx = (k) => horiz ? (l * w + k) * 4 : (k * w + l) * 4;
+                        for (let k = 0; k <= radius && k < len; k++) { const o = idx(k); sr += src[o]; sg += src[o + 1]; sb += src[o + 2]; sa += src[o + 3]; }
+                        for (let k = 0; k < len; k++) {
+                            const cnt = Math.min(k + radius, len - 1) - Math.max(k - radius, 0) + 1;
+                            const o = idx(k); dst[o] = sr / cnt; dst[o + 1] = sg / cnt; dst[o + 2] = sb / cnt; dst[o + 3] = sa / cnt;
+                            const addK = k + radius + 1, subK = k - radius;
+                            if (addK < len) { const a = idx(addK); sr += src[a]; sg += src[a + 1]; sb += src[a + 2]; sa += src[a + 3]; }
+                            if (subK >= 0) { const s = idx(subK); sr -= src[s]; sg -= src[s + 1]; sb -= src[s + 2]; sa -= src[s + 3]; }
+                        }
+                    }
+                };
+                passBlur(pm, tmp, true); passBlur(tmp, pm, false);
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const startIdx = sy * w * 4, endIdx = ey * w * 4;
+                for (let i = startIdx; i < endIdx; i += 4) {
+                    const a = pm[i + 3]; const inv = a > 0 ? 255 / a : 0;
+                    d_[i] = pm[i] * inv; d_[i + 1] = pm[i + 1] * inv; d_[i + 2] = pm[i + 2] * inv; d_[i + 3] = a;
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'temptint': {
+                // Balance des blancs simple : Température (bleu↔ambre) + Teinte (vert↔magenta)
+                const t = (val('ef-tt-temp') || 0) * 0.6;
+                const ti = (val('ef-tt-tint') || 0) * 0.6;
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const startIdx = sy * w * 4, endIdx = ey * w * 4, total = endIdx - startIdx || 1;
+                for (let i = startIdx; i < endIdx; i += 4) {
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Température / Teinte");
+                    let r = srcOrig[i] + t - ti * 0.5;
+                    let g = srcOrig[i + 1] + ti;
+                    let b = srcOrig[i + 2] - t - ti * 0.5;
+                    d_[i] = r < 0 ? 0 : r > 255 ? 255 : r;
+                    d_[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+                    d_[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
+                }
+                this.ctx.putImageData(img, 0, 0); return;
             }
             default: this.ctx.putImageData(new ImageData(new Uint8ClampedArray(srcOrig),w,h), 0,0); break;
         }

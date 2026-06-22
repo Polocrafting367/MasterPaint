@@ -2,7 +2,7 @@
 // Gestion des filtres mathématiques avec Modales Intégrées (Live Preview)
 
 const EFFECT_PARAM_DEFAULTS = {
-    brightness: { 'ef-b': '0', 'ef-c': '0' },
+    brightness: { 'ef-b': '0', 'ef-c': '0', 'ef-bc-temp': '0', 'ef-bc-tint': '0' },
     hsv: { 'ef-h': '0', 'ef-s': '0', 'ef-l': '0' },
     blur: { 'ef-rad': '2' },
     halftone: { 'ef-half-rad': '4' },
@@ -86,8 +86,18 @@ chroma: {
         'ef-contour-width': '3',
         'ef-contour-color': '#ff0000',
         'ef-contour-opacity': '100',
-        'ef-contour-mode': 'outside'
-    }
+        'ef-contour-mode': 'outside',
+        'ef-contour-corner': 'miter'
+    },
+    clouds: { 'ef-clouds-scale': '250', 'ef-clouds-power': '50', 'ef-clouds-seed': '0' },
+    mandelbrot: { 'ef-mb-zoom': '10', 'ef-mb-angle': '0', 'ef-mb-factor': '1', 'ef-mb-quality': '2', 'ef-mb-invert': '0' },
+    julia: { 'ef-jl-zoom': '4', 'ef-jl-angle': '0', 'ef-jl-factor': '4', 'ef-jl-quality': '2' },
+    pencilsketch: { 'ef-pencil-tip': '2', 'ef-pencil-range': '0' },
+    softenportrait: { 'ef-soft-softness': '5', 'ef-soft-lighting': '0', 'ef-soft-warmth': '10' },
+    reducenoise: { 'ef-rn-radius': '10', 'ef-rn-strength': '40' },
+    dents: { 'ef-dent-scale': '25', 'ef-dent-refr': '50', 'ef-dent-rough': '10', 'ef-dent-tension': '10', 'ef-dent-seed': '0' },
+    unfocus: { 'ef-unfocus-r': '4' },
+    temptint: { 'ef-tt-temp': '0', 'ef-tt-tint': '0' }
 };
 
 const EFFECT_SCOPE_STORAGE_KEY = 'illu_effect_scope';
@@ -145,7 +155,16 @@ function illuEffectIconKey(id) {
         sketch: 'menu.fxSketch',
         oil: 'menu.fxOil',
         vhs: 'menu.fxVhs',
-        median: 'menu.fxMedian'
+        median: 'menu.fxMedian',
+        clouds: 'menu.fxClouds',
+        mandelbrot: 'menu.fxMandelbrot',
+        julia: 'menu.fxJulia',
+        pencilsketch: 'menu.fxPencilSketch',
+        softenportrait: 'menu.fxSoftenPortrait',
+        reducenoise: 'menu.fxReduceNoise',
+        dents: 'menu.fxDents',
+        unfocus: 'menu.fxUnfocus',
+        temptint: 'menu.adjTempTint'
     };
     return map[id] || null;
 }
@@ -183,7 +202,16 @@ const EFFECT_HISTORY_LABELS = {
     temperature: 'Température de couleur',
     ral: 'Conversion de couleur RAL',
     cmjn: 'Conversion de couleur CMJN',
-    contour: 'Contour (Transparence)'
+    contour: 'Contour (Transparence)',
+    clouds: 'Nuages',
+    mandelbrot: 'Fractale de Mandelbrot',
+    julia: 'Fractale de Julia',
+    pencilsketch: 'Croquis au crayon',
+    softenportrait: 'Portrait adouci',
+    reducenoise: 'Réduction du bruit',
+    dents: 'Bosselage',
+    unfocus: 'Flou de surface (disque)',
+    temptint: 'Température / Teinte'
 };
 
 /** Effets sans implémentation worker : repli sur _previewOneTarget (thread principal). */
@@ -197,6 +225,13 @@ window.FilterManager = {
     _cabossageSeed: 0x9e3779b9,
     _effectPreferMainThreadPreview(effect) {
         return ILLU_MAIN_THREAD_PREVIEW_EFFECTS.has(effect);
+    },
+    /** Curseur d'effet standard : <label> + range + valeur live. */
+    _fxSlider(id, label, min, max, value) {
+        return `<div class="field-row" style="margin-top:6px;"><label style="width:70px;">${label}</label>` +
+            `<input type="range" id="${id}" min="${min}" max="${max}" value="${value}" style="flex-grow:1;" ` +
+            `oninput="document.getElementById('${id}-val').innerText=this.value; FilterManager.preview()"> ` +
+            `<span id="${id}-val" style="width:32px; text-align:right;">${value}</span></div>`;
     },
     canvas: null,
     ctx: null,
@@ -1000,6 +1035,24 @@ window.FilterManager = {
                             <span class="effect-val" id="ef-c-val">0</span>
                         </div>
                     </div>
+                    <div class="effect-slider-block">
+                        <span class="effect-param-label" data-i18n="effect.param.temperature">Température</span>
+                        <div class="effect-track-row">
+                            <div class="effect-track" style="background:linear-gradient(90deg,#4ab8ff,#ffffff,#ffb14a);">
+                                <input type="range" id="ef-bc-temp" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-bc-temp-val').innerText=this.value; FilterManager.preview()">
+                            </div>
+                            <span class="effect-val" id="ef-bc-temp-val">0</span>
+                        </div>
+                    </div>
+                    <div class="effect-slider-block">
+                        <span class="effect-param-label" data-i18n="effect.param.tint">Teinte</span>
+                        <div class="effect-track-row">
+                            <div class="effect-track" style="background:linear-gradient(90deg,#5ad65a,#ffffff,#d65ad6);">
+                                <input type="range" id="ef-bc-tint" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-bc-tint-val').innerText=this.value; FilterManager.preview()">
+                            </div>
+                            <span class="effect-val" id="ef-bc-tint-val">0</span>
+                        </div>
+                    </div>
                 `);
                 break;
             case 'hsv':
@@ -1161,6 +1214,70 @@ window.FilterManager = {
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.grain">Grain:</label><input type="range" id="ef-frost" min="1" max="24" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frost-val').innerText=this.value; FilterManager.preview()"> <span id="ef-frost-val" style="width:25px; text-align:right;">8</span></div>
                 `);
                 break;
+            case 'clouds':
+                this.showModal(illuEffectTitle('clouds', 'Nuages'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;">Rendu Perlin entre couleur primaire et secondaire.</p>
+                    ${this._fxSlider('ef-clouds-scale', 'Échelle', 2, 1000, 250)}
+                    ${this._fxSlider('ef-clouds-power', 'Rugosité', 0, 100, 50)}
+                    ${this._fxSlider('ef-clouds-seed', 'Germe', 0, 255, 0)}
+                `);
+                break;
+            case 'mandelbrot':
+                this.showModal(illuEffectTitle('mandelbrot', 'Fractale de Mandelbrot'), `
+                    ${this._fxSlider('ef-mb-zoom', 'Zoom', 0, 100, 10)}
+                    ${this._fxSlider('ef-mb-angle', 'Angle', -180, 180, 0)}
+                    ${this._fxSlider('ef-mb-factor', 'Facteur', 1, 10, 1)}
+                    ${this._fxSlider('ef-mb-quality', 'Qualité', 1, 5, 2)}
+                    <div class="field-row" style="margin-top:6px;"><label style="width:70px;">Inverser</label><input type="checkbox" id="ef-mb-invert" onchange="FilterManager.preview()"></div>
+                `);
+                break;
+            case 'julia':
+                this.showModal(illuEffectTitle('julia', 'Fractale de Julia'), `
+                    ${this._fxSlider('ef-jl-zoom', 'Zoom', 1, 50, 4)}
+                    ${this._fxSlider('ef-jl-angle', 'Angle', -180, 180, 0)}
+                    ${this._fxSlider('ef-jl-factor', 'Facteur', 1, 10, 4)}
+                    ${this._fxSlider('ef-jl-quality', 'Qualité', 1, 5, 2)}
+                `);
+                break;
+            case 'pencilsketch':
+                this.showModal(illuEffectTitle('pencilsketch', 'Croquis au crayon'), `
+                    ${this._fxSlider('ef-pencil-tip', 'Pointe', 1, 20, 2)}
+                    ${this._fxSlider('ef-pencil-range', 'Plage', -20, 20, 0)}
+                `);
+                break;
+            case 'softenportrait':
+                this.showModal(illuEffectTitle('softenportrait', 'Portrait adouci'), `
+                    ${this._fxSlider('ef-soft-softness', 'Douceur', 0, 10, 5)}
+                    ${this._fxSlider('ef-soft-lighting', 'Éclairage', -20, 20, 0)}
+                    ${this._fxSlider('ef-soft-warmth', 'Chaleur', 0, 20, 10)}
+                `);
+                break;
+            case 'reducenoise':
+                this.showModal(illuEffectTitle('reducenoise', 'Réduction du bruit'), `
+                    ${this._fxSlider('ef-rn-radius', 'Rayon', 1, 50, 10)}
+                    ${this._fxSlider('ef-rn-strength', 'Force', 0, 100, 40)}
+                `);
+                break;
+            case 'dents':
+                this.showModal(illuEffectTitle('dents', 'Bosselage'), `
+                    ${this._fxSlider('ef-dent-scale', 'Échelle', 1, 200, 25)}
+                    ${this._fxSlider('ef-dent-refr', 'Réfraction', 0, 200, 50)}
+                    ${this._fxSlider('ef-dent-rough', 'Rugosité', 0, 100, 10)}
+                    ${this._fxSlider('ef-dent-tension', 'Tension', 0, 100, 10)}
+                    ${this._fxSlider('ef-dent-seed', 'Germe', 0, 255, 0)}
+                `);
+                break;
+            case 'unfocus':
+                this.showModal(illuEffectTitle('unfocus', 'Flou de surface (disque)'), `
+                    ${this._fxSlider('ef-unfocus-r', 'Rayon', 1, 50, 4)}
+                `);
+                break;
+            case 'temptint':
+                this.showModal(illuEffectTitle('temptint', 'Température / Teinte'), `
+                    ${this._fxSlider('ef-tt-temp', 'Température', -100, 100, 0)}
+                    ${this._fxSlider('ef-tt-tint', 'Teinte', -100, 100, 0)}
+                `);
+                break;
             case 'vignette':
                 this.showModal(illuEffectTitle('vignette', 'Vignettage'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-vig" min="0" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vig-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vig-val" style="width:25px; text-align:right;">50</span></div>
@@ -1309,27 +1426,28 @@ window.FilterManager = {
                 `);
                 break;
             case 'colorbal':
+                // Initialiser AVANT showModal : showModal lie l'éditeur de courbes
+                // immédiatement, or CurveEditor.bind abandonne si _cbParams est nul.
+                if (!this._cbParams) {
+                    const defPts = [{x:0, y:0}, {x:255, y:255}];
+                    this._cbParams = {
+                        curveMaster: JSON.parse(JSON.stringify(defPts)),
+                        curveR: JSON.parse(JSON.stringify(defPts)),
+                        curveG: JSON.parse(JSON.stringify(defPts)),
+                        curveB: JSON.parse(JSON.stringify(defPts))
+                    };
+                }
                 this.showModal(illuEffectTitle('colorbal', 'Courbes des tonalités'), `
                     <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.colorbal">Ajustez l'équilibre colorimétrique (RVB) ou utilisez les courbes avancées.</p>
                     <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.red">Rouge</label><input type="range" id="ef-cb-r" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-r-val" style="width:28px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:4px;"><label style="width: 92px;" data-i18n="effect.param.green">Vert</label><input type="range" id="ef-cb-g" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-g-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-g-val" style="width:28px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:4px;"><label style="width: 92px;" data-i18n="effect.param.blue">Bleu</label><input type="range" id="ef-cb-b" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-b-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-b-val" style="width:28px;text-align:right;">0</span></div>
-                    <details class="illu-advanced-section" ontoggle="if(this.open && window.IlluImageAdjustCore) { FilterManager._forceRedrawCurves(); }">
-                        <summary class="illu-advanced-section-summary" data-i18n="effect.advanced.toneCurves">Avancé : Courbes des tonalités</summary>
-                        <div class="illu-advanced-section-body">
-                            ${window.IlluImageAdjustCore.CurveEditor.createHtml('ef-cb')}
-                        </div>
-                    </details>
+                    <div style="margin-top:8px;border-top:1px solid #b9b3a0;padding-top:8px;">
+                        <div style="font-size:11px;font-weight:bold;margin-bottom:4px;" data-i18n="effect.advanced.toneCurves">Courbes des tonalités</div>
+                        ${window.IlluImageAdjustCore.CurveEditor.createHtml('ef-cb')}
+                    </div>
                 `);
-                if (!this._cbParams) {
-                    const defPts = [{x:0, y:0}, {x:255, y:255}];
-                    this._cbParams = { 
-                        curveMaster: JSON.parse(JSON.stringify(defPts)), 
-                        curveR: JSON.parse(JSON.stringify(defPts)), 
-                        curveG: JSON.parse(JSON.stringify(defPts)), 
-                        curveB: JSON.parse(JSON.stringify(defPts)) 
-                    };
-                }
+                this._forceRedrawCurves();
                 break;
             case 'mirrorquad':
                 this.showModal(illuEffectTitle('mirrorquad', 'Miroir 4 secteurs'), `
@@ -1401,7 +1519,7 @@ window.FilterManager = {
                         <label style="width:92px;" data-i18n="effect.param.corner">Angles</label>
                         <select id="ef-contour-corner" onchange="FilterManager.preview()" style="flex-grow:1;">
                             <option value="round" data-i18n="effect.contour.round">Arrondi</option>
-                            <option value="miter" data-i18n="effect.contour.miter">Pointu (Miter)</option>
+                            <option value="miter" selected data-i18n="effect.contour.miter">Pointu (Miter)</option>
                         </select>
                     </div>
                 `);
@@ -2413,7 +2531,7 @@ window.FilterManager = {
         }
         
         // Inject global colors for effects that use the palette instead of inputs
-        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette') {
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette' || this.currentEffect === 'clouds') {
             const rgbToHex = (c) => "#" + (1 << 24 | c.r << 16 | c.g << 8 | c.b).toString(16).slice(1);
             if (this.currentEffect === 'contour') {
                 vals['ef-contour-color'] = rgbToHex(window.EditorManager.primaryColor);
@@ -2422,6 +2540,9 @@ window.FilterManager = {
                 vals['ef-duo-c2'] = rgbToHex(window.EditorManager.secondaryColor);
             } else if (this.currentEffect === 'vignette') {
                 vals['ef-vig-color'] = rgbToHex(window.EditorManager.primaryColor);
+            } else if (this.currentEffect === 'clouds') {
+                vals['ef-clouds-from'] = rgbToHex(window.EditorManager.primaryColor);
+                vals['ef-clouds-to'] = rgbToHex(window.EditorManager.secondaryColor);
             }
         }
 
@@ -2530,6 +2651,11 @@ window.FilterManager = {
                     case 'invert': shader = 'invert'; break;
                     case 'sepia': shader = 'sepia'; break;
                     case 'brightness': {
+                        // Température/teinte non gérées par le shader → repli worker JS
+                        if (parseFloat(vals['ef-bc-temp'] || 0) !== 0 || parseFloat(vals['ef-bc-tint'] || 0) !== 0) {
+                            shader = null;
+                            break;
+                        }
                         shader = 'brightness_contrast';
                         uniforms.u_brightness = (vals['ef-b'] || 0) / 255;
                         uniforms.u_contrast = (vals['ef-c'] || 0) / 255;

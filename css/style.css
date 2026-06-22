@@ -466,6 +466,23 @@ li[role="menuitem"]:hover>ul[role="menu"] {
     transition: none;
 }
 
+/* Triangle de sécurité (menu-aim) : géré par illu-menu-safe-triangle.js.
+   Maintient ouvert le sous-menu visé pendant le trajet diagonal de la souris. */
+li[role="menuitem"].illu-st-open>ul[role="menu"] {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Pendant la visée, on empêche les items voisins survolés d'ouvrir leur
+   propre sous-menu (sinon il « volerait » la place du sous-menu visé). */
+menu[role="menubar"].illu-st-aiming li[role="menuitem"]:not(.illu-st-open):hover>ul[role="menu"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
     top: 0;
     left: 100%;

@@ -18,7 +18,7 @@
         adjustment: [
             { id: 'autolevel', pdn: 'AutoLevelEffect', status: PORT.YES, note: 'IlluImageAdjustCore + menu' },
             { id: 'brightness', pdn: 'BrightnessAndContrastAdjustment', status: PORT.YES },
-            { id: 'curves', pdn: 'CurvesEffect', status: PORT.PARTIAL, note: 'LevelsPanel partiel' },
+            { id: 'curves', pdn: 'CurvesEffect', status: PORT.YES, note: 'colorbal — courbes avancées RVB (FilterManager)' },
             { id: 'grayscale', pdn: 'DesaturateEffect', status: PORT.YES },
             { id: 'hsv', pdn: 'HueAndSaturationAdjustment', status: PORT.YES },
             { id: 'invert', pdn: 'InvertColorsEffect', status: PORT.YES },
@@ -33,7 +33,7 @@
             { id: 'radialblur', pdn: 'RadialBlurEffect', status: PORT.PARTIAL },
             { id: 'zoomblur', pdn: 'ZoomBlurEffect', status: PORT.PARTIAL },
             { id: 'surfaceblur', pdn: 'SurfaceBlurEffect', status: PORT.PARTIAL, note: 'pdn-effects.js simplifié' },
-            { id: 'unfocus', pdn: 'UnfocusEffect', status: PORT.NO },
+            { id: null, pdn: 'UnfocusEffect', status: PORT.NO, note: 'redondant avec surfaceblur — non exposé' },
             { id: 'fragment', pdn: 'FragmentEffect', status: PORT.PARTIAL, note: 'pdn-effects.js' }
         ],
         distort: [
@@ -42,30 +42,30 @@
             { id: 'pixelate', pdn: 'PixelateEffect', status: PORT.YES },
             { id: 'tileReflect', pdn: 'TileEffect', status: PORT.PARTIAL },
             { id: 'polarInvert', pdn: 'PolarInversionEffect', status: PORT.PARTIAL },
-            { id: 'dents', pdn: 'DentsEffect', status: PORT.NO }
+            { id: 'dents', pdn: 'DentsEffect', status: PORT.YES, note: 'filter-worker — warp Perlin' }
         ],
         render: [
-            { id: null, pdn: 'CloudsEffect', status: PORT.NO },
-            { id: null, pdn: 'MandelbrotFractalEffect', status: PORT.NO },
-            { id: null, pdn: 'JuliaFractalEffect', status: PORT.NO },
+            { id: 'clouds', pdn: 'CloudsEffect', status: PORT.YES, note: 'filter-worker — Perlin primaire→secondaire' },
+            { id: 'mandelbrot', pdn: 'MandelbrotFractalEffect', status: PORT.YES },
+            { id: 'julia', pdn: 'JuliaFractalEffect', status: PORT.YES },
             { id: null, pdn: 'ColorFillEffect', status: PORT.PARTIAL }
         ],
         noise: [
             { id: 'addnoise', pdn: 'AddNoiseEffect', status: PORT.YES },
             { id: 'median', pdn: 'MedianEffect', status: PORT.PARTIAL },
-            { id: null, pdn: 'ReduceNoiseEffect', status: PORT.NO }
+            { id: 'reducenoise', pdn: 'ReduceNoiseEffect', status: PORT.YES, note: 'filter-worker — percentile local' }
         ],
         photo: [
             { id: 'softglow', pdn: 'GlowEffect', status: PORT.PARTIAL },
             { id: 'sharpen', pdn: 'SharpenEffect', status: PORT.YES },
-            { id: null, pdn: 'SoftenPortraitEffect', status: PORT.NO },
+            { id: 'softenportrait', pdn: 'SoftenPortraitEffect', status: PORT.YES },
             { id: 'redeyeremove', pdn: 'RedEyeRemoveEffect', status: PORT.YES },
             { id: 'vignette', pdn: 'VignetteEffect', status: PORT.YES }
         ],
         artistic: [
             { id: 'oil', pdn: 'OilPaintingEffect', status: PORT.YES },
             { id: 'sketch', pdn: 'InkSketchEffect', status: PORT.PARTIAL },
-            { id: null, pdn: 'PencilSketchEffect', status: PORT.NO },
+            { id: 'pencilsketch', pdn: 'PencilSketchEffect', status: PORT.YES },
             { id: 'frosted', pdn: 'FrostedGlassEffect', status: PORT.YES }
         ],
         stylize: [
