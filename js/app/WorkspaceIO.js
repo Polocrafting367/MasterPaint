@@ -1024,20 +1024,26 @@
 
         const setHidden = (el, hide) => {
             if (!el) return;
-            if (hide) el.setAttribute('hidden', '');
-            else el.removeAttribute('hidden');
+            if (hide) {
+                el.style.display = 'none';
+                el.setAttribute('hidden', '');
+            } else {
+                el.removeAttribute('hidden');
+                el.style.removeProperty('display');
+            }
         };
 
         const syncOpts = () => {
             const v = fmt ? fmt.value : 'illu';
+            const isVecNow = !!(em && em.activeProject && em.activeProject.mode === 'vector');
             setHidden(jpegRow, v !== 'jpeg');
             setHidden(webpRow, v !== 'webp');
             setHidden(pngNote, v !== 'png');
-            setHidden(vectorPngScaleRow, !(isVec && v === 'png'));
+            setHidden(vectorPngScaleRow, !(isVecNow && v === 'png'));
             setHidden(icoRow, v !== 'ico');
             setHidden(scopeRow, v !== 'illu');
             setHidden(illuRow, v !== 'illu');
-            setHidden(colorRow, v !== 'png' && v !== 'gif');
+            setHidden(colorRow, isVecNow || v === 'illu' || v === 'ico' || v === 'pdn' || v === 'svg');
             if (scopeRow) scopeRow.style.display = v === 'illu' ? 'flex' : 'none';
         };
 
@@ -1046,11 +1052,20 @@
             syncOpts();
         }
 
+        const refreshOnModeChange = () => {
+            if (ov.style.display !== 'none') syncOpts();
+        };
         if (morePanel && !morePanel.dataset.illuExportBound) {
             morePanel.dataset.illuExportBound = '1';
             morePanel.addEventListener('toggle', () => {
                 if (morePanel.open && fmt) syncOpts();
             });
+        }
+
+        if (!document.body.dataset.illuExportModeBound) {
+            document.body.dataset.illuExportModeBound = '1';
+            document.addEventListener('illu:svg-mode-enter', refreshOnModeChange);
+            document.addEventListener('illu:svg-mode-leave', refreshOnModeChange);
         }
 
         const histCk = document.getElementById('export-include-history');

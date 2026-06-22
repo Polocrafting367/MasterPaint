@@ -13,7 +13,12 @@ window.illuSplashLog = function (msg) {
     console.log('[ILLU-INIT] ' + msg);
     const el = document.getElementById('illu-splash-status');
     if (el) {
-        el.textContent = msg;
+        if (!el.dataset.illuIconShown) {
+            el.innerHTML = '<span class="menu-icon" aria-hidden="true" data-icon-key="menu.winReset"><i class="fa-solid fa-desktop" aria-hidden="true"></i></span> ' + msg;
+            el.dataset.illuIconShown = '1';
+        } else {
+            el.textContent = msg;
+        }
     }
 };
 

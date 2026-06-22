@@ -302,8 +302,21 @@
                 illuRunSplashFadeOut(() => illuFinalizeSplashHidden(onSplashHidden));
             };
 
-            if (delay > 0) {
-                setTimeout(startFadeOut, delay);
+            if (typeof window.illuSplashLog === 'function') {
+                window.illuSplashLog('Réinitialisation du bureau...');
+            }
+            if (typeof window.resetWorkspace === 'function') {
+                window.resetWorkspace();
+            }
+            if (typeof window.illuSplashLog === 'function') {
+                window.illuSplashLog('Bureau réinitialisé.');
+            }
+
+            const postResetDelay = 300;
+            const totalDelay = Math.max(delay, postResetDelay);
+
+            if (totalDelay > 0) {
+                setTimeout(startFadeOut, totalDelay);
             } else {
                 startFadeOut();
             }

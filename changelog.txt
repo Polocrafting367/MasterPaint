@@ -1,6 +1,6 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.171,1 (22/06/26)
+2.8.173,1 (22/06/26)
 - Ouverture de fichier pdn entre paintnet et masterpaint possible dans les 2 sens
 - Ajout d'autre effet présent dans paintdotnet (old version)
        > nuage, focus, historgrame...
@@ -9,6 +9,8 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Correction theme mobile affiché sur paint et photoshop
 - Ajout d'un triangle de sécurité dans les menus
 - Effet remplissage par contenu réparré
+- résolution export svg retiré du mode bitmap
+- Fenetre volante outils, couleur,... position reset a chaque chargement
 
 2.8.164 (21/06/26)
 - Correction ruban d'obtion mal compatible avec le mode téléphone
