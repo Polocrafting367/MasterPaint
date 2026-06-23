@@ -51,6 +51,7 @@
     <link rel="stylesheet" href="css/svg-mode.css">
     <link rel="stylesheet" href="css/illu-mobile-shell.css">
     <link rel="stylesheet" href="css/theme-mobile-modern.css">
+    <link rel="stylesheet" href="css/theme-photoshop.css">
     <link rel="stylesheet" href="css/illu-tool-ribbon.css">
     <style>
         .menubar-contact-btn:hover {
@@ -2624,17 +2625,23 @@
                                 <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
                                     id="btn-dock-rail-sliders" role="tab" aria-pressed="true"
                                     data-i18n-title="dock.railSlidersTitle" title=""
-                                    onclick="window.illuToggleDockRailPanel('sliders')"><i class="fa-solid fa-sliders"
-                                        aria-hidden="true"></i></button>
+                                    onclick="window.illuToggleDockRailPanel('sliders')"><i class="fa-solid fa-palette" aria-hidden="true"></i></button>
                                 <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
                                     id="btn-dock-rail-history" role="tab" aria-pressed="true"
                                     data-i18n-title="dock.railHistoryTitle" title=""
                                     onclick="window.illuToggleDockRailPanel('history')"><i
                                         class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                                <button type="button" class="palette-dock-rail__tab palette-dock-rail__tab--active"
+                                    id="btn-dock-rail-svg-objects" role="tab" aria-pressed="true"
+                                    data-i18n-title="dock.railSvgObjectsTitle" title=""
+                                    onclick="window.illuToggleDockRailPanel('svg-objects')"><i
+                                        class="fa-solid fa-shapes" aria-hidden="true"></i></button>
                             </div>
                             <div class="palette-dock-rail__content">
+                                <div id="dock-rail-tool-options-host" class="palette-dock-rail__host"></div>
                                 <div id="dock-rail-sliders-host" class="palette-dock-rail__host"></div>
                                 <div id="dock-rail-history-host" class="palette-dock-rail__host"></div>
+                                <div id="dock-rail-svg-objects-host" class="palette-dock-rail__host"></div>
                             </div>
                         </div>
 
@@ -2643,6 +2650,8 @@
 
                 <aside id="palette-dock-right" class="palette-dock palette-dock--right" aria-label="Palettes droite"
                     data-i18n-aria-label="dock.right">
+                    <!-- Mode Photoshop : hôte d'accueil des options d'outil (relogées par app.js) -->
+                    <div id="dock-tool-options-host" class="dock-tool-options-host"></div>
                     <!-- Calques -->
                     <div id="win-layers" class="window palette-panel">
                         <div class="title-bar">
@@ -3729,8 +3738,10 @@
                                     data-value="floating" data-i18n="settings.layoutPn"
                                     aria-pressed="true">Paint.NET</button>
                                 <button type="button" class="illu-scope-btn illu-settings-scope-btn"
-                                    data-value="photoshop" data-i18n="settings.layoutPs"
-                                    aria-pressed="false">Photoshop</button>
+                                    data-value="photoshop" aria-pressed="false">
+                                    <span data-i18n="settings.layoutPs">Photoshop</span>
+                                    <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
+                                </button>
                                 <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="phone"
                                     data-i18n="settings.layoutPhone" aria-pressed="false">Téléphone</button>
                             </div>
@@ -4008,8 +4019,10 @@
                                     data-value="floating" data-i18n="settings.layoutPn"
                                     aria-pressed="true">Paint.NET</button>
                                 <button type="button" class="illu-scope-btn illu-settings-scope-btn"
-                                    data-value="photoshop" data-i18n="settings.layoutPs"
-                                    aria-pressed="false">Photoshop</button>
+                                    data-value="photoshop" aria-pressed="false">
+                                    <span data-i18n="settings.layoutPs">Photoshop</span>
+                                    <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
+                                </button>
                                 <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="phone"
                                     data-i18n="settings.layoutPhone" aria-pressed="false">Téléphone</button>
                             </div>

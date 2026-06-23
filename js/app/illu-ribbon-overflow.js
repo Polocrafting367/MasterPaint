@@ -289,6 +289,9 @@
     function computeOverflow(container) {
         if (_updatingCount > 0) return;
         if (!document.body.classList.contains('illu-toolbar-ribbon')) return;
+        /* Mode Photoshop : options en panneau vertical → pas de compression,
+           on laisse défiler verticalement (cf. mountPalettesDocked → reset()). */
+        if (typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'photoshop') return;
 
         /* Marge préventive : on soustrait 6px pour éviter le train de retard
          * (le layout reflow est légèrement en avance sur la mesure RO).          */

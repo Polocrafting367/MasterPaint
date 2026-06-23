@@ -45,6 +45,21 @@ body.theme-dark {
     margin-left: 8px;
 }
 
+.illu-settings-scope-btn[data-value="photoshop"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.illu-settings-scope-btn[data-value="photoshop"] .illu-beta-tag {
+    margin-left: 0;
+    font-size: 7px;
+    line-height: 1.25;
+    padding: 0 3px;
+    vertical-align: baseline;
+}
+
 /* Toggles barre d’options : bouton + mot descriptif à droite */
 .illu-mode-toggle-group,
 .tool-pinned-toggles {

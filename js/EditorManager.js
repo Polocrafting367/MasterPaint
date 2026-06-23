@@ -4597,13 +4597,19 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         });
     },
 
-    handleNewProject() {
+    handleNewProject(opts) {
+        opts = opts || {};
         const pMode = document.querySelector('input[name="proj-mode"]:checked')?.value || 'pixel';
         const isPixel = pMode.startsWith('pixel');
         const dw = window.ILLU_DEFAULT_DOC_WIDTH || 1280;
         const dh = window.ILLU_DEFAULT_DOC_HEIGHT || 720;
-        const pWidth = parseInt(document.getElementById('p-width')?.value || dw, 10);
-        const pHeight = parseInt(document.getElementById('p-height')?.value || dh, 10);
+        /* useDefaults : création automatique « aucun projet ouvert » (démarrage,
+           fermeture du dernier onglet). On ignore les champs du dialogue (qui
+           gardent les valeurs paysage par défaut du HTML) pour respecter la
+           taille par défaut — portrait sur téléphone. */
+        const useDefaults = opts.useDefaults === true;
+        const pWidth = useDefaults ? dw : parseInt(document.getElementById('p-width')?.value || dw, 10);
+        const pHeight = useDefaults ? dh : parseInt(document.getElementById('p-height')?.value || dh, 10);
 
         const project = {
             id: Date.now(),
@@ -7757,7 +7763,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
 
         if (this.projects.length === 0) {
             this.activeProjectIndex = -1;
-            this.handleNewProject();
+            this.handleNewProject({ useDefaults: true });
             return;
         }
 
@@ -12228,7 +12234,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
 
         if (!this.projects.length) {
-            this.handleNewProject();
+            this.handleNewProject({ useDefaults: true });
             return;
         }
 
@@ -13380,7 +13386,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (!ok) {
                 // Essayer de router via URL si pas de restauration
                 routed = this.handleUrlRouting();
-                if (!routed) this.handleNewProject();
+                if (!routed) this.handleNewProject({ useDefaults: true });
             } else {
                 // Restauration réussie : on considère que l'initialisation est faite.
                 // On marque routed = true pour éviter de redéclencher handleUrlRouting dans le microtask.
@@ -13388,7 +13394,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         } else {
             routed = this.handleUrlRouting();
-            if (!routed) this.handleNewProject();
+            if (!routed) this.handleNewProject({ useDefaults: true });
         }
 
         queueMicrotask(() => {

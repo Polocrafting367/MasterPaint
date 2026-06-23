@@ -1607,6 +1607,12 @@ window.illuFocusPaletteForMobile = function (id) {
                 window.illuToggleDockRailPanel('sliders');
             }
         }
+        if (id === 'win-svg-objects') {
+            const hostSO = document.getElementById('dock-rail-svg-objects-host');
+            if (hostSO && hostSO.hasAttribute('hidden') && typeof window.illuToggleDockRailPanel === 'function') {
+                window.illuToggleDockRailPanel('svg-objects');
+            }
+        }
         if (typeof window.illuUpdateDockRailVisibility === 'function') window.illuUpdateDockRailVisibility();
     }
     const el = document.getElementById(id);
@@ -1867,6 +1873,21 @@ window.illuIsPhoneLikeClient = function () {
         return false;
     }
 };
+
+/* Sur téléphone : document portrait par défaut (720×1280) plutôt que paysage
+   (1280×720), quand aucun projet n'est ouvert. */
+try {
+    if (window.illuIsPhoneLikeClient()) {
+        const _dw = window.ILLU_DEFAULT_DOC_WIDTH;
+        const _dh = window.ILLU_DEFAULT_DOC_HEIGHT;
+        if (Number.isFinite(_dw) && Number.isFinite(_dh) && _dw > _dh) {
+            window.ILLU_DEFAULT_DOC_WIDTH = _dh;
+            window.ILLU_DEFAULT_DOC_HEIGHT = _dw;
+        }
+    }
+} catch (e) {
+    /* ignore */
+}
 
 /**
  * Si aucune disposition n’a jamais été enregistrée et que le client ressemble à un téléphone,
@@ -2497,11 +2518,183 @@ function illuClearPdnBottomDockPreservingPalettes(bottomDock, safeParent) {
     bottomDock.innerHTML = '';
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   MODE PHOTOSHOP — relocalisation des options d'outil & sélecteur couleur
+   ════════════════════════════════════════════════════════════════════════ */
+
+/** Pose un repère invisible pour restaurer #tool-options-container à sa place. */
+function illuEnsureToolOptionsPlaceholder() {
+    const cont = document.getElementById('tool-options-container');
+    if (!cont || !cont.parentNode) return null;
+    let ph = document.getElementById('illu-tool-options-origin');
+    if (!ph) {
+        ph = document.createElement('div');
+        ph.id = 'illu-tool-options-origin';
+        ph.hidden = true;
+        cont.parentNode.insertBefore(ph, cont);
+    }
+    return ph;
+}
+
+/** Ancre les options d'outil dans le dock droit (#dock-tool-options-host).
+ *  Sans effet hors mode Photoshop. */
+window.illuRouteToolOptionsForDocked = function () {
+    if (typeof window.getUILayoutMode !== 'function' || window.getUILayoutMode() !== 'photoshop') return;
+    const cont = document.getElementById('tool-options-container');
+    if (!cont || !cont.classList.contains('illu-tool-options--docked')) return;
+    const dockHost = document.getElementById('dock-tool-options-host');
+    if (dockHost && cont.parentNode !== dockHost) {
+        dockHost.appendChild(cont);
+    }
+    if (typeof window.illuUpdateDockRailVisibility === 'function') {
+        window.illuUpdateDockRailVisibility();
+    }
+};
+
+/** Entrée en mode Photoshop : reloge les options d'outil en colonne. */
+function illuRelocateToolOptionsToDock() {
+    const cont = document.getElementById('tool-options-container');
+    if (!cont) return;
+    illuEnsureToolOptionsPlaceholder();
+    cont.classList.add('illu-tool-options--docked');
+    window.illuRouteToolOptionsForDocked();
+}
+
+/** Sortie du mode Photoshop : restaure les options d'outil à leur place. */
+function illuRestoreToolOptionsFromDock() {
+    const cont = document.getElementById('tool-options-container');
+    if (!cont) return;
+    cont.classList.remove('illu-tool-options--docked');
+    const ph = document.getElementById('illu-tool-options-origin');
+    if (ph && ph.parentNode) {
+        ph.parentNode.insertBefore(cont, ph);
+    }
+}
+
+/* Sélecteur couleur ancré : grille + roue qui remplit l'espace (non carrée). */
+var _illuPrevColorPickerState = null;
+var _illuDockedWheelRO = null;
+var _illuDockedWheelRaf = null;
+var _illuDockedWheelObservedEl = null;
+
+/** Cible de mesure : .color-picker-left (espace utile roue + pastilles). */
+function illuGetDockedColorWheelMeasureRoot() {
+    const winColors = document.getElementById('win-colors');
+    return winColors && winColors.querySelector('.color-picker-left');
+}
+
+/** Redimensionne le buffer du canvas sur l'espace de color-picker-left, puis régénère. */
+function illuSyncDockedColorWheelSize() {
+    const em = window.EditorManager;
+    const canvas = document.getElementById('color-wheel');
+    const cont = document.getElementById('color-wheel-container');
+    const left = illuGetDockedColorWheelMeasureRoot();
+    if (!em || !canvas || !cont || !left) return;
+
+    const row = left.querySelector('.color-wheel-row');
+    const swatch = row && row.querySelector('.color-swatch-box');
+    const gap = row ? (parseFloat(getComputedStyle(row).columnGap || getComputedStyle(row).gap) || 0) : 0;
+    const swatchW = swatch ? swatch.offsetWidth : 0;
+
+    let w = cont.clientWidth;
+    let h = cont.clientHeight;
+    if (w < 40 || h < 40) {
+        w = Math.max(40, left.clientWidth - swatchW - (swatchW > 0 ? gap : 0));
+        h = Math.max(40, left.clientHeight);
+    }
+    w = Math.max(40, Math.round(w));
+    h = Math.max(40, Math.round(h));
+    if (canvas.width === w && canvas.height === h) return;
+    canvas.width = w;
+    canvas.height = h;
+    if (typeof em.rebuildColorPickerBase === 'function') em.rebuildColorPickerBase();
+}
+
+function illuDisconnectDockedColorWheelObserver() {
+    if (_illuDockedWheelRO) {
+        _illuDockedWheelRO.disconnect();
+        _illuDockedWheelRO = null;
+    }
+    _illuDockedWheelObservedEl = null;
+    if (_illuDockedWheelRaf) {
+        cancelAnimationFrame(_illuDockedWheelRaf);
+        _illuDockedWheelRaf = null;
+    }
+}
+
+function illuEnsureDockedColorWheelObserver() {
+    const left = illuGetDockedColorWheelMeasureRoot();
+    if (!left || typeof ResizeObserver === 'undefined') return;
+    if (_illuDockedWheelObservedEl === left && _illuDockedWheelRO) return;
+    illuDisconnectDockedColorWheelObserver();
+    _illuDockedWheelObservedEl = left;
+    _illuDockedWheelRO = new ResizeObserver(() => {
+        if (_illuDockedWheelRaf) cancelAnimationFrame(_illuDockedWheelRaf);
+        _illuDockedWheelRaf = requestAnimationFrame(illuSyncDockedColorWheelSize);
+    });
+    _illuDockedWheelRO.observe(left);
+}
+
+/** Entrée en mode Photoshop : carré couleur en grille + roue adaptative. */
+function illuApplyDockedColorPicker() {
+    const em = window.EditorManager;
+    const canvas = document.getElementById('color-wheel');
+    const cont = document.getElementById('color-wheel-container');
+    if (!em || !canvas || _illuPrevColorPickerState) return;
+    _illuPrevColorPickerState = {
+        grid: typeof em.isColorPickerGridMode === 'function' ? em.isColorPickerGridMode() : false,
+        w: canvas.width,
+        h: canvas.height,
+        styleW: canvas.style.width,
+        styleH: canvas.style.height
+    };
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    if (typeof em.setColorPickerGridMode === 'function') {
+        em.setColorPickerGridMode(true); /* rebuild + sync */
+    }
+    illuSyncDockedColorWheelSize();
+    illuEnsureDockedColorWheelObserver();
+    queueMicrotask(() => {
+        illuSyncDockedColorWheelSize();
+        illuEnsureDockedColorWheelObserver();
+    });
+}
+
+/** Sortie du mode Photoshop : restaure la roue (taille + mode précédent). */
+function illuRestoreColorPicker() {
+    const st = _illuPrevColorPickerState;
+    if (!st) return;
+    _illuPrevColorPickerState = null;
+    illuDisconnectDockedColorWheelObserver();
+    const em = window.EditorManager;
+    const canvas = document.getElementById('color-wheel');
+    if (canvas) {
+        canvas.width = st.w;
+        canvas.height = st.h;
+        canvas.style.width = st.styleW || (st.w + 'px');
+        canvas.style.height = st.styleH || (st.h + 'px');
+    }
+    if (em && typeof em.setColorPickerGridMode === 'function') {
+        em.setColorPickerGridMode(st.grid);
+    } else if (em && typeof em.rebuildColorPickerBase === 'function') {
+        em.rebuildColorPickerBase();
+    }
+}
+
 /** Paint.NET classique : quatre fenêtres volantes (barre de titre déplaçable). */
 function mountPalettesFloating() {
     if (typeof window.teardownIlluMobileShell === 'function') window.teardownIlluMobileShell();
     illuDisconnectMobileToolsToolbarLayout();
     illuPdnArrangeEdgeTabsForPhone(false);
+    illuRestoreToolOptionsFromDock();
+    illuRestoreColorPicker();
+    if (window.illuRibbonOverflow && typeof window.illuRibbonOverflow.update === 'function') {
+        window.illuRibbonOverflow.update();
+    }
+    if (typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+        window.updateBodyBackgroundFromActiveTabThumb();
+    }
     const host = document.getElementById('floating-palette-host');
     if (!host) return;
     const bottomDock = document.getElementById('illu-pdn-bottom-dock');
@@ -2599,6 +2792,11 @@ function mountPalettesFloating() {
 /** Téléphone : shell mobile (dock + sheets) ; palettes dans #illu-mobile-palette-pool. */
 function mountPalettesPhonePdn() {
     illuDisconnectMobileToolsToolbarLayout();
+    illuRestoreToolOptionsFromDock();
+    illuRestoreColorPicker();
+    if (window.illuRibbonOverflow && typeof window.illuRibbonOverflow.update === 'function') {
+        window.illuRibbonOverflow.update();
+    }
     const host = document.getElementById('floating-palette-host');
     const pool = document.getElementById('illu-mobile-palette-pool');
     const bottomDock = document.getElementById('illu-pdn-bottom-dock');
@@ -2679,6 +2877,7 @@ function mountPalettesDocked() {
     const rail = document.getElementById('palette-dock-rail');
     const slidersHost = document.getElementById('dock-rail-sliders-host');
     const historyHost = document.getElementById('dock-rail-history-host');
+    const svgObjectsHost = document.getElementById('dock-rail-svg-objects-host');
     const host = document.getElementById('floating-palette-host');
     const bottomDock = document.getElementById('illu-pdn-bottom-dock');
     if (!left || !right) return;
@@ -2740,20 +2939,52 @@ function mountPalettesDocked() {
         historyHost.appendChild(hist);
         hist.classList.remove('floating-window');
         stripPaletteInlinePosition(hist);
-        hist.style.width = '200px';
-        hist.style.minWidth = '200px';
-        hist.style.maxWidth = '200px';
+        hist.style.width = '100%';
+        hist.style.minWidth = '0';
+        hist.style.maxWidth = '100%';
         const tb = hist.querySelector('.title-bar');
+        if (tb) tb.style.cursor = 'default';
+    }
+    const svgObjects = document.getElementById('win-svg-objects');
+    if (svgObjects && svgObjectsHost && svgObjects.parentNode !== svgObjectsHost) {
+        svgObjects.classList.remove('illu-floating-window-hidden');
+        svgObjectsHost.appendChild(svgObjects);
+        svgObjects.classList.remove('floating-window');
+        stripPaletteInlinePosition(svgObjects);
+        svgObjects.style.width = '';
+        svgObjects.style.maxWidth = '';
+        const tb = svgObjects.querySelector('.title-bar');
         if (tb) tb.style.cursor = 'default';
     }
     if (rail) {
         rail.style.removeProperty('display');
     }
+    /* Mode Photoshop : panneaux curseurs / historique repliés par défaut
+       (boutons d'onglet visibles, réouverture via clic ou menu palettes). */
+    [['dock-rail-sliders-host', 'btn-dock-rail-sliders'],
+     ['dock-rail-history-host', 'btn-dock-rail-history'],
+     ['dock-rail-svg-objects-host', 'btn-dock-rail-svg-objects']].forEach(([hostId, btnId]) => {
+        const h = document.getElementById(hostId);
+        const b = document.getElementById(btnId);
+        if (h) h.setAttribute('hidden', '');
+        if (b) {
+            b.classList.remove('palette-dock-rail__tab--active');
+            b.setAttribute('aria-pressed', 'false');
+        }
+    });
     if (typeof window.illuUpdateDockRailVisibility === 'function') {
         window.illuUpdateDockRailVisibility();
     }
     if (typeof window.illuSyncToolsDockAutoWidth === 'function') {
         queueMicrotask(() => window.illuSyncToolsDockAutoWidth());
+    }
+    illuRelocateToolOptionsToDock();
+    queueMicrotask(() => illuApplyDockedColorPicker());
+    if (window.illuRibbonOverflow && typeof window.illuRibbonOverflow.reset === 'function') {
+        window.illuRibbonOverflow.reset();
+    }
+    if (typeof window.updateBodyBackgroundFromActiveTabThumb === 'function') {
+        window.updateBodyBackgroundFromActiveTabThumb();
     }
 }
 
@@ -2767,30 +2998,37 @@ window.illuUpdateDockRailVisibility = function () {
     const content = rail && rail.querySelector('.palette-dock-rail__content');
     const hostS = document.getElementById('dock-rail-sliders-host');
     const hostH = document.getElementById('dock-rail-history-host');
+    const hostSO = document.getElementById('dock-rail-svg-objects-host');
     if (!rail || !content || !hostS || !hostH) return;
 
     rail.style.removeProperty('display');
     const sVis = !hostS.hasAttribute('hidden');
     const hVis = !hostH.hasAttribute('hidden');
-    if (!sVis && !hVis) {
+    const soVis = !!(hostSO && !hostSO.hasAttribute('hidden'));
+    if (!sVis && !hVis && !soVis) {
         content.setAttribute('hidden', '');
+        rail.classList.remove('palette-dock-rail--content-open');
     } else {
         content.removeAttribute('hidden');
+        rail.classList.add('palette-dock-rail--content-open');
     }
 };
 
-/** Bascule panneaux curseurs / historique dans le rail Photoshop (ancré). */
+/** Table des panneaux du rail Photoshop : clé → [hostId, btnId]. */
+const ILLU_DOCK_RAIL_PANELS = {
+    sliders: ['dock-rail-sliders-host', 'btn-dock-rail-sliders'],
+    history: ['dock-rail-history-host', 'btn-dock-rail-history'],
+    'svg-objects': ['dock-rail-svg-objects-host', 'btn-dock-rail-svg-objects']
+};
+
+/** Bascule un panneau (curseurs / historique / objets SVG) dans le rail Photoshop. */
 window.illuToggleDockRailPanel = function (which) {
     const m = typeof window.getUILayoutMode === 'function' ? window.getUILayoutMode() : '';
     if (m !== 'photoshop') return;
-    const host =
-        which === 'sliders'
-            ? document.getElementById('dock-rail-sliders-host')
-            : document.getElementById('dock-rail-history-host');
-    const btn =
-        which === 'sliders'
-            ? document.getElementById('btn-dock-rail-sliders')
-            : document.getElementById('btn-dock-rail-history');
+    const entry = ILLU_DOCK_RAIL_PANELS[which];
+    if (!entry) return;
+    const host = document.getElementById(entry[0]);
+    const btn = document.getElementById(entry[1]);
     if (!host || !btn) return;
     if (host.hasAttribute('hidden')) {
         host.removeAttribute('hidden');
@@ -2893,6 +3131,9 @@ window.applyUILayoutFromPreference = function () {
     }
     if (typeof window.illuInitToolsDockAutoWidth === 'function') {
         window.illuInitToolsDockAutoWidth();
+    }
+    if (typeof window.illuRecalculateTabBarWidth === 'function') {
+        window.illuRecalculateTabBarWidth();
     }
     queueMicrotask(() => {
         if (typeof window.initIlluPaletteGridResizeObserver === 'function') {
@@ -3182,6 +3423,18 @@ function syncSettingsFormFromStorage() {
             tabBgCb.checked = localStorage.getItem('settings-tab-bg-preview-enabled') !== '0';
         } catch (e) {
             tabBgCb.checked = true;
+        }
+        /* Mode Photoshop : aperçu de fond désactivé de force et non activable. */
+        const tabBgPhotoshop = typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'photoshop';
+        const tabBgRow = document.querySelector('[data-illu-toggle-for="settings-tab-bg-preview-enabled"]');
+        if (tabBgPhotoshop) {
+            tabBgCb.checked = false;
+            if (tabBgRow) {
+                tabBgRow.classList.add('illu-settings-toggle-row--locked');
+                if (typeof illuSettingsToggleSetActive === 'function') illuSettingsToggleSetActive(tabBgRow, false);
+            }
+        } else if (tabBgRow) {
+            tabBgRow.classList.remove('illu-settings-toggle-row--locked');
         }
     }
     const strokeLightCb = document.getElementById('settings-stroke-light-render');
@@ -3580,7 +3833,9 @@ window.updateBodyBackgroundFromActiveTabThumb = function () {
         document.body.classList.contains('illu-mobile-ui') ||
         document.body.classList.contains('illu-mobile-shell-active') ||
         (typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive());
-    if (isMobile) {
+    /* Mode Photoshop : aperçu de fond désactivé de force (comme en téléphone). */
+    const isPhotoshop = typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'photoshop';
+    if (isMobile || isPhotoshop) {
         const bgDiv = document.getElementById('body-bg-preview');
         if (bgDiv) bgDiv.style.display = 'none';
         return;

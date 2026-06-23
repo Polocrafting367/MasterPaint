@@ -1,0 +1,490 @@
+/* ================================================================
+   Theme Photoshop — MasterPaint
+   Rendu « Photopea-like » : fenêtres davantage ancrées et agencées,
+   MAIS on garde le chrome Windows (win10-flat / win98) et l'accent
+   géré dans les Paramètres (--mp-accent). AUCUNE couleur figée ici :
+   uniquement de l'agencement (layout).
+
+   Actif UNIQUEMENT en mode disposition « Photoshop », c.-à-d. quand
+   body.ui-layout-docked est présent et hors client téléphone
+   (illu-mobile-ui). Inerte en mode flottant et téléphone.
+
+   Le mode sombre reste géré globalement par body.theme-dark
+   (toggle dans les Paramètres) — rien à faire ici.
+   ================================================================ */
+
+/* ================================================================
+   1. TAB-BAR — toujours en mode rangée (état @media max-width:590px)
+   Porté hors media-query, scopé au mode Photoshop.
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui) {
+    /* Tab-bar : chrome dédié (--mp-tab-bar-bg), distinct du workspace (--mp-center-strip) */
+    --illu-ps-tab-bar-bg: var(--mp-tab-bar-bg, #f3f2f1);
+    --palette-dock-rail-tabs-width: 40px;
+    --palette-dock-rail-content-width: 200px;
+    --palette-dock-rail-width: calc(var(--palette-dock-rail-tabs-width) + var(--palette-dock-rail-content-width));
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui).theme-dark {
+    --illu-ps-tab-bar-bg: var(--mp-tab-bar-bg, #202020);
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .app-header-container {
+    background: var(--mp-surface, #ffffff) !important;
+    border-top: 1px solid var(--mp-dock-border, #cccccc);
+    border-bottom: 1px solid var(--mp-dock-border, #cccccc);
+    box-shadow: none;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #tab-bar-outer {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    right: auto !important;
+    top: auto !important;
+    z-index: 40 !important;
+    overflow: hidden !important;
+    align-self: stretch !important;
+    box-sizing: border-box !important;
+    background: var(--illu-ps-tab-bar-bg, var(--mp-tab-bar-bg, #f3f2f1)) !important;
+    border-top: 1px solid var(--mp-raised-top, #cccccc) !important;
+    border-bottom: 1px solid var(--mp-dock-border, #cccccc) !important;
+    box-shadow: none !important;
+}
+
+/* Zone workspace : teinte séparée de la tab-bar (canva / docks latéraux du centre) */
+body.ui-layout-docked:not(.illu-mobile-ui) .workspace-dock-center {
+    background: var(--mp-center-strip, #e1dfdd) !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #tab-bar {
+    flex-direction: row !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .tab-bar-inner .tab {
+    width: 100px !important;
+    height: 40px !important;
+    display: flex !important;
+    flex-direction: row !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .tab-bar-inner .tab .tab-thumb,
+body.ui-layout-docked:not(.illu-mobile-ui) .tab-bar-inner .tab:hover .tab-thumb {
+    width: 40px !important;
+    height: 25px !important;
+    margin: 0 !important;
+    transition: none !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .tab-bar-inner .tab span,
+body.ui-layout-docked:not(.illu-mobile-ui) .tab-bar-inner .tab:hover span {
+    display: block !important;
+    padding-top: 0 !important;
+    margin: 0 !important;
+}
+
+/* ================================================================
+   2. PANNEAU OPTIONS OUTIL ancré (#tool-options-container relogé)
+   La classe illu-tool-options--docked est posée par le JS quand le
+   conteneur est déplacé dans le dock droit ou le rail.
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Groupes ribbon empilés verticalement, pleine largeur.
+   :not([hidden]) pour ne PAS révéler les groupes masqués par outil. */
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-group:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--mp-dock-border, #808080);
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-group-body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Label du groupe au-dessus des contrôles (entête de section). */
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-group-label {
+    order: -1;
+    width: 100%;
+    margin: 0 0 3px;
+    font-size: var(--mp-ui-font-small, 11px);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+/* Rangées d'options : repliables sur la largeur du panneau.
+   :not([hidden]) pour respecter les barres masquées (ex. #tool-options-bar-2). */
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .tool-options-bar:not([hidden]),
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-groups:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 4px;
+}
+
+/* Séparateurs verticaux du ruban inutiles en colonne. */
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .opt-sep {
+    display: none;
+}
+
+/* ================================================================
+   3. HÔTE OPTIONS dans le dock droit
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-tool-options-host {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: 45%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--mp-dock-border, #808080);
+    background: var(--mp-surface, #f0f0f0);
+}
+
+/* Vide (options routées vers le rail) → masqué pour ne pas voler d'espace. */
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-tool-options-host:empty {
+    display: none;
+}
+
+/* ================================================================
+   4. HÔTE OPTIONS dans le rail (superposé près de la toile)
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-rail-tool-options-host {
+    flex: 0 0 auto;
+    min-height: 0;
+    border-bottom: 1px solid var(--mp-dock-border, #808080);
+    background: var(--mp-surface, #f0f0f0);
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-rail-tool-options-host:empty {
+    display: none;
+}
+
+/* ================================================================
+   5. #win-colors : roue agrandie en grille, nuancier du bas masqué
+   (le passage en mode grille + le redimensionnement du canvas sont
+    pilotés par le JS ; ici on cale le conteneur et on masque la grille)
+   ================================================================ */
+
+/* Nuancier (palette de pastilles) masqué en mode Photoshop. */
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors #palette-grid {
+    display: none !important;
+}
+
+/* Roue / carré de sélection : remplit color-picker-left (rectangulaire, buffer JS). */
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors.window.palette-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-window-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-picker-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-picker-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-top-row {
+    flex: 0 0 auto;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-picker-left {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-wheel-row {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    align-items: stretch;
+    align-self: stretch;
+    width: 100%;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors .color-wheel-row .color-swatch-box {
+    align-self: flex-start;
+    flex-shrink: 0;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors #color-wheel-container {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: auto !important;
+    height: auto !important;
+    max-width: none;
+    max-height: none;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    align-self: stretch;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #win-colors #color-wheel {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: block;
+}
+
+/* ================================================================
+   6. Docking « propre » — légères finitions d'agencement
+   (couleurs inchangées : on réutilise les variables Windows)
+   ================================================================ */
+
+/* Bordures nettes entre docks et zone de travail. */
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-left {
+    border-right: 1px solid var(--mp-dock-border, #808080);
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right {
+    border-left: 1px solid var(--mp-dock-border, #808080);
+}
+
+/* Rail : largeur fixe seulement quand un panneau est ouvert (classe posée par JS) */
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-rail {
+    width: var(--palette-dock-rail-tabs-width);
+    min-width: var(--palette-dock-rail-tabs-width);
+    max-width: var(--palette-dock-rail-tabs-width);
+    flex: 0 0 var(--palette-dock-rail-tabs-width);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-rail.palette-dock-rail--content-open {
+    width: var(--palette-dock-rail-width);
+    min-width: var(--palette-dock-rail-width);
+    max-width: var(--palette-dock-rail-width);
+    flex: 0 0 var(--palette-dock-rail-width);
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__tabs {
+    flex: 0 0 var(--palette-dock-rail-tabs-width);
+    width: var(--palette-dock-rail-tabs-width);
+    min-width: var(--palette-dock-rail-tabs-width);
+    max-width: var(--palette-dock-rail-tabs-width);
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__content {
+    width: var(--palette-dock-rail-content-width);
+    min-width: 0;
+    max-width: var(--palette-dock-rail-content-width);
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .window.palette-panel,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host #win-history,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host #win-svg-objects,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host #color-sliders-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Entêtes de tiroir — panneaux ancrés (dock droit + rail), pas des fenêtres flottantes. */
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .window.palette-panel,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .window.palette-panel {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    opacity: 1 !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .palette-panel > .title-bar,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .palette-panel > .title-bar {
+    padding: 2px 6px 4px;
+    min-height: 22px;
+    height: auto !important;
+    background: var(--mp-dock-bg, #f3f2f1) !important;
+    border: none !important;
+    border-top: 1px solid var(--mp-dock-border, #cccccc) !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    cursor: default;
+    position: relative;
+}
+
+/* Trait bas : plus court que le panneau → sous-élément du même bloc, pas une séparation externe */
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .palette-panel > .title-bar::after,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .palette-panel > .title-bar::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 1px;
+    background: var(--mp-dock-border, #cccccc);
+    pointer-events: none;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .palette-panel > .title-bar .title-bar-text,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .palette-panel > .title-bar .title-bar-text {
+    font-size: var(--mp-ui-font-small, 11px);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.88;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .palette-panel > .title-bar-controls,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .palette-panel > .title-bar-controls,
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .illu-palette-float-close,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .illu-palette-float-close {
+    display: none !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-right .palette-panel > .window-body,
+body.ui-layout-docked:not(.illu-mobile-ui) .palette-dock-rail__host .palette-panel > .window-body {
+    background: var(--mp-surface, #ffffff);
+    border: none;
+    border-radius: 0;
+}
+
+/* ================================================================
+   7. Menubar + sous-menubar sur une seule ligne
+   (menubar à gauche, barre d'outils rapide poussée à droite)
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui) .app-header-left {
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper {
+    flex-direction: row !important;
+    align-items: stretch !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    border-top-right-radius: 0 !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper > .illu-menubar-root {
+    width: auto !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper > .illu-sub-menubar {
+    width: auto !important;
+    margin-left: auto !important;
+}
+
+/* Coin arrondi inversé + radius : sans objet en disposition ligne. */
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper::after {
+    display: none !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menubar-root > li:last-child,
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menubar-root > li:last-child > span,
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-menubar-root > li:last-child > button {
+    border-top-right-radius: 0 !important;
+}
+
+/* ================================================================
+   8. Réglage « Aperçu de l'onglet en arrière-plan » : non activable
+   (l'effet est aussi neutralisé côté JS)
+   ================================================================ */
+
+body.ui-layout-docked:not(.illu-mobile-ui)
+    .illu-settings-toggle-row[data-illu-toggle-for="settings-tab-bg-preview-enabled"],
+.illu-settings-toggle-row--locked {
+    pointer-events: none !important;
+    opacity: 0.45 !important;
+}
+
+/* ================================================================
+   9. Options d'outil : scroll vertical + en-têtes masqués
+   (la compression auto des alvéoles est désactivée côté JS)
+   ================================================================ */
+
+/* Borne la hauteur du rail pour engager le scroll vertical des options. */
+body.ui-layout-docked:not(.illu-mobile-ui) #palette-dock-rail .palette-dock-rail__content {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-rail-tool-options-host {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+}
+
+/* Nom d'outil + sélecteur de forme masqués dans le panneau d'options. */
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked #tool-main-header,
+body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked #illu-shape-picker-header {
+    display: none !important;
+}
+
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-tool-options-host .illu-ribbon-group[data-illu-ribbon-group="tool"] {
+    display: none !important;
+}

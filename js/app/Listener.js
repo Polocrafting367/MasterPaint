@@ -1241,6 +1241,20 @@ window.illuRecalculateTabBarWidth = function () {
     const tabBarOuter = document.getElementById('tab-bar-outer');
     if (!tabBarOuter) return;
 
+    const uiMode = typeof window.getUILayoutMode === 'function' ? window.getUILayoutMode() : '';
+    if (uiMode === 'photoshop') {
+        tabBarOuter.style.removeProperty('width');
+        tabBarOuter.style.removeProperty('max-width');
+        requestAnimationFrame(() => {
+            const scrollBox = document.getElementById('tab-bar-scroll');
+            if (scrollBox && tabBarOuter) {
+                const hasOverflow = scrollBox.scrollWidth > scrollBox.clientWidth;
+                tabBarOuter.classList.toggle('tab-bar-has-overflow', hasOverflow);
+            }
+        });
+        return;
+    }
+
     if (window.innerWidth <= 590) {
         tabBarOuter.style.removeProperty('width');
         tabBarOuter.style.removeProperty('max-width');

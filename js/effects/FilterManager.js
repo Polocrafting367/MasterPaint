@@ -4,29 +4,29 @@
 const EFFECT_PARAM_DEFAULTS = {
     brightness: { 'ef-b': '0', 'ef-c': '0', 'ef-bc-temp': '0', 'ef-bc-tint': '0' },
     hsv: { 'ef-h': '0', 'ef-s': '0', 'ef-l': '0' },
-    blur: { 'ef-rad': '2' },
+    blur: { 'ef-rad': '2', 'ef-ca': '0', 'ef-ca-amt': '8' },
     halftone: { 'ef-half-rad': '4' },
-    gaussian: { 'ef-rad': '2' },
+    gaussian: { 'ef-rad': '2', 'ef-ca': '0', 'ef-ca-amt': '8' },
     pixelate: { 'ef-size': '10' },
     posterize: { 'ef-lvl': '4' },
     addnoise: { 'ef-int': '20' },
-    bulge: { 'ef-bulge': '40' },
-    pinch: { 'ef-pinch': '40' },
-    twist: { 'ef-twist': '30' },
+    bulge: { 'ef-bulge': '40', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    pinch: { 'ef-pinch': '40', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    twist: { 'ef-twist': '30', 'ef-ca': '0', 'ef-ca-amt': '8' },
     crystallize: { 'ef-cry': '12' },
-    polarInvert: { 'ef-polar': '80' },
-    tileReflect: { 'ef-tile': '24' },
-    frosted: { 'ef-frost': '8' },
+    polarInvert: { 'ef-polar': '80', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    tileReflect: { 'ef-tile': '24', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    frosted: { 'ef-frost': '8', 'ef-ca': '0', 'ef-ca-amt': '8' },
     vignette: { 'ef-vig': '50' },
     softglow: { 'ef-glow-r': '6', 'ef-glow-a': '40' },
     edges: { 'ef-edge': '40' },
     emboss: { 'ef-emb': '12' },
     solarize: { 'ef-sol': '128' },
-    radialblur: { 'ef-rblur-angle': '2', 'ef-rblur-quality': '2', 'ef-rblur-ox': '0', 'ef-rblur-oy': '0', 'ef-rblur-inner': '0' },
-    zoomblur:   { 'ef-zblur-amount': '10', 'ef-zblur-ox': '0', 'ef-zblur-oy': '0', 'ef-zblur-inner': '0' },
-    motionblur: { 'ef-mblur-angle': '25', 'ef-mblur-dist': '10', 'ef-mblur-center': '1' },
-    surfaceblur: { 'ef-sblur-r': '6', 'ef-sblur-t': '15' },
-    fragment: { 'ef-frag-n': '4', 'ef-frag-d': '8', 'ef-frag-r': '0' },
+    radialblur: { 'ef-rblur-angle': '2', 'ef-rblur-quality': '2', 'ef-rblur-ox': '0', 'ef-rblur-oy': '0', 'ef-rblur-inner': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    zoomblur:   { 'ef-zblur-amount': '10', 'ef-zblur-ox': '0', 'ef-zblur-oy': '0', 'ef-zblur-inner': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    motionblur: { 'ef-mblur-angle': '25', 'ef-mblur-dist': '10', 'ef-mblur-center': '1', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    surfaceblur: { 'ef-sblur-r': '6', 'ef-sblur-t': '15', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    fragment: { 'ef-frag-n': '4', 'ef-frag-d': '8', 'ef-frag-r': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
     oil: { 'ef-oil': '4' },
     projection3d: {
         'ef-3d-rx': '0', 'ef-3d-ry': '0', 'ef-3d-f': '280', 'ef-3d-z': '100',
@@ -43,14 +43,16 @@ chroma: {
         'ef-cab-refr': '50',
         'ef-cab-rough': '10',
         'ef-cab-tension': '10',
-        'ef-cab-q': '2'
+        'ef-cab-q': '2',
+        'ef-ca': '0',
+        'ef-ca-amt': '8'
     },
     argenticgrain: { 'ef-grain': '40' },
     digitalpattern: { 'ef-grain': '40', 'ef-grain-fine': '15' },
     chromatic: { 'ef-chr': '6' },
     sharpen: { 'ef-sharp': '45', 'ef-sharp-r': '1' },
     exposure: { 'ef-exp': '100', 'ef-gamma': '100' },
-    wave: { 'ef-wave-a': '12', 'ef-wave-f': '14' },
+    wave: { 'ef-wave-a': '12', 'ef-wave-f': '14', 'ef-ca': '0', 'ef-ca-amt': '8' },
     colorbal: { 'ef-cb-r': '0', 'ef-cb-g': '0', 'ef-cb-b': '0' },
     duotone: { 'ef-duo-mid': '128', 'ef-duo-c1': '#1a0533', 'ef-duo-c2': '#fff5e0' },
     dropshadow: { 'ef-ds-ox': '4', 'ef-ds-oy': '6', 'ef-ds-blur': '10', 'ef-ds-op': '45' },
@@ -95,8 +97,8 @@ chroma: {
     pencilsketch: { 'ef-pencil-tip': '2', 'ef-pencil-range': '0' },
     softenportrait: { 'ef-soft-softness': '5', 'ef-soft-lighting': '0', 'ef-soft-warmth': '10' },
     reducenoise: { 'ef-rn-radius': '10', 'ef-rn-strength': '40' },
-    dents: { 'ef-dent-scale': '25', 'ef-dent-refr': '50', 'ef-dent-rough': '10', 'ef-dent-tension': '10', 'ef-dent-seed': '0' },
-    unfocus: { 'ef-unfocus-r': '4' },
+    dents: { 'ef-dent-scale': '25', 'ef-dent-refr': '50', 'ef-dent-rough': '10', 'ef-dent-tension': '10', 'ef-dent-seed': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    unfocus: { 'ef-unfocus-r': '4', 'ef-ca': '0', 'ef-ca-amt': '8' },
     temptint: { 'ef-tt-temp': '0', 'ef-tt-tint': '0' }
 };
 
@@ -219,6 +221,12 @@ const ILLU_MAIN_THREAD_PREVIEW_EFFECTS = new Set([
     'autolevel', 'dropshadow', 'emboss', 'filmgrain', 'fragment', 'frosted', 'redeyeremove', 'solarize', 'temperature'
 ]);
 
+/** Effets de flou / déformation qui proposent la bascule « Aberration chromatique » (post-traitement). */
+const ILLU_CHROMA_ABERRATION_EFFECTS = new Set([
+    'blur', 'gaussian', 'radialblur', 'zoomblur', 'motionblur', 'surfaceblur', 'unfocus',
+    'twist', 'bulge', 'pinch', 'dents', 'tileReflect', 'frosted', 'polarInvert', 'wave', 'fragment', 'cabossage'
+]);
+
 window.FilterManager = {
     originalImageData: null,
     currentEffect: null,
@@ -232,6 +240,21 @@ window.FilterManager = {
             `<input type="range" id="${id}" min="${min}" max="${max}" value="${value}" style="flex-grow:1;" ` +
             `oninput="document.getElementById('${id}-val').innerText=this.value; FilterManager.preview()"> ` +
             `<span id="${id}-val" style="width:32px; text-align:right;">${value}</span></div>`;
+    },
+    /**
+     * Bascule « Aberration chromatique » réutilisable pour les flous / déformations.
+     * Ajoute une case à cocher (ef-ca) + un curseur d'intensité (ef-ca-amt). Les ids
+     * sont partagés : une seule modale d'effet est ouverte à la fois. Le post-traitement
+     * radial est appliqué dans _runPreview, indépendamment du moteur (Wasm/WebGL/worker/CPU).
+     */
+    _fxChromaToggle(amount = 8) {
+        return `<div class="field-row" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(128,128,128,0.3);">` +
+            `<input type="checkbox" id="ef-ca" onchange="FilterManager.preview()">` +
+            `<label for="ef-ca" style="margin-left:6px;cursor:pointer;" data-i18n="effect.param.chromaticAberration">Aberration chromatique</label></div>` +
+            `<div class="field-row" style="margin-top:6px;"><label style="width:92px;" data-i18n="effect.param.intensity">Intensité</label>` +
+            `<input type="range" id="ef-ca-amt" min="1" max="40" value="${amount}" style="flex-grow:1;" ` +
+            `oninput="document.getElementById('ef-ca-amt-val').innerText=this.value; FilterManager.preview()"> ` +
+            `<span id="ef-ca-amt-val" style="width:32px; text-align:right;">${amount}</span></div>`;
     },
     canvas: null,
     ctx: null,
@@ -611,7 +634,7 @@ window.FilterManager = {
         }
         store[eff] = {};
         root.querySelectorAll('input[id^="ef-"]').forEach((el) => {
-            store[eff][el.id] = el.value;
+            store[eff][el.id] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
         });
         try {
             localStorage.setItem('illu_effect_params', JSON.stringify(store));
@@ -632,7 +655,9 @@ window.FilterManager = {
         const merged = { ...defs, ...saved };
         for (const [id, v] of Object.entries(merged)) {
             const el = document.getElementById(id);
-            if (el && 'value' in el) el.value = v;
+            if (!el) continue;
+            if (el.type === 'checkbox') el.checked = v === '1' || v === true || v === 'true';
+            else if ('value' in el) el.value = v;
         }
         for (const id of Object.keys(merged)) {
             const el = document.getElementById(id);
@@ -709,7 +734,9 @@ window.FilterManager = {
         if (!defs || !this.ctx) return;
         for (const [id, v] of Object.entries(defs)) {
             const el = document.getElementById(id);
-            if (el && 'value' in el) el.value = v;
+            if (!el) continue;
+            if (el.type === 'checkbox') el.checked = v === '1' || v === true;
+            else if ('value' in el) el.value = v;
         }
         let store = {};
         try {
@@ -794,6 +821,65 @@ window.FilterManager = {
         const i00 = idx(y0, x0), i10 = idx(y0, x1), i01 = idx(y1, x0), i11 = idx(y1, x1);
         const ch = (o) => lerp(lerp(src[i00 + o], src[i10 + o], tx), lerp(src[i01 + o], src[i11 + o], tx), ty);
         return [ch(0), ch(1), ch(2), ch(3)];
+    },
+
+    /**
+     * Aberration chromatique radiale appliquée sur un rendu déjà calculé.
+     * Le rouge est échantillonné en s'écartant du centre, le bleu en s'en rapprochant,
+     * le vert reste fixe. Le décalage croît du centre (0) vers les coins (amountPx).
+     * Retourne une nouvelle ImageData.
+     */
+    _applyChromaticAberration(imageData, amountPx) {
+        const amt = Number(amountPx) || 0;
+        if (amt <= 0) return imageData;
+        const w = imageData.width, h = imageData.height;
+        const src = imageData.data;
+        const out = new ImageData(w, h);
+        const od = out.data;
+        const cx = w / 2, cy = h / 2;
+        const maxR = Math.hypot(cx, cy) || 1;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const dx = x - cx, dy = y - cy;
+                const r = Math.hypot(dx, dy);
+                const ux = r > 1e-6 ? dx / r : 0;
+                const uy = r > 1e-6 ? dy / r : 0;
+                const shift = amt * (r / maxR);
+                const [rr, , , ra] = this._sampleBilinear(src, w, h, x + ux * shift, y + uy * shift);
+                const [, g, , ga] = this._sampleBilinear(src, w, h, x, y);
+                const [, , b, ba] = this._sampleBilinear(src, w, h, x - ux * shift, y - uy * shift);
+                const i = (y * w + x) * 4;
+                od[i] = rr; od[i + 1] = g; od[i + 2] = b;
+                od[i + 3] = Math.min(ra, ga, ba);
+            }
+        }
+        return out;
+    },
+
+    /**
+     * Applique l'aberration chromatique au contenu du canvas de travail si l'effet
+     * courant la propose et que la case (ef-ca) est cochée. Appelé après le rendu de
+     * l'effet, donc valable quel que soit le moteur utilisé. L'intensité (px pleine
+     * résolution) est mise à l'échelle de l'aperçu via _effectPreviewPxScale.
+     */
+    _maybeApplyChromaticAberration(pw, ph) {
+        if (!ILLU_CHROMA_ABERRATION_EFFECTS.has(this.currentEffect)) return;
+        const cb = document.getElementById('ef-ca');
+        if (!cb || !cb.checked) return;
+        const amtUi = parseFloat(document.getElementById('ef-ca-amt')?.value || '0') || 0;
+        if (amtUi <= 0) return;
+        const scale =
+            this._effectPreviewPxScale != null && this._effectPreviewPxScale > 0
+                ? this._effectPreviewPxScale
+                : 1;
+        let img;
+        try {
+            img = this.ctx.getImageData(0, 0, pw, ph);
+        } catch (e) {
+            return;
+        }
+        const out = this._applyChromaticAberration(img, amtUi * scale);
+        if (out !== img) this.ctx.putImageData(out, 0, 0);
     },
 
     _cabHash(ix, iy, seed) {
@@ -1127,6 +1213,7 @@ window.FilterManager = {
                         <input type="checkbox" id="ef-blur-edge" onchange="FilterManager.preview()" checked>
                         <label for="ef-blur-edge" data-i18n="effect.param.respectEdges">Prendre en compte les bords</label>
                     </div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'argenticgrain':
@@ -1167,11 +1254,13 @@ window.FilterManager = {
             case 'bulge':
                 this.showModal(illuEffectTitle('bulge', 'Bosse'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-bulge" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-bulge-val').innerText=this.value; FilterManager.preview()"> <span id="ef-bulge-val" style="width:25px; text-align:right;">40</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'pinch':
                 this.showModal(illuEffectTitle('pinch', 'Pincement'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-pinch" min="0" max="100" value="40" style="flex-grow:1;" oninput="document.getElementById('ef-pinch-val').innerText=this.value; FilterManager.preview()"> <span id="ef-pinch-val" style="width:25px; text-align:right;">40</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'cabossage':
@@ -1186,12 +1275,14 @@ window.FilterManager = {
                         <div class="field-row" style="margin-bottom:6px;"><label style="width:96px;">Angle</label><input type="range" id="ef-cab-angle" min="0" max="360" value="135" style="flex:1;" oninput="document.getElementById('ef-cab-angle-v').textContent=this.value; FilterManager.preview();"><span id="ef-cab-angle-v" style="width:48px;text-align:right;">135</span></div>
                         <div class="field-row" style="margin-bottom:10px;"><label style="width:96px;cursor:pointer;" for="ef-cab-invert" data-i18n="effect.param.invert">Inverser</label><input type="checkbox" id="ef-cab-invert" onchange="FilterManager.preview()"></div>
                         <div class="field-row" style="align-items:center;gap:8px;"><span style="min-width:96px;" data-i18n="effect.param.randomNoise">Bruit aléatoire</span><button type="button" id="ef-cab-reset-noise" style="font-size:11px;" data-i18n="effect.param.reset">Réinitialiser</button></div>
+                        ${this._fxChromaToggle()}
                     </div>
                 `);
                 break;
             case 'twist':
                 this.showModal(illuEffectTitle('twist', 'Torsion'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.angle">Angle:</label><input type="range" id="ef-twist" min="-90" max="90" value="30" style="flex-grow:1;" oninput="document.getElementById('ef-twist-val').innerText=this.value; FilterManager.preview()"> <span id="ef-twist-val" style="width:30px; text-align:right;">30</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'crystallize':
@@ -1202,16 +1293,19 @@ window.FilterManager = {
             case 'polarInvert':
                 this.showModal(illuEffectTitle('polarInvert', 'Inversion polaire'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.intensity">Intensité:</label><input type="range" id="ef-polar" min="0" max="100" value="80" style="flex-grow:1;" oninput="document.getElementById('ef-polar-val').innerText=this.value; FilterManager.preview()"> <span id="ef-polar-val" style="width:25px; text-align:right;">80</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'tileReflect':
                 this.showModal(illuEffectTitle('tileReflect', 'Réflexion mosaïque'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.tileSize">Taille tuile:</label><input type="range" id="ef-tile" min="8" max="128" value="24" style="flex-grow:1;" oninput="document.getElementById('ef-tile-val').innerText=this.value; FilterManager.preview()"> <span id="ef-tile-val" style="width:25px; text-align:right;">24</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'frosted':
                 this.showModal(illuEffectTitle('frosted', 'Verre dépoli'), `
                     <div class="field-row"><label style="width: 70px;" data-i18n="effect.param.grain">Grain:</label><input type="range" id="ef-frost" min="1" max="24" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frost-val').innerText=this.value; FilterManager.preview()"> <span id="ef-frost-val" style="width:25px; text-align:right;">8</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'clouds':
@@ -1265,11 +1359,13 @@ window.FilterManager = {
                     ${this._fxSlider('ef-dent-rough', 'Rugosité', 0, 100, 10)}
                     ${this._fxSlider('ef-dent-tension', 'Tension', 0, 100, 10)}
                     ${this._fxSlider('ef-dent-seed', 'Germe', 0, 255, 0)}
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'unfocus':
                 this.showModal(illuEffectTitle('unfocus', 'Flou de surface (disque)'), `
                     ${this._fxSlider('ef-unfocus-r', 'Rayon', 1, 50, 4)}
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'temptint':
@@ -1343,6 +1439,7 @@ window.FilterManager = {
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.innerRadius">Zone nette (rayon %)</label><input type="range" id="ef-rblur-inner" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-inner-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-inner-val" style="width:36px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetX">Décalage centre X</label><input type="range" id="ef-rblur-ox" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-ox-val" style="width:36px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetY">Décalage centre Y</label><input type="range" id="ef-rblur-oy" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-oy-val" style="width:36px;text-align:right;">0</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'zoomblur':
@@ -1352,6 +1449,7 @@ window.FilterManager = {
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.innerRadius">Zone nette (rayon %)</label><input type="range" id="ef-zblur-inner" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-inner-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-inner-val" style="width:36px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetX">Décalage centre X</label><input type="range" id="ef-zblur-ox" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-ox-val" style="width:36px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetY">Décalage centre Y</label><input type="range" id="ef-zblur-oy" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-zblur-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-zblur-oy-val" style="width:36px;text-align:right;">0</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'motionblur':
@@ -1359,12 +1457,14 @@ window.FilterManager = {
                     <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.angle">Angle °</label><input type="range" id="ef-mblur-angle" min="-180" max="180" value="25" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-angle-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-angle-v" style="width:32px;text-align:right;">25</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.distance">Distance</label><input type="range" id="ef-mblur-dist" min="1" max="200" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-mblur-dist-v').innerText=this.value; FilterManager.preview()"> <span id="ef-mblur-dist-v" style="width:32px;text-align:right;">10</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.centered">Centré</label><input type="checkbox" id="ef-mblur-center" checked onchange="FilterManager.preview()"></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'surfaceblur':
                 this.showModal(illuEffectTitle('surfaceblur', 'Flou de surface'), `
                     <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.radius">Rayon</label><input type="range" id="ef-sblur-r" min="1" max="50" value="6" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-r-v" style="width:32px;text-align:right;">6</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.threshold">Seuil</label><input type="range" id="ef-sblur-t" min="1" max="100" value="15" style="flex-grow:1;" oninput="document.getElementById('ef-sblur-t-v').innerText=this.value; FilterManager.preview()"> <span id="ef-sblur-t-v" style="width:32px;text-align:right;">15</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'fragment':
@@ -1372,6 +1472,7 @@ window.FilterManager = {
                     <div class="field-row"><label style="width: 88px;" data-i18n="effect.param.fragments">Fragments</label><input type="range" id="ef-frag-n" min="2" max="50" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-frag-n-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-n-v" style="width:32px;text-align:right;">4</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.distance">Distance</label><input type="range" id="ef-frag-d" min="0" max="100" value="8" style="flex-grow:1;" oninput="document.getElementById('ef-frag-d-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-d-v" style="width:32px;text-align:right;">8</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 88px;" data-i18n="effect.param.rotation">Rotation °</label><input type="range" id="ef-frag-r" min="0" max="360" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-frag-r-v').innerText=this.value; FilterManager.preview()"> <span id="ef-frag-r-v" style="width:32px;text-align:right;">0</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'oil':
@@ -1423,6 +1524,7 @@ window.FilterManager = {
                 this.showModal(illuEffectTitle('wave', 'Déformation en vague'), `
                     <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.amplitude">Amplitude</label><input type="range" id="ef-wave-a" min="0" max="80" value="12" style="flex-grow:1;" oninput="document.getElementById('ef-wave-a-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-a-val" style="width:28px;text-align:right;">12</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width: 92px;" data-i18n="effect.param.frequency">Fréquence</label><input type="range" id="ef-wave-f" min="4" max="48" value="14" style="flex-grow:1;" oninput="document.getElementById('ef-wave-f-val').innerText=this.value; FilterManager.preview()"> <span id="ef-wave-f-val" style="width:28px;text-align:right;">14</span></div>
+                    ${this._fxChromaToggle()}
                 `);
                 break;
             case 'colorbal':
@@ -2833,7 +2935,11 @@ window.FilterManager = {
             } else {
                 this._previewOneTarget(val, pw, ph); // Synchronous fallback
             }
-            
+
+            // Aberration chromatique optionnelle : post-traitement appliqué au rendu,
+            // indépendamment du moteur (Wasm/WebGL/worker/CPU).
+            this._maybeApplyChromaticAberration(pw, ph);
+
             const pm = EditorManager.activeProject && EditorManager.activeProject.mode;
             if (
                 pm &&

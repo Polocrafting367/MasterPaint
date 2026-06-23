@@ -1995,6 +1995,10 @@ window.updateToolOptionsBar = function () {
     if (typeof window.illuSyncSymmetryButtonState === 'function') {
         window.illuSyncSymmetryButtonState();
     }
+    /* Mode Photoshop : options d'outil ancrées dans le dock droit. */
+    if (typeof window.illuRouteToolOptionsForDocked === 'function') {
+        window.illuRouteToolOptionsForDocked();
+    }
 };
 
 /** Désactive les outils incompatibles avec le mode (pixel / vecteur) et rétablit la sélection si besoin. */
