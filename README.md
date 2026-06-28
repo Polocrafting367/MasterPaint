@@ -51,7 +51,7 @@ Le passage entre mode **téléphone** et modes **bureau** (Paint.NET / Photoshop
 
 ## Démarrage
 
-**En ligne** — [polocrafting.fr/Illu](https://masterpaint.fr)
+**En ligne** — [masterpaint.fr](https://masterpaint.fr)
 
 **En local** — Téléchargez le ZIP du projet, lancez XAMPP (ou tout serveur web local) et ouvrez l’application dans le navigateur.
 
