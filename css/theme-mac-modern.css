@@ -1,0 +1,298 @@
+/**
+ * Thème « macOS » moderne (Big Sur / Sonoma) — surcouche chrome.
+ *
+ * S'empile sur theme-win10-flat.css, actif sous .illu-theme-macmodern.
+ * Gère CLAIR et SOMBRE. La BARRE DE TITRE reste SOMBRE dans les deux modes
+ * (look macOS de référence), seul le corps des fenêtres suit clair/sombre.
+ *
+ * Barre de titre cohérente avec le thème Lion : hauteur 24px, feux 12px à
+ * gauche, titre centré en absolu — pas de marge/padding exagéré.
+ * Accent piloté par la couleur choisie (--mp-accent posé par le JS).
+ */
+
+/* ───── Variables communes (accent + chrome ; barre de titre TOUJOURS sombre) ───── */
+body.illu-theme-macmodern {
+    --mp-teal: var(--mp-accent);
+    --mp-teal-dark: var(--mp-title);
+    --mp-focus: var(--mp-accent);
+    --mp-menu-hover-bg: var(--mp-accent);
+    --mp-accent-muted: rgba(var(--mp-accent-rgb), 0.16);
+
+    --mp-radius: 6px;
+    --mp-font: -apple-system, "SF Pro Text", "SF Pro Display", BlinkMacSystemFont,
+        "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+
+    /* Barre de titre sombre (constante) */
+    --mac-titlebar-bg: rgba(42, 42, 44, 0.85);
+    --mac-titlebar-border: rgba(0, 0, 0, 0.55);
+    --mac-title-color: rgba(255, 255, 255, 0.80);
+    --mac-glyph: rgba(0, 0, 0, 0.55);
+
+    /* Liseré de fenêtre (clair par défaut) */
+    --mac-window-ring: rgba(0, 0, 0, 0.12);
+
+    --mp-body-chrome: #6a7686;
+    --mp-workspace: #e9e9ec;
+    --mp-workspace-deep: #d2d2d8;
+    --mp-dock-bg: #f6f6f8;
+    --mp-dock-border: #e0e0e5;
+}
+
+/* Surfaces claires */
+body.illu-theme-macmodern:not(.theme-dark) {
+    --mp-surface: #ffffff;
+    --mp-surface-deep: #f2f2f4;
+    --mp-raised-top: #d9d9de;
+    --mp-raised-bot: #d9d9de;
+    --mp-inset-top: #cdcdd3;
+    --mp-inset-bot: #cdcdd3;
+    --mp-text: #1d1d1f;
+}
+
+/* ───── Bascule SOMBRE (corps des fenêtres) ───── */
+body.illu-theme-macmodern.theme-dark {
+    --mp-surface: #2a2a2c;
+    --mp-surface-deep: #1e1e1f;
+    --mp-raised-top: #3a3a3c;
+    --mp-raised-bot: #3a3a3c;
+    --mp-inset-top: #48484a;
+    --mp-inset-bot: #48484a;
+    --mp-text: #f2f2f2;
+
+    --mac-window-ring: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════ Fenêtres ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window {
+    border: none !important;
+    border-radius: 11px !important;
+    box-shadow:
+        0 40px 60px rgba(0, 0, 0, 0.20),
+        0 0 15px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        0 0 0 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Palettes flottantes : coins clippés + liseré interne 1px (réf .window:after) */
+body.illu-theme-macmodern .window:not(#app-window) {
+    overflow: hidden;
+    position: relative;
+}
+body.illu-theme-macmodern .window:not(#app-window)::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 11px;
+    box-shadow: inset 0 0 0 1px var(--mac-window-ring);
+    pointer-events: none;
+    z-index: 999999;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window.window {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+}
+body.illu-theme-macmodern #app-window.window::after {
+    display: none;
+}
+
+/* ═══════════════════════ Barre de titre (toujours sombre, givrée) ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar {
+    position: relative !important;
+    height: 24px !important;
+    background: var(--mac-titlebar-bg) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+    backdrop-filter: blur(22px) saturate(1.6);
+    border-bottom: 0.5px solid var(--mac-titlebar-border) !important;
+    box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.06) !important;
+    padding: 0 10px !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window .title-bar {
+    border-radius: 0 !important;
+}
+
+/* Titre centré en ABSOLU (pas d'élargissement des petites palettes) */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-text {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    flex: none !important;
+    padding: 0 22px !important;
+    text-align: center !important;
+    pointer-events: none !important;
+    color: var(--mac-title-color) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls {
+    order: -1 !important;
+    gap: 8px !important;
+    align-items: center !important;
+    margin-right: 4px !important;
+    height: auto !important;
+}
+
+/* ═══════════════════════ Feux tricolores ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    position: relative !important;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.22) !important;
+    overflow: visible !important;
+    transition: filter .12s ease;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"] {
+    background: #ff5d5a !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"] {
+    background: #f5c350 !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"] {
+    background: #65cd57 !important;
+}
+
+/* ::before neutralisé */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* ::after = glyphe (× / − / +), masqué au repos, révélé au survol du cluster */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font: 700 10px/1 -apple-system, Arial, sans-serif !important;
+    color: rgba(0, 0, 0, 0.6) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    opacity: 0 !important;
+    transition: opacity .1s ease !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls:hover button::after {
+    opacity: 1 !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+    content: "\00D7" !important;
+    font-size: 11px !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"]::after {
+    content: "\2212" !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"]::after {
+    content: "+" !important;
+}
+
+/* Survol : on assombrit la pastille, aucun fond gris/carré du flat */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:hover {
+    filter: brightness(0.94) !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:active {
+    filter: brightness(0.80) !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover {
+    background: #ff5d5a !important;
+}
+
+/* ═══════════════════════ Boutons ═══════════════════════ */
+/* Clair : boutons blancs plats (padding d'origine conservé) */
+body.illu-theme-macmodern:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
+    border-radius: 6px !important;
+    border: 0.5px solid #d0d0d6 !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.08) !important;
+    color: #1d1d1f !important;
+}
+body.illu-theme-macmodern:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
+    background: #f5f5f7 !important;
+}
+
+/* Sombre : boutons translucides (réf [type=button]) */
+body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
+    border-radius: 4px !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075), 0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+}
+body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+}
+body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active {
+    background: var(--mp-accent) !important;
+    color: #ffffff !important;
+}
+
+/* Barre d'options d'outil : boutons SANS style au repos (padding/couleur conservés) */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn) {
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    color: inherit !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover {
+    background: rgba(127, 127, 127, 0.16) !important;
+    border-radius: 5px !important;
+}
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):active,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn).active {
+    background: rgba(127, 127, 127, 0.26) !important;
+    border-radius: 5px !important;
+}
+
+/* ═══════════════════════ Champs ═══════════════════════ */
+body.illu-theme-macmodern input[type="text"],
+body.illu-theme-macmodern input[type="number"],
+body.illu-theme-macmodern input[type="search"],
+body.illu-theme-macmodern select {
+    border-radius: 6px !important;
+}
+body.illu-theme-macmodern:not(.theme-dark) input[type="text"],
+body.illu-theme-macmodern:not(.theme-dark) input[type="number"],
+body.illu-theme-macmodern:not(.theme-dark) input[type="search"],
+body.illu-theme-macmodern:not(.theme-dark) select {
+    border: 0.5px solid #cdcdd3 !important;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05) !important;
+}
+body.illu-theme-macmodern.theme-dark input[type="text"],
+body.illu-theme-macmodern.theme-dark input[type="number"],
+body.illu-theme-macmodern.theme-dark input[type="search"],
+body.illu-theme-macmodern.theme-dark select {
+    border: none !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}

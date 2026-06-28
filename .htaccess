@@ -1,0 +1,15 @@
+RewriteEngine On
+
+# 1. Redirection forcée si l'utilisateur arrive par polocrafting.fr
+RewriteCond %{HTTP_HOST} ^(www\.)?polocrafting\.fr$ [NC]
+RewriteRule ^(.*)$ https://masterpaint.fr/$1 [R=301,L,NC]
+
+# 2. Force HTTPS pour masterpaint.fr (si on est sur le bon domaine)
+RewriteCond %{HTTP_HOST} ^(www\.)?masterpaint\.fr$ [NC]
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 3. SPA (pour éviter les 404 sur ton outil)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

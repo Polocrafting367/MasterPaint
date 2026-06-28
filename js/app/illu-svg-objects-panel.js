@@ -60,18 +60,32 @@
         item.addEventListener('dragover', e => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            item.style.borderTop = '2px solid #0078d4';
+            // Indique visuellement si on déposera au-dessus ou en dessous selon la position du curseur.
+            const r = item.getBoundingClientRect();
+            const after = (e.clientY - r.top) > r.height / 2;
+            item.style.borderTop = after ? '' : '2px solid #0078d4';
+            item.style.borderBottom = after ? '2px solid #0078d4' : '';
         });
-        item.addEventListener('dragleave', () => { item.style.borderTop = ''; });
+        item.addEventListener('dragleave', () => { item.style.borderTop = ''; item.style.borderBottom = ''; });
         item.addEventListener('drop', e => {
             e.preventDefault();
+            const r = item.getBoundingClientRect();
+            const after = (e.clientY - r.top) > r.height / 2;
             item.style.borderTop = '';
-            if (!_dragEl || _dragEl === svgEl) return;
+            item.style.borderBottom = '';
+            if (!_dragEl || _dragEl === svgEl) { _dragEl = null; _dragItem = null; return; }
             const parent = svgEl.parentElement;
-            if (!parent || !parent.contains(_dragEl)) return;
-            parent.insertBefore(_dragEl, svgEl);
+            if (!parent || !parent.contains(_dragEl)) { _dragEl = null; _dragItem = null; return; }
+            // La liste est affichée en ordre Z inverse (premier plan en haut). « Au-dessus » dans la
+            // liste = plus haut dans la pile = plus tard dans le DOM ; on insère donc en conséquence.
+            if (after) {
+                parent.insertBefore(_dragEl, svgEl); // sous la cible visuelle → avant dans le DOM
+            } else {
+                parent.insertBefore(_dragEl, svgEl.nextSibling); // au-dessus → après dans le DOM
+            }
             const em = global.EditorManager;
             if (em && em.saveHistory) em.saveHistory('Réordonner Z');
+            document.dispatchEvent(new CustomEvent('illu:svg-objects-changed'));
             refresh();
             _dragEl = null; _dragItem = null;
         });
@@ -199,17 +213,26 @@
             item.appendChild(name);
             item.appendChild(actions);
 
+            // Référence directe item → élément SVG (pour la synchro de surbrillance).
+            item.__illuSvgEl = child;
+
             item.addEventListener('click', e => {
                 if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-                container.querySelectorAll('.svg-obj-item.selected').forEach(el => el.classList.remove('selected'));
-                item.classList.add('selected');
                 const em = global.EditorManager;
-                if (em) {
+                if (!em) return;
+                if (!Array.isArray(em.activeVectorSelection)) em.activeVectorSelection = [];
+                const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+                if (additive) {
+                    const idx = em.activeVectorSelection.indexOf(child);
+                    if (idx > -1) em.activeVectorSelection.splice(idx, 1);
+                    else em.activeVectorSelection.push(child);
+                } else {
                     em.activeVectorSelection = [child];
-                    window._activeVectorShapeEl = child;
-                    if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
-                    if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
                 }
+                window._activeVectorShapeEl = em.activeVectorSelection[em.activeVectorSelection.length - 1] || null;
+                _applySelectionHighlight();
+                if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             });
 
             _setupDragDrop(item, child, container);
@@ -223,6 +246,24 @@
     }
 
     // ─── API Publique ─────────────────────────────────────────────────────────
+
+    /** Marque comme « selected » les items dont l'élément SVG est dans la sélection active. */
+    function _applySelectionHighlight() {
+        const body = _getBody();
+        if (!body) return;
+        const em = global.EditorManager;
+        const sel = (em && Array.isArray(em.activeVectorSelection)) ? em.activeVectorSelection : [];
+        body.querySelectorAll('.svg-obj-item').forEach(it => {
+            it.classList.toggle('selected', sel.indexOf(it.__illuSvgEl) > -1);
+        });
+    }
+
+    /** Synchronise la surbrillance avec la sélection canvas sans reconstruire l'arbre. */
+    function syncSelection() {
+        const panel = document.getElementById(PANEL_ID);
+        if (!panel || panel.classList.contains('illu-floating-window-hidden')) return;
+        _applySelectionHighlight();
+    }
 
     /** Reconstruit la liste depuis le calque SVG actif. */
     function refresh() {
@@ -247,10 +288,12 @@
             return;
         }
         _buildItems(svgLayer, 0, body);
-
+        _applySelectionHighlight();
     }
 
-    /** Auto-refresh : détecte changement de calque actif ou modification DOM SVG. */
+    /** Auto-refresh : reconstruit dès qu'une mutation pertinente du DOM SVG survient (ajout,
+     *  suppression, réordonnancement) ou que le calque actif change. Plus de comparaison de
+     *  cardinalité (qui ratait les réordonnancements à nombre d'éléments constant). */
     function _scheduleAutoRefresh() {
         if (_autoRefreshTimer) return;
         _autoRefreshTimer = setTimeout(() => {
@@ -259,22 +302,7 @@
             if (!panel || panel.classList.contains('illu-floating-window-hidden')) return;
             const em = global.EditorManager;
             if (!em || !em.activeProject || em.activeProject.mode !== 'vector') return;
-            const activeLayerId = em.activeLayer && em.activeLayer.id;
-            const svgLayer = (activeLayerId && document.getElementById('layer-' + activeLayerId))
-                           || document.getElementById('svg-layers');
-            const currentId = svgLayer ? svgLayer.id : null;
-            /* Changement de calque : refresh immédiat. */
-            if (currentId !== _lastSvgLayerId) {
-                refresh();
-                return;
-            }
-            /* Même calque : on vérifie si le nombre d'éléments a changé. */
-            if (!svgLayer) return;
-            const body = _getBody();
-            if (!body) return;
-            const expected = body.querySelectorAll('.svg-obj-item').length;
-            const actual = svgLayer.querySelectorAll('*').length;
-            if (expected !== actual) refresh();
+            refresh();
         }, 120);
     }
 
@@ -335,5 +363,8 @@
         _startMutationObserver();
     }
 
-    global.illuSvgObjectsPanel = { show, hide, toggle, refresh };
+    /* Sélection canvas → surbrillance panneau (sans reconstruire l'arbre). */
+    document.addEventListener('illu:vector-selection-changed', syncSelection);
+
+    global.illuSvgObjectsPanel = { show, hide, toggle, refresh, syncSelection };
 })(window);

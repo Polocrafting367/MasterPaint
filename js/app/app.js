@@ -2335,7 +2335,10 @@ window.refreshPaletteGridLayout = function () {
         if (expanded) {
             illuApplyPaletteGridFixed(grid, 37, Math.ceil(baseSwatches.length / 37), baseSwatches, cell);
         } else {
-            illuApplyPaletteGridFixed(grid, 14, 4, baseSwatches, cell);
+            // Mode réduit : n'afficher que les 2 premières lignes de la palette compacte (14×2).
+            // Les 4 lignes complètes réapparaissent une fois la fenêtre développée (« Plus >> »).
+            const reducedSwatches = baseSwatches.slice(0, 14 * 2);
+            illuApplyPaletteGridFixed(grid, 14, 2, reducedSwatches, cell);
         }
     }
 };
@@ -3255,17 +3258,37 @@ function illuEnforceLockedAppearanceStorage() {
 }
 window.illuEnforceLockedAppearanceStorage = illuEnforceLockedAppearanceStorage;
 
+/** Variantes de thème d'interface (bureau). Catégorie Windows : flat, classic. macOS : maclion, macmodern. */
+const ILLU_THEME_VARIANTS = ['flat', 'classic', 'maclion', 'macmodern'];
+
+/** Défaut = 'flat' : c'est le thème réellement rendu au premier lancement (lien CSS non désactivé). */
+function illuNormalizeThemeVariant(v) {
+    return ILLU_THEME_VARIANTS.includes(v) ? v : 'flat';
+}
+window.illuNormalizeThemeVariant = illuNormalizeThemeVariant;
+
+/**
+ * Active le bon bouton parmi TOUTES les rangées de variante (Windows + macOS),
+ * sans repli automatique : la rangée qui ne contient pas la variante n'a aucun bouton actif.
+ */
+function illuSyncThemeVariantRows(variant) {
+    document.querySelectorAll('.illu-theme-variant-row').forEach((row) => {
+        row.querySelectorAll('.illu-scope-btn').forEach((btn) => {
+            const active = (btn.getAttribute('data-value') || '') === String(variant);
+            btn.classList.toggle('illu-scope-btn--active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    });
+}
+window.illuSyncThemeVariantRows = illuSyncThemeVariantRows;
+
 function syncSettingsThemeVariantScopeFromStorage() {
     illuEnforceLockedAppearanceStorage();
-    let variant = 'classic';
+    let variant = 'flat';
     try {
-        variant = localStorage.getItem('illu_theme_variant') === 'flat' ? 'flat' : 'classic';
+        variant = illuNormalizeThemeVariant(localStorage.getItem('illu_theme_variant'));
     } catch (e) { /* ignore */ }
-    const row = document.getElementById('settings-ui-base-row');
-    if (row) illuSettingsScopeSetActive(row, variant);
-    
-    const welcomeRow = document.getElementById('welcome-ui-base-row');
-    if (welcomeRow) illuSettingsScopeSetActive(welcomeRow, variant);
+    illuSyncThemeVariantRows(variant);
 }
 
 function syncSettingsBetaSkinFromStorage() {
@@ -3318,13 +3341,15 @@ function illuBindSettingsScopeRows() {
                     localStorage.setItem(ILLU_RESAMPLE_KEY, value);
                     window.illuInterpolationMode = value;
                 } catch (e) { /* ignore */ }
-            } else if (row.id === 'settings-ui-base-row' || row.id === 'welcome-ui-base-row') {
+            } else if (row.classList.contains('illu-theme-variant-row')) {
                 try {
-                    localStorage.setItem('illu_theme_variant', value);
+                    localStorage.setItem('illu_theme_variant', illuNormalizeThemeVariant(value));
                     if (window.IlluTheme && window.IlluTheme.applyFromStorage) {
                         window.IlluTheme.applyFromStorage();
                     }
                 } catch (e) { /* ignore */ }
+                // Désactive le bouton actif de l'autre catégorie (Windows <-> macOS).
+                illuSyncThemeVariantRows(value);
             }
         });
     });
@@ -4716,30 +4741,39 @@ window.IlluTheme = {
         let themeVariant = 'flat';
         try {
             const stored = localStorage.getItem('illu_theme_variant');
-            if (stored === 'classic') themeVariant = 'classic';
+            if (ILLU_THEME_VARIANTS.includes(stored)) themeVariant = stored;
         } catch(e) {}
 
         // En mode mobile, theme-mobile-modern.css prend le relais visuellement.
         // On force theme-win10-flat.css comme base desktop en parallèle du thème
-        // mobile, et on désactive theme-win98-modern.css (classic).
+        // mobile, et on désactive les autres bases (classic / macOS).
         // En mode bureau, on rétablit la préférence utilisateur.
+        //
+        // Les thèmes macOS sont des surcouches : on garde theme-win10-flat.css
+        // comme base structurelle plate et on empile la feuille macOS par-dessus.
         const isMobile = document.body.classList.contains('illu-mobile-ui');
         const classicLink = document.getElementById('theme-link-classic');
         const flatLink = document.getElementById('theme-link-flat');
-        if (isMobile) {
-            if (classicLink) classicLink.disabled = true;
-            if (flatLink) flatLink.disabled = false;
-        } else if (classicLink && flatLink) {
-            if (themeVariant === 'flat') {
-                classicLink.disabled = true;
-                flatLink.disabled = false;
-            } else {
-                classicLink.disabled = false;
-                flatLink.disabled = true;
-            }
-        } else if (classicLink) {
-            classicLink.disabled = false;
-        }
+        const macLionLink = document.getElementById('theme-link-maclion');
+        const macModernLink = document.getElementById('theme-link-macmodern');
+        const setLink = (el, on) => { if (el) el.disabled = !on; };
+
+        const effectiveVariant = isMobile ? 'flat' : themeVariant;
+        const isMacLion = effectiveVariant === 'maclion';
+        const isMacModern = effectiveVariant === 'macmodern';
+        const isClassic = effectiveVariant === 'classic';
+        const isMac = isMacLion || isMacModern;
+
+        // base : flat pour flat + les deux thèmes macOS ; classic pour Windows 98.
+        setLink(flatLink, !isClassic);
+        setLink(classicLink, isClassic);
+        setLink(macLionLink, isMacLion);
+        setLink(macModernLink, isMacModern);
+
+        // Classes body pour permettre aux surcouches macOS de cibler le chrome.
+        document.body.classList.toggle('illu-theme-mac', isMac);
+        document.body.classList.toggle('illu-theme-maclion', isMacLion);
+        document.body.classList.toggle('illu-theme-macmodern', isMacModern);
 
         const deskHex = '#0d8f8f';
         window._illuSplashDeskColor = deskHex;
@@ -4847,6 +4881,8 @@ function initSettingsLiveApply() {
     if (langRow) langRow.addEventListener('click', applyLangFromForm);
     const variantRow = document.getElementById('settings-ui-base-row');
     if (variantRow) variantRow.addEventListener('click', applyLockedAppearanceFromForm);
+    const variantRowMac = document.getElementById('settings-ui-base-row-mac');
+    if (variantRowMac) variantRowMac.addEventListener('click', applyLockedAppearanceFromForm);
     const betaSkinRow = document.getElementById('settings-beta-skin-row');
     if (betaSkinRow) betaSkinRow.addEventListener('click', applyLockedAppearanceFromForm);
     const iconStyleRow = document.getElementById('settings-icon-style-row');
@@ -5460,16 +5496,22 @@ window.illuBindWelcomeWindow = function () {
             if (typeof window.closeWelcomeDialog === 'function') window.closeWelcomeDialog();
             else welcome.style.display = 'none';
             // Save layout on close just in case
+            let needsApply = false;
             try {
                 const row = document.getElementById('welcome-layout-scope-row');
                 const layout = window.illuSettingsScopeGetValue ? window.illuSettingsScopeGetValue(row, 'floating') : 'floating';
                 if (layout === 'photoshop' || layout === 'floating' || layout === 'phone') {
                     localStorage.setItem('illu_ui_layout', layout);
-                    if (window.EditorManager && typeof window.EditorManager.applyProjectToUI === 'function') {
-                        window.EditorManager.applyProjectToUI();
-                    }
+                    needsApply = true;
                 }
             } catch (e) {}
+            // Appliquer la disposition après le repaint pour que la fenêtre se ferme
+            // instantanément au lieu d'attendre la fin du remontage de l'interface.
+            if (needsApply && window.EditorManager && typeof window.EditorManager.applyProjectToUI === 'function') {
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    window.EditorManager.applyProjectToUI();
+                }));
+            }
         };
     }
 };

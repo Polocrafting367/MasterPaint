@@ -103,7 +103,11 @@ window.VectorEngine = (() => {
     function zoom() { return EditorManager.getCanvasZoomLevel() || 1; }
     function isNodeMode() {
         const t = window.activeTool;
-        return t === 'node-select' || t === 'direct-select';
+        if (t === 'node-select' || t === 'direct-select') return true;
+        // Outil « Sélection » tout-en-un : l'édition de nœuds s'active à la volée
+        // (double-clic sur un tracé ou bouton « Éditer les nœuds » de la barre d'options).
+        if (t === 'select' && window._illuForceNodeMode) return true;
+        return false;
     }
 
     // ─── Visuel de sélection ────────────────────────────────────────────────
@@ -198,6 +202,25 @@ window.VectorEngine = (() => {
         return true;
     }
 
+    // Émet `illu:vector-selection-changed` uniquement quand l'ensemble sélectionné change
+    // d'identité (longueur ou éléments), pour ne pas spammer pendant les drags.
+    let _lastSelKey = ' ';
+    const _selIdMap = new WeakMap();
+    let _selIdSeq = 0;
+    function _maybeEmitSelectionChanged(sel) {
+        let key = '';
+        if (sel && sel.length) {
+            key = sel.map((el) => {
+                let id = _selIdMap.get(el);
+                if (!id) { id = ++_selIdSeq; _selIdMap.set(el, id); }
+                return id;
+            }).join(',');
+        }
+        if (key === _lastSelKey) return;
+        _lastSelKey = key;
+        try { document.dispatchEvent(new CustomEvent('illu:vector-selection-changed')); } catch (e) { /* no-op */ }
+    }
+
     function refreshSelectionUIImpl() {
         const ui = getUI();
         if (!ui) return;
@@ -227,11 +250,12 @@ window.VectorEngine = (() => {
         polyDots.forEach((n) => ui.appendChild(n));
 
         const sel = EditorManager.activeVectorSelection;
+        _maybeEmitSelectionChanged(sel);
         if (!sel || !sel.length) {
             _uiBuiltForDrag = false;
             return;
         }
-        
+
         if (typeof window.illuSyncVectorPropertiesBar === 'function') {
             window.illuSyncVectorPropertiesBar();
         }
@@ -1342,11 +1366,37 @@ window.VectorEngine = (() => {
         fillShape,
         applyStyleToSelection,
         clearNodeSelection: _clearNodeSelection,
+        isNodeMode,
         beginTransform,
         penCommitToCanvas,
         polygonCommitToCanvas,
     };
 })();
+
+/**
+ * Boîte englobante d'un élément exprimée dans le repère de son parent (transform de l'élément
+ * appliqué). Renvoie une AABB {x,y,width,height} + rotation détectée. Utilisé pour que la
+ * lecture et l'écriture de la barre géométrie partagent le même espace (round-trip cohérent).
+ */
+window.illuVectorParentBBox = function (el) {
+    let bb;
+    try { bb = el.getBBox(); } catch (e) { return null; }
+    let m = null;
+    try {
+        const consolidated = el.transform && el.transform.baseVal && el.transform.baseVal.consolidate();
+        m = consolidated ? consolidated.matrix : null;
+    } catch (e) { m = null; }
+    if (!m) return { x: bb.x, y: bb.y, width: bb.width, height: bb.height, rotation: 0 };
+    const corners = [
+        [bb.x, bb.y], [bb.x + bb.width, bb.y],
+        [bb.x + bb.width, bb.y + bb.height], [bb.x, bb.y + bb.height]
+    ].map(([x, y]) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f }));
+    const xs = corners.map(p => p.x), ys = corners.map(p => p.y);
+    const minX = Math.min(...xs), minY = Math.min(...ys), maxX = Math.max(...xs), maxY = Math.max(...ys);
+    let rotation = Math.atan2(m.b, m.a) * 180 / Math.PI;
+    if (!isFinite(rotation)) rotation = 0;
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY, rotation };
+};
 
 // -- Vector Properties Bar --
 window.illuSyncVectorPropertiesBar = function() {
@@ -1354,38 +1404,81 @@ window.illuSyncVectorPropertiesBar = function() {
     if (!pX) return;
     const sel = EditorManager.activeVectorSelection;
     if (!sel || sel.length === 0) return;
-    
+
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     sel.forEach(el => {
-        try {
-            const b = el.getBBox();
-            if (b.x < minX) minX = b.x;
-            if (b.y < minY) minY = b.y;
-            if (b.x + b.width > maxX) maxX = b.x + b.width;
-            if (b.y + b.height > maxY) maxY = b.y + b.height;
-        } catch(e) {}
+        const b = window.illuVectorParentBBox(el);
+        if (!b) return;
+        if (b.x < minX) minX = b.x;
+        if (b.y < minY) minY = b.y;
+        if (b.x + b.width > maxX) maxX = b.x + b.width;
+        if (b.y + b.height > maxY) maxY = b.y + b.height;
     });
-    
+
     if (minX === Infinity) return;
-    
-    let angle = 0;
+
     const primary = sel[sel.length - 1];
-    if (primary && primary.transform && primary.transform.baseVal) {
-        for (let i = 0; i < primary.transform.baseVal.numberOfItems; i++) {
-            const tr = primary.transform.baseVal.getItem(i);
-            if (tr.type === SVGTransform.SVG_TRANSFORM_ROTATE) {
-                angle += tr.angle;
-            }
-        }
-    }
-    angle = angle % 360;
+    const pb = window.illuVectorParentBBox(primary);
+    const angle = pb ? (Math.round(pb.rotation) % 360) : 0;
 
     pX.value = Math.round(minX);
     document.getElementById('vec-prop-y').value = Math.round(minY);
     document.getElementById('vec-prop-w').value = Math.round(maxX - minX);
     document.getElementById('vec-prop-h').value = Math.round(maxY - minY);
-    document.getElementById('vec-prop-angle').value = Math.round(angle);
+    document.getElementById('vec-prop-angle').value = angle;
 };
+
+/**
+ * Applique une géométrie (x/y/largeur/hauteur/angle) à un élément SVG de façon générique,
+ * quel que soit son type. x/y déplacent via translate (delta sur la bbox courante) ; w/h
+ * utilisent les attributs natifs pour rect/image, sinon une mise à l'échelle autour du coin
+ * haut-gauche de la bbox ; l'angle se cumule via rotate() autour du centre de la bbox.
+ */
+function illuApplyVectorGeometry(el, prop, val) {
+    const pb = window.illuVectorParentBBox(el); // AABB en espace parent (transform de l'élément appliqué)
+    if (!pb) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    const isRectLike = tag === 'rect' || tag === 'image';
+
+    // Prépend = transform le plus externe → s'exprime dans le repère du parent.
+    const prependTransform = (t) => {
+        const cur = (el.getAttribute('transform') || '').trim();
+        el.setAttribute('transform', (t + ' ' + cur).trim());
+    };
+
+    if (prop === 'x' || prop === 'y') {
+        const dx = prop === 'x' ? val - pb.x : 0;
+        const dy = prop === 'y' ? val - pb.y : 0;
+        if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return false;
+        prependTransform(`translate(${_r2(dx)},${_r2(dy)})`);
+        return true;
+    }
+    if (prop === 'w' || prop === 'h') {
+        if (val <= 0) return false;
+        // Rect/image non pivotés : édition native des attributs (round-trip parfait).
+        if (isRectLike && Math.abs(pb.rotation) < 0.01) {
+            el.setAttribute(prop === 'w' ? 'width' : 'height', _r2(val));
+            return true;
+        }
+        // Sinon : mise à l'échelle en espace parent autour du coin haut-gauche de l'AABB.
+        const sx = prop === 'w' ? (pb.width ? val / pb.width : 1) : 1;
+        const sy = prop === 'h' ? (pb.height ? val / pb.height : 1) : 1;
+        if (!isFinite(sx) || !isFinite(sy)) return false;
+        prependTransform(`translate(${_r2(pb.x)},${_r2(pb.y)}) scale(${_r2(sx)},${_r2(sy)}) translate(${_r2(-pb.x)},${_r2(-pb.y)})`);
+        return true;
+    }
+    if (prop === 'angle') {
+        const cx = pb.x + pb.width / 2;
+        const cy = pb.y + pb.height / 2;
+        // On retire la rotation existante puis on applique la rotation absolue autour du centre parent.
+        const baseTr = (el.getAttribute('transform') || '').replace(/rotate\([^)]+\)/g, '').trim();
+        el.setAttribute('transform', `rotate(${_r2(val)} ${_r2(cx)} ${_r2(cy)}) ${baseTr}`.trim());
+        return true;
+    }
+    return false;
+}
+function _r2(v) { return Math.round(v * 100) / 100; }
+window.illuApplyVectorGeometry = illuApplyVectorGeometry;
 
 document.addEventListener('DOMContentLoaded', () => {
     ['x', 'y', 'w', 'h', 'angle'].forEach(prop => {
@@ -1396,24 +1489,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!sel || !sel.length) return;
                 const val = parseFloat(e.target.value);
                 if (isNaN(val)) return;
-                
+
                 const primary = sel[sel.length - 1];
-                if (prop === 'x') primary.setAttribute('x', val);
-                if (prop === 'y') primary.setAttribute('y', val);
-                if (prop === 'w') primary.setAttribute('width', val);
-                if (prop === 'h') primary.setAttribute('height', val);
-                if (prop === 'angle') {
-                    let cx = parseFloat(primary.getAttribute('x')) || 0;
-                    let cy = parseFloat(primary.getAttribute('y')) || 0;
-                    let cw = parseFloat(primary.getAttribute('width')) || 0;
-                    let ch = parseFloat(primary.getAttribute('height')) || 0;
-                    cx += cw/2;
-                    cy += ch/2;
-                    const baseTr = (primary.getAttribute('transform') || '').replace(/rotate\([^)]+\)/g, '').trim();
-                    primary.setAttribute('transform', `rotate(${val} ${cx} ${cy}) ${baseTr}`.trim());
-                }
+                const changed = illuApplyVectorGeometry(primary, prop, val);
                 if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
                 EditorManager.render();
+                if (changed && EditorManager.saveHistory) {
+                    EditorManager.saveHistory('Géométrie vectorielle', { patchActiveLayer: true });
+                }
             });
         }
     });

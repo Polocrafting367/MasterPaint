@@ -1,0 +1,286 @@
+/**
+ * Thème « Mac OS X Lion » (10.7) — surcouche chrome.
+ *
+ * S'empile sur theme-win10-flat.css, actif sous .illu-theme-maclion.
+ * Gère CLAIR et SOMBRE (toggle « Thème sombre » = body.theme-dark).
+ * Accent piloté par la couleur choisie (--mp-accent posé par le JS).
+ *
+ * Barre de titre : style cohérent avec le thème macOS moderne (hauteur 24px,
+ * feux 12px à gauche, titre centré en absolu — pas de marge/padding exagéré,
+ * compatible avec la structure des barres de titre Windows).
+ */
+
+/* ───── Variables communes (accent + chrome, clair par défaut) ───── */
+body.illu-theme-maclion {
+    --mp-teal: var(--mp-accent);
+    --mp-teal-dark: var(--mp-title);
+    --mp-focus: var(--mp-accent);
+    --mp-menu-hover-bg: var(--mp-accent);
+    --mp-accent-muted: rgba(var(--mp-accent-rgb), 0.18);
+
+    --mp-radius: 4px;
+    --mp-font: "Lucida Grande", "Helvetica Neue", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+
+    /* Chrome (clair) */
+    --mac-window-bg: #ECECEC;
+    --mac-titlebar-bg: linear-gradient(to bottom, #ebebeb 0%, #d3d3d3 100%);
+    --mac-titlebar-border: #a4a4a4;
+    --mac-titlebar-inner: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    --mac-title-color: #4a4a4a;
+    --mac-title-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    --mac-glyph: rgba(0, 0, 0, 0.55);
+
+    --mp-body-chrome: #8a9bb5;
+    --mp-workspace: #d8d8d8;
+    --mp-workspace-deep: #bdbdbd;
+    --mp-dock-bg: #ECECEC;
+    --mp-dock-border: #c6c6c6;
+}
+
+/* Surfaces claires */
+body.illu-theme-maclion:not(.theme-dark) {
+    --mp-surface: #ECECEC;
+    --mp-surface-deep: #E2E2E2;
+    --mp-raised-top: #c6c6c6;
+    --mp-raised-bot: #c6c6c6;
+    --mp-inset-top: #b7b7b7;
+    --mp-inset-bot: #b7b7b7;
+    --mp-text: #2b2b2b;
+}
+
+/* ───── Bascule SOMBRE ───── */
+body.illu-theme-maclion.theme-dark {
+    --mp-surface: #2b2b2d;
+    --mp-surface-deep: #1f1f21;
+    --mp-raised-top: #3a3a3c;
+    --mp-raised-bot: #3a3a3c;
+    --mp-inset-top: #4a4a4c;
+    --mp-inset-bot: #4a4a4c;
+    --mp-text: #f2f2f2;
+
+    --mac-window-bg: #2b2b2d;
+    --mac-titlebar-bg: linear-gradient(to bottom, #46464a 0%, #353539 100%);
+    --mac-titlebar-border: #1c1c1e;
+    --mac-titlebar-inner: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --mac-title-color: rgba(255, 255, 255, 0.82);
+    --mac-title-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════════════════════ Fenêtres ═══════════════════════ */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window {
+    border: 1px solid rgba(0, 0, 0, 0.42) !important;
+    border-radius: 6px !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 14px 44px 2px rgba(0, 0, 0, 0.40) !important;
+    background: var(--mac-window-bg) !important;
+}
+
+body.illu-theme-maclion .window:not(#app-window) {
+    overflow: hidden;
+}
+
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window.window {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+}
+
+/* ═══════════════════════ Barre de titre ═══════════════════════ */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar {
+    position: relative !important;
+    height: 24px !important;
+    background: var(--mac-titlebar-bg) !important;
+    border-bottom: 1px solid var(--mac-titlebar-border) !important;
+    box-shadow: var(--mac-titlebar-inner) !important;
+    padding: 0 10px !important;
+}
+
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window .title-bar {
+    border-radius: 0 !important;
+}
+
+/* Titre centré en ABSOLU (centrage visuel sans gonfler la largeur des palettes) */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-text {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    flex: none !important;
+    padding: 0 22px !important;
+    text-align: center !important;
+    pointer-events: none !important;
+    color: var(--mac-title-color) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-shadow: var(--mac-title-shadow) !important;
+}
+
+/* Cluster des feux à gauche */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls {
+    order: -1 !important;
+    gap: 8px !important;
+    align-items: center !important;
+    margin-right: 4px !important;
+    height: auto !important;
+}
+
+/* ═══════════════════════ Feux tricolores (bulles Aqua) ═══════════════════════ */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    position: relative !important;
+    background-repeat: no-repeat !important;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    overflow: visible !important;
+    transition: filter .12s ease;
+}
+
+/* Couleur + sheen (gradient blanc limité au haut → la couleur reste lisible) */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn,
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"] {
+    background-color: #FD4E4E !important;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 55%) !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"] {
+    background-color: #F3BB55 !important;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 55%) !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"],
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"] {
+    background-color: #96D16F !important;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 55%) !important;
+}
+
+/* ::before neutralisé (on n'utilise plus la demi-croix du flat) */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* ::after = glyphe (× / − / +), masqué au repos, révélé au survol du cluster */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font: 700 10px/1 "Lucida Grande", Arial, sans-serif !important;
+    color: rgba(0, 0, 0, 0.55) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    opacity: 0 !important;
+    transition: opacity .1s ease !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls:hover button::after {
+    opacity: 1 !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+    content: "\00D7" !important;
+    font-size: 11px !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"]::after {
+    content: "\2212" !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"]::after,
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"]::after {
+    content: "+" !important;
+}
+
+/* Survol : on assombrit légèrement, AUCUN fond gris/carré du flat */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:hover {
+    filter: brightness(0.95) !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:active {
+    filter: brightness(0.82) !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover,
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover {
+    background-color: #FD4E4E !important;
+}
+
+/* ═══════════════════════ Boutons généraux (capsules Aqua) ═══════════════════════ */
+/* Clair */
+body.illu-theme-maclion:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
+    border-radius: 5px !important;
+    border: 1px solid #a9a9a9 !important;
+    background: linear-gradient(to bottom, #ffffff, #e4e4e4) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 1px rgba(0, 0, 0, 0.08) !important;
+    color: #2b2b2b !important;
+}
+body.illu-theme-maclion:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
+    background: linear-gradient(to bottom, #ffffff, #dadada) !important;
+}
+body.illu-theme-maclion:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active {
+    background: linear-gradient(to bottom, #d0d0d0, #c0c0c0) !important;
+}
+/* Sombre */
+body.illu-theme-maclion.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
+    border-radius: 5px !important;
+    border: 1px solid #1f1f21 !important;
+    background: linear-gradient(to bottom, #5a5a5c, #48484a) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+    color: #f2f2f2 !important;
+}
+body.illu-theme-maclion.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
+    background: linear-gradient(to bottom, #646466, #525254) !important;
+}
+
+/* Barre d'options d'outil : boutons SANS style au repos (padding/couleur conservés) */
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn) {
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    color: inherit !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover {
+    background: rgba(127, 127, 127, 0.16) !important;
+    border-radius: 4px !important;
+}
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):active,
+body.illu-theme-maclion:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn).active {
+    background: rgba(127, 127, 127, 0.26) !important;
+    border-radius: 4px !important;
+}
+
+/* ═══════════════════════ Champs ═══════════════════════ */
+body.illu-theme-maclion input[type="text"],
+body.illu-theme-maclion input[type="number"],
+body.illu-theme-maclion input[type="search"],
+body.illu-theme-maclion select {
+    border-radius: 4px !important;
+}
+body.illu-theme-maclion:not(.theme-dark) input[type="text"],
+body.illu-theme-maclion:not(.theme-dark) input[type="number"],
+body.illu-theme-maclion:not(.theme-dark) input[type="search"],
+body.illu-theme-maclion:not(.theme-dark) select {
+    border: 1px solid #b3b3b3 !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.10) !important;
+}
+body.illu-theme-maclion.theme-dark input[type="text"],
+body.illu-theme-maclion.theme-dark input[type="number"],
+body.illu-theme-maclion.theme-dark input[type="search"],
+body.illu-theme-maclion.theme-dark select {
+    border: 1px solid #4a4a4c !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.30) !important;
+    color: #f2f2f2 !important;
+}

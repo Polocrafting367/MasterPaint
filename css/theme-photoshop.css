@@ -115,7 +115,10 @@ body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-opt
     min-width: 0;
     margin: 0;
     padding: 0 0 6px;
-    border-bottom: 1px solid var(--mp-dock-border, #808080);
+    /* Séparateur interne discret (plus clair que la couture externe du dock)
+       pour éviter l'empilement de lignes sombres « brouillon ».
+       Gris translucide : subtil sur thème clair comme sombre. */
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
 }
 
 body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-options--docked .illu-ribbon-group:last-child {
@@ -168,13 +171,34 @@ body.ui-layout-docked:not(.illu-mobile-ui) #tool-options-container.illu-tool-opt
 body.ui-layout-docked:not(.illu-mobile-ui) #dock-tool-options-host {
     flex: 0 0 auto;
     min-height: 0;
-    max-height: 45%;
+    /* Hauteur plus sobre : ne doit pas écraser les panneaux titrés en dessous. */
+    max-height: 38%;
     overflow-x: hidden;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    border-bottom: 1px solid var(--mp-dock-border, #808080);
+    /* Une seule couture franche en bas, identique au séparateur des entêtes
+       de panneaux : le dock se lit comme une pile de sections homogènes. */
+    border-bottom: 1px solid var(--mp-dock-border, #cccccc);
     background: var(--mp-surface, #f0f0f0);
+}
+
+/* En-tête de section « OPTIONS » : aligne l'hôte d'options sur le style des
+   entêtes de panneaux (Calques / Historique…) pour harmoniser le dock. */
+body.ui-layout-docked:not(.illu-mobile-ui) #dock-tool-options-host:not(:empty)::before {
+    content: attr(data-illu-section-label);
+    flex: 0 0 auto;
+    padding: 4px 8px 3px;
+    font-size: var(--mp-ui-font-small, 11px);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.88;
+    background: var(--mp-dock-bg, #f3f2f1);
+    border-bottom: 1px solid var(--mp-dock-border, #cccccc);
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 /* Vide (options routées vers le rail) → masqué pour ne pas voler d'espace. */
@@ -429,10 +453,22 @@ body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper {
     justify-content: space-between !important;
     width: 100% !important;
     border-top-right-radius: 0 !important;
+    /* En disposition ligne, le menubar n'est plus au bord droit du header :
+       on neutralise la barre grise (drop-shadow) qui dépareillait. */
+    filter: none !important;
 }
 
 body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper > .illu-menubar-root {
     width: auto !important;
+    /* Coin arrondi du menubar : sans objet en ligne (il n'est plus au bord). */
+    border-top-right-radius: 0 !important;
+}
+
+/* Le menubar (role="menubar") et son dernier bouton de sous-barre :
+   on aplatit tous les arrondis hérités pour s'harmoniser avec le wrapper. */
+body.ui-layout-docked:not(.illu-mobile-ui) .illu-sub-menubar .illu-menubar-toolbar > button:last-child {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 body.ui-layout-docked:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper > .illu-sub-menubar {

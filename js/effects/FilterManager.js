@@ -34,8 +34,10 @@ const EFFECT_PARAM_DEFAULTS = {
     },
 chroma: {
         'ef-ch-r': '0', 'ef-ch-g': '255', 'ef-ch-b': '0',
+        'ef-ch-use2': '0', 'ef-ch-r2': '0', 'ef-ch-g2': '180', 'ef-ch-b2': '0',
         'ef-ch-tol': '30', 'ef-ch-feather': '15',
         'ef-ch-drift': '50', 'ef-ch-black': '0', 'ef-ch-white': '100',
+        'ef-ch-luma': '0', 'ef-ch-recover': '0',
         'ef-ch-spill': '0', 'ef-ch-gamma': '1.0'
     },
     cabossage: {
@@ -59,23 +61,64 @@ chroma: {
     vhs: {
         'ef-vhs-preset': 'default',
         'ef-vhs-preview_max': '480',
-        'ef-vhs-chroma_bleed': '12',
-        'ef-vhs-chroma_blur': '25',
-        'ef-vhs-chroma_saturation': '2.4',
-        'ef-vhs-noise_intensity_y': '0',
-        'ef-vhs-noise_intensity_c': '30',
-        'ef-vhs-glitch_intensity': '0',
-        'ef-vhs-jitter_amp': '1',
-        'ef-vhs-head_switch_rows': '95',
+        // Cadrage & base
+        'ef-vhs-enable_y': '1',
+        'ef-vhs-enable_r': '1',
+        'ef-vhs-enable_g': '1',
+        'ef-vhs-enable_b': '1',
         'ef-vhs-crop_padding': '6',
         'ef-vhs-crop_feather': '4',
+        'ef-vhs-luma_contrast': '1',
+        'ef-vhs-luma_brightness': '0',
+        'ef-vhs-pixel_size': '1',
+        'ef-vhs-band_patina': '0.9',
+        'ef-vhs-apply_jpeg': '0',
+        'ef-vhs-jpeg_quality': '86',
+        // Colorimétrie
+        'ef-vhs-chroma_saturation': '2.4',
+        'ef-vhs-edge_sat': '4.8',
+        'ef-vhs-hs_sat': '0',
+        'ef-vhs-shadow_sat': '0',
+        'ef-vhs-chroma_phase': '0',
+        'ef-vhs-apply_color_cast': '1',
+        'ef-vhs-cast_r': '33',
+        'ef-vhs-cast_g': '-5',
+        'ef-vhs-cast_b': '-10',
+        // Décalages & bavements
         'ef-vhs-shift_y': '0',
         'ef-vhs-shift_r': '-13',
         'ef-vhs-shift_g': '8',
         'ef-vhs-shift_b': '6',
-        'ef-vhs-luma_contrast': '1',
-        'ef-vhs-luma_brightness': '0',
-        'ef-vhs-chroma_phase': '0'
+        'ef-vhs-chroma_blur': '25',
+        'ef-vhs-chroma_bleed': '12',
+        'ef-vhs-luma_smear': '0',
+        'ef-vhs-right_pink': '0',
+        'ef-vhs-right_pink_width': '0.4',
+        // Déformations & instabilité
+        'ef-vhs-glitch_intensity': '0',
+        'ef-vhs-glitch_jitter': '1',
+        'ef-vhs-glitch_dropouts': '1',
+        'ef-vhs-glitch_tears': '1',
+        'ef-vhs-glitch_noise': '1',
+        'ef-vhs-jitter_amp': '1',
+        'ef-vhs-jitter_freq': '0.39',
+        'ef-vhs-head_switch_rows': '95',
+        'ef-vhs-head_switch_pull': '24',
+        'ef-vhs-head_switch_freq': '0.52',
+        'ef-vhs-head_switch_wave': '0.5',
+        'ef-vhs-head_switch_noise': '0',
+        // Bandes couleur (tracking)
+        'ef-vhs-hs_color_tear': '0',
+        'ef-vhs-tear_color': 'cyan',
+        'ef-vhs-tear_max_height': '20',
+        'ef-vhs-tear_length': '80',
+        'ef-vhs-tear_thickness': '2',
+        // Dégradations & artefacts
+        'ef-vhs-noise_intensity_y': '0',
+        'ef-vhs-noise_intensity_c': '30',
+        'ef-vhs-dropout_chance': '0',
+        'ef-vhs-dropout_len': '0.2',
+        'ef-vhs-dropout_thickness': '2'
     },
     ral: {
         'ef-ral-category': 'all',
@@ -618,7 +661,11 @@ window.FilterManager = {
         if (!inp || !inp.id) return;
         let lab = document.getElementById(`${inp.id}-val`);
         if (!lab) lab = document.getElementById(`${inp.id}-v`);
-        if (lab) lab.textContent = inp.value;
+        if (!lab) return;
+        // Les boîtes de valeur éditables (ex. chroma) sont des <input> : on écrit .value ;
+        // les affichages classiques sont des <span> : on écrit .textContent.
+        if (lab.tagName === 'INPUT' || lab.tagName === 'TEXTAREA') lab.value = inp.value;
+        else lab.textContent = inp.value;
     },
 
     _persistCurrentEffectParams() {
@@ -789,20 +836,28 @@ window.FilterManager = {
         sw.style.background = `rgb(${r},${g},${b})`;
     },
 
-    startChromaPick() {
+    startChromaPick(target) {
+        this._chromaPickTarget = target === 'B' ? 'B' : 'A';
         window._chromaKeyPickActive = true;
         document.body.style.cursor = 'crosshair';
         this.preview();
     },
 
     applyPickedChromaColor(r, g, b) {
-        const ir = document.getElementById('ef-ch-r');
-        const ig = document.getElementById('ef-ch-g');
-        const ib = document.getElementById('ef-ch-b');
+        const suffix = this._chromaPickTarget === 'B' ? '2' : '';
+        const ir = document.getElementById('ef-ch-r' + suffix);
+        const ig = document.getElementById('ef-ch-g' + suffix);
+        const ib = document.getElementById('ef-ch-b' + suffix);
         if (ir) ir.value = String(Math.round(r));
         if (ig) ig.value = String(Math.round(g));
         if (ib) ib.value = String(Math.round(b));
+        // Échantillonner la couleur B active automatiquement la 2ᵉ clé
+        if (this._chromaPickTarget === 'B') {
+            const cb = document.getElementById('ef-ch-use2');
+            if (cb) cb.checked = true;
+        }
         this._syncChromaSwatch();
+        if (window.ChromaKeyer && window.ChromaKeyer.syncUI) window.ChromaKeyer.syncUI(true);
         this._persistCurrentEffectParams();
         this.preview();
     },
@@ -826,10 +881,14 @@ window.FilterManager = {
     /**
      * Aberration chromatique radiale appliquée sur un rendu déjà calculé.
      * Le rouge est échantillonné en s'écartant du centre, le bleu en s'en rapprochant,
-     * le vert reste fixe. Le décalage croît du centre (0) vers les coins (amountPx).
+     * le vert reste fixe. La direction reste radiale (rendu « optique »).
+     *
+     * Le décalage est piloté par `modField` (0..1 par pixel) lorsqu'il est fourni :
+     * plus un pixel a été flouté/déformé, plus l'aberration y est forte. À défaut, on
+     * retombe sur le comportement historique où le décalage croît du centre vers les coins.
      * Retourne une nouvelle ImageData.
      */
-    _applyChromaticAberration(imageData, amountPx) {
+    _applyChromaticAberration(imageData, amountPx, modField) {
         const amt = Number(amountPx) || 0;
         if (amt <= 0) return imageData;
         const w = imageData.width, h = imageData.height;
@@ -844,7 +903,9 @@ window.FilterManager = {
                 const r = Math.hypot(dx, dy);
                 const ux = r > 1e-6 ? dx / r : 0;
                 const uy = r > 1e-6 ? dy / r : 0;
-                const shift = amt * (r / maxR);
+                const shift = modField
+                    ? amt * modField[y * w + x]
+                    : amt * (r / maxR);
                 const [rr, , , ra] = this._sampleBilinear(src, w, h, x + ux * shift, y + uy * shift);
                 const [, g, , ga] = this._sampleBilinear(src, w, h, x, y);
                 const [, , b, ba] = this._sampleBilinear(src, w, h, x - ux * shift, y - uy * shift);
@@ -878,8 +939,168 @@ window.FilterManager = {
         } catch (e) {
             return;
         }
-        const out = this._applyChromaticAberration(img, amtUi * scale);
+        // Champ de modulation : intensité locale du flou/déformation par pixel.
+        // 1) Champ ANALYTIQUE quand l'effet a une forme fermée (flou radial/zoom, torsion,
+        //    renflement, pincement…) : on recalcule la vraie quantité de flou (rayon) ou de
+        //    déplacement avec les mêmes formules que l'effet — donc valable même sur une zone
+        //    unie (ex. zone de sécurité du flou radial = 0 aberration, bord = aberration max).
+        // 2) Sinon REPLI sur l'écart rendu/source (effets à bruit, flous uniformes), où
+        //    l'aberration de bord est de toute façon le bon comportement perceptif.
+        let modField = this._buildEffectStrengthField(this.currentEffect, pw, ph, scale);
+        if (!modField) modField = this._buildDeformationField(img, this.originalImageData, pw, ph);
+        const out = this._applyChromaticAberration(img, amtUi * scale, modField);
         if (out !== img) this.ctx.putImageData(out, 0, 0);
+    },
+
+    /** Lit un paramètre numérique d'effet (#id) avec valeur de repli. */
+    _fxNum(id, def) {
+        const el = document.getElementById(id);
+        const v = el ? parseFloat(el.value) : NaN;
+        return Number.isFinite(v) ? v : def;
+    },
+
+    /**
+     * Champ d'intensité locale (Float32, 0..1) calculé ANALYTIQUEMENT à partir de la
+     * géométrie propre à l'effet — la vraie quantité de flou/déformation à chaque pixel,
+     * pas l'écart visible. Normalisé par une référence absolue (REF, en px d'aperçu) :
+     * peu de flou/déformation → peu d'aberration, beaucoup → aberration maximale.
+     * Retourne null pour les effets sans forme fermée (→ repli sur _buildDeformationField).
+     */
+    _buildEffectStrengthField(effect, w, h, scale) {
+        const s = scale > 0 ? scale : 1;
+        const REF = 8 * s; // déplacement/flou local (px d'aperçu) au-delà duquel l'aberration sature
+        const n = w * h;
+        const f = new Float32Array(n);
+        const cx0 = w / 2, cy0 = h / 2;
+        const maxR0 = Math.hypot(cx0, cy0) || 1;
+        let magFn = null;
+
+        if (effect === 'radialblur' || effect === 'zoomblur') {
+            // Même géométrie que radial-zoom-blur.js : zone nette (t=0) puis montée linéaire
+            // de la force du flou jusqu'au bord (t=1), centre décalable via offset.
+            const pfx = effect === 'radialblur' ? 'ef-rblur' : 'ef-zblur';
+            const ox = this._fxNum(`${pfx}-ox`, 0) / 100;
+            const oy = this._fxNum(`${pfx}-oy`, 0) / 100;
+            const inner = Math.max(0, Math.min(1, this._fxNum(`${pfx}-inner`, 0) / 100));
+            const cx = (w / 2) * (1 + ox);
+            const cy = (h / 2) * (1 + oy);
+            const maxR = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy)) || 1;
+            const safeR = inner * maxR;
+            // Force du flou : arc (rad) pour le radial, facteur de convergence pour le zoom.
+            const strength = effect === 'radialblur'
+                ? (Math.max(0, this._fxNum('ef-rblur-angle', 2)) * Math.PI / 180)
+                : (Math.max(0, this._fxNum('ef-zblur-amount', 10)) / 100);
+            magFn = (x, y) => {
+                const d = Math.hypot(x - cx, y - cy);
+                if (d <= safeR) return 0;
+                const t = maxR > safeR ? (d - safeR) / (maxR - safeR) : 1;
+                return strength * d * t; // étalement de flou local (px), 0 dans la zone nette
+            };
+        } else {
+            switch (effect) {
+                case 'twist': {
+                    const ang = this._fxNum('ef-twist', 0) * Math.PI / 180;
+                    magFn = (x, y) => {
+                        const dx = x - cx0, dy = y - cy0, r = Math.hypot(dx, dy);
+                        const a = ang * (1 - r / maxR0);
+                        return 2 * r * Math.abs(Math.sin(a / 2)); // corde du déplacement
+                    };
+                    break;
+                }
+                case 'bulge':
+                case 'pinch': {
+                    const k = effect === 'bulge'
+                        ? (this._fxNum('ef-bulge', 50) / 100) * 1.5
+                        : -(this._fxNum('ef-pinch', 50) / 100) * 1.5;
+                    magFn = (x, y) => {
+                        const dx = x - cx0, dy = y - cy0, r = Math.hypot(dx, dy), t = r / maxR0;
+                        const rS = r / (1 + k * (1 - t * t));
+                        return Math.abs(r - rS);
+                    };
+                    break;
+                }
+                case 'polarInvert': {
+                    const amt = this._fxNum('ef-polar', 50) / 100;
+                    magFn = (x, y) => {
+                        const dx = x - cx0, dy = y - cy0, r = Math.hypot(dx, dy);
+                        const rS = r * (1 - amt) + (maxR0 - r) * amt;
+                        return Math.abs(rS - r);
+                    };
+                    break;
+                }
+                case 'wave': {
+                    const amp = this._fxNum('ef-wave-a', 12) * s;
+                    const frq = this._fxNum('ef-wave-f', 14) || 1;
+                    const k = (2 * Math.PI) / frq;
+                    magFn = (x, y) => Math.hypot(amp * Math.sin(y * k), amp * Math.cos(x * k));
+                    break;
+                }
+                case 'tileReflect': {
+                    const T = Math.max(4, Math.round(this._fxNum('ef-tile', 30) * s));
+                    magFn = (x, y) => {
+                        const qx = Math.floor(x / T), qy = Math.floor(y / T);
+                        const tx = x - qx * T, ty = y - qy * T;
+                        const mx = tx < T / 2 ? tx : T - 1 - tx;
+                        const my = ty < T / 2 ? ty : T - 1 - ty;
+                        return Math.hypot((qx * T + mx) - x, (qy * T + my) - y);
+                    };
+                    break;
+                }
+                default:
+                    return null;
+            }
+        }
+
+        const inv = 1 / REF;
+        let any = false;
+        for (let y = 0, p = 0; y < h; y++) {
+            for (let x = 0; x < w; x++, p++) {
+                let m = magFn(x, y) * inv;
+                if (m > 1) m = 1;
+                else if (m < 0) m = 0;
+                if (m > 0) any = true;
+                f[p] = m;
+            }
+        }
+        return any ? f : null;
+    },
+
+    /**
+     * Champ d'intensité locale de déformation/flou (Float32, 0..1 par pixel) servant à
+     * moduler l'aberration chromatique. Mesuré comme l'écart cumulé RGBA entre le rendu de
+     * l'effet (`img`) et la source d'origine (`orig`, capturée avant l'effet). L'écart est
+     * lissé pour passer de contours à des zones, puis ramené sur 0..1 via un seuil absolu
+     * (REF) : ainsi « peu de déformation » → peu d'aberration, « beaucoup » → aberration max.
+     * Retourne null si rien n'a changé ou si les dimensions ne correspondent pas (repli radial).
+     */
+    _buildDeformationField(img, orig, w, h) {
+        if (!orig || orig.width !== w || orig.height !== h) return null;
+        const a = img.data, b = orig.data;
+        const n = w * h;
+        const f = new Float32Array(n);
+        let any = false;
+        for (let p = 0, i = 0; p < n; p++, i += 4) {
+            const d =
+                Math.abs(a[i] - b[i]) +
+                Math.abs(a[i + 1] - b[i + 1]) +
+                Math.abs(a[i + 2] - b[i + 2]) +
+                Math.abs(a[i + 3] - b[i + 3]);
+            if (d > 0) any = true;
+            f[p] = d;
+        }
+        if (!any) return null;
+        // Lisse l'écart : transforme les contours de changement en « zones » de déformation,
+        // pour une montée progressive de l'aberration plutôt que sur les seuls bords.
+        this._blurFloatField2D(f, w, h, 3);
+        // Seuil absolu : ~REF de différence cumulée RGBA correspond à l'aberration maximale.
+        const REF = 48;
+        const inv = 1 / REF;
+        for (let p = 0; p < n; p++) {
+            let v = f[p] * inv;
+            if (v > 1) v = 1;
+            f[p] = v;
+        }
+        return f;
     },
 
     _cabHash(ix, iy, seed) {
@@ -1673,9 +1894,14 @@ window.FilterManager = {
                                 <div class="illu-vhs-preset-row">
                                     <button type="button" onclick="illuVhsApplyPreset('default')" data-i18n="effect.vhsPresetClassic">Classique</button>
                                     <button type="button" onclick="illuVhsApplyPreset('pro')" data-i18n="effect.vhsPresetPro">Pro</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('vhs')">Cassette VHS</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('minidv')">Mini DV</button>
                                     <button type="button" onclick="illuVhsApplyPreset('damaged')" data-i18n="effect.vhsPresetDamaged">Abîmé</button>
                                     <button type="button" onclick="illuVhsApplyPreset('pellicule')" data-i18n="effect.vhsPresetFilm">Pellicule</button>
-                                    <button type="button" onclick="illuVhsApplyPreset('vintage')" data-i18n="effect.vhsPresetVintage">Vintage</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('vintage')" data-i18n="effect.vhsPresetVintage">8mm</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('photo')">Polaroïd</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('matrix')">Matrix</button>
+                                    <button type="button" onclick="illuVhsApplyPreset('dune')">Dune</button>
                                     <button type="button" onclick="illuVhsApplyPreset('cyberpunk')" data-i18n="effect.vhsPresetCyber">Cyberpunk</button>
                                 </div>
                             </div>
@@ -1683,6 +1909,12 @@ window.FilterManager = {
                         <section class="illu-cr-sec illu-cr-sec--collapsed">
                             <h3 class="illu-cr-sec-h" data-illu-vhs-toggle><span class="illu-cr-chev">▼</span> <span data-i18n="effect.vhsSecCrop">Cadrage & couleur</span></h3>
                             <div class="illu-cr-sec-body illu-vhs-grid">
+                            <div class="field-row" style="margin-bottom:8px;gap:12px;flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-enable_y" checked onchange="FilterManager.preview()"> Y</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-enable_r" checked onchange="FilterManager.preview()"> R</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-enable_g" checked onchange="FilterManager.preview()"> V</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-enable_b" checked onchange="FilterManager.preview()"> B</label>
+                            </div>
                             <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;" data-i18n="effect.vhsCropPad">Rognage (px)</label>
                                 <input type="range" id="ef-vhs-crop_padding" min="0" max="64" value="6" style="flex:1;" oninput="document.getElementById('ef-vhs-crop_padding-val').textContent=this.value;FilterManager.preview()">
                                 <span id="ef-vhs-crop_padding-val" style="width:32px;text-align:right;">6</span></div>
@@ -1707,9 +1939,45 @@ window.FilterManager = {
                             <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;" data-i18n="effect.vhsLumaBright">Luminosité luma</label>
                                 <input type="range" id="ef-vhs-luma_brightness" min="-50" max="50" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-luma_brightness-val').textContent=this.value;FilterManager.preview()">
                                 <span id="ef-vhs-luma_brightness-val" style="width:36px;text-align:right;">0</span></div>
-                            <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;" data-i18n="effect.vhsChromaPhase">Phase chroma (°)</label>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;" data-i18n="effect.vhsChromaPhase">Phase chroma (°)</label>
                                 <input type="range" id="ef-vhs-chroma_phase" min="-180" max="180" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-chroma_phase-val').textContent=this.value;FilterManager.preview()">
                                 <span id="ef-vhs-chroma_phase-val" style="width:36px;text-align:right;">0</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Pixelisation</label>
+                                <input type="range" id="ef-vhs-pixel_size" min="1" max="15" step="1" value="1" style="flex:1;" oninput="document.getElementById('ef-vhs-pixel_size-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-pixel_size-val" style="width:36px;text-align:right;">1</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Patine / flou bande</label>
+                                <input type="range" id="ef-vhs-band_patina" min="0.2" max="1" step="0.01" value="0.9" style="flex:1;" oninput="document.getElementById('ef-vhs-band_patina-val').textContent=Number(this.value).toFixed(2);FilterManager.preview()">
+                                <span id="ef-vhs-band_patina-val" style="width:36px;text-align:right;">0.90</span></div>
+                            <div class="field-row" style="margin-bottom:6px;align-items:center;gap:8px;">
+                                <label style="display:flex;align-items:center;gap:4px;width:120px;"><input type="checkbox" id="ef-vhs-apply_jpeg" onchange="FilterManager.preview()"> Flou codec</label>
+                                <input type="range" id="ef-vhs-jpeg_quality" min="1" max="100" step="1" value="86" style="flex:1;" oninput="document.getElementById('ef-vhs-jpeg_quality-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-jpeg_quality-val" style="width:36px;text-align:right;">86</span></div>
+                            </div>
+                        </section>
+                        <section class="illu-cr-sec illu-cr-sec--collapsed">
+                            <h3 class="illu-cr-sec-h" data-illu-vhs-toggle><span class="illu-cr-chev">▼</span> <span>Colorimétrie</span></h3>
+                            <div class="illu-cr-sec-body illu-vhs-grid">
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Sat. bordures</label>
+                                <input type="range" id="ef-vhs-edge_sat" min="0" max="20" step="0.1" value="4.8" style="flex:1;" oninput="document.getElementById('ef-vhs-edge_sat-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-edge_sat-val" style="width:36px;text-align:right;">4.8</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Sat. bas de bande</label>
+                                <input type="range" id="ef-vhs-hs_sat" min="-5" max="15" step="0.1" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-hs_sat-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-hs_sat-val" style="width:36px;text-align:right;">0</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Sat. ombres</label>
+                                <input type="range" id="ef-vhs-shadow_sat" min="-5" max="5" step="0.1" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-shadow_sat-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-shadow_sat-val" style="width:36px;text-align:right;">0</span></div>
+                            <div class="field-row" style="margin-bottom:6px;">
+                                <label style="display:flex;align-items:center;gap:4px;width:120px;"><input type="checkbox" id="ef-vhs-apply_color_cast" checked onchange="FilterManager.preview()"> Teinte globale</label>
+                            </div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Teinte R</label>
+                                <input type="range" id="ef-vhs-cast_r" min="-50" max="50" step="1" value="33" style="flex:1;" oninput="document.getElementById('ef-vhs-cast_r-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-cast_r-val" style="width:36px;text-align:right;">33</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Teinte V</label>
+                                <input type="range" id="ef-vhs-cast_g" min="-50" max="50" step="1" value="-5" style="flex:1;" oninput="document.getElementById('ef-vhs-cast_g-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-cast_g-val" style="width:36px;text-align:right;">-5</span></div>
+                            <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;">Teinte B</label>
+                                <input type="range" id="ef-vhs-cast_b" min="-50" max="50" step="1" value="-10" style="flex:1;" oninput="document.getElementById('ef-vhs-cast_b-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-cast_b-val" style="width:36px;text-align:right;">-10</span></div>
                             </div>
                         </section>
                         <section class="illu-cr-sec">
@@ -1736,9 +2004,83 @@ window.FilterManager = {
                         <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;" data-i18n="effect.vhsJitter">Jitter</label>
                             <input type="range" id="ef-vhs-jitter_amp" min="0" max="8" step="0.1" value="1" style="flex:1;" oninput="document.getElementById('ef-vhs-jitter_amp-val').textContent=this.value;FilterManager.preview()">
                             <span id="ef-vhs-jitter_amp-val" style="width:36px;text-align:right;">1</span></div>
-                        <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;" data-i18n="effect.vhsHead">Bande tête (px)</label>
-                            <input type="range" id="ef-vhs-head_switch_rows" min="0" max="200" value="95" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_rows-val').textContent=this.value;FilterManager.preview()">
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;" data-i18n="effect.vhsHead">Bande tête (px)</label>
+                            <input type="range" id="ef-vhs-head_switch_rows" min="0" max="300" value="95" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_rows-val').textContent=this.value;FilterManager.preview()">
                             <span id="ef-vhs-head_switch_rows-val" style="width:36px;text-align:right;">95</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Fréq. jitter</label>
+                            <input type="range" id="ef-vhs-jitter_freq" min="0" max="2" step="0.01" value="0.39" style="flex:1;" oninput="document.getElementById('ef-vhs-jitter_freq-val').textContent=this.value;FilterManager.preview()">
+                            <span id="ef-vhs-jitter_freq-val" style="width:36px;text-align:right;">0.39</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Traînée lumineuse</label>
+                            <input type="range" id="ef-vhs-luma_smear" min="0" max="100" step="1" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-luma_smear-val').textContent=this.value;FilterManager.preview()">
+                            <span id="ef-vhs-luma_smear-val" style="width:36px;text-align:right;">0</span></div>
+                        <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Délavement rose</label>
+                            <input type="range" id="ef-vhs-right_pink" min="0" max="100" step="1" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-right_pink-val').textContent=this.value;FilterManager.preview()">
+                            <span id="ef-vhs-right_pink-val" style="width:36px;text-align:right;">0</span></div>
+                        <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;">Largeur délavement</label>
+                            <input type="range" id="ef-vhs-right_pink_width" min="0.05" max="1" step="0.05" value="0.4" style="flex:1;" oninput="document.getElementById('ef-vhs-right_pink_width-val').textContent=Number(this.value).toFixed(2);FilterManager.preview()">
+                            <span id="ef-vhs-right_pink_width-val" style="width:36px;text-align:right;">0.40</span></div>
+                            </div>
+                        </section>
+                        <section class="illu-cr-sec illu-cr-sec--collapsed">
+                            <h3 class="illu-cr-sec-h" data-illu-vhs-toggle><span class="illu-cr-chev">▼</span> <span>Déformation bas de bande</span></h3>
+                            <div class="illu-cr-sec-body illu-vhs-grid">
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Tirage (pull)</label>
+                                <input type="range" id="ef-vhs-head_switch_pull" min="0" max="100" step="1" value="24" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_pull-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-head_switch_pull-val" style="width:36px;text-align:right;">24</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Onde fréq.</label>
+                                <input type="range" id="ef-vhs-head_switch_freq" min="0" max="2" step="0.01" value="0.52" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_freq-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-head_switch_freq-val" style="width:36px;text-align:right;">0.52</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Onde amp.</label>
+                                <input type="range" id="ef-vhs-head_switch_wave" min="0" max="5" step="0.1" value="0.5" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_wave-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-head_switch_wave-val" style="width:36px;text-align:right;">0.5</span></div>
+                            <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;">Bruit déchirure</label>
+                                <input type="range" id="ef-vhs-head_switch_noise" min="0" max="100" step="1" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-head_switch_noise-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-head_switch_noise-val" style="width:36px;text-align:right;">0</span></div>
+                            </div>
+                        </section>
+                        <section class="illu-cr-sec illu-cr-sec--collapsed">
+                            <h3 class="illu-cr-sec-h" data-illu-vhs-toggle><span class="illu-cr-chev">▼</span> <span>Bandes couleur (tracking)</span></h3>
+                            <div class="illu-cr-sec-body illu-vhs-grid">
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Intensité bandes</label>
+                                <input type="range" id="ef-vhs-hs_color_tear" min="0" max="1" step="0.05" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-hs_color_tear-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-hs_color_tear-val" style="width:36px;text-align:right;">0</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Couleur</label>
+                                <select id="ef-vhs-tear_color" style="flex:1;" onchange="FilterManager.preview()">
+                                    <option value="cyan">Cyan / Bleu</option>
+                                    <option value="magenta">Magenta / Rose</option>
+                                    <option value="red">Rouge</option>
+                                    <option value="green">Vert</option>
+                                    <option value="random">Aléatoire</option>
+                                </select></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Hauteur max (%)</label>
+                                <input type="range" id="ef-vhs-tear_max_height" min="0" max="100" step="1" value="20" style="flex:1;" oninput="document.getElementById('ef-vhs-tear_max_height-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-tear_max_height-val" style="width:36px;text-align:right;">20</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Largeur (%)</label>
+                                <input type="range" id="ef-vhs-tear_length" min="10" max="100" step="1" value="80" style="flex:1;" oninput="document.getElementById('ef-vhs-tear_length-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-tear_length-val" style="width:36px;text-align:right;">80</span></div>
+                            <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;">Épaisseur (px)</label>
+                                <input type="range" id="ef-vhs-tear_thickness" min="1" max="50" step="1" value="2" style="flex:1;" oninput="document.getElementById('ef-vhs-tear_thickness-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-tear_thickness-val" style="width:36px;text-align:right;">2</span></div>
+                            </div>
+                        </section>
+                        <section class="illu-cr-sec illu-cr-sec--collapsed">
+                            <h3 class="illu-cr-sec-h" data-illu-vhs-toggle><span class="illu-cr-chev">▼</span> <span>Glitch & rayures</span></h3>
+                            <div class="illu-cr-sec-body illu-vhs-grid">
+                            <div class="field-row" style="margin-bottom:6px;gap:10px;flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-glitch_jitter" checked onchange="FilterManager.preview()"> Tremblement</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-glitch_dropouts" checked onchange="FilterManager.preview()"> Rayures</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-glitch_tears" checked onchange="FilterManager.preview()"> Tracking</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ef-vhs-glitch_noise" checked onchange="FilterManager.preview()"> Bruit</label>
+                            </div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Quantité rayures</label>
+                                <input type="range" id="ef-vhs-dropout_chance" min="0" max="1" step="0.01" value="0" style="flex:1;" oninput="document.getElementById('ef-vhs-dropout_chance-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-dropout_chance-val" style="width:36px;text-align:right;">0</span></div>
+                            <div class="field-row" style="margin-bottom:6px;"><label style="width:120px;">Longueur rayure</label>
+                                <input type="range" id="ef-vhs-dropout_len" min="0.01" max="1" step="0.01" value="0.2" style="flex:1;" oninput="document.getElementById('ef-vhs-dropout_len-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-dropout_len-val" style="width:36px;text-align:right;">0.2</span></div>
+                            <div class="field-row" style="margin-bottom:4px;"><label style="width:120px;">Épaisseur rayure</label>
+                                <input type="range" id="ef-vhs-dropout_thickness" min="1" max="20" step="1" value="2" style="flex:1;" oninput="document.getElementById('ef-vhs-dropout_thickness-val').textContent=this.value;FilterManager.preview()">
+                                <span id="ef-vhs-dropout_thickness-val" style="width:36px;text-align:right;">2</span></div>
                             </div>
                         </section>
                             </div>
@@ -1821,17 +2163,22 @@ window.FilterManager = {
             if (this.currentEffect !== 'vhs') vhsFooterLink.onclick = null;
         }
         if (window.IlluI18n && typeof window.IlluI18n.apply === 'function') window.IlluI18n.apply();
+        this._bindEffectScopeButtons();
+        this._restoreEffectParams();
         if (this.currentEffect === 'vhs' && typeof window.illuVhsSyncSliderLabels === 'function') {
             window.illuVhsSyncSliderLabels();
         }
-        this._bindEffectScopeButtons();
-        this._restoreEffectParams();
         this._installEffectPrefsListener();
         const pickBtn = document.getElementById('ef-ch-pick-btn');
-        if (pickBtn) pickBtn.onclick = () => this.startChromaPick();
+        if (pickBtn) pickBtn.onclick = () => this.startChromaPick('A');
+        const pickBtn2 = document.getElementById('ef-ch-pick-btn2');
+        if (pickBtn2) pickBtn2.onclick = () => this.startChromaPick('B');
         const maskBtn = document.getElementById('ef-ch-apply-mask-btn');
         if (maskBtn) maskBtn.onclick = () => this.applyChromaAsAlphaMask();
-        if (this.currentEffect === 'chroma') this._syncChromaSwatch();
+        if (this.currentEffect === 'chroma') {
+            this._syncChromaSwatch();
+            if (window.ChromaKeyer && window.ChromaKeyer.syncUI) window.ChromaKeyer.syncUI(true);
+        }
         if (this.currentEffect === 'hsv') {
             const hsvPanel = document.getElementById('ef-hsv-panel');
             if (hsvPanel) delete hsvPanel.dataset.hsvRefHue;
@@ -2227,18 +2574,23 @@ window.FilterManager = {
         const kg = Math.max(0, Math.min(255, val('ef-ch-g')));
         const kb = Math.max(0, Math.min(255, val('ef-ch-b')));
         
+        const useKey2 = !!(document.getElementById('ef-ch-use2') && document.getElementById('ef-ch-use2').checked);
         const params = {
             tolerance: val('ef-ch-tol') !== undefined ? val('ef-ch-tol') : 30,
-            lumTol: val('ef-ch-lum'), 
+            lumTol: val('ef-ch-lum'),
             drift: val('ef-ch-drift'),
-            shadowProt: val('ef-ch-shadows'), 
+            shadowProt: val('ef-ch-shadows'),
             feather: val('ef-ch-feather'),
             clipBlack: val('ef-ch-black'),
             clipWhite: val('ef-ch-white') !== undefined ? val('ef-ch-white') : 100,
             gamma: val('ef-ch-gamma') > 0 ? val('ef-ch-gamma') : 1.0,
             spill: val('ef-ch-spill'),
             recover: val('ef-ch-recover'),
-            lumaProt: val('ef-ch-luma')
+            lumaProt: val('ef-ch-luma'),
+            useKey2,
+            kr2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-r2'))) : undefined,
+            kg2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-g2'))) : undefined,
+            kb2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-b2'))) : undefined
         };
 
         const selOnly =
@@ -4042,6 +4394,7 @@ case 'chroma': {
                 const kg = Math.max(0, Math.min(255, val('ef-ch-g')));
                 const kb = Math.max(0, Math.min(255, val('ef-ch-b')));
                 
+                const useKey2 = !!(document.getElementById('ef-ch-use2') && document.getElementById('ef-ch-use2').checked);
                 const params = {
                     tolerance: val('ef-ch-tol'),
                     drift: val('ef-ch-drift'),
@@ -4049,7 +4402,12 @@ case 'chroma': {
                     clipBlack: val('ef-ch-black'),
                     clipWhite: val('ef-ch-white'),
                     gamma: val('ef-ch-gamma'),
-                    spill: val('ef-ch-spill')
+                    spill: val('ef-ch-spill'),
+                    lumaProt: val('ef-ch-luma'),
+                    useKey2,
+                    kr2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-r2'))) : undefined,
+                    kg2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-g2'))) : undefined,
+                    kb2: useKey2 ? Math.max(0, Math.min(255, val('ef-ch-b2'))) : undefined
                 };
 
                 const out = new ImageData(new Uint8ClampedArray(srcOrig), w, h);

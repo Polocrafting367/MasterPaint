@@ -995,9 +995,11 @@
                     ctx.strokeStyle = activeChan === 'curveMaster' ? '#fff' : (activeChan === 'curveR' ? '#f55' : (activeChan === 'curveG' ? '#5f5' : '#55f'));
                 };
                 canvas._forceDraw = draw;
+                // Édition de courbe au doigt / stylet : le canevas capte le geste sans défilement.
+                canvas.style.touchAction = 'none';
 
-
-                canvas.onmousedown = (e) => {
+                canvas.onpointerdown = (e) => {
+                    if (e.pointerType !== 'mouse' && e.cancelable) e.preventDefault();
                     const rect = canvas.getBoundingClientRect();
                     const x = Math.round(((e.clientX - rect.left) / rect.width) * 255);
                     const y = Math.round((1 - (e.clientY - rect.top) / rect.height) * 255);
@@ -1043,15 +1045,17 @@
 
                 const upHandler = () => { dragIdx = -1; draw(); };
 
-                window.addEventListener('mousemove', moveHandler);
-                window.addEventListener('mouseup', upHandler);
+                window.addEventListener('pointermove', moveHandler);
+                window.addEventListener('pointerup', upHandler);
+                window.addEventListener('pointercancel', upHandler);
                 canvas.oncontextmenu = (e) => e.preventDefault();
                 sel.onchange = (e) => { activeChan = e.target.value; draw(); };
 
                 // Nettoyage en cas de suppression du DOM (approximatif ici)
                 wrap._cleanupCurve = () => {
-                    window.removeEventListener('mousemove', moveHandler);
-                    window.removeEventListener('mouseup', upHandler);
+                    window.removeEventListener('pointermove', moveHandler);
+                    window.removeEventListener('pointerup', upHandler);
+                    window.removeEventListener('pointercancel', upHandler);
                 };
                 
                 wrap._forceDrawCurve = draw;

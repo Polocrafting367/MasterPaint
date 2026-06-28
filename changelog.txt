@@ -1,12 +1,31 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.8.177,2 (23/06/26)
+2.8.190 (28/06/26)
+- Correction nouveau projet qui crée canvas de 1x1 pixel
+- Ajout lissage des trais
+- Prise en charge des crayon tactil
+- Réduction tail fenetre des couleur
+- L'interface prend en charge maintenant le tactil et les stylet
+- Ajout d'icone import fichier et de collage
+- Prévisualisation fenetre de collage et d'import
+- Correctif ralentissement de la fenetre des paramètre a ça fermeture
+- Revue filtre VHS
+
+2.8.181 (27/06/26)
+- Retour ne devrait plus faire quité la page de force (surtout sur mobile)
+- Revu theme Photoshop 
+- Ajout theme MACOS ( désactivé pour le moments)
+
+2.8.178,4 (23/06/26)
 - Début refont du mode photoshop
        > style plus photoshop
        > revu emplacement, icone fonctionnement propre a photoshop!
 - Canvas de dessin vertical sur téléphone par défaut
 - toggle d'Abération crhomatique sur effet déformations/flous
+       > l'abération suit désormais la quantité locale de flou/déformation (plus c'est flou/déformé, plus l'abération est forte)
 - Optimisation divers
+- Correction mode svg diverse
+       > tentative de rendre ça potable
 
 2.8.173,1 (22/06/26)
 - Ouverture de fichier pdn entre paintnet et masterpaint possible dans les 2 sens

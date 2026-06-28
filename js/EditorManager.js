@@ -848,6 +848,10 @@ const EditorManager = {
         /** Dimensions suggérées depuis le presse-papiers interne (Ctrl+C). */
         window.illuSuggestedNewProjectDimensionsFromClipboard = function () {
             const clamp = (n) => Math.max(1, Math.min(16384, Math.round(n)));
+            // Une sélection/un presse-papiers minuscule (ex. 1×1) ne doit pas imposer une
+            // résolution aberrante au nouveau projet : on l'ignore pour retomber sur le
+            // défaut sensé (720p en PC, portrait sur téléphone).
+            const tooTiny = (w, h) => clamp(w) < 8 && clamp(h) < 8;
             if (window.ctxClipboard && window.ctxClipboard.width >= 1 && window.ctxClipboard.height >= 1) {
                 if (
                     typeof window.illuImageDataHasVisiblePixels === 'function' &&
@@ -860,6 +864,7 @@ const EditorManager = {
                         b && Number.isFinite(b.w) && b.w >= 1 ? b.w : window.ctxClipboard.width | 0;
                     const h =
                         b && Number.isFinite(b.h) && b.h >= 1 ? b.h : window.ctxClipboard.height | 0;
+                    if (tooTiny(w, h)) return null;
                     return { w: clamp(w), h: clamp(h) };
                 }
             }
@@ -871,7 +876,8 @@ const EditorManager = {
                     Number.isFinite(sb.w) &&
                     Number.isFinite(sb.h) &&
                     sb.w >= 1 &&
-                    sb.h >= 1
+                    sb.h >= 1 &&
+                    !tooTiny(sb.w, sb.h)
                 ) {
                     return { w: clamp(sb.w), h: clamp(sb.h) };
                 }
@@ -897,7 +903,7 @@ const EditorManager = {
                     bb = null;
                 }
                 svg.remove();
-                if (bb && bb.width >= 0.5 && bb.height >= 0.5) {
+                if (bb && bb.width >= 0.5 && bb.height >= 0.5 && !tooTiny(bb.width, bb.height)) {
                     return { w: clamp(bb.width), h: clamp(bb.height) };
                 }
             }
@@ -909,6 +915,8 @@ const EditorManager = {
             const iw = document.getElementById('p-width');
             const ih = document.getElementById('p-height');
             if (!iw || !ih) return false;
+            // Ignorer une sélection minuscule (ex. 1×1) : on laisse le défaut sensé s'appliquer.
+            const tooTiny = (w, h) => w < 8 && h < 8;
             const hasSel =
                 typeof window.hasActivePixelSelection === 'function' && window.hasActivePixelSelection();
             if (
@@ -918,7 +926,8 @@ const EditorManager = {
                 Number.isFinite(sb.w) &&
                 Number.isFinite(sb.h) &&
                 sb.w >= 1 &&
-                sb.h >= 1
+                sb.h >= 1 &&
+                !tooTiny(sb.w, sb.h)
             ) {
                 return window.illuApplyNewProjectDialogDimensions(sb.w, sb.h);
             }
@@ -929,7 +938,8 @@ const EditorManager = {
                 Number.isFinite(sb.w) &&
                 Number.isFinite(sb.h) &&
                 sb.w >= 1 &&
-                sb.h >= 1
+                sb.h >= 1 &&
+                !tooTiny(sb.w, sb.h)
             ) {
                 return window.illuApplyNewProjectDialogDimensions(sb.w, sb.h);
             }
@@ -951,6 +961,16 @@ const EditorManager = {
             }
             if (typeof window.illuApplySuggestedNewProjectDimensions === 'function') {
                 window.illuApplySuggestedNewProjectDimensions();
+            }
+            // Repli bureau : aucune suggestion exploitable (ou sélection minuscule ignorée)
+            // → résolution par défaut 720p paysage en PC (le défaut mobile est géré ci-dessus).
+            const isMobile =
+                typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
+            if (!isMobile) {
+                window.illuApplyNewProjectDialogDimensions(
+                    window.ILLU_DEFAULT_DOC_WIDTH || 1280,
+                    window.ILLU_DEFAULT_DOC_HEIGHT || 720
+                );
             }
         };
         window.showNewProjectDialog = () => {
@@ -1579,13 +1599,7 @@ const EditorManager = {
                         localStorage.setItem('illu_history_max_entries', String(n));
                         hm.value = String(n);
                     }
-                    this.trimAllProjectsHistoryToMax();
                 } catch (err) { /* ignore */ }
-                this.updateTabUI();
-                this.updateLayerUI();
-                if (typeof window.IlluTheme !== 'undefined' && window.IlluTheme.applyFromStorage) {
-                    window.IlluTheme.applyFromStorage();
-                }
                 const revertLayout = () => {
                     try {
                         localStorage.setItem('illu_ui_layout', prevLayout);
@@ -1600,14 +1614,26 @@ const EditorManager = {
                 ) {
                     return;
                 }
-                if (typeof window.applyUILayoutFromPreference === 'function') window.applyUILayoutFromPreference();
-                if (typeof window.illuInitToolbarRibbon === 'function') window.illuInitToolbarRibbon();
-                if (typeof window.applyIlluMobileUiClass === 'function') window.applyIlluMobileUiClass();
-                if (window.IlluI18n) window.IlluI18n.apply();
-                if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
-                this.render();
+                // Fermer la fenêtre tout de suite (réactivité perçue), puis appliquer le
+                // travail lourd (historique, thème, disposition, traductions, rendu) après
+                // le repaint — sinon la fenêtre reste affichée pendant tout ce traitement.
                 settingsOv.style.display = 'none';
                 document.body.classList.remove('no-scroll');
+                const applySettingsHeavy = () => {
+                    try { this.trimAllProjectsHistoryToMax(); } catch (e) { /* ignore */ }
+                    this.updateTabUI();
+                    this.updateLayerUI();
+                    if (typeof window.IlluTheme !== 'undefined' && window.IlluTheme.applyFromStorage) {
+                        window.IlluTheme.applyFromStorage();
+                    }
+                    if (typeof window.applyUILayoutFromPreference === 'function') window.applyUILayoutFromPreference();
+                    if (typeof window.illuInitToolbarRibbon === 'function') window.illuInitToolbarRibbon();
+                    if (typeof window.applyIlluMobileUiClass === 'function') window.applyIlluMobileUiClass();
+                    if (window.IlluI18n) window.IlluI18n.apply();
+                    if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
+                    this.render();
+                };
+                requestAnimationFrame(() => requestAnimationFrame(applySettingsHeavy));
             };
         }
         if (settingsOv) {
@@ -4839,14 +4865,54 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             pasteDocBounds: window.ctxClipboardDocBounds,
             pasteProjectId: window.ctxClipboardProjectId
         };
-        if (!this._isSamePasteProject(importOpts.pasteProjectId)) {
-            importOpts.ignorePastePosition = true;
-            delete importOpts.pasteDocBounds;
+        // Même projet : collage direct en nouveau calque (à la même position, sélectionné),
+        // sans dialogue. Autre projet : on propose le dialogue de choix (prévisualisation +
+        // nouveau calque / calque actif / nouvel onglet).
+        if (this._isSamePasteProject(importOpts.pasteProjectId)) {
+            this._runImportOversizeGate(c, () => {
+                this._finishFloatingPaste(c, importOpts, 'commit', 'Coller');
+            });
+            return true;
         }
-        this._runImportOversizeGate(c, () => {
-            this._finishFloatingPaste(c, importOpts, 'commit', 'Coller');
-        });
+        importOpts.ignorePastePosition = true;
+        delete importOpts.pasteDocBounds;
+        this.promptImport(c, importOpts);
         return true;
+    },
+
+    /** Affiche une miniature de ce qui va être importé / collé dans le dialogue de choix. */
+    _renderImportChoicePreview(img, boxId) {
+        const box = document.getElementById(boxId || 'import-choice-preview');
+        if (!box) return;
+        box.innerHTML = '';
+        box.classList.remove('has-image');
+        if (!img) return;
+        const iw = img.naturalWidth || img.width || 0;
+        const ih = img.naturalHeight || img.height || 0;
+        if (iw < 1 || ih < 1) return;
+        const maxW = 280;
+        const maxH = 140;
+        const scale = Math.min(1, maxW / iw, maxH / ih);
+        const cw = Math.max(1, Math.round(iw * scale));
+        const ch = Math.max(1, Math.round(ih * scale));
+        const cv = document.createElement('canvas');
+        cv.width = cw;
+        cv.height = ch;
+        const c = cv.getContext('2d');
+        if (!c) return;
+        c.imageSmoothingEnabled = true;
+        if (typeof c.imageSmoothingQuality === 'string') c.imageSmoothingQuality = 'high';
+        try {
+            c.drawImage(img, 0, 0, cw, ch);
+        } catch (e) {
+            return;
+        }
+        box.appendChild(cv);
+        const dims = document.createElement('div');
+        dims.className = 'illu-import-preview-dims';
+        dims.textContent = `${iw} × ${ih} px`;
+        box.appendChild(dims);
+        box.classList.add('has-image');
     },
 
     promptImport(img, importOpts) {
@@ -4866,17 +4932,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         const fromInternalClipboard = importOpts.pasteProjectId != null;
 
-        // Collage presse-papiers interne (même projet ou autre onglet).
+        // Collage presse-papiers interne (même projet ou autre onglet) :
+        // on passe par le dialogue de choix (prévisualisation + icônes + nouveau calque /
+        // calque actif / nouvel onglet) au lieu d'un collage direct silencieux.
         if (fromInternalClipboard) {
             const sameProject = this._isSamePasteProject(importOpts.pasteProjectId);
             if (!sameProject) {
                 importOpts = { ...importOpts, ignorePastePosition: true };
                 delete importOpts.pasteDocBounds;
             }
-            this._runImportOversizeGate(img, () => {
-                this._finishFloatingPaste(img, importOpts, 'commit', 'Coller');
-            });
-            return;
         }
 
         // Glisser-déposer / import fichier sans dialogue.
@@ -4903,6 +4967,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             this.importImageAsNewLayer(img, 'Image importée', importOpts);
             return;
         }
+        this._renderImportChoicePreview(img);
         overlay.style.display = 'flex';
 
         const afterImport = (opts) => {
@@ -5190,6 +5255,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         delete l.importStagingY;
         if (typeof illuSetImportPlacementChromeActive === 'function') {
             illuSetImportPlacementChromeActive(false);
+        }
+        // Le contenu collé/importé sur le calque actif reste sélectionné (cadre), comme un
+        // collage en nouveau calque : on peut ainsi le repositionner ou le transformer aussitôt.
+        if (
+            typeof window.illuSetRectSelectionDocBounds === 'function' &&
+            scratch.width >= 1 &&
+            scratch.height >= 1
+        ) {
+            window.illuSetRectSelectionDocBounds(docX, docY, scratch.width, scratch.height);
         }
     },
 
@@ -10169,6 +10243,50 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     initHistory() {
         window.undo = () => this.doHistory(-1);
         window.redo = () => this.doHistory(1);
+        this.initBackButtonGuard();
+    },
+
+    /**
+     * Neutralise le bouton/geste « Retour » du navigateur : au lieu de quitter
+     * MasterPaint, un Retour déclenche un Undo. On maintient en permanence une
+     * entrée « sentinelle » au sommet de l'historique pour capter le popstate
+     * sans jamais sortir de la page.
+     */
+    initBackButtonGuard() {
+        if (this._backGuardInstalled) return;
+
+        // (Re)pose l'entrée sentinelle au sommet de l'historique.
+        // @returns {boolean} false si la History API est indisponible (ex. file://).
+        const arm = () => {
+            try {
+                history.pushState({ mpGuard: true }, '', location.href);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        // Premier armement : si impossible, on n'installe pas les listeners
+        // (et on laisse _backGuardInstalled à false pour réessayer plus tard).
+        if (!arm()) return;
+        this._backGuardInstalled = true;
+
+        window.addEventListener('popstate', () => {
+            // Le Retour vient de consommer notre sentinelle : on la repose
+            // aussitôt pour rester sur la page, puis on déclenche l'Undo.
+            // window.undo est résolu dynamiquement (PhotoMode le remplace).
+            // → Pour que Retour ne fasse RIEN au lieu d'un Undo, supprimer la
+            //   ligne window.undo() ci-dessous.
+            arm();
+            if (typeof window.undo === 'function') window.undo();
+        });
+
+        // Retour via bfcache (page restaurée depuis le cache arrière du
+        // navigateur, fréquent sur mobile) : la sentinelle a disparu, on la
+        // repose pour rester captif de la page.
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) arm();
+        });
     },
 
     /** @returns {number} borne 5–500 */

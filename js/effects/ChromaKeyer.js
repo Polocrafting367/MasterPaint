@@ -37,13 +37,45 @@
         /** Core calculation of the matte (transparency factor 0-1) */
         computeMatte: function (pr, pg, pb, kr, kg, kb, params) {
             const labP = this.rgbToLab(pr, pg, pb);
-            const labK = this.rgbToLab(kr, kg, kb);
 
-            // Perceptual distance
-            let dL = labP[0] - labK[0];
-            const da = labP[1] - labK[1];
-            const db = labP[2] - labK[2];
-            
+            // Cache des Lab des couleurs-clés sur l'objet params : évite de recalculer
+            // rgbToLab(clé) à chaque pixel (gros gain de perf sur une image entière).
+            if (!params._labK) params._labK = this.rgbToLab(kr, kg, kb);
+            const labK = params._labK;
+
+            const chromaWeight = (params.drift || 50) / 100;
+            const wL = 1 - chromaWeight;   // poids de la composante luminance
+            const wC = 1 + chromaWeight;   // poids des composantes chroma (a,b)
+
+            // --- Point-clé de référence ---
+            // Mode 2 couleurs : on mesure la distance au SEGMENT [A → B] dans l'espace Lab
+            // (pondéré par drift). On capture ainsi tout un dégradé de fond sans gonfler
+            // le rayon de tolérance, ce qui affine fortement le détourage.
+            let Kc = labK;
+            const useKey2 = params.useKey2 && params.kr2 !== undefined && params.kr2 !== null;
+            if (useKey2) {
+                if (!params._labK2) params._labK2 = this.rgbToLab(params.kr2, params.kg2, params.kb2);
+                const labK2 = params._labK2;
+                // Vecteur du segment et projection pondérée de P sur [A,B]
+                const eL = labK2[0] - labK[0];
+                const ea = labK2[1] - labK[1];
+                const eb = labK2[2] - labK[2];
+                const segLen = wL * eL * eL + wC * (ea * ea + eb * eb);
+                if (segLen > 1e-6) {
+                    const pL = labP[0] - labK[0];
+                    const pa = labP[1] - labK[1];
+                    const pb2 = labP[2] - labK[2];
+                    let t = (wL * pL * eL + wC * (pa * ea + pb2 * eb)) / segLen;
+                    if (t < 0) t = 0; else if (t > 1) t = 1;
+                    Kc = [labK[0] + t * eL, labK[1] + t * ea, labK[2] + t * eb];
+                }
+            }
+
+            // Perceptual distance vers le point-clé le plus proche
+            let dL = labP[0] - Kc[0];
+            const da = labP[1] - Kc[1];
+            const db = labP[2] - Kc[2];
+
             const lumaProt = params.lumaProt || 0;
             if (lumaProt > 0) {
                 if (dL > 0 && labP[0] > 60) {
@@ -57,8 +89,7 @@
                 }
             }
 
-            const chromaWeight = (params.drift || 50) / 100;
-            const dist = Math.sqrt(dL * dL * (1 - chromaWeight) + (da * da + db * db) * (1 + chromaWeight));
+            const dist = Math.sqrt(dL * dL * wL + (da * da + db * db) * wC);
 
             const totalTol = params.tolerance || 30;
             const feather = params.feather || 15;
@@ -230,10 +261,20 @@
         getUI: function (i18n, currentValues = {}) {
             const t = (k, fb) => i18n ? (i18n.t ? i18n.t(k) : i18n(k)) : fb;
 
+            // Génère une ligne « slider + boîte éditable » (les deux restent synchronisés).
+            // L'id de la boîte reste `${id}-val` pour rester compatible avec la persistance/restauration.
+            const row = (id, label, min, max, value, step, unit) => `
+                <div class="field-row" style="align-items:center; gap:6px;">
+                    <label style="width:92px;">${label}</label>
+                    <input type="range" id="ef-ch-${id}" min="${min}" max="${max}" step="${step || 1}" value="${value}" style="flex:1;" oninput="ChromaKeyer.syncUI()">
+                    <input type="number" id="ef-ch-${id}-val" min="${min}" max="${max}" step="${step || 1}" value="${value}" style="width:48px; text-align:right;" oninput="ChromaKeyer.fromBox('${id}')">
+                    ${unit ? `<span style="width:10px; color:#777;">${unit}</span>` : '<span style="width:10px;"></span>'}
+                </div>`;
+
             return `
             <div class="chromakey-pro-dialog" style="font-size:11px; line-height:1.4;">
                 <p style="margin:0 0 8px; color:#444;">${t('chroma.desc', 'Module d\'incrustation haute précision avec moteur CIELAB.')}</p>
-                
+
                 <!-- BOUTONS DE PRÉRÉGLAGES -->
                 <div style="display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;">
                     <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('default')">${t('chroma.presetDefault', 'Défaut')}</button>
@@ -245,9 +286,11 @@
                 </div>
 
                 <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupSelection', '1. Sélection de la cible')}</legend>
+                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupSelection', '1. Couleurs cibles')}</legend>
+                    <!-- Couleur A -->
                     <div class="field-row" style="align-items:center; gap:8px;">
-                        <span id="ef-ch-swatch" style="width:32px; height:24px; border:1px solid #666; background:rgb(0,255,0); display:inline-block;"></span>
+                        <span id="ef-ch-swatch" style="width:30px; height:24px; border:1px solid #666; background:rgb(0,255,0); display:inline-block;"></span>
+                        <label style="width:14px; font-weight:bold;">A</label>
                         <div style="display:flex; gap:4px; align-items:center;">
                             <label>R</label><input type="number" id="ef-ch-r" min="0" max="255" value="${currentValues.r || 0}" style="width:40px;" oninput="ChromaKeyer.syncUI()">
                             <label>V</label><input type="number" id="ef-ch-g" min="0" max="255" value="${currentValues.g || 255}" style="width:40px;" oninput="ChromaKeyer.syncUI()">
@@ -255,59 +298,43 @@
                         </div>
                         <button type="button" id="ef-ch-pick-btn" class="tool-btn" style="padding:2px 8px;">${t('chroma.pipette', 'Pipette')}</button>
                     </div>
-                </fieldset>
-
-                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupMatte', '2. Affinage du masque')}</legend>
-                    <div class="field-row">
-                        <label style="width:80px;">${t('chroma.tolerance', 'Tolérance')}</label>
-                        <input type="range" id="ef-ch-tol" min="0" max="200" value="30" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-tol-val" style="width:30px; text-align:right;">30</span>
+                    <!-- Activation 2ᵉ couleur -->
+                    <div class="field-row" style="align-items:center; gap:6px; margin-top:6px; padding-top:6px; border-top:1px dashed #ccc;">
+                        <input type="checkbox" id="ef-ch-use2" style="margin:0;" onchange="ChromaKeyer.syncUI()">
+                        <label for="ef-ch-use2" style="cursor:pointer; color:#333;">${t('chroma.useKey2', '2ᵉ couleur (affine le dégradé de fond)')}</label>
                     </div>
-                    <div class="field-row">
-                        <label style="width:80px;">${t('chroma.feather', 'Transition')}</label>
-                        <input type="range" id="ef-ch-feather" min="0" max="100" value="15" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-feather-val" style="width:30px; text-align:right;">15</span>
-                    </div>
-                    <div class="field-row">
-                        <label style="width:80px;">${t('chroma.drift', 'Précision')}</label>
-                        <input type="range" id="ef-ch-drift" min="0" max="100" value="50" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-drift-val" style="width:30px; text-align:right;">50</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; padding-top:8px; border-top:1px dashed #ccc;">
-                        <div>
-                            <label style="display:block; font-size:9px;">${t('chroma.clipBlack', 'Clip Noir')}</label>
-                            <input type="range" id="ef-ch-black" min="0" max="100" value="0" style="width:100%;" oninput="ChromaKeyer.syncUI()">
+                    <!-- Couleur B -->
+                    <div class="field-row" id="ef-ch-rowB" style="align-items:center; gap:8px; margin-top:4px;">
+                        <span id="ef-ch-swatch2" style="width:30px; height:24px; border:1px solid #666; background:rgb(0,180,0); display:inline-block;"></span>
+                        <label style="width:14px; font-weight:bold;">B</label>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <label>R</label><input type="number" id="ef-ch-r2" min="0" max="255" value="0" style="width:40px;" oninput="ChromaKeyer.syncUI()">
+                            <label>V</label><input type="number" id="ef-ch-g2" min="0" max="255" value="180" style="width:40px;" oninput="ChromaKeyer.syncUI()">
+                            <label>B</label><input type="number" id="ef-ch-b2" min="0" max="255" value="0" style="width:40px;" oninput="ChromaKeyer.syncUI()">
                         </div>
-                        <div>
-                            <label style="display:block; font-size:9px;">${t('chroma.clipWhite', 'Clip Blanc')}</label>
-                            <input type="range" id="ef-ch-white" min="0" max="100" value="100" style="width:100%;" oninput="ChromaKeyer.syncUI()">
-                        </div>
+                        <button type="button" id="ef-ch-pick-btn2" class="tool-btn" style="padding:2px 8px;">${t('chroma.pipette', 'Pipette')}</button>
                     </div>
                 </fieldset>
 
                 <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupEdge', '3. Bords, Luma et Spill')}</legend>
-                    <div class="field-row">
-                        <label style="width:80px;">${t('chroma.lumaProt', 'Protég. Luma')}</label>
-                        <input type="range" id="ef-ch-luma" min="0" max="100" value="0" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-luma-val" style="width:30px; text-align:right;">0%</span>
-                    </div>
-                    <div class="field-row" style="margin-top:4px;">
-                        <label style="width:80px;">${t('chroma.recover', 'Récupérer Coul.')}</label>
-                        <input type="range" id="ef-ch-recover" min="0" max="100" value="0" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-recover-val" style="width:30px; text-align:right;">0%</span>
-                    </div>
-                    <div class="field-row" style="margin-top:4px;">
-                        <label style="width:80px;">${t('chroma.spill', 'Despill')}</label>
-                        <input type="range" id="ef-ch-spill" min="0" max="100" value="0" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-spill-val" style="width:30px; text-align:right;">0%</span>
-                    </div>
-                    <div class="field-row" style="margin-top:4px;">
-                        <label style="width:80px;">${t('chroma.gamma', 'Contraste α')}</label>
-                        <input type="range" id="ef-ch-gamma" min="0.1" max="3" step="0.1" value="1.0" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                        <span id="ef-ch-gamma-val" style="width:30px; text-align:right;">1.0</span>
-                    </div>
+                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupMatte', '2. Masque (sélection)')}</legend>
+                    ${row('tol', t('chroma.tolerance', 'Tolérance'), 0, 200, 30, 0.5)}
+                    ${row('feather', t('chroma.feather', 'Transition'), 0, 100, 15, 0.5)}
+                    ${row('drift', t('chroma.drift', 'Chroma / Luma'), 0, 100, 50, 1)}
+                </fieldset>
+
+                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
+                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupDensity', '3. Densité du masque')}</legend>
+                    ${row('black', t('chroma.clipBlack', 'Clip Noir'), 0, 100, 0, 1, '%')}
+                    ${row('white', t('chroma.clipWhite', 'Clip Blanc'), 0, 100, 100, 1, '%')}
+                    ${row('gamma', t('chroma.gamma', 'Contraste α'), 0.1, 3, 1.0, 0.05)}
+                </fieldset>
+
+                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
+                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupEdge', '4. Bords & couleur')}</legend>
+                    ${row('luma', t('chroma.lumaProt', 'Protég. Luma'), 0, 100, 0, 1, '%')}
+                    ${row('recover', t('chroma.recover', 'Récup. Coul.'), 0, 100, 0, 1, '%')}
+                    ${row('spill', t('chroma.spill', 'Despill'), 0, 100, 0, 1, '%')}
                 </fieldset>
 
                 <div style="margin-top:10px; display:flex; gap:8px;">
@@ -319,22 +346,49 @@
 
         _previewTimeout: null,
 
-        /** Helper to sync UI sliders to their labels and trigger preview */
+        /** Sliders réglables : recopie la valeur du slider dans sa boîte éditable */
+        SLIDER_IDS: ['tol', 'feather', 'drift', 'black', 'white', 'spill', 'recover', 'luma', 'gamma'],
+
+        /** Saisie manuelle dans une boîte numérique : recopie (en bornant) vers le slider */
+        fromBox: function (id) {
+            const slider = document.getElementById('ef-ch-' + id);
+            const box = document.getElementById('ef-ch-' + id + '-val');
+            if (!slider || !box) return;
+            let v = parseFloat(box.value);
+            if (!isFinite(v)) return; // laisse l'utilisateur finir de taper (champ vide / « - »)
+            const min = parseFloat(slider.min), max = parseFloat(slider.max);
+            if (v < min) v = min; else if (v > max) v = max;
+            slider.value = v;
+            this.syncUI();
+        },
+
+        /** Helper to sync UI sliders to their boxes/swatches and trigger preview */
         syncUI: function (skipPreview = false) {
-            const ids = ['tol', 'feather', 'drift', 'black', 'white', 'spill', 'recover', 'luma', 'gamma'];
-            ids.forEach(id => {
+            this.SLIDER_IDS.forEach(id => {
                 const el = document.getElementById('ef-ch-' + id);
-                const val = document.getElementById('ef-ch-' + id + '-val');
-                if (el && val) {
-                    val.innerText = (id === 'spill' || id === 'recover' || id === 'luma') ? el.value + '%' : el.value;
-                }
+                const box = document.getElementById('ef-ch-' + id + '-val');
+                // On ne réécrit pas la boîte qui a le focus (sinon on perturbe la frappe)
+                if (el && box && document.activeElement !== box) box.value = el.value;
             });
-            
+
             const r = document.getElementById('ef-ch-r')?.value || 0;
             const g = document.getElementById('ef-ch-g')?.value || 0;
             const b = document.getElementById('ef-ch-b')?.value || 0;
             const swatch = document.getElementById('ef-ch-swatch');
             if (swatch) swatch.style.background = `rgb(${r},${g},${b})`;
+
+            // Couleur B : pastille + griser la ligne quand la 2ᵉ couleur est désactivée
+            const use2 = document.getElementById('ef-ch-use2')?.checked;
+            const r2 = document.getElementById('ef-ch-r2')?.value || 0;
+            const g2 = document.getElementById('ef-ch-g2')?.value || 0;
+            const b2 = document.getElementById('ef-ch-b2')?.value || 0;
+            const swatch2 = document.getElementById('ef-ch-swatch2');
+            if (swatch2) swatch2.style.background = `rgb(${r2},${g2},${b2})`;
+            const rowB = document.getElementById('ef-ch-rowB');
+            if (rowB) {
+                rowB.style.opacity = use2 ? '1' : '0.4';
+                rowB.style.pointerEvents = use2 ? 'auto' : 'none';
+            }
 
             // On empêche le rendu si la pipette est active ou si on force le saut
             if (skipPreview || window._chromaKeyPickActive) return;

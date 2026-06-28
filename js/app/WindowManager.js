@@ -11,11 +11,13 @@ const WindowManager = {
         this._delegationBound = true;
 
         document.addEventListener(
-            'mousedown',
+            'pointerdown',
             (e) => {
+                // Souris : bouton gauche uniquement. Tactile / stylet : contact principal.
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                if (e.isPrimary === false) return;
                 const win = e.target.closest('.floating-window');
                 if (!win) return;
-                if (e.button !== 0) return;
                 this.bringToFront(win);
                 /* Panneau recadrage : ancré dans .illu-crop-panel-host — le drag briserait left/top (pas fixed). */
                 if (win.classList.contains('illu-crop-panel')) return;
@@ -30,6 +32,15 @@ const WindowManager = {
     },
 
     dragStart(e, win) {
+        const pointerId = e.pointerId;
+        // Empêche le défilement / la sélection pendant le glissement au doigt ou au stylet.
+        try {
+            e.preventDefault();
+        } catch (err) {
+            /* ignore */
+        }
+        const prevTouchAction = win.style.touchAction;
+        win.style.touchAction = 'none';
         const rect = win.getBoundingClientRect();
         const offsetX = e.clientX - rect.left;
         const offsetY = e.clientY - rect.top;
@@ -69,6 +80,8 @@ const WindowManager = {
         win.classList.add('dragging');
 
         const dragMove = (moveEv) => {
+            if (moveEv.pointerId !== pointerId) return;
+            if (moveEv.cancelable) moveEv.preventDefault();
             let newX;
             let newY;
             if (useViewport) {
@@ -146,9 +159,12 @@ const WindowManager = {
             }
         };
 
-        const dragEnd = () => {
-            document.removeEventListener('mousemove', dragMove);
-            document.removeEventListener('mouseup', dragEnd);
+        const dragEnd = (endEv) => {
+            if (endEv && endEv.pointerId != null && endEv.pointerId !== pointerId) return;
+            document.removeEventListener('pointermove', dragMove);
+            document.removeEventListener('pointerup', dragEnd);
+            document.removeEventListener('pointercancel', dragEnd);
+            win.style.touchAction = prevTouchAction;
             win.classList.remove('dragging');
 
             // -- Smart Anchoring Logic --
@@ -191,8 +207,9 @@ const WindowManager = {
             }
         };
 
-        document.addEventListener('mousemove', dragMove);
-        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('pointermove', dragMove, { passive: false });
+        document.addEventListener('pointerup', dragEnd);
+        document.addEventListener('pointercancel', dragEnd);
         this.bringToFront(win);
     },
 

@@ -49,6 +49,52 @@ html {
 
 .floating-window .title-bar {
     cursor: move;
+    /* Glissement au doigt / stylet : empêche le défilement de capturer le geste sur la barre de titre. */
+    touch-action: none;
+}
+
+/* Dialogue de choix d'import / collage : icônes + prévisualisation. */
+.illu-import-choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+}
+.illu-import-choice-ico {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    opacity: 0.85;
+}
+.illu-import-preview {
+    display: none;
+    margin: 10px 0 2px;
+    padding: 6px;
+    border: 1px inset #fff;
+    background:
+        linear-gradient(45deg, #cfcfcf 25%, transparent 25%),
+        linear-gradient(-45deg, #cfcfcf 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #cfcfcf 75%),
+        linear-gradient(-45deg, transparent 75%, #cfcfcf 75%),
+        #fff;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    text-align: center;
+}
+.illu-import-preview.has-image {
+    display: block;
+}
+.illu-import-preview canvas,
+.illu-import-preview img {
+    max-width: 100%;
+    max-height: 140px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+    vertical-align: middle;
+}
+.illu-import-preview-dims {
+    margin-top: 5px;
+    font-size: 11px;
+    opacity: 0.8;
 }
 
 body.effect-dialog-open #win-tools,
@@ -4178,6 +4224,27 @@ body.theme-dark .tab-bar-inner .tab .tab-thumb {
 #settings-overlay .settings-table-control:has(.illu-settings-scope-btn-row),
 #welcome-overlay .settings-table-control:has(.illu-settings-scope-btn-row) {
     width: 100% !important;
+}
+
+/* Thème d'interface : catégories (Windows / macOS) empilées */
+.illu-theme-variant-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.illu-theme-variant-control .illu-theme-cat-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    opacity: .55;
+    margin: 2px 0 0;
+}
+.illu-theme-variant-control .illu-theme-cat-label:first-child {
+    margin-top: 0;
+}
+.illu-theme-variant-control .illu-theme-variant-row {
+    margin-bottom: 2px;
 }
 
 #tool-line-mode-row .illu-scope-btn-row {

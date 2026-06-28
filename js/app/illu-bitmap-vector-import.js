@@ -170,6 +170,9 @@
             }
             return;
         }
+        if (window.EditorManager && typeof window.EditorManager._renderImportChoicePreview === 'function') {
+            window.EditorManager._renderImportChoicePreview(img, 'vector-import-preview');
+        }
         ov.style.display = 'flex';
     };
 

@@ -1659,6 +1659,21 @@ window.updateToolOptionsBar = function () {
         document.getElementById('select-free-corners-row');
     const showFreeCornersBtn = ['select', 'wand', 'direct-select', 'deform', 'warp-4'].includes(t);
     if (freeCornersRow) freeCornersRow.hidden = !showFreeCornersBtn;
+    // Bouton « Éditer les nœuds » — visible pour l'outil Sélection (vecteur) quand un tracé est sélectionné.
+    const nodeEditWrap = document.getElementById('select-node-edit-wrap');
+    if (nodeEditWrap) {
+        const sel = (EditorManager.activeVectorSelection || []);
+        const hasEditablePath = EditorManager.mode === 'vector' && t === 'select' && sel.some(el => {
+            const tag = (el.tagName || '').toLowerCase();
+            return tag === 'path' || tag === 'polygon' || tag === 'polyline';
+        });
+        nodeEditWrap.hidden = !hasEditablePath;
+        if (!hasEditablePath && window._illuForceNodeMode) {
+            window._illuForceNodeMode = false;
+        }
+        const nodeEditBtn = document.getElementById('select-node-edit-btn');
+        if (nodeEditBtn) nodeEditBtn.setAttribute('aria-pressed', window._illuForceNodeMode ? 'true' : 'false');
+    }
     const shapeFreeCornersWrap = document.getElementById('tool-shape-free-corners-wrap');
     if (shapeFreeCornersWrap) shapeFreeCornersWrap.hidden = t !== 'rect' && t !== 'round-3';
     if (typeof window.syncSelectionRectFreeCornersArmUI === 'function') {
@@ -3234,8 +3249,27 @@ function illuBrushUsesStampMode(tool) {
     if (pat === 'spray') return false;
     if (pat === 'soft') return tool === 'brush' || tool === 'eraser';
     const h = EditorManager.toolProps.brushHardness != null ? EditorManager.toolProps.brushHardness : 100;
-    if (tool === 'brush' || tool === 'eraser') return h < 100;
+    if (tool === 'brush') {
+        // Pinceau anticrénelé : toujours en mode tampon sur-échantillonné (bords lissés
+        // + prise en charge de la pression du stylet). Désactivable via toolProps.antialias.
+        if (EditorManager.toolProps.antialias !== false) return true;
+        return h < 100;
+    }
+    if (tool === 'eraser') return h < 100;
     return false;
+}
+
+/**
+ * Taille effective du tampon de pinceau : module la taille de base selon la pression
+ * du stylet (window._illuStrokePenPressure). Souris/doigt → pression 1 (aucun effet).
+ */
+window._illuStrokePenPressure = 1;
+function illuEffectiveBrushSize() {
+    const base = Math.max(1, EditorManager.toolProps.size || 5);
+    const p = window._illuStrokePenPressure;
+    if (p == null || p >= 1) return base;
+    const f = 0.25 + 0.75 * Math.max(0, Math.min(1, p));
+    return Math.max(1, base * f);
 }
 
 /** Crayon : bloc carré aligné sur la grille pixel, sans anticrénelage ni dureté. */
@@ -3275,93 +3309,84 @@ function illuBrushStampSpacing(lw) {
     return Math.min(s, lw * 0.5);
 }
 
-function stampBrushDisc(ctx, cx, cy, diameter, hardnessPct, rgb, isEraser) {
-    const R = Math.max(0.5, diameter / 2);
+/**
+ * Tampon de pinceau sur-échantillonné : on dessine la forme dans une tuile interne
+ * à 2× la résolution, puis on la recopie réduite avec lissage de haute qualité sur
+ * le calque. Résultat : des bords réellement anticrénelés (lisses) même à 100 %,
+ * pour le pinceau, la gomme douce, les motifs et les pointes personnalisées.
+ * Le crayon, lui, garde son rendu pixel brut (il n'utilise pas cette fonction).
+ */
+let _illuStampTileCanvas = null;
+function illuStampSupersampled(destCtx, cx, cy, R, isEraser, paint) {
+    const SS = 2; // facteur de sur-échantillonnage
+    const pad = 2;
+    const tile = Math.max(2, Math.ceil(R * 2 + pad * 2));
+    const w = tile * SS;
+    if (!_illuStampTileCanvas) _illuStampTileCanvas = document.createElement('canvas');
+    const c = _illuStampTileCanvas;
+    if (c.width !== w || c.height !== w) {
+        c.width = w;
+        c.height = w;
+    }
+    const tctx = c.getContext('2d', { willReadFrequently: false });
+    tctx.setTransform(1, 0, 0, 1, 0, 0);
+    tctx.clearRect(0, 0, w, w);
+    tctx.save();
+    tctx.scale(SS, SS);
+    // La forme est centrée dans la tuile ; elle sera replacée sur (cx, cy) ci-dessous.
+    paint(tctx, tile / 2, tile / 2);
+    tctx.restore();
+
+    destCtx.save();
+    destCtx.imageSmoothingEnabled = true;
+    if (typeof destCtx.imageSmoothingQuality === 'string') destCtx.imageSmoothingQuality = 'high';
+    destCtx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    destCtx.drawImage(c, 0, 0, w, w, cx - tile / 2, cy - tile / 2, tile, tile);
+    destCtx.restore();
+}
+
+function illuStampHardnessGradient(tctx, tx, ty, R, hardnessPct, rgb, isEraser) {
     const hf = Math.max(0, Math.min(100, hardnessPct)) / 100;
     const innerR = R * hf;
     const ir = R > 1e-6 ? innerR / R : 0;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    if (isEraser) {
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        if (innerR >= R - 0.05) {
-            grad.addColorStop(1, 'rgba(0,0,0,1)');
-        } else {
-            grad.addColorStop(Math.min(0.999, Math.max(0.001, ir)), 'rgba(0,0,0,1)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-        }
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, R, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+    const col = isEraser ? '0,0,0' : `${rgb.r},${rgb.g},${rgb.b}`;
+    const grad = tctx.createRadialGradient(tx, ty, 0, tx, ty, R);
+    grad.addColorStop(0, `rgba(${col},1)`);
+    if (innerR >= R - 0.05) {
+        grad.addColorStop(1, `rgba(${col},1)`);
     } else {
-        const { r, g, b } = rgb;
-        grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
-        if (innerR >= R - 0.05) {
-            grad.addColorStop(1, `rgba(${r},${g},${b},1)`);
-        } else {
-            grad.addColorStop(Math.min(0.999, Math.max(0.001, ir)), `rgba(${r},${g},${b},1)`);
-            grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        }
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, R, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        grad.addColorStop(Math.min(0.999, Math.max(0.001, ir)), `rgba(${col},1)`);
+        grad.addColorStop(1, `rgba(${col},0)`);
     }
+    return grad;
+}
+
+function stampBrushDisc(ctx, cx, cy, diameter, hardnessPct, rgb, isEraser) {
+    const R = Math.max(0.5, diameter / 2);
+    illuStampSupersampled(ctx, cx, cy, R, isEraser, (tctx, tx, ty) => {
+        tctx.fillStyle = illuStampHardnessGradient(tctx, tx, ty, R, hardnessPct, rgb, isEraser);
+        tctx.beginPath();
+        tctx.arc(tx, ty, R, 0, Math.PI * 2);
+        tctx.fill();
+    });
 }
 
 function stampBrushSquare(ctx, cx, cy, side, hardnessPct, rgb, isEraser) {
     const half = side / 2;
-    const x0 = cx - half;
-    const y0 = cy - half;
     const R = Math.hypot(half, half);
-    const hf = Math.max(0, Math.min(100, hardnessPct)) / 100;
-    const innerR = R * hf;
-    const ir = R > 1e-6 ? innerR / R : 0;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    if (isEraser) {
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        if (innerR >= R - 0.05) {
-            grad.addColorStop(1, 'rgba(0,0,0,1)');
-        } else {
-            grad.addColorStop(Math.min(0.999, Math.max(0.001, ir)), 'rgba(0,0,0,1)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-        }
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x0, y0, side, side);
-        ctx.clip();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = grad;
-        ctx.fillRect(x0, y0, side, side);
-        ctx.restore();
-    } else {
-        const { r, g, b } = rgb;
-        grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
-        if (innerR >= R - 0.05) {
-            grad.addColorStop(1, `rgba(${r},${g},${b},1)`);
-        } else {
-            grad.addColorStop(Math.min(0.999, Math.max(0.001, ir)), `rgba(${r},${g},${b},1)`);
-            grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        }
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x0, y0, side, side);
-        ctx.clip();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = grad;
-        ctx.fillRect(x0, y0, side, side);
-        ctx.restore();
-    }
+    illuStampSupersampled(ctx, cx, cy, R, isEraser, (tctx, tx, ty) => {
+        const x0 = tx - half;
+        const y0 = ty - half;
+        tctx.beginPath();
+        tctx.rect(x0, y0, side, side);
+        tctx.clip();
+        tctx.fillStyle = illuStampHardnessGradient(tctx, tx, ty, R, hardnessPct, rgb, isEraser);
+        tctx.fillRect(x0, y0, side, side);
+    });
 }
 
 function stampBrushAt(ctx, tool, lx, ly) {
-    const lw = Math.max(1, EditorManager.toolProps.size || 5);
+    const lw = Math.max(1, illuEffectiveBrushSize());
     const pat = EditorManager.toolProps.brushPattern || 'round';
 
     // CUSTOM BRUSH TIP SUPPORT
@@ -3562,7 +3587,7 @@ window.captureSelectionAsFillPattern = function () {
 };
 
 function stampBrushSegment(ctx, tool, x0, y0, x1, y1) {
-    const lw = Math.max(1, EditorManager.toolProps.size || 5);
+    const lw = Math.max(1, illuEffectiveBrushSize());
     const step = illuBrushStampSpacing(lw);
     const dist = Math.hypot(x1 - x0, y1 - y0);
     if (dist < step * 0.35) {
@@ -4817,6 +4842,9 @@ function initTools() {
     if (typeof window.illuWireSelectRectFreeCornersButtons === 'function') {
         window.illuWireSelectRectFreeCornersButtons();
     }
+    if (typeof window.illuWireSelectNodeEditButton === 'function') {
+        window.illuWireSelectNodeEditButton();
+    }
     if (typeof window.illuWireShapeRectFreeCornersButtons === 'function') {
         window.illuWireShapeRectFreeCornersButtons();
     }
@@ -4870,6 +4898,9 @@ function initTools() {
         } catch (err) {
             /* ignore */
         }
+        // Pression du stylet (crayon tactile) : module la taille du pinceau. Souris/doigt → 1.
+        window._illuStrokePenPressure =
+            e.pointerType === 'pen' ? Math.max(0.05, Math.min(1, e.pressure || 0.5)) : 1;
         handleMouseDown(e);
     };
 
@@ -4881,6 +4912,8 @@ function initTools() {
         if (list.length === 0) return;
         const latest = list[list.length - 1];
         window._shiftConstraintProportions = latest.shiftKey;
+        window._illuStrokePenPressure =
+            latest.pointerType === 'pen' ? Math.max(0.05, Math.min(1, latest.pressure || 0.5)) : 1;
         trackClient(latest);
         if (!window._illuPointerMoveThrottled) {
             window._illuPointerMoveThrottled = true;
@@ -4921,6 +4954,41 @@ function initTools() {
         EditorManager.deselectAll();
         if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
     });
+    // Escape (outil Sélection) : sortir d'abord du mode édition de nœuds, puis désélectionner.
+    window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
+        if (EditorManager.mode !== 'vector' || window.activeTool !== 'select') return;
+        if (currentElement) return;
+        if (window._illuForceNodeMode) {
+            window._illuForceNodeMode = false;
+            if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            e.preventDefault();
+            return;
+        }
+        const sel = EditorManager.activeVectorSelection;
+        if (sel && sel.length) {
+            e.preventDefault();
+            EditorManager.deselectAll();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+        }
+    });
+    // Entrée : valider un tracé plume/polygone en cours (équivalent au double-clic).
+    window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        if (typeof isFormFieldTarget === 'function' && isFormFieldTarget(e.target)) return;
+        if (EditorManager.mode !== 'vector') return;
+        const VE = window.VectorEngine;
+        if (!VE) return;
+        if (window.activeTool === 'pen' && VE.isPenActive()) {
+            e.preventDefault();
+            VE.penCommit();
+        } else if (window.activeTool === 'polygon' && VE.isPolygonActive()) {
+            e.preventDefault();
+            VE.polygonCommit();
+        }
+    });
     const onPointerUpWin = (e) => {
         if (e.isPrimary === false) return;
         try {
@@ -4938,6 +5006,7 @@ function initTools() {
         if (e.pointerType === 'touch' || e.pointerType === 'pen') {
             window._illuSuppressCanvasMouseUntil = performance.now() + 120;
         }
+        window._illuStrokePenPressure = 1;
         handleMouseUp(e);
     };
 
@@ -4997,13 +5066,20 @@ function initTools() {
             };
             const hit = window.VectorEngine && window.VectorEngine.hitTest ? window.VectorEngine.hitTest(pos, e) : null;
             if (hit && (hit.tagName.toLowerCase() === 'path' || hit.tagName.toLowerCase() === 'polygon' || hit.tagName.toLowerCase() === 'polyline')) {
+                // S'assurer que l'élément double-cliqué est bien la sélection active avant d'éditer ses nœuds.
+                if (!EditorManager.activeVectorSelection.includes(hit)) {
+                    EditorManager.activeVectorSelection = [hit];
+                    window._activeVectorShapeEl = hit;
+                }
                 window._illuForceNodeMode = !window._illuForceNodeMode;
                 window.VectorEngine.refreshSelectionUI();
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
                 e.preventDefault();
                 return;
             } else {
                 window._illuForceNodeMode = false;
                 if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+                if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
             }
         }
         const VE = window.VectorEngine;
@@ -9085,7 +9161,8 @@ function startVector(pos, e) {
             } else {
                 if (!EditorManager.activeVectorSelection.includes(hit)) {
                     // Do not overwrite selection if we clicked a UI handle
-                    const isNodeHandle = (window.activeTool === 'direct-select') && (hit.classList && (hit.classList.contains('ve-node-handle') || hit.classList.contains('ve-cp-handle')));
+                    const inNodeEditMode = window.activeTool === 'direct-select' || (window.activeTool === 'select' && window._illuForceNodeMode);
+                    const isNodeHandle = inNodeEditMode && (hit.classList && (hit.classList.contains('ve-node-handle') || hit.classList.contains('ve-cp-handle')));
                     const isResizeHandle = hit.classList && hit.classList.contains('svg-resize-handle');
                     if (!isNodeHandle && !isResizeHandle) {
                         EditorManager.activeVectorSelection = [hit];
@@ -11998,6 +12075,20 @@ window.illuWireSelectRectFreeCornersButtons = function () {
     btn.addEventListener('click', handler);
 };
 
+// Bouton « Éditer les nœuds » de l'outil Sélection tout-en-un : bascule le mode nœud à la volée.
+window.illuWireSelectNodeEditButton = function () {
+    const btn = document.getElementById('select-node-edit-btn');
+    if (!btn || btn.dataset.illuNodeEditWired === '1') return;
+    btn.dataset.illuNodeEditWired = '1';
+    btn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        window._illuForceNodeMode = !window._illuForceNodeMode;
+        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+    });
+};
+
 window.illuWireWarpBarButtons = function () {
     const snapBtn = document.getElementById('warp-quad-snap-rect-btn');
     if (snapBtn && snapBtn.dataset.illuWired !== '1') {
@@ -14820,6 +14911,28 @@ function handleMouseUp(e) {
                 window.illuSyncVectorSelectionUI();
             } else {
                 generateAnchors(created);
+            }
+            // Édition à la volée : après une forme fermée, basculer sur l'outil Sélection pour
+            // manipuler immédiatement (déplacer/redimensionner/pivoter) sans changer d'outil à la main.
+            // Désactivable via EditorManager.toolProps.svgSelectAfterDraw = false.
+            const ILLU_CLOSED_SHAPE_TOOLS = ['rect', 'circle', 'round-3', 'triangle', 'star', 'reg-poly', 'diamond', 'trapezoid', 'parallelogram', 'triangle-right', 'callout'];
+            if (EditorManager.toolProps.svgSelectAfterDraw !== false && ILLU_CLOSED_SHAPE_TOOLS.includes(tool)) {
+                const keepSel = created;
+                setTimeout(() => {
+                    if (EditorManager.mode !== 'vector') return;
+                    if (typeof window.activateIlluToolButtonById === 'function') {
+                        window.activateIlluToolButtonById('tool-select');
+                    } else {
+                        const b = document.getElementById('tool-select');
+                        if (b) b.click();
+                    }
+                    if (keepSel && keepSel.parentNode) {
+                        EditorManager.activeVectorSelection = [keepSel];
+                        window._activeVectorShapeEl = keepSel;
+                        if (window.VectorEngine) window.VectorEngine.refreshSelectionUI();
+                        if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+                    }
+                }, 0);
             }
         }
         if (hadNewShape || hadVectorAnchorDrag) {

@@ -10,33 +10,80 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>MasterPaint 98 - Éditeur Photo en Ligne (Alternative Paint.NET)</title>
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="MasterPaint 98 est un puissant éditeur d'images en ligne gratuit, conçu une alternative à Paint.NET. Retouchez vos photos avec des calques, filtres et outils professionnels directement dans votre navigateur.">
-    <meta name="keywords" content="paint.net, paint.net online, éditeur photo en ligne, retouche photo, alternative paint.net, image editor online, photoshop online, dessin, calques, masterpaint">
+    <title>MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET</title>
+
+    <!-- SEO Meta Tags (FR + EN) -->
+    <meta name="description" content="MasterPaint, l'éditeur photo professionnel en ligne et 100 % gratuit : l'alternative à Paint.NET qui tourne directement dans le navigateur, sur Linux et macOS, sans installation. — A free, professional online photo editor: the Paint.NET alternative running right in your browser, on Linux and macOS, no install required.">
+    <meta name="keywords" content="paint.net, paint.net linux, paint.net macos, paint.net mac, alternative paint.net, paint.net en ligne, paint.net online, éditeur photo en ligne, éditeur photo gratuit, éditeur photo linux, éditeur photo mac, retouche photo en ligne, online photo editor, free photo editor, photo editor linux, photo editor macos, image editor online, calques, filtres, masterpaint">
     <meta name="author" content="Polocrafting367">
     <meta name="robots" content="index, follow">
+    <meta name="language" content="fr, en">
+    <meta http-equiv="content-language" content="fr, en">
+    <link rel="canonical" href="https://masterpaint.fr/">
 
-    <!-- Open Graph / Réseaux Sociaux -->
+    <!-- Open Graph / Réseaux sociaux -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://polocrafting.fr/MasterPaint/">
-    <meta property="og:title" content="MasterPaint 98 - L'éditeur photo en ligne style Paint.NET">
-    <meta property="og:description" content="Éditez vos images gratuitement dans votre navigateur avec une interface professionnelle et des outils avancés (calques, filtres).">
-    <meta property="og:image" content="https://polocrafting.fr/MasterPaint/icons/icon-512.png">
-    
+    <meta property="og:site_name" content="MasterPaint">
+    <meta property="og:url" content="https://masterpaint.fr/">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:title" content="MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET">
+    <meta property="og:description" content="Retouchez vos photos gratuitement dans le navigateur : l'alternative à Paint.NET pour Linux et macOS, avec calques, filtres et outils pro. — Free, professional photo editing in your browser: the Paint.NET alternative for Linux & macOS.">
+    <meta property="og:image" content="https://masterpaint.fr/IMG/illu.jpeg">
+    <meta property="og:image:secure_url" content="https://masterpaint.fr/IMG/illu.jpeg">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1662">
+    <meta property="og:image:height" content="918">
+    <meta property="og:image:alt" content="Aperçu de l'interface de MasterPaint, éditeur photo en ligne">
+    <!-- image_src : ancien indice d'image d'illustration encore lu par certains crawlers -->
+    <link rel="image_src" href="https://masterpaint.fr/IMG/illu.jpeg">
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MasterPaint 98 - L'éditeur photo en ligne style Paint.NET">
-    <meta name="twitter:description" content="Éditez vos images gratuitement dans votre navigateur avec une interface professionnelle et des outils avancés (calques, filtres).">
-    <meta name="twitter:image" content="https://polocrafting.fr/MasterPaint/icons/icon-512.png">
+    <meta name="twitter:title" content="MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET">
+    <meta name="twitter:description" content="L'alternative à Paint.NET, en ligne et gratuite, sur Linux et macOS. — The free, online Paint.NET alternative for Linux & macOS.">
+    <meta name="twitter:image" content="https://masterpaint.fr/IMG/illu.jpeg">
+    <meta name="twitter:image:alt" content="Aperçu de l'interface de MasterPaint, éditeur photo en ligne">
+
+    <!-- Données structurées (résultats enrichis Google) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MasterPaint",
+      "alternateName": "MasterPaint — Online Paint.NET alternative",
+      "url": "https://masterpaint.fr/",
+      "image": "https://masterpaint.fr/IMG/illu.jpeg",
+      "screenshot": "https://masterpaint.fr/IMG/illu.jpeg",
+      "applicationCategory": "MultimediaApplication",
+      "applicationSubCategory": "Photo Editor",
+      "operatingSystem": "Linux, macOS, Web",
+      "inLanguage": ["fr", "en"],
+      "browserRequirements": "Requires JavaScript. Runs in any modern web browser.",
+      "description": "MasterPaint est un éditeur de photo professionnel en ligne et gratuit, alternative à Paint.NET fonctionnant sur Linux et macOS, directement dans le navigateur. A free, professional online photo editor and Paint.NET alternative for Linux and macOS, running entirely in the browser.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Polocrafting367",
+        "url": "https://polocrafting.fr/"
+      }
+    }
+    </script>
     
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <!-- favicon.ico à la racine : indispensable pour Google/Bing qui requêtent /favicon.ico par défaut -->
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
@@ -45,6 +92,9 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/theme-win98-modern.css" id="theme-link-classic" disabled>
     <link rel="stylesheet" href="css/theme-win10-flat.css" id="theme-link-flat">
+    <!-- Thèmes macOS : surcouche chrome appliquée par-dessus theme-win10-flat.css (base structurelle plate) -->
+    <link rel="stylesheet" href="css/theme-mac-lion.css" id="theme-link-maclion" disabled>
+    <link rel="stylesheet" href="css/theme-mac-modern.css" id="theme-link-macmodern" disabled>
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/photo-mode.css">
@@ -1453,6 +1503,11 @@
                                             <use href="#illu-icon-sel-free-corners" />
                                         </svg><span class="illu-mode-toggle-lbl" data-i18n="tools.selectFreeCornersShort">4 coins</span></button>
                                 </span>
+                                <span class="illu-mode-toggle-item illu-mode-toggle-item--unified illu-toggle-layout--inline" id="select-node-edit-wrap" hidden>
+                                    <button type="button" id="select-node-edit-btn" class="illu-icon-toggle illu-mode-toggle-btn"
+                                        aria-pressed="false" data-i18n-title="tools.selectNodeEdit" title="Éditer les nœuds (double-clic)"><i
+                                            class="fa-solid fa-bezier-curve" aria-hidden="true"></i><span class="illu-mode-toggle-lbl" data-i18n="tools.selectNodeEditShort">Nœuds</span></button>
+                                </span>
                                 <span class="illu-mode-toggle-item illu-mobile-ribbon-only"
                                     id="illu-mobile-ribbon-deselect-wrap" hidden>
                                     <button type="button" id="opt-ribbon-deselect"
@@ -2650,8 +2705,9 @@
 
                 <aside id="palette-dock-right" class="palette-dock palette-dock--right" aria-label="Palettes droite"
                     data-i18n-aria-label="dock.right">
-                    <!-- Mode Photoshop : hôte d'accueil des options d'outil (relogées par app.js) -->
-                    <div id="dock-tool-options-host" class="dock-tool-options-host"></div>
+                    <!-- Mode Photoshop : hôte d'accueil des options d'outil (relogées par app.js).
+                         data-illu-section-label : titre de section affiché via ::before (thème Photoshop). -->
+                    <div id="dock-tool-options-host" class="dock-tool-options-host" data-illu-section-label="Options"></div>
                     <!-- Calques -->
                     <div id="win-layers" class="window palette-panel">
                         <div class="title-bar">
@@ -3373,13 +3429,26 @@
             </div>
             <div class="window-body">
                 <p data-i18n="dlg.importHow">Comment souhaitez-vous…</p>
+                <div id="import-choice-preview" class="illu-import-preview" aria-hidden="true"></div>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                    <button type="button" id="btn-import-layer" style="min-width: 100%;"
-                        data-i18n="dlg.importLayer">Nouveau calque…</button>
-                    <button type="button" id="btn-import-current" style="min-width: 100%;"
-                        data-i18n="dlg.importCurrentLayer">Coller sur le calque actif…</button>
-                    <button type="button" id="btn-import-tab" style="min-width: 100%;" data-i18n="dlg.importTab">Nouvel
-                        onglet…</button>
+                    <button type="button" id="btn-import-layer" class="illu-import-choice-btn" style="min-width: 100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M8 1.5 14.5 5 8 8.5 1.5 5Z" /><path d="M2 8l6 3.2L14 8" /><path d="M2 11l6 3.2L14 11" />
+                        </svg><span data-i18n="dlg.importLayer">Nouveau calque…</span>
+                    </button>
+                    <button type="button" id="btn-import-current" class="illu-import-choice-btn" style="min-width: 100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                            <rect x="3" y="2.5" width="10" height="12" rx="1.2" /><path d="M6 2.5V1.8a.8.8 0 0 1 .8-.8h2.4a.8.8 0 0 1 .8.8v.7" /><path d="M6 7.5h4M6 10h4" />
+                        </svg><span data-i18n="dlg.importCurrentLayer">Coller sur le calque actif…</span>
+                    </button>
+                    <button type="button" id="btn-import-tab" class="illu-import-choice-btn" style="min-width: 100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                            <rect x="2" y="3.5" width="12" height="10" rx="1.2" /><path d="M2 6h12" /><path d="M8 8.5v3M6.5 10h3" />
+                        </svg><span data-i18n="dlg.importTab">Nouvel onglet…</span>
+                    </button>
                 </div>
                 <div style="text-align: right; margin-top: 10px;">
                     <button type="button"
@@ -3423,13 +3492,26 @@
             <div class="window-body">
                 <p style="margin-top:0;font-size:12px;line-height:1.4;">Choisissez comment intégrer ce bitmap dans le
                     document vectoriel.</p>
+                <div id="vector-import-preview" class="illu-import-preview" aria-hidden="true"></div>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-                    <button type="button" id="btn-vector-import-embed" style="min-width:100%;">Intégrer le bitmap
-                        (balise SVG image)</button>
-                    <button type="button" id="btn-vector-import-vectorize" style="min-width:100%;">Vectoriser en formes
-                        SVG…</button>
-                    <button type="button" id="btn-vector-import-pixel-tab" style="min-width:100%;">Ouvrir en projet
-                        pixel (nouvel onglet)</button>
+                    <button type="button" id="btn-vector-import-embed" class="illu-import-choice-btn" style="min-width:100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="2" y="3" width="12" height="10" rx="1.2" /><path d="m4 11 3-3.2 2.2 2.2L11.5 7 14 9.5" /><circle cx="6" cy="6" r="1.1" />
+                        </svg><span>Intégrer le bitmap (balise SVG image)</span>
+                    </button>
+                    <button type="button" id="btn-vector-import-vectorize" class="illu-import-choice-btn" style="min-width:100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                            <path d="M3 12.5C5 6 11 6 13 3.5" /><circle cx="3" cy="12.5" r="1.4" /><circle cx="13" cy="3.5" r="1.4" />
+                        </svg><span>Vectoriser en formes SVG…</span>
+                    </button>
+                    <button type="button" id="btn-vector-import-pixel-tab" class="illu-import-choice-btn" style="min-width:100%;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                            <rect x="2" y="3.5" width="12" height="10" rx="1.2" /><path d="M2 6h12" /><path d="M8 8.5v3M6.5 10h3" />
+                        </svg><span>Ouvrir en projet pixel (nouvel onglet)</span>
+                    </button>
                 </div>
                 <div style="text-align:right;margin-top:10px;">
                     <button type="button" data-vector-import-cancel>Annuler</button>
@@ -3807,10 +3889,16 @@
                                     <div class="settings-table-main">
                                         <div class="settings-table-title" data-i18n="settings.themeLabel">Thème d'interface</div>
                                     </div>
-                                    <div class="settings-table-control">
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="welcome-ui-base-row" role="group">
-                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="classic" aria-pressed="true">Windows 98</button>
-                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="flat" aria-pressed="false">Flat Design</button>
+                                    <div class="settings-table-control illu-theme-variant-control">
+                                        <div class="illu-theme-cat-label">Windows</div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="welcome-ui-base-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
+                                        </div>
+                                        <div class="illu-theme-cat-label" style="display:none;">macOS</div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="welcome-ui-base-row-mac" role="group" style="display:none;">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
                                     </div>
                                 </div>
@@ -4089,10 +4177,16 @@
                                     <div class="settings-table-main">
                                         <div class="settings-table-title" data-i18n="settings.themeLabel">Thème d'interface</div>
                                     </div>
-                                    <div class="settings-table-control">
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-ui-base-row" role="group">
-                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="classic" aria-pressed="true">Windows 98</button>
-                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="flat" aria-pressed="false">Flat Design</button>
+                                    <div class="settings-table-control illu-theme-variant-control">
+                                        <div class="illu-theme-cat-label">Windows</div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="settings-ui-base-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
+                                        </div>
+                                        <div class="illu-theme-cat-label" style="display:none;">macOS</div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="settings-ui-base-row-mac" role="group" style="display:none;">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
                                     </div>
                                 </div>
@@ -4710,10 +4804,13 @@
                 localStorage.setItem('app_device_id', deviceId);
             }
 
-            // 2. Envoyer les données
-            fetch('/track.php', {
+            // 2. Envoyer les données (backend hébergé sur polocrafting.fr, origine absolue
+            //    pour fonctionner depuis masterpaint.fr comme depuis polocrafting.fr).
+            //    Content-Type "text/plain" = requête CORS « simple » : pas de préflight OPTIONS.
+            //    Le corps reste du JSON, lu côté PHP via php://input + json_decode.
+            fetch('https://polocrafting.fr/track.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
                 body: JSON.stringify({
                     deviceId: deviceId,
                     page: pageName
@@ -4948,7 +5045,7 @@
             }
         });
     </script>
-    <script src="js/contact.js"></script>
+    <script src="js/contact.js?v=20260628-cors"></script>
     <script src="js/VectorProperties.js"></script>
     <script id="popover-fallback-script">
         document.addEventListener('beforetoggle', (e) => {

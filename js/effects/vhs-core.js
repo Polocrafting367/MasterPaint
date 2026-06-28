@@ -18,6 +18,7 @@
         crop_padding: 6,
         crop_feather: 4,
         pixel_size: 1,
+        band_patina: 0.9,
         apply_jpeg: false,
         jpeg_quality: 86,
         chroma_blur: 25,
@@ -62,31 +63,47 @@
         cast_b: -10
     };
 
+    // Presets alignés sur VIDEO/js/app.js (Analog Video Processor Pro).
     const ILLU_VHS_PRESETS = {
         default: ILLU_VHS_DEFAULTS,
         pro: Object.assign({}, ILLU_VHS_DEFAULTS, {
-            apply_jpeg: true, jpeg_quality: 92, crop_padding: 8, crop_feather: 8,
+            apply_jpeg: false, jpeg_quality: 92, crop_padding: 8, crop_feather: 8,
             chroma_blur: 15, chroma_bleed: 45, chroma_saturation: 1.5, edge_sat: 3.0,
-            shift_r: -6, shift_g: 2, shift_b: 4, noise_intensity_y: 8, noise_intensity_c: 18,
+            shift_r: -6, shift_g: 2, shift_b: 4, noise_intensity_y: 0, noise_intensity_c: 18,
             jitter_freq: 0.15, jitter_amp: 0.5, head_switch_rows: 50, head_switch_pull: 15,
-            head_switch_freq: 0.25, head_switch_noise: 10, hs_color_tear: 0.05,
+            head_switch_freq: 0.25, head_switch_noise: 0, hs_color_tear: 0.05,
             apply_color_cast: true, cast_r: 15, cast_g: -2, cast_b: -5
+        }),
+        vhs: Object.assign({}, ILLU_VHS_DEFAULTS, {
+            band_patina: 0.75, apply_jpeg: false, crop_padding: 10, crop_feather: 6,
+            chroma_blur: 35, chroma_bleed: 30, chroma_saturation: 2.0, edge_sat: 4.0, luma_smear: 15,
+            shift_r: -15, shift_g: 5, shift_b: 10, noise_intensity_y: 0, noise_intensity_c: 40,
+            jitter_freq: 0.5, jitter_amp: 1.5, head_switch_rows: 100, head_switch_pull: 25,
+            head_switch_freq: 0.5, head_switch_noise: 0,
+            apply_color_cast: true, cast_r: 25, cast_g: -10, cast_b: -5
+        }),
+        minidv: Object.assign({}, ILLU_VHS_DEFAULTS, {
+            band_patina: 1.0, pixel_size: 1, apply_jpeg: false, crop_padding: 2, crop_feather: 1,
+            chroma_blur: 5, chroma_bleed: 0, chroma_saturation: 1.1, edge_sat: 1.5,
+            shift_r: -2, shift_g: 0, shift_b: 2, noise_intensity_y: 0, noise_intensity_c: 10,
+            jitter_freq: 0.0, jitter_amp: 0.0, head_switch_rows: 0, head_switch_pull: 0,
+            head_switch_noise: 0, apply_color_cast: false
         }),
         damaged: Object.assign({}, ILLU_VHS_DEFAULTS, {
             crop_padding: 8, crop_feather: 2, luma_contrast: 1.3, chroma_blur: 35,
             chroma_bleed: 60, chroma_saturation: 2.8, edge_sat: 6.0, luma_smear: 80,
             right_pink: 60, right_pink_width: 0.6, shift_r: -20, shift_g: 5, shift_b: 15,
-            glitch_intensity: 8.5, noise_intensity_y: 25, noise_intensity_c: 50,
+            glitch_intensity: 8.5, noise_intensity_y: 0, noise_intensity_c: 50,
             jitter_freq: 0.8, jitter_amp: 4.5, dropout_chance: 0.15, dropout_len: 0.6,
             dropout_thickness: 8, head_switch_rows: 150, head_switch_pull: 60,
-            head_switch_wave: 2.0, head_switch_noise: 40, hs_color_tear: 0.8,
+            head_switch_wave: 2.0, head_switch_noise: 0, hs_color_tear: 0.8,
             tear_color: 'random', tear_max_height: 100, tear_length: 100, tear_thickness: 15,
             hs_sat: 2.0, apply_color_cast: true, cast_r: 10, cast_g: 15, cast_b: -20
         }),
         pellicule: Object.assign({}, ILLU_VHS_DEFAULTS, {
             crop_padding: 15, crop_feather: 10, luma_contrast: 1.2, luma_brightness: -10,
             chroma_blur: 5, chroma_bleed: 0, chroma_saturation: 1.2, edge_sat: 1.5,
-            shadow_sat: -1.0, shift_r: 2, shift_g: 0, shift_b: -2, noise_intensity_y: 25,
+            shadow_sat: -1.0, shift_r: 2, shift_g: 0, shift_b: -2, noise_intensity_y: 0,
             noise_intensity_c: 5, jitter_freq: 0.8, jitter_amp: 2.5, dropout_chance: 0.05,
             dropout_len: 0.05, dropout_thickness: 4, head_switch_rows: 0, head_switch_pull: 0,
             head_switch_noise: 0, apply_color_cast: true, cast_r: 20, cast_g: 10, cast_b: -10
@@ -94,10 +111,34 @@
         vintage: Object.assign({}, ILLU_VHS_DEFAULTS, {
             enable_r: false, enable_g: false, enable_b: false, luma_contrast: 1.4,
             luma_brightness: 10, crop_padding: 20, crop_feather: 15, edge_sat: 0,
-            glitch_intensity: 3.0, noise_intensity_y: 50, noise_intensity_c: 0,
+            glitch_intensity: 3.0, noise_intensity_y: 0, noise_intensity_c: 0,
             jitter_freq: 0.6, jitter_amp: 1.5, dropout_chance: 0.1, dropout_len: 0.1,
             dropout_thickness: 3, head_switch_rows: 60, head_switch_pull: 8,
-            head_switch_noise: 15, apply_color_cast: false
+            head_switch_noise: 0, apply_color_cast: false
+        }),
+        photo: Object.assign({}, ILLU_VHS_DEFAULTS, {
+            luma_contrast: 1.5, luma_brightness: -5, crop_padding: 4, crop_feather: 2,
+            chroma_blur: 8, chroma_bleed: 0, chroma_saturation: 2.0, edge_sat: 2.0, shadow_sat: -1.0,
+            shift_r: 3, shift_g: 0, shift_b: -3, noise_intensity_y: 0, noise_intensity_c: 5,
+            jitter_amp: 0.0, head_switch_rows: 0, head_switch_pull: 0, head_switch_noise: 0,
+            apply_color_cast: true, cast_r: 15, cast_g: 5, cast_b: -5
+        }),
+        matrix: Object.assign({}, ILLU_VHS_DEFAULTS, {
+            apply_color_cast: true, cast_r: -50, cast_g: 40, cast_b: -30,
+            luma_contrast: 1.4, luma_brightness: -15, shadow_sat: 2.0,
+            shift_r: 0, shift_g: 15, shift_b: -5, chroma_phase: 45,
+            chroma_blur: 20, chroma_bleed: 40, chroma_saturation: 3.0, edge_sat: 6.0, luma_smear: 40,
+            glitch_intensity: 5.0, tear_color: 'green', hs_color_tear: 0.5,
+            noise_intensity_y: 0, noise_intensity_c: 40,
+            jitter_freq: 0.2, jitter_amp: 0.5, dropout_chance: 0.02, dropout_len: 0.1, dropout_thickness: 1,
+            head_switch_pull: 15, head_switch_rows: 60, head_switch_noise: 0
+        }),
+        dune: Object.assign({}, ILLU_VHS_DEFAULTS, {
+            apply_color_cast: true, cast_r: 45, cast_g: 15, cast_b: -40,
+            luma_contrast: 1.1, luma_brightness: 5, right_pink: 15, right_pink_width: 0.3, chroma_phase: -20,
+            shift_r: 8, shift_g: 0, shift_b: -8,
+            chroma_blur: 15, chroma_bleed: 10, chroma_saturation: 1.5, edge_sat: 2.5,
+            noise_intensity_y: 0, noise_intensity_c: 10
         }),
         cyberpunk: Object.assign({}, ILLU_VHS_DEFAULTS, {
             apply_color_cast: true, cast_r: 30, cast_g: -30, cast_b: 40, luma_contrast: 1.2,
@@ -105,7 +146,7 @@
             chroma_phase: 90, shift_r: 25, shift_g: -5, shift_b: -20, chroma_blur: 40,
             chroma_bleed: 60, chroma_saturation: 4.5, edge_sat: 8.0, luma_smear: 60,
             glitch_intensity: 6.0, tear_color: 'magenta', hs_color_tear: 0.7,
-            head_switch_noise: 20, noise_intensity_y: 5, noise_intensity_c: 60,
+            head_switch_noise: 0, noise_intensity_y: 0, noise_intensity_c: 60,
             jitter_freq: 1.2, jitter_amp: 2.0, head_switch_pull: 40
         })
     };
@@ -418,10 +459,61 @@
         return out;
     }
 
+    /**
+     * Pré-traitement « résolution / codec » identique à VIDEO (Analog Video Processor Pro) :
+     *  - band_patina (< 1.0) : réduit la résolution interne (patine / flou de bande) ;
+     *  - apply_jpeg : flou de génération (codec) appliqué avant l'effet.
+     * Nécessite OffscreenCanvas (thread principal moderne + Web Worker). Sinon, on ignore
+     * proprement le pré-traitement (rendu à pleine résolution, sans flou codec).
+     */
     function illuApplyVhsToRgba(rgba, width, height, params, effectTime) {
         if (!rgba || !width || !height) return null;
-        const src = rgba instanceof Uint8Array ? rgba : new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
-        const out = illuProcessVhsCore(src, width, height, params, effectTime);
+        const p = illuMergeVhsParams(params);
+        let src = rgba instanceof Uint8Array ? rgba : new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+        const w = width, h = height;
+
+        const patina = (typeof p.band_patina === 'number' && p.band_patina > 0 && p.band_patina < 1.0) ? p.band_patina : 1.0;
+        const wantJpeg = !!p.apply_jpeg;
+        const hasOC = typeof OffscreenCanvas !== 'undefined';
+
+        let iw = w, ih = h, scaledDown = false;
+        if (hasOC && (patina < 1.0 || wantJpeg)) {
+            try {
+                iw = Math.max(1, Math.floor(w * patina));
+                ih = Math.max(1, Math.floor(h * patina));
+                const full = new OffscreenCanvas(w, h);
+                const fctx = full.getContext('2d', { willReadFrequently: true });
+                fctx.putImageData(new ImageData(new Uint8ClampedArray(src), w, h), 0, 0);
+                const small = new OffscreenCanvas(iw, ih);
+                const sctx = small.getContext('2d', { willReadFrequently: true });
+                sctx.imageSmoothingEnabled = true;
+                if (wantJpeg) sctx.filter = 'blur(' + (Math.max(0, 100 - (p.jpeg_quality || 86)) / 20) + 'px)';
+                sctx.drawImage(full, 0, 0, w, h, 0, 0, iw, ih);
+                const smallData = sctx.getImageData(0, 0, iw, ih);
+                src = new Uint8Array(smallData.data.buffer.slice(0));
+                scaledDown = (iw !== w || ih !== h);
+            } catch (e) {
+                iw = w; ih = h; scaledDown = false;
+                src = rgba instanceof Uint8Array ? rgba : new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+            }
+        }
+
+        const out = illuProcessVhsCore(src, iw, ih, p, effectTime);
+
+        if (scaledDown && hasOC) {
+            try {
+                const rc = new OffscreenCanvas(iw, ih);
+                const rctx = rc.getContext('2d', { willReadFrequently: true });
+                rctx.putImageData(new ImageData(new Uint8ClampedArray(out.buffer, out.byteOffset, out.length), iw, ih), 0, 0);
+                const up = new OffscreenCanvas(w, h);
+                const uctx = up.getContext('2d', { willReadFrequently: true });
+                uctx.imageSmoothingEnabled = true;
+                uctx.drawImage(rc, 0, 0, iw, ih, 0, 0, w, h);
+                const upData = uctx.getImageData(0, 0, w, h);
+                return new Uint8ClampedArray(upData.data.buffer.slice(0));
+            } catch (e) { /* repli : on renvoie le rendu réduit tel quel ci-dessous */ }
+        }
+
         return new Uint8ClampedArray(out.buffer, out.byteOffset, out.length);
     }
 

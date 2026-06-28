@@ -132,9 +132,11 @@ async function sendContactData() {
     };
 
     try {
-        const response = await fetch('/contact_save.php', { 
+        // Content-Type "text/plain" = requête CORS « simple » : pas de préflight OPTIONS
+        // (le corps reste du JSON, lu côté PHP via php://input + json_decode).
+        const response = await fetch('https://polocrafting.fr/contact_save.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
             body: JSON.stringify(payload)
         });
 
