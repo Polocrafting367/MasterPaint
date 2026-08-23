@@ -1,11 +1,17 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
-2.9.28 (23/08/26)
+2.9.29,3 (23/08/26)
 - Correction en profondeur du traitement des photos raw
 - Correction traitement 14bit
 - Plus de controle haute et basse lumières
 - Correction des image ouverte ou les blanc/noir etais cramé(en rose)
-- Introduction en beta de theme MacOS
+- Photo mode raw avancé, mode auto revu pour meilleure gestion
+- Introduction en beta de theme MacOS moderne (catalina)/vieux (lion)
+- Mieux placé l'onglet d'annimation et plus d'outil    
+       > Selection plusieurs frame
+       > pouvoir apliqué un meme effet sur plusieurs frame
+       > Repositionnement du volets...
+- Corrections diverses
 
 2.9.21 (26/07/26)
 - Curseur visuelement revu plus compact, 

@@ -67,13 +67,31 @@ body.theme-dark {
     -webkit-user-select: none;
 }
 
+/* Ancrage dans le flux : la frise est un bloc de l'application, inséré entre la zone de
+   travail (#editor-dock-row) et la barre d'état — jamais par-dessus ni sous celle-ci. */
+#illu-anim-panel.illu-anim-inflow {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    flex: 0 0 var(--anim-panel-h);
+    height: var(--anim-panel-h);
+    min-height: 0;
+    box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.12);
+}
+
 #illu-anim-panel.illu-anim-visible {
     display: flex;
 }
 
-/* Réserve la hauteur du panneau en bas de l'application : le workspace (et le canvas)
-   ne passent jamais sous le panneau, donc le dessin reste possible partout. */
-body.illu-anim-active #app-window {
+/* Panneau replié (croix de fermeture) : le mode animation reste actif, la frise disparaît. */
+#illu-anim-panel:not(.illu-anim-visible) {
+    display: none;
+}
+
+/* Repli sur l'ancrage fixe (frise posée dans <body> faute de coquille applicative) :
+   on réserve alors la hauteur en bas de l'application pour ne pas masquer la toile. */
+body.illu-anim-active.illu-anim-floating #app-window {
     padding-bottom: calc(var(--anim-panel-h) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -376,4 +394,132 @@ body.illu-anim-active .floating-window {
 /* Bouton d'ouverture de la frise dans la barre d'état/outils */
 .illu-anim-open-btn.illu-anim-on {
     color: var(--anim-accent);
+}
+
+/* ---- Sélection multi-images (calques × plage d'images) -------------------- */
+
+/* Cellules sélectionnées : voile accentué + liseré, lisible par-dessus la miniature. */
+.illu-anim-cell.illu-anim-sel {
+    background: rgba(43, 108, 255, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(43, 108, 255, 0.75);
+}
+.illu-anim-cell.illu-anim-sel.illu-anim-cel {
+    box-shadow: inset 0 0 0 2px var(--anim-accent);
+}
+.illu-anim-cell.illu-anim-sel::before {
+    /* la barre de maintien reste visible sur fond sélectionné */
+    filter: brightness(1.25);
+}
+
+/* Colonnes de la règle couvertes par la sélection. */
+.illu-anim-ruler-cell.illu-anim-sel-col {
+    background: rgba(43, 108, 255, 0.32);
+    color: var(--anim-text);
+}
+.illu-anim-ruler-cell.illu-anim-sel-col.illu-anim-playhead-col {
+    background: var(--anim-accent);
+    color: #fff;
+}
+
+/* Compteur de sélection dans la barre d'outils. */
+.illu-anim-sel-info {
+    color: var(--anim-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
+.illu-anim-sel-info.illu-anim-sel-info--on {
+    color: #fff;
+    background: var(--anim-accent);
+    border-radius: 9px;
+    padding: 2px 7px;
+}
+
+/* Boutons de fermeture : la croix replie la frise, ⏏ quitte le mode animation. */
+.illu-anim-toolbar button.illu-anim-close-btn,
+.illu-anim-toolbar button.illu-anim-exit-btn {
+    margin-left: 0;
+}
+.illu-anim-toolbar button.illu-anim-exit-btn {
+    margin-left: 8px;
+}
+.illu-anim-toolbar button.illu-anim-close-btn:hover {
+    background: #c94a4a;
+    border-color: #c94a4a;
+    color: #fff;
+}
+
+/* ---- Menus flottants de la frise ---------------------------------------- */
+
+.illu-anim-menu {
+    position: fixed;
+    z-index: 12000;
+    background: var(--anim-surface);
+    color: var(--anim-text);
+    border: 1px solid var(--anim-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+    padding: 4px;
+    min-width: 200px;
+    font-size: 12px;
+}
+.illu-anim-menu-item {
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.illu-anim-menu-item:hover {
+    background: rgba(43, 108, 255, 0.16);
+}
+.illu-anim-menu-item--off {
+    opacity: 0.45;
+    pointer-events: none;
+}
+.illu-anim-menu-sep {
+    height: 1px;
+    background: var(--anim-border);
+    margin: 4px 2px;
+}
+.illu-anim-menu-title {
+    padding: 5px 10px 3px;
+    color: var(--anim-muted);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ---- Bouton de réouverture dans la barre d'état -------------------------- */
+
+.illu-anim-open-cell {
+    display: flex;
+    align-items: center;
+}
+button.illu-anim-open-btn {
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    padding: 2px 8px;
+    border: 1px solid var(--anim-border);
+    border-radius: 4px;
+    background: var(--anim-surface);
+    color: var(--anim-text);
+    cursor: pointer;
+    white-space: nowrap;
+}
+button.illu-anim-open-btn:hover {
+    border-color: var(--anim-accent);
+}
+button.illu-anim-open-btn.illu-anim-on {
+    background: var(--anim-accent);
+    border-color: var(--anim-accent);
+    color: #fff;
+}
+
+/* ---- Portée « Images » de la fenêtre d'effet (mode animation) ------------- */
+
+.effect-frame-scope-bar .illu-scope-btn--disabled,
+.effect-frame-scope-bar .illu-scope-btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
 }

@@ -1,298 +1,2015 @@
+@charset "UTF-8";
+
 /**
- * Thème « macOS » moderne (Big Sur / Sonoma) — surcouche chrome.
- *
- * S'empile sur theme-win10-flat.css, actif sous .illu-theme-macmodern.
- * Gère CLAIR et SOMBRE. La BARRE DE TITRE reste SOMBRE dans les deux modes
- * (look macOS de référence), seul le corps des fenêtres suit clair/sombre.
- *
- * Barre de titre cohérente avec le thème Lion : hauteur 24px, feux 12px à
- * gauche, titre centré en absolu — pas de marge/padding exagéré.
- * Accent piloté par la couleur choisie (--mp-accent posé par le JS).
+ * macOS Catalina 10.15 — thème AppKit réaliste
+ * Surcouche de theme-win10-flat.css.
+ * Activation : body.illu-theme-macmodern
+ * Mode sombre : body.illu-theme-macmodern.theme-dark
  */
 
-/* ───── Variables communes (accent + chrome ; barre de titre TOUJOURS sombre) ───── */
+/* ═══════════════════════ 1. Variables système ═══════════════════════ */
 body.illu-theme-macmodern {
-    --mp-teal: var(--mp-accent);
-    --mp-teal-dark: var(--mp-title);
-    --mp-focus: var(--mp-accent);
-    --mp-menu-hover-bg: var(--mp-accent);
-    --mp-accent-muted: rgba(var(--mp-accent-rgb), 0.16);
+    color-scheme: light;
 
-    --mp-radius: 6px;
-    --mp-font: -apple-system, "SF Pro Text", "SF Pro Display", BlinkMacSystemFont,
-        "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    --cata-accent: #0a64c8;
+    --cata-accent-hover: #1476d4;
+    --cata-accent-pressed: #0754aa;
+    --cata-focus: rgba(10, 100, 200, 0.28);
+    --cata-selection: #0a64c8;
+    --cata-selection-text: #ffffff;
 
-    /* Barre de titre sombre (constante) */
-    --mac-titlebar-bg: rgba(42, 42, 44, 0.85);
-    --mac-titlebar-border: rgba(0, 0, 0, 0.55);
-    --mac-title-color: rgba(255, 255, 255, 0.80);
-    --mac-glyph: rgba(0, 0, 0, 0.55);
+    --cata-label: #1d1d1f;
+    --cata-label-secondary: rgba(29, 29, 31, 0.68);
+    --cata-label-tertiary: rgba(29, 29, 31, 0.42);
+    --cata-disabled: rgba(29, 29, 31, 0.34);
 
-    /* Liseré de fenêtre (clair par défaut) */
-    --mac-window-ring: rgba(0, 0, 0, 0.12);
+    --cata-window: #ececec;
+    --cata-window-alt: #e6e6e6;
+    --cata-title-top: #f7f7f7;
+    --cata-title-bottom: #e8e8e8;
+    --cata-toolbar-top: #f5f5f5;
+    --cata-toolbar-bottom: #e1e1e1;
+    --cata-control-top: #ffffff;
+    --cata-control-bottom: #e7e7e7;
+    --cata-control-hover-top: #ffffff;
+    --cata-control-hover-bottom: #eeeeee;
+    --cata-control-pressed: #d2d2d2;
+    --cata-field: #ffffff;
+    --cata-inset: #f5f5f5;
+    --cata-hover: rgba(0, 0, 0, 0.065);
+    --cata-pressed: rgba(0, 0, 0, 0.12);
 
-    --mp-body-chrome: #6a7686;
-    --mp-workspace: #e9e9ec;
-    --mp-workspace-deep: #d2d2d8;
-    --mp-dock-bg: #f6f6f8;
-    --mp-dock-border: #e0e0e5;
+    --cata-border: rgba(0, 0, 0, 0.28);
+    --cata-border-soft: rgba(0, 0, 0, 0.16);
+    --cata-separator: rgba(0, 0, 0, 0.15);
+    --cata-specular: rgba(255, 255, 255, 0.72);
+
+    --cata-menu: rgba(246, 246, 246, 0.97);
+    --cata-menu-icon: rgba(29, 29, 31, 0.66);
+    --cata-workspace-top: #c9cdd3;
+    --cata-workspace-bottom: #b5bac2;
+    --cata-scrollbar: rgba(60, 60, 60, 0.42);
+    --cata-scrollbar-hover: rgba(42, 42, 42, 0.62);
+
+    --cata-window-radius: 10px;
+    --cata-inner-radius: 9px;
+    --cata-control-radius: 4px;
+    --cata-menu-radius: 6px;
+    --cata-panel-shadow: 0 12px 34px rgba(0, 0, 0, 0.27),
+        0 2px 7px rgba(0, 0, 0, 0.16);
+    --cata-menu-shadow: 0 12px 30px rgba(0, 0, 0, 0.30),
+        0 2px 7px rgba(0, 0, 0, 0.15);
+
+    /* Noms conservés pour la compatibilité avec le thème précédent. */
+    --mac-accent: var(--cata-accent);
+    --mac-accent-rgb: 10, 100, 200;
+    --mac-accent-hover: var(--cata-accent-hover);
+    --mac-accent-pressed: var(--cata-accent-pressed);
+    --mac-focus: var(--cata-focus);
+    --mac-text: var(--cata-label);
+    --mac-text-secondary: var(--cata-label-secondary);
+    --mac-text-tertiary: var(--cata-label-tertiary);
+    --mac-text-on-accent: var(--cata-selection-text);
+    --mac-workspace: var(--cata-workspace-top);
+    --mac-workspace-deep: var(--cata-workspace-bottom);
+    --mac-surface: var(--cata-window);
+    --mac-surface-solid: var(--cata-window);
+    --mac-surface-raised: var(--cata-field);
+    --mac-surface-inset: var(--cata-inset);
+    --mac-glass: var(--cata-window);
+    --mac-glass-strong: var(--cata-window);
+    --mac-glass-control: var(--cata-control-bottom);
+    --mac-glass-control-hover: var(--cata-control-hover-bottom);
+    --mac-glass-control-pressed: var(--cata-control-pressed);
+    --mac-selection-soft: rgba(10, 100, 200, 0.16);
+    --mac-border: var(--cata-border-soft);
+    --mac-border-strong: var(--cata-border);
+    --mac-separator: var(--cata-separator);
+    --mac-highlight: var(--cata-specular);
+    --mac-shadow: var(--cata-panel-shadow);
+    --mac-menu-shadow: var(--cata-menu-shadow);
+    --mac-radius-window: var(--cata-window-radius);
+    --mac-radius-panel: 6px;
+    --mac-radius-control: var(--cata-control-radius);
+    --mac-radius-menu-item: var(--cata-menu-radius);
+    --mac-radius-pill: 999px;
+    --mac-scrollbar-thumb: var(--cata-scrollbar);
+    --mac-scrollbar-thumb-hover: var(--cata-scrollbar-hover);
+
+    --mp-accent: var(--cata-accent);
+    --mp-accent-rgb: 10, 100, 200;
+    --mp-teal: var(--cata-accent);
+    --mp-teal-dark: var(--cata-accent-pressed);
+    --mp-focus: var(--cata-accent);
+    --mp-accent-muted: rgba(10, 100, 200, 0.16);
+    --mp-menu-hover-bg: var(--cata-selection);
+    --mp-menu-hover-fg: var(--cata-selection-text);
+    --mp-radius: var(--cata-control-radius);
+    --mp-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+        "Segoe UI", sans-serif;
+    --mp-body-chrome: var(--cata-window);
+    --mp-workspace: var(--cata-workspace-top);
+    --mp-workspace-deep: var(--cata-workspace-bottom);
+    --mp-dock-bg: var(--cata-window);
+    --mp-dock-border: var(--cata-border-soft);
+    --mp-surface: var(--cata-window);
+    --mp-surface-deep: var(--cata-window-alt);
+    --mp-raised-top: var(--cata-border-soft);
+    --mp-raised-bot: var(--cata-border-soft);
+    --mp-inset-top: var(--cata-border);
+    --mp-inset-bot: var(--cata-border);
+    --mp-text: var(--cata-label);
+
+    margin: 0;
+    color: var(--cata-label) !important;
+    font-family: var(--mp-font);
+    font-size: 12px;
+    background: var(--cata-workspace-bottom) !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-/* Surfaces claires */
-body.illu-theme-macmodern:not(.theme-dark) {
-    --mp-surface: #ffffff;
-    --mp-surface-deep: #f2f2f4;
-    --mp-raised-top: #d9d9de;
-    --mp-raised-bot: #d9d9de;
-    --mp-inset-top: #cdcdd3;
-    --mp-inset-bot: #cdcdd3;
-    --mp-text: #1d1d1f;
-}
-
-/* ───── Bascule SOMBRE (corps des fenêtres) ───── */
 body.illu-theme-macmodern.theme-dark {
-    --mp-surface: #2a2a2c;
-    --mp-surface-deep: #1e1e1f;
-    --mp-raised-top: #3a3a3c;
-    --mp-raised-bot: #3a3a3c;
-    --mp-inset-top: #48484a;
-    --mp-inset-bot: #48484a;
-    --mp-text: #f2f2f2;
+    color-scheme: dark;
 
-    --mac-window-ring: rgba(255, 255, 255, 0.15);
+    --cata-accent: #0a84ff;
+    --cata-accent-hover: #2394ff;
+    --cata-accent-pressed: #0070dc;
+    --cata-focus: rgba(10, 132, 255, 0.34);
+    --cata-selection: #0a64c8;
+
+    --cata-label: rgba(255, 255, 255, 0.91);
+    --cata-label-secondary: rgba(255, 255, 255, 0.62);
+    --cata-label-tertiary: rgba(255, 255, 255, 0.40);
+    --cata-disabled: rgba(255, 255, 255, 0.30);
+
+    --cata-window: #2b2b2b;
+    --cata-window-alt: #252525;
+    --cata-title-top: #3a3a3a;
+    --cata-title-bottom: #303030;
+    --cata-toolbar-top: #383838;
+    --cata-toolbar-bottom: #2c2c2c;
+    --cata-control-top: #4a4a4a;
+    --cata-control-bottom: #373737;
+    --cata-control-hover-top: #525252;
+    --cata-control-hover-bottom: #404040;
+    --cata-control-pressed: #242424;
+    --cata-field: #1f1f1f;
+    --cata-inset: #222222;
+    --cata-hover: rgba(255, 255, 255, 0.08);
+    --cata-pressed: rgba(255, 255, 255, 0.14);
+
+    --cata-border: rgba(255, 255, 255, 0.25);
+    --cata-border-soft: rgba(255, 255, 255, 0.13);
+    --cata-separator: rgba(255, 255, 255, 0.12);
+    --cata-specular: rgba(255, 255, 255, 0.15);
+
+    --cata-menu: rgba(48, 48, 48, 0.98);
+    --cata-menu-icon: rgba(255, 255, 255, 0.66);
+    --cata-workspace-top: #35383d;
+    --cata-workspace-bottom: #23262a;
+    --cata-scrollbar: rgba(230, 230, 230, 0.34);
+    --cata-scrollbar-hover: rgba(240, 240, 240, 0.54);
+    --cata-panel-shadow: 0 14px 38px rgba(0, 0, 0, 0.58),
+        0 2px 8px rgba(0, 0, 0, 0.34);
+    --cata-menu-shadow: 0 14px 34px rgba(0, 0, 0, 0.62),
+        0 2px 8px rgba(0, 0, 0, 0.38);
+
+    --mac-accent-rgb: 10, 132, 255;
+    --mp-accent-rgb: 10, 132, 255;
+    background: var(--cata-workspace-bottom) !important;
 }
 
-/* ═══════════════════════ Fenêtres ═══════════════════════ */
+body.illu-theme-macmodern *,
+body.illu-theme-macmodern *::before,
+body.illu-theme-macmodern *::after {
+    box-sizing: border-box;
+}
+
+body.illu-theme-macmodern ::selection {
+    color: var(--cata-selection-text);
+    background: var(--cata-selection);
+}
+
+body.illu-theme-macmodern #workspace,
+body.illu-theme-macmodern #main-canvas-container {
+    background: linear-gradient(
+        145deg,
+        var(--cata-workspace-top),
+        var(--cata-workspace-bottom)
+    ) !important;
+}
+
+/* ═══════════════════════ 2. Scrollbars Catalina ═══════════════════════ */
+html:has(> body.illu-theme-macmodern),
+body.illu-theme-macmodern,
+body.illu-theme-macmodern * {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--cata-scrollbar) transparent !important;
+}
+
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar,
+body.illu-theme-macmodern::-webkit-scrollbar,
+body.illu-theme-macmodern *::-webkit-scrollbar {
+    width: 12px !important;
+    height: 12px !important;
+    background: transparent !important;
+}
+
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar-track,
+body.illu-theme-macmodern::-webkit-scrollbar-track,
+body.illu-theme-macmodern *::-webkit-scrollbar-track,
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar-corner,
+body.illu-theme-macmodern::-webkit-scrollbar-corner,
+body.illu-theme-macmodern *::-webkit-scrollbar-corner {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar-thumb,
+body.illu-theme-macmodern::-webkit-scrollbar-thumb,
+body.illu-theme-macmodern *::-webkit-scrollbar-thumb {
+    min-width: 24px;
+    min-height: 24px;
+    border: 3px solid transparent !important;
+    border-radius: 999px !important;
+    background: var(--cata-scrollbar) content-box !important;
+    box-shadow: none !important;
+}
+
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar-thumb:hover,
+body.illu-theme-macmodern::-webkit-scrollbar-thumb:hover,
+body.illu-theme-macmodern *::-webkit-scrollbar-thumb:hover {
+    background: var(--cata-scrollbar-hover) content-box !important;
+}
+
+html:has(> body.illu-theme-macmodern)::-webkit-scrollbar-button,
+body.illu-theme-macmodern::-webkit-scrollbar-button,
+body.illu-theme-macmodern *::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+/* ═══════════════════════ 3. Fenêtres AppKit ═══════════════════════ */
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window {
-    border: none !important;
-    border-radius: 11px !important;
-    box-shadow:
-        0 40px 60px rgba(0, 0, 0, 0.20),
-        0 0 15px rgba(0, 0, 0, 0.12),
-        0 0 0 1px rgba(0, 0, 0, 0.05),
-        0 0 0 1px rgba(0, 0, 0, 0.35) !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    color: var(--cata-label) !important;
+    font-family: var(--mp-font);
+    font-size: 12px;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: var(--cata-window-radius) !important;
+    background: var(--cata-window) !important;
+    box-shadow: var(--cata-panel-shadow) !important;
 }
 
-/* Palettes flottantes : coins clippés + liseré interne 1px (réf .window:after) */
-body.illu-theme-macmodern .window:not(#app-window) {
-    overflow: hidden;
-    position: relative;
-}
-body.illu-theme-macmodern .window:not(#app-window)::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 11px;
-    box-shadow: inset 0 0 0 1px var(--mac-window-ring);
-    pointer-events: none;
-    z-index: 999999;
+body.illu-theme-macmodern.ui-layout-floating #floating-palette-host > .window.palette-panel,
+body.illu-theme-macmodern.ui-layout-floating #floating-palette-host > #win-layers.window.palette-panel {
+    opacity: 1 !important;
+    overflow: hidden !important;
+    border-radius: var(--cata-window-radius) !important;
+    box-shadow: var(--cata-panel-shadow) !important;
 }
 
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window.window {
+    overflow: visible !important;
+    border: 0 !important;
     border-radius: 0 !important;
+    background: var(--cata-window) !important;
     box-shadow: none !important;
-    overflow: visible;
 }
+
+body.illu-theme-macmodern .window:not(#app-window) {
+    position: relative;
+}
+
+body.illu-theme-macmodern .window:not(#app-window)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 999999;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 0.5px var(--cata-border-soft),
+        inset 0 1px 0 var(--cata-specular);
+    pointer-events: none;
+}
+
 body.illu-theme-macmodern #app-window.window::after {
     display: none;
 }
 
-/* ═══════════════════════ Barre de titre (toujours sombre, givrée) ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna) .window-body {
+    min-height: 0;
+    color: var(--cata-label) !important;
+    background: var(--cata-window) !important;
+}
+
+/* Le dernier bloc porte toujours les deux coins inférieurs. */
+body.illu-theme-macmodern .window:not(#app-window) > :last-child {
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+}
+
+body.illu-theme-macmodern .window:not(#app-window) > .window-body:last-child,
+body.illu-theme-macmodern .window:not(#app-window) > .status-bar:last-child,
+body.illu-theme-macmodern .window:not(#app-window) > footer:last-child {
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+}
+
+/* ═══════════════════════ 4. Title bar et feux tricolores ═══════════════════════ */
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar {
     position: relative !important;
-    height: 24px !important;
-    background: var(--mac-titlebar-bg) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(1.6);
-    backdrop-filter: blur(22px) saturate(1.6);
-    border-bottom: 0.5px solid var(--mac-titlebar-border) !important;
-    box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-shrink: 0;
+    min-height: 28px !important;
+    height: 28px !important;
     padding: 0 10px !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cata-separator) !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-title-top),
+        var(--cata-title-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+    text-shadow: none !important;
 }
 
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #app-window .title-bar {
     border-radius: 0 !important;
 }
 
-/* Titre centré en ABSOLU (pas d'élargissement des petites palettes) */
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-text {
     position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    flex: none !important;
-    padding: 0 22px !important;
-    text-align: center !important;
-    pointer-events: none !important;
-    color: var(--mac-title-color) !important;
-    font-size: 13px !important;
+    inset: 50% 45px auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    color: var(--cata-label) !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35) !important;
+    line-height: 14px !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-shadow: none !important;
+    transform: translateY(-50%) !important;
+    pointer-events: none !important;
 }
 
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls {
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna) .title-bar-controls {
     order: -1 !important;
-    gap: 8px !important;
+    display: flex !important;
     align-items: center !important;
-    margin-right: 4px !important;
-    height: auto !important;
+    gap: 8px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* ═══════════════════════ Feux tricolores ═══════════════════════ */
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button {
+    position: relative !important;
+    flex: 0 0 12px !important;
     width: 12px !important;
-    height: 12px !important;
     min-width: 12px !important;
+    max-width: 12px !important;
+    height: 12px !important;
     min-height: 12px !important;
+    max-height: 12px !important;
     padding: 0 !important;
     margin: 0 !important;
-    border: none !important;
-    border-radius: 50% !important;
-    position: relative !important;
-    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.22) !important;
     overflow: visible !important;
-    transition: filter .12s ease;
+    color: transparent !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background-image: none !important;
+    box-shadow:
+        inset 0 0 0 0.5px rgba(0, 0, 0, 0.22),
+        inset 0 1px 1px rgba(255, 255, 255, 0.24) !important;
+    transform: none !important;
 }
 
+/* Fallback pour un DOM Windows : réduire, agrandir, fermer. */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:nth-child(1) {
+    order: 2 !important;
+    background: #ffbd2e !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:nth-child(2) {
+    order: 3 !important;
+    background: #28c940 !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:nth-child(3) {
+    order: 1 !important;
+    background: #ff5f57 !important;
+}
+
+/* Les sélecteurs sémantiques gagnent toujours sur la position. */
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn,
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"] {
-    background: #ff5d5a !important;
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Fermer"] {
+    order: 1 !important;
+    background: #ff5f57 !important;
 }
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"] {
-    background: #f5c350 !important;
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Réduire"] {
+    order: 2 !important;
+    background: #ffbd2e !important;
 }
+
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"],
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"] {
-    background: #65cd57 !important;
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Agrandir"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restaurer"] {
+    order: 3 !important;
+    background: #28c940 !important;
 }
 
-/* ::before neutralisé */
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::before {
-    content: none !important;
-    display: none !important;
-}
-
-/* ::after = glyphe (× / − / +), masqué au repos, révélé au survol du cluster */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::before,
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button::after {
     content: "" !important;
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: auto !important;
-    height: auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font: 700 10px/1 -apple-system, Arial, sans-serif !important;
-    color: rgba(0, 0, 0, 0.6) !important;
+    display: block !important;
+    margin: 0 !important;
+    border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    border-radius: 0 !important;
-    transform: none !important;
     opacity: 0 !important;
-    transition: opacity .1s ease !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls:hover button::after {
-    opacity: 1 !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
-    content: "\00D7" !important;
-    font-size: 11px !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"]::after {
-    content: "\2212" !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"]::after,
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"]::after {
-    content: "+" !important;
+    transition: opacity 80ms linear !important;
 }
 
-/* Survol : on assombrit la pastille, aucun fond gris/carré du flat */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls:hover button::before,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls:hover button::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:focus-visible::before,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:focus-visible::after {
+    opacity: 1 !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::before,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::before,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+    left: 2px !important;
+    top: 5px !important;
+    width: 8px !important;
+    height: 1.5px !important;
+    border-radius: 1px !important;
+    background: #74110d !important;
+    transform: rotate(45deg) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]::after {
+    transform: rotate(-45deg) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Minimize"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Réduire"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:nth-child(1)::after {
+    left: 2px !important;
+    top: 5px !important;
+    width: 8px !important;
+    height: 1.5px !important;
+    border-radius: 1px !important;
+    background: #8a5b00 !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Maximize"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restore"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Agrandir"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Restaurer"]::after,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:nth-child(2)::after {
+    inset: 2px !important;
+    width: 8px !important;
+    height: 8px !important;
+    background:
+        linear-gradient(135deg, #0b6d18 0 48%, transparent 50%) 0 0 / 4px 4px no-repeat,
+        linear-gradient(315deg, #0b6d18 0 48%, transparent 50%) 100% 100% / 4px 4px no-repeat !important;
+}
+
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:hover {
     filter: brightness(0.94) !important;
 }
+
 body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button:active {
-    filter: brightness(0.80) !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button.title-bar-close-btn:hover,
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .title-bar-controls button[aria-label="Close"]:hover {
-    background: #ff5d5a !important;
+    filter: brightness(0.78) !important;
 }
 
-/* ═══════════════════════ Boutons ═══════════════════════ */
-/* Clair : boutons blancs plats (padding d'origine conservé) */
-body.illu-theme-macmodern:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
-    border-radius: 6px !important;
-    border: 0.5px solid #d0d0d6 !important;
-    background: #ffffff !important;
-    box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.08) !important;
-    color: #1d1d1f !important;
-}
-body.illu-theme-macmodern:not(.theme-dark):not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
-    background: #f5f5f7 !important;
+/* ═══════════════════════ 5. Chrome principal et onglets ═══════════════════════ */
+body.illu-theme-macmodern #app-window > .window-body.illu-app-window-body {
+    color: var(--cata-label) !important;
+    background: var(--cata-window) !important;
 }
 
-/* Sombre : boutons translucides (réf [type=button]) */
-body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn) {
-    border-radius: 4px !important;
-    border: none !important;
-    background: rgba(255, 255, 255, 0.15) !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075), 0 0 0 1px rgba(0, 0, 0, 0.2) !important;
-    color: #ffffff !important;
-}
-body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):hover {
-    background: rgba(255, 255, 255, 0.22) !important;
-}
-body.illu-theme-macmodern.theme-dark:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):active {
-    background: var(--mp-accent) !important;
-    color: #ffffff !important;
-}
-
-/* Barre d'options d'outil : boutons SANS style au repos (padding/couleur conservés) */
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn) {
-    background: transparent !important;
-    background-image: none !important;
-    border: none !important;
-    box-shadow: none !important;
+body.illu-theme-macmodern #app-window .window-body > menu.illu-menubar-root,
+body.illu-theme-macmodern menu[role="menubar"] {
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 2px 7px !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cata-separator) !important;
     border-radius: 0 !important;
-    color: inherit !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover {
-    background: rgba(127, 127, 127, 0.16) !important;
-    border-radius: 5px !important;
-}
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):active,
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #tool-options-container button:not(.tool-btn):not(.illu-scope-btn).active {
-    background: rgba(127, 127, 127, 0.26) !important;
-    border-radius: 5px !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-title-top),
+        var(--cata-title-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
 }
 
-/* ═══════════════════════ Champs ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"] {
+    min-height: 24px !important;
+    padding: 3px 7px !important;
+    color: var(--cata-label) !important;
+    font-size: 13px !important;
+    line-height: 18px !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"]:hover {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"]:hover > span {
+    color: var(--cata-label) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"][aria-expanded="true"],
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"][aria-selected="true"] {
+    color: var(--cata-selection-text) !important;
+    background: var(--cata-selection) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"][aria-expanded="true"] > span,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) menu[role="menubar"] > li[role="menuitem"][aria-selected="true"] > span {
+    color: var(--cata-selection-text) !important;
+}
+
+body.illu-theme-macmodern #tab-bar,
+body.illu-theme-macmodern #tab-bar-outer,
+body.illu-theme-macmodern .tab-bar,
+body.illu-theme-macmodern .tab-bar-inner {
+    margin: 0 !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-toolbar-top),
+        var(--cata-toolbar-bottom)
+    ) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern #tab-bar-outer {
+    min-height: 58px !important;
+    padding: 0 4px !important;
+    border-bottom: 1px solid var(--cata-separator) !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab {
+    position: relative !important;
+    top: 0 !important;
+    width: 74px !important;
+    height: 52px !important;
+    margin: 3px 2px !important;
+    padding: 3px !important;
+    gap: 2px !important;
+    color: var(--cata-label-secondary) !important;
+    border: 1px solid transparent !important;
+    border-radius: 5px !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab:hover:not(.active) {
+    color: var(--cata-label) !important;
+    border-color: var(--cata-border-soft) !important;
+    outline: 0 !important;
+    background: var(--cata-hover) !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab.active {
+    color: var(--cata-label) !important;
+    border-color: var(--cata-border) !important;
+    outline: 0 !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-control-top),
+        var(--cata-control-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular), 0 1px 2px rgba(0, 0, 0, 0.10) !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab span,
+body.illu-theme-macmodern .tab-bar-inner .tab:hover span,
+body.illu-theme-macmodern .tab-bar-inner .tab.active span {
+    display: block !important;
+    order: 1 !important;
+    max-width: 64px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    color: inherit !important;
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+    line-height: 11px !important;
+    text-align: center !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-shadow: none !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab .tab-thumb,
+body.illu-theme-macmodern .tab-bar-inner .tab:hover .tab-thumb {
+    order: 2 !important;
+    width: 64px !important;
+    max-width: 64px !important;
+    height: 32px !important;
+    max-height: 32px !important;
+    margin: 0 auto !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 2px !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10) !important;
+}
+
+body.illu-theme-macmodern.theme-dark .tab-bar-inner .tab .tab-thumb {
+    background: #181818 !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab button {
+    position: absolute !important;
+    top: 1px !important;
+    right: 1px !important;
+    display: none !important;
+    place-items: center !important;
+    width: 13px !important;
+    min-width: 13px !important;
+    height: 13px !important;
+    min-height: 13px !important;
+    padding: 0 !important;
+    color: var(--cata-label-secondary) !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(127, 127, 127, 0.20) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab:hover button {
+    display: inline-grid !important;
+}
+
+body.illu-theme-macmodern .tab-bar-inner .tab button:hover {
+    color: var(--cata-label) !important;
+    background: rgba(127, 127, 127, 0.32) !important;
+}
+
+/* ═══════════════════════ 6. Toolbars AppKit ═══════════════════════ */
+body.illu-theme-macmodern .illu-app-toolbars-container,
+body.illu-theme-macmodern #tool-options-container,
+body.illu-theme-macmodern .tool-options-bar,
+body.illu-theme-macmodern #tool-options-bar {
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cata-separator) !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-toolbar-top),
+        var(--cata-toolbar-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar,
+body.illu-theme-macmodern #tool-options-bar {
+    min-height: 36px !important;
+    padding: 3px 6px !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .opt-grp {
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 7px !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-right: 1px solid var(--cata-separator) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .opt-grp:last-child {
+    border-right: 0 !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .opt-grp::before,
+body.illu-theme-macmodern .tool-options-bar .opt-grp::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar :is(
+    .opt-grp-label,
+    .ribbon-group-label,
+    .illu-ribbon-group-label
+) {
+    display: none !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .opt-sep {
+    width: 1px !important;
+    height: 20px !important;
+    margin: 0 5px !important;
+    background: var(--cata-separator) !important;
+}
+
+body.illu-theme-macmodern .illu-menubar-toolbar {
+    gap: 3px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+body.illu-theme-macmodern .illu-menubar-toolbar__sep {
+    width: 1px !important;
+    height: 18px !important;
+    margin: 0 3px !important;
+    border: 0 !important;
+    background: var(--cata-separator) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar :is(
+    .illu-icon-toggle-group,
+    .illu-mode-toggle-group
+),
+body.illu-theme-macmodern #tool-global-modes :is(
+    .illu-icon-toggle-group,
+    .illu-mode-toggle-group
+) {
+    overflow: hidden !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 5px !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-control-top),
+        var(--cata-control-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar :is(
+    .illu-icon-toggle-group,
+    .illu-mode-toggle-group
+) > * + * {
+    border-left: 1px solid var(--cata-border-soft) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .illu-icon-toggle,
+body.illu-theme-macmodern #tool-pinned-toggles .illu-icon-toggle,
+body.illu-theme-macmodern .tool-options-bar .opt-bar-btn,
+body.illu-theme-macmodern #tool-options-container button:not(.tool-btn):not(.illu-scope-btn),
+body.illu-theme-macmodern .illu-menubar-icon-btn {
+    width: 26px !important;
+    min-width: 26px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 5px !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .illu-icon-toggle:hover,
+body.illu-theme-macmodern #tool-pinned-toggles .illu-icon-toggle:hover,
+body.illu-theme-macmodern .tool-options-bar .opt-bar-btn:hover,
+body.illu-theme-macmodern #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover,
+body.illu-theme-macmodern .illu-menubar-icon-btn:hover {
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    background: var(--cata-hover) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .illu-icon-toggle:is(.active, .illu-icon-toggle--on),
+body.illu-theme-macmodern #tool-pinned-toggles .illu-icon-toggle:is(.active, .illu-icon-toggle--on),
+body.illu-theme-macmodern .tool-options-bar .opt-bar-btn.opt-bar-btn--on,
+body.illu-theme-macmodern #tool-options-container button.active {
+    color: var(--cata-selection-text) !important;
+    border: 0 !important;
+    background: var(--cata-selection) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
+}
+
+body.illu-theme-macmodern .tool-options-bar .illu-opt-lbl,
+body.illu-theme-macmodern .tool-options-bar .opt-tool-name,
+body.illu-theme-macmodern .illu-menubar-zoom-val {
+    color: var(--cata-label-secondary) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+}
+
+/* ═══════════════════════ 7. Boutons et champs AppKit ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle) {
+    min-height: 22px !important;
+    padding: 2px 8px !important;
+    color: var(--cata-label) !important;
+    font: 400 12px/16px var(--mp-font) !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: var(--cata-control-radius) !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-control-top),
+        var(--cata-control-bottom)
+    ) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular), 0 1px 1px rgba(0, 0, 0, 0.06) !important;
+    text-shadow: none !important;
+    transform: none !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):hover:not(:disabled) {
+    color: var(--cata-label) !important;
+    border-color: var(--cata-border) !important;
+    background: linear-gradient(
+        180deg,
+        var(--cata-control-hover-top),
+        var(--cata-control-hover-bottom)
+    ) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) button:not(.tool-btn):not(.title-bar-controls button):not(.illu-scope-btn):not(.illu-menubar-icon-btn):not(.illu-icon-toggle):active:not(:disabled) {
+    color: var(--cata-label) !important;
+    background: var(--cata-control-pressed) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14) !important;
+}
+
+body.illu-theme-macmodern button:disabled,
+body.illu-theme-macmodern input:disabled,
+body.illu-theme-macmodern select:disabled,
+body.illu-theme-macmodern textarea:disabled {
+    color: var(--cata-disabled) !important;
+    opacity: 1 !important;
+    cursor: default !important;
+}
+
+body.illu-theme-macmodern button:focus-visible,
+body.illu-theme-macmodern input:focus-visible,
+body.illu-theme-macmodern select:focus-visible,
+body.illu-theme-macmodern textarea:focus-visible,
+body.illu-theme-macmodern [tabindex]:focus-visible {
+    outline: 0 !important;
+    box-shadow: 0 0 0 3px var(--cata-focus) !important;
+}
+
+body.illu-theme-macmodern :is(
+    .primary,
+    .default,
+    [data-default="true"],
+    .welcome-dialog-start-btn,
+    .illu-crop-btn-primary,
+    .illu-lvl-btn-ok
+):not(.tool-btn) {
+    color: var(--cata-selection-text) !important;
+    border-color: #0755aa !important;
+    background: linear-gradient(180deg, #2b8ae6, var(--cata-accent)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 1px 2px rgba(0, 70, 150, 0.20) !important;
+}
+
+body.illu-theme-macmodern :is(
+    .primary,
+    .default,
+    [data-default="true"],
+    .welcome-dialog-start-btn,
+    .illu-crop-btn-primary,
+    .illu-lvl-btn-ok
+):not(.tool-btn):hover:not(:disabled) {
+    color: var(--cata-selection-text) !important;
+    background: linear-gradient(180deg, #3898ef, var(--cata-accent-hover)) !important;
+}
+
 body.illu-theme-macmodern input[type="text"],
 body.illu-theme-macmodern input[type="number"],
 body.illu-theme-macmodern input[type="search"],
+body.illu-theme-macmodern input[type="password"],
+body.illu-theme-macmodern input[type="url"],
+body.illu-theme-macmodern input[type="email"],
+body.illu-theme-macmodern textarea,
 body.illu-theme-macmodern select {
-    border-radius: 6px !important;
+    min-height: 22px !important;
+    padding: 2px 6px !important;
+    color: var(--cata-label) !important;
+    font: 400 12px/16px var(--mp-font) !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: var(--cata-control-radius) !important;
+    background: var(--cata-field) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.09), 0 1px 0 var(--cata-specular) !important;
+    text-shadow: none !important;
 }
-body.illu-theme-macmodern:not(.theme-dark) input[type="text"],
-body.illu-theme-macmodern:not(.theme-dark) input[type="number"],
-body.illu-theme-macmodern:not(.theme-dark) input[type="search"],
-body.illu-theme-macmodern:not(.theme-dark) select {
-    border: 0.5px solid #cdcdd3 !important;
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05) !important;
+
+body.illu-theme-macmodern input::placeholder,
+body.illu-theme-macmodern textarea::placeholder {
+    color: var(--cata-label-tertiary) !important;
+    opacity: 1;
 }
-body.illu-theme-macmodern.theme-dark input[type="text"],
-body.illu-theme-macmodern.theme-dark input[type="number"],
-body.illu-theme-macmodern.theme-dark input[type="search"],
-body.illu-theme-macmodern.theme-dark select {
-    border: none !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+
+body.illu-theme-macmodern select option {
+    color: var(--cata-label);
+    background: var(--cata-window);
+}
+
+body.illu-theme-macmodern fieldset {
+    min-width: 0;
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 5px !important;
+    background: transparent !important;
+}
+
+body.illu-theme-macmodern legend,
+body.illu-theme-macmodern label {
+    color: var(--cata-label) !important;
+}
+
+body.illu-theme-macmodern .muted-help,
+body.illu-theme-macmodern small,
+body.illu-theme-macmodern .settings-hint-micro,
+body.illu-theme-macmodern .settings-perf-hint,
+body.illu-theme-macmodern .settings-data-hint,
+body.illu-theme-macmodern .settings-layout-desc,
+body.illu-theme-macmodern .settings-ai-note {
+    color: var(--cata-label-secondary) !important;
+}
+
+body.illu-theme-macmodern hr {
+    height: 1px;
+    border: 0 !important;
+    background: var(--cata-separator) !important;
+}
+
+body.illu-theme-macmodern kbd {
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-bottom-color: var(--cata-border) !important;
+    border-radius: 3px !important;
+    background: var(--cata-control-bottom) !important;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ═══════════════════════ 8. Checkboxes, radios, sliders ═══════════════════════ */
+body.illu-theme-macmodern input[type="checkbox"],
+body.illu-theme-macmodern input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: inline-grid;
+    place-content: center;
+    flex: 0 0 auto;
+    width: 14px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    margin: 0 5px 0 0 !important;
+    padding: 0 !important;
+    vertical-align: -2px;
+    border: 1px solid var(--cata-border) !important;
+    background: linear-gradient(180deg, var(--cata-control-top), var(--cata-control-bottom)) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern input[type="checkbox"] {
+    border-radius: 3px !important;
+}
+
+body.illu-theme-macmodern input[type="radio"] {
+    border-radius: 50% !important;
+}
+
+body.illu-theme-macmodern input[type="checkbox"]::before {
+    content: "" !important;
+    width: 7px;
+    height: 4px;
+    border: 0 solid #ffffff;
+    border-left-width: 2px;
+    border-bottom-width: 2px;
+    opacity: 0;
+    transform: translateY(-1px) rotate(-45deg);
+}
+
+body.illu-theme-macmodern input[type="radio"]::after {
+    content: "" !important;
+    display: block !important;
+    width: 6px !important;
+    height: 6px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    opacity: 0;
+    transform: none !important;
+}
+
+body.illu-theme-macmodern input[type="checkbox"]:checked,
+body.illu-theme-macmodern input[type="radio"]:checked {
+    border-color: #0755aa !important;
+    background: linear-gradient(180deg, #2c91eb, var(--cata-accent)) !important;
+}
+
+body.illu-theme-macmodern input[type="checkbox"]:checked::before,
+body.illu-theme-macmodern input[type="radio"]:checked::after {
+    opacity: 1 !important;
+}
+
+body.illu-theme-macmodern input[type="range"],
+body.illu-theme-macmodern .effect-range,
+body.illu-theme-macmodern .illu-cr-range {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 18px;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern input[type="range"]::-webkit-slider-runnable-track,
+body.illu-theme-macmodern .effect-range::-webkit-slider-runnable-track,
+body.illu-theme-macmodern .illu-cr-range::-webkit-slider-runnable-track {
+    height: 4px !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 999px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.illu-theme-macmodern input[type="range"]::-moz-range-track,
+body.illu-theme-macmodern .effect-range::-moz-range-track,
+body.illu-theme-macmodern .illu-cr-range::-moz-range-track {
+    height: 4px !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 999px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.illu-theme-macmodern input[type="range"]::-webkit-slider-thumb,
+body.illu-theme-macmodern .effect-range::-webkit-slider-thumb,
+body.illu-theme-macmodern .illu-cr-range::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 15px !important;
+    height: 15px !important;
+    margin-top: -6px !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 50% !important;
+    background: linear-gradient(180deg, #ffffff, #dedede) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.illu-theme-macmodern input[type="range"]::-moz-range-thumb,
+body.illu-theme-macmodern .effect-range::-moz-range-thumb,
+body.illu-theme-macmodern .illu-cr-range::-moz-range-thumb {
+    width: 15px !important;
+    height: 15px !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 50% !important;
+    background: linear-gradient(180deg, #ffffff, #dedede) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.illu-theme-macmodern .illu-range-wrap,
+body.illu-theme-macmodern .illu-gauge-wrap,
+body.illu-theme-macmodern .illu-status-progress-track,
+body.illu-theme-macmodern .illu-autosave-progress-track,
+body.illu-theme-macmodern .illu-rmbg-progress-track,
+body.illu-theme-macmodern .illu-caf-progress-track,
+body.illu-theme-macmodern .illu-mp-progress-indicator {
+    overflow: hidden;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 999px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14) !important;
+}
+
+body.illu-theme-macmodern .illu-range-fill,
+body.illu-theme-macmodern .illu-gauge-fill,
+body.illu-theme-macmodern .illu-status-progress-fill,
+body.illu-theme-macmodern .illu-autosave-progress-fill,
+body.illu-theme-macmodern .illu-rmbg-progress-fill,
+body.illu-theme-macmodern .illu-caf-progress-fill,
+body.illu-theme-macmodern .illu-mp-progress-indicator__bar {
+    border: 0 !important;
+    border-radius: inherit !important;
+    background: linear-gradient(180deg, #3f9bee, var(--cata-accent)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
+}
+
+body.illu-theme-macmodern .illu-mp-progress-indicator--segmented > .illu-mp-progress-indicator__bar {
+    background:
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.48), transparent),
+        linear-gradient(180deg, #3f9bee, var(--cata-accent)) !important;
+    background-size: 160% 100%, 100% 100% !important;
+    animation: cata-progress 1.2s linear infinite !important;
+}
+
+@keyframes cata-progress {
+    from { background-position: 150% 0, 0 0; }
+    to { background-position: -70% 0, 0 0; }
+}
+
+/* ═══════════════════════ 9. Palette Outils ═══════════════════════ */
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn {
+    gap: 2px !important;
+    padding: 4px !important;
+    color: var(--cata-label) !important;
+    background: var(--cata-window) !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-group {
+    border-color: var(--cata-separator) !important;
+    background: transparent !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn:hover:not(:disabled) {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active {
+    color: var(--cata-selection-text) !important;
+    background: var(--cata-selection) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn i,
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn i::before,
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn svg {
+    color: inherit !important;
+    fill: currentColor;
+    filter: none !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn svg [fill]:not([fill="none"]) {
+    fill: currentColor !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn svg [stroke]:not([stroke="none"]) {
+    stroke: currentColor !important;
+}
+
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active i,
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active i::before,
+html body.illu-theme-macmodern #win-tools #main-toolbox.tool-grid--pdn .tool-btn.active svg {
+    color: var(--cata-selection-text) !important;
+}
+
+/* ═══════════════════════ 10. Listes, calques et couleurs ═══════════════════════ */
+body.illu-theme-macmodern .list-box,
+body.illu-theme-macmodern #layers-list.list-box {
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 4px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07) !important;
+}
+
+body.illu-theme-macmodern .list-item,
+body.illu-theme-macmodern #layers-list.list-box .list-item.layer-row {
+    min-height: 23px !important;
+    margin: 1px 3px !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 3px !important;
+    background: transparent !important;
+}
+
+body.illu-theme-macmodern .list-item:not(.active):hover,
+body.illu-theme-macmodern #layers-list.list-box .list-item.layer-row:not(.active):hover {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+/* Sélection verrouillée : fond bleu + texte blanc, jamais blanc sur blanc. */
+body.illu-theme-macmodern .list-item.active,
+body.illu-theme-macmodern #layers-list .layer-row.active,
+body.illu-theme-macmodern #layers-list .layer-row.layer-row--dyn-filter.active,
+body.illu-theme-macmodern #layers-list .layer-row.layer-row--alpha-mask.active {
+    color: var(--cata-selection-text) !important;
+    border-color: transparent !important;
+    background: var(--cata-selection) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-row.active .layer-name,
+body.illu-theme-macmodern #layers-list .layer-row.active .layer-name *,
+body.illu-theme-macmodern #layers-list .layer-row.active > span:not(.layer-thumb),
+body.illu-theme-macmodern #layers-list .layer-row.active i,
+body.illu-theme-macmodern #layers-list .layer-row.active i::before,
+body.illu-theme-macmodern #layers-list .layer-row.active svg {
+    color: var(--cata-selection-text) !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-row.active svg [fill]:not([fill="none"]) {
+    fill: currentColor !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-row.active svg [stroke]:not([stroke="none"]) {
+    stroke: currentColor !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #layers-list :is(
+    .layer-alpha-btn,
+    .layer-dynfx-btn,
+    .layer-dynfilter-alpha-preview-btn
+) {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 19px !important;
+    min-width: 19px !important;
+    height: 19px !important;
+    min-height: 19px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: var(--cata-label) !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 3px !important;
+    background: var(--cata-control-bottom) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #layers-list .layer-row.active :is(
+    .layer-alpha-btn,
+    .layer-dynfx-btn,
+    .layer-dynfilter-alpha-preview-btn
+) {
+    color: var(--cata-selection-text) !important;
+    border-color: rgba(255, 255, 255, 0.34) !important;
+    background: rgba(255, 255, 255, 0.17) !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-row.active input[type="checkbox"] {
+    border-color: rgba(255, 255, 255, 0.82) !important;
+    background: #ffffff !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-row.active input[type="checkbox"]::before {
+    border-color: var(--cata-selection) !important;
+}
+
+body.illu-theme-macmodern #layers-list .layer-dynfx-btn--on,
+body.illu-theme-macmodern #layers-list .layer-dynfilter-alpha-preview-btn--on {
+    color: var(--cata-selection-text) !important;
+    border-color: #0755aa !important;
+    background: var(--cata-selection) !important;
+}
+
+body.illu-theme-macmodern #win-layers #layer-bounds-panel,
+body.illu-theme-macmodern #palette-grid,
+body.illu-theme-macmodern #color-wheel-container {
+    border-color: var(--cata-border-soft) !important;
+    border-radius: 4px !important;
+    background: var(--cata-window-alt) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern #win-layers .layer-palette-toolbar {
+    overflow: hidden;
+    border: 0 !important;
+    border-top: 1px solid var(--cata-separator) !important;
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+    background: linear-gradient(180deg, var(--cata-title-top), var(--cata-title-bottom)) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .layer-palette-toolbar button {
+    width: 25px !important;
+    min-width: 25px !important;
+    height: 23px !important;
+    min-height: 23px !important;
+    padding: 0 !important;
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 3px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) #win-layers .layer-palette-toolbar button:hover:not(:disabled) {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+/* ═══════════════════════ 11. Segments, onglets et barre d’état ═══════════════════════ */
+body.illu-theme-macmodern .illu-scope-btn-row {
+    display: inline-flex !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    min-height: 22px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 5px !important;
+    background: var(--cata-control-bottom) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-scope-btn {
+    min-width: 54px !important;
+    min-height: 20px !important;
+    margin: 0 !important;
+    padding: 2px 9px !important;
+    color: var(--cata-label) !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    line-height: 16px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--cata-separator) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .illu-scope-btn:first-child {
+    border-left: 0 !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-scope-btn:hover:not(.illu-scope-btn--active):not(:disabled) {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-scope-btn--active,
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .illu-scope-btn[aria-pressed="true"] {
+    color: var(--cata-selection-text) !important;
+    border-left-color: transparent !important;
+    background: var(--cata-selection) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20) !important;
+}
+
+body.illu-theme-macmodern .effect-scope-bar,
+body.illu-theme-macmodern .illu-effect-scope-bar.field-row {
+    margin: 6px 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+body.illu-theme-macmodern .status-bar {
+    min-height: 24px !important;
+    padding: 2px 6px !important;
+    color: var(--cata-label-secondary) !important;
+    font-size: 11px !important;
+    border: 0 !important;
+    border-top: 1px solid var(--cata-separator) !important;
+    background: linear-gradient(180deg, var(--cata-title-top), var(--cata-title-bottom)) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .window:not(#app-window) > .status-bar:last-child {
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+}
+
+body.illu-theme-macmodern .status-bar-cell {
+    min-height: 18px !important;
+    padding: 0 7px !important;
+    color: var(--cata-label-secondary) !important;
+    border: 0 !important;
+    border-right: 1px solid var(--cata-separator) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .status-bar-cell:last-child {
+    border-right: 0 !important;
+}
+
+body.illu-theme-macmodern .status-bar-field,
+body.illu-theme-macmodern .status-bar-credit,
+body.illu-theme-macmodern .status-bar-credit-line {
+    color: inherit !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .status-bar-credit-link,
+body.illu-theme-macmodern #settings-overlay a,
+body.illu-theme-macmodern .settings-github-link {
+    color: var(--cata-accent) !important;
+    text-decoration: none !important;
+}
+
+body.illu-theme-macmodern .status-bar-credit-link:hover,
+body.illu-theme-macmodern #settings-overlay a:hover,
+body.illu-theme-macmodern .settings-github-link:hover {
+    text-decoration: underline !important;
+}
+
+/* ═══════════════════════ 12. Menus AppKit ═══════════════════════ */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"],
+body.illu-theme-macmodern #context-menu.ctx-menu-panel,
+body.illu-theme-macmodern .illu-shape-picker-popup {
+    min-width: 182px !important;
+    padding: 4px 0 !important;
+    overflow: visible !important;
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: var(--cata-menu-radius) !important;
+    background: var(--cata-menu) !important;
+    box-shadow: var(--cata-menu-shadow) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(1.08) !important;
+    backdrop-filter: blur(18px) saturate(1.08) !important;
+}
+
+body.illu-theme-macmodern li[role="menuitem"] > ul[role="menu"] ul[role="menu"] {
+    margin-top: -4px !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"],
+body.illu-theme-macmodern #context-menu .ctx-item {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 22px !important;
+    margin: 0 4px !important;
+    padding: 2px 25px 2px 10px !important;
+    color: var(--cata-label) !important;
+    font-family: var(--mp-font) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 18px !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon {
+    padding-left: 34px !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check {
+    padding-left: 50px !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"] .menu-icon {
+    position: absolute !important;
+    left: 10px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    color: var(--cata-menu-icon) !important;
+    text-align: center !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-icon {
+    left: 30px !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"] .menu-check,
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check .menu-check {
+    position: absolute !important;
+    left: 10px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 16px !important;
+    color: var(--cata-menu-icon) !important;
+    text-align: center !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"] :is(.menu-shortcut, .shortcut, [class*="shortcut"]),
+body.illu-theme-macmodern #context-menu .ctx-shortcut {
+    margin-left: auto !important;
+    padding-left: 18px !important;
+    color: var(--cata-label-secondary) !important;
+    white-space: nowrap !important;
+}
+
+/* Échappement CSS ASCII : aucune corruption de type a-euro. */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"][aria-haspopup="true"]::after {
+    content: "\25B8" !important;
+    position: absolute !important;
+    right: 8px !important;
+    color: currentColor !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+}
+
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]),
+body.illu-theme-macmodern #context-menu .ctx-item:is(:hover, .active):not([aria-disabled="true"]) {
+    color: var(--cata-selection-text) !important;
+    background: var(--cata-selection) !important;
+    text-shadow: none !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) *,
+body.illu-theme-macmodern #context-menu .ctx-item:is(:hover, .active):not([aria-disabled="true"]) * {
+    color: var(--cata-selection-text) !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg {
+    color: var(--cata-selection-text) !important;
+    fill: currentColor !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg [fill]:not([fill="none"]) {
+    fill: currentColor !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg [stroke]:not([stroke="none"]) {
+    stroke: currentColor !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) i::before {
+    color: var(--cata-selection-text) !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) img {
+    filter: grayscale(1) brightness(0) invert(1) !important;
+    opacity: 1 !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"][aria-disabled="true"],
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"].disabled,
+body.illu-theme-macmodern #context-menu .ctx-item[aria-disabled="true"],
+body.illu-theme-macmodern #context-menu .ctx-item.disabled {
+    color: var(--cata-disabled) !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"][aria-disabled="true"] *,
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"].disabled *,
+body.illu-theme-macmodern #context-menu .ctx-item[aria-disabled="true"] *,
+body.illu-theme-macmodern #context-menu .ctx-item.disabled * {
+    color: var(--cata-disabled) !important;
+    opacity: 1 !important;
+}
+
+body.illu-theme-macmodern ul[role="menu"] li.divider,
+body.illu-theme-macmodern ul[role="menu"] li[role="separator"],
+body.illu-theme-macmodern #context-menu .ctx-sep {
+    height: 1px !important;
+    min-height: 1px !important;
+    margin: 4px 8px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--cata-separator) !important;
+    box-shadow: none !important;
+}
+
+/* ═══════════════════════ 13. Dialogues et panneaux avancés ═══════════════════════ */
+body.illu-theme-macmodern #dialog-overlay,
+body.illu-theme-macmodern #export-dialog-overlay,
+body.illu-theme-macmodern #settings-overlay,
+body.illu-theme-macmodern .dialog-overlay,
+body.illu-theme-macmodern .modal-overlay,
+body.illu-theme-macmodern .illu-instant-effect-busy__backdrop {
+    background: rgba(20, 22, 26, 0.34) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+    backdrop-filter: blur(2px) !important;
+}
+
+body.illu-theme-macmodern fieldset,
+body.illu-theme-macmodern .illu-advanced-section,
+body.illu-theme-macmodern .illu-cr-sec,
+body.illu-theme-macmodern .illu-rbgg-toolbar {
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 5px !important;
+    background: var(--cata-window-alt) !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .illu-advanced-section-summary,
+body.illu-theme-macmodern .illu-cr-sec-h {
+    color: var(--cata-label) !important;
+    border-bottom: 1px solid var(--cata-separator) !important;
+    border-radius: 4px 4px 0 0 !important;
+    background: linear-gradient(180deg, var(--cata-title-top), var(--cata-title-bottom)) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .illu-advanced-section-summary::before {
+    content: "\25B8" !important;
+    color: var(--cata-label-secondary) !important;
+    font-size: 9px !important;
+}
+
+body.illu-theme-macmodern details[open] > .illu-advanced-section-summary::before {
+    content: "\25BE" !important;
+}
+
+body.illu-theme-macmodern kbd,
+body.illu-theme-macmodern #settings-overlay kbd {
+    padding: 1px 5px !important;
+    color: var(--cata-label) !important;
+    font-family: var(--mp-font) !important;
+    font-size: 10px !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 4px !important;
+    background: linear-gradient(180deg, var(--cata-control-top), var(--cata-control-bottom)) !important;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.illu-theme-macmodern hr,
+body.illu-theme-macmodern .illu-cr-foot,
+body.illu-theme-macmodern .illu-lvl-foot,
+body.illu-theme-macmodern .settings-dialog-actions {
+    border-color: var(--cata-separator) !important;
+}
+
+body.illu-theme-macmodern #settings-overlay .settings-dialog-aside {
+    color: var(--cata-label) !important;
+    border-right: 1px solid var(--cata-separator) !important;
+    background: var(--cata-window-alt) !important;
+}
+
+body.illu-theme-macmodern #settings-overlay .settings-dialog-actions,
+body.illu-theme-macmodern #effect-dialog-footer,
+body.illu-theme-macmodern .welcome-dialog-footer,
+body.illu-theme-macmodern .illu-cr-foot,
+body.illu-theme-macmodern .illu-lvl-foot {
+    color: var(--cata-label) !important;
+    border-top: 1px solid var(--cata-separator) !important;
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+    background: linear-gradient(180deg, var(--cata-toolbar-top), var(--cata-toolbar-bottom)) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .illu-cr-preview-col,
+body.illu-theme-macmodern .illu-vhs-preview-col,
+body.illu-theme-macmodern .illu-lvl-preview-wrap,
+body.illu-theme-macmodern .illu-rbgg-canvas-wrap {
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 4px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.illu-theme-macmodern .illu-cr-preview,
+body.illu-theme-macmodern .illu-vhs-preview-canvas,
+body.illu-theme-macmodern .illu-lvl-preview,
+body.illu-theme-macmodern .illu-lvl-hist {
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 2px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.illu-theme-macmodern .effect-param-label,
+body.illu-theme-macmodern .effect-val,
+body.illu-theme-macmodern .illu-vhs-hint,
+body.illu-theme-macmodern .illu-vhs-hint--muted,
+body.illu-theme-macmodern .illu-rmbg-lead,
+body.illu-theme-macmodern .illu-rmbg-hint,
+body.illu-theme-macmodern .illu-rmbg-hint-settings,
+body.illu-theme-macmodern .illu-lvl-col-title,
+body.illu-theme-macmodern .illu-lvl-gamma-lab {
+    color: var(--cata-label) !important;
+}
+
+body.illu-theme-macmodern .illu-crop-ratio-btn--active,
+body.illu-theme-macmodern .illu-rbgg-brush-btn.is-active,
+body.illu-theme-macmodern .ef-hsv-preset.active,
+body.illu-theme-macmodern .ef-hsv-preset[aria-pressed="true"] {
+    color: var(--cata-selection-text) !important;
+    border-color: var(--cata-accent-pressed) !important;
+    background: var(--cata-selection) !important;
+}
+
+/* ═══════════════════════ 14. Docks, tiroirs et chargement ═══════════════════════ */
+body.illu-theme-macmodern .palette-dock,
+body.illu-theme-macmodern #palette-dock-rail.palette-dock-rail,
+body.illu-theme-macmodern .palette-dock-rail__host {
+    color: var(--cata-label) !important;
+    border-color: var(--cata-border-soft) !important;
+    background: var(--cata-window) !important;
+}
+
+body.illu-theme-macmodern .palette-dock-rail__tabs,
+body.illu-theme-macmodern .workspace-dock-center {
+    border-color: var(--cata-separator) !important;
+    background: linear-gradient(180deg, var(--cata-toolbar-top), var(--cata-toolbar-bottom)) !important;
+}
+
+body.illu-theme-macmodern .illu-mobile-drawer,
+body.illu-theme-macmodern .illu-mobile-drawer__panel,
+body.illu-theme-macmodern .illu-mobile-drawer__palette-tile {
+    color: var(--cata-label) !important;
+    border-color: var(--cata-border-soft) !important;
+    background: var(--cata-window) !important;
+}
+
+body.illu-theme-macmodern .illu-mobile-burger-btn {
+    color: var(--cata-label) !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.illu-theme-macmodern .illu-mobile-burger-btn:hover,
+body.illu-theme-macmodern .illu-mobile-burger-btn:active {
+    color: var(--cata-label) !important;
+    background: var(--cata-hover) !important;
+}
+
+body.illu-theme-macmodern .illu-pdn-tab {
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: 5px 5px 0 0 !important;
+    background: linear-gradient(180deg, var(--cata-control-top), var(--cata-control-bottom)) !important;
+    box-shadow: inset 0 1px 0 var(--cata-specular) !important;
+}
+
+body.illu-theme-macmodern .illu-pdn-tab[aria-pressed="true"] {
+    color: var(--cata-selection-text) !important;
+    border-color: var(--cata-accent-pressed) !important;
+    background: var(--cata-selection) !important;
+}
+
+body.illu-theme-macmodern .illu-instant-effect-busy__box {
+    overflow: hidden !important;
+    color: var(--cata-label) !important;
+    border: 1px solid var(--cata-border) !important;
+    border-radius: var(--cata-window-radius) !important;
+    background: var(--cata-window) !important;
+    box-shadow: var(--cata-panel-shadow) !important;
+}
+
+body.illu-theme-macmodern .illu-splash__track,
+body.illu-theme-macmodern .illu-instant-effect-busy__track {
+    overflow: hidden !important;
+    border: 1px solid var(--cata-border-soft) !important;
+    border-radius: 999px !important;
+    background: var(--cata-inset) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.16) !important;
+}
+
+body.illu-theme-macmodern .illu-splash__fill:not(.illu-mp-progress-indicator__bar),
+body.illu-theme-macmodern .illu-instant-effect-busy__track > span {
+    border-radius: inherit !important;
+    background: var(--cata-accent) !important;
+}
+
+/* ═══════════════════════ 15. Verrous de cascade critiques ═══════════════════════ */
+/* Une palette à bouton unique reste un vrai bouton rouge de fermeture. */
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls button.title-bar-close-btn {
+    order: 1 !important;
+    width: 12px !important;
+    min-width: 12px !important;
+    max-width: 12px !important;
+    height: 12px !important;
+    min-height: 12px !important;
+    max-height: 12px !important;
+    padding: 0 !important;
+    color: transparent !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #ff5f57 !important;
+    box-shadow:
+        inset 0 0 0 0.5px rgba(0, 0, 0, 0.22),
+        inset 0 1px 1px rgba(255, 255, 255, 0.24) !important;
+}
+
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls button.title-bar-close-btn::before,
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls button.title-bar-close-btn::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 2px !important;
+    top: 5px !important;
+    display: block !important;
+    width: 8px !important;
+    height: 1.5px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 1px !important;
+    background: #74110d !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    transform: rotate(45deg) !important;
+}
+
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls button.title-bar-close-btn::after {
+    transform: rotate(-45deg) !important;
+}
+
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls:hover button.title-bar-close-btn::before,
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) :is(
+    #win-layers,
+    #win-colors,
+    #win-tools,
+    #win-history,
+    #win-svg-objects,
+    .iview-window,
+    .palette-panel,
+    .floating-window
+) .title-bar-controls:hover button.title-bar-close-btn::after {
+    opacity: 1 !important;
+}
+
+/* Icônes sombres au repos, blanches uniquement sur la sélection bleue. */
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) :is(
+    .menu-icon,
+    .menu-check,
+    i
+) {
+    color: var(--cata-menu-icon) !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) i::before {
+    color: var(--cata-menu-icon) !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) svg {
+    color: var(--cata-menu-icon) !important;
+    fill: currentColor !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) svg [fill]:not([fill="none"]) {
+    fill: currentColor !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) svg [stroke]:not([stroke="none"]) {
+    stroke: currentColor !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) img {
+    filter: grayscale(1) brightness(0.40) !important;
+    opacity: 0.82 !important;
+}
+
+html body.illu-theme-macmodern.theme-dark ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active):not([aria-selected="true"]):not([aria-disabled="true"]) img {
+    filter: grayscale(1) brightness(1.75) !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active,
+html body.illu-theme-macmodern #layers-list .layer-row.layer-row--dyn-filter.active,
+html body.illu-theme-macmodern #layers-list .layer-row.layer-row--alpha-mask.active {
     color: #ffffff !important;
+    border-color: transparent !important;
+    background-color: #0a64c8 !important;
+    background-image: none !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active :is(
+    .layer-name,
+    .layer-name *,
+    span:not(.layer-thumb),
+    i,
+    svg
+) {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active i::before {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active svg {
+    fill: currentColor !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active svg [fill]:not([fill="none"]) {
+    fill: #ffffff !important;
+}
+
+html body.illu-theme-macmodern #layers-list .layer-row.active svg [stroke]:not([stroke="none"]) {
+    stroke: #ffffff !important;
+}
+
+html body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) .window:not(#app-window),
+html body.illu-theme-macmodern.ui-layout-floating #floating-palette-host > .window.palette-panel {
+    overflow: hidden !important;
+    border-radius: var(--cata-window-radius) !important;
+    background-clip: padding-box !important;
+}
+
+html body.illu-theme-macmodern .window:not(#app-window) > :last-child,
+html body.illu-theme-macmodern #win-layers > .layer-palette-toolbar:last-child,
+html body.illu-theme-macmodern #effect-dialog-window > #effect-dialog-footer:last-child {
+    border-bottom-left-radius: var(--cata-inner-radius) !important;
+    border-bottom-right-radius: var(--cata-inner-radius) !important;
+}
+
+@media (max-width: 590px) {
+    body.illu-theme-macmodern .status-bar {
+        min-height: 24px !important;
+    }
+
+    body.illu-theme-macmodern .title-bar {
+        min-height: 28px !important;
+        height: 28px !important;
+    }
+
+    body.illu-theme-macmodern.illu-mobile-ui #win-tools #main-toolbox.tool-grid--pdn .tool-btn {
+        border-radius: 5px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.illu-theme-macmodern *,
+    body.illu-theme-macmodern *::before,
+    body.illu-theme-macmodern *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

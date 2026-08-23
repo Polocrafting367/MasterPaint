@@ -485,6 +485,12 @@ window.FilterManager = {
     _effectPersistBound: false,
     _frozenSnapshots: null,
     _effectTargets: null,
+    /** Mode animation : portée « Images » de la session ('current' | 'selection' | 'all'). */
+    _effectFrameScope: null,
+    /** Mode animation : Map 'layerId:frame' → { canvas (état d'origine), cel }. */
+    _animCelSnapshots: null,
+    /** Mode animation : cels effectivement traités par la dernière application. */
+    _animCelTargets: null,
     /** Portée mémorisée à l’ouverture de la modale (pour l’historique à la validation). */
     _effectSessionScopeAll: false,
     /** Mode téléphone : portée de la modale effet en cours (ignorer localStorage / sélection). */
@@ -534,10 +540,20 @@ window.FilterManager = {
     /** Enregistre l’historique selon la portée (calque actif / sélection / tous les calques). */
     _commitEffectHistory(label) {
         const scopeAll = this._effectSessionScopeAll === true || this._scopeAffectsAllLayers();
-        if (scopeAll) {
-            EditorManager.saveHistoryAllLayers(`${label} (tous les calques)`);
+        /* Mode animation : sans la liste des cels touchés, l'annulation ne rendrait que le
+           buffer du calque actif — c'est-à-dire la seule image affichée. */
+        const animCels =
+            this._animCelTargets && this._animCelTargets.length
+                ? this._animCelTargets.map(({ layer, cel }) => ({ layerId: layer.id, frame: cel.frame }))
+                : null;
+        if (scopeAll || (animCels && animCels.length > 1)) {
+            EditorManager.saveHistoryAllLayers(`${label}${scopeAll ? ' (tous les calques)' : ''}`, { animCels });
         } else {
-            EditorManager.saveHistory(label, { patchActiveLayer: true });
+            EditorManager.saveHistory(label, { patchActiveLayer: true, animCels });
+        }
+        /* Les miniatures de la frise viennent des cels : elles doivent se redessiner. */
+        if (animCels && animCels.length) {
+            document.dispatchEvent(new CustomEvent('illu:anim-changed', { detail: { kind: 'effect' } }));
         }
     },
 
@@ -582,6 +598,174 @@ window.FilterManager = {
         }
     },
 
+    // ---- Mode animation : portée « Images » des effets -----------------------
+
+    /** Sélection courante de la frise ({layers, from, to}) ou null. */
+    _animSelection() {
+        const p = window.IlluAnimPanel;
+        if (p && typeof p.getSelection === 'function') return p.getSelection();
+        return window.IlluAnimSelection || null;
+    },
+
+    /** Portée « Images » proposée par défaut : la sélection de frise si elle en vaut la peine. */
+    _defaultFrameScope() {
+        const s = this._animSelection();
+        return s && (s.to > s.from || s.layers.length > 1) ? 'selection' : 'current';
+    },
+
+    _readFrameScope() {
+        if (!EditorManager.isAnimationMode) return 'current';
+        const v = this._effectFrameScope;
+        if (v === 'current' || v === 'all') return v;
+        if (v === 'selection') return this._animSelection() ? 'selection' : 'current';
+        return this._defaultFrameScope();
+    },
+
+    /**
+     * Plage de frise visée par l'effet, croisement des deux portées :
+     *  - « Sélection de la frise » : exactement le rectangle sélectionné (calques × images) ;
+     *  - « Toutes les images » : les calques de la portée calque × toute la durée.
+     * Retourne null pour « Image courante » (comportement historique).
+     */
+    _animScopeSelection() {
+        if (!EditorManager.isAnimationMode) return null;
+        const anim = EditorManager.animation;
+        if (!anim) return null;
+        const fs = this._readFrameScope();
+        if (fs === 'current') return null;
+        if (fs === 'selection') {
+            const sel = this._animSelection();
+            return sel ? { layers: sel.layers.slice(), from: sel.from, to: sel.to } : null;
+        }
+        const layers =
+            this._readEffectScope() === 'all'
+                ? EditorManager.layers.map((l, i) => i)
+                : [EditorManager.activeLayerIndex];
+        return { layers, from: 0, to: Math.max(0, (anim.duration | 0) - 1) };
+    },
+
+    /** Cels visés, pour l'historique (undo d'un effet multi-images). */
+    _animScopedCelRefs() {
+        const sel = this._animScopeSelection();
+        if (!sel || typeof EditorManager.animCelRefsForSelection !== 'function') return null;
+        return EditorManager.animCelRefsForSelection(sel);
+    },
+
+    /**
+     * Remplace les cibles de l'effet par un couple (buffer de cel, cliché d'origine) pour
+     * chaque dessin de la plage. L'aperçu de la modale reste sur l'image courante — seule
+     * la validation étale l'effet sur toutes les images (sinon chaque curseur relancerait
+     * l'effet N fois).
+     */
+    _expandEffectTargetsToAnimCels() {
+        const sel = this._animScopeSelection();
+        const IA = window.IlluAnim;
+        if (!sel || !IA || typeof IA.selectionCels !== 'function') return false;
+        const cels = IA.selectionCels(EditorManager, sel);
+        if (!cels || !cels.length) return false;
+        if (!this._animCelSnapshots) this._animCelSnapshots = new Map();
+        const out = [];
+        cels.forEach(({ layer, cel }) => {
+            if (!cel || !cel.buffer) return;
+            const key = `${layer.id}:${cel.frame}`;
+            let snap = this._animCelSnapshots.get(key);
+            if (!snap) {
+                snap = EditorManager.cloneCanvas(cel.buffer);
+                this._animCelSnapshots.set(key, { canvas: snap, cel });
+            } else {
+                snap = snap.canvas;
+            }
+            out.push({
+                // Calque « synthétique » : seuls buffer/x/y sont lus par le moteur d'effet.
+                layer: { id: key, buffer: cel.buffer, x: layer.x, y: layer.y },
+                backup: EditorManager.cloneCanvas(snap),
+                animCel: { layerId: layer.id, frame: cel.frame }
+            });
+        });
+        if (!out.length) return false;
+        this._effectTargets = out;
+        this._animCelTargets = cels;
+        return true;
+    },
+
+    /** Remet les cels touchés dans leur état d'avant l'effet (annulation / re-rendu). */
+    _restoreAnimCelsFromSnapshots() {
+        if (!this._animCelSnapshots || !this._animCelSnapshots.size) return;
+        this._animCelSnapshots.forEach(({ canvas, cel }) => {
+            if (!cel || !cel.buffer || !canvas) return;
+            const ctx = cel.buffer.getContext('2d', { willReadFrequently: true });
+            ctx.clearRect(0, 0, cel.buffer.width, cel.buffer.height);
+            ctx.drawImage(canvas, 0, 0);
+        });
+    },
+
+    _clearAnimEffectState() {
+        this._animCelSnapshots = null;
+        this._animCelTargets = null;
+        this._effectFrameScope = null;
+    },
+
+    _syncEffectFrameScopeButtonStyles(root, scope) {
+        if (!root) return;
+        root.querySelectorAll('.illu-scope-btn[data-frame-scope]').forEach((btn) => {
+            btn.classList.toggle('illu-scope-btn--active', btn.getAttribute('data-frame-scope') === scope);
+        });
+    },
+
+    _bindEffectFrameScopeButtons() {
+        const root = document.querySelector('#effect-dialog-content .effect-frame-scope-bar');
+        if (!root || root.dataset.illuFrameScopeBound) return;
+        root.dataset.illuFrameScopeBound = '1';
+        this._syncEffectFrameScopeButtonStyles(root, this._readFrameScope());
+        root.querySelectorAll('.illu-scope-btn[data-frame-scope]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const v = btn.getAttribute('data-frame-scope');
+                if (!v) return;
+                this._effectFrameScope = v;
+                this._syncEffectFrameScopeButtonStyles(root, this._readFrameScope());
+                this._onEffectScopeChange();
+            });
+        });
+    },
+
+    /** Ligne « Images : … » de la modale d'effet (mode animation uniquement). */
+    _buildFrameScopeRow() {
+        if (!EditorManager.isAnimationMode) return '';
+        const T = (k, fb) => {
+            if (!window.IlluI18n || typeof window.IlluI18n.t !== 'function') return fb;
+            const v = window.IlluI18n.t(k);
+            return v && v !== k ? v : fb;
+        };
+        const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const anim = EditorManager.animation;
+        const dur = anim ? Math.max(1, anim.duration | 0) : 1;
+        const sel = this._animSelection();
+        const nSel = sel ? (sel.to - sel.from + 1) * sel.layers.length : 0;
+        const scope = this._readFrameScope();
+        const on = (v) => (scope === v ? ' illu-scope-btn--active' : '');
+        /* Les libellés restent courts : la rangée de portées est en flex, sans ellipse —
+           les nombres vivent donc dans l'infobulle, pas dans le bouton. */
+        const selBtn = sel
+            ? `<button type="button" class="illu-scope-btn${on('selection')}" data-frame-scope="selection" title="${
+                  esc(T('effect.frameScopeSelectionTitle', 'Images sélectionnées dans la frise') + ` : ${nSel}`)
+              }">${esc(T('effect.frameScopeSelection', 'Sélection frise'))}</button>`
+            : `<button type="button" class="illu-scope-btn illu-scope-btn--disabled" disabled title="${
+                  esc(T('effect.frameScopeNoSelection', 'Sélectionnez des images dans la frise (clic, Maj+clic, glisser sur la règle).'))
+              }">${esc(T('effect.frameScopeSelection', 'Sélection frise'))}</button>`;
+        return `<div class="effect-frame-scope-bar illu-effect-scope-bar field-row" style="flex-wrap:nowrap;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #808080;font-size:11px;align-items:stretch;">
+            <span class="illu-scope-bar-label" style="font-weight:600;flex-shrink:0;align-self:center;">${esc(T('effect.frameScopeLabel', 'Images :'))}</span>
+            <div class="illu-scope-btn-row" role="group" aria-label="${esc(T('effect.frameScopeAria', 'Images visées par l’effet'))}">
+                <button type="button" class="illu-scope-btn${on('current')}" data-frame-scope="current" title="${
+                    esc(T('effect.frameScopeCurrentTitle', 'Seule l’image affichée'))
+                }">${esc(T('effect.frameScopeCurrent', 'Image courante'))}</button>
+                ${selBtn}
+                <button type="button" class="illu-scope-btn${on('all')}" data-frame-scope="all" title="${
+                    esc(T('effect.frameScopeAllTitle', 'Toutes les images de l’animation') + ` : ${dur}`)
+                }">${esc(T('effect.frameScopeAll', 'Toute l’anim.'))}</button>
+            </div>
+        </div>`;
+    },
+
     _beginPixelEffectSession() {
         const pm = window.PhotoModeManager;
         if (pm && pm.isOpen()) {
@@ -615,6 +799,8 @@ window.FilterManager = {
             return false;
         }
         this._syncEffectScopeToContext();
+        this._clearAnimEffectState();
+        if (EditorManager.isAnimationMode) this._effectFrameScope = this._defaultFrameScope();
         const scope = this._readEffectScope();
         if (scope === 'active' && !EditorManager.activeLayer?.buffer) {
             window.showIlluAlert("Le calque actif n'a pas d'image.");
@@ -643,6 +829,7 @@ window.FilterManager = {
     },
 
     _restoreAllLayersFromFrozen() {
+        this._restoreAnimCelsFromSnapshots();
         if (!this._frozenSnapshots) return;
         const byId = Object.fromEntries(EditorManager.layers.map((l) => [l.id, l]));
         this._frozenSnapshots.forEach(({ id, snap }) => {
@@ -695,6 +882,12 @@ window.FilterManager = {
                     backup: EditorManager.cloneCanvas(byId[al.id])
                 });
             }
+        }
+        /* Mode animation, portée « Images » ≠ image courante : on remplace les cibles par
+           un couple (buffer de cel, cliché d'origine) par dessin. Uniquement au rendu final :
+           l'aperçu de la modale reste sur l'image affichée. */
+        if (EditorManager.isAnimationMode && this._effectPreviewIsFinal) {
+            this._expandEffectTargetsToAnimCels();
         }
     },
 
@@ -792,7 +985,7 @@ window.FilterManager = {
                 this._effectSessionScopeAll
                     ? 'État avant effet (tous les calques)'
                     : 'État avant effet',
-                { allLayers: this._effectSessionScopeAll }
+                { allLayers: this._effectSessionScopeAll, animCels: this._animScopedCelRefs() }
             );
         }
     },
@@ -1501,7 +1694,7 @@ window.FilterManager = {
                     this._effectSessionScopeAll
                         ? 'État avant effet (tous les calques)'
                         : 'État avant effet',
-                    { allLayers: this._effectSessionScopeAll }
+                    { allLayers: this._effectSessionScopeAll, animCels: this._animScopedCelRefs() }
                 );
             }
         }
@@ -2488,7 +2681,9 @@ window.FilterManager = {
             </div>
         </div>`;
         const content = document.getElementById('effect-dialog-content');
-        content.innerHTML = scopeRow + html;
+        /* Mode animation : seconde portée, orthogonale aux calques — sur quelles images
+           l'effet est appliqué (image courante, sélection de la frise, toute l'animation). */
+        content.innerHTML = scopeRow + this._buildFrameScopeRow() + html;
 
         /*
          * Mise au format compact : les gabarits d'effet sont écrits avec des styles en
@@ -2505,6 +2700,7 @@ window.FilterManager = {
         }
         if (window.IlluI18n && typeof window.IlluI18n.apply === 'function') window.IlluI18n.apply();
         this._bindEffectScopeButtons();
+        this._bindEffectFrameScopeButtons();
         this._restoreEffectParams();
         /* ASCII : la palette dépend des réglages restaurés (couleur unique / fond secondaire). */
         if (this.currentEffect === 'ascii') this._syncAsciiColorUi();
@@ -2675,6 +2871,7 @@ window.FilterManager = {
             FilterManager.apply();
         };
         this._frozenSnapshots = null;
+        this._clearAnimEffectState();
         this._effectTargets = null;
         this._effectSessionScopeAll = false;
         this.originalImageData = null;
@@ -2705,6 +2902,7 @@ window.FilterManager = {
         }
 
         this._frozenSnapshots = null;
+        this._clearAnimEffectState();
         this._effectTargets = null;
         this._effectSessionScopeAll = false;
         this.originalImageData = null;
@@ -2770,6 +2968,7 @@ window.FilterManager = {
                 }
             }
             this._frozenSnapshots = null;
+            this._clearAnimEffectState();
             this._effectTargets = null;
             this._effectSessionScopeAll = false;
             this.originalImageData = null;
@@ -2805,8 +3004,8 @@ window.FilterManager = {
                         this._vhsSkipCanvasWrite = false;
                     }
                     this._restoreAllLayersFromFrozen();
-                    this._setupEffectTargets();
                     this._effectPreviewIsFinal = true;
+                    this._setupEffectTargets();
                     await this._runPreviewSafe();
                     this._effectPreviewIsFinal = false;
                     this._vhsUseLowResPreview = wasLow;
@@ -2821,6 +3020,7 @@ window.FilterManager = {
                         this._commitEffectHistory(`Effet : ${label}`);
                     }
                     this._frozenSnapshots = null;
+                    this._clearAnimEffectState();
                     this._effectTargets = null;
                     this._effectSessionScopeAll = false;
                     this.originalImageData = null;
@@ -2860,9 +3060,9 @@ window.FilterManager = {
                         this._vhsSkipCanvasWrite = false;
                     }
                     this._restoreAllLayersFromFrozen();
-                    this._setupEffectTargets();
                     this._effectPreviewIsFinal = true;
-                    
+                    this._setupEffectTargets();
+
                     if (!abortController.signal.aborted) {
                         await this._runPreviewSafe();
                     }
@@ -2876,6 +3076,7 @@ window.FilterManager = {
                 } finally {
                     this._effectPreviewIsFinal = false;
                     this._frozenSnapshots = null;
+                    this._clearAnimEffectState();
                     this._effectTargets = null;
                     this._effectSessionScopeAll = false;
                     this.originalImageData = null;
@@ -2905,6 +3106,7 @@ window.FilterManager = {
         document.getElementById('effect-dialog').style.display = 'none';
         this._effectDialogDidClose();
         this._frozenSnapshots = null;
+        this._clearAnimEffectState();
         this._effectTargets = null;
         this.originalImageData = null;
         this.currentEffect = null;
@@ -3039,6 +3241,7 @@ window.FilterManager = {
         const base = illuEffectTitle('chromaAlphaMask', 'Incrustation (masque alpha)');
         this._commitEffectHistory(base);
         this._frozenSnapshots = null;
+        this._clearAnimEffectState();
         this._effectTargets = null;
         this.originalImageData = null;
         this.currentEffect = null;
@@ -5499,6 +5702,7 @@ FilterManager.showInstantFilterGallery = function() {
     this.showModal(typeof tKey === 'function' ? tKey('photo.filtersGallery', 'Galerie de Filtres') : 'Galerie de Filtres', contentHtml);
     if (typeof illuSetEffectDialogFooterMode === 'function') illuSetEffectDialogFooterMode('default');
     this._bindEffectScopeButtons();
+    this._bindEffectFrameScopeButtons();
     this._galleryPresetId = 'none';
     this.previewInstantFilter('none');
 };

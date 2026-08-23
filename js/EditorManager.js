@@ -1993,6 +1993,135 @@ const EditorManager = {
     },
 
     /**
+     * Cliché de la *structure* de la frise : images clés, maintiens, durée, pistes de tween.
+     * Les buffers sont référencés, pas copiés (le contenu des dessins est couvert à part par
+     * `_snapshotAnimCels`) — sans quoi une simple insertion d'image coûterait un clone de
+     * toute l'animation.
+     */
+    _snapshotAnimStructure() {
+        if (!this.isAnimationMode) return null;
+        const anim = this.animation;
+        if (!anim) return null;
+        return {
+            duration: anim.duration | 0,
+            playhead: anim.playhead | 0,
+            layers: this.layers.map((l) => ({
+                layerId: l.id,
+                cels: Array.isArray(l.cels)
+                    ? l.cels.map((c) => ({ frame: c.frame, hold: c.hold, buffer: c.buffer }))
+                    : null,
+                propTracks: l.propTracks
+                    ? JSON.parse(JSON.stringify(l.propTracks))
+                    : null
+            }))
+        };
+    },
+
+    /** Rétablit la structure de frise d'un cliché (annulation / rétablissement). */
+    _restoreAnimStructure(snap) {
+        if (!this.isAnimationMode || !snap || !Array.isArray(snap.layers)) return;
+        const anim = this.animation;
+        const byId = new Map(this.layers.map((l) => [l.id, l]));
+        snap.layers.forEach((s) => {
+            const layer = byId.get(s.layerId);
+            if (!layer) return;
+            if (s.cels) {
+                layer.cels = s.cels.map((c) => ({ frame: c.frame, hold: c.hold, buffer: c.buffer }));
+                layer.cels.sort((a, b) => a.frame - b.frame);
+            }
+            if (s.propTracks) layer.propTracks = JSON.parse(JSON.stringify(s.propTracks));
+        });
+        if (anim && snap.duration > 0) {
+            anim.duration = snap.duration;
+            if (anim.playhead > anim.duration - 1) anim.playhead = anim.duration - 1;
+        }
+    },
+
+    /**
+     * Références de cels d'une sélection de frise ({layers, from, to}) sous forme
+     * { layerId, frame } — passées à saveHistory via `opts.animCels` pour que l'annulation
+     * restaure les images concernées, et pas seulement le buffer du calque actif.
+     */
+    animCelRefsForSelection(sel) {
+        if (!this.isAnimationMode || !window.IlluAnim || typeof window.IlluAnim.selectionCels !== 'function') {
+            return null;
+        }
+        const cels = window.IlluAnim.selectionCels(this, sel);
+        if (!cels || !cels.length) return null;
+        return cels.map(({ layer, cel }) => ({ layerId: layer.id, frame: cel.frame }));
+    },
+
+    /**
+     * Cliché des cels pour l'historique en mode animation. Sans lui, undo/redo ne rendrait
+     * que `layer.buffer` — or celui-ci est repointé sur le cel courant à chaque rendu,
+     * donc la restauration serait aussitôt écrasée.
+     * @param {Array<{layerId:*, frame:number}>|null} refs cels précis, sinon cel courant
+     * @param {boolean} activeOnly limite le cliché implicite au calque actif
+     */
+    _snapshotAnimCels(refs, activeOnly) {
+        if (!this.isAnimationMode) return null;
+        const anim = this.animation;
+        if (!anim) return null;
+        const IA = window.IlluAnim;
+        const ph = anim.playhead | 0;
+        const seen = new Set();
+        const out = [];
+        const push = (layer, cel) => {
+            if (!layer || !cel || !cel.buffer) return;
+            const key = `${layer.id}:${cel.frame}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push({
+                layerId: layer.id,
+                frame: cel.frame,
+                hold: cel.hold,
+                buffer: this.cloneCanvas(cel.buffer)
+            });
+        };
+        if (Array.isArray(refs) && refs.length) {
+            const byId = new Map(this.layers.map((l) => [l.id, l]));
+            refs.forEach((r) => {
+                const layer = byId.get(r.layerId);
+                if (!layer || !Array.isArray(layer.cels)) return;
+                push(layer, layer.cels.find((c) => c.frame === (r.frame | 0)));
+            });
+        } else {
+            const pool = activeOnly && this.activeLayer ? [this.activeLayer] : this.layers;
+            pool.forEach((layer) => {
+                if (!layer || !Array.isArray(layer.cels)) return;
+                push(layer, IA && IA.celAt ? IA.celAt(layer, ph) : null);
+            });
+        }
+        return out.length ? { playhead: ph, cels: out } : null;
+    },
+
+    /** Réinjecte un cliché de cels (annulation / rétablissement en mode animation). */
+    _restoreAnimCels(snapshot) {
+        if (!this.isAnimationMode || !snapshot || !Array.isArray(snapshot.cels)) return;
+        const byId = new Map(this.layers.map((l) => [l.id, l]));
+        snapshot.cels.forEach((s) => {
+            const layer = byId.get(s.layerId);
+            if (!layer || !s.buffer) return;
+            if (!Array.isArray(layer.cels)) layer.cels = [];
+            let cel = layer.cels.find((c) => c.frame === s.frame);
+            if (!cel) {
+                cel = { frame: s.frame, hold: s.hold != null ? s.hold : 1e9, buffer: null };
+                layer.cels.push(cel);
+                layer.cels.sort((a, b) => a.frame - b.frame);
+            }
+            // On réécrit DANS le canvas du cel (sans le remplacer) : les buffers de cel sont
+            // référencés ailleurs (layer.buffer repointé, presse-papier, export).
+            if (!cel.buffer) {
+                cel.buffer = this.cloneCanvas(s.buffer);
+            } else {
+                const ctx = cel.buffer.getContext('2d', { willReadFrequently: true });
+                ctx.clearRect(0, 0, cel.buffer.width, cel.buffer.height);
+                ctx.drawImage(s.buffer, 0, 0);
+            }
+        });
+    },
+
+    /**
      * Pelure d'oignon : dessine des fantômes teintés des cels voisins du calque actif
      * (bleu = avant, rouge = après) par-dessus le composite. Ignorée pendant la lecture.
      */
@@ -2434,10 +2563,15 @@ const EditorManager = {
         if (!this.activeProject || !this.isPixelMode) return;
         const allLayers = opts.allLayers === true;
         if (allLayers) {
-            this.saveHistoryAllLayers(label || 'Point de restauration');
+            this.saveHistoryAllLayers(label || 'Point de restauration', {
+                animCels: opts.animCels,
+                animStructure: opts.animStructure
+            });
         } else {
             this.saveHistory(label || 'Point de restauration', {
-                patchActiveLayer: !!this.activeLayer?.buffer
+                patchActiveLayer: !!this.activeLayer?.buffer,
+                animCels: opts.animCels,
+                animStructure: opts.animStructure
             });
         }
     },
@@ -10775,6 +10909,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
      */
     disposeHistoryEntryData(data) {
         if (!data || typeof data !== 'object') return;
+        /* animStruct ne détient que des références aux buffers vivants des cels : on
+           lâche le cliché sans jamais libérer les canvas (ils servent encore au document). */
+        if (data.animStruct) data.animStruct = null;
+        if (data.anim && Array.isArray(data.anim.cels)) {
+            data.anim.cels.forEach((c) => {
+                if (c && c.buffer) {
+                    this._disposeCanvasBuffer(c.buffer);
+                    c.buffer = null;
+                }
+            });
+            data.anim = null;
+        }
         if (data.type === 'pixel-patch' && data.patch) {
             if (data.patch.buffer) {
                 this._disposeCanvasBuffer(data.patch.buffer);
@@ -11089,6 +11235,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             }
         } else {
             data = this._snapshotVectorHistoryData(opts);
+        }
+
+        /* Mode animation : le buffer de calque n'est qu'un pointeur sur le cel courant.
+           On joint donc le cliché des cels touchés, sinon undo/redo n'aurait aucun effet. */
+        if (data && (data.type === 'pixel-patch' || data.type === 'pixel-full') && this.isAnimationMode) {
+            const animSnap = this._snapshotAnimCels(opts.animCels, usePatch);
+            if (animSnap) data.anim = animSnap;
+            /* Opérations de frise (insérer/supprimer une image, cadence, décalage…) : la
+               structure change sans que les pixels bougent forcément. */
+            if (opts.animStructure) data.animStruct = this._snapshotAnimStructure();
         }
 
         if (this.historyIndex >= 0 && data && data.type) {
@@ -11538,6 +11694,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         Math.min(Math.max(0, d.activeLayerIndex != null ? d.activeLayerIndex : li), this.layers.length - 1)
                     );
                 }
+                this._restoreAnimStructure(d.animStruct);
+                this._restoreAnimCels(d.anim);
                 this.updateLayerUI();
                 this.render({ flushUiThumbnails: true, layerIndex: li >= 0 ? li : undefined });
             } else if (
@@ -11546,6 +11704,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 Array.isArray(d.layers)
             ) {
                 const src = d;
+                /* Les pistes d'animation (cels, tween) ne sont pas dans le cliché bitmap :
+                   on les reporte depuis les calques en place, sinon l'annulation en mode
+                   animation effacerait toute la frise. */
+                const animTracksById = new Map(
+                    this.layers.map((l) => [l.id, { cels: l.cels, propTracks: l.propTracks }])
+                );
                 const restored = src.layers
                     .filter((s) => s.buffer)
                     .map((s) => ({
@@ -11564,6 +11728,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                             ? this.cloneCanvas(s.importStagingCanvas)
                             : null,
                         ...this._snapshotDynamicFilterProps(s),
+                        ...(animTracksById.get(s.id) || {}),
                         buffer: this.cloneCanvas(s.buffer)
                     }));
                 this.activeProject.layers = restored;
@@ -11573,6 +11738,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 this.setActiveLayerIndex(
                     Math.min(Math.max(0, src.activeLayerIndex || 0), this.layers.length - 1)
                 );
+                this._restoreAnimStructure(d.animStruct);
+                this._restoreAnimCels(d.anim);
                 this.updateLayerUI();
                 this.render({ flushUiThumbnails: true, uiThumbnailsAllLayers: true });
             } else if (typeof d === 'string') {

@@ -20,6 +20,7 @@
     const DOC = document;
     const HOLD_INF = 1e9;
     let _celClipboard = null; // presse-papier de cel (canvas) pour copier/coller
+    let _rangeClipboard = null; // presse-papier de plage (calques × images) pour la sélection
 
     function makeCanvas(w, h) {
         const c = DOC.createElement('canvas');
@@ -613,6 +614,292 @@
         /** Y a-t-il un cel exactement à `frame` sur ce calque ? */
         hasCelAt(layer, frame) {
             return !!(layer && layer.cels && layer.cels.some((c) => c.frame === (frame | 0)));
+        },
+
+        // ---- Sélection multi-images (calques × plage d'images) ----------------
+
+        /**
+         * Normalise une sélection de frise : { layers:[index…], from, to } → bornes triées
+         * et indices de calques valides. Retourne null si la sélection est vide.
+         */
+        normalizeSelection(em, sel) {
+            if (!em || !sel || !Array.isArray(sel.layers) || !sel.layers.length) return null;
+            const anim = em.animation;
+            const last = anim ? Math.max(0, (anim.duration | 0) - 1) : 0;
+            const a = Math.min(sel.from | 0, sel.to | 0);
+            const b = Math.max(sel.from | 0, sel.to | 0);
+            const from = Math.max(0, Math.min(last, a));
+            const to = Math.max(0, Math.min(last, b));
+            const layers = sel.layers
+                .map((i) => i | 0)
+                .filter((i, k, arr) => i >= 0 && i < em.layers.length && arr.indexOf(i) === k)
+                .sort((x, y) => x - y);
+            if (!layers.length) return null;
+            return { layers, from, to };
+        },
+
+        /**
+         * Cels distincts *exposés* dans la sélection (un cel maintenu sur 5 images ne compte
+         * qu'une fois). C'est la cible des opérations « par dessin » : effets, effacement…
+         * @returns {Array<{layerIndex:number, layer:object, cel:object}>}
+         */
+        selectionCels(em, sel) {
+            const out = [];
+            const s = this.normalizeSelection(em, sel);
+            if (!s) return out;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer) return;
+                ensureTracks(em, layer);
+                const seen = new Set();
+                for (let f = s.from; f <= s.to; f++) {
+                    const cel = celAt(layer, f);
+                    if (cel && !seen.has(cel)) {
+                        seen.add(cel);
+                        out.push({ layerIndex: li, layer, cel });
+                    }
+                }
+            });
+            return out;
+        },
+
+        /** Cels dont l'image clé *propre* tombe dans la sélection (cible des retimings). */
+        selectionOwnCels(em, sel) {
+            const out = [];
+            const s = this.normalizeSelection(em, sel);
+            if (!s) return out;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer) return;
+                ensureTracks(em, layer);
+                layer.cels
+                    .filter((c) => c.frame >= s.from && c.frame <= s.to)
+                    .forEach((cel) => out.push({ layerIndex: li, layer, cel }));
+            });
+            return out;
+        },
+
+        /** Sélection = toute la frise (tous les calques, toutes les images). */
+        wholeTimelineSelection(em) {
+            const anim = em && em.animation;
+            if (!anim) return null;
+            return {
+                layers: (em.layers || []).map((l, i) => i),
+                from: 0,
+                to: Math.max(0, (anim.duration | 0) - 1)
+            };
+        },
+
+        // ---- Opérations groupées sur une sélection ---------------------------
+
+        /** Vide le dessin des cels exposés dans la sélection (les cels restent en place). */
+        clearSelectionCels(em, sel) {
+            const targets = this.selectionCels(em, sel);
+            if (!targets.length) return 0;
+            targets.forEach(({ cel }) => {
+                if (!cel.buffer) return;
+                const ctx = cel.buffer.getContext('2d', { willReadFrequently: true });
+                ctx.clearRect(0, 0, cel.buffer.width, cel.buffer.height);
+            });
+            this._changed(em);
+            em.render();
+            return targets.length;
+        },
+
+        /** Supprime les cels de la sélection (retour au maintien du cel précédent). */
+        removeSelectionCels(em, sel) {
+            const s = this.normalizeSelection(em, sel);
+            if (!s) return 0;
+            let n = 0;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer || !layer.cels) return;
+                const before = layer.cels.length;
+                // Le cel@0 est le socle du calque : on le vide au lieu de le retirer.
+                layer.cels = layer.cels.filter((c) => {
+                    if (c.frame < s.from || c.frame > s.to) return true;
+                    if (c.frame === 0) {
+                        const ctx = c.buffer && c.buffer.getContext('2d', { willReadFrequently: true });
+                        if (ctx) ctx.clearRect(0, 0, c.buffer.width, c.buffer.height);
+                        return true;
+                    }
+                    return false;
+                });
+                n += before - layer.cels.length;
+            });
+            if (n) {
+                this._changed(em);
+                em.render();
+            }
+            return n;
+        },
+
+        /** Décale dans le temps les cels de la sélection (glisser au clavier / boutons). */
+        shiftSelectionCels(em, sel, delta) {
+            const s = this.normalizeSelection(em, sel);
+            const d = delta | 0;
+            if (!s || !d) return false;
+            const anim = em.animation;
+            const last = Math.max(0, (anim.duration | 0) - 1);
+            let moved = false;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer || !layer.cels) return;
+                ensureTracks(em, layer);
+                const picked = layer.cels.filter((c) => c.frame >= s.from && c.frame <= s.to && c.frame !== 0);
+                if (!picked.length) return;
+                const dest = picked.map((c) => c.frame + d);
+                if (dest.some((f) => f < 1 || f > last)) return; // sortie de frise : on ne bouge pas
+                const destSet = new Set(dest);
+                layer.cels = layer.cels.filter((c) => picked.indexOf(c) >= 0 || !destSet.has(c.frame));
+                picked.forEach((c) => { c.frame += d; });
+                sortCels(layer);
+                moved = true;
+            });
+            if (moved) {
+                this._changed(em);
+                em.render();
+            }
+            return moved;
+        },
+
+        /**
+         * Cadence (exposition) : ré-étale les dessins de la sélection à raison de `n` images
+         * chacun — « animer sur 2 » (n=2) est la base du dessin traditionnel. Les cels situés
+         * après la sélection sont décalés d'autant.
+         */
+        setSelectionExposure(em, sel, n) {
+            const s = this.normalizeSelection(em, sel);
+            const step = Math.max(1, n | 0);
+            if (!s) return false;
+            const anim = em.animation;
+            let maxEnd = 0;
+            let changed = false;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer || !layer.cels) return;
+                ensureTracks(em, layer);
+                const inRange = layer.cels
+                    .filter((c) => c.frame >= s.from && c.frame <= s.to)
+                    .sort((a, b) => a.frame - b.frame);
+                if (inRange.length < 1) return;
+                const oldEnd = inRange[inRange.length - 1].frame;
+                const start = inRange[0].frame;
+                inRange.forEach((c, i) => {
+                    c.frame = start + i * step;
+                    c.hold = HOLD_INF;
+                });
+                const newEnd = inRange[inRange.length - 1].frame;
+                const shift = newEnd - oldEnd;
+                if (shift !== 0) {
+                    layer.cels.forEach((c) => {
+                        if (inRange.indexOf(c) < 0 && c.frame > oldEnd) c.frame += shift;
+                    });
+                }
+                sortCels(layer);
+                maxEnd = Math.max(maxEnd, layer.cels[layer.cels.length - 1].frame);
+                changed = true;
+            });
+            if (changed) {
+                if (anim && maxEnd > anim.duration - 1) anim.duration = maxEnd + 1;
+                this._changed(em);
+                em.render();
+            }
+            return changed;
+        },
+
+        /** Inverse l'ordre des dessins *à l'intérieur* de la sélection (le reste ne bouge pas). */
+        reverseSelectionCels(em, sel) {
+            const s = this.normalizeSelection(em, sel);
+            if (!s || s.to <= s.from) return false;
+            let changed = false;
+            s.layers.forEach((li) => {
+                const layer = em.layers[li];
+                if (!layer || !layer.cels) return;
+                ensureTracks(em, layer);
+                const frames = [];
+                for (let f = s.from; f <= s.to; f++) frames.push(celAt(layer, f));
+                frames.reverse();
+                const kept = layer.cels.filter((c) => c.frame < s.from || c.frame > s.to);
+                let prev;
+                for (let i = 0; i < frames.length; i++) {
+                    const src = frames[i];
+                    if (src === prev) continue;
+                    prev = src;
+                    if (!src) continue;
+                    kept.push({ frame: s.from + i, hold: HOLD_INF, buffer: copyCanvas(src.buffer, em.width, em.height) });
+                }
+                layer.cels = kept;
+                if (!layer.cels.some((c) => c.frame === 0)) {
+                    layer.cels.push({ frame: 0, hold: HOLD_INF, buffer: makeCanvas(em.width, em.height) });
+                }
+                sortCels(layer);
+                changed = true;
+            });
+            if (changed) {
+                this._changed(em);
+                em.render();
+            }
+            return changed;
+        },
+
+        /** Copie une plage complète (calques × images) dans le presse-papier de frise. */
+        copySelection(em, sel) {
+            const s = this.normalizeSelection(em, sel);
+            if (!s) return 0;
+            const tracks = s.layers.map((li) => {
+                const layer = em.layers[li];
+                ensureTracks(em, layer);
+                const cels = [];
+                for (let f = s.from; f <= s.to; f++) {
+                    const own = layer.cels.find((c) => c.frame === f);
+                    if (own) cels.push({ offset: f - s.from, hold: own.hold, buffer: copyCanvas(own.buffer, em.width, em.height) });
+                }
+                return cels;
+            });
+            _rangeClipboard = { span: s.to - s.from + 1, tracks };
+            return tracks.reduce((a, t) => a + t.length, 0);
+        },
+
+        hasRangeClipboard() {
+            return !!(_rangeClipboard && _rangeClipboard.tracks && _rangeClipboard.tracks.length);
+        },
+
+        /** Colle le presse-papier de plage à partir de (layerIndex, frame). */
+        pasteSelection(em, layerIndex, frame) {
+            if (!this.hasRangeClipboard()) return false;
+            const anim = em.animation;
+            if (!anim) return false;
+            const baseLayer = layerIndex == null ? em.activeLayerIndex : layerIndex | 0;
+            const baseFrame = frame == null ? anim.playhead | 0 : frame | 0;
+            let maxFrame = 0;
+            _rangeClipboard.tracks.forEach((cels, i) => {
+                const layer = em.layers[baseLayer + i];
+                if (!layer) return;
+                ensureTracks(em, layer);
+                cels.forEach((c) => {
+                    const f = baseFrame + c.offset;
+                    if (f < 0) return;
+                    layer.cels = layer.cels.filter((x) => x.frame !== f);
+                    layer.cels.push({ frame: f, hold: c.hold != null ? c.hold : HOLD_INF, buffer: copyCanvas(c.buffer, em.width, em.height) });
+                    if (f > maxFrame) maxFrame = f;
+                });
+                sortCels(layer);
+            });
+            if (maxFrame > anim.duration - 1) anim.duration = maxFrame + 1;
+            this._changed(em);
+            em.render();
+            return true;
+        },
+
+        // ---- Lecture / frise -------------------------------------------------
+
+        /** Active/désactive la lecture en boucle. */
+        toggleLoop(em) {
+            const anim = em.animation;
+            if (!anim) return;
+            anim.loop = !anim.loop;
+            this._changed(em, 'loop');
         },
 
         _changed(em, kind) {

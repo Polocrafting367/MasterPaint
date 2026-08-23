@@ -26,6 +26,16 @@
     let _dragCel = null; // {layerIndex, frame} en cours de glisser-déposer
     let _selCell = { layerIndex: 0, frame: 0 }; // dernière cellule sélectionnée (copier/coller)
     let _panelHovered = false;
+    let loopBtn = null;
+    let durInput = null;
+    let selInfoEl = null;
+    let openBtn = null; // bouton de réouverture dans la barre d'état
+    /** Sélection multi-images : { layers:[index…], from, to } (null = aucune). */
+    let _sel = null;
+    /** Ancre du Maj+clic (dernière cellule cliquée sans Maj). */
+    let _selAnchor = null;
+    /** Frise repliée par la croix de fermeture (le mode animation reste actif). */
+    let _collapsed = false;
 
     function syncOnionOptsVisibility() {
         if (!onionOpts) return;
@@ -67,6 +77,244 @@
         const s = DOC.createElement('span');
         s.className = 'illu-anim-sep';
         return s;
+    }
+
+    // ---- Sélection multi-images -------------------------------------------
+
+    function allLayerIndices() {
+        const e = em();
+        return e && e.layers ? e.layers.map((l, i) => i) : [];
+    }
+
+    /** Sélection normalisée (bornes triées, indices valides) ou null. */
+    function normSel() {
+        const IA = window.IlluAnim;
+        if (!IA || !IA.normalizeSelection) return null;
+        return IA.normalizeSelection(em(), _sel);
+    }
+
+    /**
+     * Sélection effective des opérations : la sélection explicite si elle existe,
+     * sinon la cellule courante (calque actif × tête de lecture).
+     */
+    function opsSelection() {
+        const s = normSel();
+        if (s) return s;
+        const e = em();
+        const a = anim();
+        if (!e || !a) return null;
+        const f = a.playhead | 0;
+        return { layers: [e.activeLayerIndex], from: f, to: f };
+    }
+
+    function setSelection(sel) {
+        _sel = sel;
+        scheduleRefresh();
+        syncSelectionMirror();
+    }
+
+    function clearSelection() {
+        _sel = null;
+        _selAnchor = null;
+        scheduleRefresh();
+        syncSelectionMirror();
+    }
+
+    function selectAllFrames() {
+        const IA = window.IlluAnim;
+        const s = IA && IA.wholeTimelineSelection ? IA.wholeTimelineSelection(em()) : null;
+        if (s) {
+            _selAnchor = { layerIndex: 0, frame: 0 };
+            setSelection(s);
+        }
+    }
+
+    function isCellSelected(li, f) {
+        const s = normSel();
+        return !!(s && f >= s.from && f <= s.to && s.layers.indexOf(li) >= 0);
+    }
+
+    /** Étend la sélection depuis l'ancre jusqu'à (li, f) — Maj+clic. */
+    function extendSelectionTo(li, f) {
+        const a = _selAnchor || { layerIndex: li, frame: f };
+        const l0 = Math.min(a.layerIndex, li);
+        const l1 = Math.max(a.layerIndex, li);
+        const layers = [];
+        for (let i = l0; i <= l1; i++) layers.push(i);
+        setSelection({ layers, from: Math.min(a.frame, f), to: Math.max(a.frame, f) });
+    }
+
+    /** Publie la sélection pour les consommateurs externes (portée des effets). */
+    function syncSelectionMirror() {
+        const s = normSel();
+        window.IlluAnimSelection = s
+            ? { layers: s.layers.slice(), from: s.from, to: s.to }
+            : null;
+        DOC.dispatchEvent(new CustomEvent('illu:anim-selection-changed', { detail: window.IlluAnimSelection }));
+    }
+
+    // ---- Petit menu flottant réutilisable ---------------------------------
+
+    function makeMenu(id) {
+        closeFloatingMenus();
+        const menu = DOC.createElement('div');
+        menu.id = id;
+        menu.className = 'illu-anim-menu';
+        const api = {
+            el: menu,
+            add(label, fn, disabled) {
+                const it = DOC.createElement('div');
+                it.className = 'illu-anim-menu-item';
+                it.textContent = label;
+                if (disabled) it.classList.add('illu-anim-menu-item--off');
+                if (!disabled) {
+                    it.addEventListener('click', () => {
+                        closeFloatingMenus();
+                        fn();
+                    });
+                }
+                menu.appendChild(it);
+                return it;
+            },
+            sep() {
+                const d = DOC.createElement('div');
+                d.className = 'illu-anim-menu-sep';
+                menu.appendChild(d);
+            },
+            title(label) {
+                const d = DOC.createElement('div');
+                d.className = 'illu-anim-menu-title';
+                d.textContent = label;
+                menu.appendChild(d);
+            },
+            show(clientX, clientY) {
+                DOC.body.appendChild(menu);
+                const mw = menu.offsetWidth;
+                const mh = menu.offsetHeight;
+                let x = clientX;
+                let y = clientY;
+                if (x + mw > innerWidth) x = innerWidth - mw - 6;
+                if (y + mh > innerHeight) y = innerHeight - mh - 6;
+                menu.style.left = Math.max(4, x) + 'px';
+                menu.style.top = Math.max(4, y) + 'px';
+                setTimeout(() => DOC.addEventListener('pointerdown', closeFloatingMenus, { once: true }), 0);
+            }
+        };
+        return api;
+    }
+
+    function closeFloatingMenus() {
+        DOC.querySelectorAll('.illu-anim-menu').forEach((m) => m.remove());
+    }
+
+    /** Menu des opérations groupées sur la sélection. */
+    function openSelectionMenu(clientX, clientY) {
+        const IA = window.IlluAnim;
+        const E = em();
+        if (!IA || !E) return;
+        const s = opsSelection();
+        const nFrames = s ? s.to - s.from + 1 : 0;
+        const nLayers = s ? s.layers.length : 0;
+        const m = makeMenu('illu-anim-sel-menu');
+        m.title(
+            s
+                ? t('anim.selSummary', 'Sélection') + ` : ${nLayers} × ${nFrames}`
+                : t('anim.selNone', 'Aucune sélection')
+        );
+        m.add(t('anim.selAll', 'Tout sélectionner (Ctrl+A)'), selectAllFrames);
+        m.add(t('anim.selClearSel', 'Désélectionner (Échap)'), clearSelection, !_sel);
+        m.sep();
+        m.add(t('anim.selCopy', 'Copier la plage'), () => {
+            IA.copySelection(E, s);
+            scheduleRefresh();
+        }, !s);
+        m.add(
+            t('anim.selPaste', 'Coller la plage ici'),
+            () => {
+                withAnimHistory(t('anim.histPaste', 'Coller une plage d’images'), () =>
+                    IA.pasteSelection(E, s.layers[0], s.from)
+                );
+            },
+            !s || !IA.hasRangeClipboard()
+        );
+        m.sep();
+        m.add(t('anim.selClear', 'Effacer le dessin des images'), () => {
+            withAnimHistory(
+                t('anim.histClear', 'Effacer les images sélectionnées'),
+                () => IA.clearSelectionCels(E, s),
+                { pixelSel: s }
+            );
+        }, !s);
+        m.add(t('anim.selDelete', 'Supprimer les cels (Suppr)'), () => {
+            withAnimHistory(
+                t('anim.histDelete', 'Supprimer des cels'),
+                () => IA.removeSelectionCels(E, s),
+                { pixelSel: s }
+            );
+        }, !s);
+        m.sep();
+        m.add(t('anim.selShiftLeft', 'Décaler ← d’une image'), () => {
+            withAnimHistory(t('anim.histShift', 'Décaler des cels'), () => IA.shiftSelectionCels(E, s, -1));
+        }, !s);
+        m.add(t('anim.selShiftRight', 'Décaler → d’une image'), () => {
+            withAnimHistory(t('anim.histShift', 'Décaler des cels'), () => IA.shiftSelectionCels(E, s, 1));
+        }, !s);
+        m.add(t('anim.selReverse', 'Inverser l’ordre de la plage'), () => {
+            withAnimHistory(t('anim.histReverse', 'Inverser une plage'), () => IA.reverseSelectionCels(E, s));
+        }, !s || nFrames < 2);
+        m.sep();
+        m.title(t('anim.exposure', 'Cadence (images par dessin)'));
+        [1, 2, 3, 4].forEach((n) => {
+            m.add(
+                t('anim.exposureN', 'Animer sur') + ` ${n}`,
+                () => {
+                    withAnimHistory(t('anim.histExposure', 'Changer la cadence'), () =>
+                        IA.setSelectionExposure(E, s, n)
+                    );
+                },
+                !s
+            );
+        });
+        m.show(clientX, clientY);
+    }
+
+    /**
+     * Exécute une opération de frise entre deux points d'historique, de sorte que Ctrl+Z
+     * rende bien l'état d'avant : l'historique bitmap seul ne suit que `layer.buffer`,
+     * c'est-à-dire l'unique image affichée.
+     *
+     * La *structure* (images clés, maintiens, durée, tween) est clichée par référence —
+     * coût négligeable. Les *pixels* ne le sont que pour les opérations qui écrivent dans
+     * un buffer existant (effacement), via `opts.pixelSel` : tout cloner reviendrait à
+     * dupliquer l'animation entière à chaque clic.
+     *
+     * @param {string} label
+     * @param {function} fn
+     * @param {{pixelSel?: object}} [opts]
+     */
+    function withAnimHistory(label, fn, opts) {
+        const E = em();
+        if (!E) return;
+        const pixelSel = opts && opts.pixelSel ? opts.pixelSel : null;
+        const refs = () =>
+            pixelSel && typeof E.animCelRefsForSelection === 'function'
+                ? E.animCelRefsForSelection(pixelSel)
+                : null;
+        if (typeof E.pushHistoryCheckpoint === 'function') {
+            E.pushHistoryCheckpoint(t('anim.histBefore', 'Avant modification de la frise'), {
+                animCels: refs(),
+                animStructure: true
+            });
+        }
+        fn();
+        if (typeof E.saveHistory === 'function') {
+            E.saveHistory(label, {
+                patchActiveLayer: !!(E.activeLayer && E.activeLayer.buffer),
+                animCels: refs(),
+                animStructure: true
+            });
+        }
+        scheduleRefresh();
     }
 
     const PANEL_H_KEY = 'illu-anim-panel-height';
@@ -171,10 +419,14 @@
 
         bar.appendChild(sep());
 
-        bar.appendChild(btn('＋', t('anim.addFrame', 'Ajouter une image'), () => window.IlluAnim.addFrame(em())));
-        bar.appendChild(btn('⧉', t('anim.dupCel', 'Dupliquer le cel'), () => window.IlluAnim.duplicateCel(em())));
-        bar.appendChild(btn('⤵', t('anim.insertFrame', 'Insérer une image ici'), () => window.IlluAnim.insertFrame(em())));
-        bar.appendChild(btn('🗑', t('anim.delFrame', 'Supprimer l’image'), () => window.IlluAnim.removeFrame(em())));
+        bar.appendChild(btn('＋', t('anim.addFrame', 'Ajouter une image'), () =>
+            withAnimHistory(t('anim.addFrame', 'Ajouter une image'), () => window.IlluAnim.addFrame(em()))));
+        bar.appendChild(btn('⧉', t('anim.dupCel', 'Dupliquer le cel'), () =>
+            withAnimHistory(t('anim.dupCel', 'Dupliquer le cel'), () => window.IlluAnim.duplicateCel(em()))));
+        bar.appendChild(btn('⤵', t('anim.insertFrame', 'Insérer une image ici'), () =>
+            withAnimHistory(t('anim.insertFrame', 'Insérer une image ici'), () => window.IlluAnim.insertFrame(em()))));
+        bar.appendChild(btn('🗑', t('anim.delFrame', 'Supprimer l’image'), () =>
+            withAnimHistory(t('anim.delFrame', 'Supprimer l’image'), () => window.IlluAnim.removeFrame(em()))));
 
         bar.appendChild(sep());
 
@@ -275,7 +527,8 @@
         bar.appendChild(sep());
 
         // Inversion / ping-pong / draw & step.
-        bar.appendChild(btn('⇄', t('anim.reverse', 'Inverser l’animation'), () => window.IlluAnim.reverseAnimation(em())));
+        bar.appendChild(btn('⇄', t('anim.reverse', 'Inverser l’animation'), () =>
+            withAnimHistory(t('anim.reverse', 'Inverser l’animation'), () => window.IlluAnim.reverseAnimation(em()))));
         pingpongBtn = btn('⇋', t('anim.pingpong', 'Lecture aller-retour (ping-pong)'), () => {
             window.IlluAnim.togglePingPong(em());
             const a = anim();
@@ -290,9 +543,60 @@
         });
         bar.appendChild(drawStepBtn);
 
+        bar.appendChild(sep());
+
+        // Boucle de lecture + durée totale de la frise.
+        loopBtn = btn('🔁', t('anim.loop', 'Lecture en boucle'), () => {
+            window.IlluAnim.toggleLoop(em());
+            const a = anim();
+            loopBtn.classList.toggle('illu-anim-on', !!(a && a.loop));
+        });
+        bar.appendChild(loopBtn);
+
+        const durLbl = DOC.createElement('label');
+        durLbl.textContent = t('anim.duration', 'Images');
+        durLbl.title = t('anim.durationTitle', 'Nombre total d’images de l’animation');
+        durInput = DOC.createElement('input');
+        durInput.type = 'number';
+        durInput.min = '1';
+        durInput.max = '9999';
+        durInput.value = '24';
+        durInput.addEventListener('change', () => {
+            const v = parseInt(durInput.value, 10);
+            if (Number.isFinite(v) && v > 0) {
+                withAnimHistory(t('anim.duration', 'Images'), () => window.IlluAnim.setDuration(em(), v));
+            }
+        });
+        durLbl.appendChild(durInput);
+        bar.appendChild(durLbl);
+
+        bar.appendChild(sep());
+
+        // Opérations groupées sur la sélection (effacer, décaler, cadence…).
+        const selBtn = btn('▦', t('anim.selMenu', 'Sélection d’images : opérations groupées'), (ev) => {
+            const r = ev.currentTarget.getBoundingClientRect();
+            openSelectionMenu(r.left, r.bottom + 2);
+        });
+        bar.appendChild(selBtn);
+
+        selInfoEl = DOC.createElement('span');
+        selInfoEl.className = 'illu-anim-sel-info';
+        selInfoEl.title = t('anim.selInfoTitle', 'Images sélectionnées — les effets peuvent leur être appliqués (portée « Images » de la fenêtre d’effet)');
+        bar.appendChild(selInfoEl);
+
         readoutEl = DOC.createElement('span');
         readoutEl.className = 'illu-anim-frame-readout';
         bar.appendChild(readoutEl);
+
+        // Fermeture : ⏏ quitte le mode animation (aplatit), ✕ replie seulement la frise.
+        const exitBtn = btn('⏏', t('anim.exitMode', 'Quitter le mode animation (aplatit sur l’image courante)'), () => {
+            requestExitAnimationMode();
+        }, 'illu-anim-exit-btn');
+        bar.appendChild(exitBtn);
+        const closeBtn = btn('✕', t('anim.closePanel', 'Fermer la frise (le mode animation reste actif)'), () => {
+            collapsePanel(true);
+        }, 'illu-anim-close-btn');
+        bar.appendChild(closeBtn);
 
         panel.appendChild(bar);
 
@@ -307,21 +611,78 @@
         panel.addEventListener('pointerenter', () => (_panelHovered = true));
         panel.addEventListener('pointerleave', () => (_panelHovered = false));
 
-        DOC.body.appendChild(panel);
+        mountPanel(panel);
         return panel;
+    }
+
+    /**
+     * Ancre la frise DANS le flux de l'application, entre la zone de travail
+     * (#editor-dock-row / #workspace-wrapper) et la barre d'état — pas au-dessous d'elle.
+     * Repli sur <body> si la coquille applicative n'est pas encore là.
+     */
+    function mountPanel(el) {
+        const statusBar = DOC.getElementById('app-status-bar');
+        const host = statusBar ? statusBar.parentNode : null;
+        if (host && statusBar) {
+            host.insertBefore(el, statusBar);
+            el.classList.add('illu-anim-inflow');
+            return;
+        }
+        const dockRow = DOC.getElementById('editor-dock-row');
+        if (dockRow && dockRow.parentNode) {
+            dockRow.parentNode.insertBefore(el, dockRow.nextSibling);
+            el.classList.add('illu-anim-inflow');
+            return;
+        }
+        DOC.body.appendChild(el);
+        DOC.body.classList.add('illu-anim-floating');
     }
 
     /** Construit une cellule de règle (numéro d'image). */
     function rulerCell(frame, playhead) {
         const c = DOC.createElement('div');
         c.className = 'illu-anim-ruler-cell';
+        c.dataset.frame = String(frame);
         if (frame % 5 === 0) {
             c.classList.add('illu-anim-tick');
             c.textContent = String(frame);
         }
         if (frame === playhead) c.classList.add('illu-anim-playhead-col');
-        c.addEventListener('click', () => window.IlluAnim.seek(em(), frame));
+        const s = normSel();
+        if (s && frame >= s.from && frame <= s.to) c.classList.add('illu-anim-sel-col');
+        // Clic = déplacer la tête de lecture ; glisser = sélectionner une plage d'images
+        // sur tous les calques (le glisser-déposer de cel vit dans les cellules, pas ici).
+        c.addEventListener('pointerdown', (ev) => {
+            if (ev.button !== 0) return;
+            ev.preventDefault();
+            window.IlluAnim.seek(em(), frame);
+            if (ev.shiftKey && _selAnchor) {
+                extendSelectionTo(_selAnchor.layerIndex, frame);
+            } else {
+                _selAnchor = { layerIndex: 0, frame };
+                setSelection({ layers: allLayerIndices(), from: frame, to: frame });
+            }
+            beginRulerDrag(frame);
+        });
         return c;
+    }
+
+    /** Glisser sur la règle : étend la plage d'images sélectionnée. */
+    function beginRulerDrag(startFrame) {
+        const onMove = (ev) => {
+            const el = DOC.elementFromPoint(ev.clientX, ev.clientY);
+            const cell = el && el.closest ? el.closest('.illu-anim-ruler-cell, .illu-anim-cell') : null;
+            if (!cell || cell.dataset.frame == null) return;
+            const f = parseInt(cell.dataset.frame, 10);
+            if (!Number.isFinite(f)) return;
+            setSelection({ layers: allLayerIndices(), from: startFrame, to: f });
+        };
+        const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
     }
 
     /** Construit une cellule calque×frame. */
@@ -351,6 +712,9 @@
     function trackCell(layerIndex, layer, frame, playhead) {
         const c = DOC.createElement('div');
         c.className = 'illu-anim-cell';
+        c.dataset.frame = String(frame);
+        c.dataset.layer = String(layerIndex);
+        if (isCellSelected(layerIndex, frame)) c.classList.add('illu-anim-sel');
         const IA = window.IlluAnim;
         const info = IA.activeCelInfo(layer, frame);
         const isCel = info && info.cel.frame === frame;
@@ -379,7 +743,10 @@
             c.classList.remove('illu-anim-drop');
             if (_dragCel && _dragCel.layerIndex === layerIndex) {
                 ev.preventDefault();
-                IA.moveCel(em(), layerIndex, _dragCel.frame, frame);
+                const from = _dragCel.frame;
+                withAnimHistory(t('anim.moveCel', 'Déplacer un cel'), () =>
+                    IA.moveCel(em(), layerIndex, from, frame)
+                );
                 _dragCel = null;
                 refresh();
             }
@@ -399,6 +766,21 @@
         c.addEventListener('click', (e) => {
             const e2 = em();
             _selCell = { layerIndex, frame };
+            // Maj+clic : étend la sélection depuis l'ancre. Ctrl/Cmd+clic : ajoute ou retire
+            // le calque de la sélection en cours. Clic simple : sélectionne cette cellule.
+            if (e.shiftKey) {
+                extendSelectionTo(layerIndex, frame);
+            } else if ((e.ctrlKey || e.metaKey) && normSel()) {
+                const s = normSel();
+                const layers = s.layers.slice();
+                const k = layers.indexOf(layerIndex);
+                if (k >= 0) layers.splice(k, 1);
+                else layers.push(layerIndex);
+                setSelection({ layers, from: s.from, to: s.to });
+            } else {
+                _selAnchor = { layerIndex, frame };
+                setSelection({ layers: [layerIndex], from: frame, to: frame });
+            }
             e2.setActiveLayerIndex(layerIndex);
             IA.seek(e2, frame);
             if (e.altKey) {
@@ -418,6 +800,14 @@
         });
         c.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            // Clic droit dans une sélection multiple : opérations groupées.
+            const s = normSel();
+            const inSel = isCellSelected(layerIndex, frame);
+            const multi = s && (s.layers.length > 1 || s.to > s.from);
+            if (inSel && multi) {
+                openSelectionMenu(e.clientX, e.clientY);
+                return;
+            }
             openCellMenu(e, layerIndex, layer, frame);
         });
         return c;
@@ -425,28 +815,9 @@
 
     /** Petit menu contextuel de cellule. */
     function openCellMenu(evt, layerIndex, layer, frame) {
-        closeCellMenu();
         const IA = window.IlluAnim;
-        const menu = DOC.createElement('div');
-        menu.id = 'illu-anim-cell-menu';
-        menu.style.cssText =
-            'position:fixed;z-index:12000;background:var(--anim-surface,#fff);color:var(--anim-text,#000);' +
-            'border:1px solid var(--anim-border,#999);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.28);' +
-            'padding:4px;min-width:180px;font-size:12px;';
-        const add = (label, fn, disabled) => {
-            const it = DOC.createElement('div');
-            it.textContent = label;
-            it.style.cssText =
-                'padding:6px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;' +
-                (disabled ? 'opacity:.45;pointer-events:none;' : '');
-            it.addEventListener('mouseenter', () => (it.style.background = 'rgba(43,108,255,.16)'));
-            it.addEventListener('mouseleave', () => (it.style.background = ''));
-            it.addEventListener('click', () => {
-                closeCellMenu();
-                fn();
-            });
-            menu.appendChild(it);
-        };
+        const m = makeMenu('illu-anim-cell-menu');
+        const add = (label, fn, disabled) => m.add(label, fn, disabled);
 
         add(t('anim.menuKey', 'Créer un cel ici (image clé)'), () => {
             const e2 = em();
@@ -456,27 +827,36 @@
             e2.render();
             refresh();
         });
-        add(t('anim.menuDup', 'Dupliquer ce cel →'), () => IA.duplicateCel(em(), layerIndex, frame));
+        add(t('anim.menuDup', 'Dupliquer ce cel →'), () =>
+            withAnimHistory(t('anim.menuDup', 'Dupliquer ce cel →'), () => IA.duplicateCel(em(), layerIndex, frame)));
         add(t('anim.menuCopy', 'Copier le cel'), () => {
             IA.copyCel(em(), layerIndex, frame);
         });
-        add(t('anim.menuPaste', 'Coller le cel ici'), () => IA.pasteCel(em(), layerIndex, frame), !IA.hasClipboard());
+        add(t('anim.menuPaste', 'Coller le cel ici'), () =>
+            withAnimHistory(t('anim.menuPaste', 'Coller le cel ici'), () => IA.pasteCel(em(), layerIndex, frame)),
+            !IA.hasClipboard());
         add(t('anim.menuExtend', 'Étendre ce dessin sur… images'), () => {
             const n = parseInt(window.prompt(t('anim.extendPrompt', 'Sur combien d’images suivantes ?'), '3'), 10);
-            if (Number.isFinite(n) && n > 0) IA.repeatCelOverRange(em(), layerIndex, frame, n);
+            if (Number.isFinite(n) && n > 0) {
+                withAnimHistory(t('anim.menuExtend', 'Étendre ce dessin sur… images'), () =>
+                    IA.repeatCelOverRange(em(), layerIndex, frame, n)
+                );
+            }
         });
         add(
             t('anim.menuClear', 'Effacer ce cel'),
-            () => IA.clearCel(em(), layerIndex, frame),
+            () => withAnimHistory(t('anim.menuClear', 'Effacer ce cel'), () => IA.clearCel(em(), layerIndex, frame)),
             !IA.hasCelAt(layer, frame) || frame === 0
         );
         add(t('anim.menuHold', 'Figer jusqu’à cette image'), () => {
             const info = IA.activeCelInfo(layer, frame);
-            if (info) IA.setCelHoldUntil(em(), layerIndex, info.cel.frame, frame);
+            if (info) {
+                withAnimHistory(t('anim.menuHold', 'Figer jusqu’à cette image'), () =>
+                    IA.setCelHoldUntil(em(), layerIndex, info.cel.frame, frame)
+                );
+            }
         });
-        const sepDiv = DOC.createElement('div');
-        sepDiv.style.cssText = 'height:1px;background:var(--anim-border,#999);margin:4px 2px;';
-        menu.appendChild(sepDiv);
+        m.sep();
         add(t('anim.menuPosKey', 'Clé de position (x/y)'), () => {
             IA.addPropKeyframe(em(), layerIndex, 'x', frame);
             IA.addPropKeyframe(em(), layerIndex, 'y', frame);
@@ -492,9 +872,7 @@
 
         // Easing des clés présentes à cette image (courbe d'accélération éditable).
         if (IA.hasPropKeyAt(layer, frame)) {
-            const sep2 = DOC.createElement('div');
-            sep2.style.cssText = 'height:1px;background:var(--anim-border,#999);margin:4px 2px;';
-            menu.appendChild(sep2);
+            m.sep();
             [
                 ['linear', t('anim.easeLinear', 'Easing : linéaire')],
                 ['ease-in', t('anim.easeIn', 'Easing : accélère')],
@@ -504,21 +882,7 @@
             ].forEach(([val, label]) => add(label, () => IA.setEasingAtFrame(em(), layerIndex, frame, val)));
         }
 
-        DOC.body.appendChild(menu);
-        const mw = menu.offsetWidth;
-        const mh = menu.offsetHeight;
-        let x = evt.clientX;
-        let y = evt.clientY;
-        if (x + mw > innerWidth) x = innerWidth - mw - 6;
-        if (y + mh > innerHeight) y = innerHeight - mh - 6;
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
-        setTimeout(() => DOC.addEventListener('pointerdown', closeCellMenu, { once: true }), 0);
-    }
-
-    function closeCellMenu() {
-        const m = DOC.getElementById('illu-anim-cell-menu');
-        if (m) m.remove();
+        m.show(evt.clientX, evt.clientY);
     }
 
     /** Reconstruit la grille depuis l'état courant. */
@@ -548,8 +912,25 @@
         if (onionAllBtn) onionAllBtn.classList.toggle('illu-anim-on', !!a.onionAllLayers);
         if (pingpongBtn) pingpongBtn.classList.toggle('illu-anim-on', !!a.pingpong);
         if (drawStepBtn) drawStepBtn.classList.toggle('illu-anim-on', !!a.drawStep);
+        if (loopBtn) loopBtn.classList.toggle('illu-anim-on', a.loop !== false);
+        if (durInput && DOC.activeElement !== durInput) durInput.value = String(dur);
         syncOnionOptsVisibility();
-        if (readoutEl) readoutEl.textContent = `${playhead + 1} / ${dur} · ${a.fps || 12} ips`;
+        if (readoutEl) {
+            const secs = dur / Math.max(1, a.fps || 12);
+            readoutEl.textContent =
+                `${playhead + 1} / ${dur} · ${a.fps || 12} ips · ${secs.toFixed(2)} s`;
+        }
+        if (selInfoEl) {
+            const s = normSel();
+            if (s) {
+                const nF = s.to - s.from + 1;
+                selInfoEl.textContent = `${t('anim.selShort', 'Sél.')} ${s.layers.length}×${nF}`;
+                selInfoEl.classList.add('illu-anim-sel-info--on');
+            } else {
+                selInfoEl.textContent = '';
+                selInfoEl.classList.remove('illu-anim-sel-info--on');
+            }
+        }
 
         // Grille : 1 colonne de libellé + `dur` colonnes de frame.
         gridEl.style.gridTemplateColumns = `var(--anim-label-w) repeat(${dur}, var(--anim-cell-w))`;
@@ -587,9 +968,25 @@
             nm.style.textOverflow = 'ellipsis';
             lab.appendChild(vis);
             lab.appendChild(nm);
-            lab.addEventListener('click', () => {
+            lab.addEventListener('click', (ev) => {
                 e.setActiveLayerIndex(li);
+                // Clic sur le nom du calque : sélectionne toute sa ligne (Maj = étend).
+                const lastFrame = Math.max(0, dur - 1);
+                if (ev.shiftKey && _selAnchor) {
+                    extendSelectionTo(li, lastFrame);
+                } else {
+                    _selAnchor = { layerIndex: li, frame: 0 };
+                    setSelection({ layers: [li], from: 0, to: lastFrame });
+                }
                 refresh();
+            });
+            lab.addEventListener('contextmenu', (ev) => {
+                ev.preventDefault();
+                if (!isCellSelected(li, 0)) {
+                    _selAnchor = { layerIndex: li, frame: 0 };
+                    setSelection({ layers: [li], from: 0, to: Math.max(0, dur - 1) });
+                }
+                openSelectionMenu(ev.clientX, ev.clientY);
             });
             frag.appendChild(lab);
             for (let f = 0; f < dur; f++) frag.appendChild(trackCell(li, layer, f, playhead));
@@ -624,6 +1021,74 @@
         });
     }
 
+    // ---- Ouverture / fermeture de la frise ---------------------------------
+
+    /** Replie (ou déplie) la frise sans toucher au mode animation du projet. */
+    function collapsePanel(on) {
+        _collapsed = !!on;
+        const a = anim();
+        if (_collapsed && a && a.playing) window.IlluAnim.pause(em());
+        syncVisibility();
+        const e = em();
+        if (e && typeof e._refitZoomAfterLayout === 'function') e._refitZoomAfterLayout();
+    }
+
+    function togglePanelCollapsed() {
+        collapsePanel(!_collapsed);
+    }
+
+    /** Quitte le mode animation — destructif (aplatit sur l'image courante) : on confirme. */
+    function requestExitAnimationMode() {
+        const e = em();
+        if (!e || !e.isAnimationMode) return;
+        const doExit = () => {
+            if (typeof e.disableAnimationOnActiveProject === 'function') e.disableAnimationOnActiveProject();
+            _collapsed = false;
+            clearSelection();
+            syncVisibility();
+        };
+        if (typeof window.showIlluConfirm === 'function') {
+            window.showIlluConfirm({
+                title: t('anim.exitTitle', 'Quitter le mode animation'),
+                message: t(
+                    'anim.exitMsg',
+                    'Les calques seront aplatis sur l’image affichée et les autres images seront perdues. Continuer ?'
+                ),
+                confirmText: t('anim.exitConfirm', 'Quitter l’animation'),
+                onConfirm: doExit
+            });
+        } else {
+            doExit();
+        }
+    }
+
+    /** Bouton de réouverture logé dans la barre d'état (visible en mode animation). */
+    function ensureOpenButton() {
+        if (openBtn && openBtn.isConnected) return openBtn;
+        const zones = DOC.querySelector('#app-status-bar .status-bar-zones');
+        if (!zones) return null;
+        const cell = DOC.createElement('div');
+        cell.className = 'status-bar-cell illu-anim-open-cell';
+        openBtn = DOC.createElement('button');
+        openBtn.type = 'button';
+        openBtn.id = 'illu-anim-open-btn';
+        openBtn.className = 'illu-anim-open-btn';
+        openBtn.textContent = '🎬 ' + t('anim.timeline', 'Frise');
+        openBtn.title = t('anim.togglePanel', 'Afficher / masquer la frise chronologique');
+        openBtn.addEventListener('click', togglePanelCollapsed);
+        cell.appendChild(openBtn);
+        zones.insertBefore(cell, zones.firstChild);
+        return openBtn;
+    }
+
+    function syncOpenButton() {
+        const b = ensureOpenButton();
+        if (!b) return;
+        const on = isAnim();
+        b.parentNode.style.display = on ? '' : 'none';
+        b.classList.toggle('illu-anim-on', on && !_collapsed);
+    }
+
     function syncMenuCheck() {
         const el = DOC.getElementById('menu-anim-check');
         if (el) el.style.visibility = isAnim() ? 'visible' : 'hidden';
@@ -631,17 +1096,26 @@
 
     function syncVisibility() {
         ensurePanel();
-        const show = isAnim();
+        const animOn = isAnim();
+        const show = animOn && !_collapsed;
+        if (!animOn) _collapsed = false;
         panel.classList.toggle('illu-anim-visible', show);
         DOC.body.classList.toggle('illu-anim-active', show);
+        DOC.body.classList.toggle('illu-anim-mode', animOn);
         syncMenuCheck();
+        syncOpenButton();
         if (show) {
             refresh();
-            // Laisse le layout se réserver (padding app-window) avant de repositionner.
+            // Laisse le layout se réserver avant de repositionner les palettes flottantes.
             requestAnimationFrame(repositionFloatingWindowsAbovePanel);
         } else {
             const a = anim();
             if (a && a.playing) window.IlluAnim.pause(em());
+            if (!animOn) {
+                _sel = null;
+                _selAnchor = null;
+                syncSelectionMirror();
+            }
         }
     }
 
@@ -672,14 +1146,32 @@
         // Copier/coller un cel : seulement quand la frise est survolée (sinon on laisse le
         // copier/coller pixel habituel de l'application).
         if ((e.ctrlKey || e.metaKey) && _panelHovered) {
+            if (e.key === 'a' || e.key === 'A') {
+                selectAllFrames();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            const s = normSel();
+            const multi = s && (s.layers.length > 1 || s.to > s.from);
             if (e.key === 'c' || e.key === 'C') {
-                if (IA.copyCel(E, _selCell.layerIndex, _selCell.frame)) {
+                // Sélection multiple : copie de plage ; sinon copie du cel pointé.
+                const ok = multi ? IA.copySelection(E, s) : IA.copyCel(E, _selCell.layerIndex, _selCell.frame);
+                if (ok) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
                 return;
             }
             if (e.key === 'v' || e.key === 'V') {
+                if (IA.hasRangeClipboard() && multi) {
+                    withAnimHistory(t('anim.histPaste', 'Coller une plage d’images'), () =>
+                        IA.pasteSelection(E, s.layers[0], s.from)
+                    );
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
                 E.setActiveLayerIndex(_selCell.layerIndex);
                 IA.seek(E, _selCell.frame);
                 if (IA.pasteCel(E, _selCell.layerIndex, _selCell.frame)) {
@@ -689,6 +1181,24 @@
                 }
                 return;
             }
+        }
+        if (_panelHovered && (e.key === 'Delete' || e.key === 'Backspace')) {
+            const s = normSel();
+            if (s) {
+                withAnimHistory(
+                    t('anim.histDelete', 'Supprimer des cels'),
+                    () => IA.removeSelectionCels(E, s),
+                    { pixelSel: s }
+                );
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+        }
+        if (e.key === 'Escape' && _sel) {
+            clearSelection();
+            e.preventDefault();
+            return;
         }
         switch (e.key) {
             case ' ':
@@ -728,14 +1238,38 @@
     function init() {
         ensurePanel();
         DOC.addEventListener('illu:anim-changed', scheduleRefresh);
-        DOC.addEventListener('illu:anim-mode-enter', syncVisibility);
-        DOC.addEventListener('illu:anim-mode-leave', syncVisibility);
-        DOC.addEventListener('illu:project-applied', syncVisibility);
+        DOC.addEventListener('illu:anim-mode-enter', () => {
+            _collapsed = false;
+            clearSelection();
+            syncVisibility();
+        });
+        DOC.addEventListener('illu:anim-mode-leave', () => {
+            clearSelection();
+            syncVisibility();
+        });
+        // Changement d'onglet : la sélection appartient au document précédent.
+        DOC.addEventListener('illu:project-applied', () => {
+            clearSelection();
+            syncVisibility();
+        });
         window.addEventListener('keydown', onKeydown, true);
+        syncSelectionMirror();
         syncVisibility();
     }
 
-    window.IlluAnimPanel = { init, refresh, syncVisibility };
+    window.IlluAnimPanel = {
+        init,
+        refresh,
+        syncVisibility,
+        /** Sélection courante de la frise (ou null) — lue par FilterManager. */
+        getSelection: () => normSel(),
+        setSelection: (sel) => setSelection(sel),
+        clearSelection,
+        selectAll: selectAllFrames,
+        isCollapsed: () => _collapsed,
+        setCollapsed: collapsePanel,
+        toggleCollapsed: togglePanelCollapsed
+    };
 
     if (DOC.readyState === 'loading') {
         DOC.addEventListener('DOMContentLoaded', init);
