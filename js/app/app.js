@@ -228,6 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const m = t.match(/(\d+\.\d+\.\d+)/);
             const vEl = document.getElementById('illu-version-text');
             if (m && vEl) vEl.textContent = 'v' + m[1] + ' - ';
+            // Même version dans la barre d'état, à la suite du crédit. Espace insécable :
+            // .status-bar-credit-line est un conteneur flex, une espace ordinaire en début
+            // de span y serait supprimée et la version collerait au nom.
+            const vStatus = document.getElementById('illu-version-text-status');
+            if (m && vStatus) vStatus.textContent = '\u00a0v' + m[1];
             if (typeof window.illuRevealSplashSub === 'function') window.illuRevealSplashSub();
         })
         .catch(() => {
@@ -3449,17 +3454,25 @@ function syncSettingsFormFromStorage() {
         } catch (e) {
             tabBgCb.checked = true;
         }
-        /* Mode Photoshop : aperçu de fond désactivé de force et non activable. */
+        /*
+         * Mode Photoshop : aperçu de fond désactivé de force et non activable. Le
+         * décochage n'est qu'un affichage — `data-illu-forced` empêche la validation
+         * de l'écrire dans les préférences. Sans ce garde-fou, ouvrir Paramètres en
+         * mode Photoshop puis valider enregistrait « off » et l'aperçu restait éteint
+         * après le retour en Paint.NET.
+         */
         const tabBgPhotoshop = typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'photoshop';
         const tabBgRow = document.querySelector('[data-illu-toggle-for="settings-tab-bg-preview-enabled"]');
         if (tabBgPhotoshop) {
+            tabBgCb.dataset.illuForced = '1';
             tabBgCb.checked = false;
             if (tabBgRow) {
                 tabBgRow.classList.add('illu-settings-toggle-row--locked');
                 if (typeof illuSettingsToggleSetActive === 'function') illuSettingsToggleSetActive(tabBgRow, false);
             }
-        } else if (tabBgRow) {
-            tabBgRow.classList.remove('illu-settings-toggle-row--locked');
+        } else {
+            delete tabBgCb.dataset.illuForced;
+            if (tabBgRow) tabBgRow.classList.remove('illu-settings-toggle-row--locked');
         }
     }
     const strokeLightCb = document.getElementById('settings-stroke-light-render');
@@ -3747,22 +3760,14 @@ window.addEventListener('illu-i18n-applied', () => {
 
 /** Titre de l’onglet navigateur / PWA : document + langue */
 window.refreshChromeDocTitle = function () {
-    const p = window.EditorManager && EditorManager.activeProject;
-    const raw = p && p.name ? p.name : null;
-    const untitled =
-        window.IlluI18n && typeof window.IlluI18n.t === 'function'
-            ? window.IlluI18n.t('app.untitled')
-            : 'Sans titre';
-    const name = raw || untitled;
-    const mobileUi =
-        typeof window.getUILayoutMode === 'function' && window.getUILayoutMode() === 'phone';
-    const titleKey = mobileUi ? 'app.titleMobile' : 'app.title';
-    const titleText =
-        window.IlluI18n && typeof window.IlluI18n.t === 'function'
-            ? window.IlluI18n.t(titleKey, { doc: name })
-            : mobileUi
-                ? `MasterPaint 98 — ${name}`
-                : `MasterPaint  — ${name}`;
+    // Titre de l'onglet / du résultat Google : stable et descriptif (sans le nom de projet
+    // volatile « Sans titre 1 » qui rendait le lien incohérent dans les moteurs de recherche).
+    // Le nom du projet reste affiché dans la barre de titre interne de l'appli (chrome mobile/desktop).
+    let titleText = 'MasterPaint';
+    if (window.IlluI18n && typeof window.IlluI18n.t === 'function') {
+        const t = window.IlluI18n.t('app.browserTitle');
+        if (t && t !== 'app.browserTitle') titleText = t;
+    }
     if (typeof document !== 'undefined') document.title = titleText;
     if (typeof window.illuMobileSyncDocTitle === 'function') window.illuMobileSyncDocTitle();
 };
@@ -4861,6 +4866,9 @@ function initSettingsLiveApply() {
 
     const applyTabBgFromForm = () => {
         const tbg = document.getElementById('settings-tab-bg-preview-enabled');
+        /* Même garde-fou qu'à la validation : l'état forcé en mode Photoshop ne doit
+           pas remplacer la préférence enregistrée. */
+        if (tbg && tbg.dataset.illuForced === '1') return;
         try {
             localStorage.setItem('settings-tab-bg-preview-enabled', tbg && tbg.checked ? '1' : '0');
         } catch (e) { /* ignore */ }

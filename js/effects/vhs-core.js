@@ -164,7 +164,14 @@
         const bleedRaw = params.chroma_bleed !== undefined ? params.chroma_bleed : 12;
         let bleed = 0; if (bleedRaw > 0) bleed = 1.0 - Math.pow(10, -(bleedRaw / 30));
 
-        const blurRadius = params.chroma_blur !== undefined ? params.chroma_blur : 25;
+        /*
+         * Rayon du flou chroma : il sert de borne à une boucle d'entiers et d'index dans
+         * rowI/rowQ. Un rayon fractionnaire (aperçu réduit : 25 px × 0,375) produisait des
+         * index décimaux — donc `undefined`, puis NaN sur toute la ligne, et une image
+         * entièrement noire. On arrondit toujours à l'entier.
+         */
+        const blurRaw = params.chroma_blur !== undefined ? Number(params.chroma_blur) : 25;
+        const blurRadius = Number.isFinite(blurRaw) ? Math.max(0, Math.round(blurRaw)) : 25;
         const chromaSatBase = params.chroma_saturation !== undefined ? params.chroma_saturation : 2.4;
         const edgeSat = params.edge_sat !== undefined ? params.edge_sat : 4.8;
         const shadowSat = params.shadow_sat !== undefined ? params.shadow_sat : 0;

@@ -13,3 +13,37 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
+
+# 4. Compression (gzip) — divise par ~3-5 le poids des JS/CSS/SVG/JSON/WASM
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript text/javascript
+    AddOutputFilterByType DEFLATE application/json application/manifest+json
+    AddOutputFilterByType DEFLATE image/svg+xml application/wasm
+</IfModule>
+
+# 5. Cache navigateur. Les JS/CSS ne sont PAS versionnés (pas de ?v=) et l'app est mise à jour
+# souvent : on force donc la revalidation (ETag/Last-Modified → 304 si inchangé) pour le code,
+# ce qui évite le re-téléchargement tout en servant toujours la dernière version. Seuls les
+# assets stables (polices, images) obtiennent un cache long.
+<IfModule mod_headers.c>
+    # Code applicatif : revalidé à chaque chargement (304 si inchangé), jamais périmé
+    <FilesMatch "\.(js|mjs|css|wasm)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+    # index.html, manifeste et service worker : toujours revalidés
+    <FilesMatch "\.(html|webmanifest)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+    <FilesMatch "^sw\.js$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+    # Polices : quasi immuables et nombreuses (~100) → cache long
+    <FilesMatch "\.woff2?$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # Images : cache modéré (peuvent évoluer : icônes, aperçus)
+    <FilesMatch "\.(png|jpe?g|webp|gif|svg|ico)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>

@@ -27,14 +27,29 @@
      * y vide agressivement les pages en arrière-plan ; off sinon (choix explicite dans Paramètres).
      */
     function getAutoSaveMode() {
+        const explicit = getExplicitAutoSaveMode();
+        if (explicit) return explicit;
+        return getDefaultAutoSaveMode();
+    }
+
+    /** Valeur réellement enregistrée par l'utilisateur, ou null si la clé est absente. */
+    function getExplicitAutoSaveMode() {
         try {
             const v = localStorage.getItem(AUTO_SAVE_MODE_KEY);
             if (v === 'continuous' || v === 'interval' || v === 'off') return v;
         } catch (e) {
             /* ignore */
         }
-        // Par défaut, sur mobile/téléphone on active la sauvegarde continue pour éviter
-        // la perte totale quand le navigateur recharge la page en arrière-plan.
+        return null;
+    }
+
+    /**
+     * Valeur implicite, qui suit la disposition : sauvegarde continue sur téléphone
+     * (le navigateur y vide agressivement les pages en arrière-plan), rien ailleurs.
+     * Elle ne doit jamais être écrite en dur — voir le garde-fou à la validation des
+     * Paramètres : sinon quitter le mode téléphone laisserait la sauvegarde active.
+     */
+    function getDefaultAutoSaveMode() {
         const isPhone = typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
         return isPhone ? 'continuous' : 'off';
     }
@@ -544,6 +559,24 @@
                     });
                     usedKeys.add(key);
                 }
+                // Animation : déporte aussi chaque cel (dessin) vers IndexedDB, sinon le
+                // payload localStorage explose (quota) sur les documents animés.
+                if (Array.isArray(pl.cels)) {
+                    pl.cels.forEach((cel, ci) => {
+                        if (cel && typeof cel.dataUrl === 'string' && cel.dataUrl.length > 0) {
+                            const ckey = `illu_cel_${pid}_${pl.id != null ? pl.id : 'x'}_${ci}`;
+                            bulk.push({
+                                key: ckey,
+                                blob: dataUrlToBlob(cel.dataUrl),
+                                apply: () => {
+                                    cel.celBlobKey = ckey;
+                                    delete cel.dataUrl;
+                                }
+                            });
+                            usedKeys.add(ckey);
+                        }
+                    });
+                }
             }
             const hist = p.historySerialized || [];
             for (let hi = 0; hi < hist.length; hi++) {
@@ -581,6 +614,17 @@
                     const blob = await idbGet(pk);
                     pl.dataUrl = blob ? await blobToDataUrl(blob) : EMPTY_PNG_DATAURL;
                     delete pl.pixelBlobKey;
+                }
+                // Restaure les cels d'animation déportés en IndexedDB.
+                if (Array.isArray(pl.cels)) {
+                    for (const cel of pl.cels) {
+                        if (cel && cel.celBlobKey && !cel.dataUrl) {
+                            if (typeof window.illuYieldToMain === 'function') await window.illuYieldToMain(1);
+                            const cblob = await idbGet(cel.celBlobKey);
+                            cel.dataUrl = cblob ? await blobToDataUrl(cblob) : EMPTY_PNG_DATAURL;
+                            delete cel.celBlobKey;
+                        }
+                    }
                 }
             }
             const history = p.historySerialized || [];
@@ -994,6 +1038,7 @@
         const illuRow = document.getElementById('export-illu-options');
         const icoRow = document.getElementById('export-ico-options');
         const colorRow = document.getElementById('export-color-options');
+        const animRow = document.getElementById('export-anim-options');
         const morePanel = document.getElementById('export-more-panel');
 
         syncExportQuickImageLabel(isVec);
@@ -1006,12 +1051,20 @@
                 o.textContent = label;
                 fmt.appendChild(o);
             };
+            const isAnimNow = !!(em && em.isAnimationMode);
             if (isVec) {
                 add('svg', 'SVG (.svg)');
                 add('png', 'PNG haute résolution (.png)');
                 add('illu', 'Projet Illu (.illu)');
             } else {
-                add('png', 'PNG (.png)');
+                if (isAnimNow) {
+                    add('gif-anim', 'GIF animé (.gif)');
+                    add('mp4', 'Vidéo MP4 — H.264 (.mp4)');
+                    add('webm', 'Vidéo WebM — VP9 (.webm)');
+                    add('sheet', 'Planche de sprites (.png)');
+                    add('zip', 'Séquence PNG numérotée (.zip)');
+                }
+                add('png', isAnimNow ? 'PNG — image courante (.png)' : 'PNG (.png)');
                 add('jpeg', 'JPEG (.jpg)');
                 add('webp', 'WebP (.webp)');
                 add('gif', 'GIF (.gif)');
@@ -1019,7 +1072,7 @@
                 add('pdn', 'Paint.NET (.pdn)');
                 add('illu', 'Projet Illu (.illu)');
             }
-            fmt.value = isVec ? 'svg' : 'png';
+            fmt.value = isVec ? 'svg' : isAnimNow ? 'gif-anim' : 'png';
         }
 
         const setHidden = (el, hide) => {
@@ -1036,6 +1089,7 @@
         const syncOpts = () => {
             const v = fmt ? fmt.value : 'illu';
             const isVecNow = !!(em && em.activeProject && em.activeProject.mode === 'vector');
+            const isAnimFmt = v === 'gif-anim' || v === 'mp4' || v === 'webm';
             setHidden(jpegRow, v !== 'jpeg');
             setHidden(webpRow, v !== 'webp');
             setHidden(pngNote, v !== 'png');
@@ -1043,7 +1097,14 @@
             setHidden(icoRow, v !== 'ico');
             setHidden(scopeRow, v !== 'illu');
             setHidden(illuRow, v !== 'illu');
-            setHidden(colorRow, isVecNow || v === 'illu' || v === 'ico' || v === 'pdn' || v === 'svg');
+            setHidden(animRow, !isAnimFmt);
+            setHidden(colorRow, isVecNow || isAnimFmt || v === 'illu' || v === 'ico' || v === 'pdn' || v === 'svg');
+            if (isAnimFmt) {
+                const fpsEl = document.getElementById('export-anim-fps');
+                const loopEl = document.getElementById('export-anim-loop');
+                if (fpsEl && em && em.animation && !fpsEl.dataset.userSet) fpsEl.value = em.animation.fps || 12;
+                if (loopEl) loopEl.parentElement.parentElement.style.display = v === 'gif-anim' ? '' : 'none';
+            }
             if (scopeRow) scopeRow.style.display = v === 'illu' ? 'flex' : 'none';
         };
 
@@ -1178,6 +1239,44 @@ function applyBitDepthReduction(ctx, width, height, bits) {
         const fmt = overrides.fmt != null ? overrides.fmt : fmtEl ? fmtEl.value : 'illu';
         const scopeEl = document.getElementById('export-scope-select');
         const scope = overrides.scope != null ? overrides.scope : scopeEl ? scopeEl.value : 'current';
+
+        // --- Export d'animation (GIF animé / MP4 / WebM / planche / séquence ZIP) ---
+        if ((fmt === 'gif-anim' || fmt === 'mp4' || fmt === 'webm' || fmt === 'sheet' || fmt === 'zip') && em && em.isAnimationMode && window.IlluAnimExport) {
+            const anim = em.animation;
+            const fpsEl = document.getElementById('export-anim-fps');
+            const loopEl = document.getElementById('export-anim-loop');
+            const rangeEl = document.getElementById('export-anim-range');
+            const fps = overrides.fps || (fpsEl ? parseInt(fpsEl.value, 10) : 0) || (anim ? anim.fps : 12);
+            const loop = loopEl ? !!loopEl.checked : true;
+            const wholeRange = !rangeEl || rangeEl.value !== 'current';
+            const base = sanitizeFilename(em.activeProject?.name) || 'animation';
+            const format = fmt === 'gif-anim' ? 'gif' : fmt;
+            const ext = format === 'gif' ? 'gif' : format === 'mp4' ? 'mp4' : format === 'sheet' ? 'png' : format === 'zip' ? 'zip' : 'webm';
+            const eopts = {
+                format,
+                fps,
+                loop,
+                baseName: base,
+                start: wholeRange ? 0 : anim.playhead,
+                end: wholeRange ? anim.duration - 1 : anim.playhead
+            };
+            Promise.resolve(window.IlluAnimExport.export(em, eopts))
+                .then((blob) => {
+                    if (blob) downloadBlob(blob, `${base}.${ext}`);
+                })
+                .catch((e) => {
+                    console.error('Export animation échoué', e);
+                    if (typeof window.showIlluAlert === 'function') {
+                        window.showIlluAlert('Échec de l’export de l’animation : ' + (e && e.message ? e.message : e));
+                    }
+                })
+                .finally(() => {
+                    hideExportDialog();
+                    const P = window.IlluProgress;
+                    if (P && typeof P.setInstantEffectBusy === 'function') P.setInstantEffectBusy(false);
+                });
+            return;
+        }
 
         const jpegQ = document.getElementById('export-jpeg-quality');
         const webpQ = document.getElementById('export-webp-quality');
@@ -1475,10 +1574,10 @@ if (fmt === 'png' || fmt === 'gif') {
                 try {
                     // Manual save: merge only the current project into the stored workspace
                     try {
-                        mergeSaveCurrentProject();
+                        await mergeSaveCurrentProject();
                     } catch (e) {
                         console.warn('mergeSaveCurrentProject failed, falling back to full persist:', e);
-                        persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
+                        await persistToLocalStorageAsync({ force: true, manual: true, persistReason: 'manual' });
                     }
 
                     // Simple confirm
@@ -1504,45 +1603,54 @@ if (fmt === 'png' || fmt === 'gif') {
         }
 
     // Merge current project into existing saved workspace in localStorage without overwriting other projects.
-    function mergeSaveCurrentProject() {
+    async function mergeSaveCurrentProject() {
         const em = window.EditorManager;
         if (!em || !em.activeProject) return;
         const proj = em.serializeWorkspacePayload([em.activeProject]);
-        // Load existing workspace manifest
+        // Déporte les blobs (calques + cels d'animation + historique) du projet courant vers
+        // IndexedDB : sinon les dessins PNG inline font exploser le quota localStorage (~5 Mo)
+        // sur les documents animés (beaucoup d'images).
+        let usedKeys = new Set();
+        if (window.indexedDB) {
+            try {
+                usedKeys = await stripPayloadPixelBlobsToIdb(proj);
+            } catch (e) {
+                console.warn('IDB offload (merge) :', e);
+            }
+        }
+        const fullPersist = () => persistToLocalStorageAsync({ force: true, manual: true, persistReason: 'manual' });
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) {
-                // No existing workspace: persist full payload for safety
-                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
-                return;
-            }
+            if (!raw) return fullPersist();
             let existing = null;
             try {
                 existing = JSON.parse(raw);
             } catch (e) {
-                // if parsing fails, fallback to full persist
-                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
-                return;
+                return fullPersist();
             }
-            if (!existing || !Array.isArray(existing.projects)) {
-                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
-                return;
-            }
-            // Replace or append the active project by id
+            if (!existing || !Array.isArray(existing.projects)) return fullPersist();
             const incomingProj = proj.projects && proj.projects[0];
-            if (!incomingProj) {
-                persistToLocalStorage({ force: true, manual: true, persistReason: 'manual' });
-                return;
-            }
-            const idx = existing.projects.findIndex(p => p.id === incomingProj.id);
+            if (!incomingProj) return fullPersist();
+            const idx = existing.projects.findIndex((p) => p.id === incomingProj.id);
             if (idx >= 0) existing.projects[idx] = incomingProj;
             else existing.projects.push(incomingProj);
-            // Do not alter other projects or activeProjectIndex (leave as-is)
-            const s = JSON.stringify(existing);
-            localStorage.setItem(STORAGE_KEY, s);
+            // Signale l'usage d'IndexedDB (nécessaire à l'hydratation au chargement).
+            if (usedKeys.size || existing.pixelBlobsInIdb) {
+                existing.pixelBlobsInIdb = true;
+                const keys = new Set(Array.isArray(existing.idbBlobKeys) ? existing.idbBlobKeys : []);
+                usedKeys.forEach((k) => keys.add(k));
+                existing.idbBlobKeys = [...keys];
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+            } catch (quotaErr) {
+                // Toujours trop volumineux (autres projets inline) → persist complet via IDB.
+                console.warn('merge localStorage trop volumineux, bascule persist complet IDB :', quotaErr);
+                return fullPersist();
+            }
         } catch (err) {
             console.error('mergeSaveCurrentProject error:', err);
-            throw err;
+            return fullPersist();
         }
     }
 
@@ -1603,6 +1711,8 @@ if (fmt === 'png' || fmt === 'gif') {
         AUTO_SAVE_INTERVAL_MIN_KEY,
         LAST_PERSIST_META_KEY,
         getAutoSaveMode,
+        getExplicitAutoSaveMode,
+        getDefaultAutoSaveMode,
         getAutoSaveIntervalMinutes,
         shouldScheduleHistoryPersist,
         shouldPersistOnExit,

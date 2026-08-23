@@ -17,8 +17,15 @@ self.onmessage = async function (evt) {
             outputBps: 16,
             useCameraWb: true,
             noAutoBright: true,
-            gamma: [1.0, 1.0], // TRUE LINEAR output — real RAW headroom
-            outputColor: 0,    // Raw camera color space
+            // Fusion des canaux saturés : évite la dominante magenta sur les
+            // zones brûlées (voir CameraRawPanel.js).
+            highlight: 2,
+            gamma: [1.0, 1.0], // Sortie vraiment linéaire — conserve la marge du RAW
+            // sRGB, et non l'espace natif du capteur : la matrice couleur du
+            // boîtier doit être appliquée AVANT le traitement, sinon la balance
+            // des blancs, la saturation et le TSL opèrent sur des primaires
+            // inconnues et les couleurs sortent fausses.
+            outputColor: 1,
         });
 
         const imgDataRaw = await lr.imageData();
@@ -63,15 +70,15 @@ self.onmessage = async function (evt) {
             }
         }
 
-        // Also build a U8 preview (sRGB gamma-corrected) for the 8-bit thumbnail
-        // Apply simple sRGB gamma to the linear data for display
+        // Vignette 8 bits pour la pellicule. Le blanc de scène est mesuré, puis
+        // comprimé par le même Reinhard étendu que le pipeline (photo-pipeline.js) :
+        // sans lui, tout ce qui dépasse 1.0 en linéaire ressortirait écrêté à blanc.
+        const sceneWhite = measureSceneWhite(floatData);
         const previewU8 = new Uint8ClampedArray(expectedRgbaLen);
         for (let i = 0; i < expectedRgbaLen; i += 4) {
-            const r = floatData[i], g = floatData[i + 1], b = floatData[i + 2];
-            // Linear → sRGB gamma (standard formula)
-            previewU8[i]     = linearToSrgbByte(r);
-            previewU8[i + 1] = linearToSrgbByte(g);
-            previewU8[i + 2] = linearToSrgbByte(b);
+            previewU8[i]     = linearToSrgbByte(toneMap(floatData[i], sceneWhite));
+            previewU8[i + 1] = linearToSrgbByte(toneMap(floatData[i + 1], sceneWhite));
+            previewU8[i + 2] = linearToSrgbByte(toneMap(floatData[i + 2], sceneWhite));
             previewU8[i + 3] = 255;
         }
 
@@ -85,6 +92,32 @@ self.onmessage = async function (evt) {
         self.postMessage({ id, error: String(err) });
     }
 };
+
+/**
+ * Reinhard étendu calé sur W : f(W) = 1 exactement, et f = identité quand W = 1.
+ * Doit rester identique à toneMapScalar de js/effects/photo-pipeline.js.
+ */
+function toneMap(x, W) {
+    if (W <= 1.0000001 || x <= 0) return x;
+    return x * (1 + x / (W * W)) / (1 + x);
+}
+
+/** Blanc de la scène : percentile haut, pour qu'un spéculaire isolé ne pèse pas. */
+function measureSceneWhite(floatData) {
+    const len = floatData.length;
+    const step = Math.max(4, (((len / 4) / 200000) | 0) * 4);
+    const samples = [];
+    let hi = 0;
+    for (let o = 0; o < len; o += step) {
+        const m = Math.max(floatData[o], Math.max(floatData[o + 1], floatData[o + 2]));
+        if (m > hi) hi = m;
+        samples.push(m);
+    }
+    if (!samples.length) return 1;
+    samples.sort((a, b) => a - b);
+    const p999 = samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.999))];
+    return Math.max(0.05, Math.min(hi, p999));
+}
 
 /** Linear → sRGB (0..255) with proper gamma */
 function linearToSrgbByte(lin) {

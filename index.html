@@ -76,14 +76,14 @@
     
     <link rel="manifest" href="manifest.webmanifest">
     <!-- favicon.ico à la racine : indispensable pour Google/Bing qui requêtent /favicon.ico par défaut -->
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
@@ -103,6 +103,9 @@
     <link rel="stylesheet" href="css/theme-mobile-modern.css">
     <link rel="stylesheet" href="css/theme-photoshop.css">
     <link rel="stylesheet" href="css/illu-tool-ribbon.css">
+    <link rel="stylesheet" href="css/anim.css">
+    <!-- Chargée en dernier : reprend la main sur les gabarits d'effet historiques -->
+    <link rel="stylesheet" href="css/effects-compact.css">
     <style>
         .menubar-contact-btn:hover {
             filter: brightness(1.15) contrast(1.1);
@@ -260,7 +263,7 @@
                                             class="fa-regular fa-folder-open"></i></span><span data-i18n="menu.fileOpen">Ouvrir
                                         / Importer image…</span></li>
                                 <input type="file" id="file-import" style="display: none" multiple
-                                    accept="image/*,image/svg+xml,.svg,.illu,.pdn" onchange="importFile(event)">
+                                    accept="image/*,image/svg+xml,.svg,.illu,.pdn,.gif" onchange="importFile(event)">
                                 <input type="file" id="illu-vectorize-file-input" style="display:none"
                                     accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/*" aria-hidden="true"
                                     tabindex="-1">
@@ -274,8 +277,13 @@
                                     <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.photoModePro"></span>
                                     <span data-i18n="menu.photoModePro">Mode Photo Pro…</span>
                                 </li>
+                                <li role="menuitem" class="menu-row-icon" id="menu-convert-photomodepro"
+                                    onclick="(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()">
+                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.convertPhotoModePro"></span>
+                                    <span data-i18n="menu.convertPhotoModePro">Ouvrir projet dans Photo Mode Pro</span>
+                                </li>
                                 <li role="menuitem" aria-haspopup="true">
-                                    <span data-i18n="menu.imageConvert">Ouvrir comme...</span>
+                                    <span data-i18n="menu.imageConvert">Espace de couleur :</span>
                                     <ul role="menu">
                                         <li role="menuitem" class="menu-row-icon" id="menu-convert-pixel"
                                             onclick="EditorManager.convertActiveProjectToPixel()">
@@ -283,7 +291,7 @@
                                                     class="fa-solid fa-paintbrush"></i></span>
                                             <span data-i18n="menu.convertPixel">Bitmap (Couleurs)</span>
                                         </li>
-                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-dither"
+                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-dither" style="display:none"
                                             onclick="EditorManager.convertActiveProjectToDither()">
                                             <span class="menu-icon" aria-hidden="true"><i
                                                     class="fa-solid fa-braille"></i></span>
@@ -300,11 +308,6 @@
                                             <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.convertCmjn"></span>
                                             <span data-i18n="menu.convertCmjn">Espace de travail CMJN</span>
                                         </li>
-                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-photomodepro"
-                                            onclick="(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()">
-                                            <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.convertPhotoModePro"></span>
-                                            <span data-i18n="menu.convertPhotoModePro">Photo Mode Pro</span>
-                                        </li>
                                     </ul>
                                 </li>
                                 <li role="menuitem" class="divider"></li>
@@ -315,6 +318,22 @@
                                 <li role="menuitem" class="menu-row-icon" onclick="showSettingsDialog(true)"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.fileSettings"></span><span
                                         data-i18n="menu.fileSettings">Paramètres…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.showChangelog && window.showChangelog()">
+                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winChangelog"></span>
+                                    <span data-i18n="menu.winChangelog">Changelog…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.showWelcomeDialog && window.showWelcomeDialog(true)">
+                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winWelcomeInfo"></span>
+                                    <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="window.openIconViewerWindow && window.openIconViewerWindow()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-icons"></i></span>
+                                    <span data-i18n="menu.winIconViewer">Visionneuse d'icônes…</span>
+                                </li>
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true" id="menu-file-photopro" style="display:none"><span
@@ -450,236 +469,146 @@
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-chart-column"></i></span><span
                                         data-i18n="menu.adjLevels">Niveaux…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-circle-half-stroke"></i></span><span
-                                        data-i18n="menu.adjInvert">Inverser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-droplet-slash"></i></span><span
-                                        data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjSepia"></span><span
-                                        data-i18n="menu.adjSepia">Sépia</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjPosterize"></span><span
-                                        data-i18n="menu.adjPosterize">Postériser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openCurvesForActiveLayer()"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjCurves"></span><span
+                                        data-i18n="menu.adjCurves">Courbes…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjBrightness"></span><span
                                         data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjExposure"></span><span
+                                        data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('temptint')"><span class="menu-icon"
                                          aria-hidden="true" data-icon-key="menu.adjTempTint"></span><span
                                         data-i18n="menu.adjTempTint">Température / Teinte…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjHsv"></span><span
                                         data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vibrance')"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjVibrance"></span><span
+                                        data-i18n="menu.adjVibrance">Vibrance / Éclat…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
                                         class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-camera-retro"></i></span><span
                                         data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjExposure"></span><span
-                                        data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjSharpen"></span><span
-                                        data-i18n="menu.adjSharpen">Netteté…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjCurves"></span><span
-                                        data-i18n="menu.adjCurves">Courbes…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-droplet-slash"></i></span><span
+                                        data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjSepia"></span><span
+                                        data-i18n="menu.adjSepia">Sépia</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span
+                                        class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-circle-half-stroke"></i></span><span
+                                        data-i18n="menu.adjInvert">Inverser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.adjPosterize"></span><span
+                                        data-i18n="menu.adjPosterize">Postériser…</span></li>
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.effects">Effets</span>
+                    <ul role="menu">
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCutout">Détourage</span>
                             <ul role="menu">
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCutout">Détourage</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon"
-                                                 aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span
-                                                data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="illuGuidedCutoutToolStart()"><span class="menu-icon"
-                                                 aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span
-                                                data-i18n="menu.imageCutoutGuided">Détourage par sélection…</span></li>
-                                        <li role="menuitem" class="divider"></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span
-                                                class="menu-icon" aria-hidden="true"><i
-                                                    class="fa-solid fa-wand-magic-sparkles"></i></span><span
-                                                data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSketch"></span><span
-                                                data-i18n="menu.fxSketch">Esquisse…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxOil"></span><span
-                                                data-i18n="menu.fxOil">Peinture…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pencilsketch')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPencilSketch"></span><span
-                                                data-i18n="menu.fxPencilSketch">Croquis au crayon…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxAddNoise"></span><span
-                                                data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxArgenticGrain"></span><span
-                                                data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDigitalPattern"></span><span
-                                                data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxVhs"></span><span
-                                                data-i18n="menu.fxVhs">Effet
-                                                VHS…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxMedian"></span><span
-                                                data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('reducenoise')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxReduceNoise"></span><span
-                                                data-i18n="menu.fxReduceNoise">Réduction du bruit (PDN)…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxBulge"></span><span
-                                                data-i18n="menu.fxBulge">Bosse…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPinch"></span><span
-                                                data-i18n="menu.fxPinch">Pincement…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dents')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDents"></span><span
-                                                data-i18n="menu.fxDents">Bosselage…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span
-                                                data-i18n="menu.fxPixelate">Pixéliser…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span
-                                                data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span
-                                                data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxTwist"></span><span
-                                                data-i18n="menu.fxTwist">Torsion…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxWave"></span><span
-                                                data-i18n="menu.fxWave">Onde…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxMirrorQuad"></span><span
-                                                data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxFrosted"></span><span
-                                                data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span
-                                                class="menu-icon" aria-hidden="true"><i
-                                                    class="fa-solid fa-cube"></i></span><span
-                                                data-i18n="menu.fxProjection3d">Projection 3D…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxBlurSimple"></span><span
-                                                data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxGaussian"></span><span
-                                                data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRadialBlur"></span><span
-                                                data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxZoomBlur"></span><span
-                                                data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span
-                                                class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou
-                                                de mouvement…</span></li>
-
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unfocus')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxUnfocus"></span><span
-                                                data-i18n="menu.fxUnfocus">Flou de surface…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRedEyeRemove"></span><span
-                                                data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxVignette"></span><span
-                                                data-i18n="menu.fxVignette">Vignettage…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSoftGlow"></span><span
-                                                data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span
-                                                data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softenportrait')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSoftenPortrait"></span><span
-                                                data-i18n="menu.fxSoftenPortrait">Portrait adouci…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxEdges"></span><span
-                                                data-i18n="menu.fxEdges">Contours…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxContour"></span><span
-                                                data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('clouds')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxClouds"></span><span
-                                                data-i18n="menu.fxClouds">Nuages…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mandelbrot')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxMandelbrot"></span><span
-                                                data-i18n="menu.fxMandelbrot">Fractale de Mandelbrot…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('julia')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxJulia"></span><span
-                                                data-i18n="menu.fxJulia">Fractale de Julia…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxEmboss"></span><span
-                                                data-i18n="menu.fxEmboss">Relief…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxSolarize"></span><span
-                                                data-i18n="menu.fxSolarize">Solariser…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxHalftone"></span><span
-                                                data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
-                                    </ul>
-                                </li>
-                                <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxColor">Couleur</span>
-                                    <ul role="menu">
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chroma')"><span
-                                                class="menu-icon" aria-hidden="true"><i
-                                                    class="fa-solid fa-fill-drip"></i></span><span
-                                                data-i18n="menu.fxChroma">Incrustation…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxChromatic"></span><span
-                                                data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxDuotone"></span><span
-                                                data-i18n="menu.fxDuotone">Duo-tone…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxRal"></span><span
-                                                data-i18n="menu.fxRal">Conversion de couleur RAL…</span></li>
-                                        <li role="menuitem" class="menu-row-icon" id="menu-convert-cmjn"
-                                            onclick="applyEffect('cmjn')"><span class="menu-icon"
-                                                 aria-hidden="true" data-icon-key="menu.fxCmjn"></span><span
-                                                data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
-                                    </ul>
-                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="illuGuidedCutoutToolStart()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageCutoutGuided">Détourage par sélection…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.window">Fenêtre</span>
+                        <li role="menuitem" class="divider"></li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSketch"></span><span data-i18n="menu.fxSketch">Esquisse…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pencilsketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPencilSketch"></span><span data-i18n="menu.fxPencilSketch">Croquis au crayon…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxOil"></span><span data-i18n="menu.fxOil">Peinture…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ascii')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxAscii"></span><span data-i18n="menu.fxAscii">Art ASCII…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxHalftone"></span><span data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxAddNoise"></span><span data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMedian"></span><span data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('reducenoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxReduceNoise"></span><span data-i18n="menu.fxReduceNoise">Réduction du bruit (PDN)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxArgenticGrain"></span><span data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDigitalPattern"></span><span data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVhs"></span><span data-i18n="menu.fxVhs">Effet VHS…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxColor">Couleur</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjColorBal"></span><span data-i18n="menu.adjColorBal">Balance des couleurs…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chroma')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-fill-drip"></i></span><span data-i18n="menu.fxChroma">Incrustation…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxChromatic"></span><span data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('duotone')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDuotone"></span><span data-i18n="menu.fxDuotone">Duo-tone…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ral')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRal"></span><span data-i18n="menu.fxRal">Conversion de couleur RAL…</span></li>
+                                <li role="menuitem" class="menu-row-icon" id="menu-fx-cmjn" onclick="applyEffect('cmjn')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxCmjn"></span><span data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBulge"></span><span data-i18n="menu.fxBulge">Bosse…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxCrystallize"></span><span data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dents')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDents"></span><span data-i18n="menu.fxDents">Bosselage…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFrosted"></span><span data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMirrorQuad"></span><span data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPinch"></span><span data-i18n="menu.fxPinch">Pincement…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span data-i18n="menu.fxPixelate">Pixéliser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-cube"></i></span><span data-i18n="menu.fxProjection3d">Projection 3D…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTwist"></span><span data-i18n="menu.fxTwist">Torsion…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxWave"></span><span data-i18n="menu.fxWave">Onde…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBlurSimple"></span><span data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxGaussian"></span><span data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou de mouvement…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRadialBlur"></span><span data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxZoomBlur"></span><span data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSurfaceBlur"></span><span data-i18n="menu.fxSurfaceBlur">Flou de surface…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('fragment')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFragment"></span><span data-i18n="menu.fxFragment">Fragment…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unfocus')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxUnfocus"></span><span data-i18n="menu.fxUnfocus">Flou d'objectif…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxObject">Objet</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxContour"></span><span data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRedEyeRemove"></span><span data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftGlow"></span><span data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjSharpen"></span><span data-i18n="menu.adjSharpen">Netteté…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unsharp')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjUnsharp"></span><span data-i18n="menu.adjUnsharp">Masque flou (netteté)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softenportrait')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftenPortrait"></span><span data-i18n="menu.fxSoftenPortrait">Portrait adouci…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVignette"></span><span data-i18n="menu.fxVignette">Vignettage…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('clouds')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxClouds"></span><span data-i18n="menu.fxClouds">Nuages…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('julia')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxJulia"></span><span data-i18n="menu.fxJulia">Fractale de Julia…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mandelbrot')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMandelbrot"></span><span data-i18n="menu.fxMandelbrot">Fractale de Mandelbrot…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEdges"></span><span data-i18n="menu.fxEdges">Contours…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEmboss"></span><span data-i18n="menu.fxEmboss">Relief…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSolarize"></span><span data-i18n="menu.fxSolarize">Solariser…</span></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.window">Outils</span>
                             <ul role="menu">
                                 <li role="menuitem" class="menu-row-icon" onclick="openCanvasLivePreviewWindow()"><span
                                         class="menu-icon" aria-hidden="true"><i
@@ -715,22 +644,6 @@
                                 <li role="menuitem" class="menu-row-icon" onclick="resetWorkspace()"><span class="menu-icon" 
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.winReset"></span><span
                                         data-i18n="menu.winReset">Réinitialiser le bureau</span></li>
-                                <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon"
-                                    onclick="window.showChangelog && window.showChangelog()">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winChangelog"></span>
-                                    <span data-i18n="menu.winChangelog">Changelog…</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon"
-                                    onclick="window.showWelcomeDialog && window.showWelcomeDialog(true)">
-                                    <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winWelcomeInfo"></span>
-                                    <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
-                                </li>
-                                <li role="menuitem" class="menu-row-icon"
-                                    onclick="window.openIconViewerWindow && window.openIconViewerWindow()">
-                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-icons"></i></span>
-                                    <span>Visionneuse d'icônes…</span>
-                                </li>
 
                                 <li role="menuitem" class="menu-win-hint-mobile-only"
                                     style="opacity:0.85;font-size:10px;cursor:default;pointer-events:none;"><span
@@ -764,9 +677,20 @@
                                         data-i18n="menu.floatPalHistory">Historique</span>
                                 </li>
                                 <li role="menuitem" class="menu-floating-only menu-row-icon menu-toggle-check"
-                                    onclick="window.toggleFloatingPaletteVisibility('win-svg-objects')"><span class="menu-icon" 
+                                    onclick="window.toggleFloatingPaletteVisibility('win-svg-objects')"><span class="menu-icon"
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.floatPalSvgObjects"></span><i id="menu-win-svg-objects-check" class="menu-check fa-solid fa-check"></i><span
                                         >Objets SVG</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon menu-toggle-check"
+                                    onclick="window.toggleAnimationMode && window.toggleAnimationMode()">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-clapperboard"></i></span><i
+                                        id="menu-anim-check" class="menu-check fa-solid fa-check" style="visibility:hidden"></i><span
+                                        data-i18n="menu.winAnimation">Animation (frise)</span>
+                                </li>
+                                <li role="menuitem" class="menu-row-icon" id="menu-anim-sequence"
+                                    onclick="window.IlluGifImport&&window.IlluGifImport.pickAndImportSequence(window.EditorManager)">
+                                    <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
+                                    <span data-i18n="menu.winAnimSequence">Importer une séquence d’images (frames)…</span>
                                 </li>
                             </ul>
                         </li>
@@ -1123,7 +1047,7 @@
                         </div>
                         <span class="illu-ribbon-group-label" data-i18n="ribbon.groupSymmetry">Symétrie</span>
                     </div>
-                    <span id="pencil-close-row" class="field-row illu-size-extra-row" hidden aria-hidden="true">
+                    <span id="pencil-close-row-2" class="field-row illu-size-extra-row" hidden aria-hidden="true">
                         <label class="opt-bar-check">
                             <input type="checkbox" data-illu-toggle-check="tool-pencil-close" tabindex="-1" disabled>
                             <span data-i18n="tools.optClosePath">Fermer</span>
@@ -2394,7 +2318,7 @@
                                     <button class="tool-btn" id="tool-zoom" data-i18n-title="title.toolZoom"><i
                                             class="fa-solid fa-magnifying-glass"></i></button>
 
-                                    <button class="tool-btn" id="illu-tb-zoom-fit" data-i18n-title="menubar.tbZoomFit"
+                                    <button class="tool-btn" id="illu-tb-zoom-fit-2" data-i18n-title="menubar.tbZoomFit"
                                         onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
                                             class="fa-solid fa-expand"></i></button>
                                 </div>
@@ -2570,21 +2494,21 @@
                                                     data-i18n="color.rgb">RVB</div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">R</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-r" min="0" max="255" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-r-val" value="0"
                                                         min="0" max="255" step="1">
                                                 </div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">V</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-g" min="0" max="255" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-g-val" value="0"
                                                         min="0" max="255" step="1">
                                                 </div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">B</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-b" min="0" max="255" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-b-val" value="0"
                                                         min="0" max="255" step="1">
@@ -2595,35 +2519,44 @@
                                                     data-i18n="color.hsv">TSV</div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">T</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-h" min="0" max="360" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-h-val" value="0"
                                                         min="0" max="360" step="1">
                                                 </div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">S</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-s" min="0" max="100" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-s-val" value="0"
                                                         min="0" max="100" step="1">
                                                 </div>
                                                 <div class="field-row color-slider-row">
                                                     <label class="color-slider-label">V</label>
-                                                    <div class="trk-wrapper"><input type="range" class="c-slider"
+                                                    <div class="trk-wrapper fx-track"><input type="range" class="c-slider fx-range"
                                                             id="col-v" min="0" max="100" value="0"></div>
                                                     <input type="number" class="illu-num-input" id="col-v-val" value="0"
                                                         min="0" max="100" step="1">
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="field-row color-hex-row">
+                                        <!-- Hexa et RAL partagent une seule ligne : deux champs courts
+                                             n'ont pas besoin d'une ligne chacun. #color-ral-row garde son
+                                             id (masqué hors mode RAL) et devient un simple groupe inline. -->
+                                        <div class="field-row color-hex-row color-hex-row--pair">
                                             <label class="color-hex-label" data-i18n="color.hex">Hexa</label>
                                             <input type="text" id="color-hex" class="color-hex-input" value="000000">
+                                            <span class="color-ral-group" id="color-ral-row">
+                                                <label class="color-hex-label" for="color-ral">Ral :</label>
+                                                <input type="text" id="color-ral" class="color-hex-input" list="ral-list"
+                                                    placeholder="RAL 3020" autocomplete="off" spellcheck="false">
+                                            </span>
+                                            <datalist id="ral-list"></datalist>
                                         </div>
                                         <div class="color-section-title color-section-title--sliders color-section-title--alpha"
                                             data-i18n="color.alpha">Alpha</div>
                                         <div class="field-row color-slider-row color-slider-row--alpha">
-                                            <div class="trk-wrapper alpha-trk"><input type="range" class="c-slider"
+                                            <div class="trk-wrapper alpha-trk fx-track"><input type="range" class="c-slider fx-range"
                                                     id="col-a" min="0" max="255" value="255"></div>
                                             <input type="number" class="illu-num-input" id="col-a-val" value="255"
                                                 min="0" max="255" step="1">
@@ -2747,8 +2680,8 @@
                                 </div>
                                 <div class="field-row layer-bounds-panel__row">
                                     <label class="layer-bounds-panel__label" data-i18n="layer.opacity">Opacité</label>
-                                    <input type="range" id="layer-opacity-range" min="0" max="100" value="100"
-                                        class="layer-bounds-panel__opacity-range">
+                                    <span class="fx-track layer-opacity-track"><input type="range" id="layer-opacity-range" min="0" max="100" value="100"
+                                        class="layer-bounds-panel__opacity-range fx-range"></span>
                                     <span id="layer-opacity-val" class="layer-bounds-panel__opacity-val">100</span>%
                                 </div>
                             </div>
@@ -2968,7 +2901,8 @@
                             <span data-i18n="status.creditPrefix">MasterPaint par </span><a
                                 href="https://polocrafting.fr/" class="status-bar-credit-link" target="_blank"
                                 rel="noopener noreferrer" data-i18n-title="status.creditLinkTitle"
-                                title="polocrafting.fr"> Polocrafting 367</a>
+                                title="polocrafting.fr"> Polocrafting 367</a><span
+                                id="illu-version-text-status"></span>
                         </p>
                     </div>
                 </div>
@@ -3231,7 +3165,7 @@
                         <span data-i18n="status.creditPrefix">MasterPaint par </span><a href="https://polocrafting.fr/"
                             class="illu-mobile-drawer__credit-link" target="_blank" rel="noopener noreferrer"
                             data-i18n-title="status.creditLinkTitle" title="Site web — polocrafting.fr"> Polocrafting
-                            367</a>
+                            367 </a>
                     </p>
                 </footer>
             </div>
@@ -3264,6 +3198,11 @@
                     </div>
                 </div>
                 <div class="field-row illu-new-project-type-row">
+                    <input type="radio" id="mode-anim-main" name="proj-mode-main" value="pixel-anim">
+                    <label for="mode-anim-main" data-i18n="dlg.animMode">Animation (frise)</label>
+                    <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
+                </div>
+                <div class="field-row illu-new-project-type-row">
                     <input type="radio" id="mode-vector-main" name="proj-mode-main" value="vector">
                     <label for="mode-vector-main" data-i18n="dlg.vectorMode">Vecteur (SVG)</label>
                     <span class="illu-beta-tag" data-i18n="common.beta">BETA</span>
@@ -3275,6 +3214,7 @@
                     <input type="radio" id="mode-pixel-dither" name="proj-mode" value="pixel-dither">
                     <input type="radio" id="mode-pixel-ral" name="proj-mode" value="pixel-ral">
                     <input type="radio" id="mode-pixel-cmjn" name="proj-mode" value="pixel-cmjn">
+                    <input type="radio" id="mode-pixel-anim" name="proj-mode" value="pixel-anim">
                 </div>
                 <hr class="illu-new-project-sep">
                 <p class="illu-new-project-presets-label" data-i18n="dlg.newProjectPresets">Préréglages :</p>
@@ -3316,7 +3256,8 @@
                             const isPixel = document.getElementById('mode-pixel-main').checked;
                             subModesDiv.style.display = isPixel ? 'block' : 'none';
 
-                            let selectedMode = 'vector';
+                            const checkedMain = document.querySelector('input[name="proj-mode-main"]:checked');
+                            let selectedMode = checkedMain ? checkedMain.value : 'pixel';
                             if (isPixel) {
                                 const activeBtn = subModesDiv.querySelector('.illu-scope-btn--active');
                                 selectedMode = activeBtn ? activeBtn.getAttribute('data-proj-mode') : 'pixel';
@@ -3448,6 +3389,12 @@
                             stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
                             <rect x="2" y="3.5" width="12" height="10" rx="1.2" /><path d="M2 6h12" /><path d="M8 8.5v3M6.5 10h3" />
                         </svg><span data-i18n="dlg.importTab">Nouvel onglet…</span>
+                    </button>
+                    <button type="button" id="btn-import-sequence" class="illu-import-choice-btn" style="min-width: 100%; display:none;">
+                        <svg class="illu-import-choice-ico" viewBox="0 0 16 16" width="16" height="16" fill="none"
+                            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                            <rect x="1.5" y="4" width="9" height="8" rx="1" /><path d="M11.5 5.5 14.5 4v8l-3-1.5" /><path d="M4 8h4" />
+                        </svg><span data-i18n="dlg.importSequence">Ouvrir en séquence animée…</span>
                     </button>
                 </div>
                 <div style="text-align: right; margin-top: 10px;">
@@ -3632,6 +3579,23 @@
                                 <option value="4">4 bits</option>
                                 <option value="8" selected>8 bits (standard)</option>
                             </select>
+                        </div>
+                        <div id="export-anim-options" class="illu-export-more__opts" hidden>
+                            <div class="field-row">
+                                <label for="export-anim-fps" data-i18n="dlg.animFps">Images/seconde</label>
+                                <input type="number" id="export-anim-fps" min="1" max="60" value="12" style="width:60px">
+                            </div>
+                            <div class="field-row">
+                                <label for="export-anim-range" data-i18n="dlg.animRange">Plage</label>
+                                <select id="export-anim-range">
+                                    <option value="all" data-i18n="dlg.animRangeAll">Toute l’animation</option>
+                                    <option value="current" data-i18n="dlg.animRangeCurrent">Image courante seulement</option>
+                                </select>
+                            </div>
+                            <div class="field-row">
+                                <label><input type="checkbox" id="export-anim-loop" checked>
+                                    <span data-i18n="dlg.animLoop">Boucle (GIF)</span></label>
+                            </div>
                         </div>
                         <div id="export-jpeg-options" class="illu-export-more__opts" hidden>
                             <div class="field-row">
@@ -3895,12 +3859,11 @@
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
                                         </div>
-                                        <div class="illu-theme-cat-label" style="display:none;">macOS</div>
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="welcome-ui-base-row-mac" role="group" style="display:none;">
+                                        <div class="illu-theme-cat-label">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="welcome-ui-base-row-mac" role="group">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
-                                    </div>
                                 </div>
                                 <div class="settings-table-row">
                                     <div class="settings-table-main" style="display: flex; align-items: center; gap: 4px;">
@@ -4183,8 +4146,8 @@
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
                                         </div>
-                                        <div class="illu-theme-cat-label" style="display:none;">macOS</div>
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="settings-ui-base-row-mac" role="group" style="display:none;">
+                                        <div class="illu-theme-cat-label">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="settings-ui-base-row-mac" role="group">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
@@ -4692,12 +4655,16 @@
     <script src="js/effects/WebGLFilterEngine.js"></script>
     <script src="js/effects/ral_colors.js"></script>
     <script src="js/effects/radial-zoom-blur.js"></script>
+    <script src="js/effects/halftone-core.js"></script>
+    <script src="js/effects/EffectDialogUI.js"></script>
     <script src="js/effects/FilterManager.js"></script>
     <script src="js/app/PixelOverlay.js"></script>
     <script src="js/app/PixelTextEdit.js"></script>
+    <script src="js/effects/photo-pipeline.js"></script>
     <script src="js/effects/image-adjust-core.js"></script>
     <script src="js/effects/CameraRawPanel.js"></script>
     <script src="js/effects/LevelsPanel.js"></script>
+    <script src="js/effects/CurvesPanel.js"></script>
     <script src="js/tools/warp-core.js"></script>
     <script src="js/tools/IlluCropInteractive.js"></script>
     <script src="js/effects/ContentAwareFill.js"></script>
@@ -4717,6 +4684,15 @@
     <script src="js/app/illu-svg-text.js"></script>
     <script src="js/app/illu-svg-objects-panel.js"></script>
     <script src="js/app/illu-svg-colors.js"></script>
+    <!-- Mode animation (frise chronologique, cels, tween, export/import GIF-MP4) -->
+    <script src="vendor/anim/gifenc.js"></script>
+    <script src="vendor/anim/omggif.js"></script>
+    <script src="vendor/anim/mp4-muxer.js"></script>
+    <script src="vendor/anim/webm-muxer.js"></script>
+    <script src="js/anim/AnimationTimeline.js"></script>
+    <script src="js/anim/AnimationExport.js"></script>
+    <script src="js/anim/GifImport.js"></script>
+    <script src="js/anim/AnimationPanel.js"></script>
     <script src="js/app/app.js"></script>
     <script src="js/app/Listener.js"></script>
     <script src="js/app/illu-mobile.js"></script>

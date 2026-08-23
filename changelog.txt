@@ -1,5 +1,62 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.9.28 (23/08/26)
+- Correction en profondeur du traitement des photos raw
+- Correction traitement 14bit
+- Plus de controle haute et basse lumières
+- Correction des image ouverte ou les blanc/noir etais cramé(en rose)
+- Introduction en beta de theme MacOS
+
+2.9.21 (26/07/26)
+- Curseur visuelement revu plus compact, 
+- Cohérence visuel
+- Effet d'incrusation, vhs, raw retravaillé
+- Gestion des effets complexes meme sur téléphone
+- réorganisation des effets/ajustements
+- Réparré effet VHS cassé
+- VHS : aperçu entièrement noir corrigé (le rayon de flou chroma devenait décimal sur
+  l'aperçu réduit, ce qui rendait toute l'image invalide). Bavement et hauteur de
+  déchirure ne sont plus mis à l'échelle : ce sont des pourcentages, pas des pixels
+- Ajout icone dans onglet de projet pour mode annimé
+- Correction bug roue couleurs en mode RAL 
+- Correction bug sauvegarde auto quand non réclamé
+
+2.9.11 (24/07/26)
+- Trame CMJN : vraie simulation d'impression. Les encres cyan / magenta / jaune / noir
+  utilisent leurs couleurs réelles d'imprimerie et se superposent en synthèse soustractive
+  (C+M = bleu-violet, C+J = vert, M+J = rouge) au lieu de primaires écran
+- Nouveaux réglages « encriers » : intensité de chaque encre (0–200 %, comme les encriers
+  d'une presse) et engraissement du point (l'encre s'étale sur le papier)
+
+2.9.10 (24/07/26)
+- Ajout d'un trammage ascii
+- Trame : nouvelles variantes « Points couleur » et « Impression CMJN »
+- Rangé les menu : effets, ajustement..
+- Nombreux ajustement non rensigné
+
+2.9.6 (20/07/26)
+- Export animation : nouvelle option « Séquence PNG numérotée (.zip) » — toutes les images
+  dans un ZIP, nommées frame_0001.png, frame_0002.png…
+- Menu Fichier réorganisé : « Ouvrir comme… » renommé « Espace de couleur : » ; l'entrée
+  Photo Mode Pro sort de ce sous-menu et passe juste sous « Mode Photo Pro… », renommée
+  « Ouvrir projet dans Photo Mode Pro »
+- Entrée « Tramé (Noir et Blanc) » de l'espace de couleur masquée (conservée en interne)
+
+2.9.3 (19/07/26)
+- NOUVEAU : Mode Animation (frise chronologique) — un mode bitmap avec une timeline 2D
+  (calques × temps) et des images clés (keyframes) par calque
+- Sauvegarde/chargement des animations dans les projets .illu
+- Menus : « Importer un GIF animé… » et « Activer l'animation (frise) »
+- Exportation ; GIF, mp4...
+
+2.8.196 (15/07/26)
+- Ajout d'un vrai réglage Courbes (RVB + par canal)
+- Ajout effet Vibrance et Masque flou (netteté)
+- Seuil intégré dans la postérisation (option N&B)
+- Rangement du menu Effets, correction d'effets mal rangé ou inaccessible
+- Correction raccourcis clavier outils (crayon, plume, polygone)
+- Correction de bug divers et optimisation du chargement
+
 2.8.190 (28/06/26)
 - Correction nouveau projet qui crée canvas de 1x1 pixel
 - Ajout lissage des trais

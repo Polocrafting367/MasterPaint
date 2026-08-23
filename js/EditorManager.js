@@ -140,7 +140,23 @@ const EditorManager = {
     },
 
 
+    /**
+     * Le mode RAL impose la grille. La roue est une coupe teinte × saturation à
+     * valeur maximale : quantifiée vers le RAL le plus proche, elle ne peut faire
+     * apparaître que les teintes vives de la palette — tous les tons sombres
+     * (RAL 7016, 9005…) et pastel restent invisibles. La grille teinte × luminosité
+     * balaie au contraire toute la plage et montre la palette entière.
+     *
+     * C'est un forçage calculé, jamais écrit dans les préférences : en quittant un
+     * projet RAL, le choix de l'utilisateur (roue ou grille) revient de lui-même.
+     */
+    isColorPickerGridForced() {
+        const p = this.activeProject;
+        return !!(p && p.mode === 'pixel-ral');
+    },
+
     isColorPickerGridMode() {
+        if (this.isColorPickerGridForced()) return true;
         try {
             return localStorage.getItem('illu_color_picker_grid') === '1'
                 || localStorage.getItem('illu_color_wheel_black_rim') === '1';
@@ -220,10 +236,19 @@ const EditorManager = {
         const btn = document.getElementById('btn-toggle-color-grid');
         const canvas = document.getElementById('color-wheel');
         const grid = this.isColorPickerGridMode();
+        const forced = this.isColorPickerGridForced();
         if (btn) {
             btn.setAttribute('aria-pressed', grid ? 'true' : 'false');
             btn.style.backgroundColor = grid ? '#333' : '';
             btn.style.color = grid ? '#fff' : '';
+            /* En RAL le choix ne s'applique pas : on le montre plutôt que de laisser
+               croire à un bouton cassé. */
+            btn.disabled = forced;
+            btn.style.opacity = forced ? '0.55' : '';
+            btn.style.cursor = forced ? 'default' : 'pointer';
+            btn.title = forced
+                ? 'Mode RAL : la grille est nécessaire pour afficher toute la palette'
+                : '';
         }
         if (canvas) {
             canvas.style.borderRadius = grid ? '0' : '50%';
@@ -327,10 +352,66 @@ const EditorManager = {
                     }
                 });
                 swatch.addEventListener('contextmenu', e => e.preventDefault());
-                
+
                 container.appendChild(swatch);
             });
         }
+    },
+
+    /** Remplit le <datalist id="ral-list"> avec TOUTES les couleurs RAL (autocomplétion). */
+    populateRalDatalist() {
+        const list = document.getElementById('ral-list');
+        if (!list || list.children.length > 0 || typeof RAL_COLORS === 'undefined') return;
+        const frag = document.createDocumentFragment();
+        RAL_COLORS.forEach((c) => {
+            const opt = document.createElement('option');
+            const lang = window.IlluI18n && window.IlluI18n.getLang && window.IlluI18n.getLang() === 'en' ? c.en : c.fr;
+            opt.value = c.code; // ex. "RAL 3020"
+            opt.label = `${c.code} — ${lang || c.en || ''}`;
+            frag.appendChild(opt);
+        });
+        list.appendChild(frag);
+    },
+
+    /** Retrouve une couleur RAL par code saisi ("RAL 3020", "3020", "ral3020"…). */
+    findRalByCode(input) {
+        if (typeof RAL_COLORS === 'undefined' || !input) return null;
+        const norm = String(input).toUpperCase().replace(/[^0-9A-Z]/g, ''); // "RAL3020" / "3020"
+        const digits = norm.replace(/^RAL/, '');
+        return (
+            RAL_COLORS.find((c) => c.code.toUpperCase().replace(/[^0-9A-Z]/g, '') === norm) ||
+            RAL_COLORS.find((c) => c.code.replace(/[^0-9]/g, '') === digits) ||
+            null
+        );
+    },
+
+    /** Couleur RAL la plus proche d'un RVB (pondérée perception, comme la quantization). */
+    nearestRalColor(r, g, b) {
+        if (typeof RAL_COLORS === 'undefined' || !RAL_COLORS.length) return null;
+        let best = RAL_COLORS[0];
+        let bestDist = Infinity;
+        for (let i = 0; i < RAL_COLORS.length; i++) {
+            const c = RAL_COLORS[i];
+            const dr = r - c.r;
+            const dg = g - c.g;
+            const db = b - c.b;
+            const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = c;
+            }
+        }
+        return best;
+    },
+
+    /** Applique une couleur RAL (par code) à la cible de couleur active. */
+    setColorFromRalCode(input) {
+        const ral = this.findRalByCode(input);
+        if (!ral) return false;
+        if (typeof this.setColorFromHex === 'function') {
+            this.setColorFromHex(ral.hex);
+        }
+        return true;
     },
 
     setupCmjnPalette() {
@@ -1561,7 +1642,23 @@ const EditorManager = {
                             : 'continuous';
                     if (mode !== 'continuous' && mode !== 'interval' && mode !== 'off') mode = 'continuous';
                     if (window.WorkspaceIO && window.WorkspaceIO.AUTO_SAVE_MODE_KEY) {
-                        localStorage.setItem(window.WorkspaceIO.AUTO_SAVE_MODE_KEY, mode);
+                        /*
+                         * Le mode téléphone impose « continu » par défaut, sans clé
+                         * enregistrée. Valider les Paramètres figeait ce défaut implicite :
+                         * la sauvegarde restait donc active après le passage en Paint.NET
+                         * ou Photoshop. On n'écrit que si l'utilisateur avait déjà un
+                         * réglage explicite, ou s'il demande autre chose que le défaut.
+                         */
+                        const hadExplicit =
+                            typeof window.WorkspaceIO.getExplicitAutoSaveMode === 'function' &&
+                            window.WorkspaceIO.getExplicitAutoSaveMode() != null;
+                        const implicitDefault =
+                            typeof window.WorkspaceIO.getDefaultAutoSaveMode === 'function'
+                                ? window.WorkspaceIO.getDefaultAutoSaveMode()
+                                : 'off';
+                        if (hadExplicit || mode !== implicitDefault) {
+                            localStorage.setItem(window.WorkspaceIO.AUTO_SAVE_MODE_KEY, mode);
+                        }
                     }
                     const asMin = document.getElementById('settings-autosave-interval-min');
                     if (asMin && window.WorkspaceIO && window.WorkspaceIO.AUTO_SAVE_INTERVAL_MIN_KEY) {
@@ -1582,7 +1679,12 @@ const EditorManager = {
                 } catch (err) { /* ignore */ }
                 try {
                     const tbg = document.getElementById('settings-tab-bg-preview-enabled');
-                    localStorage.setItem('settings-tab-bg-preview-enabled', tbg && tbg.checked ? '1' : '0');
+                    /* En mode Photoshop la case est décochée de force (voir
+                       syncSettingsFromStorage) : on ne persiste pas cet état, sinon la
+                       préférence de l'utilisateur serait perdue au retour en Paint.NET. */
+                    if (tbg && tbg.dataset.illuForced !== '1') {
+                        localStorage.setItem('settings-tab-bg-preview-enabled', tbg.checked ? '1' : '0');
+                    }
                 } catch (err) { /* ignore */ }
                 try {
                     const sl = document.getElementById('settings-stroke-light-render');
@@ -1835,7 +1937,218 @@ const EditorManager = {
     get isPixelMode() {
         if (!this.activeProject) return true;
         const m = this.activeProject.mode;
-        return m === 'pixel' || m === 'pixel-dither' || m === 'pixel-ral' || m === 'pixel-cmjn';
+        return (
+            m === 'pixel' ||
+            m === 'pixel-dither' ||
+            m === 'pixel-ral' ||
+            m === 'pixel-cmjn' ||
+            m === 'pixel-anim'
+        );
+    },
+
+    /** Mode animation : projet pixel doté d'une frise chronologique active. */
+    get isAnimationMode() {
+        const p = this.activeProject;
+        return !!(p && p.animation && p.animation.enabled);
+    },
+
+    /** Objet animation du projet actif (ou null). */
+    get animation() {
+        const p = this.activeProject;
+        return p && p.animation ? p.animation : null;
+    },
+
+    /** État d'animation par défaut (nouveau document animé / conversion). */
+    _makeDefaultAnimationState() {
+        return {
+            enabled: true,
+            fps: 12,
+            duration: 24, // nombre d'images (frames)
+            playhead: 0,
+            loop: true,
+            playing: false,
+            pingpong: false,
+            onionSkin: false,
+            onionAllLayers: false,
+            onionBefore: 1,
+            onionAfter: 1,
+            onionOpacity: 0.4,
+            onionTintBefore: '#2a6bff',
+            onionTintAfter: '#ff3b3b',
+            drawStep: false
+        };
+    },
+
+    /**
+     * Avant toute mutation d'un calque (trait, collage, effet) en mode animation :
+     * s'assure qu'un cel éditable existe exactement au temps courant (matérialise / scinde
+     * le maintien si nécessaire) et repointe layer.buffer dessus. No-op hors animation.
+     */
+    ensureEditableCelAtPlayhead(layerIndex) {
+        if (!this.isAnimationMode) return;
+        const idx = layerIndex == null ? this.activeLayerIndex : layerIndex;
+        if (window.IlluAnim && typeof window.IlluAnim.ensureEditableCel === 'function') {
+            window.IlluAnim.ensureEditableCel(this, idx);
+        }
+    },
+
+    /**
+     * Pelure d'oignon : dessine des fantômes teintés des cels voisins du calque actif
+     * (bleu = avant, rouge = après) par-dessus le composite. Ignorée pendant la lecture.
+     */
+    _drawOnionSkin(ctx) {
+        const anim = this.animation;
+        if (!anim || !anim.onionSkin || anim.playing) return;
+        const IA = window.IlluAnim;
+        if (!IA) return;
+        const t = anim.playhead | 0;
+        const nb = Math.max(0, anim.onionBefore | 0);
+        const na = Math.max(0, anim.onionAfter | 0);
+        const baseOp = anim.onionOpacity != null ? Math.max(0.05, Math.min(1, anim.onionOpacity)) : 0.4;
+        const tintBefore = anim.onionTintBefore || '#2a6bff';
+        const tintAfter = anim.onionTintAfter || '#ff3b3b';
+        const layers =
+            anim.onionAllLayers ? (this.layers || []).filter((l) => l && l.visible) : [this.activeLayer];
+        const ghostLayer = (layer) => {
+            if (!layer || !layer.cels) return;
+            const ghost = (frame, tint, alpha) => {
+                if (frame < 0 || frame > anim.duration - 1) return;
+                const cel = IA.celAt(layer, frame);
+                if (!cel || cel.buffer === layer.buffer) return;
+                const g = this._onionGhost(cel.buffer, tint);
+                if (!g) return;
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(g, layer.x || 0, layer.y || 0);
+                ctx.restore();
+            };
+            for (let i = nb; i >= 1; i--) ghost(t - i, tintBefore, baseOp * (1 - (i - 1) / (nb + 1)));
+            for (let i = na; i >= 1; i--) ghost(t + i, tintAfter, baseOp * (1 - (i - 1) / (na + 1)));
+        };
+        layers.forEach(ghostLayer);
+    },
+
+    /** Copie teintée d'un buffer de cel (fantôme de pelure d'oignon), reconstruite à la volée. */
+    _onionGhost(buffer, tint) {
+        if (!buffer) return null;
+        const c = document.createElement('canvas');
+        c.width = buffer.width;
+        c.height = buffer.height;
+        const cx = c.getContext('2d');
+        cx.drawImage(buffer, 0, 0);
+        cx.globalCompositeOperation = 'source-atop';
+        cx.globalAlpha = 0.55;
+        cx.fillStyle = tint;
+        cx.fillRect(0, 0, c.width, c.height);
+        return c;
+    },
+
+    /**
+     * Crée un nouveau projet en mode animation (pixel-anim) avec un calque prêt.
+     * Utilisé notamment par l'import de GIF animés.
+     */
+    createAnimationProject(opts) {
+        opts = opts || {};
+        const dw = window.ILLU_DEFAULT_DOC_WIDTH || 1280;
+        const dh = window.ILLU_DEFAULT_DOC_HEIGHT || 720;
+        const w = Math.max(1, opts.width || dw);
+        const h = Math.max(1, opts.height || dh);
+        const anim = this._makeDefaultAnimationState();
+        if (opts.fps) anim.fps = Math.max(1, Math.min(60, opts.fps | 0));
+        if (opts.duration) anim.duration = Math.max(1, opts.duration | 0);
+        const project = {
+            id: Date.now(),
+            name: opts.name || `Animation ${this.projects.length + 1}`,
+            mode: 'pixel-anim',
+            width: w,
+            height: h,
+            ditherEffectSize: 1,
+            layers: [],
+            activeLayerIndex: 0,
+            history: [],
+            historyIndex: -1,
+            zoomLevel: 1.0,
+            canvasPanX: 0,
+            canvasPanY: 0,
+            canvasData: null,
+            svgData: '',
+            role: 'main',
+            parentProjectId: null,
+            parentLayerId: null,
+            autoSaveLocal: false,
+            ditherInvert: false,
+            animation: anim
+        };
+        this.projects.push(project);
+        this.activeProjectIndex = this.projects.length - 1;
+        this.addLayer(opts.layerName || 'Animation');
+        this.saveHistory('Nouvelle animation');
+        this.updateTabUI();
+        this.applyProjectToUI();
+        if (typeof window.fitActiveProjectZoomToWorkspace === 'function') {
+            window.fitActiveProjectZoomToWorkspace(this, { force: true });
+        }
+        return project;
+    },
+
+    /** Convertit le projet pixel actif en projet animé (calques existants → cel@0). */
+    enableAnimationOnActiveProject() {
+        const p = this.activeProject;
+        if (!p || !this.isPixelMode) return false;
+        if (p.animation && p.animation.enabled) return true;
+        p.animation = this._makeDefaultAnimationState();
+        if (p.mode === 'pixel') p.mode = 'pixel-anim';
+        this.layers.forEach((l) => {
+            if (!l.cels) this._initLayerAnimationTracks(l, l.buffer);
+        });
+        if (typeof this.applyProjectToUI === 'function') this.applyProjectToUI();
+        /* La barre d'onglets porte le repère « séquence animée » : elle doit se
+           redessiner tout de suite, pas au prochain changement d'onglet. */
+        this.updateTabUI();
+        document.dispatchEvent(new CustomEvent('illu:anim-mode-enter'));
+        this.render();
+        // Le panneau réserve de la hauteur : réajuste le zoom pour que la toile reste visible.
+        this._refitZoomAfterLayout();
+        return true;
+    },
+
+    /** Réajuste le zoom « adapter à la fenêtre » après un changement de layout (panneau anim). */
+    _refitZoomAfterLayout() {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (typeof window.fitActiveProjectZoomToWorkspace === 'function' && this.activeProject) {
+                    window.fitActiveProjectZoomToWorkspace(this, { force: true });
+                }
+            });
+        });
+    },
+
+    /** Désactive l'animation : fige chaque calque sur son image courante, retire la frise. */
+    disableAnimationOnActiveProject() {
+        const p = this.activeProject;
+        if (!p || !p.animation || !p.animation.enabled) return false;
+        // Repointe les buffers sur le cel au temps courant (image visible) avant d'aplatir.
+        if (window.IlluAnim && typeof window.IlluAnim.resolveForRender === 'function') {
+            if (p.animation.playing) window.IlluAnim.pause(this);
+            window.IlluAnim.resolveForRender(this);
+        }
+        (this.layers || []).forEach((l) => {
+            // layer.buffer référence déjà le cel courant : il devient le buffer statique.
+            delete l.cels;
+            delete l.propTracks;
+            delete l.animScale;
+            delete l.animRotation;
+        });
+        p.animation = null;
+        if (p.mode === 'pixel-anim') p.mode = 'pixel';
+        document.dispatchEvent(new CustomEvent('illu:anim-mode-leave'));
+        if (typeof this.applyProjectToUI === 'function') this.applyProjectToUI();
+        this.updateTabUI();
+        this.render();
+        this._refitZoomAfterLayout();
+        return true;
     },
 
     /** 
@@ -2174,6 +2487,10 @@ const EditorManager = {
     },
     _pixelDomLayerViewsEligible() {
         if (!this.activeProject || !this.isPixelMode) return false;
+        // Mode animation : le buffer de chaque calque est repointé sur le cel courant à
+        // chaque rendu — on impose le compositing canvas direct (qui relit les buffers)
+        // pour éviter les vues DOM figées lors du défilement de la frise.
+        if (this.isAnimationMode) return false;
         if (this.activeProject.role === 'layerAlphaMask') return false;
         for (let i = 0; i < this.layers.length; i++) {
             const l = this.layers[i];
@@ -3612,6 +3929,26 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         ctx.save();
         ctx.globalAlpha = layer.opacity != null ? layer.opacity : 1;
         ctx.globalCompositeOperation = this.getLayerBlendMode(layer);
+        // Tween animation : échelle/rotation autour du centre du contenu du calque + teinte.
+        // Enveloppe l'ensemble du dessin (annulée par le ctx.restore() final).
+        if (this.isAnimationMode) {
+            const asx = layer.animScale != null ? layer.animScale : 1;
+            const arot = layer.animRotation || 0;
+            if (asx !== 1 || arot !== 0) {
+                const bw = layer.buffer.width;
+                const bh = layer.buffer.height;
+                const px = (Number(layer.x) || 0) + bw / 2;
+                const py = (Number(layer.y) || 0) + bh / 2;
+                ctx.translate(px, py);
+                if (arot) ctx.rotate((arot * Math.PI) / 180);
+                if (asx !== 1) ctx.scale(asx, asx);
+                ctx.translate(-px, -py);
+            }
+            const hue = layer.animHue || 0;
+            if (hue && typeof ctx.filter === 'string') {
+                ctx.filter = `hue-rotate(${hue}deg)`;
+            }
+        }
         const useEraserIntermediateOnly =
             this._strokeIntermediateCanvas &&
             this._strokeIntermediateLayerId === layer.id &&
@@ -4637,9 +4974,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const pWidth = useDefaults ? dw : parseInt(document.getElementById('p-width')?.value || dw, 10);
         const pHeight = useDefaults ? dh : parseInt(document.getElementById('p-height')?.value || dh, 10);
 
+        const isAnim = pMode === 'pixel-anim';
+        const nameSuffix = pMode === 'pixel-dither' ? ' (N&B)'
+            : pMode === 'pixel-ral' ? ' (RAL)'
+            : pMode === 'pixel-cmjn' ? ' (CMJN)'
+            : isAnim ? ' (Anim)'
+            : '';
+
         const project = {
             id: Date.now(),
-            name: `Sans titre ${this.projects.length + 1}` + (pMode === 'pixel-dither' ? ' (N&B)' : pMode === 'pixel-ral' ? ' (RAL)' : pMode === 'pixel-cmjn' ? ' (CMJN)' : ''),
+            name: `Sans titre ${this.projects.length + 1}` + nameSuffix,
             mode: pMode,
             width: Math.max(1, Number.isFinite(pWidth) && pWidth > 0 ? pWidth : dw),
             height: Math.max(1, Number.isFinite(pHeight) && pHeight > 0 ? pHeight : dh),
@@ -4657,7 +5001,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             parentProjectId: null,
             parentLayerId: null,
             autoSaveLocal: false,
-            ditherInvert: false
+            ditherInvert: false,
+            animation: isAnim ? this._makeDefaultAnimationState() : null
         };
 
         this.projects.push(project);
@@ -5059,6 +5404,25 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 this.handleNewProjectFromImage(img);
                 if (importOpts.onComplete) importOpts.onComplete();
                 resolveBatch('tab');
+            };
+        }
+
+        // Option « séquence animée » : uniquement pour un import multi-images.
+        const btnSeq = document.getElementById('btn-import-sequence');
+        if (btnSeq) {
+            btnSeq.style.display = importOpts.multiImport ? '' : 'none';
+            btnSeq.onclick = () => {
+                window._illuGlobalImportChoice = 'sequence';
+                overlay.style.display = 'none';
+                if (overlayOversize) overlayOversize.style.display = 'none';
+                const items =
+                    this._illuPendingMultiImports && this._illuPendingMultiImports.length
+                        ? this._illuPendingMultiImports.slice()
+                        : [{ img, importOpts }];
+                this._illuPendingMultiImports = [];
+                if (window.IlluGifImport && typeof window.IlluGifImport.startSequenceFromPending === 'function') {
+                    window.IlluGifImport.startSequenceFromPending(this, items);
+                }
             };
         }
     },
@@ -5890,6 +6254,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const p = this.activeProject;
         if (!p) return;
 
+        // Notifie la frise d'animation (visibilité + rafraîchissement) au changement de projet.
+        try {
+            document.dispatchEvent(new CustomEvent('illu:project-applied', { detail: { projectId: p.id } }));
+        } catch (e) {
+            /* no-op */
+        }
+
         if (typeof window.illuSplashLog === 'function') {
             const count = p.layers ? p.layers.length : 0;
             const name = p.name || 'Sans titre';
@@ -5993,7 +6364,15 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             if (swatchBox) swatchBox.style.display = 'flex';
         }
 
-        if (this.updateColorWheelForMode) this.updateColorWheelForMode();
+        /*
+         * Reconstruire la base (et pas seulement la recolorer) : la géométrie même du
+         * sélecteur dépend du mode — grille imposée en RAL, roue ou grille selon la
+         * préférence ailleurs. Sans ce rebuild, passer d'un projet RAL à un projet
+         * normal laissait la grille en place alors que la roue était sélectionnée.
+         */
+        if (this.rebuildColorPickerBase) this.rebuildColorPickerBase();
+        else if (this.updateColorWheelForMode) this.updateColorWheelForMode();
+        if (this.syncColorPickerLayoutButton) this.syncColorPickerLayoutButton();
 
         if (this.snapColorToPalette && (this.isCmjnSimulationMode(p.mode) || this.isPaletteRestrictedMode(p.mode))) {
             this.snapColorToPalette(this.primaryColor, p.mode);
@@ -7889,6 +8268,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         );
         tab.addEventListener('click', () => this.switchProject(i));
 
+        /* Repère « ce projet contient une séquence animée » : un clap, avant le nom,
+           pour distinguer d'un coup d'œil un document animé d'un bitmap ordinaire. */
+        if (!isAlphaChild && p.animation && p.animation.enabled) {
+            const clap = document.createElement('i');
+            clap.className = 'fa-solid fa-clapperboard tab-anim-badge';
+            clap.setAttribute('aria-hidden', 'true');
+            const fps = p.animation.fps || 12;
+            clap.title = `Séquence animée activée (${fps} i/s)`;
+            tab.appendChild(clap);
+        }
+
         const label = document.createElement('span');
         label.textContent = p.name;
         label.style.flex = '1';
@@ -7955,9 +8345,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 p.name || '',
                 p.role || 'main',
                 p.parentProjectId != null ? p.parentProjectId : 'none',
-                p.alphaMaskUiHidden === true ? 1 : 0
+                p.alphaMaskUiHidden === true ? 1 : 0,
+                /* Sans cette part, activer/désactiver l'animation ne redessinerait pas
+                   la barre et le clap n'apparaîtrait qu'au prochain changement d'onglet. */
+                p.animation && p.animation.enabled ? 1 : 0
             ].join(':'))
-            .join('|') + pmSig;
+            .join('|') + pmSig +
+            /* La disposition fait partie de la signature : l'aperçu de fond et le
+               chrome des onglets en dépendent, et sans ça passer de Photoshop à
+               Paint.NET ne redessinait rien (liste de projets inchangée). */
+            `|ui:${typeof window.getUILayoutMode === 'function' ? window.getUILayoutMode() : ''}`;
         if (this._lastTabUiSignature === sig) return;
         this._lastTabUiSignature = sig;
         bar.innerHTML = '';
@@ -8042,14 +8439,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         label.style.fontSize = '11px';
         tab.appendChild(label);
 
+        /* Même croix que sur un onglet de projet : Photo Mode Pro se ferme depuis
+           la barre d'onglets, sans passer par son menu Fichier. */
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', 'Fermer Photo Mode Pro');
+        closeBtn.title = 'Fermer Photo Mode Pro';
         closeBtn.textContent = '×';
         closeBtn.style.cssText = 'font-size:14px;line-height:1;padding:0 5px;min-width:20px;cursor:pointer;border:none;background:transparent;color:white;';
-        closeBtn.onclick = (e) => {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            if (pm.close) pm.close();
-        };
+            e.stopImmediatePropagation();
+            if (typeof pm.close === 'function') pm.close();
+            this.updateTabUI();
+        });
         tab.appendChild(closeBtn);
 
         return tab;
@@ -8276,6 +8680,22 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
         
         document.getElementById('color-hex').addEventListener('change', (e) => this.setColorFromHex(e.target.value));
+        this.populateRalDatalist();
+        const ralInput = document.getElementById('color-ral');
+        if (ralInput) {
+            const applyRal = (e) => {
+                const ok = this.setColorFromRalCode(e.target.value);
+                if (!ok && e.type === 'change') {
+                    // saisie invalide : réaffiche le RAL le plus proche courant
+                    this.syncUItoState();
+                }
+            };
+            ralInput.addEventListener('change', applyRal);
+            ralInput.addEventListener('input', (e) => {
+                // Sélection directe dans le datalist (valeur exacte) → applique aussitôt.
+                if (this.findRalByCode(e.target.value)) this.setColorFromRalCode(e.target.value);
+            });
+        }
         document.getElementById('color-target-sel').addEventListener('change', (e) => {
             this.activeColorTarget = e.target.value;
             this.syncUItoState();
@@ -8545,6 +8965,13 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const hInp = document.getElementById('color-hex');
         if (hInp && document.activeElement !== hInp) hInp.value = hex.replace('#', '').toUpperCase();
 
+        // Champ RAL : affiche le code RAL le plus proche de la couleur active.
+        const ralInp = document.getElementById('color-ral');
+        if (ralInp && document.activeElement !== ralInp && typeof this.nearestRalColor === 'function') {
+            const nr = this.nearestRalColor(col.r, col.g, col.b);
+            if (nr) ralInp.value = nr.code;
+        }
+
         // Update Primary/Secondary UI Boxes
         const uiPri = document.getElementById('ui-col-primary');
         const uiSec = document.getElementById('ui-col-secondary');
@@ -8592,16 +9019,27 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             });
         }
         
-        // Update Gradients of Sliders
+        /*
+         * Dégradés des curseurs de couleur. Ils sont posés sur la PISTE (.fx-track) et
+         * non sur l'input : c'est la structure des fenêtres d'effet, où l'input reste
+         * transparent et ne porte que son bouton. Sans ça le dégradé passerait par-dessus.
+         */
         const toCss = (r,g,b) => `rgb(${r},${g},${b})`;
-        const sr = document.getElementById('col-r'); if (sr) sr.style.background = `linear-gradient(to right, ${toCss(0,col.g,col.b)}, ${toCss(255,col.g,col.b)})`;
-        const sg = document.getElementById('col-g'); if (sg) sg.style.background = `linear-gradient(to right, ${toCss(col.r,0,col.b)}, ${toCss(col.r,255,col.b)})`;
-        const sb = document.getElementById('col-b'); if (sb) sb.style.background = `linear-gradient(to right, ${toCss(col.r,col.g,0)}, ${toCss(col.r,col.g,255)})`;
-        
-        const sh = document.getElementById('col-h'); if (sh) sh.style.background = `linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)`;
-        const ss = document.getElementById('col-s'); if (ss) ss.style.background = `linear-gradient(to right, ${toCss(...Object.values(this.hsvToRgb(hsv.h,0,hsv.v)))}, ${toCss(...Object.values(this.hsvToRgb(hsv.h,100,hsv.v)))})`;
-        const sv = document.getElementById('col-v'); if (sv) sv.style.background = `linear-gradient(to right, #000000, ${toCss(...Object.values(this.hsvToRgb(hsv.h,hsv.s,100)))})`;
-        
+        const setTrack = (id, grad) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const track = el.closest('.fx-track') || el.parentElement;
+            if (track) track.style.background = grad;
+            el.style.removeProperty('background');
+        };
+        setTrack('col-r', `linear-gradient(to right, ${toCss(0,col.g,col.b)}, ${toCss(255,col.g,col.b)})`);
+        setTrack('col-g', `linear-gradient(to right, ${toCss(col.r,0,col.b)}, ${toCss(col.r,255,col.b)})`);
+        setTrack('col-b', `linear-gradient(to right, ${toCss(col.r,col.g,0)}, ${toCss(col.r,col.g,255)})`);
+
+        setTrack('col-h', `linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)`);
+        setTrack('col-s', `linear-gradient(to right, ${toCss(...Object.values(this.hsvToRgb(hsv.h,0,hsv.v)))}, ${toCss(...Object.values(this.hsvToRgb(hsv.h,100,hsv.v)))})`);
+        setTrack('col-v', `linear-gradient(to right, #000000, ${toCss(...Object.values(this.hsvToRgb(hsv.h,hsv.s,100)))})`);
+
         const sa = document.getElementById('col-a');
         if (sa && sa.parentElement) sa.parentElement.style.setProperty('--alpha-col', `rgba(${col.r},${col.g},${col.b},1)`);
 
@@ -8723,6 +9161,9 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 bCtx.fillRect(0, 0, this.width, this.height);
             }
             layer.buffer = buffer;
+            if (this.isAnimationMode) {
+                this._initLayerAnimationTracks(layer, buffer);
+            }
         } else {
             const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             group.setAttribute('id', `layer-${id}`);
@@ -8734,6 +9175,18 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this.setActiveLayerIndex(this.layers.length - 1);
         this.updateLayerUI();
         this.render();
+    },
+
+    /**
+     * Initialise les pistes d'animation d'un calque : un unique cel au temps 0 qui
+     * référence le buffer courant, exposé sur toute la durée (maintien), et des pistes
+     * de propriétés vides (interpolation ajoutée à la demande).
+     */
+    _initLayerAnimationTracks(layer, buffer) {
+        const anim = this.animation;
+        const dur = anim && anim.duration > 0 ? anim.duration : 24;
+        layer.cels = [{ frame: 0, hold: dur, buffer: buffer || layer.buffer }];
+        layer.propTracks = { x: [], y: [], opacity: [], scale: [], rotation: [] };
     },
 
     /**
@@ -8789,6 +9242,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         this._cachedPointerRect = null;
         this._cachedPointerRectAtMs = 0;
         if (!this.activeProject) return;
+        // Mode animation : repointe chaque layer.buffer sur le cel actif au temps courant
+        // et applique les transforms interpolées (tween) avant compositing.
+        if (this.isAnimationMode && window.IlluAnim && typeof window.IlluAnim.resolveForRender === 'function') {
+            window.IlluAnim.resolveForRender(this);
+        }
         if (this.isPixelMode) {
             const mainCanvas = document.getElementById('drawing-canvas');
             const stack = document.getElementById('pixel-layer-stack');
@@ -8820,6 +9278,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
                     const sl = this.strokeLightPixelRenderWanted();
                     this._renderPixelLayersStackToContext(ctx, this.layers, true, sl ? { strokeLightRender: true } : undefined);
+                    if (this.isAnimationMode) this._drawOnionSkin(ctx);
                 }
             }
         } else {
@@ -11238,7 +11697,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 blendMode: l.blendMode || 'source-over',
                 alphaMaskProjectId: l.alphaMaskProjectId != null ? l.alphaMaskProjectId : null,
                 ...this._snapshotDynamicFilterProps(l),
-                buffer: l.buffer
+                buffer: l.buffer,
+                // Passe-plat animation pour la sérialisation (cels + pistes tween).
+                cels: l.cels,
+                propTracks: l.propTracks
             }));
     },
 
@@ -12082,8 +12544,28 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 autoSaveLocal: p.autoSaveLocal === true,
                 illuSpriteSheet: p.illuSpriteSheet === true,
                 illuSpriteSourceName: p.illuSpriteSourceName || null,
-                illuSpriteDefsData: p.illuSpriteDefsData || ''
+                illuSpriteDefsData: p.illuSpriteDefsData || '',
+                animation:
+                    p.animation && p.animation.enabled
+                        ? {
+                              enabled: true,
+                              fps: p.animation.fps || 12,
+                              duration: p.animation.duration || 1,
+                              playhead: p.animation.playhead || 0,
+                              loop: p.animation.loop !== false,
+                              pingpong: !!p.animation.pingpong,
+                              onionSkin: !!p.animation.onionSkin,
+                              onionAllLayers: !!p.animation.onionAllLayers,
+                              onionBefore: p.animation.onionBefore || 1,
+                              onionAfter: p.animation.onionAfter || 1,
+                              onionOpacity: p.animation.onionOpacity != null ? p.animation.onionOpacity : 0.4,
+                              onionTintBefore: p.animation.onionTintBefore || '#2a6bff',
+                              onionTintAfter: p.animation.onionTintAfter || '#ff3b3b',
+                              drawStep: !!p.animation.drawStep
+                          }
+                        : null
             };
+            const isAnimProj = !!(p.animation && p.animation.enabled);
             if (p.role === 'layerAlphaMask') {
                 base.alphaMaskUiHidden = p.alphaMaskUiHidden === true;
             }
@@ -12119,7 +12601,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     blendMode: l.blendMode || 'source-over',
                     alphaMaskProjectId: l.alphaMaskProjectId != null ? l.alphaMaskProjectId : null,
                     ...this._snapshotDynamicFilterProps(l),
-                    dataUrl: l.buffer ? l.buffer.toDataURL('image/png') : ''
+                    dataUrl: l.buffer ? l.buffer.toDataURL('image/png') : '',
+                    // Animation : cels (dessins + maintien) et pistes de propriétés (tween).
+                    cels:
+                        isAnimProj && Array.isArray(l.cels)
+                            ? l.cels.map((c) => ({
+                                  frame: c.frame | 0,
+                                  hold: c.hold != null ? c.hold : null,
+                                  dataUrl: c.buffer ? c.buffer.toDataURL('image/png') : ''
+                              }))
+                            : undefined,
+                    propTracks: isAnimProj && l.propTracks ? l.propTracks : undefined
                 }));
                 base.historyIndex = p.historyIndex != null ? p.historyIndex : -1;
                 base.historySerialized = (includeHistory && Array.isArray(p.history))
@@ -12237,7 +12729,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 autoSaveLocal: sp.autoSaveLocal === true,
                 illuSpriteSheet: sp.illuSpriteSheet === true,
                 illuSpriteSourceName: sp.illuSpriteSourceName || null,
-                illuSpriteDefsData: sp.illuSpriteDefsData || ''
+                illuSpriteDefsData: sp.illuSpriteDefsData || '',
+                animation:
+                    sp.animation && sp.animation.enabled
+                        ? Object.assign({}, sp.animation, { playing: false, _raf: 0 })
+                        : null
             };
             if (p.role === 'layerAlphaMask' && sp.alphaMaskUiHidden === true) {
                 p.alphaMaskUiHidden = true;
@@ -12260,7 +12756,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                             await window.illuYieldToMain(pl.dataUrl.length > 120000 ? 2 : 1);
                         }
                         const buf = await this._canvasFromDataUrl(pl.dataUrl);
-                        loadedLayers.push({
+                        const layerObj = {
                             id: pl.id != null ? pl.id : Date.now() + Math.floor(Math.random() * 1000000) + j,
                             name: pl.name || 'Calque',
                             visible: pl.visible !== false,
@@ -12272,7 +12768,45 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                                 pl.alphaMaskProjectId != null ? pl.alphaMaskProjectId : null,
                             ...this._snapshotDynamicFilterProps(pl),
                             buffer: buf
-                        });
+                        };
+                        // Rehydrate cels / pistes d'animation.
+                        if (p.animation && p.animation.enabled) {
+                            if (Array.isArray(pl.cels) && pl.cels.length) {
+                                const cels = [];
+                                for (const c of pl.cels) {
+                                    let cbuf;
+                                    if (c.dataUrl) {
+                                        cbuf = await this._canvasFromDataUrl(c.dataUrl);
+                                    } else {
+                                        cbuf = document.createElement('canvas');
+                                        cbuf.width = p.width;
+                                        cbuf.height = p.height;
+                                    }
+                                    cels.push({
+                                        frame: c.frame | 0,
+                                        hold: c.hold != null ? c.hold : 1e9,
+                                        buffer: cbuf
+                                    });
+                                }
+                                cels.sort((a, b) => a.frame - b.frame);
+                                layerObj.cels = cels;
+                                // Buffer initial cohérent avec la tête de lecture sauvegardée.
+                                const ph = p.animation.playhead | 0;
+                                let active = cels[0];
+                                for (const c of cels) if (c.frame <= ph) active = c;
+                                if (active) layerObj.buffer = active.buffer;
+                            } else {
+                                layerObj.cels = [{ frame: 0, hold: 1e9, buffer: buf }];
+                            }
+                            layerObj.propTracks = pl.propTracks || {
+                                x: [],
+                                y: [],
+                                opacity: [],
+                                scale: [],
+                                rotation: []
+                            };
+                        }
+                        loadedLayers.push(layerObj);
                     } catch (e) {
                         console.warn(e);
                     }

@@ -1,0 +1,1393 @@
+/* ============================================================================
+ * effects-compact.css — mise en page compacte des fenêtres d'effet.
+ *
+ * Chargée en dernier : elle reprend la main sur les gabarits historiques une fois
+ * que js/effects/EffectDialogUI.js a marqué le DOM (.fx-compact / .fx-row / .fx-track).
+ * Les surcharges mobiles (illu-mobile-shell.css) utilisent `!important` et restent
+ * donc prioritaires.
+ *
+ * Toutes les couleurs passent par les variables de thème (--mp-*) : la feuille
+ * fonctionne à l'identique en clair, en sombre et sur les thèmes Mac / Photoshop.
+ * ========================================================================== */
+
+:root {
+    /* Rampe neutre des pistes sans couleur propre (mode clair). */
+    --fx-ramp-a: #9aa3ae;
+    --fx-ramp-b: #e4e8ee;
+    /* Métriques de la grille compacte. */
+    --fx-row-h: 18px;
+    --fx-gap-y: 5px;
+    --fx-gap-x: 8px;
+    --fx-label-w: 96px;
+    --fx-val-w: 42px;
+}
+
+body.theme-dark {
+    --fx-ramp-a: #6f7b8a;
+    --fx-ramp-b: #2b3138;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 1. Fenêtre & chrome
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+#effect-dialog-window .window-body {
+    padding: 8px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(100vh - 90px);
+    box-sizing: border-box;
+}
+
+#effect-dialog-content.fx-compact {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Laisse la place au pied de fenêtre plutôt que d'étirer la modale. */
+    max-height: min(58vh, 520px);
+    padding-right: 2px;
+    font-size: var(--mp-ui-font-small, 11px);
+    line-height: 1.3;
+}
+
+/* Les modales à aperçu intégré (VHS) gèrent leur hauteur via leur propre colonne
+   défilante : on lève seulement le plafond, sans toucher au flux flex du thème. */
+#effect-dialog-window.effect-dialog--vhs #effect-dialog-content.fx-compact {
+    max-height: none;
+    overflow: hidden;
+}
+
+#effect-dialog-window.effect-dialog--vhs .window-body {
+    max-height: min(88vh, 620px);
+}
+
+/* Barre de portée : une seule ligne serrée au-dessus des réglages. */
+#effect-dialog-content.fx-compact .effect-scope-bar {
+    margin-bottom: 7px !important;
+    padding-bottom: 6px !important;
+    gap: 6px !important;
+    font-size: 10px !important;
+}
+
+#effect-dialog-content.fx-compact .illu-scope-btn {
+    padding: 2px 8px;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+/* Pied de fenêtre : boutons resserrés, RAZ à gauche. */
+.illu-effect-dialog-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 7px;
+    border-top: 1px solid var(--mp-inset-top, rgba(128, 128, 128, .35));
+    flex: 0 0 auto;
+}
+
+.illu-effect-footer-start {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.illu-effect-footer-end {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+}
+
+.illu-effect-dialog-footer button {
+    padding: 3px 10px;
+    font-size: var(--mp-ui-font-small, 11px);
+    min-width: 54px !important;
+}
+
+.illu-effect-footer-vhs-link {
+    min-width: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 2. Ligne de réglage compacte : libellé | piste | valeur
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * Flex plutôt que grille : certains gabarits ajoutent des contrôles à la ligne
+ * (case à cocher, unité « px », seconde boîte de saisie). Avec une grille ils
+ * seraient replacés au petit bonheur ; en flex ils restent à leur place et les
+ * largeurs fixes du libellé et de la valeur suffisent à aligner les colonnes.
+ */
+.fx-compact .fx-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px var(--fx-gap-x);
+    margin: 0 0 var(--fx-gap-y);
+    min-height: var(--fx-row-h);
+}
+
+.fx-compact .fx-label {
+    flex: 0 0 var(--fx-label-w);
+    max-width: var(--fx-label-w);
+    font-size: var(--mp-ui-font-small, 11px);
+    font-weight: normal;
+    color: var(--mp-text, #222);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    line-height: 1.25;
+}
+
+.fx-compact .fx-val {
+    flex: 0 0 var(--fx-val-w);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--mp-text, #222);
+    opacity: .85;
+    white-space: nowrap;
+}
+
+/* Valeur éditable (incrustation, remplissage intelligent) : même gabarit visuel. */
+.fx-compact input.fx-val,
+.fx-compact .fx-row input[type="number"] {
+    flex: 0 0 var(--fx-val-w);
+    width: var(--fx-val-w);
+    min-width: 0;
+    padding: 1px 3px;
+    font-size: 10px;
+    text-align: right;
+    box-sizing: border-box;
+    opacity: 1;
+}
+
+/* Tout autre contenu de la ligne (unité, bouton, case) garde sa taille propre. */
+.fx-compact .fx-row > *:not(.fx-label):not(.fx-track):not(.fx-val) {
+    flex: 0 0 auto;
+    font-size: 10px;
+}
+
+/*
+ * Gabarit « bloc » (luminosité, TSL, température) : le libellé est remonté dans la
+ * ligne par EffectDialogUI, le bloc ne sert plus qu'à espacer.
+ */
+.fx-compact .effect-slider-block {
+    margin: 0 0 var(--fx-gap-y);
+}
+
+.fx-compact .effect-track-row {
+    gap: var(--fx-gap-x);
+}
+
+.fx-compact .ef-hsv-rgb-presets {
+    margin-top: 3px;
+    margin-left: calc(var(--fx-label-w) + var(--fx-gap-x));
+    gap: 4px;
+}
+
+.fx-compact .ef-hsv-rgb-presets button {
+    padding: 1px 8px;
+    font-size: 10px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 3. Piste dégradée
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* `.fx-track` / `.fx-range` ne sont posées que par EffectDialogUI (ou par un gabarit
+   qui les demande explicitement) : pas besoin de les restreindre à `.fx-compact`,
+   ce qui permet de les réutiliser hors de la modale d'effet (Niveaux). */
+.fx-track {
+    position: relative;
+    flex: 1 1 90px;
+    min-width: 70px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border: 1px solid var(--mp-inset-top, #8b8b8b);
+    border-radius: 2px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .18);
+    background-color: var(--mp-surface-deep, #d0d0d0);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+.fx-range {
+    width: 100%;
+    margin: 0;
+    height: 14px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+}
+
+input[type="range"].fx-range::-webkit-slider-runnable-track {
+    height: 2px;
+    background: transparent;
+    border: none;
+}
+
+input[type="range"].fx-range::-moz-range-track {
+    height: 2px;
+    background: transparent;
+    border: none;
+}
+
+/*
+ * Bouton du curseur : entièrement piloté par variables, parce que le dessin doit
+ * suivre le thème. Les valeurs ci-dessous (biseau gris cerné de noir) sont le
+ * repli, c'est-à-dire l'aspect Windows 98. Les thèmes plats redéfinissent
+ * `--fx-thumb-*` sur :root — voir theme-win10-flat.css — et reprennent alors la
+ * main sans surcharge de sélecteur.
+ */
+input[type="range"].fx-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: var(--fx-thumb-w, 9px);
+    height: var(--fx-thumb-h, 16px);
+    margin-top: calc((var(--fx-thumb-h, 16px) / -2) + 1px);
+    border-radius: var(--fx-thumb-radius, 2px);
+    background: var(--fx-thumb-bg, linear-gradient(180deg, #fff 0%, #d2d2d2 55%, #9a9a9a 100%));
+    border: var(--fx-thumb-border, 1px solid #2f2f2f);
+    box-shadow: var(--fx-thumb-shadow, 0 1px 2px rgba(0, 0, 0, .35));
+    cursor: grab;
+}
+
+input[type="range"].fx-range::-moz-range-thumb {
+    width: var(--fx-thumb-w, 9px);
+    height: var(--fx-thumb-h, 16px);
+    border-radius: var(--fx-thumb-radius, 2px);
+    background: var(--fx-thumb-bg, linear-gradient(180deg, #fff 0%, #d2d2d2 55%, #9a9a9a 100%));
+    border: var(--fx-thumb-border, 1px solid #2f2f2f);
+    box-shadow: var(--fx-thumb-shadow, 0 1px 2px rgba(0, 0, 0, .35));
+    cursor: grab;
+}
+
+input[type="range"].fx-range:active::-webkit-slider-thumb {
+    cursor: grabbing;
+}
+
+.fx-range:focus-visible {
+    outline: none;
+}
+
+input[type="range"].fx-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: var(--fx-thumb-shadow, 0 1px 2px rgba(0, 0, 0, .35)), 0 0 0 2px var(--fx-thumb-focus, rgba(47, 111, 208, .5));
+}
+
+/* Sombre : seul le repli biseauté a besoin d'être éclairci ; les thèmes plats
+   utilisent la couleur d'accentuation, déjà lisible sur fond sombre. */
+body.theme-dark {
+    --fx-thumb-bg-w98-dark: linear-gradient(180deg, #f2f2f2 0%, #b8b8b8 55%, #7c7c7c 100%);
+}
+
+body.theme-dark input[type="range"].fx-range::-webkit-slider-thumb,
+body.theme-dark input[type="range"].fx-range::-moz-range-thumb {
+    background: var(--fx-thumb-bg, var(--fx-thumb-bg-w98-dark));
+    border: var(--fx-thumb-border, 1px solid #101010);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 4. Lignes sans curseur, regroupements, notes
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.fx-compact .fx-line {
+    display: flex;
+    align-items: center;
+    gap: var(--fx-gap-x);
+    margin: 0 0 var(--fx-gap-y);
+    min-height: var(--fx-row-h);
+    flex-wrap: wrap;
+}
+
+.fx-compact .fx-line > .fx-label {
+    flex: 0 0 var(--fx-label-w);
+    max-width: var(--fx-label-w);
+}
+
+.fx-compact .fx-line select,
+.fx-compact .fx-line input[type="text"],
+.fx-compact .fx-line input[type="number"] {
+    font-size: 10px;
+    padding: 1px 4px;
+    min-height: 18px;
+}
+
+.fx-compact .fx-line label:not(.fx-label) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.fx-compact input[type="checkbox"] {
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.fx-compact .fx-group {
+    margin: 0 0 7px;
+    padding: 6px 8px 4px;
+    border: 1px solid var(--mp-inset-top, rgba(128, 128, 128, .4));
+    border-radius: 3px;
+    background: var(--mp-surface-deep, rgba(0, 0, 0, .03));
+}
+
+.fx-compact .fx-group-h {
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    opacity: .85;
+    color: var(--mp-text, #222);
+}
+
+.fx-compact .fx-hint {
+    margin: 0 0 6px;
+    font-size: 10px;
+    line-height: 1.35;
+    opacity: .72;
+    color: var(--mp-text, #333);
+}
+
+/* Séparateur discret entre blocs (aberration chromatique, encriers…). */
+.fx-compact hr {
+    border: 0;
+    border-top: 1px solid var(--mp-inset-top, rgba(128, 128, 128, .3));
+    margin: 6px 0;
+}
+
+.fx-compact button {
+    font-size: 10px;
+    padding: 2px 8px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 5. Deux colonnes pour les modales denses
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.fx-compact.fx-grid-2,
+.fx-compact .fx-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /*
+     * Remplissage colonne par colonne : `--fx-rows` (posée par EffectDialogUI) fixe la
+     * hauteur d'une colonne, donc les réglages liés du gabarit — décalage X puis Y,
+     * les quatre coins d'une perspective — restent l'un sous l'autre.
+     */
+    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--fx-rows, 3), auto);
+    column-gap: 14px;
+    align-content: start;
+    /* En deux colonnes la valeur se resserre ; le libellé garde de quoi rester lisible
+       (une infobulle posée par EffectDialogUI couvre les intitulés les plus longs). */
+    --fx-label-w: 100px;
+    --fx-val-w: 34px;
+}
+
+/* La grille ne contient que des lignes de réglage (EffectDialogUI n'y met rien
+   d'autre) ; par sécurité, tout intrus occupe la largeur entière. */
+.fx-compact.fx-grid-2 > *:not(.fx-row),
+.fx-compact .fx-grid-2 > *:not(.fx-row) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+
+    .fx-compact.fx-grid-2,
+    .fx-compact .fx-grid-2 {
+        /* Une seule colonne : on rend la main au flux du document. */
+        display: block;
+        --fx-label-w: 96px;
+        --fx-val-w: 42px;
+    }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 6. Sections repliables (VHS, Camera Raw) resserrées
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.fx-compact .illu-cr-sec,
+.illu-cr--compact .illu-cr-sec {
+    margin-bottom: 4px;
+}
+
+.fx-compact .illu-cr-sec-h,
+.illu-cr--compact .illu-cr-sec-h {
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.fx-compact .illu-cr-sec-body,
+.illu-cr--compact .illu-cr-sec-body {
+    padding: 7px 8px;
+}
+
+.illu-cr--compact .illu-pm-row {
+    margin-bottom: 6px;
+}
+
+.illu-cr--compact .illu-pm-row label {
+    font-size: 10px;
+    margin-bottom: 2px;
+}
+
+.illu-cr--compact .illu-cr-range-wrap {
+    height: 13px;
+}
+
+.illu-cr--compact .illu-pm-row .val-input {
+    width: 40px;
+    padding: 0 3px;
+    font-size: 10px;
+    text-align: right;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 7. Camera Raw — interface simplifiée
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* Les sections avancées (courbes, TSL, RGB) n'existent qu'en mode expert. */
+.illu-cr--simple .illu-cr-sec--adv,
+.illu-cr--simple .illu-cr-row--adv {
+    display: none;
+}
+
+.illu-cr-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.illu-cr-mode-bar .illu-cr-mode-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 10px;
+    opacity: .7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.illu-cr-mode-bar button {
+    flex: 0 0 auto;
+    font-size: 10px;
+    padding: 2px 8px;
+}
+
+.illu-cr--compact .illu-cr-window {
+    max-height: min(88vh, 760px);
+}
+
+.illu-cr--compact .illu-cr-window-body {
+    padding: 6px 8px 8px;
+}
+
+.illu-cr--compact .illu-cr-split {
+    gap: 8px;
+}
+
+.illu-cr--compact .illu-cr-foot {
+    margin-top: 6px !important;
+    gap: 6px !important;
+}
+
+.illu-cr--compact .illu-cr-foot button {
+    padding: 3px 10px;
+    font-size: 11px;
+}
+
+/* En mode simplifié la colonne de réglages n'a pas besoin d'être large. */
+.illu-cr--simple .illu-cr-controls-col {
+    flex: 0 0 min(252px, 38%);
+    min-width: 190px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 8. Niveaux — fenêtre resserrée
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * Disposition : histogrammes empilés à gauche (Entrée puis Sortie, chacun avec sa
+ * rampe horizontale juste dessous), aperçu à droite. L'ancienne version alignait
+ * quatre colonnes verticales de 200 px de haut, d'où une fenêtre de 920 × 900.
+ */
+.illu-lvl--compact .illu-lvl-window {
+    width: min(680px, 100%);
+    max-width: min(680px, 98vw);
+    max-height: min(90vh, 620px);
+}
+
+.illu-lvl--compact .illu-lvl-body {
+    padding: 8px 10px 10px;
+    gap: 8px;
+}
+
+.illu-lvl--compact .illu-lvl-split {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 10px;
+    min-height: 0;
+}
+
+.illu-lvl--compact .illu-lvl-controls {
+    flex: 0 0 288px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.illu-lvl--compact .illu-lvl-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    /*
+     * Marge latérale = demi-largeur d'une poignée : aux valeurs extrêmes (0 et 255)
+     * la poignée déborde de la rampe, et sans cette réserve elle créerait une barre
+     * de défilement horizontale. Histogramme et rampe restent alignés puisque la
+     * réserve s'applique à toute la pile.
+     */
+    padding: 0 10px;
+}
+
+.illu-lvl--compact .illu-lvl-col-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-align: left;
+    opacity: .8;
+    margin: 0;
+}
+
+.illu-lvl--compact .illu-lvl-hist {
+    width: 100%;
+    max-width: none;
+    height: 64px;
+    /* La rampe se colle sous l'histogramme : ils partagent la même échelle 0–255. */
+    border-bottom: none;
+}
+
+/* Rampe horizontale, alignée pixel pour pixel avec l'histogramme au-dessus. */
+.illu-lvl--compact .illu-lvl-ramp-wrap {
+    position: relative;
+    width: 100%;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.illu-lvl--compact .illu-lvl-ramp {
+    background: linear-gradient(to right, #000000 0%, #ffffff 100%);
+}
+
+/* Poignées : mêmes variables que le bouton des curseurs d'effet, pour suivre le
+   thème et rester lisibles aux deux bouts de la rampe (fond noir → blanc). */
+.illu-lvl--compact .illu-lvl-handle {
+    top: 50%;
+    left: 0;
+    width: calc(var(--fx-thumb-w, 9px) + 2px);
+    height: 20px;
+    margin-left: calc((var(--fx-thumb-w, 9px) + 2px) / -2);
+    padding: 0;
+    border-radius: var(--fx-thumb-radius, 2px);
+    border: var(--fx-thumb-border, 1px solid #2f2f2f);
+    background: var(--fx-thumb-bg, linear-gradient(180deg, #fff 0%, #d2d2d2 55%, #9a9a9a 100%));
+    box-shadow: var(--fx-thumb-shadow, 0 1px 3px rgba(0, 0, 0, .45));
+    cursor: ew-resize;
+    transform: translateY(-50%);
+}
+
+.illu-lvl--compact .illu-lvl-handle:focus-visible {
+    outline: none;
+    box-shadow: var(--fx-thumb-shadow, 0 1px 3px rgba(0, 0, 0, .45)), 0 0 0 2px var(--fx-thumb-focus, rgba(47, 111, 208, .5));
+}
+
+body.theme-dark .illu-lvl--compact .illu-lvl-handle {
+    background: var(--fx-thumb-bg, var(--fx-thumb-bg-w98-dark));
+    border: var(--fx-thumb-border, 1px solid #101010);
+}
+
+.illu-lvl--compact .illu-lvl-nums {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+}
+
+.illu-lvl--compact .illu-lvl-nums-spacer,
+.illu-lvl--compact .illu-lvl-gamma-row {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.illu-lvl--compact .illu-lvl-num {
+    flex: 0 0 46px;
+    width: 46px;
+    min-width: 0;
+}
+
+.illu-lvl--compact .illu-lvl-gamma-block {
+    max-width: none;
+    margin-top: 0;
+}
+
+.illu-lvl--compact .illu-lvl-preview-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-top: 0;
+    max-height: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 6px;
+    background: var(--mp-surface-deep, #d0d0d0);
+    border: 1px solid var(--mp-inset-top, #8b8b8b);
+}
+
+.illu-lvl--compact .illu-lvl-preview {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.illu-lvl--compact .illu-lvl-num {
+    font-size: 10px;
+    padding: 1px 3px;
+}
+
+.illu-lvl--compact .illu-lvl-foot {
+    margin-top: 6px;
+    gap: 6px;
+}
+
+.illu-lvl--compact .illu-lvl-foot button {
+    padding: 3px 10px;
+    font-size: 11px;
+}
+
+.illu-lvl--compact .illu-lvl-ch {
+    font-size: 10px;
+}
+
+/* Le curseur gamma profite de la même piste dégradée que les modales d'effet. */
+.illu-lvl--compact .illu-lvl-gamma-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+}
+
+.illu-lvl-gamma-track {
+    background: linear-gradient(to right, #2b2b2b, #9a9a9a, #f4f4f4);
+    flex: 1 1 auto;
+    min-width: 50px;
+}
+
+/* Le thème borne encore le curseur brut (max-width 120px) : dans la piste,
+   c'est elle qui porte la largeur, le curseur la remplit. */
+.illu-lvl-gamma-row .fx-track .fx-range {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+}
+
+.illu-lvl--compact .illu-lvl-num--gamma {
+    flex: 0 0 46px;
+    width: 46px;
+}
+
+.illu-lvl--compact .illu-lvl-gamma-lab {
+    display: inline;
+    flex: 0 0 auto;
+    font-size: 10px;
+    margin: 0;
+    opacity: .8;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 9. Incrustation (ChromaKeyer)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.fx-compact .chromakey-pro-dialog {
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.fx-compact .fx-ck-presets {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+    margin-bottom: 7px;
+}
+
+.fx-compact .fx-ck-preset {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    padding: 3px 2px;
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fx-compact .fx-ck-key {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+}
+
+.fx-compact .fx-ck-swatch {
+    width: 22px;
+    height: 18px;
+    flex: 0 0 auto;
+    border: 1px solid var(--mp-inset-top, #666);
+    border-radius: 2px;
+}
+
+.fx-compact .fx-ck-rgb {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.fx-compact .fx-ck-rgb input[type="number"] {
+    width: 36px;
+    padding: 1px 2px;
+    font-size: 10px;
+    text-align: right;
+}
+
+.fx-compact .fx-ck-rgb label {
+    font-size: 9px;
+    opacity: .75;
+}
+
+.fx-compact .fx-ck-key strong {
+    flex: 0 0 auto;
+    font-size: 11px;
+}
+
+.fx-compact .fx-ck-pick {
+    margin-left: auto;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    padding: 2px 7px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.fx-compact .fx-ck-mask-btn {
+    display: block;
+    width: 100%;
+    margin-top: 2px;
+    padding: 5px 0;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+/* Unité affichée après la valeur (%, px, °). */
+.fx-compact .fx-unit {
+    flex: 0 0 auto;
+    width: 10px;
+    font-size: 9px;
+    opacity: .6;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 10. VHS — panneau de réglages plus dense à côté de l'aperçu
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.fx-compact .illu-vhs-preset-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 3px;
+}
+
+.fx-compact .illu-vhs-preset-row button {
+    padding: 3px 2px;
+    font-size: 10px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fx-compact .illu-vhs-hint {
+    font-size: 10px;
+    line-height: 1.3;
+    opacity: .75;
+    margin: 0 0 5px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 11. Confort tactile : sur pointeur grossier on regagne de la surface utile
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .fx-compact {
+        --fx-row-h: 24px;
+        --fx-gap-y: 8px;
+    }
+
+    .fx-track {
+        height: 16px;
+    }
+
+    .fx-range {
+        height: 22px;
+    }
+
+    input[type="range"].fx-range::-webkit-slider-thumb {
+        width: 14px;
+        height: 22px;
+        margin-top: -10px;
+    }
+
+    input[type="range"].fx-range::-moz-range-thumb {
+        width: 14px;
+        height: 22px;
+    }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 12. Téléphone — les mêmes fenêtres, en feuille de bas d'écran
+ *
+ * En mode bureau (Photoshop / Paint.NET) ces fenêtres sont des modales flottantes
+ * centrées : parfait à la souris, inutilisable sur un écran de 380 px. Ici on les
+ * rebâtit en feuille ancrée en bas, pleine largeur, avec :
+ *   – une colonne unique (jamais deux) ;
+ *   – le curseur sur sa propre ligne, pleine largeur (le libellé et la valeur
+ *     restent au-dessus) — bien plus précis au doigt qu'une piste de 70 px ;
+ *   – l'aperçu au-dessus des réglages plutôt qu'à côté ;
+ *   – un pied de fenêtre collant, avec des boutons à hauteur tactile.
+ *
+ * Deux déclencheurs : la classe posée par l'application (`illu-mobile-ui`, mise à
+ * jour par applyIlluMobileUiClass) et une requête média de repli, pour que la
+ * mise en page tienne aussi dans une fenêtre de bureau très étroite.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 620px) {
+
+    /* — Ligne de réglage : libellé + valeur en tête, piste pleine largeur dessous — */
+    .fx-compact .fx-row {
+        row-gap: 2px;
+        margin-bottom: 10px;
+    }
+
+    .fx-compact .fx-label {
+        flex: 1 1 auto;
+        max-width: none;
+        order: 1;
+        font-size: 12px;
+    }
+
+    .fx-compact .fx-val {
+        order: 2;
+        flex: 0 0 auto;
+        min-width: 38px;
+        font-size: 12px;
+    }
+
+    .fx-compact input.fx-val,
+    .fx-compact .fx-row input[type="number"] {
+        order: 2;
+        flex: 0 0 56px;
+        width: 56px;
+        min-height: 26px;
+        font-size: 12px;
+    }
+
+    .fx-compact .fx-track {
+        order: 3;
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    /*
+     * Les ordres ci-dessus ne valent que si TOUT enfant en reçoit un : sans cela un
+     * suffixe (« px ») ou une case à cocher, restés à `order: 0`, remonteraient
+     * devant le libellé.
+     */
+    .fx-compact .fx-row > *:not(.fx-label):not(.fx-track):not(.fx-val) {
+        order: 2;
+    }
+
+    /* Jamais deux colonnes : chacune ferait 150 px. */
+    .fx-compact.fx-grid-2,
+    .fx-compact .fx-grid-2 {
+        display: block;
+    }
+
+    .fx-compact .ef-hsv-rgb-presets {
+        margin-left: 0;
+    }
+
+    .fx-compact .fx-line {
+        font-size: 12px;
+    }
+
+    .fx-compact .fx-line > .fx-label {
+        flex: 1 1 auto;
+        max-width: none;
+    }
+
+    .fx-compact .fx-line select,
+    .fx-compact .fx-line input[type="text"],
+    .fx-compact .fx-line input[type="number"] {
+        font-size: 12px;
+        min-height: 28px;
+    }
+
+    .fx-compact .fx-hint,
+    .fx-compact .fx-group-h,
+    .fx-compact button {
+        font-size: 11px;
+    }
+
+    /* — Modale d'effet en feuille de bas d'écran — */
+    #effect-dialog-window {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #effect-dialog-content.fx-compact {
+        max-height: min(52vh, 480px);
+    }
+
+    .illu-effect-dialog-footer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .illu-effect-dialog-footer button {
+        flex: 1 1 auto;
+        min-height: 36px;
+        font-size: 13px;
+    }
+
+    /* « Fermer » fait doublon avec « Annuler » quand la place manque. */
+    #effect-dialog-btn-fermer {
+        display: none;
+    }
+
+    .illu-effect-footer-vhs-link {
+        flex: 1 1 100%;
+    }
+
+    /* La barre de portée passe sur deux lignes plutôt que de comprimer ses boutons. */
+    #effect-dialog-content.fx-compact .effect-scope-bar {
+        flex-wrap: wrap !important;
+        font-size: 11px !important;
+    }
+
+    #effect-dialog-content.fx-compact .illu-scope-bar-label {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    /* Piste et curseur à la taille du doigt, même si le navigateur n'annonce pas
+       un pointeur grossier (fenêtre de bureau étroite, émulateur). */
+    .fx-compact .fx-track {
+        height: 18px;
+    }
+
+    .fx-compact .fx-range {
+        height: 26px;
+    }
+
+    .fx-compact input[type="range"].fx-range::-webkit-slider-thumb {
+        width: 16px;
+        height: 26px;
+        margin-top: -12px;
+    }
+
+    .fx-compact input[type="range"].fx-range::-moz-range-thumb {
+        width: 16px;
+        height: 26px;
+    }
+
+    #effect-dialog-content.fx-compact .illu-scope-btn-row {
+        display: flex;
+        width: 100%;
+    }
+
+    #effect-dialog-content.fx-compact .illu-scope-btn {
+        flex: 1 1 0;
+        min-height: 30px;
+        padding: 3px 4px;
+        font-size: 11px;
+    }
+
+    /* — VHS : aperçu au-dessus, réglages dessous — */
+    #effect-dialog-window.effect-dialog--vhs {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #effect-dialog-window.effect-dialog--vhs .window-body {
+        max-height: min(86vh, calc(100vh - 24px));
+    }
+
+    .fx-compact .illu-vhs-split {
+        flex-direction: column;
+    }
+
+    .fx-compact .illu-vhs-preview-col {
+        flex: 0 0 auto;
+        max-height: 30vh;
+    }
+
+    .fx-compact .illu-vhs-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fx-compact .illu-vhs-preset-row {
+        grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    }
+
+    .fx-compact .illu-vhs-preset-row button {
+        min-height: 30px;
+    }
+
+    /* — Niveaux : histogrammes puis aperçu, empilés — */
+    .illu-levels-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    .illu-lvl--compact .illu-lvl-window {
+        width: 100%;
+        max-width: 100%;
+        max-height: min(92vh, calc(100vh - 16px));
+    }
+
+    .illu-lvl--compact .illu-lvl-split {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .illu-lvl--compact .illu-lvl-controls {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .illu-lvl--compact .illu-lvl-hist {
+        height: 76px;
+    }
+
+    /* Poignées élargies : on les attrape au doigt sans loupe. */
+    .illu-lvl--compact .illu-lvl-ramp-wrap {
+        height: 22px;
+    }
+
+    .illu-lvl--compact .illu-lvl-handle {
+        width: 18px;
+        height: 30px;
+        margin-left: -9px;
+    }
+
+    .illu-lvl--compact .illu-lvl-num {
+        flex: 0 0 56px;
+        width: 56px;
+        min-height: 28px;
+        font-size: 12px;
+    }
+
+    /*
+     * `flex: 0 0 auto` sans largeur ferait dimensionner la boîte sur le canevas
+     * d'aperçu (jusqu'à 560 px de large) : la feuille déborderait l'écran.
+     */
+    .illu-lvl--compact .illu-lvl-preview-wrap {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+        min-height: 130px;
+        max-height: 32vh;
+    }
+
+    .illu-lvl--compact .illu-lvl-foot {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .illu-lvl--compact .illu-lvl-foot button {
+        flex: 1 1 auto;
+        min-height: 36px;
+        font-size: 13px;
+    }
+
+    .illu-lvl--compact .illu-lvl-ch {
+        font-size: 13px;
+    }
+
+    /* — Camera Raw : aperçu au-dessus, réglages dessous — */
+    .illu-camera-raw-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    .illu-cr--compact .illu-cr-window {
+        width: 100%;
+        max-width: 100%;
+        max-height: min(92vh, calc(100vh - 16px));
+    }
+
+    .illu-cr--compact .illu-cr-split {
+        flex-direction: column;
+    }
+
+    .illu-cr--compact .illu-cr-preview-col {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+        min-height: 130px;
+        max-height: 30vh;
+    }
+
+    .illu-cr--compact .illu-cr-controls-col,
+    .illu-cr--simple .illu-cr-controls-col {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .illu-cr--compact .illu-cr-sec-h {
+        min-height: 34px;
+        font-size: 12px;
+    }
+
+    .illu-cr--compact .illu-pm-row label {
+        font-size: 12px;
+    }
+
+    .illu-cr--compact .illu-cr-range-wrap {
+        height: 20px;
+    }
+
+    .illu-cr--compact .illu-pm-row .val-input {
+        width: 52px;
+        min-height: 26px;
+        font-size: 12px;
+    }
+
+    .illu-cr--compact .illu-cr-foot {
+        flex-wrap: wrap;
+    }
+
+    .illu-cr--compact .illu-cr-foot button {
+        flex: 1 1 auto;
+        min-height: 36px;
+        font-size: 13px;
+    }
+
+    /* — Incrustation : préréglages sur deux rangées, saisies au doigt — */
+    .fx-compact .fx-ck-presets {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+    }
+
+    .fx-compact .fx-ck-preset {
+        min-height: 32px;
+        font-size: 11px;
+    }
+
+    .fx-compact .fx-ck-key {
+        flex-wrap: wrap;
+    }
+
+    .fx-compact .fx-ck-rgb input[type="number"] {
+        width: 48px;
+        min-height: 28px;
+        font-size: 12px;
+    }
+
+    .fx-compact .fx-ck-pick {
+        min-height: 28px;
+    }
+
+    .fx-compact .fx-ck-mask-btn {
+        min-height: 38px;
+        font-size: 12px;
+    }
+}
+
+/*
+ * Mode téléphone déclaré par l'application : mêmes règles, mais indépendantes de la
+ * largeur réelle (tablette en paysage forcée en interface téléphone, par exemple).
+ * On ne reprend ici que ce qui change vraiment la disposition — le reste est déjà
+ * couvert par la requête média et par `@media (pointer: coarse)`.
+ */
+body.illu-mobile-ui .fx-compact .fx-label {
+    flex: 1 1 auto;
+    max-width: none;
+}
+
+body.illu-mobile-ui .fx-compact .fx-track {
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 100%;
+}
+
+body.illu-mobile-ui .fx-compact .fx-val,
+body.illu-mobile-ui .fx-compact .fx-row > *:not(.fx-label):not(.fx-track):not(.fx-val) {
+    order: 2;
+}
+
+body.illu-mobile-ui .fx-compact .fx-label {
+    order: 1;
+}
+
+body.illu-mobile-ui .fx-compact.fx-grid-2,
+body.illu-mobile-ui .fx-compact .fx-grid-2 {
+    display: block;
+}
+
+body.illu-mobile-ui .illu-levels-overlay,
+body.illu-mobile-ui .illu-camera-raw-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+}
+
+body.illu-mobile-ui .illu-lvl--compact .illu-lvl-window,
+body.illu-mobile-ui .illu-cr--compact .illu-cr-window {
+    width: 100%;
+    max-width: 100%;
+    max-height: min(92vh, calc(100vh - 16px));
+}
+
+body.illu-mobile-ui .illu-lvl--compact .illu-lvl-split,
+body.illu-mobile-ui .illu-cr--compact .illu-cr-split {
+    flex-direction: column;
+}
+
+body.illu-mobile-ui .fx-compact .illu-vhs-split {
+    flex-direction: column;
+}
+
+body.illu-mobile-ui #effect-dialog-btn-fermer {
+    display: none;
+}
+
+/* La feuille doit rester au-dessus du dock d'outils mobile. */
+body.illu-mobile-shell-active .illu-levels-overlay,
+body.illu-mobile-shell-active .illu-camera-raw-overlay {
+    padding-bottom: var(--illu-mobile-panel-bottom, 0) !important;
+    box-sizing: border-box !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 13. Mêmes curseurs hors des fenêtres d'effet
+ *
+ * La palette Couleurs et l'opacité de calque utilisaient un curseur maison
+ * (petit triangle noir) sans rapport avec les autres fenêtres. Ils portent
+ * désormais `.fx-track` / `.fx-range` et héritent donc du même dessin, y compris
+ * les variables `--fx-thumb-*` du thème actif.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* La piste reçoit le dégradé (posé par EditorManager.updateColorUI). */
+#color-sliders-panel .trk-wrapper.fx-track,
+.color-picker-body .trk-wrapper.fx-track {
+    height: 12px;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-right: 0;
+    border-radius: 2px;
+    border: 1px solid var(--mp-inset-top, #8b8b8b);
+    padding: 0 5px;
+}
+
+/* Alpha : damier + fondu vers la couleur courante, conservés sous le bouton. */
+.trk-wrapper.alpha-trk.fx-track {
+    background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 25% 50%) 50% / 8px 8px;
+}
+
+/* Le curseur lui-même reste transparent : le triangle d'origine est remplacé
+   par le bouton commun (règles `input[type="range"].fx-range::…` plus haut). */
+#color-sliders-panel .c-slider.fx-range,
+.color-picker-body .c-slider.fx-range {
+    height: 16px;
+    cursor: pointer;
+    background: transparent;
+}
+
+#color-sliders-panel .c-slider.fx-range::-webkit-slider-thumb,
+.color-picker-body .c-slider.fx-range::-webkit-slider-thumb {
+    clip-path: none;
+    width: var(--fx-thumb-w, 9px);
+    height: var(--fx-thumb-h, 16px);
+}
+
+#color-sliders-panel .c-slider.fx-range::-moz-range-thumb,
+.color-picker-body .c-slider.fx-range::-moz-range-thumb {
+    clip-path: none;
+    width: var(--fx-thumb-w, 9px);
+    height: var(--fx-thumb-h, 16px);
+}
+
+/* Hexa + RAL sur une seule ligne. */
+.color-hex-row--pair {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+}
+
+.color-hex-row--pair .color-ral-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#color-sliders-panel .color-hex-row--pair .color-hex-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+/*
+ * Opacité de calque : la piste est désormais le conteneur flex de la ligne. Elle
+ * prend la place restante mais avec `flex-basis: 0` + `min-width: 0`, sinon sa
+ * largeur intrinsèque pousserait la valeur et le « % » hors de la palette.
+ */
+#layer-bounds-panel .layer-bounds-panel__row .layer-opacity-track {
+    flex: 1 1 0;
+    min-width: 40px;
+    height: 12px;
+}
+
+/* Le curseur remplit la piste : c'est elle qui porte la largeur, plus l'input. */
+#layer-bounds-panel .layer-bounds-panel__opacity-range.fx-range {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    height: 16px;
+}

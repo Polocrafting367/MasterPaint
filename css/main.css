@@ -4560,3 +4560,19 @@ body.illu-svg-mode-active .svg-rotation-handle {
       margin: 2px 0 2px 0 !important;
   }
 }
+/* ——— Onglet de projet : repère « séquence animée » ———
+   Un clap discret devant le nom du document, posé par EditorManager._makeProjectTab
+   quand `project.animation.enabled` est vrai. Il ne doit pas capter le clic : c'est
+   l'onglet entier qui change de projet. */
+.tab-bar-inner .tab .tab-anim-badge,
+.tab-bar-outer .tab .tab-anim-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.tab-bar-inner .tab.active .tab-anim-badge,
+.tab-bar-outer .tab.active .tab-anim-badge {
+    opacity: 1;
+}

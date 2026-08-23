@@ -1,0 +1,379 @@
+/* Frise chronologique — mode animation.
+   Panneau ancré en bas de l'espace de travail, visible seulement en mode animation. */
+
+/* Masque des entrées de menu sans les retirer du DOM.
+   Sélecteur par ID (+!important) pour battre la règle de thème display:flex !important. */
+#menu-convert-dither,
+#menu-anim-sequence {
+    display: none !important;
+}
+
+:root {
+    --anim-panel-h: 148px;
+    --anim-cell-w: 22px;
+    --anim-row-h: 24px;
+    --anim-label-w: 148px;
+    --anim-bg: #f0f0f0;
+    --anim-bg-alt: #e4e4e4;
+    --anim-surface: #ffffff;
+    --anim-border: #b9b9b9;
+    --anim-text: #1c1c1c;
+    --anim-muted: #6a6a6a;
+    --anim-accent: var(--mp-accent, #2b6cff);
+    --anim-cel: #3a3a3a;
+    --anim-hold: #9aa7c7;
+    --anim-key: #d08a17;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --anim-bg: #2a2b2e;
+        --anim-bg-alt: #232427;
+        --anim-surface: #313236;
+        --anim-border: #45464b;
+        --anim-text: #ececec;
+        --anim-muted: #9a9ba0;
+        --anim-cel: #e6e6e6;
+        --anim-hold: #5c6a92;
+    }
+}
+
+body.theme-dark {
+    --anim-bg: #2a2b2e;
+    --anim-bg-alt: #232427;
+    --anim-surface: #313236;
+    --anim-border: #45464b;
+    --anim-text: #ececec;
+    --anim-muted: #9a9ba0;
+    --anim-cel: #e6e6e6;
+    --anim-hold: #5c6a92;
+}
+
+#illu-anim-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--anim-panel-h);
+    display: none;
+    flex-direction: column;
+    background: var(--anim-bg);
+    color: var(--anim-text);
+    border-top: 1px solid var(--anim-border);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.18);
+    z-index: 900;
+    font-size: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#illu-anim-panel.illu-anim-visible {
+    display: flex;
+}
+
+/* Réserve la hauteur du panneau en bas de l'application : le workspace (et le canvas)
+   ne passent jamais sous le panneau, donc le dessin reste possible partout. */
+body.illu-anim-active #app-window {
+    padding-bottom: calc(var(--anim-panel-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Palettes flottantes (Paint.NET) au-dessus du panneau d'animation. */
+body.illu-anim-active .floating-window {
+    z-index: 950;
+}
+
+/* Poignée de redimensionnement (bord haut du panneau). */
+.illu-anim-resize {
+    height: 6px;
+    cursor: ns-resize;
+    background: var(--anim-bg-alt);
+    border-bottom: 1px solid var(--anim-border);
+    flex: 0 0 auto;
+    position: relative;
+}
+.illu-anim-resize::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 42px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--anim-muted);
+    opacity: 0.6;
+}
+.illu-anim-resize:hover::after {
+    opacity: 1;
+    background: var(--anim-accent);
+}
+
+/* Barre d'outils */
+.illu-anim-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--anim-bg-alt);
+    border-bottom: 1px solid var(--anim-border);
+    flex-wrap: wrap;
+}
+
+.illu-anim-toolbar button {
+    min-width: 28px;
+    height: 24px;
+    padding: 0 7px;
+    border: 1px solid var(--anim-border);
+    background: var(--anim-surface);
+    color: var(--anim-text);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.illu-anim-toolbar button:hover {
+    border-color: var(--anim-accent);
+}
+
+.illu-anim-toolbar button.illu-anim-on {
+    background: var(--anim-accent);
+    color: #fff;
+    border-color: var(--anim-accent);
+}
+
+.illu-anim-toolbar .illu-anim-sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--anim-border);
+    margin: 2px 2px;
+}
+
+.illu-anim-toolbar label {
+    color: var(--anim-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.illu-anim-toolbar input[type='number'] {
+    width: 46px;
+    height: 22px;
+    border: 1px solid var(--anim-border);
+    background: var(--anim-surface);
+    color: var(--anim-text);
+    border-radius: 4px;
+    padding: 0 4px;
+}
+
+.illu-anim-onion-opts {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 0 2px;
+}
+.illu-anim-onion-num {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--anim-muted);
+    font-size: 11px;
+}
+.illu-anim-onion-num input[type='number'] {
+    width: 38px;
+    height: 22px;
+    border: 1px solid var(--anim-border);
+    background: var(--anim-surface);
+    color: var(--anim-text);
+    border-radius: 4px;
+    padding: 0 3px;
+}
+.illu-anim-onion-num input[type='range'] {
+    width: 64px;
+}
+.illu-anim-onion-tint {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--anim-border);
+    border-radius: 4px;
+    background: var(--anim-surface);
+    cursor: pointer;
+}
+
+.illu-anim-frame-readout {
+    margin-left: auto;
+    color: var(--anim-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Frise (défilement) */
+.illu-anim-timeline {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+.illu-anim-grid {
+    display: grid;
+    /* colonne 0 = libellés calques, puis 1 colonne par frame */
+    align-content: start;
+    min-width: 100%;
+}
+
+/* Règle des numéros de frame */
+.illu-anim-ruler-label,
+.illu-anim-track-label {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--anim-bg-alt);
+    border-right: 1px solid var(--anim-border);
+    box-sizing: border-box;
+    width: var(--anim-label-w);
+    min-width: var(--anim-label-w);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    height: var(--anim-row-h);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.illu-anim-ruler-label {
+    z-index: 4;
+    top: 0;
+    position: sticky;
+    color: var(--anim-muted);
+    font-weight: 600;
+}
+
+.illu-anim-ruler-cell {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: var(--anim-row-h);
+    width: var(--anim-cell-w);
+    min-width: var(--anim-cell-w);
+    box-sizing: border-box;
+    border-right: 1px solid var(--anim-border);
+    background: var(--anim-bg-alt);
+    color: var(--anim-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    cursor: pointer;
+}
+
+.illu-anim-ruler-cell.illu-anim-tick {
+    color: var(--anim-text);
+    font-weight: 600;
+}
+
+.illu-anim-ruler-cell.illu-anim-playhead-col,
+.illu-anim-cell.illu-anim-playhead-col {
+    box-shadow: inset 0 0 0 9999px rgba(43, 108, 255, 0.10);
+}
+
+.illu-anim-ruler-cell.illu-anim-playhead-col {
+    background: var(--anim-accent);
+    color: #fff;
+}
+
+/* Lignes de calque */
+.illu-anim-track-label {
+    background: var(--anim-surface);
+    cursor: pointer;
+    gap: 6px;
+}
+
+.illu-anim-track-label.illu-anim-active {
+    background: rgba(43, 108, 255, 0.14);
+    box-shadow: inset 3px 0 0 var(--anim-accent);
+}
+
+.illu-anim-track-label .illu-anim-vis {
+    color: var(--anim-muted);
+    cursor: pointer;
+}
+
+.illu-anim-cell {
+    height: var(--anim-row-h);
+    width: var(--anim-cell-w);
+    min-width: var(--anim-cell-w);
+    box-sizing: border-box;
+    border-right: 1px solid var(--anim-border);
+    border-bottom: 1px solid var(--anim-border);
+    background: var(--anim-surface);
+    position: relative;
+    cursor: pointer;
+}
+
+.illu-anim-cell:nth-child(odd) {
+    background: var(--anim-bg-alt);
+}
+
+/* Barre de maintien (exposition d'un cel) */
+.illu-anim-cell.illu-anim-hold::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+    background: var(--anim-hold);
+}
+
+/* Miniature du cel (aperçu du dessin) */
+.illu-anim-thumb {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Contour des cases de cel (le dessin est montré par la miniature) */
+.illu-anim-cell.illu-anim-cel {
+    box-shadow: inset 0 0 0 1px var(--anim-accent);
+}
+
+/* Cible de dépôt (glisser-déposer) */
+.illu-anim-cell.illu-anim-drop {
+    outline: 2px solid var(--anim-accent);
+    outline-offset: -2px;
+    z-index: 3;
+}
+
+/* Point clé de propriété (tween) : petit rond, coin bas-droite */
+.illu-anim-cell.illu-anim-key::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    z-index: 2;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--anim-key);
+    box-shadow: 0 0 0 1px var(--anim-surface);
+}
+
+/* Colonne sous la tête de lecture */
+.illu-anim-cell.illu-anim-playhead-col {
+    outline: 1px solid var(--anim-accent);
+    outline-offset: -1px;
+}
+
+/* Bouton d'ouverture de la frise dans la barre d'état/outils */
+.illu-anim-open-btn.illu-anim-on {
+    color: var(--anim-accent);
+}

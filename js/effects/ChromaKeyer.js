@@ -261,85 +261,72 @@
         getUI: function (i18n, currentValues = {}) {
             const t = (k, fb) => i18n ? (i18n.t ? i18n.t(k) : i18n(k)) : fb;
 
-            // Génère une ligne « slider + boîte éditable » (les deux restent synchronisés).
-            // L'id de la boîte reste `${id}-val` pour rester compatible avec la persistance/restauration.
+            /*
+             * Ligne « curseur + boîte éditable ». La mise en forme (piste dégradée,
+             * largeurs, espacements) est posée par EffectDialogUI/effects-compact.css :
+             * on ne garde ici que la structure. L'id de la boîte reste `${id}-val`,
+             * contrat attendu par la persistance des paramètres et par syncUI().
+             */
             const row = (id, label, min, max, value, step, unit) => `
-                <div class="field-row" style="align-items:center; gap:6px;">
-                    <label style="width:92px;">${label}</label>
-                    <input type="range" id="ef-ch-${id}" min="${min}" max="${max}" step="${step || 1}" value="${value}" style="flex:1;" oninput="ChromaKeyer.syncUI()">
-                    <input type="number" id="ef-ch-${id}-val" min="${min}" max="${max}" step="${step || 1}" value="${value}" style="width:48px; text-align:right;" oninput="ChromaKeyer.fromBox('${id}')">
-                    ${unit ? `<span style="width:10px; color:#777;">${unit}</span>` : '<span style="width:10px;"></span>'}
+                <div class="field-row">
+                    <label>${label}</label>
+                    <input type="range" id="ef-ch-${id}" min="${min}" max="${max}" step="${step || 1}" value="${value}" oninput="ChromaKeyer.syncUI()">
+                    <input type="number" id="ef-ch-${id}-val" min="${min}" max="${max}" step="${step || 1}" value="${value}" oninput="ChromaKeyer.fromBox('${id}')">
+                    ${unit ? `<span class="fx-unit">${unit}</span>` : ''}
+                </div>`;
+
+            /* Bloc « couleur clé » : pastille, trois canaux, pipette — sur une seule ligne. */
+            const keyRow = (suffix, letter, r, g, b, btnId, rowId) => `
+                <div class="fx-ck-key"${rowId ? ` id="${rowId}"` : ''}>
+                    <span id="ef-ch-swatch${suffix}" class="fx-ck-swatch" style="background:rgb(${r},${g},${b});"></span>
+                    <strong>${letter}</strong>
+                    <div class="fx-ck-rgb">
+                        <label>R</label><input type="number" id="ef-ch-r${suffix}" min="0" max="255" value="${r}" oninput="ChromaKeyer.syncUI()">
+                        <label>V</label><input type="number" id="ef-ch-g${suffix}" min="0" max="255" value="${g}" oninput="ChromaKeyer.syncUI()">
+                        <label>B</label><input type="number" id="ef-ch-b${suffix}" min="0" max="255" value="${b}" oninput="ChromaKeyer.syncUI()">
+                    </div>
+                    <button type="button" id="${btnId}" class="fx-ck-pick">${t('chroma.pipette', 'Pipette')}</button>
                 </div>`;
 
             return `
-            <div class="chromakey-pro-dialog" style="font-size:11px; line-height:1.4;">
-                <p style="margin:0 0 8px; color:#444;">${t('chroma.desc', 'Module d\'incrustation haute précision avec moteur CIELAB.')}</p>
-
-                <!-- BOUTONS DE PRÉRÉGLAGES -->
-                <div style="display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;">
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('default')">${t('chroma.presetDefault', 'Défaut')}</button>
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('soft')">${t('chroma.presetSoft', 'Doux')}</button>
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('hard')">${t('chroma.presetHard', 'Fort')}</button>
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('shadow')">${t('chroma.presetShadow', 'Ombres')}</button>
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('glass')">${t('chroma.presetGlass', 'Verre')}</button>
-                    <button type="button" class="tool-btn" style="flex:1; padding:4px 0; min-width:40px; font-size:10px;" onclick="ChromaKeyer.applyPreset('despill')">${t('chroma.presetDespill', 'Spill')}</button>
+            <div class="chromakey-pro-dialog">
+                <div class="fx-ck-presets">
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('default')">${t('chroma.presetDefault', 'Défaut')}</button>
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('soft')">${t('chroma.presetSoft', 'Doux')}</button>
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('hard')">${t('chroma.presetHard', 'Fort')}</button>
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('shadow')">${t('chroma.presetShadow', 'Ombres')}</button>
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('glass')">${t('chroma.presetGlass', 'Verre')}</button>
+                    <button type="button" class="fx-ck-preset" onclick="ChromaKeyer.applyPreset('despill')">${t('chroma.presetDespill', 'Spill')}</button>
                 </div>
 
-                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupSelection', '1. Couleurs cibles')}</legend>
-                    <!-- Couleur A -->
-                    <div class="field-row" style="align-items:center; gap:8px;">
-                        <span id="ef-ch-swatch" style="width:30px; height:24px; border:1px solid #666; background:rgb(0,255,0); display:inline-block;"></span>
-                        <label style="width:14px; font-weight:bold;">A</label>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <label>R</label><input type="number" id="ef-ch-r" min="0" max="255" value="${currentValues.r || 0}" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                            <label>V</label><input type="number" id="ef-ch-g" min="0" max="255" value="${currentValues.g || 255}" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                            <label>B</label><input type="number" id="ef-ch-b" min="0" max="255" value="${currentValues.b || 0}" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                        </div>
-                        <button type="button" id="ef-ch-pick-btn" class="tool-btn" style="padding:2px 8px;">${t('chroma.pipette', 'Pipette')}</button>
+                <fieldset>
+                    <legend>${t('chroma.groupSelection', 'Couleurs cibles')}</legend>
+                    ${keyRow('', 'A', currentValues.r || 0, currentValues.g != null ? currentValues.g : 255, currentValues.b || 0, 'ef-ch-pick-btn', null)}
+                    <div class="field-row">
+                        <input type="checkbox" id="ef-ch-use2" onchange="ChromaKeyer.syncUI()">
+                        <label for="ef-ch-use2">${t('chroma.useKey2', '2ᵉ couleur (dégradé de fond)')}</label>
                     </div>
-                    <!-- Activation 2ᵉ couleur -->
-                    <div class="field-row" style="align-items:center; gap:6px; margin-top:6px; padding-top:6px; border-top:1px dashed #ccc;">
-                        <input type="checkbox" id="ef-ch-use2" style="margin:0;" onchange="ChromaKeyer.syncUI()">
-                        <label for="ef-ch-use2" style="cursor:pointer; color:#333;">${t('chroma.useKey2', '2ᵉ couleur (affine le dégradé de fond)')}</label>
-                    </div>
-                    <!-- Couleur B -->
-                    <div class="field-row" id="ef-ch-rowB" style="align-items:center; gap:8px; margin-top:4px;">
-                        <span id="ef-ch-swatch2" style="width:30px; height:24px; border:1px solid #666; background:rgb(0,180,0); display:inline-block;"></span>
-                        <label style="width:14px; font-weight:bold;">B</label>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <label>R</label><input type="number" id="ef-ch-r2" min="0" max="255" value="0" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                            <label>V</label><input type="number" id="ef-ch-g2" min="0" max="255" value="180" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                            <label>B</label><input type="number" id="ef-ch-b2" min="0" max="255" value="0" style="width:40px;" oninput="ChromaKeyer.syncUI()">
-                        </div>
-                        <button type="button" id="ef-ch-pick-btn2" class="tool-btn" style="padding:2px 8px;">${t('chroma.pipette', 'Pipette')}</button>
-                    </div>
+                    ${keyRow('2', 'B', 0, 180, 0, 'ef-ch-pick-btn2', 'ef-ch-rowB')}
                 </fieldset>
 
-                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupMatte', '2. Masque (sélection)')}</legend>
+                <fieldset>
+                    <legend>${t('chroma.groupMatte', 'Masque')}</legend>
                     ${row('tol', t('chroma.tolerance', 'Tolérance'), 0, 200, 30, 0.5)}
                     ${row('feather', t('chroma.feather', 'Transition'), 0, 100, 15, 0.5)}
                     ${row('drift', t('chroma.drift', 'Chroma / Luma'), 0, 100, 50, 1)}
-                </fieldset>
-
-                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupDensity', '3. Densité du masque')}</legend>
                     ${row('black', t('chroma.clipBlack', 'Clip Noir'), 0, 100, 0, 1, '%')}
                     ${row('white', t('chroma.clipWhite', 'Clip Blanc'), 0, 100, 100, 1, '%')}
                     ${row('gamma', t('chroma.gamma', 'Contraste α'), 0.1, 3, 1.0, 0.05)}
                 </fieldset>
 
-                <fieldset style="margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:2px;">
-                    <legend style="font-weight:bold; padding:0 4px;">${t('chroma.groupEdge', '4. Bords & couleur')}</legend>
+                <fieldset>
+                    <legend>${t('chroma.groupEdge', 'Bords & couleur')}</legend>
                     ${row('luma', t('chroma.lumaProt', 'Protég. Luma'), 0, 100, 0, 1, '%')}
                     ${row('recover', t('chroma.recover', 'Récup. Coul.'), 0, 100, 0, 1, '%')}
                     ${row('spill', t('chroma.spill', 'Despill'), 0, 100, 0, 1, '%')}
                 </fieldset>
 
-                <div style="margin-top:10px; display:flex; gap:8px;">
-                    <button type="button" id="ef-ch-apply-mask-btn" style="flex:1; height:28px; font-weight:bold;">${t('chroma.applyAsMask', 'Appliquer en masque alpha lié')}</button>
-                </div>
+                <button type="button" id="ef-ch-apply-mask-btn" class="fx-ck-mask-btn">${t('chroma.applyAsMask', 'Appliquer en masque alpha lié')}</button>
             </div>
             `;
         },

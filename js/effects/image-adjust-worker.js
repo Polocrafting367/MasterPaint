@@ -1,3 +1,4 @@
+self.importScripts('photo-pipeline.js');
 self.importScripts('image-adjust-core.js');
 self.importScripts('../WasmManager.js');
 
@@ -30,22 +31,11 @@ self.onmessage = async function (ev) {
             } else {
                 src = new Uint8ClampedArray(msg.buffer);
             }
-            let out;
-            
-            if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-                const imgData = msg.floatBuffer ? src : new ImageData(src, width, height);
-                const res = MasterPaintWasm.applyCameraRaw(imgData, msg.params || {}, width, height);
-                let wasmOut = res ? (res.data ? res.data : res) : null;
-                if (wasmOut) {
-                    out = self.IlluImageAdjustCore.applyPostCameraRaw(wasmOut, width, height, msg.params || {});
-                } else {
-                    let d = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
-                    out = self.IlluImageAdjustCore.applyPostCameraRaw(d, width, height, msg.params || {});
-                }
-            } else {
-                let d = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
-                out = self.IlluImageAdjustCore.applyPostCameraRaw(d, width, height, msg.params || {});
-            }
+            // Un seul moteur CPU : le pipeline flottant de photo-pipeline.js.
+            // Le module Wasm n'est plus sollicité ici — sa version du traitement
+            // divergeait (sortie 8 bits, math différente du shader), ce qui
+            // faisait changer l'image selon le moteur qui la calculait.
+            const out = self.IlluImageAdjustCore.applyCameraRawBuffer(src, width, height, msg.params || {});
 
 
             self.postMessage(

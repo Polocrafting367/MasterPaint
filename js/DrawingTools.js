@@ -2,6 +2,17 @@
 let container = null;
 const workspaceDock = null;
 
+/** Outils non destructifs : ne matérialisent pas de cel en mode animation. */
+const ANIM_NON_MUTATING_TOOLS = new Set([
+    'eyedropper',
+    'zoom',
+    'wand',
+    'pan',
+    'hand',
+    'select',
+    'direct-select'
+]);
+
 var isDrawing = false;
 /** True pendant un glisser « déplacer » lancé depuis sle bouton central Déformation (pas un clic sur la toile). */
 window._illuDeformMoveFromButtonActive = false;
@@ -2209,7 +2220,6 @@ window.activateIlluToolByShortcut = function (e) {
         d: 'tool-direct-select',
         b: 'tool-wand',
         w: 'tool-wand',
-        p: 'tool-pencil',
         e: 'tool-eraser',
         f: 'tool-fill',
         g: 'tool-gradient',
@@ -2221,13 +2231,18 @@ window.activateIlluToolByShortcut = function (e) {
         l: 'tool-line',
         u: 'tool-round-3',
         c: 'tool-cubic-3',
-        p: 'tool-pen',
-        y: 'tool-polygon',
         y: 'tool-deform',
         q: 'tool-warp-4',
         h: 'tool-shadow'
     };
-    const id = map[k];
+    let id = map[k];
+    // « P » : crayon en mode pixel, plume en mode vecteur (les deux libellés annoncent « (P) »,
+    // et les modes sont mutuellement exclusifs). Cf. title.toolPencil / title.toolPen.
+    if (k === 'p') {
+        id = (typeof EditorManager !== 'undefined' && EditorManager.isPixelMode)
+            ? 'tool-pencil'
+            : 'tool-pen';
+    }
     if (!id) return false;
     return window.activateIlluToolButtonById(id);
 };
@@ -4660,19 +4675,19 @@ function initTools() {
                 }
                 return;
             }
-            if (btn.id === 'btn-deselect' || btn.id === 'illu-tb-zoom-fit') {
+            const isZoomFitBtn = btn.id.startsWith('illu-tb-zoom-fit');
+            if (btn.id === 'btn-deselect' || isZoomFitBtn) {
                 if (btn.id === 'btn-deselect') {
                     if (typeof window.finalizePendingPixelLiveEdits === 'function') {
                         window.finalizePendingPixelLiveEdits();
                     }
                     EditorManager.deselectAll();
                 }
-                if (btn.id === 'illu-tb-zoom-fit' && typeof window.fitActiveProjectZoomToWorkspace === 'function') {
-                    window.fitActiveProjectZoomToWorkspace();
+                if (isZoomFitBtn && typeof window.fitActiveProjectZoomToWorkspace === 'function') {
+                    window.fitActiveProjectZoomToWorkspace(undefined, { force: true });
                 }
-                // S'assurer qu'il ne reste pas actif par inadvertance
+                // S'assurer qu'il ne reste pas actif par inadvertance (ce n'est pas un outil)
                 btn.classList.remove('active');
-                // L'onclick défini en HTML pour zoom-fit s'exécutera également (si non écrasé)
                 return;
             }
             const prev = window.activeTool;
@@ -4991,6 +5006,7 @@ function initTools() {
     });
     const onPointerUpWin = (e) => {
         if (e.isPrimary === false) return;
+        illuEdgeAutoPanStop();
         try {
             container.releasePointerCapture(e.pointerId);
         } catch (err) {
@@ -5007,7 +5023,21 @@ function initTools() {
             window._illuSuppressCanvasMouseUntil = performance.now() + 120;
         }
         window._illuStrokePenPressure = 1;
+        const wasDrawing = isDrawing;
         handleMouseUp(e);
+        // Mode animation « draw & step » : après un tracé, avance automatiquement d'une image.
+        if (
+            wasDrawing &&
+            EditorManager.isAnimationMode &&
+            EditorManager.animation &&
+            EditorManager.animation.drawStep &&
+            EditorManager.isPixelMode &&
+            !ANIM_NON_MUTATING_TOOLS.has(window.activeTool) &&
+            window.IlluAnim &&
+            typeof window.IlluAnim.step === 'function'
+        ) {
+            window.IlluAnim.step(EditorManager, 1);
+        }
     };
 
     const workspaceEl = document.getElementById('workspace') || canvasHost;
@@ -5567,6 +5597,11 @@ function onGlobalMouseMove(e) {
         EditorManager.applyCanvasViewportOnly();
         return;
     }
+    /* Défilement automatique quand on glisse (déplacer / sélection / déformation) jusqu'au bord
+       d'une toile zoomée : la toile se déplace dans la direction du bord touché. */
+    if (!ILLU_EDGE_AUTOPAN._inTick) {
+        illuEdgeAutoPanUpdate(e.clientX, e.clientY, e.shiftKey);
+    }
     /* Glisser depuis le bouton central Déformation : pointermove porte le tracé ; mousemove seul est peu fiable (foreignObject SVG). Sans PointerEvent, on garde mousemove. Idem session warp (poignée centre / capture). */
     if (
         (window._illuDeformMoveFromButtonActive || window.selectionPixelWarpActive) &&
@@ -5576,6 +5611,193 @@ function onGlobalMouseMove(e) {
         return;
     }
     handleMouseMove(e);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Défilement automatique au bord (edge auto-pan)
+   Pendant un glisser actif (déplacement d'élément, tracé de sélection,
+   déformation…), si le pointeur atteint le bord de la zone visible #workspace
+   alors que la toile est zoomée et déborde, on fait défiler la toile dans la
+   direction du bord pour révéler la partie cachée, et on prolonge l'opération
+   en cours sans que l'utilisateur ait à relâcher.
+   ───────────────────────────────────────────────────────────────────────── */
+const ILLU_EDGE_AUTOPAN = {
+    rafId: 0,
+    active: false,
+    _inTick: false,
+    cx: 0,
+    cy: 0,
+    shiftKey: false,
+    edgePx: 56,     // largeur de la bande sensible au bord (px écran)
+    speed: 13,      // vitesse de défilement CONSTANTE par frame (px écran)
+    _wsRect: null,  // rect du #workspace en cache (ne bouge pas pendant un tracé)
+    _wsRectAt: 0
+};
+
+/** Un glisser pour lequel le défilement auto a du sens est-il en cours ? */
+function illuEdgeAutoPanIsDragActive() {
+    if (window.isPanning) return false;
+    return !!(
+        isDrawing ||
+        selectionWarpHandlePointerDown ||
+        window._illuDeformMoveFromButtonActive ||
+        window._illuShapeEditMoveActive ||
+        window._illuVectorDragActive
+    );
+}
+
+/** Rect du workspace mis en cache (évite un reflow à chaque pointermove ; le panneau ne bouge pas pendant un tracé). */
+function illuEdgeAutoPanWorkspaceRect() {
+    const now = performance.now();
+    if (ILLU_EDGE_AUTOPAN._wsRect && now - ILLU_EDGE_AUTOPAN._wsRectAt < 400) {
+        return ILLU_EDGE_AUTOPAN._wsRect;
+    }
+    const ws = document.getElementById('workspace');
+    if (!ws) return null;
+    const r = ws.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return null;
+    ILLU_EDGE_AUTOPAN._wsRect = r;
+    ILLU_EDGE_AUTOPAN._wsRectAt = now;
+    return r;
+}
+
+/** Le pointeur est-il dans la bande sensible d'un bord du workspace ? (test bon marché, rect en cache) */
+function illuEdgeAutoPanNearEdge(r) {
+    const EDGE = ILLU_EDGE_AUTOPAN.edgePx;
+    const cx = ILLU_EDGE_AUTOPAN.cx;
+    const cy = ILLU_EDGE_AUTOPAN.cy;
+    return (
+        cx - r.left < EDGE ||
+        r.right - cx < EDGE ||
+        cy - r.top < EDGE ||
+        r.bottom - cy < EDGE
+    );
+}
+
+/**
+ * Vecteur direction de défilement selon la position pointeur courante et l'état de débordement
+ * de la toile. Chaque axe est pondéré par la profondeur d'entrée dans la bande de bord (0→1), ce
+ * qui mélange naturellement les deux axes près d'un coin → diagonale fluide. Le vecteur est ensuite
+ * normalisé dans le tick pour une vitesse constante. Recalculé chaque frame → suit un changement de
+ * direction sans relâchement. Lit le rect conteneur (frais) et reçoit le rect workspace en cache.
+ */
+function illuEdgeAutoPanComputeDir(r) {
+    const cont = document.getElementById('main-canvas-container');
+    const p = window.EditorManager && EditorManager.activeProject;
+    if (!cont || !p || !r) return { fx: 0, fy: 0 };
+    const cr = cont.getBoundingClientRect();
+    const OVF = 1; // marge : reste-t-il de la toile cachée à révéler de ce côté ?
+    const EDGE = ILLU_EDGE_AUTOPAN.edgePx;
+    const cx = ILLU_EDGE_AUTOPAN.cx;
+    const cy = ILLU_EDGE_AUTOPAN.cy;
+    // Profondeur d'entrée dans la bande [0..1] (1 = sur le bord ou au-delà).
+    const pen = (dist) => Math.min(1, Math.max(0, (EDGE - dist) / EDGE));
+    let fx = 0;
+    let fy = 0;
+    if (cr.left < r.left - OVF) fx += pen(cx - r.left);        // bord gauche → toile vers la droite
+    if (cr.right > r.right + OVF) fx -= pen(r.right - cx);     // bord droit → toile vers la gauche
+    if (cr.top < r.top - OVF) fy += pen(cy - r.top);          // bord haut
+    if (cr.bottom > r.bottom + OVF) fy -= pen(r.bottom - cy);  // bord bas
+    return { fx, fy };
+}
+
+/**
+ * Hook bon marché appelé à chaque pointermove : mémorise la position courante et démarre/arrête
+ * la boucle selon que le pointeur est près d'un bord. AUCUN calcul lourd ici (pas de reflow par
+ * événement coalescé) — toute la logique de direction est faite une seule fois par frame dans le tick.
+ */
+function illuEdgeAutoPanUpdate(clientX, clientY, shiftKey) {
+    ILLU_EDGE_AUTOPAN.shiftKey = !!shiftKey;
+    ILLU_EDGE_AUTOPAN.cx = clientX;
+    ILLU_EDGE_AUTOPAN.cy = clientY;
+    if (!illuEdgeAutoPanIsDragActive()) {
+        illuEdgeAutoPanStop();
+        return;
+    }
+    const r = illuEdgeAutoPanWorkspaceRect();
+    if (r && illuEdgeAutoPanNearEdge(r)) {
+        illuEdgeAutoPanStart();
+    } else {
+        illuEdgeAutoPanStop();
+    }
+}
+
+function illuEdgeAutoPanStart() {
+    if (ILLU_EDGE_AUTOPAN.active) return;
+    ILLU_EDGE_AUTOPAN.active = true;
+    ILLU_EDGE_AUTOPAN.rafId = requestAnimationFrame(illuEdgeAutoPanTick);
+}
+
+function illuEdgeAutoPanStop() {
+    ILLU_EDGE_AUTOPAN.active = false;
+    if (ILLU_EDGE_AUTOPAN.rafId) {
+        cancelAnimationFrame(ILLU_EDGE_AUTOPAN.rafId);
+        ILLU_EDGE_AUTOPAN.rafId = 0;
+    }
+}
+window.illuEdgeAutoPanStop = illuEdgeAutoPanStop;
+
+function illuEdgeAutoPanTick() {
+    ILLU_EDGE_AUTOPAN.rafId = 0;
+    if (!ILLU_EDGE_AUTOPAN.active) return;
+    if (!illuEdgeAutoPanIsDragActive()) {
+        illuEdgeAutoPanStop();
+        return;
+    }
+    const p = window.EditorManager && EditorManager.activeProject;
+    const r = illuEdgeAutoPanWorkspaceRect();
+    if (!p || !r) {
+        illuEdgeAutoPanStop();
+        return;
+    }
+    // Le pointeur a quitté la bande de bord (revenu vers le milieu) → on arrête tout de suite.
+    if (!illuEdgeAutoPanNearEdge(r)) {
+        illuEdgeAutoPanStop();
+        return;
+    }
+    // Direction recalculée chaque frame depuis la position pointeur courante.
+    const d = illuEdgeAutoPanComputeDir(r);
+    const len = Math.hypot(d.fx, d.fy);
+    if (len < 1e-3) {
+        // Près d'un bord mais plus rien de caché à révéler : on arrête. Rien ne peut redevenir
+        // révélable sans un mouvement du pointeur, qui relancera la boucle via le hook.
+        illuEdgeAutoPanStop();
+        return;
+    }
+    // Vitesse constante quelle que soit la position dans la bande ; direction normalisée (diagonale incluse).
+    const vx = (d.fx / len) * ILLU_EDGE_AUTOPAN.speed;
+    const vy = (d.fy / len) * ILLU_EDGE_AUTOPAN.speed;
+    p.canvasPanX = (p.canvasPanX || 0) + vx;
+    p.canvasPanY = (p.canvasPanY || 0) + vy;
+    // Met à jour le transform de la toile + invalide le cache de rect + clampe dans le workspace.
+    EditorManager.applyCanvasViewportOnly();
+    // Prolonge l'opération en cours au pointeur figé : la toile ayant bougé sous le
+    // curseur, la position document correspondante a changé.
+    ILLU_EDGE_AUTOPAN._inTick = true;
+    try {
+        const ev = {
+            type: 'pointermove',
+            clientX: ILLU_EDGE_AUTOPAN.cx,
+            clientY: ILLU_EDGE_AUTOPAN.cy,
+            shiftKey: ILLU_EDGE_AUTOPAN.shiftKey,
+            altKey: false,
+            ctrlKey: false,
+            metaKey: false,
+            button: 0,
+            buttons: 1,
+            isPrimary: true,
+            pointerType: 'mouse',
+            preventDefault() {},
+            stopPropagation() {},
+            getCoalescedEvents() {
+                return [this];
+            }
+        };
+        onGlobalMouseMove(ev);
+    } finally {
+        ILLU_EDGE_AUTOPAN._inTick = false;
+    }
+    ILLU_EDGE_AUTOPAN.rafId = requestAnimationFrame(illuEdgeAutoPanTick);
 }
 
 /** RVB+A du pixel composite à la position (coordonnées document / px logiques). */
@@ -8458,6 +8680,12 @@ function handleMouseDown(e) {
     let pos = getPos(e);
     if (isSelectionOrWarpTool() && (!EditorManager.toolProps || !EditorManager.toolProps.allowOutsideCanvas)) {
         pos = illuClampPointToDocument(pos.x, pos.y);
+    }
+
+    // Mode animation : avant de peindre, garantir un cel éditable au temps courant
+    // (matérialise/scinde le maintien). Exclut les outils non destructifs.
+    if (EditorManager.isAnimationMode && EditorManager.isPixelMode && !ANIM_NON_MUTATING_TOOLS.has(window.activeTool)) {
+        EditorManager.ensureEditableCelAtPlayhead(EditorManager.activeLayerIndex);
     }
 
     if (EditorManager.isPixelMode && illuTryCommitImportPlacementOnOutsideClick(e, pos)) {
@@ -14690,6 +14918,7 @@ function updatePixel(pos, pointerEv) {
 }
 
 function handleMouseUp(e) {
+    if (typeof illuEdgeAutoPanStop === 'function') illuEdgeAutoPanStop();
     if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
     if (window.activeTool === 'pen' && window.VectorEngine && window.VectorEngine.isPenActive()) {
         window.VectorEngine.penEndDrag();
@@ -17265,6 +17494,32 @@ window.illuProcessFileImport = function (file, opts) {
         return;
     }
 
+    // GIF animé : si plusieurs images, importer comme document d'animation.
+    if (lower.endsWith('.gif') && !options.forceStatic && window.IlluGifImport) {
+        (async () => {
+            const P = window.IlluProgress;
+            try {
+                const dec = await window.IlluGifImport.decode(file);
+                if (dec && dec.frames && dec.frames.length > 1) {
+                    if (P && P.status) P.status(10, 'Import du GIF animé…');
+                    await window.IlluGifImport.importAsAnimation(
+                        window.EditorManager,
+                        file,
+                        (file.name || 'gif').replace(/\.gif$/i, '')
+                    );
+                    if (P && P.statusDone) P.statusDone();
+                    if (inputEl) inputEl.value = '';
+                    return;
+                }
+            } catch (err) {
+                console.warn('Détection GIF animé échouée, import statique :', err);
+            }
+            // Une seule image (ou échec décodage) → import statique classique.
+            window.illuProcessFileImport(file, Object.assign({}, options, { forceStatic: true }));
+        })();
+        return;
+    }
+
     const maybeProject =
         lower.endsWith('.illu') ||
         (lower.endsWith('.json') && (file.type === 'application/json' || file.type === ''));
@@ -18223,6 +18478,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', () => {
+                // Réinitialise le centre personnalisé de l'axe désactivé, quel que soit
+                // le moyen de décochage (bouton, clavier, programmatique) — évite un
+                // centre périmé réappliqué à la réactivation de la symétrie.
+                if (!el.checked) {
+                    if (id === 'tool-sym-x') window._illuSymCenterX = null;
+                    if (id === 'tool-sym-y') window._illuSymCenterY = null;
+                }
                 const symX = document.getElementById('tool-sym-x');
                 const symY = document.getElementById('tool-sym-y');
                 const anyOn = (symX && symX.checked) || (symY && symY.checked);

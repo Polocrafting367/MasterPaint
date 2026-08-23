@@ -1,11 +1,36 @@
 // --- FilterManager.js ---
 // Gestion des filtres mathématiques avec Modales Intégrées (Live Preview)
 
+/**
+ * Art ASCII : rampes de caractères prédéfinies, ordonnées du MOINS dense (espace) au PLUS dense.
+ * L'index est choisi d'après la luminance de la cellule ; « Inverser » retourne la rampe
+ * (encre claire sur fond sombre ↔ encre sombre sur fond clair).
+ */
+const ILLU_ASCII_RAMPS = {
+    standard: ' .:-=+*#%@',
+    detailed: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+    blocks: ' ░▒▓█',
+    dots: ' .·◦•●',
+    binary: ' 10'
+};
+
 const EFFECT_PARAM_DEFAULTS = {
-    brightness: { 'ef-b': '0', 'ef-c': '0', 'ef-bc-temp': '0', 'ef-bc-tint': '0' },
+    brightness: { 'ef-b': '0', 'ef-c': '0' },
     hsv: { 'ef-h': '0', 'ef-s': '0', 'ef-l': '0' },
     blur: { 'ef-rad': '2', 'ef-ca': '0', 'ef-ca-amt': '8' },
-    halftone: { 'ef-half-rad': '4' },
+    halftone: {
+        'ef-half-rad': '4',
+        'ef-half-mode': 'bw',
+        'ef-half-angle': '45',
+        'ef-half-paper': 'white',
+        'ef-half-k': '1',
+        'ef-half-invert': '0',
+        'ef-half-dc': '100',
+        'ef-half-dm': '100',
+        'ef-half-dy': '100',
+        'ef-half-dk': '100',
+        'ef-half-gain': '0'
+    },
     gaussian: { 'ef-rad': '2', 'ef-ca': '0', 'ef-ca-amt': '8' },
     pixelate: { 'ef-size': '10' },
     posterize: { 'ef-lvl': '4' },
@@ -22,6 +47,9 @@ const EFFECT_PARAM_DEFAULTS = {
     edges: { 'ef-edge': '40' },
     emboss: { 'ef-emb': '12' },
     solarize: { 'ef-sol': '128' },
+    threshold: { 'ef-thr': '128' },
+    vibrance: { 'ef-vibr': '50' },
+    unsharp: { 'ef-us-amount': '80', 'ef-us-radius': '3', 'ef-us-threshold': '0' },
     radialblur: { 'ef-rblur-angle': '2', 'ef-rblur-quality': '2', 'ef-rblur-ox': '0', 'ef-rblur-oy': '0', 'ef-rblur-inner': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
     zoomblur:   { 'ef-zblur-amount': '10', 'ef-zblur-ox': '0', 'ef-zblur-oy': '0', 'ef-zblur-inner': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
     motionblur: { 'ef-mblur-angle': '25', 'ef-mblur-dist': '10', 'ef-mblur-center': '1', 'ef-ca': '0', 'ef-ca-amt': '8' },
@@ -134,6 +162,17 @@ chroma: {
         'ef-contour-mode': 'outside',
         'ef-contour-corner': 'miter'
     },
+    ascii: {
+        'ef-ascii-size': '10',
+        'ef-ascii-font': 'monospace',
+        'ef-ascii-set': 'standard',
+        'ef-ascii-chars': ILLU_ASCII_RAMPS.standard,
+        'ef-ascii-gamma': '100',
+        'ef-ascii-invert': '0',
+        'ef-ascii-bold': '0',
+        'ef-ascii-color': 'pixel',
+        'ef-ascii-bg': 'black'
+    },
     clouds: { 'ef-clouds-scale': '250', 'ef-clouds-power': '50', 'ef-clouds-seed': '0' },
     mandelbrot: { 'ef-mb-zoom': '10', 'ef-mb-angle': '0', 'ef-mb-factor': '1', 'ef-mb-quality': '2', 'ef-mb-invert': '0' },
     julia: { 'ef-jl-zoom': '4', 'ef-jl-angle': '0', 'ef-jl-factor': '4', 'ef-jl-quality': '2' },
@@ -141,7 +180,7 @@ chroma: {
     softenportrait: { 'ef-soft-softness': '5', 'ef-soft-lighting': '0', 'ef-soft-warmth': '10' },
     reducenoise: { 'ef-rn-radius': '10', 'ef-rn-strength': '40' },
     dents: { 'ef-dent-scale': '25', 'ef-dent-refr': '50', 'ef-dent-rough': '10', 'ef-dent-tension': '10', 'ef-dent-seed': '0', 'ef-ca': '0', 'ef-ca-amt': '8' },
-    unfocus: { 'ef-unfocus-r': '4', 'ef-ca': '0', 'ef-ca-amt': '8' },
+    unfocus: { 'ef-unfocus-r': '8', 'ef-unfocus-hl': '55', 'ef-ca': '0', 'ef-ca-amt': '8' },
     temptint: { 'ef-tt-temp': '0', 'ef-tt-tint': '0' }
 };
 
@@ -171,6 +210,8 @@ function illuEffectIconKey(id) {
         digitalpattern: 'menu.fxDigitalPattern',
         pixelate: 'menu.fxPixelate',
         posterize: 'menu.adjPosterize',
+        vibrance: 'menu.adjVibrance',
+        unsharp: 'menu.adjUnsharp',
         addnoise: 'menu.fxAddNoise',
         bulge: 'menu.fxBulge',
         pinch: 'menu.fxPinch',
@@ -193,6 +234,7 @@ function illuEffectIconKey(id) {
         emboss: 'menu.fxEmboss',
         solarize: 'menu.fxSolarize',
         halftone: 'menu.fxHalftone',
+        ascii: 'menu.fxAscii',
         chromatic: 'menu.fxChromatic',
         duotone: 'menu.fxDuotone',
         ral: 'menu.fxRal',
@@ -238,6 +280,7 @@ const EFFECT_HISTORY_LABELS = {
     dropshadow: 'Ombre portée',
     vhs: 'Effet VHS',
     halftone: 'Trame (Demi-teinte)',
+    ascii: 'Art ASCII',
     grayscale: 'Noir et blanc',
     invert: 'Inversion',
     sepia: 'Sépia',
@@ -255,13 +298,13 @@ const EFFECT_HISTORY_LABELS = {
     softenportrait: 'Portrait adouci',
     reducenoise: 'Réduction du bruit',
     dents: 'Bosselage',
-    unfocus: 'Flou de surface (disque)',
+    unfocus: 'Flou d’objectif',
     temptint: 'Température / Teinte'
 };
 
 /** Effets sans implémentation worker : repli sur _previewOneTarget (thread principal). */
 const ILLU_MAIN_THREAD_PREVIEW_EFFECTS = new Set([
-    'autolevel', 'dropshadow', 'emboss', 'filmgrain', 'fragment', 'frosted', 'redeyeremove', 'solarize', 'temperature'
+    'ascii', 'autolevel', 'dropshadow', 'emboss', 'filmgrain', 'fragment', 'frosted', 'redeyeremove', 'solarize', 'temperature', 'threshold'
 ]);
 
 /** Effets de flou / déformation qui proposent la bascule « Aberration chromatique » (post-traitement). */
@@ -276,6 +319,143 @@ window.FilterManager = {
     _cabossageSeed: 0x9e3779b9,
     _effectPreferMainThreadPreview(effect) {
         return ILLU_MAIN_THREAD_PREVIEW_EFFECTS.has(effect);
+    },
+    /**
+     * Modale « Postériser » : bascule le mode « Noir & blanc (seuil) ». Le seuil est rendu par
+     * l'effet interne 'threshold' (thread principal), la postérisation classique par son pipeline
+     * habituel (Wasm/WebGL/worker). On échange donc simplement currentEffect ; preview() et apply()
+     * dispatchent dessus.
+     */
+    setPosterizeBw(on) {
+        this.currentEffect = on ? 'threshold' : 'posterize';
+        const lvlRow = document.getElementById('ef-post-lvl-row');
+        const bwRow = document.getElementById('ef-post-bw-row');
+        if (lvlRow) lvlRow.style.display = on ? 'none' : '';
+        if (bwRow) bwRow.style.display = on ? '' : 'none';
+        this.preview();
+    },
+
+    /** Trame : l'encre noire n'existe qu'en quadrichromie. */
+    setHalftoneMode() {
+        this._syncHalftoneUi();
+        this.preview();
+    },
+
+    _syncHalftoneUi() {
+        const sel = document.getElementById('ef-half-mode');
+        const isCmyk = (sel ? sel.value : 'bw') === 'cmyk';
+        const kRow = document.getElementById('ef-half-k-row');
+        if (kRow) kRow.style.display = isCmyk ? '' : 'none';
+        // Encriers C/M/J/N : n'ont de sens qu'en quadrichromie.
+        const inks = document.getElementById('ef-half-inks');
+        if (inks) inks.style.display = isCmyk ? '' : 'none';
+        // Reflète les valeurs courantes dans les libellés (après restauration des réglages).
+        [['ef-half-dc', '%'], ['ef-half-dm', '%'], ['ef-half-dy', '%'], ['ef-half-dk', '%'], ['ef-half-gain', '%']].forEach(
+            ([id, suffix]) => {
+                const el = document.getElementById(id);
+                const lab = document.getElementById(id + '-val');
+                if (el && lab) lab.innerText = el.value + suffix;
+            }
+        );
+    },
+
+    /* ---------------------------------------------------------------- Art ASCII */
+
+    /** Rampe effectivement utilisée : le champ texte fait foi (les préréglages le remplissent). */
+    _asciiChars() {
+        const el = document.getElementById('ef-ascii-chars');
+        const raw = el && el.value ? el.value : ILLU_ASCII_RAMPS.standard;
+        const chars = Array.from(raw);
+        return chars.length ? chars : Array.from(ILLU_ASCII_RAMPS.standard);
+    },
+
+    /** Préréglage choisi : on recopie la rampe dans le champ texte, qui reste éditable. */
+    setAsciiCharset(sel) {
+        const ramp = ILLU_ASCII_RAMPS[sel ? sel.value : 'standard'];
+        const inp = document.getElementById('ef-ascii-chars');
+        if (ramp && inp) {
+            inp.value = ramp;
+            this._persistCurrentEffectParams();
+        }
+        this.preview();
+    },
+
+    /** Édition manuelle de la rampe : le préréglage bascule sur « Personnalisé ». */
+    onAsciiCharsInput() {
+        const inp = document.getElementById('ef-ascii-chars');
+        const sel = document.getElementById('ef-ascii-set');
+        if (inp && sel) {
+            const cur = inp.value;
+            const match = Object.keys(ILLU_ASCII_RAMPS).find((k) => ILLU_ASCII_RAMPS[k] === cur);
+            sel.value = match || 'custom';
+        }
+        this.preview();
+    },
+
+    _asciiUsesSolidColor() {
+        const el = document.getElementById('ef-ascii-color');
+        return (el ? el.value : 'pixel') === 'solid';
+    },
+
+    _asciiUsesSecondaryBg() {
+        const el = document.getElementById('ef-ascii-bg');
+        return (el ? el.value : 'transparent') === 'secondary';
+    },
+
+    /** Changement de mode couleur / fond : la palette n'a de sens que si l'effet lit une couleur. */
+    setAsciiColorMode() {
+        this._syncAsciiColorUi();
+        this.preview();
+    },
+
+    /**
+     * Affiche ou masque la palette flottante « win-colors » selon que l'effet utilise
+     * une couleur de la palette (comme Contour) : couleur unique, ou fond « secondaire ».
+     * En mode « couleur des pixels » sur fond neutre, la palette est masquée comme pour
+     * les autres effets.
+     */
+    _syncAsciiColorUi() {
+        const solid = this._asciiUsesSolidColor();
+        const secBg = this._asciiUsesSecondaryBg();
+        const needsPalette = solid || secBg;
+        document.body.classList.toggle('effect-allows-colors', needsPalette);
+        const row = document.getElementById('ef-ascii-color-row');
+        if (row) row.style.display = needsPalette ? '' : 'none';
+        const sw = document.getElementById('ef-ascii-swatch');
+        if (sw && window.EditorManager) {
+            const c = solid ? window.EditorManager.primaryColor : window.EditorManager.secondaryColor;
+            if (c) sw.style.background = `rgb(${c.r},${c.g},${c.b})`;
+        }
+    },
+    /** Flou box séparable (glissant) sur les canaux RVB ; l'alpha est recopié. Utilisé par le masque flou. */
+    _boxBlurRGB(src, w, h, radius) {
+        const tmp = new Float32Array(src.length);
+        const out = new Uint8ClampedArray(src.length);
+        const win = radius * 2 + 1;
+        const cl = (v, hi) => (v < 0 ? 0 : v > hi ? hi : v);
+        for (let y = 0; y < h; y++) {
+            const row = y * w * 4;
+            for (let c = 0; c < 3; c++) {
+                let sum = 0;
+                for (let k = -radius; k <= radius; k++) sum += src[row + cl(k, w - 1) * 4 + c];
+                for (let x = 0; x < w; x++) {
+                    tmp[row + x * 4 + c] = sum / win;
+                    sum += src[row + cl(x + radius + 1, w - 1) * 4 + c] - src[row + cl(x - radius, w - 1) * 4 + c];
+                }
+            }
+        }
+        for (let x = 0; x < w; x++) {
+            for (let c = 0; c < 3; c++) {
+                let sum = 0;
+                for (let k = -radius; k <= radius; k++) sum += tmp[(cl(k, h - 1) * w + x) * 4 + c];
+                for (let y = 0; y < h; y++) {
+                    out[(y * w + x) * 4 + c] = sum / win;
+                    sum += tmp[(cl(y + radius + 1, h - 1) * w + x) * 4 + c] - tmp[(cl(y - radius, h - 1) * w + x) * 4 + c];
+                }
+            }
+        }
+        for (let i = 3; i < out.length; i += 4) out[i] = src[i];
+        return out;
     },
     /** Curseur d'effet standard : <label> + range + valeur live. */
     _fxSlider(id, label, min, max, value) {
@@ -328,17 +508,6 @@ window.FilterManager = {
     _galleryPresetId: 'none',
     _filterWorkerBatchSeq: 0,
     _activeFilterPreviewBatchId: 0,
-    _bayer8x8: [
-        [ 0, 32,  8, 40,  2, 34, 10, 42],
-        [48, 16, 56, 24, 50, 18, 58, 26],
-        [12, 44,  4, 36, 14, 46,  6, 38],
-        [60, 28, 68, 20, 62, 30, 70, 22],
-        [ 3, 35, 11, 43,  1, 33,  9, 41],
-        [51, 19, 59, 27, 49, 17, 57, 25],
-        [15, 47,  7, 39, 13, 45,  5, 37],
-        [63, 31, 71, 23, 61, 29, 69, 21]
-    ],
-
 
     _isMobilePhoneEffectUi() {
         return typeof window.isIlluMobileUiActive === 'function' && window.isIlluMobileUiActive();
@@ -351,6 +520,11 @@ window.FilterManager = {
     _effectDialogDidClose() {
         document.body.classList.remove('effect-dialog-open', 'effect-allows-colors');
         this._clearEffectDialogScopeSession();
+        /* La fenêtre est partagée avec d'autres boîtes de dialogue : on rend le
+           conteneur neutre pour ne pas leur imposer la mise en page compacte. */
+        if (window.IlluEffectDialogUI) {
+            window.IlluEffectDialogUI.reset(document.getElementById('effect-dialog-content'));
+        }
     },
 
     _scopeAffectsAllLayers() {
@@ -449,6 +623,17 @@ window.FilterManager = {
         if (scope === 'selection' && !EditorManager.activeLayer?.buffer) {
             window.showIlluAlert("Le calque actif n'a pas d'image.");
             return false;
+        }
+        // Mode animation : matérialiser le(s) cel(s) éditable(s) au temps courant avant que
+        // l'effet ne mute les buffers, pour que la modification s'inscrive dans le cel de t.
+        if (EditorManager.isAnimationMode) {
+            if (scope === 'all') {
+                for (let i = 0; i < EditorManager.layers.length; i++) {
+                    EditorManager.ensureEditableCelAtPlayhead(i);
+                }
+            } else {
+                EditorManager.ensureEditableCelAtPlayhead(EditorManager.activeLayerIndex);
+            }
         }
         this._frozenSnapshots = EditorManager.layers
             .filter((l) => l.buffer)
@@ -1342,24 +1527,6 @@ window.FilterManager = {
                             <span class="effect-val" id="ef-c-val">0</span>
                         </div>
                     </div>
-                    <div class="effect-slider-block">
-                        <span class="effect-param-label" data-i18n="effect.param.temperature">Température</span>
-                        <div class="effect-track-row">
-                            <div class="effect-track" style="background:linear-gradient(90deg,#4ab8ff,#ffffff,#ffb14a);">
-                                <input type="range" id="ef-bc-temp" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-bc-temp-val').innerText=this.value; FilterManager.preview()">
-                            </div>
-                            <span class="effect-val" id="ef-bc-temp-val">0</span>
-                        </div>
-                    </div>
-                    <div class="effect-slider-block">
-                        <span class="effect-param-label" data-i18n="effect.param.tint">Teinte</span>
-                        <div class="effect-track-row">
-                            <div class="effect-track" style="background:linear-gradient(90deg,#5ad65a,#ffffff,#d65ad6);">
-                                <input type="range" id="ef-bc-tint" class="effect-range" min="-100" max="100" value="0" oninput="document.getElementById('ef-bc-tint-val').innerText=this.value; FilterManager.preview()">
-                            </div>
-                            <span class="effect-val" id="ef-bc-tint-val">0</span>
-                        </div>
-                    </div>
                 `);
                 break;
             case 'hsv':
@@ -1455,15 +1622,82 @@ window.FilterManager = {
                 break;
             case 'posterize':
                 this.showModal(illuEffectTitle('posterize', 'Postériser'), `
-                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.levels">Niveaux:</label><input type="range" id="ef-lvl" min="2" max="16" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-lvl-val').innerText=this.value; FilterManager.preview()"> <span id="ef-lvl-val" style="width:25px; text-align:right;">4</span></div>
+                    <div class="field-row" id="ef-post-lvl-row"><label style="width: 60px;" data-i18n="effect.param.levels">Niveaux:</label><input type="range" id="ef-lvl" min="2" max="16" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-lvl-val').innerText=this.value; FilterManager.preview()"> <span id="ef-lvl-val" style="width:25px; text-align:right;">4</span></div>
+                    <div class="field-row" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(128,128,128,0.3);"><input type="checkbox" id="ef-post-bw" onchange="FilterManager.setPosterizeBw(this.checked)"><label for="ef-post-bw" style="margin-left:6px;cursor:pointer;" data-i18n="effect.param.posterizeBw">Noir &amp; blanc (seuil)</label></div>
+                    <div class="field-row" id="ef-post-bw-row" style="margin-top:6px; display:none;"><label style="width: 60px;" data-i18n="effect.param.threshold">Seuil:</label><input type="range" id="ef-thr" min="0" max="255" value="128" style="flex-grow:1;" oninput="document.getElementById('ef-thr-val').innerText=this.value; FilterManager.preview()"> <span id="ef-thr-val" style="width:30px; text-align:right;">128</span></div>
+                `);
+                break;
+            case 'vibrance':
+                this.showModal(illuEffectTitle('vibrance', 'Vibrance / Éclat'), `
+                    <div class="field-row"><label style="width: 60px;" data-i18n="effect.param.vibrance">Éclat:</label><input type="range" id="ef-vibr" min="-100" max="100" value="50" style="flex-grow:1;" oninput="document.getElementById('ef-vibr-val').innerText=this.value; FilterManager.preview()"> <span id="ef-vibr-val" style="width:30px; text-align:right;">50</span></div>
+                `);
+                break;
+            case 'unsharp':
+                this.showModal(illuEffectTitle('unsharp', 'Masque flou (netteté)'), `
+                    <div class="field-row"><label style="width: 78px;" data-i18n="effect.param.amount">Intensité:</label><input type="range" id="ef-us-amount" min="0" max="300" value="80" style="flex-grow:1;" oninput="document.getElementById('ef-us-amount-val').innerText=this.value; FilterManager.preview()"> <span id="ef-us-amount-val" style="width:34px; text-align:right;">80</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 78px;" data-i18n="effect.param.radius">Rayon:</label><input type="range" id="ef-us-radius" min="1" max="20" value="3" style="flex-grow:1;" oninput="document.getElementById('ef-us-radius-val').innerText=this.value; FilterManager.preview()"> <span id="ef-us-radius-val" style="width:34px; text-align:right;">3</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width: 78px;" data-i18n="effect.param.threshold">Seuil:</label><input type="range" id="ef-us-threshold" min="0" max="50" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-us-threshold-val').innerText=this.value; FilterManager.preview()"> <span id="ef-us-threshold-val" style="width:34px; text-align:right;">0</span></div>
                 `);
                 break;
             case 'halftone':
                 this.showModal(illuEffectTitle('halftone', 'Trame (Demi-teinte)'), `
-                    <div class="field-row">
-                        <label style="width: 110px;" data-i18n="effect.halftoneRadius">Taille des points:</label>
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.halftone">Trame d'imprimerie : chaque cellule reçoit un point plein dont la taille suit la quantité d'encre. Les points sont toujours 100 % opaques.</p>
+                    <div class="field-row" style="align-items:center;gap:8px;">
+                        <label style="width:110px;" data-i18n="effect.param.halfMode">Variante</label>
+                        <select id="ef-half-mode" onchange="FilterManager.setHalftoneMode()" style="flex-grow:1;">
+                            <option value="bw" data-i18n="effect.half.modeBw">Noir &amp; blanc</option>
+                            <option value="color" data-i18n="effect.half.modeColor">Points couleur</option>
+                            <option value="cmyk" data-i18n="effect.half.modeCmyk">Impression CMJN (cyan / magenta / jaune)</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:110px;" data-i18n="effect.halftoneRadius">Taille des points:</label>
                         <input type="range" id="ef-half-rad" min="1" max="50" value="4" style="flex-grow:1;" oninput="document.getElementById('ef-half-rad-val').innerText=this.value; FilterManager.preview()">
                         <span id="ef-half-rad-val" style="width:25px; text-align:right;">4</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:110px;" data-i18n="effect.param.halfAngle">Angle de trame</label>
+                        <input type="range" id="ef-half-angle" min="0" max="90" value="45" style="flex-grow:1;" oninput="document.getElementById('ef-half-angle-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-half-angle-val" style="width:25px; text-align:right;">45</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:110px;" data-i18n="effect.param.halfPaper">Fond</label>
+                        <select id="ef-half-paper" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="white" data-i18n="effect.half.paperWhite">Papier blanc</option>
+                            <option value="transparent" data-i18n="effect.half.paperNone">Transparent (points seuls)</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:14px;">
+                        <label id="ef-half-k-row" style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="ef-half-k" checked onchange="FilterManager.preview()"><span data-i18n="effect.param.halfBlackInk">Encre noire (N)</span></label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="ef-half-invert" onchange="FilterManager.preview()"><span data-i18n="effect.param.invert">Inverser</span></label>
+                    </div>
+                    <div id="ef-half-inks" style="display:none;margin-top:10px;border-top:1px solid #bbb;padding-top:8px;">
+                        <p style="margin:0 0 6px;font-size:11px;color:#333;" data-i18n="effect.half.inkIntro">Encriers : intensité de chaque encre, comme sur une presse. 100 % = densité normale.</p>
+                        <div class="field-row" style="margin-top:4px;">
+                            <label style="width:110px;color:#0093c7;" data-i18n="effect.half.inkC">Cyan</label>
+                            <input type="range" id="ef-half-dc" min="0" max="200" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-half-dc-val').innerText=this.value+'%'; FilterManager.preview()">
+                            <span id="ef-half-dc-val" style="width:38px; text-align:right;">100%</span>
+                        </div>
+                        <div class="field-row" style="margin-top:4px;">
+                            <label style="width:110px;color:#c8007a;" data-i18n="effect.half.inkM">Magenta (rose)</label>
+                            <input type="range" id="ef-half-dm" min="0" max="200" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-half-dm-val').innerText=this.value+'%'; FilterManager.preview()">
+                            <span id="ef-half-dm-val" style="width:38px; text-align:right;">100%</span>
+                        </div>
+                        <div class="field-row" style="margin-top:4px;">
+                            <label style="width:110px;color:#a08800;" data-i18n="effect.half.inkY">Jaune</label>
+                            <input type="range" id="ef-half-dy" min="0" max="200" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-half-dy-val').innerText=this.value+'%'; FilterManager.preview()">
+                            <span id="ef-half-dy-val" style="width:38px; text-align:right;">100%</span>
+                        </div>
+                        <div class="field-row" style="margin-top:4px;">
+                            <label style="width:110px;" data-i18n="effect.half.inkK">Noir</label>
+                            <input type="range" id="ef-half-dk" min="0" max="200" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-half-dk-val').innerText=this.value+'%'; FilterManager.preview()">
+                            <span id="ef-half-dk-val" style="width:38px; text-align:right;">100%</span>
+                        </div>
+                        <div class="field-row" style="margin-top:6px;">
+                            <label style="width:110px;" data-i18n="effect.half.dotGain" title="L'encre s'étale sur le papier : les points impriment plus gros">Engraissement</label>
+                            <input type="range" id="ef-half-gain" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-half-gain-val').innerText=this.value+'%'; FilterManager.preview()">
+                            <span id="ef-half-gain-val" style="width:38px; text-align:right;">0%</span>
+                        </div>
                     </div>
                 `);
                 break;
@@ -1584,8 +1818,9 @@ window.FilterManager = {
                 `);
                 break;
             case 'unfocus':
-                this.showModal(illuEffectTitle('unfocus', 'Flou de surface (disque)'), `
-                    ${this._fxSlider('ef-unfocus-r', 'Rayon', 1, 50, 4)}
+                this.showModal(illuEffectTitle('unfocus', 'Flou d’objectif (bokeh)'), `
+                    ${this._fxSlider('ef-unfocus-r', 'Rayon', 1, 50, 8)}
+                    ${this._fxSlider('ef-unfocus-hl', 'Hautes lumières', 0, 100, 55)}
                     ${this._fxChromaToggle()}
                 `);
                 break;
@@ -1656,8 +1891,8 @@ window.FilterManager = {
                 this.showModal(illuEffectTitle('radialblur', 'Flou radial (rotation)'), `
                     <p style="margin:0 0 8px;font-size:11px;color:#888;" data-i18n="effect.desc.radialblur">Flou par rotation autour du centre — algorithme Paint.NET.</p>
                     <div class="field-row"><label style="width:130px;" data-i18n="effect.param.angle">Arc de rotation °</label><input type="range" id="ef-rblur-angle" min="0" max="360" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-angle-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-angle-val" style="width:36px;text-align:right;">2</span></div>
-                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.quality">Qualité (1-5)</label><input type="range" id="ef-rblur-quality" min="1" max="5" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-quality-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-quality-val" style="width:36px;text-align:right;">2</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.innerRadius">Zone nette (rayon %)</label><input type="range" id="ef-rblur-inner" min="0" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-inner-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-inner-val" style="width:36px;text-align:right;">0</span></div>
+                    <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.quality">Qualité (1-5)</label><input type="range" id="ef-rblur-quality" min="1" max="5" value="2" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-quality-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-quality-val" style="width:36px;text-align:right;">2</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetX">Décalage centre X</label><input type="range" id="ef-rblur-ox" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-ox-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-ox-val" style="width:36px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:6px;"><label style="width:130px;" data-i18n="effect.param.offsetY">Décalage centre Y</label><input type="range" id="ef-rblur-oy" min="-100" max="100" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-rblur-oy-val').innerText=this.value; FilterManager.preview()"> <span id="ef-rblur-oy-val" style="width:36px;text-align:right;">0</span></div>
                     ${this._fxChromaToggle()}
@@ -1760,7 +1995,7 @@ window.FilterManager = {
                         curveB: JSON.parse(JSON.stringify(defPts))
                     };
                 }
-                this.showModal(illuEffectTitle('colorbal', 'Courbes des tonalités'), `
+                this.showModal(illuEffectTitle('colorbal', 'Balance des couleurs'), `
                     <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.colorbal">Ajustez l'équilibre colorimétrique (RVB) ou utilisez les courbes avancées.</p>
                     <div class="field-row"><label style="width: 92px;" data-i18n="effect.param.red">Rouge</label><input type="range" id="ef-cb-r" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-r-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-r-val" style="width:28px;text-align:right;">0</span></div>
                     <div class="field-row" style="margin-top:4px;"><label style="width: 92px;" data-i18n="effect.param.green">Vert</label><input type="range" id="ef-cb-g" min="-80" max="80" value="0" style="flex-grow:1;" oninput="document.getElementById('ef-cb-g-val').innerText=this.value; FilterManager.preview()"> <span id="ef-cb-g-val" style="width:28px;text-align:right;">0</span></div>
@@ -1844,6 +2079,75 @@ window.FilterManager = {
                             <option value="round" data-i18n="effect.contour.round">Arrondi</option>
                             <option value="miter" selected data-i18n="effect.contour.miter">Pointu (Miter)</option>
                         </select>
+                    </div>
+                `);
+                break;
+            case 'ascii':
+                this.showModal(illuEffectTitle('ascii', 'Art ASCII'), `
+                    <p style="margin:0 0 8px;font-size:11px;color:#333;" data-i18n="effect.desc.ascii">Recompose l'image avec des caractères : chaque cellule reçoit le caractère dont la densité correspond à sa luminosité, et sa couleur moyenne.</p>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:92px;" data-i18n="effect.param.asciiSize">Taille car. (px)</label>
+                        <input type="range" id="ef-ascii-size" min="4" max="48" value="10" style="flex-grow:1;" oninput="document.getElementById('ef-ascii-size-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-ascii-size-val" style="width:28px;text-align:right;">10</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.asciiFont">Police</label>
+                        <select id="ef-ascii-font" onchange="FilterManager.preview()" style="flex-grow:1;">
+                            <option value="monospace" data-i18n="effect.ascii.fontSystem">Monospace (système)</option>
+                            <option value="&quot;Courier New&quot;, monospace">Courier New</option>
+                            <option value="Consolas, monospace">Consolas</option>
+                            <option value="&quot;Share Tech Mono&quot;, monospace">Share Tech Mono</option>
+                            <option value="VT323, monospace">VT323</option>
+                            <option value="&quot;Press Start 2P&quot;, monospace">Press Start 2P</option>
+                            <option value="Silkscreen, monospace">Silkscreen</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.asciiSet">Jeu de car.</label>
+                        <select id="ef-ascii-set" onchange="FilterManager.setAsciiCharset(this)" style="flex-grow:1;">
+                            <option value="standard" data-i18n="effect.ascii.setStandard">Classique (10 niveaux)</option>
+                            <option value="detailed" data-i18n="effect.ascii.setDetailed">Détaillé (70 niveaux)</option>
+                            <option value="blocks" data-i18n="effect.ascii.setBlocks">Blocs (░▒▓█)</option>
+                            <option value="dots" data-i18n="effect.ascii.setDots">Points</option>
+                            <option value="binary" data-i18n="effect.ascii.setBinary">Binaire (1/0)</option>
+                            <option value="custom" data-i18n="effect.ascii.setCustom">Personnalisé…</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.asciiChars">Caractères</label>
+                        <input type="text" id="ef-ascii-chars" spellcheck="false" autocomplete="off" style="flex-grow:1;font-family:monospace;" oninput="FilterManager.onAsciiCharsInput()">
+                    </div>
+                    <div style="margin:3px 0 0 92px;font-size:10px;color:#666;" data-i18n="effect.ascii.charsHint">Du plus clair (à gauche) au plus dense (à droite).</div>
+                    <div class="field-row" style="margin-top:6px;">
+                        <label style="width:92px;" data-i18n="effect.param.gamma">Gamma</label>
+                        <input type="range" id="ef-ascii-gamma" min="20" max="300" value="100" style="flex-grow:1;" oninput="document.getElementById('ef-ascii-gamma-val').innerText=this.value; FilterManager.preview()">
+                        <span id="ef-ascii-gamma-val" style="width:28px;text-align:right;">100</span>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:14px;">
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="ef-ascii-invert" onchange="FilterManager.preview()"><span data-i18n="effect.param.asciiInvert">Inverser la rampe</span></label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="ef-ascii-bold" onchange="FilterManager.preview()"><span data-i18n="effect.param.asciiBold">Gras</span></label>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.color">Couleur</label>
+                        <select id="ef-ascii-color" onchange="FilterManager.setAsciiColorMode()" style="flex-grow:1;">
+                            <option value="pixel" data-i18n="effect.ascii.colorPixel">Couleur des pixels</option>
+                            <option value="solid" data-i18n="effect.ascii.colorSolid">Couleur unique (primaire)</option>
+                        </select>
+                    </div>
+                    <div class="field-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <label style="width:92px;" data-i18n="effect.param.asciiBg">Fond</label>
+                        <select id="ef-ascii-bg" onchange="FilterManager.setAsciiColorMode()" style="flex-grow:1;">
+                            <option value="transparent" data-i18n="effect.ascii.bgTransparent">Transparent</option>
+                            <option value="black" data-i18n="effect.ascii.bgBlack">Noir</option>
+                            <option value="white" data-i18n="effect.ascii.bgWhite">Blanc</option>
+                            <option value="secondary" data-i18n="effect.ascii.bgSecondary">Couleur secondaire</option>
+                        </select>
+                    </div>
+                    <div class="field-row" id="ef-ascii-color-row" style="margin-top:6px;align-items:center;gap:8px;">
+                        <button type="button" onclick="window.toggleFloatingPaletteVisibility('win-colors')" style="flex-grow:1;font-size:11px;padding:3px 6px;">
+                            <i class="fa-solid fa-palette"></i> <span data-i18n="effect.ascii.paletteBtn">Palette de couleurs</span>
+                        </button>
+                        <div id="ef-ascii-swatch" style="width:24px;height:18px;border:1px solid #888;flex-shrink:0;background:#000000;"></div>
                     </div>
                 `);
                 break;
@@ -2104,6 +2408,40 @@ window.FilterManager = {
         }
     },
 
+    /**
+     * Modales dont la largeur est imposée par un contenu non textuel (éditeur de
+     * courbes, grille de nuanciers, aperçu ASCII) : la mesure automatique ne
+     * conviendrait pas. `vhs` est absent : sa largeur vient de `.effect-dialog--vhs`.
+     */
+    _effectDialogFixedWidth: {
+        projection3d: 480,
+        chroma: 420,
+        colorbal: 400,
+        ral: 460,
+        ascii: 420,
+        halftone: 400,
+        gallery: 380
+    },
+
+    /**
+     * Normalise le contenu de la modale puis lui donne une largeur proportionnée.
+     * Appelée juste après l'injection du HTML, avant le centrage de la fenêtre.
+     *
+     * @param {HTMLElement|null} win  `#effect-dialog-window`
+     * @param {HTMLElement} content   `#effect-dialog-content`
+     */
+    _applyEffectDialogWidth(win, content) {
+        const ui = window.IlluEffectDialogUI;
+        const info = ui ? ui.normalize(content, { effect: this.currentEffect }) : null;
+        if (!win) return;
+        if (this.currentEffect === 'vhs') return; /* largeur pilotée par la classe VHS */
+
+        const w = this._effectDialogFixedWidth[this.currentEffect] ||
+            (ui ? ui.suggestWidth(content, info) : 400);
+        /* La barre de portée impose un plancher : trois boutons côte à côte. */
+        win.style.width = Math.max(340, w) + 'px';
+    },
+
     showModal(title, html) {
         if (this._isMobilePhoneEffectUi()) {
             this._effectDialogScope = 'all';
@@ -2118,11 +2456,8 @@ window.FilterManager = {
                 this._vhsSkipCanvasWrite = true;
                 win.style.removeProperty('width');
                 win.style.removeProperty('max-width');
-            } else if (this.currentEffect === 'projection3d') win.style.width = '540px';
-            else if (this.currentEffect === 'chroma') win.style.width = '500px';
-            else if (this.currentEffect === 'cabossage') win.style.width = '460px';
-            else if (['colorbal', 'exposure', 'wave', 'duotone'].includes(this.currentEffect)) win.style.width = '440px';
-            else win.style.width = '440px';
+            }
+            /* Largeur : calculée après normalisation du contenu (_applyEffectDialogWidth). */
             win.classList.add('floating-window');
             win.style.position = 'fixed';
         }
@@ -2155,7 +2490,13 @@ window.FilterManager = {
         const content = document.getElementById('effect-dialog-content');
         content.innerHTML = scopeRow + html;
 
-        // Auto-wrap range inputs to give them the Win98 gauge style
+        /*
+         * Mise au format compact : les gabarits d'effet sont écrits avec des styles en
+         * ligne hétérogènes. EffectDialogUI enveloppe chaque curseur dans une piste
+         * dégradée et rebâtit la grille libellé / piste / valeur, sans recréer aucun
+         * élément (les id et les `oninput=` en ligne sont préservés).
+         */
+        this._applyEffectDialogWidth(win, content);
 
         const vhsFooterLink = document.getElementById('ef-vhs-open-video-pro');
         if (vhsFooterLink) {
@@ -2165,6 +2506,9 @@ window.FilterManager = {
         if (window.IlluI18n && typeof window.IlluI18n.apply === 'function') window.IlluI18n.apply();
         this._bindEffectScopeButtons();
         this._restoreEffectParams();
+        /* ASCII : la palette dépend des réglages restaurés (couleur unique / fond secondaire). */
+        if (this.currentEffect === 'ascii') this._syncAsciiColorUi();
+        if (this.currentEffect === 'halftone') this._syncHalftoneUi();
         if (this.currentEffect === 'vhs' && typeof window.illuVhsSyncSliderLabels === 'function') {
             window.illuVhsSyncSliderLabels();
         }
@@ -2201,7 +2545,7 @@ window.FilterManager = {
                 };
             }
         }
-        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette') {
+        if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette' || this.currentEffect === 'ascii') {
             if (this._colorPollInterval) clearInterval(this._colorPollInterval);
             let lastP = window.EditorManager ? JSON.stringify(window.EditorManager.primaryColor) : '';
             let lastS = window.EditorManager ? JSON.stringify(window.EditorManager.secondaryColor) : '';
@@ -2223,6 +2567,11 @@ window.FilterManager = {
                             const c = window.EditorManager.primaryColor;
                             sw.style.background = `rgb(${c.r},${c.g},${c.b})`;
                         }
+                    }
+                    if (this.currentEffect === 'ascii') {
+                        this._syncAsciiColorUi();
+                        /* En « couleur des pixels » sur fond neutre, aucune couleur de palette n'est lue. */
+                        if (!this._asciiUsesSolidColor() && !this._asciiUsesSecondaryBg()) return;
                     }
                     this.preview();
                 }
@@ -2851,8 +3200,15 @@ window.FilterManager = {
             const margin = this._getEffectMargin(effect, params, ps);
             // Special case: dropshadow uses Canvas API, cannot be chunked easily.
             // gaussian is now enabled for multi-worker thanks to margins.
+            //
+            // VHS : effet à l'échelle de l'image entière (commutation de tête, tracking,
+            // bavement chroma d'une ligne à l'autre). Découpé en tuiles, chaque worker
+            // recalculait la trame complète pour n'en garder qu'une bande — soit N fois
+            // le travail, avec des ruptures aux jointures. Un seul chunk, donc.
             const chunkCount =
-                effect === 'dropshadow' || effect === 'motionblur' || effect === 'surfaceblur' ? 1 : wks.length;
+                effect === 'dropshadow' || effect === 'motionblur' || effect === 'surfaceblur' || effect === 'vhs'
+                    ? 1
+                    : wks.length;
             const stepY = Math.ceil(h / chunkCount);
             
             this._activeBatchChunkCount = chunkCount;
@@ -3016,10 +3372,20 @@ window.FilterManager = {
             const fh = backup.height;
             let pw = fw;
             let ph = fh;
-            const useLowResModal = modalPreviewLowRes;
+            /*
+             * VHS : l'aperçu vit dans sa propre colonne, jamais dans le calque. Il a donc
+             * sa propre limite de résolution, réglable par le curseur « Max. aperçu (px) ».
+             * Sans cela l'effet tournait à la taille du document à chaque mouvement de
+             * curseur — plusieurs secondes sur une photo, et un aperçu qui ne suivait plus.
+             */
+            const vhsMaxEdge = vhsPreviewOnly && !this._effectPreviewIsFinal
+                ? Math.max(120, this._fxNum('ef-vhs-preview_max', 480))
+                : 0;
+            const maxEdge = modalPreviewLowRes ? EFFECT_PREVIEW_MAX_EDGE : vhsMaxEdge;
+            const useLowResModal = maxEdge > 0 && Math.max(fw, fh) > 0;
             if (useLowResModal) {
                 const big = Math.max(fw, fh);
-                const s = Math.min(1, EFFECT_PREVIEW_MAX_EDGE / big);
+                const s = Math.min(1, maxEdge / big);
                 pw = Math.max(1, Math.round(fw * s));
                 ph = Math.max(1, Math.round(fh * s));
             }
@@ -3072,9 +3438,12 @@ window.FilterManager = {
             const webglPreview = localStorage.getItem('illu_webgl_preview') === 'true';
             
             // Check if current effect has a Wasm implementation
-            const wasmSupported = typeof MasterPaintWasm !== 'undefined' && 
-                                MasterPaintWasm.isEffectSupported && 
-                                MasterPaintWasm.isEffectSupported(this.currentEffect);
+            // (halftone est exclu : Wasm et WebGL ne connaissent ni les variantes CMJN,
+            //  ni l'angle de trame, ni les points pleins — voir halftone-core.js)
+            const wasmSupported = typeof MasterPaintWasm !== 'undefined' &&
+                                MasterPaintWasm.isEffectSupported &&
+                                MasterPaintWasm.isEffectSupported(this.currentEffect) &&
+                                this.currentEffect !== 'halftone';
             
             // If Wasm is active AND supported, we skip GPU to ensure Wasm priority
             const skipGPU = useWasm && wasmSupported && MasterPaintWasm.isLoaded;
@@ -3213,12 +3582,6 @@ window.FilterManager = {
                         uniforms.u_c1 = [c1.r / 255, c1.g / 255, c1.b / 255];
                         uniforms.u_c2 = [c2.r / 255, c2.g / 255, c2.b / 255];
                         uniforms.u_pivot = (vals['ef-duo-mid'] || 128) / 255;
-                        break;
-                    }
-                    case 'halftone': {
-                        shader = 'halftone';
-                        uniforms.u_radius = (vals['ef-half-rad'] || 4) / this._effectPreviewPxScale;
-                        uniforms.u_res = [pw, ph];
                         break;
                     }
                     case 'filmgrain': 
@@ -3513,6 +3876,10 @@ window.FilterManager = {
                 const p = effect === 'gaussian' ? 3 : 1;
                 m = Math.ceil(rad * p * scale) + 1;
                 break;
+            case 'unsharp':
+                /* Le masque flou lit un voisinage de `rayon` px : sans marge, chaque
+                   tuile du worker afficherait une couture le long de son bord. */
+                m = Math.ceil((val('ef-us-radius') || 3) * scale) + 1; break;
             case 'median':
                 m = Math.ceil((val('ef-med-rad') || 2) * scale) + 1; break;
             case 'oil':
@@ -3771,13 +4138,7 @@ window.FilterManager = {
                     uniforms.u_pivot = (val('ef-duo-mid') || 128) / 255;
                     break;
                 }
-                case 'halftone': {
-                    shader = 'halftone';
-                    uniforms.u_radius = (val('ef-half-rad') || 4) / this._effectPreviewPxScale;
-                    uniforms.u_res = [this.originalImageData.width, this.originalImageData.height];
-                    break;
-                }
-                case 'filmgrain': 
+                case 'filmgrain':
                 case 'argenticgrain': {
                     shader = 'filmgrain';
                     uniforms.u_intensity = (val('ef-grain') || 40) / 100;
@@ -4162,27 +4523,15 @@ window.FilterManager = {
                 return;
             }
             case 'halftone': {
-                const dotSize = Math.max(1, pxInt(val('ef-half-rad')));
-                const data = this.originalImageData.data;
-                const out = new ImageData(w, h);
-                const od = out.data;
-                const matrix = this._bayer8x8;
-
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        const i = (y * w + x) * 4;
-                        const luma = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-                        
-                        const mx = (x / dotSize | 0) % 8;
-                        const my = (y / dotSize | 0) % 8;
-                        const threshold = (matrix[my][mx] / 64) * 255;
-                        
-                        const v = luma >= threshold ? 255 : 0;
-                        od[i] = od[i + 1] = od[i + 2] = v;
-                        od[i + 3] = data[i + 3];
-                    }
-                }
-                this.ctx.putImageData(out, 0, 0);
+                // Repli thread principal : même trame que le worker (halftone-core.js), pour que
+                // l'aperçu et le rendu soient identiques quel que soit le moteur disponible.
+                const vals = {};
+                document.querySelectorAll('#effect-dialog-content [id^="ef-half-"]').forEach((el) => {
+                    vals[el.id] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
+                });
+                const opts = window.illuHalftoneOptsFromVals(vals, ps);
+                const res = window.illuApplyHalftone(srcOrig, w, h, opts, 0, h);
+                this.ctx.putImageData(new ImageData(res, w, h), 0, 0);
                 return;
             }
             case 'oil': {
@@ -4285,6 +4634,55 @@ window.FilterManager = {
                 this.ctx.putImageData(imgData, 0, 0);
                 return;
             }
+            case 'threshold': {
+                // Seuil : chaque pixel devient noir ou blanc selon sa luminance (préserve l'alpha).
+                const th = val('ef-thr');
+                const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    const v = lum >= th ? 255 : 0;
+                    data[i] = data[i + 1] = data[i + 2] = v;
+                }
+                this.ctx.putImageData(imgData, 0, 0);
+                return;
+            }
+            case 'vibrance': {
+                // Vibrance : booste surtout les couleurs peu saturées (protège les tons déjà vifs).
+                const amount = val('ef-vibr') / 100;
+                const imgData = new ImageData(new Uint8ClampedArray(this.originalImageData.data), w, h);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i + 1], b = data[i + 2];
+                    const mx = Math.max(r, g, b);
+                    const avg = (r + g + b) / 3;
+                    const boost = amount * (1 - (mx - avg) / 255);
+                    data[i] = avg + (r - avg) * (1 + boost);
+                    data[i + 1] = avg + (g - avg) * (1 + boost);
+                    data[i + 2] = avg + (b - avg) * (1 + boost);
+                }
+                this.ctx.putImageData(imgData, 0, 0);
+                return;
+            }
+            case 'unsharp': {
+                // Masque flou : original + intensité × (original − flou), avec seuil anti-bruit.
+                const amount = val('ef-us-amount') / 100;
+                const radius = Math.max(1, Math.round(val('ef-us-radius')));
+                const thr = val('ef-us-threshold');
+                const src = this.originalImageData.data;
+                const blur = this._boxBlurRGB(src, w, h, radius);
+                const imgData = new ImageData(new Uint8ClampedArray(src), w, h);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    for (let c = 0; c < 3; c++) {
+                        const o = src[i + c];
+                        const diff = o - blur[i + c];
+                        if (Math.abs(diff) > thr) data[i + c] = o + amount * diff;
+                    }
+                }
+                this.ctx.putImageData(imgData, 0, 0);
+                return;
+            }
             case 'vignette': {
                 const vig = val('ef-vig') / 100;
                 const vc = this._parseHexColor(val('ef-vig-color') || '#000000');
@@ -4363,6 +4761,121 @@ window.FilterManager = {
                     }
                 }
                 this.ctx.putImageData(imgData, 0, 0);
+                return;
+            }
+            case 'ascii': {
+                // La source est découpée en cellules de la taille d'un caractère. Chaque cellule
+                // donne une couleur moyenne (pondérée par l'alpha) et une luminosité ; celle-ci
+                // choisit le caractère dans la rampe (du plus clair au plus dense).
+                const size = Math.max(2, pxInt(val('ef-ascii-size') || 10));
+                const family = document.getElementById('ef-ascii-font')?.value || 'monospace';
+                const bold = !!document.getElementById('ef-ascii-bold')?.checked;
+                const invert = !!document.getElementById('ef-ascii-invert')?.checked;
+                const gamma = Math.max(0.2, (val('ef-ascii-gamma') || 100) / 100);
+                const chars = this._asciiChars();
+                const nChars = chars.length;
+                const solid = this._asciiUsesSolidColor();
+                const bgMode = document.getElementById('ef-ascii-bg')?.value || 'transparent';
+
+                const em = window.EditorManager;
+                const pc = solid && em && em.primaryColor ? em.primaryColor : { r: 255, g: 255, b: 255 };
+                const inkCss = `rgb(${pc.r},${pc.g},${pc.b})`;
+                let bgCss = null;
+                if (bgMode === 'black') bgCss = '#000000';
+                else if (bgMode === 'white') bgCss = '#ffffff';
+                else if (bgMode === 'secondary') {
+                    const sc = em && em.secondaryColor ? em.secondaryColor : { r: 0, g: 0, b: 0 };
+                    bgCss = `rgb(${sc.r},${sc.g},${sc.b})`;
+                }
+
+                const ctx = this.ctx;
+                const fontSpec = `${bold ? 'bold ' : ''}${size}px ${family}`;
+                ctx.font = fontSpec;
+
+                // Police @font-face pas encore chargée : on rend avec le repli, puis on relance
+                // l'aperçu une fois la police disponible (sinon le canvas garde le repli).
+                try {
+                    if (document.fonts && !document.fonts.check(fontSpec)) {
+                        if (this._asciiFontPending !== fontSpec) {
+                            this._asciiFontPending = fontSpec;
+                            document.fonts
+                                .load(fontSpec, chars.join(''))
+                                .then(() => {
+                                    if (this._asciiFontPending !== fontSpec) return;
+                                    this._asciiFontPending = null;
+                                    if (this.currentEffect === 'ascii') this.preview();
+                                })
+                                .catch(() => {
+                                    this._asciiFontPending = null;
+                                });
+                        }
+                    } else {
+                        this._asciiFontPending = null;
+                    }
+                } catch (e) {
+                    /* spécification de police non vérifiable : on rend tel quel */
+                }
+
+                // Grille régulière : largeur = caractère le plus large de la rampe.
+                let cw = 0;
+                for (let i = 0; i < nChars; i++) {
+                    const m = ctx.measureText(chars[i]).width;
+                    if (m > cw) cw = m;
+                }
+                cw = Math.max(1, Math.round(cw));
+                const cellH = Math.max(1, Math.round(size));
+                const cols = Math.ceil(w / cw);
+                const rows = Math.ceil(h / cellH);
+
+                ctx.clearRect(0, 0, w, h);
+                ctx.save();
+                ctx.font = fontSpec;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let ry = 0; ry < rows; ry++) {
+                    const y0 = ry * cellH;
+                    const y1 = Math.min(h, y0 + cellH);
+                    for (let rx = 0; rx < cols; rx++) {
+                        const x0 = rx * cw;
+                        const x1 = Math.min(w, x0 + cw);
+                        let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+                        for (let y = y0; y < y1; y++) {
+                            let i = (y * w + x0) * 4;
+                            for (let x = x0; x < x1; x++, i += 4) {
+                                const a = srcOrig[i + 3] / 255;
+                                sr += srcOrig[i] * a;
+                                sg += srcOrig[i + 1] * a;
+                                sb += srcOrig[i + 2] * a;
+                                sa += a;
+                                n++;
+                            }
+                        }
+                        if (!n) continue;
+                        const aAvg = sa / n;
+                        if (aAvg < 0.02) continue; // cellule vide : reste transparente
+                        const r = sr / sa, g = sg / sa, b = sb / sa;
+
+                        if (bgCss) {
+                            ctx.globalAlpha = aAvg;
+                            ctx.fillStyle = bgCss;
+                            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+                        }
+
+                        let t = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                        t = Math.pow(t < 0 ? 0 : t > 1 ? 1 : t, 1 / gamma);
+                        if (invert) t = 1 - t;
+                        const gi = Math.max(0, Math.min(nChars - 1, Math.round(t * (nChars - 1))));
+                        const glyph = chars[gi];
+                        if (glyph && glyph !== ' ') {
+                            ctx.globalAlpha = aAvg;
+                            ctx.fillStyle = solid ? inkCss : `rgb(${r | 0},${g | 0},${b | 0})`;
+                            ctx.fillText(glyph, x0 + cw / 2, y0 + cellH / 2);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+                ctx.restore();
                 return;
             }
             case 'dropshadow': {

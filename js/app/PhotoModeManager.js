@@ -24,7 +24,17 @@
     function deepCloneParams(source) {
         const out = {};
         Object.keys(source).forEach(k => {
-            out[k] = Array.isArray(source[k]) ? source[k].map(v => (typeof v === 'object' ? Object.assign({}, v) : v)) : source[k];
+            const v = source[k];
+            if (Array.isArray(v)) {
+                out[k] = v.map(x => (typeof x === 'object' && x ? Object.assign({}, x) : x));
+            } else if (v && typeof v === 'object') {
+                // maskOn / extend : copiés eux aussi, sinon toutes les photos
+                // partageraient le même objet et cocher une case les affecterait
+                // toutes à la fois.
+                out[k] = Object.assign({}, v);
+            } else {
+                out[k] = v;
+            }
         });
         return out;
     }
@@ -225,7 +235,7 @@
                     btn.setAttribute('aria-pressed', 'true');
                     
                     if (window.IlluImageAdjustCore && window.IlluImageAdjustCore.Slider) {
-                        IlluImageAdjustCore.Slider.updateRanges(document.getElementById('pm-panel-edit'), 'pm-slider-', photo.useRawMode);
+                        IlluImageAdjustCore.Slider.updateRanges(document.getElementById('pm-sidebar'), 'pm-slider-', photo.useRawMode);
                     }
                     
                     renderActivePhoto();
@@ -361,14 +371,38 @@
 
         // Bind sliders
         Object.keys(DEFAULT_PARAMS).forEach(key => {
+            const def = DEFAULT_PARAMS[key];
+            // maskOn / extend / courbes / TSL ne sont pas des curseurs.
+            if (Array.isArray(def) || (def && typeof def === 'object')) return;
             const id = `pm-slider-${key}`;
-            const isMini = key.endsWith('Hi') || key.endsWith('Sh'); 
-            IlluImageAdjustCore.Slider.bind(overlay, id, key, { isMini: isMini }, {
+            const isMini = key.endsWith('Hi') || key.endsWith('Sh');
+            const photo = getActivePhoto();
+            IlluImageAdjustCore.Slider.bind(overlay, id, key, {
+                isMini: isMini,
+                isRaw: !!(photo && photo.useRawMode)
+            }, {
                 onInput: (val) => {
                     updateActiveParams(key, val);
                 },
                 onChange: () => {
                     pushPhotoHistory();
+                },
+                onMask: (on) => {
+                    const p = getActivePhoto();
+                    if (!p) return;
+                    if (!p.params.maskOn) p.params.maskOn = {};
+                    // Absent = actif : on ne stocke que les exceptions.
+                    if (on) delete p.params.maskOn[key];
+                    else p.params.maskOn[key] = false;
+                    p.isModified = true;
+                    renderActivePhoto();
+                },
+                onExtend: (on) => {
+                    const p = getActivePhoto();
+                    if (!p) return;
+                    if (!p.params.extend) p.params.extend = {};
+                    if (on) p.params.extend[key] = true;
+                    else delete p.params.extend[key];
                 }
             });
         });
@@ -694,6 +728,64 @@
 
     // --- Interactive Crop Mode ---
 
+    /**
+     * Pose l'exposition de départ calculée au décodage du RAW.
+     *
+     * Les données restent intactes : c'est un simple réglage de curseur, que
+     * l'utilisateur peut modifier ou annuler. Sans lui, un RAW linéaire
+     * s'ouvrirait très sombre — ce qui est correct physiquement, mais
+     * déroutant.
+     */
+    function applyBaselineExposure(photo, imageData) {
+        if (!photo || !imageData) return;
+        const b = imageData.baselineExposure;
+        if (typeof b === 'number' && isFinite(b) && b !== 0) {
+            photo.params.exposure = b;
+            photo.baselineExposure = b;
+        }
+    }
+
+    /**
+     * Recopie les données RAW 14 bits d'un ImageData vers un autre.
+     *
+     * Toute opération qui passe par un canvas 2D (rotation, recadrage,
+     * historique) fabrique un ImageData neuf et perd donc ces champs, qui ne
+     * sont pas des propriétés standard. Sans ce transport, useRawMode restait
+     * vrai alors que rawFloatData avait disparu : le traitement retombait
+     * silencieusement en 8 bits, et le mode RAW rendait exactement comme le
+     * mode 8 bits.
+     */
+    function carryRawData(target, source, floatData, w, h) {
+        if (!target || !source) return target;
+        const fd = floatData || source.rawFloatData;
+        if (fd instanceof Float32Array) {
+            target.rawFloatData = fd;
+            target.rawFloatWidth = w != null ? w : source.rawFloatWidth;
+            target.rawFloatHeight = h != null ? h : source.rawFloatHeight;
+            target.sourceWhite = (window.IlluPhotoPipeline)
+                ? window.IlluPhotoPipeline.sourceWhiteFor(fd)
+                : (source.sourceWhite || 1.0);
+        }
+        if (source.rawMetadata) target.rawMetadata = source.rawMetadata;
+        return target;
+    }
+
+    /** Rotation de 90° horaire d'un buffer RGBA flottant. */
+    function rotateFloat90(src, w, h) {
+        const out = new Float32Array(w * h * 4);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const si = (y * w + x) * 4;
+                const di = (x * h + (h - 1 - y)) * 4;
+                out[di] = src[si];
+                out[di + 1] = src[si + 1];
+                out[di + 2] = src[si + 2];
+                out[di + 3] = src[si + 3];
+            }
+        }
+        return out;
+    }
+
     function rotateActivePhoto90() {
         if (!state.activeId) return;
         const p = state.photos.find(x => x.id === state.activeId);
@@ -718,8 +810,17 @@
             return out;
         };
 
-        p.imageData = rotateImgData(p.imageData);
-        p.previewImageData = rotateImgData(p.previewImageData);
+        const srcFloat = p.imageData.rawFloatData;
+        const srcFW = p.imageData.rawFloatWidth;
+        const srcFH = p.imageData.rawFloatHeight;
+
+        const rotated = rotateImgData(p.imageData);
+        if (srcFloat instanceof Float32Array) {
+            carryRawData(rotated, p.imageData, rotateFloat90(srcFloat, srcFW, srcFH), srcFH, srcFW);
+        }
+        p.imageData = rotated;
+        p.previewImageData = downscaleForPreview(p.imageData);
+        p.useRawMode = !!p.imageData.rawFloatData;
         p.isModified = true;
         
         renderActivePhoto();
@@ -833,9 +934,35 @@
         ctx.drawImage(srcCanvas, fx1, fy1, fw, fh, 0, 0, fw, fh);
         const newImageData = ctx.getImageData(0, 0, fw, fh);
 
+        // Découper également les données 14 bits, sinon le recadrage ferait
+        // retomber la photo en traitement 8 bits.
+        const srcFloat = photo.imageData.rawFloatData;
+        if (srcFloat instanceof Float32Array) {
+            const sfw = photo.imageData.rawFloatWidth || fullW;
+            const sfh = photo.imageData.rawFloatHeight || fullH;
+            const kx = sfw / fullW, ky = sfh / fullH;
+            const cx = Math.round(fx1 * kx), cy = Math.round(fy1 * ky);
+            const cw = Math.max(1, Math.round(fw * kx)), chh = Math.max(1, Math.round(fh * ky));
+            const outFloat = new Float32Array(cw * chh * 4);
+            for (let y = 0; y < chh; y++) {
+                const sy = Math.min(sfh - 1, cy + y);
+                for (let x = 0; x < cw; x++) {
+                    const sx = Math.min(sfw - 1, cx + x);
+                    const si = (sy * sfw + sx) * 4;
+                    const di = (y * cw + x) * 4;
+                    outFloat[di] = srcFloat[si];
+                    outFloat[di + 1] = srcFloat[si + 1];
+                    outFloat[di + 2] = srcFloat[si + 2];
+                    outFloat[di + 3] = srcFloat[si + 3];
+                }
+            }
+            carryRawData(newImageData, photo.imageData, outFloat, cw, chh);
+        }
+
         // Update photo object
         photo.imageData = newImageData;
         photo.previewImageData = downscaleForPreview(newImageData);
+        photo.useRawMode = !!newImageData.rawFloatData;
         photo.isModified = true;
 
         cancelCropMode();
@@ -868,6 +995,12 @@
                         imageData.rawFloatWidth = options.rawFloatWidth;
                         imageData.rawFloatHeight = options.rawFloatHeight;
                         imageData.rawMetadata = options.rawMetadata;
+                        // Blanc réel de la scène : cale le tone mapping sur la
+                        // dynamique effective du fichier plutôt que sur une
+                        // constante. Mesuré une seule fois, à l'ouverture.
+                        imageData.sourceWhite = (window.IlluPhotoPipeline)
+                            ? window.IlluPhotoPipeline.sourceWhiteFor(options.rawFloatData)
+                            : 1.0;
                     }
 
                     const photoObj = {
@@ -878,8 +1011,13 @@
                         params: deepCloneParams(DEFAULT_PARAMS),
                         isModified: false,
                         useRawMode: !!imageData.rawFloatData,
-                        metadata: imageData.rawMetadata
+                        metadata: imageData.rawMetadata,
+                        // Référence conservée pour « Réinitialiser » : permet de
+                        // revenir sur un recadrage ou une rotation.
+                        originalImageData: imageData
                     };
+
+                    applyBaselineExposure(photoObj, imageData);
 
                     if (photoObj.metadata) {
                         applyMetadataPresets(photoObj);
@@ -921,8 +1059,9 @@
             outId = new ImageData(new Uint8ClampedArray(id.data), w, h);
             if (id.rawFloatData) {
                 outId.rawFloatData = id.rawFloatData;
-                outId.rawFloatWidth = w;
-                outId.rawFloatHeight = h;
+                outId.rawFloatWidth = id.rawFloatWidth || w;
+                outId.rawFloatHeight = id.rawFloatHeight || h;
+                outId.sourceWhite = id.sourceWhite;
             }
             return outId;
         }
@@ -945,11 +1084,16 @@
         if (id.rawFloatData) {
             const outFloat = new Float32Array(nw * nh * 4);
             const inFloat = id.rawFloatData;
+            // Le buffer flottant n'a pas forcément les mêmes dimensions que la
+            // prévisualisation 8 bits : indexer avec `w` produirait un décalage
+            // progressif de l'image.
+            const fw = id.rawFloatWidth || w;
+            const fh = id.rawFloatHeight || h;
             for (let y = 0; y < nh; y++) {
-                const srcY = Math.floor(y / s);
+                const srcY = Math.min(fh - 1, Math.floor((y / nh) * fh));
                 for (let x = 0; x < nw; x++) {
-                    const srcX = Math.floor(x / s);
-                    const si = (srcY * w + srcX) * 4;
+                    const srcX = Math.min(fw - 1, Math.floor((x / nw) * fw));
+                    const si = (srcY * fw + srcX) * 4;
                     const di = (y * nw + x) * 4;
                     outFloat[di] = inFloat[si];
                     outFloat[di+1] = inFloat[si+1];
@@ -960,6 +1104,9 @@
             outId.rawFloatData = outFloat;
             outId.rawFloatWidth = nw;
             outId.rawFloatHeight = nh;
+            // Le blanc de scène se mesure sur les données PLEINE résolution :
+            // le sous-échantillonnage écrête les hautes lumières les plus fines.
+            outId.sourceWhite = id.sourceWhite;
         }
 
         return outId;
@@ -1048,8 +1195,19 @@
                 thumbUrl: thumbUrl,
                 params: deepCloneParams(DEFAULT_PARAMS),
                 isModified: false,
-                useRawMode: !!imageData.rawFloatData
+                useRawMode: !!imageData.rawFloatData,
+                metadata: imageData.rawMetadata,
+                // Référence conservée pour « Réinitialiser ».
+                originalImageData: imageData
             };
+
+            applyBaselineExposure(photoObj, imageData);
+
+            // Le blanc de scène est mesuré une seule fois, sur les données
+            // pleine résolution.
+            if (imageData.rawFloatData && window.IlluPhotoPipeline && imageData.sourceWhite == null) {
+                imageData.sourceWhite = window.IlluPhotoPipeline.sourceWhiteFor(imageData.rawFloatData);
+            }
 
             state.photos.push(photoObj);
             renderFilmstrip();
@@ -1285,6 +1443,13 @@
                     info += ` | ${details.join(' | ')}`;
                 }
             }
+            // État réel du traitement, pour lever toute ambiguïté.
+            if (photo.imageData && photo.imageData.rawFallback) {
+                info += ' | ⚠ JPEG intégré (décodage RAW échoué)';
+            } else if (photo.imageData && photo.imageData.rawFloatData) {
+                const sw = photo.imageData.sourceWhite || 1;
+                info += ' | RAW linéaire, ' + Math.max(0, Math.log2(sw)).toFixed(1) + ' IL de marge';
+            }
             sDoc.innerText = info;
         }
 
@@ -1292,11 +1457,30 @@
         if (modeBtnRow) {
             const rawBtn = document.getElementById('pm-mode-raw-btn');
             const normalBtn = document.getElementById('pm-mode-normal-btn');
-            
-            modeBtnRow.style.opacity = '1';
-            modeBtnRow.style.pointerEvents = 'auto';
-            modeBtnRow.title = "Mode de rendu du moteur d'ajustement";
-            
+
+            // Dire franchement sur quoi on travaille. Un fichier RAW dont le
+            // décodage a échoué est remplacé par l'aperçu JPEG du boîtier :
+            // l'image est alors déjà développée, et proposer un « mode 14 bits »
+            // laisserait croire à une profondeur qui n'existe pas.
+            const hasFloat = !!(photo.imageData && photo.imageData.rawFloatData);
+            const fallback = photo.imageData && photo.imageData.rawFallback;
+
+            modeBtnRow.style.opacity = hasFloat ? '1' : '0.55';
+            modeBtnRow.style.pointerEvents = hasFloat ? 'auto' : 'none';
+            if (hasFloat) {
+                const sw = photo.imageData.sourceWhite || 1;
+                modeBtnRow.title = 'Données linéaires disponibles — blanc de scène '
+                    + sw.toFixed(2) + ', soit ' + Math.max(0, Math.log2(sw)).toFixed(1)
+                    + ' IL de marge dans les hautes lumières.';
+            } else if (fallback) {
+                modeBtnRow.title = "Décodage RAW indisponible : c'est l'aperçu JPEG intégré au "
+                    + "fichier qui est utilisé, déjà développé en 8 bits. Aucune récupération "
+                    + "des hautes lumières n'est possible. Cause : "
+                    + (photo.imageData.rawFallbackReason || 'inconnue');
+            } else {
+                modeBtnRow.title = "Image 8 bits : le mode 14 bits ne s'applique qu'aux fichiers RAW.";
+            }
+
             if (photo.useRawMode) {
                 rawBtn.classList.add('illu-scope-btn--active');
                 rawBtn.setAttribute('aria-pressed', 'true');
@@ -1311,7 +1495,9 @@
         }
         
         if (window.IlluImageAdjustCore && window.IlluImageAdjustCore.Slider) {
-            IlluImageAdjustCore.Slider.updateRanges(document.getElementById('pm-panel-edit'), 'pm-slider-', photo.useRawMode);
+            const panel = document.getElementById('pm-sidebar');
+            syncSliderOptions(panel, photo);
+            IlluImageAdjustCore.Slider.updateRanges(panel, 'pm-slider-', photo.useRawMode);
         }
 
         if (isInitial) {
@@ -1319,6 +1505,24 @@
         } else {
             renderActivePhoto();
         }
+    }
+
+    /**
+     * Remet les cases « Masque » et « Étendre » dans l'état enregistré pour la
+     * photo, avant que updateRanges ne recalcule les bornes.
+     */
+    function syncSliderOptions(panel, photo) {
+        if (!panel || !photo) return;
+        const maskOn = photo.params.maskOn || {};
+        const extend = photo.params.extend || {};
+        panel.querySelectorAll('.illu-pm-opt-mask').forEach(box => {
+            const key = box.id.replace(/^pm-slider-/, '').replace(/-mask$/, '');
+            box.checked = maskOn[key] !== false;
+        });
+        panel.querySelectorAll('.illu-pm-opt-ext').forEach(box => {
+            const key = box.id.replace(/^pm-slider-/, '').replace(/-ext$/, '');
+            box.checked = !!extend[key];
+        });
     }
 
     function updateActiveParams(key, val) {
@@ -1331,16 +1535,47 @@
         renderFilmstrip();
     }
 
+    /**
+     * Réinitialisation complète : les curseurs, mais aussi la géométrie.
+     * Un recadrage ou une rotation modifient l'image elle-même, pas des
+     * paramètres — les oublier laissait la photo tronquée ou tournée après un
+     * « Réinitialiser ».
+     */
     function resetActiveParams() {
         if (!state.activeId) return;
         const photo = state.photos.find(p => p.id === state.activeId);
         if (!photo) return;
+
         photo.params = deepCloneParams(DEFAULT_PARAMS);
+        if (typeof photo.baselineExposure === 'number') {
+            // On revient au point de départ du RAW, pas à une exposition nulle
+            // qui rendrait l'image noire.
+            photo.params.exposure = photo.baselineExposure;
+        }
         if (photo.metadata) {
             applyMetadataPresets(photo);
         }
+
+        if (photo.originalImageData) {
+            const o = photo.originalImageData;
+            photo.imageData = carryRawData(
+                new ImageData(new Uint8ClampedArray(o.data), o.width, o.height),
+                o
+            );
+            photo.useRawMode = !!photo.imageData.rawFloatData;
+            photo.previewImageData = downscaleForPreview(photo.imageData);
+            photo.thumbUrl = generateThumbUrl(photo.previewImageData);
+            // Le canevas doit être redimensionné : la géométrie a changé.
+            state.currentCanvasWidth = 0;
+            state.currentCanvasHeight = 0;
+            state.scratchCanvas = null;
+            photo.previewCanvas = null;
+        }
+
+        cancelCropMode();
         photo.isModified = false;
         selectPhoto(photo.id);
+        renderFilmstrip();
     }
 
     function applyToAll() {
@@ -1513,14 +1748,25 @@
                 // Wrap in object mimicking ImageData but containing Float32Array
                 visibleImageData = { width: procW, height: procH, data: floatView };
             } else if (photo.useRawMode) {
-                console.warn('[RAW DEBUG] useRawMode=true but NO rawFloatData on imageData!');
+                // Filet de sécurité : sans données flottantes, le mode RAW ferait
+                // interpréter un buffer sRGB comme s'il était linéaire, et les
+                // couleurs partiraient. On repasse proprement en 8 bits.
+                console.warn('[PhotoMode] Données 14 bits absentes — retour au traitement 8 bits.');
+                photo.useRawMode = false;
             }
 
             if (state.showEffects && window.illuApplyCameraRawParams) {
                 const p = Object.assign({}, photo.params, {
                     isLivePreview: true,
                     u_res: [procW, procH], // Use processed resolution for shaders
-                    isRawMode: photo.useRawMode // Tell shader to act on full dynamic range
+                    isRawMode: photo.useRawMode, // Tell shader to act on full dynamic range
+                    // Le tone mapping doit être calé sur le même blanc que celui de
+                    // l'export, sinon l'aperçu et le fichier final divergent.
+                    sourceWhite: photo.useRawMode ? (photo.imageData.sourceWhite || 1.0) : 1.0,
+                    // Le grain et la clarté s'indexent sur la pleine résolution :
+                    // leur rendu ne dépend donc pas du niveau de détail de l'aperçu.
+                    fullWidth: W,
+                    fullHeight: H
                 });
                 
                 // Process ONLY the visible portion at LOD resolution
@@ -1573,7 +1819,10 @@
                 const extendedParams = Object.assign({}, p.params, {
                     u_res: [p.imageData.width, p.imageData.height],
                     isLivePreview: false,
-                    isRawMode: p.useRawMode
+                    isRawMode: p.useRawMode,
+                    sourceWhite: p.useRawMode ? (p.imageData.sourceWhite || 1.0) : 1.0,
+                    fullWidth: p.imageData.width,
+                    fullHeight: p.imageData.height
                 });
                 const outId = window.illuApplyCameraRawParams ? window.illuApplyCameraRawParams(p.imageData, extendedParams) : p.imageData;
 
@@ -1997,6 +2246,9 @@
             photo.imageData.width,
             photo.imageData.height
         );
+        // Les données 14 bits sont immuables : on en garde la référence, sans
+        // recopier des dizaines de mégaoctets à chaque instantané.
+        carryRawData(copy, photo.imageData);
         const entry = {
             photoId: photo.id,
             imageData: copy,
@@ -2028,11 +2280,15 @@
         if (!entry) return;
         const photo = state.photos.find(p => p.id === entry.photoId);
         if (!photo) return;
-        photo.imageData = new ImageData(
-            new Uint8ClampedArray(entry.imageData.data),
-            entry.imageData.width,
-            entry.imageData.height
+        photo.imageData = carryRawData(
+            new ImageData(
+                new Uint8ClampedArray(entry.imageData.data),
+                entry.imageData.width,
+                entry.imageData.height
+            ),
+            entry.imageData
         );
+        photo.useRawMode = !!photo.imageData.rawFloatData;
         photo.previewImageData = downscaleForPreview(photo.imageData);
         photo.thumbUrl = generateThumbUrl(photo.previewImageData);
         photo.params = Object.assign({}, entry.params);

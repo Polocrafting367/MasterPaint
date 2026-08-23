@@ -104,6 +104,17 @@ class WasmManager {
         }
     }
 
+    /**
+     * @deprecated Le traitement Camera Raw passe désormais par
+     * js/effects/photo-pipeline.js (CPU flottant) et par le shader camera_raw
+     * (GPU), qui partagent une définition mathématique unique.
+     *
+     * Cette implémentation Wasm produisait une image différente des deux autres
+     * — elle repassait en 8 bits dès la conversion sRGB, écrasant la dynamique
+     * d'un RAW avant les outils couleur — de sorte que le rendu changeait selon
+     * le moteur retenu. Elle est conservée pour référence mais n'est plus
+     * appelée ; la réactiver exige d'abord de réaligner assembly/camera_raw.ts.
+     */
     applyCameraRaw(imageData, params = {}, width = 0, height = 0) {
         if (!this.isLoaded) return null;
 

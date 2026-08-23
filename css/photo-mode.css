@@ -876,3 +876,58 @@ body.illu-photo-mode-active #status-mode {
 body.illu-photo-mode-active .illu-sub-menubar {
     display: none;
 }
+
+/* ——— Options par réglage : masque local et course étendue ——— */
+.illu-pm-opt-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 3px 0 0 2px;
+}
+
+.illu-pm-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0.75;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.illu-pm-opt:hover {
+    opacity: 1;
+}
+
+/* Cases à cocher des options Camera Raw : rendu personnalisé garanti, même si le
+   thème applique `appearance: none` sans dessiner la case (sinon seuls les libellés
+   « Masque » / « Étendre » resteraient visibles, sans boîte cochable). */
+.illu-pm-opt-row .illu-pm-opt input[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 14px !important;
+    height: 14px !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    border: 1px solid var(--mp-border, rgba(128, 128, 136, 0.6)) !important;
+    border-radius: 3px !important;
+    background: var(--mp-surface, #ffffff) !important;
+    position: relative;
+    cursor: pointer;
+}
+
+.illu-pm-opt-row .illu-pm-opt input[type="checkbox"]:checked {
+    background-color: color-mix(in srgb, var(--mp-accent, #0d9f9f) 62%, var(--mp-surface, #ffffff)) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.4 8.3 L6.6 11.5 L12.7 5.2' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 100% 100% !important;
+}
+
+/* Neutralise le tracé de coche des thèmes (ex. win98, mac lion) pour éviter tout
+   chevauchement avec le SVG ci-dessus. */
+.illu-pm-opt-row .illu-pm-opt input[type="checkbox"]:checked::after {
+    content: none !important;
+}

@@ -2,7 +2,13 @@
  * Réglage des niveaux (entrée / sortie, gamma, canaux RVB) — style Win98 / thème Illu.
  */
 (function () {
-    const PREVIEW_MAX = 880;
+    /*
+     * Aperçu réduit : chaque déplacement de poignée relance une application des niveaux
+     * + deux histogrammes. À 880 px cela représentait ~770 000 pixels par image et par
+     * geste ; 560 px divise la charge par 2,5 sans différence visible dans la vignette
+     * d'aperçu, et le calcul part de toute façon dans image-adjust-worker.
+     */
+    const PREVIEW_MAX = 560;
 
     function tKey(k, fb) {
         return window.IlluI18n && typeof window.IlluI18n.t === 'function' ? window.IlluI18n.t(k) : fb;
@@ -301,6 +307,7 @@
         syncHandles(root);
     }
 
+    /** Positionne les poignées sur les rampes (horizontales, alignées sous l'histogramme). */
     function syncHandles(root) {
         const p = readParams(root);
         const lo = root.querySelector('.illu-lvl-handle--in-lo');
@@ -308,10 +315,10 @@
         const olo = root.querySelector('.illu-lvl-handle--out-lo');
         const ohi = root.querySelector('.illu-lvl-handle--out-hi');
         const pct = (v) => `${(v / 255) * 100}%`;
-        if (lo) lo.style.bottom = pct(p.inBlack);
-        if (hi) hi.style.bottom = pct(p.inWhite);
-        if (olo) olo.style.bottom = pct(p.outBlack);
-        if (ohi) ohi.style.bottom = pct(p.outWhite);
+        if (lo) lo.style.left = pct(p.inBlack);
+        if (hi) hi.style.left = pct(p.inWhite);
+        if (olo) olo.style.left = pct(p.outBlack);
+        if (ohi) ohi.style.left = pct(p.outWhite);
     }
 
     function drawHistogramOnCanvas(canvas, hist, opts) {
@@ -530,7 +537,7 @@
         );
         if (!ramp) return;
         const r = ramp.getBoundingClientRect();
-        const t = clamp01((r.bottom - ev.clientY) / Math.max(1, r.height));
+        const t = clamp01((ev.clientX - r.left) / Math.max(1, r.width));
         const v = Math.round(t * 255);
         const p = readParams(root);
         if (kind === 'in') {
@@ -560,7 +567,7 @@
     function buildPanel() {
         const root = document.createElement('div');
         root.id = 'illu-levels-root';
-        root.className = 'illu-levels-overlay';
+        root.className = 'illu-levels-overlay illu-lvl--compact';
         root.innerHTML = `
             <div class="illu-lvl-backdrop" aria-hidden="true"></div>
             <div class="window floating-window illu-lvl-window" role="dialog" aria-modal="true" aria-labelledby="illu-lvl-title">
@@ -571,45 +578,51 @@
                     </div>
                 </div>
                 <div class="window-body illu-lvl-body">
-                    <div class="illu-lvl-main">
-                        <div class="illu-lvl-hist-block">
-                            <span class="illu-lvl-col-title" data-i18n="dlg.levelsHistIn">Histogramme d’entrée</span>
-                            <canvas id="illu-lvl-hist-in" class="illu-lvl-hist" width="256" height="120"></canvas>
-                        </div>
-                        <div class="illu-lvl-col illu-lvl-col--entr">
-                            <span class="illu-lvl-col-title" data-i18n="dlg.levelsInput">Entrée</span>
-                            <input type="number" class="illu-lvl-num" id="illu-lvl-in-white" min="0" max="255" value="255" title="">
-                            <div class="illu-lvl-ramp-wrap illu-lvl-ramp-wrap--in">
-                                <div class="illu-lvl-ramp"></div>
-                                <button type="button" class="illu-lvl-handle illu-lvl-handle--in-hi" data-illu-lvl-handle="hi" aria-label=""></button>
-                                <button type="button" class="illu-lvl-handle illu-lvl-handle--in-lo" data-illu-lvl-handle="lo" aria-label=""></button>
+                    <!--
+                        Disposition : à gauche les deux histogrammes empilés avec, entre eux,
+                        les rampes Entrée / Sortie ; à droite l'aperçu. Les rampes verticales
+                        d'origine imposaient une fenêtre très haute et très large pour rien.
+                    -->
+                    <div class="illu-lvl-split">
+                        <div class="illu-lvl-controls">
+                            <div class="illu-lvl-stack">
+                                <span class="illu-lvl-col-title" data-i18n="dlg.levelsInput">Entrée</span>
+                                <canvas id="illu-lvl-hist-in" class="illu-lvl-hist" width="256" height="72"></canvas>
+                                <div class="illu-lvl-ramp-wrap illu-lvl-ramp-wrap--in">
+                                    <div class="illu-lvl-ramp"></div>
+                                    <button type="button" class="illu-lvl-handle illu-lvl-handle--in-hi" data-illu-lvl-handle="hi" aria-label="${tKey('dlg.levelsInWhite', 'Point blanc d’entrée')}"></button>
+                                    <button type="button" class="illu-lvl-handle illu-lvl-handle--in-lo" data-illu-lvl-handle="lo" aria-label="${tKey('dlg.levelsInBlack', 'Point noir d’entrée')}"></button>
+                                </div>
+                                <div class="illu-lvl-nums">
+                                    <input type="number" class="illu-lvl-num" id="illu-lvl-in-black" min="0" max="255" value="0">
+                                    <div class="illu-lvl-gamma-row">
+                                        <label class="illu-lvl-gamma-lab" for="illu-lvl-gamma-range" data-i18n="dlg.levelsGamma">Gamma</label>
+                                        <div class="fx-track illu-lvl-gamma-track">
+                                            <input type="range" class="fx-range" id="illu-lvl-gamma-range" min="10" max="999" value="100" step="1">
+                                        </div>
+                                        <input type="text" class="illu-lvl-num illu-lvl-num--gamma" id="illu-lvl-gamma" inputmode="decimal" value="1,00">
+                                    </div>
+                                    <input type="number" class="illu-lvl-num" id="illu-lvl-in-white" min="0" max="255" value="255">
+                                </div>
                             </div>
-                            <input type="number" class="illu-lvl-num" id="illu-lvl-in-black" min="0" max="255" value="0">
-                            <div class="illu-lvl-gamma-block">
-                                <label class="illu-lvl-gamma-lab" for="illu-lvl-gamma-range" data-i18n="dlg.levelsGamma">Gamma (milieu)</label>
-                                <div class="illu-lvl-gamma-row">
-                                    <input type="range" id="illu-lvl-gamma-range" min="10" max="999" value="100" step="1">
-                                    <input type="text" class="illu-lvl-num illu-lvl-num--gamma" id="illu-lvl-gamma" inputmode="decimal" value="1,00">
+                            <div class="illu-lvl-stack">
+                                <span class="illu-lvl-col-title" data-i18n="dlg.levelsOutput">Sortie</span>
+                                <canvas id="illu-lvl-hist-out" class="illu-lvl-hist" width="256" height="72"></canvas>
+                                <div class="illu-lvl-ramp-wrap illu-lvl-ramp-wrap--out">
+                                    <div class="illu-lvl-ramp"></div>
+                                    <button type="button" class="illu-lvl-handle illu-lvl-handle--out-hi" data-illu-lvl-handle="hi" aria-label="${tKey('dlg.levelsOutWhite', 'Point blanc de sortie')}"></button>
+                                    <button type="button" class="illu-lvl-handle illu-lvl-handle--out-lo" data-illu-lvl-handle="lo" aria-label="${tKey('dlg.levelsOutBlack', 'Point noir de sortie')}"></button>
+                                </div>
+                                <div class="illu-lvl-nums">
+                                    <input type="number" class="illu-lvl-num" id="illu-lvl-out-black" min="0" max="255" value="0">
+                                    <span class="illu-lvl-nums-spacer"></span>
+                                    <input type="number" class="illu-lvl-num" id="illu-lvl-out-white" min="0" max="255" value="255">
                                 </div>
                             </div>
                         </div>
-                        <div class="illu-lvl-col illu-lvl-col--sortie">
-                            <span class="illu-lvl-col-title" data-i18n="dlg.levelsOutput">Sortie</span>
-                            <input type="number" class="illu-lvl-num" id="illu-lvl-out-white" min="0" max="255" value="255">
-                            <div class="illu-lvl-ramp-wrap illu-lvl-ramp-wrap--out">
-                                <div class="illu-lvl-ramp"></div>
-                                <button type="button" class="illu-lvl-handle illu-lvl-handle--out-hi" data-illu-lvl-handle="hi" aria-label=""></button>
-                                <button type="button" class="illu-lvl-handle illu-lvl-handle--out-lo" data-illu-lvl-handle="lo" aria-label=""></button>
-                            </div>
-                            <input type="number" class="illu-lvl-num" id="illu-lvl-out-black" min="0" max="255" value="0">
+                        <div class="illu-lvl-preview-wrap">
+                            <canvas id="illu-lvl-preview" class="illu-lvl-preview" width="1" height="1"></canvas>
                         </div>
-                        <div class="illu-lvl-hist-block">
-                            <span class="illu-lvl-col-title" data-i18n="dlg.levelsHistOut">Histogramme de sortie</span>
-                            <canvas id="illu-lvl-hist-out" class="illu-lvl-hist" width="256" height="120"></canvas>
-                        </div>
-                    </div>
-                    <div class="illu-lvl-preview-wrap">
-                        <canvas id="illu-lvl-preview" class="illu-lvl-preview" width="1" height="1"></canvas>
                     </div>
                     <div class="illu-lvl-foot">
                         <div class="illu-lvl-foot-left">

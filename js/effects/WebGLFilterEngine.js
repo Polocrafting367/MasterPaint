@@ -180,6 +180,7 @@ window.WebGLFilterEngine = {
             if (Array.isArray(val)) {
                 if (val.length === 2) this.gl.uniform2f(loc, val[0], val[1]);
                 else if (val.length === 3) this.gl.uniform3f(loc, val[0], val[1], val[2]);
+                else if (val.length === 4) this.gl.uniform4f(loc, val[0], val[1], val[2], val[3]);
             } else if (typeof val === 'boolean') {
                 this.gl.uniform1i(loc, val ? 1 : 0);
             } else {
@@ -239,6 +240,7 @@ window.WebGLFilterEngine = {
             if (Array.isArray(val)) {
                 if (val.length === 2) this.gl.uniform2f(loc, val[0], val[1]);
                 else if (val.length === 3) this.gl.uniform3f(loc, val[0], val[1], val[2]);
+                else if (val.length === 4) this.gl.uniform4f(loc, val[0], val[1], val[2], val[3]);
             } else if (typeof val === 'boolean') {
                 this.gl.uniform1i(loc, val ? 1 : 0);
             } else {

@@ -569,7 +569,8 @@ body.illu-toolbar-ribbon .illu-ribbon-group[data-illu-ribbon-group="size"] .illu
     min-width: 118px;
 }
 
-body.illu-toolbar-ribbon #pencil-close-row {
+body.illu-toolbar-ribbon #pencil-close-row,
+body.illu-toolbar-ribbon #pencil-close-row-2 {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;

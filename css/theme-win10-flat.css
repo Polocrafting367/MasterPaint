@@ -761,38 +761,52 @@ input[type="checkbox"] {
     flex-shrink: 0;
 }
 
+/*
+ * `background-color`, et surtout pas le raccourci `background` : celui-ci
+ * réinitialise aussi `background-image`, donc il effaçait le SVG de la coche.
+ * Comme ce sélecteur est plus spécifique que `input[type="checkbox"]:checked`,
+ * AUCUNE case cochée n'affichait son état en thème sombre — dans toute
+ * l'application, pas seulement dans le mode photo. Le même piège était déjà
+ * documenté plus bas pour `:active`.
+ */
 body.theme-dark input[type="checkbox"] {
-    background: #2b2b2b;
+    background-color: #2b2b2b;
     border-color: #ffffff;
+}
+
+/* Doit repasser devant la règle ci-dessus, d'où le sélecteur complet. */
+body.theme-dark input[type="checkbox"]:checked {
+    background-color: var(--mp-accent);
+    border-color: var(--mp-accent);
 }
 
 input[type="checkbox"]:hover {
     border-color: var(--mp-accent);
 }
 
+/*
+ * Coche : vraie coche vectorielle plutôt qu'un « L » de 3x7 px pivoté à 45°.
+ * L'ancien tracé faisait 2 px de large sur un carré de 16 px et se lisait mal sur
+ * la couleur d'accentuation — d'où l'impression que la case n'était pas validée.
+ * Le SVG garde un trait net à toute densité d'écran et remplit mieux la case.
+ */
 input[type="checkbox"]:checked {
-    background: var(--mp-accent);
+    background-color: var(--mp-accent);
     border-color: var(--mp-accent);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.2 8.5 L6.3 11.7 L12.8 4.7' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
 }
 
+/* L'ancien pseudo-élément ne doit pas se superposer au tracé SVG. */
 input[type="checkbox"]:checked::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 5px;
-    width: 3px;
-    height: 7px;
-    border: solid #ffffff;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    content: none;
 }
 
-body.theme-dark input[type="checkbox"]:checked::after {
-    border-color: #ffffff;
-}
-
+/* `background-color` et non le raccourci : sinon l'appui effacerait la coche. */
 input[type="checkbox"]:active {
-    background: #cccccc;
+    background-color: #cccccc;
 }
 
 /* ——— Slider / Jauge Universelle ——— */
@@ -4763,8 +4777,14 @@ input[type="radio"] {
 }
 
 body.theme-dark input[type="radio"] {
-    background: #2b2b2b;
+    background-color: #2b2b2b;
     border-color: #ffffff;
+}
+
+/* Même raison que pour les cases à cocher : la règle sombre est plus
+   spécifique et masquait la bordure d'accentuation de l'état sélectionné. */
+body.theme-dark input[type="radio"]:checked {
+    border-color: var(--mp-accent);
 }
 
 input[type="radio"]:hover {
@@ -5394,3 +5414,22 @@ body.illu-rbgg-open { overflow: hidden; }
     display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;
 }
 .illu-rbgg-apply-btn { font-weight: bold; }
+
+/* ——— Curseurs des fenêtres d'effet (voir css/effects-compact.css) ———
+   Aspect Windows 10/11 : pastille pleine à la couleur d'accentuation, cerclée de
+   blanc, sans biseau ni dégradé. Le repli biseauté d'effects-compact.css reste
+   celui du thème Windows 98, qui n'a pas besoin d'être touché. */
+:root {
+    --fx-thumb-w: 12px;
+    --fx-thumb-h: 18px;
+    --fx-thumb-radius: 9px;
+    --fx-thumb-bg: var(--mp-accent);
+    --fx-thumb-border: 2px solid rgba(255, 255, 255, .92);
+    --fx-thumb-shadow: 0 1px 3px rgba(0, 0, 0, .32);
+    --fx-thumb-focus: color-mix(in srgb, var(--mp-accent) 55%, transparent);
+}
+
+body.theme-dark {
+    --fx-thumb-border: 2px solid rgba(255, 255, 255, .78);
+    --fx-thumb-shadow: 0 1px 4px rgba(0, 0, 0, .55);
+}

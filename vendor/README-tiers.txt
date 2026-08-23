@@ -32,3 +32,18 @@ Pour utiliser une copie locale du paquet npm :
   - Remplissage contenu : extension du masque, intensité du mélange original ↔ inpainting, transparence.
 
 Licences : respecter les licences d’OpenCV, d’imgly et des modèles fournis avec background-removal.
+
+4) Encodeurs du mode animation (vendor/anim/, copie locale — aucun chargement réseau)
+--------------------------------------------------------------------------------------
+  - gifenc (MIT, Matt DesLauriers) — encodeur GIF animé (palette + LZW).
+        dist/gifenc.js (CommonJS) enveloppé pour exposer window.gifenc.
+        https://github.com/mattdesl/gifenc
+  - mp4-muxer (MIT, Vanilla) — multiplexeur MP4 (H.264) pour WebCodecs VideoEncoder.
+        build/mp4-muxer.js (UMD, global Mp4Muxer). https://github.com/Vanilagy/mp4-muxer
+  - webm-muxer (MIT, Vanilla) — multiplexeur WebM (VP9). build/webm-muxer.js (UMD,
+        global WebMMuxer). https://github.com/Vanilagy/webm-muxer
+
+Ces trois fichiers sont embarqués localement sous vendor/anim/ et chargés en <script>
+classique (aucune dépendance réseau). Le rendu GIF utilise gifenc ; MP4/WebM utilisent
+l'API navigateur WebCodecs (VideoEncoder) + le muxeur correspondant, avec repli
+MediaRecorder (WebM) si WebCodecs est indisponible.

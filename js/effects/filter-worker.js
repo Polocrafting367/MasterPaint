@@ -30,10 +30,12 @@ var document = {
         }
     }
     const deps = [
+        'photo-pipeline.js',
         'radial-zoom-blur.js',
         'ral_colors.js',
         'ChromaKeyer.js',
         'vhs-core.js',
+        'halftone-core.js',
         'image-adjust-core.js',
         'pdn-effects.js'
     ];
@@ -440,7 +442,10 @@ const FilterManager = {
         // --- High Performance Wasm Path ---
         // brightness avec température/teinte : le Wasm ne les gère pas → forcer le chemin JS
         const _bcExtra = this.currentEffect === 'brightness' && ((val('ef-bc-temp') || 0) !== 0 || (val('ef-bc-tint') || 0) !== 0);
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(this.currentEffect) && !_bcExtra) {
+        // halftone : la trame Wasm ignore variante/angle/papier et module les points par l'alpha
+        // de l'image → toujours passer par illuApplyHalftone (points pleins, CMJN…).
+        const _jsOnly = _bcExtra || this.currentEffect === 'halftone';
+        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded && MasterPaintWasm.isEffectSupported(this.currentEffect) && !_jsOnly) {
             try {
                 const res = MasterPaintWasm.applyFilter(this.currentEffect, new ImageData(new Uint8ClampedArray(srcOrig), w, h), {
                     ...vals,
@@ -972,18 +977,11 @@ const FilterManager = {
                 this.ctx.putImageData(img, 0, 0); return;
             }
             case 'halftone': {
-                const dotSize = pxInt(val('ef-half-rad')) * 1.5, freq = (2 * Math.PI) / dotSize, angle = Math.PI / 4, cosA = Math.cos(angle), sinA = Math.sin(angle);
-                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
-                const total = ey - sy;
-                for (let y = sy; y < ey; y++) {
-                    if (y % 40 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Demi-teintes");
-                    for (let x = 0; x < w; x++) {
-                    const luma = (0.299 * d_[((y*w+x)*4)] + 0.587 * d_[((y*w+x)*4)+1] + 0.114 * d_[((y*w+x)*4)+2]) / 255;
-                    const rotX = x * cosA - y * sinA, rotY = x * sinA + y * cosA;
-                    const pattern = (Math.sin(rotX * freq) + Math.sin(rotY * freq)) / 2, thresh = (pattern + 1) / 2, v = luma >= thresh ? 255 : 0, i = (y * w + x) * 4;
-                    d_[i] = v; d_[i + 1] = v; d_[i + 2] = v;
-                } }
-                this.ctx.putImageData(img, 0, 0); return;
+                const opts = illuHalftoneOptsFromVals(vals, ps);
+                const label = opts.mode === 'cmyk' ? 'Trame CMJN' : 'Demi-teintes';
+                const res = illuApplyHalftone(srcOrig, w, h, opts, sy, ey, (p) => this.reportProgress(p, label));
+                this.ctx.putImageData(new ImageData(res, w, h), 0, 0);
+                return;
             }
             case 'duotone': {
                 const c1 = this._parseHexColor(vals['ef-duo-c1'] || '#1a0533'), c2 = this._parseHexColor(vals['ef-duo-c2'] || '#fff5e0'), piv = val('ef-duo-mid') || 128;
@@ -1033,6 +1031,50 @@ const FilterManager = {
                 }
                 const params =
                     typeof illuMergeVhsParams === 'function' ? illuMergeVhsParams(vals) : Object.assign({}, vals);
+                /*
+                 * Aperçu réduit : les réglages exprimés en pixels doivent suivre l'échelle,
+                 * sinon un décalage chroma de 13 px paraît deux fois plus fort sur un aperçu
+                 * demi-résolution que sur le rendu final.
+                 *
+                 * Trois catégories. Les autres réglages (chroma_bleed en dB, saturations,
+                 * fréquences, band_patina en fraction) ne sont pas des longueurs : les
+                 * mettre à l'échelle changerait le rendu, et ramener pixel_size sous 1 px
+                 * fait tourner le cœur de l'effet à vide.
+                 *
+                 * luma_smear et tear_max_height sont volontairement absents : ce sont des
+                 * pourcentages (intensité du bavement, hauteur de zone de déchirure en %
+                 * de l'image), pas des distances en pixels.
+                 */
+                if (ps < 1 - 1e-9) {
+                    /* Longueurs continues : une valeur fractionnaire ne gêne pas. */
+                    const VHS_LEN_KEYS = [
+                        'crop_padding', 'crop_feather', 'shift_y', 'shift_r', 'shift_g', 'shift_b',
+                        'head_switch_pull', 'head_switch_rows'
+                    ];
+                    for (let i = 0; i < VHS_LEN_KEYS.length; i++) {
+                        const k = VHS_LEN_KEYS[i];
+                        const v = params[k];
+                        if (typeof v === 'number' && v !== 0) params[k] = v * ps;
+                    }
+                    /*
+                     * Rayons servant d'index de boucle : ils doivent rester entiers. Un
+                     * chroma_blur de 25 px ramené à 9,375 indexait rowI/rowQ en décimal —
+                     * `undefined`, puis NaN, et un aperçu entièrement noir.
+                     */
+                    const VHS_RADIUS_KEYS = ['chroma_blur'];
+                    for (let i = 0; i < VHS_RADIUS_KEYS.length; i++) {
+                        const k = VHS_RADIUS_KEYS[i];
+                        const v = params[k];
+                        if (typeof v === 'number' && v > 0) params[k] = Math.max(0, Math.round(v * ps));
+                    }
+                    /* Épaisseurs en pixels entiers : jamais moins d'un pixel. */
+                    const VHS_THICK_KEYS = ['pixel_size', 'tear_thickness', 'dropout_thickness'];
+                    for (let i = 0; i < VHS_THICK_KEYS.length; i++) {
+                        const k = VHS_THICK_KEYS[i];
+                        const v = params[k];
+                        if (typeof v === 'number' && v > 0) params[k] = Math.max(1, Math.round(v * ps));
+                    }
+                }
                 const out = applyVhs(new Uint8ClampedArray(srcOrig), w, h, params, 0);
                 if (out) {
                     this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
@@ -1432,32 +1474,102 @@ const FilterManager = {
                 return;
             }
             case 'unfocus': {
-                // OpenPDN UnfocusEffect — flou disque (moyenne prémultipliée séparable)
-                const radius = pxRad(val('ef-unfocus-r') || 4) || 1;
-                const pm = new Float32Array(w * h * 4);
-                for (let p = 0, q = 0; p < w * h; p++, q += 4) { const a = srcOrig[q + 3] / 255; pm[q] = srcOrig[q] * a; pm[q + 1] = srcOrig[q + 1] * a; pm[q + 2] = srcOrig[q + 2] * a; pm[q + 3] = srcOrig[q + 3]; }
-                const tmp = new Float32Array(w * h * 4);
-                const passBlur = (src, dst, horiz) => {
-                    const len = horiz ? w : h, lines = horiz ? h : w;
-                    for (let l = 0; l < lines; l++) {
-                        let sr = 0, sg = 0, sb = 0, sa = 0;
-                        const idx = (k) => horiz ? (l * w + k) * 4 : (k * w + l) * 4;
-                        for (let k = 0; k <= radius && k < len; k++) { const o = idx(k); sr += src[o]; sg += src[o + 1]; sb += src[o + 2]; sa += src[o + 3]; }
-                        for (let k = 0; k < len; k++) {
-                            const cnt = Math.min(k + radius, len - 1) - Math.max(k - radius, 0) + 1;
-                            const o = idx(k); dst[o] = sr / cnt; dst[o + 1] = sg / cnt; dst[o + 2] = sb / cnt; dst[o + 3] = sa / cnt;
-                            const addK = k + radius + 1, subK = k - radius;
-                            if (addK < len) { const a = idx(addK); sr += src[a]; sg += src[a + 1]; sb += src[a + 2]; sa += src[a + 3]; }
-                            if (subK >= 0) { const s = idx(subK); sr -= src[s]; sg -= src[s + 1]; sb -= src[s + 2]; sa -= src[s + 3]; }
-                        }
+                // Flou d'objectif / BOKEH : vrai disque circulaire + floraison des hautes lumières.
+                // La moyenne se fait en espace « lumière » (v^gamma) : les points clairs dominent et
+                // se répandent en disques lumineux — la signature du bokeh, absente d'un flou moyen.
+                const radius = pxRad(val('ef-unfocus-r') || 8) || 1;
+                const hl = Math.max(0, Math.min(1, (val('ef-unfocus-hl') != null ? val('ef-unfocus-hl') : 55) / 100));
+                const gamma = 1 + hl * 3;       // 1 = flou plat, 4 = fort bloom
+                const invG = 1 / gamma;
+                const N = w * h;
+                // Prémultiplié alpha, élevé en espace lumière
+                const pr = new Float32Array(N), pg = new Float32Array(N), pb = new Float32Array(N), pa = new Float32Array(N);
+                for (let p = 0, q = 0; p < N; p++, q += 4) {
+                    const a = srcOrig[q + 3] / 255;
+                    pr[p] = Math.pow(srcOrig[q] * a, gamma);
+                    pg[p] = Math.pow(srcOrig[q + 1] * a, gamma);
+                    pb[p] = Math.pow(srcOrig[q + 2] * a, gamma);
+                    pa[p] = Math.pow(srcOrig[q + 3], gamma);
+                }
+                // Sommes-préfixes horizontales par ligne (→ somme d'un segment en O(1))
+                const W1 = w + 1;
+                const sr = new Float64Array(W1 * h), sg = new Float64Array(W1 * h), sb = new Float64Array(W1 * h), sa = new Float64Array(W1 * h);
+                for (let y = 0; y < h; y++) {
+                    const ro = y * W1, po = y * w;
+                    for (let x = 0; x < w; x++) {
+                        sr[ro + x + 1] = sr[ro + x] + pr[po + x];
+                        sg[ro + x + 1] = sg[ro + x] + pg[po + x];
+                        sb[ro + x + 1] = sb[ro + x] + pb[po + x];
+                        sa[ro + x + 1] = sa[ro + x] + pa[po + x];
                     }
-                };
-                passBlur(pm, tmp, true); passBlur(tmp, pm, false);
+                }
+                // Demi-largeur du disque pour chaque décalage vertical
+                const halfW = new Int32Array(radius + 1);
+                for (let dy = 0; dy <= radius; dy++) halfW[dy] = Math.floor(Math.sqrt(radius * radius - dy * dy));
                 const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
-                const startIdx = sy * w * 4, endIdx = ey * w * 4;
+                const total = ey - sy || 1;
+                for (let y = sy; y < ey; y++) {
+                    if ((y - sy) % 24 === 0) this.reportProgress(Math.round(((y - sy) / total) * 100), "Flou d'objectif (bokeh)");
+                    for (let x = 0; x < w; x++) {
+                        let ar = 0, ag = 0, ab = 0, aacc = 0, cnt = 0;
+                        for (let dy = -radius; dy <= radius; dy++) {
+                            const yy = y + dy; if (yy < 0 || yy >= h) continue;
+                            const hw = halfW[dy < 0 ? -dy : dy];
+                            const x0 = x - hw < 0 ? 0 : x - hw;
+                            const x1 = x + hw > w - 1 ? w - 1 : x + hw;
+                            const ro = yy * W1;
+                            ar += sr[ro + x1 + 1] - sr[ro + x0];
+                            ag += sg[ro + x1 + 1] - sg[ro + x0];
+                            ab += sb[ro + x1 + 1] - sb[ro + x0];
+                            aacc += sa[ro + x1 + 1] - sa[ro + x0];
+                            cnt += (x1 - x0 + 1);
+                        }
+                        if (cnt < 1) cnt = 1;
+                        const o = (y * w + x) * 4;
+                        const A = Math.pow(aacc / cnt, invG);   // alpha moyen (retour de l'espace lumière)
+                        const inv = A > 0 ? 255 / A : 0;
+                        d_[o] = Math.pow(ar / cnt, invG) * inv;
+                        d_[o + 1] = Math.pow(ag / cnt, invG) * inv;
+                        d_[o + 2] = Math.pow(ab / cnt, invG) * inv;
+                        d_[o + 3] = A;
+                    }
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'vibrance': {
+                // Booste surtout les couleurs peu saturées (protège les tons déjà vifs).
+                const amount = val('ef-vibr') / 100;
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const startIdx = sy * w * 4, endIdx = ey * w * 4, total = endIdx - startIdx || 1;
                 for (let i = startIdx; i < endIdx; i += 4) {
-                    const a = pm[i + 3]; const inv = a > 0 ? 255 / a : 0;
-                    d_[i] = pm[i] * inv; d_[i + 1] = pm[i + 1] * inv; d_[i + 2] = pm[i + 2] * inv; d_[i + 3] = a;
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Vibrance");
+                    const r = srcOrig[i], g = srcOrig[i + 1], b = srcOrig[i + 2];
+                    const mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+                    const avg = (r + g + b) / 3;
+                    const boost = amount * (1 - (mx - avg) / 255);
+                    d_[i] = avg + (r - avg) * (1 + boost);
+                    d_[i + 1] = avg + (g - avg) * (1 + boost);
+                    d_[i + 2] = avg + (b - avg) * (1 + boost);
+                }
+                this.ctx.putImageData(img, 0, 0); return;
+            }
+            case 'unsharp': {
+                // Masque flou : original + intensité × (original − flou), avec seuil anti-bruit.
+                // Le flou est calculé sur toute la tuile (marge incluse) pour éviter les coutures.
+                const amount = val('ef-us-amount') / 100;
+                const radius = Math.max(1, Math.round(pxRad(val('ef-us-radius') || 3)));
+                const thr = val('ef-us-threshold');
+                const blur = new Uint8ClampedArray(srcOrig);
+                this._boxBlurRGBA(blur, w, h, radius);
+                const img = new ImageData(new Uint8ClampedArray(srcOrig), w, h), d_ = img.data;
+                const startIdx = sy * w * 4, endIdx = ey * w * 4, total = endIdx - startIdx || 1;
+                for (let i = startIdx; i < endIdx; i += 4) {
+                    if ((i - startIdx) % 160000 === 0) this.reportProgress(Math.round(((i - startIdx) / total) * 100), "Masque flou");
+                    for (let c = 0; c < 3; c++) {
+                        const o = srcOrig[i + c];
+                        const diff = o - blur[i + c];
+                        if (diff > thr || diff < -thr) d_[i + c] = o + amount * diff;
+                    }
                 }
                 this.ctx.putImageData(img, 0, 0); return;
             }

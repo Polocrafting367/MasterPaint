@@ -60,6 +60,14 @@ body.theme-dark {
     vertical-align: baseline;
 }
 
+/* Étiquette BETA du libellé de catégorie (ex. « macOS ») dans le sélecteur de thème */
+.illu-theme-variant-control .illu-theme-cat-label .illu-beta-tag {
+    font-size: 7px;
+    line-height: 1.25;
+    padding: 0 3px;
+    vertical-align: baseline;
+}
+
 /* Toggles barre d’options : bouton + mot descriptif à droite */
 .illu-mode-toggle-group,
 .tool-pinned-toggles {
@@ -1491,7 +1499,8 @@ body.illu-colored-icons #tool-zoom i {
 }
 
 /* Cyan */
-body.illu-colored-icons #illu-tb-zoom-fit i {
+body.illu-colored-icons #illu-tb-zoom-fit i,
+body.illu-colored-icons #illu-tb-zoom-fit-2 i {
     color: #f97316 !important;
 }
 

@@ -210,254 +210,47 @@
         return h;
     }
 
+    /**
+     * Traitement Camera Raw complet.
+     *
+     * Délègue à IlluPhotoPipeline, qui est LA définition de référence du
+     * pipeline (voir js/effects/photo-pipeline.js). Tout le traitement s'y fait
+     * en virgule flottante : une source RAW 14 bits garde sa dynamique jusqu'aux
+     * outils couleur (température, teinte, saturation, vibrance, TSL, courbes),
+     * et la quantification 8 bits n'a lieu qu'à l'écriture du pixel de sortie.
+     *
+     * Le pipeline traite aussi la clarté, la correction du voile, le vignettage,
+     * le grain et la netteté : applyPostCameraRaw n'a donc plus rien à faire et
+     * n'est conservée que pour la compatibilité des appelants.
+     *
+     * @param {Uint8ClampedArray|Float32Array} src RGBA. Float32 = RAW linéaire.
+     * @param {object} p paramètres, éventuellement enrichis de sourceWhite /
+     *        fullWidth / fullHeight (voir photo-pipeline.js).
+     * @returns {Uint8ClampedArray} RGBA 8 bits prêt à l'affichage.
+     */
     function applyCameraRawBuffer(src, width, height, p) {
-        const isFloatArray = src instanceof Float32Array || (src && src.constructor && src.constructor.name === 'Float32Array');
-        // --- WASM Engine Integration ---
-        if (typeof MasterPaintWasm !== 'undefined' && MasterPaintWasm.isLoaded) {
-            // Setup Curves LUTs (Graphiques en courbe) for Wasm
-            const cbParams = {
-                curveMaster: p.curveMaster && p.curveMaster.length > 0 ? { lut: createCurveLUT(p.curveMaster) } : null,
-                curveR: p.curveR && p.curveR.length > 0 ? { lut: createCurveLUT(p.curveR) } : null,
-                curveG: p.curveG && p.curveG.length > 0 ? { lut: createCurveLUT(p.curveG) } : null,
-                curveB: p.curveB && p.curveB.length > 0 ? { lut: createCurveLUT(p.curveB) } : null
-            };
-
-            const res = MasterPaintWasm.applyCameraRaw(isFloatArray ? src : new ImageData(src, width, height), { 
-                ...p, 
-                cbParams,
-                hsvMixParams: {
-                    hslHue: p.hslHue,
-                    hslSat: p.hslSat,
-                    hslLum: p.hslLum
-                },
-                startY: (typeof FilterManager !== 'undefined' && typeof FilterManager._startY === 'number' ? FilterManager._startY : 0), 
-                endY: (typeof FilterManager !== 'undefined' && typeof FilterManager._endY === 'number' ? FilterManager._endY : height)
-            }, width, height);
-            
-            if (res) {
-                if (isFloatArray) {
-                    return res;
-                }
-                if (res.data) {
-                    return new Uint8ClampedArray(res.data.buffer, res.data.byteOffset, res.data.byteLength);
-                }
-            }
+        const PP = global.IlluPhotoPipeline;
+        if (!PP) {
+            console.error('[CameraRaw] photo-pipeline.js non chargé — traitement ignoré.');
+            return src instanceof Float32Array ? new Uint8ClampedArray(src.length) : src;
         }
+        p = p || {};
+        return PP.process(src, width, height, p, {
+            sourceWhite: p.sourceWhite,
+            fullWidth: p.fullWidth,
+            fullHeight: p.fullHeight,
+            grainSeed: p.grainSeed
+        });
+    }
 
-        const out = new Uint8ClampedArray(src.length);
-        const expStops = (p.exposure / 100) * 2;
-        const mult = Math.pow(2, expStops);
-        const contrastF = (100 + p.contrast) / 100;
-
-        // Setup Curves LUTs (Graphiques en courbe)
-        const lutMaster = p.curveMaster && p.curveMaster.length > 0 ? createCurveLUT(p.curveMaster) : null;
-        const lutR = p.curveR && p.curveR.length > 0 ? createCurveLUT(p.curveR) : null;
-        const lutG = p.curveG && p.curveG.length > 0 ? createCurveLUT(p.curveG) : null;
-        const lutB = p.curveB && p.curveB.length > 0 ? createCurveLUT(p.curveB) : null;
-
-        // Setup HSL Selective Arrays
-        const checkArray = (arr) => arr && arr.some(v => v !== 0);
-        const hasHsl = checkArray(p.hslHue) || checkArray(p.hslSat) || checkArray(p.hslLum);
-        const hslHueArr = p.hslHue || [0, 0, 0, 0, 0, 0, 0, 0];
-        const hslSatArr = p.hslSat || [0, 0, 0, 0, 0, 0, 0, 0];
-        const hslLumArr = p.hslLum || [0, 0, 0, 0, 0, 0, 0, 0];
-
-        const isFloat = src instanceof Float32Array || (src && src.constructor && src.constructor.name === 'Float32Array');
-
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const i = (y * width + x) * 4;
-
-                let r, g, b, a;
-                if (isFloat) {
-                    // Float32Array data is already true linear light, no gamma conversion needed
-                    r = src[i];
-                    g = src[i + 1];
-                    b = src[i + 2];
-                    a = src[i + 3] * 255;
-                } else {
-                    r = SRGB_TO_LIN[src[i]];
-                    g = SRGB_TO_LIN[src[i + 1]];
-                    b = SRGB_TO_LIN[src[i + 2]];
-                    a = src[i + 3];
-                }
-
-                r *= mult; g *= mult; b *= mult;
-
-                // Temp & Tint based on luminance zones (preserving pure black and pure white highlights)
-                const Y_orig = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                const Y_clamp = Math.max(0.0, Math.min(1.0, Y_orig));
-                const wZone = Y_clamp * (1.0 - Y_clamp) * 4.0;
-                const scaleDiv = isFloat ? 1000 : 100;
-
-                if (p.temp !== 0) {
-                    const t = (p.temp / scaleDiv) * wZone;
-                    r *= Math.max(0.0, 1 + t * 0.12);
-                    b *= Math.max(0.0, 1 - t * 0.12);
-                    g *= Math.max(0.0, 1 + t * 0.02);
-                }
-                if (p.tint !== 0) {
-                    const tn = (p.tint / scaleDiv) * wZone;
-                    r *= Math.max(0.0, 1 + tn * 0.06);
-                    b *= Math.max(0.0, 1 + tn * 0.06);
-                    g *= Math.max(0.0, 1 - tn * 0.08);
-                }
-
-                // HDR-like Luma mapping
-                let Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-                if (Y > 0.001) {
-                    let yNew = Y;
-
-                    // Highlights — ramp from Y=0.5 (w=0) to Y=1.0+ (w=1), quadratic
-                    if (p.highlights !== 0) {
-                        const hi = p.highlights / 100;
-                        let w = Math.max(0, (yNew - 0.5) / 0.5);
-                        w = w * w; // Quadratic: concentrated near whites
-                        if (hi < 0 && yNew > 0.5) {
-                            const over = yNew - 0.5;
-                            yNew = 0.5 + over * Math.pow(over + 1.0, hi * 0.5);
-                        } else {
-                            yNew += hi * w * 1.5;
-                        }
-                    }
-
-                    // Whites — only top range (Y > 0.7)
-                    if (p.whites !== 0) {
-                        const wh = p.whites / 100;
-                        const w = Math.max(0, (yNew - 0.7) / 0.3);
-                        if (wh < 0 && yNew > 0.7) {
-                            const over = yNew - 0.7;
-                            yNew = 0.7 + over * Math.pow(over + 1.0, wh * 0.6);
-                        } else {
-                            yNew += wh * w * 2.0;
-                        }
-                    }
-
-                    yNew = Math.max(0, yNew);
-                    const multLuma = yNew / Y;
-                    r *= multLuma;
-                    g *= multLuma;
-                    b *= multLuma;
-
-                    Y = yNew;
-                }
-
-                // Shadows (multiplicative tone adjustment, preserves blacks and avoids division explosions)
-                if (p.shadows !== 0) {
-                    const sh = p.shadows / 100;
-                    const w = Math.max(0, 1 - (Y / 0.5));
-                    const factor = Math.max(0, 1.0 + sh * w * w * 1.2);
-                    r *= factor;
-                    g *= factor;
-                    b *= factor;
-                }
-
-                // Blacks (multiplicative tone adjustment, preserves blacks and avoids division explosions)
-                if (p.blacks !== 0) {
-                    const bl = p.blacks / 100;
-                    const w = Math.max(0, 1 - (Y / 0.3));
-                    const factor = Math.max(0, 1.0 + bl * w * w * 1.5);
-                    r *= factor;
-                    g *= factor;
-                    b *= factor;
-                }
-
-                // Extended Reinhard tonemapping — preserves HDR range with smooth shoulder
-                // Uses luminance-based mapping to maintain color ratios
-                if (isFloat) {
-                    const maxC = Math.max(r, g, b);
-                    if (maxC > 0) {
-                        // Reinhard with white point at 4.0 (preserves detail up to ~4 stops over mid-gray)
-                        const Lw = 4.0;
-                        const mappedMax = maxC * (1.0 + maxC / (Lw * Lw)) / (1.0 + maxC);
-                        const ratio = mappedMax / maxC;
-                        r *= ratio;
-                        g *= ratio;
-                        b *= ratio;
-                    }
-                }
-
-                // --- RGB Split Toning ---
-                if (p.red || p.redHi || p.redSh || p.green || p.greenHi || p.greenSh || p.blue || p.blueHi || p.blueSh) {
-                    const wHi = Math.max(0, Y - 0.5) / 0.5;
-                    const wSh = Math.max(0, 0.5 - Y) / 0.5;
-
-                    if (p.red) r *= 1 + (p.red / 100);
-                    if (p.redHi) r *= 1 + (p.redHi / 100) * wHi * 1.5;
-                    if (p.redSh) r *= 1 + (p.redSh / 100) * wSh * 1.5;
-
-                    if (p.green) g *= 1 + (p.green / 100);
-                    if (p.greenHi) g *= 1 + (p.greenHi / 100) * wHi * 1.5;
-                    if (p.greenSh) g *= 1 + (p.greenSh / 100) * wSh * 1.5;
-
-                    if (p.blue) b *= 1 + (p.blue / 100);
-                    if (p.blueHi) b *= 1 + (p.blueHi / 100) * wHi * 1.5;
-                    if (p.blueSh) b *= 1 + (p.blueSh / 100) * wSh * 1.5;
-                }
-
-                // Conversion sRGB pour contraste, saturation, courbes et HSL
-                let r8 = fastLinToSrgbByte(r);
-                let g8 = fastLinToSrgbByte(g);
-                let b8 = fastLinToSrgbByte(b);
-
-                // Application du contraste global
-                let lr = r8 / 255; let lg = g8 / 255; let lb = b8 / 255;
-                lr = clamp01(0.5 + (lr - 0.5) * contrastF);
-                lg = clamp01(0.5 + (lg - 0.5) * contrastF);
-                lb = clamp01(0.5 + (lb - 0.5) * contrastF);
-                r8 = (lr * 255) | 0; g8 = (lg * 255) | 0; b8 = (lb * 255) | 0;
-
-                // Application des Courbes (Curves)
-                if (lutMaster) {
-                    r8 = lutMaster[r8]; g8 = lutMaster[g8]; b8 = lutMaster[b8];
-                }
-                if (lutR) r8 = lutR[r8];
-                if (lutG) g8 = lutG[g8];
-                if (lutB) b8 = lutB[b8];
-
-                // --- TSL / HSL & Vibrance ---
-                if (p.saturation !== 0 || p.vibrance !== 0 || hasHsl || (p.dehaze && p.dehaze !== 0)) {
-                    let hsl = rgbToHsl(r8, g8, b8);
-
-                    // Réglage HSL Sélectif par couleur (Pro)
-                    if (hasHsl) {
-                        const w = getHslWeightsFast(hsl.h);
-                        const hShift = (hslHueArr[w.i1] * w.w1 + hslHueArr[w.i2] * w.w2);
-                        const sShift = (hslSatArr[w.i1] * w.w1 + hslSatArr[w.i2] * w.w2);
-                        const lShift = (hslLumArr[w.i1] * w.w1 + hslLumArr[w.i2] * w.w2);
-
-                        hsl.h = (hsl.h + hShift + 360) % 360;
-                        hsl.s = Math.max(0, Math.min(100, hsl.s + sShift));
-                        hsl.l = Math.max(0, Math.min(100, hsl.l + lShift));
-                    }
-
-                    // Global Saturation & Vibrance
-                    let s = hsl.s;
-                    const satM = 1 + p.saturation / 100;
-                    s = clamp01((s / 100) * satM) * 100;
-
-                    if (p.vibrance !== 0) {
-                        const vib = p.vibrance / 100;
-                        const lowSatBoost = (1 - s / 100) * vib * 40;
-                        s = Math.max(0, Math.min(100, s + lowSatBoost));
-                    }
-
-                    // Dehaze boost saturation lightly
-                    if (p.dehaze && p.dehaze !== 0) {
-                        s = Math.min(100, s + (p.dehaze / 100) * 15 * (1 - hsl.l / 100));
-                    }
-
-                    hsl.s = s;
-                    const rgb = hslToRgb(hsl.h, hsl.s, hsl.l);
-                    r8 = rgb.r; g8 = rgb.g; b8 = rgb.b;
-                }
-
-                out[i] = r8; out[i + 1] = g8; out[i + 2] = b8; out[i + 3] = a;
-            }
-        }
-
-        return out;
+    /**
+     * Conservée pour compatibilité : le vignettage, le grain, la netteté, la
+     * clarté et la correction du voile sont désormais intégrés à
+     * applyCameraRawBuffer, à leur place correcte dans le pipeline (les deux
+     * derniers agissent en linéaire, avant le tone mapping).
+     */
+    function applyPostCameraRaw(src) {
+        return src;
     }
 
     function applySharpen(data, width, height, amount, isFloat = false) {
@@ -491,158 +284,537 @@
         return out;
     }
 
-    function suggestAutoParams(imageData) {
-        const data = imageData.data;
-        const nPx = Math.max(1, (data.length / 4) | 0);
-        const sampleTarget = 24000;
-        const pxStep = Math.max(1, Math.floor(nPx / sampleTarget));
-        const lumHist = new Uint32Array(256);
-        let sampled = 0;
-        let sumY = 0;
-        let sumY2 = 0;
-        let sumSat = 0;
-        let sumR = 0;
-        let sumG = 0;
-        let sumB = 0;
-        let gradSum = 0;
-        let gradCount = 0;
-        let edgeSum = 0;
-        let edgeCount = 0;
+    // ==================================================================
+    // Ajustement automatique
+    //
+    // Méthode : analyser la scène en LINÉAIRE (et non en sRGB, où un écart
+    // d'un diaphragme n'a pas la même taille selon la zone), en déduire des
+    // réglages par inversion des réponses connues du pipeline, puis affiner
+    // en simulant réellement le rendu sur une vignette et en corrigeant les
+    // écarts aux cibles. C'est cette boucle de vérification qui remplace les
+    // coefficients empiriques de l'ancienne version.
+    // ==================================================================
 
-        const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
-        const lerp = (a, b, t) => a + (b - a) * t;
-        const satFromRgb = (r, g, b) => {
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            if (max <= 1e-6) return 0;
-            return ((max - min) / max) * 100;
+    /** Cibles photographiques, en luminance perceptuelle (0..1). */
+    const AUTO_TARGET = {
+        /** Médiane visée pour une scène de clé normale (≈ 118/255). */
+        midtone: 0.462,
+        /** Écart-type visé : en dessous l'image est molle, au-dessus elle est dure. */
+        contrast: 0.190,
+        /** Zone morte autour de la cible de contraste : évite de corriger du bruit. */
+        contrastDead: 0.030,
+        /** Proportion de pixels tolérée au blanc pur. */
+        clipHigh: 0.0015,
+        /** Proportion tolérée au noir pur — un peu de vrai noir est souhaitable. */
+        clipLow: 0.006,
+        /** Position visée pour le point blanc (percentile 99,9). */
+        white: 0.985,
+        /** Position visée pour le point noir (percentile 0,1). */
+        black: 0.012
+    };
+
+    /**
+     * Vignette de travail en linéaire flottant.
+     * Sur un RAW on part des données 14 bits (rawFloatData) : analyser la
+     * prévisualisation 8 bits reviendrait à mesurer une image déjà écrêtée.
+     */
+    function buildAutoSample(imageData, maxEdge) {
+        const srcFloat = (imageData.rawFloatData instanceof Float32Array) ? imageData.rawFloatData
+            : (imageData.data instanceof Float32Array) ? imageData.data : null;
+        const srcW = srcFloat && imageData.rawFloatWidth ? imageData.rawFloatWidth : imageData.width;
+        const srcH = srcFloat && imageData.rawFloatHeight ? imageData.rawFloatHeight : imageData.height;
+        const scale = Math.min(1, maxEdge / Math.max(1, Math.max(srcW, srcH)));
+        const w = Math.max(1, Math.round(srcW * scale));
+        const h = Math.max(1, Math.round(srcH * scale));
+        const out = new Float32Array(w * h * 4);
+        const PP = global.IlluPhotoPipeline;
+
+        for (let y = 0; y < h; y++) {
+            const sy = Math.min(srcH - 1, Math.floor(y / scale));
+            for (let x = 0; x < w; x++) {
+                const sx = Math.min(srcW - 1, Math.floor(x / scale));
+                const si = (sy * srcW + sx) * 4;
+                const di = (y * w + x) * 4;
+                if (srcFloat) {
+                    out[di] = srcFloat[si];
+                    out[di + 1] = srcFloat[si + 1];
+                    out[di + 2] = srcFloat[si + 2];
+                } else {
+                    const d = imageData.data;
+                    out[di] = PP ? PP.SRGB_TO_LIN_8[d[si]] : d[si] / 255;
+                    out[di + 1] = PP ? PP.SRGB_TO_LIN_8[d[si + 1]] : d[si + 1] / 255;
+                    out[di + 2] = PP ? PP.SRGB_TO_LIN_8[d[si + 2]] : d[si + 2] / 255;
+                }
+                out[di + 3] = 1;
+            }
+        }
+        return { data: out, width: w, height: h, isRaw: !!srcFloat };
+    }
+
+    /** Percentile d'un tableau trié. */
+    function pct(sorted, p) {
+        if (!sorted.length) return 0;
+        const i = Math.max(0, Math.min(sorted.length - 1, Math.round(p * (sorted.length - 1))));
+        return sorted[i];
+    }
+
+    /**
+     * Mesures d'une image 8 bits déjà rendue : c'est sur elles que porte la
+     * boucle de correction, puisqu'elles décrivent ce que l'utilisateur verra.
+     */
+    function measureRendered(buf, n) {
+        const lum = new Float32Array(n);
+        let clipHigh = 0, clipLow = 0, sum = 0;
+        for (let i = 0, o = 0; i < n; i++, o += 4) {
+            const r = buf[o], g = buf[o + 1], b = buf[o + 2];
+            const l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+            lum[i] = l;
+            sum += l;
+            if (r >= 254 || g >= 254 || b >= 254) clipHigh++;
+            if (r <= 1 && g <= 1 && b <= 1) clipLow++;
+        }
+        const mean = sum / n;
+        let varSum = 0;
+        for (let i = 0; i < n; i++) { const d = lum[i] - mean; varSum += d * d; }
+        const sorted = Array.prototype.slice.call(lum).sort((a, b) => a - b);
+        return {
+            mean: mean,
+            std: Math.sqrt(varSum / n),
+            median: pct(sorted, 0.5),
+            p25: pct(sorted, 0.25),
+            p001: pct(sorted, 0.001),
+            p01: pct(sorted, 0.01),
+            p05: pct(sorted, 0.05),
+            p95: pct(sorted, 0.95),
+            p99: pct(sorted, 0.99),
+            p999: pct(sorted, 0.999),
+            clipHigh: clipHigh / n,
+            clipLow: clipLow / n
         };
-        const getPct = (hist, pct, total) => {
-            const target = Math.max(0, Math.min(total - 1, Math.round((pct / 100) * (total - 1))));
+    }
+
+    /**
+     * Analyse de la scène, en linéaire.
+     * Renvoie des grandeurs photographiques : plage dynamique en diaphragmes,
+     * clé de la scène, contraste local, voile, dominante colorée.
+     */
+    function analyseScene(sample) {
+        const { data, width, height } = sample;
+        const n = width * height;
+        const lin = new Float32Array(n);
+        const perc = new Float32Array(n);
+        let sumR = 0, sumG = 0, sumB = 0, sumSat = 0;
+        const PP = global.IlluPhotoPipeline;
+        const toPerc = (y) => (y <= 0 ? 0 : Math.pow(y, 1 / 2.2));
+
+        for (let i = 0, o = 0; i < n; i++, o += 4) {
+            const r = Math.max(0, data[o]), g = Math.max(0, data[o + 1]), b = Math.max(0, data[o + 2]);
+            const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            lin[i] = y;
+            perc[i] = toPerc(y);
+            sumR += r; sumG += g; sumB += b;
+            const mx = Math.max(r, Math.max(g, b));
+            const mn = Math.min(r, Math.min(g, b));
+            sumSat += mx > 1e-6 ? (mx - mn) / mx : 0;
+        }
+
+        const sortedLin = Array.prototype.slice.call(lin).sort((a, b) => a - b);
+        const sortedPerc = Array.prototype.slice.call(perc).sort((a, b) => a - b);
+
+        // Contraste local : écart moyen à un flou de rayon moyen. Distingue une
+        // image molle (à réveiller par la clarté) d'une image simplement peu
+        // contrastée globalement.
+        let localContrast = 0;
+        if (PP && PP.boxBlurChannel) {
+            const blur = new Float32Array(n);
+            PP.boxBlurChannel(perc, blur, width, height, Math.max(1, Math.round(Math.min(width, height) * 0.03)));
             let acc = 0;
-            for (let i = 0; i < 256; i++) {
-                acc += hist[i];
-                if (acc > target) return i;
-            }
-            return 255;
-        };
+            for (let i = 0; i < n; i++) acc += Math.abs(perc[i] - blur[i]);
+            localContrast = acc / n;
+        }
 
-        for (let p = 0; p < nPx; p += pxStep) {
-            const i = p * 4;
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            const y = 0.299 * r + 0.587 * g + 0.114 * b;
-            const yi = y < 0 ? 0 : y > 255 ? 255 : y | 0;
-            lumHist[yi]++;
-            sampled++;
-            sumY += y;
-            sumY2 += y * y;
-            sumSat += satFromRgb(r, g, b);
-            sumR += r;
-            sumG += g;
-            sumB += b;
-
-            // Quick sharpness proxy from local luma gradients.
-            const x = p % imageData.width;
-            const yPos = (p / imageData.width) | 0;
-            if (x + 1 < imageData.width && yPos + 1 < imageData.height) {
-                const iR = i + 4;
-                const iD = i + imageData.width * 4;
-                const yR = 0.299 * data[iR] + 0.587 * data[iR + 1] + 0.114 * data[iR + 2];
-                const yD = 0.299 * data[iD] + 0.587 * data[iD + 1] + 0.114 * data[iD + 2];
-                gradSum += Math.abs(y - yR) + Math.abs(y - yD);
-                gradCount++;
-            }
-
-            // Edge luminance for subtle vignette compensation.
-            const edgeBand = Math.max(8, Math.round(Math.min(imageData.width, imageData.height) * 0.1));
-            if (
-                x < edgeBand ||
-                x >= imageData.width - edgeBand ||
-                yPos < edgeBand ||
-                yPos >= imageData.height - edgeBand
-            ) {
-                edgeSum += y;
-                edgeCount++;
+        // Netteté apparente : gradient moyen.
+        let grad = 0, gradN = 0;
+        for (let y = 0; y < height - 1; y++) {
+            for (let x = 0; x < width - 1; x++) {
+                const i = y * width + x;
+                grad += Math.abs(perc[i] - perc[i + 1]) + Math.abs(perc[i] - perc[i + width]);
+                gradN++;
             }
         }
 
-        if (sampled < 1) return {};
+        const p001 = pct(sortedLin, 0.001), p01 = pct(sortedLin, 0.01), p05 = pct(sortedLin, 0.05);
+        const p25 = pct(sortedLin, 0.25);
+        const p50 = pct(sortedLin, 0.5);
+        const p95 = pct(sortedLin, 0.95), p99 = pct(sortedLin, 0.99), p999 = pct(sortedLin, 0.999);
 
-        const avgY = sumY / sampled;
-        const stdY = Math.sqrt(Math.max(0, sumY2 / sampled - avgY * avgY));
-        const avgSat = sumSat / sampled;
-        const avgR = sumR / sampled;
-        const avgG = sumG / sampled;
-        const avgB = sumB / sampled;
-        const edgeAvg = edgeCount > 0 ? edgeSum / edgeCount : avgY;
-        const p01 = getPct(lumHist, 1, sampled);
-        const p05 = getPct(lumHist, 5, sampled);
-        const p50 = getPct(lumHist, 50, sampled);
-        const p95 = getPct(lumHist, 95, sampled);
-        const p99 = getPct(lumHist, 99, sampled);
-        const dyn = Math.max(1, p95 - p05);
-        const highClip = (lumHist[250] + lumHist[251] + lumHist[252] + lumHist[253] + lumHist[254] + lumHist[255]) / sampled;
-        const lowClip = (lumHist[0] + lumHist[1] + lumHist[2] + lumHist[3] + lumHist[4] + lumHist[5]) / sampled;
-        const gradMean = gradCount > 0 ? gradSum / gradCount : 0;
+        // Plage dynamique utile, en diaphragmes.
+        const dynStops = Math.log2(Math.max(1e-6, p999) / Math.max(1e-7, p001 + 1e-7));
 
-        // Exposure: center midtones, but strongly protect highlights.
-        const targetMid = 125;
-        let midBias = (targetMid - lerp(p50, avgY, 0.4)) * 0.9;
-        if (highClip > 0.01) {
-            midBias -= (highClip * 500); 
+        // Clé de la scène : proportion de pixels sombres contre pixels clairs.
+        // Sert à ne pas transformer une photo de nuit en photo de jour.
+        let darkN = 0, brightN = 0;
+        for (let i = 0; i < n; i++) {
+            if (perc[i] < 0.20) darkN++;
+            else if (perc[i] > 0.75) brightN++;
         }
-        const exposure = clamp(Math.round(midBias), -130, 130);
+        const darkFrac = darkN / n;
+        const brightFrac = brightN / n;
 
-        // Contrast: User wants MORE contrast, punchier look!
-        const dynTarget = 210;
-        const contrastFromDyn = (dynTarget - dyn) * 0.6;
-        const contrastFromStd = (65 - stdY) * 0.5;
-        const contrast = clamp(Math.round(contrastFromDyn + contrastFromStd + 15), -40, 75);
+        // Scène à forte dynamique (contre-jour) : les deux extrémités sont
+        // peuplées et le milieu est creux.
+        let midN = 0;
+        for (let i = 0; i < n; i++) if (perc[i] >= 0.30 && perc[i] <= 0.70) midN++;
+        const midFrac = midN / n;
+        const highDynamic = (darkFrac > 0.20 && brightFrac > 0.12 && midFrac < 0.42);
 
-        // Tonal recovery: No burned whites! (Aggressive recovery)
-        const highlights = clamp(Math.round(-highClip * 800 - Math.max(0, p95 - 230) * 0.8), -100, 30);
-        const whites = clamp(Math.round((245 - p99) * 0.5 - highClip * 400), -80, 20);
-        
-        // Less burned blacks (permissive but protected)
-        const shadows = clamp(Math.round(lowClip * 300 + Math.max(0, 20 - p05) * 0.6), -20, 60);
-        const blacks = clamp(Math.round((p01 - 5) * 0.4 - lowClip * 150), -35, 30);
-
-        // White balance from global channel bias.
-        const rbDelta = (avgR - avgB) / 255;
-        const gBias = (avgG - (avgR + avgB) * 0.5) / 255;
-        const temp = clamp(Math.round(-rbDelta * 110), -70, 70);
-        const tint = clamp(Math.round(-gBias * 140), -60, 60);
-
-        // Color/texture: More colorful & clear
-        const vibrance = clamp(Math.round((42 - avgSat) * 1.1), -10, 55);
-        const saturation = clamp(Math.round((30 - avgSat) * 0.4), -10, 25);
-        const clarity = clamp(Math.round((50 - stdY) * 0.6 + 10), -10, 45);
-        const dehaze = clamp(Math.round((46 - stdY) * 0.3 + (avgY > 160 ? 10 : 0)), -5, 30);
-
-        // Sharpen only when source looks soft.
-        const sharpen = clamp(Math.round((14 - gradMean) * 2.5), 0, 40);
-
-        // Subtle vignette correction only when edges are too bright.
-        const vignette = clamp(Math.round((edgeAvg - avgY) * 0.25), -20, 25);
+        // Voile atmosphérique. Le signe distinctif n'est PAS un plancher de
+        // noirs élevé — une photo de neige en a un aussi sans être voilée —
+        // mais la conjonction d'une plage dynamique écrasée et d'un contraste
+        // local quasi nul : la brume mange le micro-détail.
+        const blackFloor = toPerc(p001);
+        const avgSat = sumSat / n;
+        const dynFor = Math.log2(Math.max(1e-6, p999) / Math.max(1e-7, p001 + 1e-7));
+        const hazeDyn = Math.max(0, Math.min(1, (2.0 - dynFor) / 1.6));
+        const hazeLoc = Math.max(0, Math.min(1, (0.006 - localContrast) / 0.005));
+        const haze = hazeDyn * hazeLoc;
 
         return {
-            exposure,
-            contrast,
-            highlights,
-            shadows,
-            whites,
-            blacks,
-            temp,
-            tint,
-            vibrance,
-            saturation,
-            clarity,
-            dehaze,
-            vignette,
-            sharpen
+            n: n,
+            p001: p001, p01: p01, p05: p05, p25: p25, p50: p50, p95: p95, p99: p99, p999: p999,
+            percMedian: pct(sortedPerc, 0.5),
+            percP05: pct(sortedPerc, 0.05),
+            percP95: pct(sortedPerc, 0.95),
+            dynStops: dynStops,
+            darkFrac: darkFrac,
+            brightFrac: brightFrac,
+            midFrac: midFrac,
+            highDynamic: highDynamic,
+            blackFloor: blackFloor,
+            haze: haze,
+            localContrast: localContrast,
+            grad: gradN ? grad / gradN : 0,
+            avgSat: avgSat,
+            avgR: sumR / n, avgG: sumG / n, avgB: sumB / n
         };
+    }
+
+    /**
+     * Position de curseur produisant un gain donné sur une étape tonale.
+     * Inverse gain = exp(amt · tanh(u/100)), la forme utilisée par le pipeline.
+     * Renvoie 0 si le gain demandé dépasse ce que l'étape peut fournir.
+     */
+    function solveToneSlider(gain, amt) {
+        if (!(gain > 0) || !isFinite(gain)) return 0;
+        const t = Math.log(gain) / amt;
+        if (t >= 0.999) return 400;
+        if (t <= -0.999) return -400;
+        // atanh
+        return 100 * 0.5 * Math.log((1 + t) / (1 - t));
+    }
+
+    /**
+     * Analyse automatique complète.
+     * @param {ImageData|{width,height,data,rawFloatData}} imageData
+     * @returns {object} paramètres prêts à être appliqués au pipeline
+     */
+    function suggestAutoParams(imageData) {
+        const PP = global.IlluPhotoPipeline;
+        if (!imageData || !imageData.width || !imageData.height) return {};
+
+        const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
+        const sample = buildAutoSample(imageData, 180);
+        const S = analyseScene(sample);
+        if (!S.n) return {};
+
+        const sourceWhite = PP ? PP.sourceWhiteFor(sample.data) : 1.0;
+        const stopsPer100 = PP ? PP.K.EXPOSURE_STOPS_PER_100 : 2;
+        const AMT_HI = PP ? PP.K.AMT_HIGHLIGHTS : 0.9;
+        const AMT_WH = PP ? PP.K.AMT_WHITES : 1.1;
+        const AMT_SH = PP ? PP.K.AMT_SHADOWS : 1.1;
+        const AMT_BL = PP ? PP.K.AMT_BLACKS : 1.3;
+
+        // ---------------------------------------------------------------
+        // 1. Exposition
+        //
+        // Cible adaptative : une scène majoritairement sombre (nuit, clé
+        // basse) ou majoritairement claire (neige, clé haute) ne doit pas
+        // être ramenée de force sur un gris moyen — ce serait la dénaturer.
+        // ---------------------------------------------------------------
+        let targetMid = AUTO_TARGET.midtone;
+        targetMid -= clamp((S.darkFrac - 0.35) * 0.30, 0, 0.10);   // clé basse : on reste sombre
+        targetMid += clamp((S.brightFrac - 0.35) * 0.24, 0, 0.08); // clé haute : on reste clair
+        if (S.highDynamic) targetMid += 0.02; // contre-jour : ouvrir un peu les ombres
+
+        // En contre-jour, la médiane globale ne veut rien dire : elle tombe
+        // entre un ciel écrasé de lumière et un sujet dans l'ombre, si bien
+        // que la viser revient à sous-exposer le sujet pour ménager le ciel.
+        // On expose alors pour le sujet — le premier quart de l'histogramme —
+        // et le ciel est rattrapé par la récupération des hautes lumières.
+        // C'est la démarche du photographe, et non la moyenne arithmétique.
+        const anchorLin = S.highDynamic ? Math.max(1e-6, S.p25) : Math.max(1e-6, S.p50);
+        const anchorTarget = S.highDynamic ? Math.max(0.26, targetMid - 0.14) : targetMid;
+        let stops = Math.log2(Math.pow(anchorTarget, 2.2) / anchorLin);
+        stops = clamp(stops, -4, 5);
+
+        // ---------------------------------------------------------------
+        // 2. Récupération des hautes lumières
+        //
+        // C'est ici que se joue le cas « image sombre à réveiller » : monter
+        // l'exposition pousse mécaniquement les hautes lumières vers le
+        // blanc. On calcule donc de combien de diaphragmes le point blanc
+        // débordera APRÈS exposition, et on demande aux hautes lumières puis
+        // aux blancs de rendre exactement cette marge.
+        // ---------------------------------------------------------------
+        const expMult = Math.pow(2, stops);
+        // Une scène de forte dynamique va recevoir beaucoup d'exposition pour
+        // son sujet : les hautes lumières devront donc être franchement
+        // rattrapées, ce que le calcul ci-dessous chiffre.
+
+        const whiteAfter = S.p999 * expMult;
+        const brightAfter = S.p95 * expMult;
+
+        let highlights = 0;
+        let whites = 0;
+        if (whiteAfter > 1.0) {
+            // Attention : le tone mapping se cale déjà sur le blanc réel de la
+            // scène et absorbe l'essentiel du dépassement. Lui ajouter une
+            // récupération calculée sur le dépassement BRUT écraserait deux
+            // fois les hautes lumières et leur ferait perdre tout modelé — le
+            // ciel deviendrait un aplat gris uniforme au lieu d'être détaillé.
+            // On n'anticipe donc qu'une correction modérée, et la boucle de
+            // vérification affine ensuite sur le rendu réellement mesuré.
+            const overStops = Math.log2(whiteAfter);
+            const hiStops = Math.min(overStops * 0.35, 0.55);
+            highlights = solveToneSlider(Math.pow(2, -hiStops), AMT_HI);
+        }
+        // Le cas inverse — aucune haute lumière n'atteint le blanc — est traité
+        // par la boucle de vérification, qui mesure le rendu réel plutôt que de
+        // l'extrapoler.
+
+        // Une scène de forte dynamique part avec un peu de récupération, sans
+        // plus : c'est la mesure du rendu qui décidera du reste.
+        if (S.highDynamic && highlights > -18) highlights = -18;
+        if (brightAfter > 0.9 && highlights > -8) highlights -= 6;
+
+        // ---------------------------------------------------------------
+        // 3. Ombres et noirs
+        //
+        // Les ombres remontent d'autant plus que la scène est contrastée et
+        // que le bas de l'histogramme est encombré. Le point noir, lui, est
+        // posé sur le percentile 0,1 : on récupère du contraste sans boucher.
+        // ---------------------------------------------------------------
+        const shadowLin = Math.max(1e-7, S.p05 * expMult);
+        const shadowPerc = Math.pow(shadowLin, 1 / 2.2);
+        let shadows = 0;
+        const shadowTarget = S.highDynamic ? 0.26 : 0.20;
+        if (shadowPerc < shadowTarget) {
+            const need = Math.pow(shadowTarget, 2.2) / Math.max(1e-7, shadowLin);
+            shadows = solveToneSlider(Math.min(need, 3.0), AMT_SH);
+        }
+
+        // Le point noir est posé par la boucle de vérification, sur le rendu
+        // mesuré : l'estimer ici à partir de l'histogramme d'entrée conduisait
+        // à l'écraser sur presque toutes les images.
+        let blacks = 0;
+
+        // ---------------------------------------------------------------
+        // 4. Contraste
+        //
+        // Mesuré, pas forfaitaire. Une scène de forte dynamique en reçoit
+        // moins : on vient d'y récupérer du détail, l'écraser serait absurde.
+        // ---------------------------------------------------------------
+        const stdPerc = Math.max(0.02, (S.percP95 - S.percP05) / 3.2);
+        let contrast = (AUTO_TARGET.contrast - stdPerc) * 120;
+        // Une scène de forte dynamique vient d'être ouverte : la réécraser
+        // annulerait la récupération.
+        if (S.highDynamic) contrast = Math.min(contrast, 6) - 10;
+        if (S.haze > 0.35) contrast += 8;
+
+        // ---------------------------------------------------------------
+        // 5. Balance des blancs — monde gris partiel, en linéaire, obtenue
+        //    en inversant la vraie courbe de température du pipeline.
+        // ---------------------------------------------------------------
+        let temp = 0, tint = 0;
+        if (PP) {
+            const STRENGTH = 0.7;
+            const solve = (target, ratioOf) => {
+                let lo = -150, hi = 150;
+                for (let it = 0; it < 26; it++) {
+                    const mid = (lo + hi) * 0.5;
+                    if (ratioOf(mid) < target) lo = mid; else hi = mid;
+                }
+                return (lo + hi) * 0.5;
+            };
+            const lr = Math.max(1e-6, S.avgR), lg = Math.max(1e-6, S.avgG), lb = Math.max(1e-6, S.avgB);
+            const wantRB = Math.pow(lb / lr, STRENGTH);
+            temp = clamp(solve(wantRB, (v) => {
+                const g = PP.whiteBalanceGains(v, 0);
+                return g.r / Math.max(1e-6, g.b);
+            }), -400, 400);
+            const wantG = Math.pow(((lr + lb) * 0.5) / lg, STRENGTH);
+            tint = clamp(solve(wantG, (v) => {
+                const g = PP.whiteBalanceGains(0, v);
+                return ((g.r + g.b) * 0.5) / Math.max(1e-6, g.g);
+            }), -400, 400);
+        }
+
+        // ---------------------------------------------------------------
+        // 6. Couleur et texture
+        // ---------------------------------------------------------------
+        const satPct = S.avgSat * 100;
+        let vibrance = clamp((32 - satPct) * 1.1, -15, 45);
+        let saturation = clamp((22 - satPct) * 0.35, -12, 16);
+
+        // Le voile décolore : sa correction rend déjà de la couleur, inutile
+        // d'en rajouter par la saturation.
+        const dehaze = clamp(Math.round(S.haze * 45), 0, 38);
+        if (dehaze > 8) { vibrance *= 0.65; saturation *= 0.55; }
+
+        // Clarté et netteté sont calées sur les valeurs réellement observées
+        // (contraste local ≈ 0,002 à 0,05 ; gradient ≈ 0,001 à 0,015 sur la
+        // vignette d'analyse), et non sur des seuils arbitraires.
+        const clarity = clamp((0.011 - S.localContrast) * 1400, -6, 28);
+        const sharpen = clamp((0.006 - S.grad) * 2500, 0, 30);
+
+        let params = {
+            exposure: clamp(Math.round((stops / stopsPer100) * 100), -220, 220),
+            contrast: clamp(Math.round(contrast), -45, 38),
+            highlights: clamp(Math.round(highlights), -220, 40),
+            shadows: clamp(Math.round(shadows), -30, 130),
+            whites: clamp(Math.round(whites), -140, 45),
+            blacks: clamp(Math.round(blacks), -70, 45),
+            temp: Math.round(temp),
+            tint: Math.round(tint),
+            vibrance: Math.round(vibrance),
+            saturation: Math.round(saturation),
+            clarity: Math.round(clarity),
+            dehaze: Math.round(dehaze),
+            sharpen: Math.round(sharpen),
+            vignette: 0
+        };
+
+        // ---------------------------------------------------------------
+        // 7. Vérification par simulation
+        //
+        // Les étapes précédentes raisonnent sur des étapes prises isolément ;
+        // elles interagissent. On rend donc réellement la vignette et on
+        // corrige les écarts restants — médiane, écrêtage haut, écrêtage bas,
+        // contraste. Deux ou trois passes suffisent à converger.
+        // ---------------------------------------------------------------
+        if (PP && typeof PP.process === 'function') {
+            const base = Object.assign({}, METADATA.DEFAULT_PARAMS);
+
+            // Cibles RELATIVES à la scène.
+            //
+            // Viser un écart-type ou un point blanc absolus revient à imposer
+            // le même rendu à toutes les images : une scène naturellement
+            // douce (brume, portrait en lumière diffuse) se retrouverait
+            // durcie jusqu'à la butée. On mesure donc d'abord le rendu neutre,
+            // et on ne demande qu'une amélioration proportionnée.
+            const neutral = measureRendered(
+                PP.process(sample.data, sample.width, sample.height, base, {
+                    sourceWhite: sourceWhite,
+                    fullWidth: sample.width,
+                    fullHeight: sample.height
+                }),
+                sample.width * sample.height
+            );
+            const targetStd = Math.min(AUTO_TARGET.contrast, neutral.std * 1.7 + 0.03);
+            const targetWhite = Math.min(AUTO_TARGET.white, neutral.p999 + 0.06);
+            // Amortissement décroissant : la première passe corrige gros, les
+            // suivantes affinent. Sans lui, deux réglages antagonistes
+            // (exposition et hautes lumières) se renvoient la balle et finissent
+            // en butée.
+            const damping = [0.75, 0.45, 0.28, 0.18];
+
+            for (let iter = 0; iter < damping.length; iter++) {
+                const k = damping[iter];
+                const test = Object.assign({}, base, params);
+                const rendered = PP.process(sample.data, sample.width, sample.height, test, {
+                    sourceWhite: sourceWhite,
+                    fullWidth: sample.width,
+                    fullHeight: sample.height
+                });
+                const M = measureRendered(rendered, sample.width * sample.height);
+                let moved = 0;
+
+                // -- Exposition : ramener l'ancre sur sa cible ---------------
+                const anchorNow = S.highDynamic ? M.p25 : M.median;
+                if (Math.abs(anchorTarget - anchorNow) > 0.010) {
+                    const gain = Math.pow(Math.max(0.04, anchorTarget) / Math.max(0.02, anchorNow), 2.2);
+                    const dStops = clamp(Math.log2(gain) * k, -1.5, 1.5);
+                    const next = clamp(params.exposure + (dStops / stopsPer100) * 100, -220, 220);
+                    moved += Math.abs(next - params.exposure);
+                    params.exposure = Math.round(next);
+                }
+
+                // -- Hautes lumières : le blanc ne doit pas brûler -----------
+                if (M.clipHigh > AUTO_TARGET.clipHigh) {
+                    const excess = Math.min(1, (M.clipHigh - AUTO_TARGET.clipHigh) / 0.015);
+                    const d = (10 + 45 * excess) * k;
+                    params.highlights = clamp(Math.round(params.highlights - d), -220, 40);
+                    if (M.clipHigh > 0.008) {
+                        params.whites = clamp(Math.round(params.whites - d * 0.7), -140, 45);
+                    }
+                    moved += d;
+                }
+
+                // -- Modelé des hautes lumières ------------------------------
+                // Pas d'écrêtage mais des hautes lumières tassées : la zone
+                // claire est devenue un aplat. On rend de la marge aux hautes
+                // lumières pour rouvrir la séparation entre p95 et p99,9.
+                if (M.clipHigh <= AUTO_TARGET.clipHigh && params.highlights < -10) {
+                    const sep = M.p999 - M.p95;
+                    const sepNeutral = Math.max(0.02, neutral.p999 - neutral.p95);
+                    if (sep < sepNeutral * 0.6) {
+                        const d = Math.min(45, (sepNeutral * 0.75 - sep) * 320) * k;
+                        params.highlights = clamp(Math.round(params.highlights + d), -220, 40);
+                        params.whites = clamp(Math.round(params.whites + d * 0.5), -140, 45);
+                        moved += d;
+                    }
+                }
+
+                // -- Blancs : viser un point blanc juste sous la saturation --
+                // C'est ce qui donne de l'éclat sans écrêter.
+                if (M.clipHigh <= AUTO_TARGET.clipHigh) {
+                    const dW = targetWhite - M.p999;
+                    if (Math.abs(dW) > 0.040) {
+                        const d = clamp(dW * 70 * k, -18, 18);
+                        params.whites = clamp(Math.round(params.whites + d), -140, 30);
+                        moved += Math.abs(d);
+                    }
+                }
+
+                // -- Noirs : poser le point noir sans boucher ---------------
+                if (M.clipLow > AUTO_TARGET.clipLow) {
+                    const excess = Math.min(1, (M.clipLow - AUTO_TARGET.clipLow) / 0.02);
+                    const d = (8 + 30 * excess) * k;
+                    params.blacks = clamp(Math.round(params.blacks + d), -70, 45);
+                    moved += d;
+                } else {
+                    const targetBlack = Math.max(AUTO_TARGET.black, neutral.p001 - 0.06);
+                    const dB = M.p001 - targetBlack;
+                    if (Math.abs(dB) > 0.030) {
+                        const d = clamp(-dB * 90 * k, -16, 16);
+                        params.blacks = clamp(Math.round(params.blacks + d), -60, 45);
+                        moved += Math.abs(d);
+                    }
+                }
+
+                // -- Contraste : zone morte, pour ne pas courir après le bruit
+                const stdErr = targetStd - M.std;
+                if (Math.abs(stdErr) > AUTO_TARGET.contrastDead) {
+                    const d = clamp(stdErr * 80 * k, -14, 14);
+                    params.contrast = clamp(Math.round(params.contrast + d), -45, 30);
+                    moved += Math.abs(d);
+                }
+
+                if (moved < 1.5) break;
+            }
+        }
+
+        return params;
     }
 
 
@@ -657,28 +829,41 @@
             curveR: [{x:0, y:0}, {x:255, y:255}],
             curveG: [{x:0, y:0}, {x:255, y:255}],
             curveB: [{x:0, y:0}, {x:255, y:255}],
-            hslHue: [0, 0, 0, 0, 0, 0, 0, 0], hslSat: [0, 0, 0, 0, 0, 0, 0, 0], hslLum: [0, 0, 0, 0, 0, 0, 0, 0]
+            hslHue: [0, 0, 0, 0, 0, 0, 0, 0], hslSat: [0, 0, 0, 0, 0, 0, 0, 0], hslLum: [0, 0, 0, 0, 0, 0, 0, 0],
+            /**
+             * Masque local par réglage. Absent = actif : on n'y stocke que les
+             * exceptions, ce qui garde les anciens projets compatibles.
+             */
+            maskOn: {},
+            /** Réglages dont la course a été étendue par l'utilisateur. */
+            extend: {}
         },
         RANGES: {
             // Plages "raisonnables mais créatives": éviter les aplats/cassures trop brutales,
             // tout en gardant de la marge pour des looks marqués.
             exposure: [-150, 150], contrast: [-80, 80], highlights: [-170, 170], shadows: [-170, 170],
-            whites: [-140, 140], blacks: [-140, 140], temp: [-1000, 1000], tint: [-1000, 1000],
+            whites: [-140, 140], blacks: [-140, 140],
+            // Course resserrée : au-delà, la courbe de température sature et le
+            // curseur ne répond plus (voir WB_MIRED_SPAN dans photo-pipeline.js).
+            temp: [-100, 100], tint: [-100, 100],
             vibrance: [-90, 90], saturation: [-80, 80], clarity: [-70, 70], dehaze: [-70, 70], vignette: [-85, 85],
             red: [-80, 80], redHi: [-70, 70], redSh: [-70, 70],
             green: [-80, 80], greenHi: [-70, 70], greenSh: [-70, 70],
             blue: [-80, 80], blueHi: [-70, 70], blueSh: [-70, 70],
             grain: [0, 100], sharpen: [0, 100], grainSharpness: [0, 100]
         },
+        /** Facteur appliqué aux bornes quand « Étendre » est coché. */
+        RANGE_EXTEND_FACTOR: 2.5,
+
         RANGES_RAW: {
             // Plages EXTRÊMES pour un contrôle total de la dynamique 14-bit RAW
             exposure: [-400, 400], contrast: [-200, 200], highlights: [-400, 400], shadows: [-400, 400],
-            whites: [-300, 300], blacks: [-300, 300], temp: [-1500, 1500], tint: [-1500, 1500],
-            vibrance: [-150, 150], saturation: [-150, 150], clarity: [-150, 150], dehaze: [-150, 150], vignette: [-150, 150],
-            red: [-150, 150], redHi: [-150, 150], redSh: [-150, 150],
-            green: [-150, 150], greenHi: [-150, 150], greenSh: [-150, 150],
-            blue: [-150, 150], blueHi: [-150, 150], blueSh: [-150, 150],
-            grain: [0, 150], sharpen: [0, 150], grainSharpness: [0, 150]
+            whites: [-300, 300], blacks: [-300, 300], temp: [-150, 150], tint: [-150, 150],
+            vibrance: [-200, 200], saturation: [-200, 200], clarity: [-200, 200], dehaze: [-200, 200], vignette: [-200, 200],
+            red: [-200, 200], redHi: [-200, 200], redSh: [-200, 200],
+            green: [-200, 200], greenHi: [-200, 200], greenSh: [-200, 200],
+            blue: [-200, 200], blueHi: [-200, 200], blueSh: [-200, 200],
+            grain: [0, 200], sharpen: [0, 200], grainSharpness: [0, 200]
         },
         UI_LAYOUT: [
             {
@@ -686,12 +871,12 @@
                 title: 'photo.secLight', fallback: 'Lumière',
                 hasAuto: true,
                 sliders: [
-                    { id: 'exposure', label: 'photo.exposure', fallback: 'Exposition' },
-                    { id: 'contrast', label: 'photo.contrast', fallback: 'Contraste' },
-                    { id: 'highlights', label: 'photo.highlights', fallback: 'Hautes lumières' },
-                    { id: 'shadows', label: 'photo.shadows', fallback: 'Ombres' },
-                    { id: 'whites', label: 'photo.whites', fallback: 'Blancs' },
-                    { id: 'blacks', label: 'photo.blacks', fallback: 'Noirs' }
+                    { id: 'exposure', label: 'photo.exposure', fallback: 'Exposition', options: { extendable: true } },
+                    { id: 'contrast', label: 'photo.contrast', fallback: 'Contraste', options: { extendable: true } },
+                    { id: 'highlights', label: 'photo.highlights', fallback: 'Hautes lumières', options: { maskable: true, extendable: true } },
+                    { id: 'shadows', label: 'photo.shadows', fallback: 'Ombres', options: { maskable: true, extendable: true } },
+                    { id: 'whites', label: 'photo.whites', fallback: 'Blancs', options: { maskable: true, extendable: true } },
+                    { id: 'blacks', label: 'photo.blacks', fallback: 'Noirs', options: { maskable: true, extendable: true } }
                 ]
             },
             {
@@ -708,8 +893,8 @@
                 id: 'sec-presence',
                 title: 'photo.secPresence', fallback: 'Présence et Détail',
                 sliders: [
-                    { id: 'clarity', label: 'photo.clarity', fallback: 'Clarté (Micro-contraste)' },
-                    { id: 'dehaze', label: 'photo.dehaze', fallback: 'Correction du voile' },
+                    { id: 'clarity', label: 'photo.clarity', fallback: 'Clarté (Micro-contraste)', options: { extendable: true } },
+                    { id: 'dehaze', label: 'photo.dehaze', fallback: 'Correction du voile', options: { extendable: true } },
                     { id: 'vignette', label: 'photo.vignette', fallback: 'Vignettage' },
                     { type: 'separator' },
                     { id: 'sharpen', label: 'photo.sharpen', fallback: 'Netteté (Piqué)' },
@@ -800,6 +985,7 @@
         buildHistogramBuffer: buildHistogramBuffer,
         applyCameraRawBuffer: applyCameraRawBuffer, applyPostCameraRaw: applyPostCameraRaw,
         suggestAutoParams: suggestAutoParams,
+        _autoAnalyse: function (imageData) { return analyseScene(buildAutoSample(imageData, 180)); },
         createCurveLUT: createCurveLUT,
         rgbToHsl: rgbToHsl,
         hslToRgb: hslToRgb,
@@ -832,6 +1018,35 @@
                     `;
                 }
 
+                // Options par réglage : masque local et course étendue.
+                // Elles ne sont proposées que là où elles ont un sens, pour ne
+                // pas encombrer les réglages qui n'en ont pas besoin.
+                let opts = '';
+                if (options.maskable || options.extendable) {
+                    // IlluI18n.t renvoie la CLÉ quand elle est absente du
+                    // dictionnaire : sans ce contrôle, l'interface afficherait
+                    // « photo.extendRange » au lieu du libellé.
+                    const t = (k, fb) => {
+                        if (!global.IlluI18n || typeof global.IlluI18n.t !== 'function') return fb;
+                        const r = global.IlluI18n.t(k);
+                        return (r && r !== k) ? r : fb;
+                    };
+                    let items = '';
+                    if (options.maskable) {
+                        items += `<label class="illu-pm-opt" title="${t('photo.maskHint', 'Le réglage suit les zones de l\'image (masque local) au lieu de traiter chaque pixel isolément.')}">
+                            <input type="checkbox" class="illu-pm-opt-mask" id="${id}-mask" checked>
+                            <span>${t('photo.useMask', 'Masque')}</span>
+                        </label>`;
+                    }
+                    if (options.extendable) {
+                        items += `<label class="illu-pm-opt" title="${t('photo.extendHint', 'Élargit les bornes du curseur.')}">
+                            <input type="checkbox" class="illu-pm-opt-ext" id="${id}-ext">
+                            <span>${t('photo.extendRange', 'Étendre')}</span>
+                        </label>`;
+                    }
+                    opts = `<div class="illu-pm-opt-row">${items}</div>`;
+                }
+
                 return `
                     <div class="illu-pm-row">
                         <label style="display:flex; justify-content:space-between; align-items:center;">
@@ -843,6 +1058,7 @@
                                 <input type="range" class="illu-cr-range" id="${id}" min="${min}" max="${max}" value="0">
                             </div>
                         </div>
+                        ${opts}
                     </div>
                 `;
             },
@@ -888,6 +1104,24 @@
                 rangeInput.addEventListener('change', (e) => {
                     if (callbacks.onChange) callbacks.onChange(parseInt(e.target.value, 10) || 0);
                 });
+
+                const maskBox = root.querySelector('#' + id + '-mask');
+                if (maskBox) {
+                    maskBox.addEventListener('change', () => {
+                        if (callbacks.onMask) callbacks.onMask(!!maskBox.checked);
+                    });
+                }
+
+                const extBox = root.querySelector('#' + id + '-ext');
+                if (extBox) {
+                    extBox.addEventListener('change', () => {
+                        global.IlluImageAdjustCore.Slider.applyExtend(rangeInput, key, !!extBox.checked, options.isRaw);
+                        // La valeur courante peut sortir des nouvelles bornes.
+                        const v = parseInt(rangeInput.value, 10) || 0;
+                        update(v, false);
+                        if (callbacks.onExtend) callbacks.onExtend(!!extBox.checked);
+                    });
+                }
                 
                 if (valDisplay) {
                     valDisplay.addEventListener('input', (e) => update(e.target.value, true));
@@ -898,18 +1132,41 @@
                 }
             },
             
+            /** Bornes d'un réglage, éventuellement étendues. */
+            rangeFor(key, isRaw, extended) {
+                const table = isRaw ? (METADATA.RANGES_RAW || METADATA.RANGES) : METADATA.RANGES;
+                const r = table[key] || METADATA.RANGES[key] || [0, 100];
+                if (!extended) return r;
+                const f = METADATA.RANGE_EXTEND_FACTOR || 2;
+                return [Math.round(r[0] * f), Math.round(r[1] * f)];
+            },
+
+            applyExtend(rangeInput, key, extended, isRaw) {
+                if (!rangeInput) return;
+                const r = this.rangeFor(key, isRaw, extended);
+                rangeInput.setAttribute('min', r[0]);
+                rangeInput.setAttribute('max', r[1]);
+                let v = parseInt(rangeInput.value, 10) || 0;
+                v = Math.max(r[0], Math.min(r[1], v));
+                rangeInput.value = v;
+            },
+
             updateRanges(root, idPrefix, isRaw) {
                 if (!root) return;
                 const ranges = isRaw ? (METADATA.RANGES_RAW || METADATA.RANGES) : METADATA.RANGES;
                 for (const key in ranges) {
                     const rangeInput = root.querySelector('#' + idPrefix + key);
                     if (rangeInput) {
-                        rangeInput.setAttribute('min', ranges[key][0]);
-                        rangeInput.setAttribute('max', ranges[key][1]);
+                        // Une course déjà étendue par l'utilisateur le reste
+                        // quand on bascule entre 8 bits et RAW.
+                        const extBox = root.querySelector('#' + idPrefix + key + '-ext');
+                        const eff = this.rangeFor(key, isRaw, !!(extBox && extBox.checked));
+                        rangeInput.setAttribute('min', eff[0]);
+                        rangeInput.setAttribute('max', eff[1]);
                         
                         // Re-clamp current value to new limits
                         let val = parseInt(rangeInput.value, 10) || 0;
-                        val = Math.max(ranges[key][0], Math.min(ranges[key][1], val));
+                        val = Math.max(eff[0], Math.min(eff[1], val));
                         rangeInput.value = val;
                         
                         const valDisplay = root.querySelector('#' + idPrefix + key + '-val');
@@ -1167,92 +1424,5 @@
             }
 
         };
-    }
-     function applyPostCameraRaw(src, width, height, p) {
-        if (!p.vignette && !p.grain && !p.sharpen && !p.clarity && !p.dehaze) return src;
-        const isFloat = src instanceof Float32Array;
-        const out = new (isFloat ? Float32Array : Uint8ClampedArray)(src.length);
-        out.set(src);
-        
-        const hasVignette = p.vignette && p.vignette !== 0;
-        const vAmt = p.vignette ? p.vignette / 100 : 0;
-        
-        const hasGrain = p.grain && p.grain > 0;
-        const grainAmt = p.grain ? p.grain / 100 : 0;
-        const gs = (p.grainSharpness != null ? p.grainSharpness : 50) / 100;
-        
-        const hasDehaze = p.dehaze && p.dehaze !== 0;
-        const dehazeAmt = p.dehaze ? p.dehaze / 100 : 0;
-        
-        const hasClarity = p.clarity && p.clarity !== 0;
-        const clarityAmt = p.clarity ? p.clarity / 100 : 0;
-        
-        if (hasVignette || hasGrain || hasDehaze || hasClarity) {
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    const i = (y * width + x) * 4;
-                    let r = out[i], g = out[i+1], b = out[i+2];
-                    
-                    if (hasDehaze || hasClarity) {
-                        // Very simple clarity/dehaze approximation (global midtone contrast)
-                        let luma = 0.299 * r + 0.587 * g + 0.114 * b;
-                        let maxVal = isFloat ? 1.0 : 255.0;
-                        let lumaNorm = luma / maxVal;
-                        
-                        if (hasDehaze) {
-                            // Dehaze: subtract light from shadows, boost saturation
-                            let sub = dehazeAmt * maxVal * 0.2 * (1.0 - lumaNorm);
-                            r = Math.max(0, r - sub);
-                            g = Math.max(0, g - sub);
-                            b = Math.max(0, b - sub);
-                            // saturation boost
-                            let satBoost = 1.0 + (dehazeAmt * 0.5);
-                            luma = 0.299 * r + 0.587 * g + 0.114 * b;
-                            r = luma + (r - luma) * satBoost;
-                            g = luma + (g - luma) * satBoost;
-                            b = luma + (b - luma) * satBoost;
-                        }
-                        
-                        if (hasClarity) {
-                            // Clarity: midtone contrast
-                            let midCurve = Math.sin(lumaNorm * Math.PI); // 1.0 at midtones, 0 at shadows/highlights
-                            let contrast = 1.0 + (clarityAmt * midCurve * 0.5);
-                            luma = 0.299 * r + 0.587 * g + 0.114 * b;
-                            r = luma + (r - luma) * contrast;
-                            g = luma + (g - luma) * contrast;
-                            b = luma + (b - luma) * contrast;
-                        }
-                    }
-                    
-                    if (hasVignette) {
-                        const cx = (x / width) - 0.5;
-                        const cy = (y / height) - 0.5;
-                        const dist = Math.sqrt(cx * cx + cy * cy) * 2.0;
-                        const falloff = Math.pow(Math.min(1, Math.max(0, dist)), 2.5);
-                        const factor = 1 - (vAmt * falloff);
-                        r *= factor; g *= factor; b *= factor;
-                    }
-                    
-                    if (hasGrain) {
-                        let maxVal = isFloat ? 1.0 : 255.0;
-                        const gn = (Math.random() - 0.5) * grainAmt * maxVal * (0.2 + 0.4 * gs);
-                        r += gn; g += gn; b += gn;
-                    }
-                    
-                    if (isFloat) {
-                        out[i] = r; out[i+1] = g; out[i+2] = b;
-                    } else {
-                        out[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
-                        out[i+1] = g < 0 ? 0 : (g > 255 ? 255 : g);
-                        out[i+2] = b < 0 ? 0 : (b > 255 ? 255 : b);
-                    }
-                }
-            }
-        }
-        
-        if (p.sharpen && p.sharpen > 0) {
-            return applySharpen(out, width, height, p.sharpen, isFloat);
-        }
-        return out;
     }
 })(typeof self !== 'undefined' ? self : window);
