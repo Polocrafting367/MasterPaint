@@ -202,7 +202,7 @@
                 return info.cel;
             }
             // Créer un nouveau cel VIERGE à t (dessin image par image). Pour repartir du
-            // cel maintenu, utiliser « Dupliquer le cel » (⧉) explicitement.
+            // cel maintenu, utiliser « Dupliquer le cel » explicitement.
             const buf = makeCanvas(em.width, em.height);
             const cel = { frame: t, hold: HOLD_INF, buffer: buf };
             layer.cels.push(cel);

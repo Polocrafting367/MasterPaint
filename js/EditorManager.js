@@ -1600,7 +1600,6 @@ const EditorManager = {
                     } else {
                         localStorage.setItem('illu_theme_variant', 'classic');
                         localStorage.setItem('illu_beta_skin', 'none');
-                        localStorage.setItem('illu_icon_style', 'monochrome');
                     }
                 } catch (err) { /* ignore */ }
                 try {
@@ -1609,7 +1608,7 @@ const EditorManager = {
                         typeof window.illuSettingsScopeGetValue === 'function'
                             ? window.illuSettingsScopeGetValue(row, 'fr')
                             : 'fr';
-                    if (window.IlluI18n) window.IlluI18n.setLang(lang === 'en' ? 'en' : 'fr');
+                    if (window.IlluI18n) window.IlluI18n.setLang(lang === 'fr' ? 'fr' : lang);
                 } catch (err) { /* ignore */ }
                 try {
                     const wasm = document.getElementById('settings-wasm-enabled');

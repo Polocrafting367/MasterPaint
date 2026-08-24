@@ -1,0 +1,1266 @@
+/*
+ * Finition des thèmes macOS — Lion et macOS moderne
+ * ==================================================
+ *
+ * POURQUOI UNE FEUILLE À PART. theme-mac-lion.css et theme-mac-modern.css sont chargés
+ * très tôt (juste après les thèmes Windows), donc AVANT main.css, illu-tool-ribbon.css
+ * et une dizaine d'autres. Ils tentaient de compenser à coups de `!important` et de
+ * `:is()` imbriqués, d'où des règles qui se battaient entre elles : c'est ce qui
+ * donnait, par exemple, un nom de calque blanc sur une ligne restée blanche.
+ * Cette feuille est chargée EN DERNIER : elle n'a plus à deviner qui gagne.
+ *
+ * PARTAGÉ  → les défauts communs aux deux thèmes (proportions, contrastes, lisibilité)
+ * MODERNE  → métriques et couleurs du macOS actuel, au plus près
+ * LION     → Mac OS X Lion revisité : dégradés verrés, chrome brossé
+ *
+ * Règle de lisibilité tenue partout : une icône ou un libellé ne prend `#fff` que si
+ * le fond derrière lui est effectivement rempli (sélection, bouton accentué).
+ */
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — jetons
+   ══════════════════════════════════════════════════════════════════════ */
+
+html body.illu-theme-mac {
+    /* Métriques des contrôles macOS : un bouton fait 22 px, le texte 13 px. */
+    --macp-control-h: 22px;
+    --macp-control-h-sm: 20px;
+    --macp-radius: 6px;
+    --macp-radius-sm: 5px;
+    --macp-font: 13px;
+    --macp-font-sm: 11px;
+
+    --macp-accent: var(--mp-accent, #0a84ff);
+    --macp-on-accent: #ffffff;
+
+    --macp-label: #1d1d1f;
+    --macp-label-2: rgba(0, 0, 0, 0.56);
+    --macp-label-3: rgba(0, 0, 0, 0.34);
+    --macp-sep: rgba(0, 0, 0, 0.11);
+    --macp-hairline: rgba(0, 0, 0, 0.16);
+
+    --macp-chrome: #ececec;
+    --macp-panel: #f5f5f7;
+    --macp-content: #ffffff;
+    --macp-control-bg: #ffffff;
+    --macp-control-border: rgba(0, 0, 0, 0.14);
+    --macp-hover: rgba(0, 0, 0, 0.055);
+    --macp-press: rgba(0, 0, 0, 0.10);
+
+    --macp-focus: 0 0 0 3.5px color-mix(in srgb, var(--macp-accent) 34%, transparent);
+    --macp-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+html body.illu-theme-mac.theme-dark {
+    --macp-label: rgba(255, 255, 255, 0.92);
+    --macp-label-2: rgba(255, 255, 255, 0.55);
+    --macp-label-3: rgba(255, 255, 255, 0.32);
+    --macp-sep: rgba(255, 255, 255, 0.12);
+    --macp-hairline: rgba(255, 255, 255, 0.18);
+
+    --macp-chrome: #323232;
+    --macp-panel: #2a2a2a;
+    --macp-content: #1e1e1e;
+    --macp-control-bg: rgba(255, 255, 255, 0.09);
+    --macp-control-border: rgba(255, 255, 255, 0.15);
+    --macp-hover: rgba(255, 255, 255, 0.08);
+    --macp-press: rgba(255, 255, 255, 0.14);
+
+    --macp-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — lisibilité : jamais de blanc sur fond non rempli
+   ══════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Le défaut d'origine : les règles de sélection posaient `color: #fff` sur les enfants
+ * de la ligne (nom, icônes, petits boutons) alors que le fond de la ligne, lui, restait
+ * transparent — nom de calque blanc sur blanc. On repart de zéro : la couleur du texte
+ * est celle du libellé, et elle ne bascule en blanc que dans la ligne réellement
+ * sélectionnée, dont le fond est peint juste en dessous.
+ */
+html body.illu-theme-mac #layers-list .layer-row,
+html body.illu-theme-mac #layers-list .layer-row :is(.layer-name, span, i, i::before, svg, button) {
+    color: var(--macp-label) !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row .layer-name {
+    font-size: var(--macp-font) !important;
+    font-weight: 400 !important;
+    opacity: 1 !important;
+}
+
+/* Ligne sélectionnée : pastille arrondie remplie, encartée — la liste macOS. */
+html body.illu-theme-mac #layers-list .layer-row.active {
+    background: var(--macp-accent) !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    border-radius: var(--macp-radius-sm) !important;
+    box-shadow: none !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active,
+html body.illu-theme-mac #layers-list .layer-row.active :is(.layer-name, span, i, svg, button) {
+    color: var(--macp-on-accent) !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active i::before {
+    color: var(--macp-on-accent) !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active svg [fill]:not([fill="none"]) {
+    fill: var(--macp-on-accent) !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active svg [stroke]:not([stroke="none"]) {
+    stroke: var(--macp-on-accent) !important;
+}
+
+/* Survol : voile neutre, jamais la couleur de sélection (macOS ne préremplit pas). */
+html body.illu-theme-mac #layers-list .layer-row:not(.active):hover {
+    background: var(--macp-hover) !important;
+    border-radius: var(--macp-radius-sm) !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row {
+    margin: 1px 1px !important;
+    padding: 3px 6px !important;
+    border: 0 !important;
+    border-radius: var(--macp-radius-sm) !important;
+    gap: 7px !important;
+    min-height: 26px !important;
+}
+
+/* Petits boutons de ligne (α, ƒ, aperçu) : discrets au repos, contrastés en sélection. */
+html body.illu-theme-mac #layers-list .layer-row :is(.layer-alpha-btn, .layer-dynfx-btn, .layer-dynfilter-alpha-preview-btn) {
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    padding: 0 !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: 4px !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: none !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active :is(.layer-alpha-btn, .layer-dynfx-btn, .layer-dynfilter-alpha-preview-btn) {
+    border-color: rgba(255, 255, 255, 0.45) !important;
+    background: rgba(255, 255, 255, 0.20) !important;
+}
+
+/* Vignette de calque : cadre fin, coins adoucis. */
+html body.illu-theme-mac #layers-list .layer-thumb {
+    border: 1px solid var(--macp-hairline) !important;
+    border-radius: 3px !important;
+}
+
+html body.illu-theme-mac #layers-list .layer-row.active .layer-thumb {
+    border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* La liste elle-même : fond de contenu, pas de bordure interne. */
+html body.illu-theme-mac #layers-list,
+html body.illu-theme-mac #history-list {
+    background: var(--macp-content) !important;
+    padding: 4px 0 !important;
+}
+
+/* Historique : même grammaire de sélection que les calques. */
+html body.illu-theme-mac #history-list .list-item {
+    margin: 1px 1px !important;
+    padding: 3px 8px !important;
+    border: 0 !important;
+    border-radius: var(--macp-radius-sm) !important;
+    color: var(--macp-label) !important;
+    font-size: var(--macp-font) !important;
+    background: transparent !important;
+}
+
+html body.illu-theme-mac #history-list .list-item:not(.active):hover {
+    background: var(--macp-hover) !important;
+}
+
+html body.illu-theme-mac #history-list .list-item.active {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+    background-image: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — rangée d'outils sous les menus
+   ══════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Les boutons étaient dimensionnés par un `line-height` en !important : hauteurs
+ * inégales et glyphes décentrés. On les remet en carrés réguliers, centrés en grille.
+ */
+html body.illu-theme-mac .illu-menubar-toolbar {
+    gap: 1px !important;
+    padding: 2px 6px !important;
+    background: transparent !important;
+    border: 0 !important;
+}
+
+html body.illu-theme-mac .illu-menubar-toolbar .illu-menubar-icon-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    /* 24x24 : la mesure des thèmes Windows, pour que la rangée garde la même hauteur. */
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    color: var(--macp-label) !important;
+    border: 0 !important;
+    border-radius: 5px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: background 0.12s ease;
+}
+
+html body.illu-theme-mac .illu-menubar-toolbar .illu-menubar-icon-btn:hover {
+    background: var(--macp-hover) !important;
+}
+
+html body.illu-theme-mac .illu-menubar-toolbar .illu-menubar-icon-btn:active {
+    background: var(--macp-press) !important;
+}
+
+html body.illu-theme-mac .illu-menubar-toolbar .illu-menubar-icon-btn i {
+    font-size: 12px !important;
+    line-height: 1 !important;
+    color: inherit !important;
+}
+
+html body.illu-theme-mac .illu-menubar-toolbar__sep {
+    width: 1px !important;
+    height: 15px !important;
+    margin: 0 5px !important;
+    background: var(--macp-sep) !important;
+}
+
+html body.illu-theme-mac .illu-menubar-zoom-val {
+    min-width: 38px !important;
+    font-size: var(--macp-font-sm) !important;
+    font-variant-numeric: tabular-nums;
+    color: var(--macp-label-2) !important;
+}
+
+/* Barre de menus : espacement et poids macOS. */
+html body.illu-theme-mac menu.illu-menubar-root {
+    background: transparent !important;
+    border: 0 !important;
+}
+
+/* Ni padding ni taille de police ici : les imposer allongeait l'en-tête de 6 px par
+   rapport aux thèmes Windows et repoussait la barre d'onglets d'autant. On ne reprend
+   que l'arrondi de la pastille de menu. */
+html body.illu-theme-mac menu.illu-menubar-root > li[role="menuitem"] {
+    border-radius: 5px !important;
+}
+
+/* « Signaler un bug » : un bouton, pas un pavé. */
+/* « Signaler un bug » : le fond accentué doit être posé sur l'élément qui porte le
+   texte, sinon on obtient du blanc sur blanc. Sélecteur renforcé car la barre de menus
+   repeint ses <li> avec une spécificité élevée. */
+html body.illu-theme-mac menu.illu-menubar-root > li.menubar-contact-btn,
+html body.illu-theme-mac .menubar-contact-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: var(--macp-control-h) !important;
+    padding: 0 10px !important;
+    font-size: var(--macp-font-sm) !important;
+    font-weight: 500 !important;
+    color: var(--macp-on-accent) !important;
+    border: 0 !important;
+    border-radius: var(--macp-radius) !important;
+    background: var(--macp-accent) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+html body.illu-theme-mac .menubar-contact-btn :is(i, .menu-icon) {
+    color: var(--macp-on-accent) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — options d'outil (ruban)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Les boutons du ruban débordaient de leur groupe et rognaient leur libellé
+ * (« Nouv, », « Retrai »). On leur donne une hauteur unique, un padding franc et on
+ * les laisse prendre la largeur de leur texte.
+ */
+html body.illu-theme-mac #tool-options-container {
+    background: var(--macp-chrome) !important;
+    border-top: 1px solid var(--macp-sep) !important;
+    border-bottom: 1px solid var(--macp-sep) !important;
+}
+
+/*
+ * Le ruban ne dépasse pas la hauteur de référence des thèmes Windows. Sur Lion le
+ * groupe montait à 98 px (ruban 100) contre 84 (ruban 86) : l'en-tête d'outil s'étirait
+ * pour remplir, et la zone de travail perdait 16 px. --illu-ribbon-group-h est la même
+ * mesure que celle des paliers de hauteur d'écran, le plafond suit donc les paliers.
+ */
+/* Pas de plafond de hauteur ici : il rognait les libellés de groupe posés en bas.
+   Sans pastilles, les items reprennent la métrique des thèmes Windows et le groupe
+   retombe de lui-même sur la bonne hauteur. */
+html body.illu-theme-mac .illu-ribbon-group {
+    border-right: 1px solid var(--macp-sep) !important;
+}
+
+html body.illu-theme-mac .illu-ribbon-group-label {
+    /* Même contraste que sur les thèmes Windows : --macp-label-3 était trop pâle. */
+    color: var(--macp-label-2) !important;
+}
+
+/*
+ * RUBAN — on ne touche QUE la couleur.
+ *
+ * Deux tentatives ratées avant celle-ci : d'abord une pastille bordée par item (elle
+ * se dimensionnait sur son texte, les colonnes ne s'alignaient plus et les libellés de
+ * groupe se faisaient rogner), puis une reprise du flux (`align-items`, `gap`) qui se
+ * battait avec la grille du ruban et renvoyait les libellés sous les icônes.
+ *
+ * La grille du ruban est déjà juste et symétrique : elle est commune à tous les thèmes.
+ * On la laisse donc intacte — aucune propriété de boîte ici — et on se contente de
+ * l'habillage : teintes, liseré de sélection, arrondi.
+ */
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item {
+    color: var(--macp-label) !important;
+    border-color: transparent !important;
+    border-radius: var(--macp-radius) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-lbl {
+    color: inherit !important;
+    text-shadow: none !important;
+}
+
+html body.illu-theme-mac #tool-options-container .illu-icon-toggle {
+    color: var(--macp-label) !important;
+    border-color: transparent !important;
+    border-radius: var(--macp-radius) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Sélectionné : voile et liseré accentués, texte gardé sombre pour rester lisible —
+   c'est la même grammaire que les thèmes Windows, aux couleurs macOS près. */
+html body.illu-theme-mac #tool-options-container .illu-icon-toggle:is(.active, .illu-icon-toggle--on),
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle--on) > .illu-icon-toggle,
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle.active) > .illu-icon-toggle {
+    color: var(--macp-label) !important;
+    border-color: var(--macp-accent) !important;
+    background: color-mix(in srgb, var(--macp-accent) 18%, transparent) !important;
+}
+
+html body.illu-theme-mac #tool-options-container .illu-icon-toggle:is(.active, .illu-icon-toggle--on) :is(i, svg, span) {
+    color: inherit !important;
+}
+
+/* Libellé d'un item sélectionné : accentué, jamais blanc sur clair. */
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle--on) .illu-mode-toggle-lbl,
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle.active) .illu-mode-toggle-lbl {
+    color: color-mix(in srgb, var(--macp-accent) 74%, var(--macp-label)) !important;
+}
+
+/* Liseré accentué sur l'item sélectionné, comme sur les thèmes Windows. */
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle--on),
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle.active) {
+    border: 1px solid var(--macp-accent) !important;
+    border-radius: var(--macp-radius) !important;
+}
+
+/* Boutons texte du ruban : contour discret, sans toucher au flux. */
+html body.illu-theme-mac #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):not(.illu-icon-toggle):not(.illu-mode-toggle-item *) {
+    color: var(--macp-label) !important;
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: var(--macp-radius) !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: var(--macp-control-shadow) !important;
+    text-shadow: none !important;
+}
+
+/* Champs numériques et listes déroulantes du ruban. */
+html body.illu-theme-mac #tool-options-container :is(input[type="number"], input[type="text"], select) {
+    height: var(--macp-control-h) !important;
+    min-height: var(--macp-control-h) !important;
+    padding: 0 7px !important;
+    font-size: 12px !important;
+    color: var(--macp-label) !important;
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: var(--macp-radius) !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: var(--macp-control-shadow) !important;
+}
+
+html body.illu-theme-mac :is(input, select, textarea):focus-visible {
+    outline: none !important;
+    box-shadow: var(--macp-focus) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — feux de circulation
+   ══════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Une seule pastille : l'application n'a qu'une commande de fermeture, on n'affiche
+ * donc pas les deux témoins « réduire » et « agrandir » qui ne mèneraient nulle part.
+ */
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls {
+    display: flex !important;
+    align-items: center !important;
+    order: -1;
+    margin: 0 10px 0 0 !important;
+}
+
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls button {
+    position: static !important;
+    flex: 0 0 auto !important;
+    width: 12px !important;
+    min-width: 12px !important;
+    height: 12px !important;
+    min-height: 12px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #ff5f57 !important;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14) !important;
+}
+
+/* La croix n'apparaît qu'au survol du groupe — comportement macOS. */
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls button::before,
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls button::after {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls:hover button::before,
+html body.illu-theme-mac .window:not(#app-window) .title-bar-controls:hover button::after {
+    opacity: 0.55;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PARTAGÉ — barre d'état
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* La taille de police n'est pas touchée : la réduire faisait perdre 10 px de hauteur
+   à la barre d'état par rapport aux thèmes Windows. */
+html body.illu-theme-mac #app-status-bar {
+    color: var(--macp-label-2) !important;
+    background: var(--macp-chrome) !important;
+    border-top: 1px solid var(--macp-sep) !important;
+}
+
+html body.illu-theme-mac #app-status-bar .status-bar-cell {
+    border: 0 !important;
+    box-shadow: inset 1px 0 0 var(--macp-sep);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODERNE — au plus près du macOS actuel
+   ══════════════════════════════════════════════════════════════════════ */
+
+html body.illu-theme-macmodern {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+        'Inter', 'Segoe UI', sans-serif;
+    --macp-window-radius: 10px;
+}
+
+/* Chrome de la fenêtre applicative : barre de menus translucide claire. */
+html body.illu-theme-macmodern .app-header-container,
+html body.illu-theme-macmodern .illu-sub-menubar,
+html body.illu-theme-macmodern menu.illu-menubar-root {
+    background: var(--macp-chrome) !important;
+    border-bottom-color: var(--macp-sep) !important;
+    box-shadow: none !important;
+}
+
+/* Menu ouvert : la « pilule » accentuée du menu macOS. */
+html body.illu-theme-macmodern menu.illu-menubar-root > li[role="menuitem"]:hover,
+html body.illu-theme-macmodern menu.illu-menubar-root > li[role="menuitem"].active {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+}
+
+/* Menus déroulants : coins arrondis, ombre douce, séparateurs fins. */
+html body.illu-theme-macmodern ul[role="menu"] {
+    padding: 5px !important;
+    border: 0.5px solid var(--macp-hairline) !important;
+    border-radius: 8px !important;
+    background: var(--macp-panel) !important;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Pas de `padding` ici : le thème réserve une gouttière à gauche pour l'icône
+   (padding-left: 30px). L'écraser faisait passer le libellé sous son icône. */
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:not(.divider):not([role="separator"]) {
+    font-size: var(--macp-font) !important;
+    color: var(--macp-label) !important;
+    border-radius: 5px !important;
+}
+
+/*
+ * Séparateurs. Ils portent role="menuitem", donc l'habillage générique des entrées les
+ * transformait en ligne de 22 px transparente — le filet disparaissait purement et
+ * simplement du menu. On les remet à 1 px, avec la teinte de séparation du thème.
+ */
+/*
+ * Spécificité volontairement doublée (`.divider:is(.divider):is(.divider)`) : en mode
+ * sombre, la règle d'entrée de menu du thème Windows pèse (0,5,3) et imposait son
+ * padding de 4 px, ce qui regonflait le filet de 1 à 9 px.
+ */
+html body.illu-theme-mac ul[role="menu"] li.divider:is(.divider):is(.divider),
+html body.illu-theme-mac ul[role="menu"] li[role="separator"]:is([role="separator"]):is([role="separator"]),
+html body.illu-theme-mac #context-menu .ctx-sep:is(.ctx-sep):is(.ctx-sep) {
+    display: block !important;
+    /* max-height et overflow verrouillent la mesure : en sombre, une hauteur minimale
+       venue d'ailleurs regonflait le filet à 8 px. */
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+    overflow: hidden !important;
+    box-sizing: content-box !important;
+    line-height: 1px !important;
+    font-size: 0 !important;
+    margin: 5px 8px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--macp-sep) !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:hover:not([aria-disabled="true"]) {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+}
+
+/* Enfants directs seulement : sinon le sous-menu ouvert, qui est un descendant de
+   l'entrée survolée, passait en blanc sur fond clair. */
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:hover:not([aria-disabled="true"]) > :is(i, span, svg),
+html body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:hover:not([aria-disabled="true"]) > .menu-icon i {
+    color: var(--macp-on-accent) !important;
+}
+
+/* Un sous-menu ouvert repart des couleurs de repos, quel que soit l'état du parent. */
+html body.illu-theme-mac ul[role="menu"] li[role="menuitem"] ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active) {
+    color: var(--macp-label) !important;
+    background: transparent !important;
+}
+
+html body.illu-theme-mac ul[role="menu"] li[role="menuitem"] ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active) > :is(span, .menu-icon, .menu-check),
+html body.illu-theme-mac ul[role="menu"] li[role="menuitem"] ul[role="menu"] li[role="menuitem"]:not(:hover):not(.active) > .menu-icon :is(i, svg) {
+    color: var(--macp-label-2) !important;
+}
+
+/* Fenêtres flottantes : coins arrondis nets, ombre portée profonde. */
+html body.illu-theme-macmodern .window:not(#app-window) {
+    border: 0.5px solid var(--macp-hairline) !important;
+    border-radius: var(--macp-window-radius) !important;
+    background: var(--macp-panel) !important;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.10) !important;
+    overflow: hidden !important;
+}
+
+html body.illu-theme-macmodern .window:not(#app-window) .title-bar {
+    display: flex !important;
+    align-items: center !important;
+    /* 27 px : la hauteur des barres de titre des thèmes Windows. */
+    height: 27px !important;
+    min-height: 27px !important;
+    padding: 0 10px !important;
+    background: var(--macp-chrome) !important;
+    border-bottom: 0.5px solid var(--macp-sep) !important;
+    box-shadow: none !important;
+}
+
+html body.illu-theme-macmodern .window:not(#app-window) .title-bar-text {
+    flex: 1 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    font-size: var(--macp-font) !important;
+    font-weight: 600 !important;
+    color: var(--macp-label) !important;
+    text-shadow: none !important;
+    /* Pas de compensation en padding : sur une palette étroite elle rognait le titre.
+       Le décalage résiduel (la largeur d'une pastille) reste discret. */
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Panneaux : corps clair, séparateurs capillaires. */
+html body.illu-theme-macmodern .window:not(#app-window) .window-body {
+    background: var(--macp-panel) !important;
+    color: var(--macp-label) !important;
+}
+
+/* Curseurs : rail fin, bouton rond blanc à ombre — le slider macOS. */
+html body.illu-theme-macmodern input[type="range"] {
+    height: 20px !important;
+    background: transparent !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+html body.illu-theme-macmodern input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px !important;
+    border-radius: 2px !important;
+    background: linear-gradient(var(--macp-hairline), var(--macp-hairline)) !important;
+}
+
+html body.illu-theme-macmodern input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px !important;
+    height: 16px !important;
+    margin-top: -6px !important;
+    border: 0.5px solid rgba(0, 0, 0, 0.14) !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Cases à cocher : carré arrondi, coche blanche sur accent. */
+html body.illu-theme-macmodern input[type="checkbox"] {
+    width: 14px !important;
+    height: 14px !important;
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: 3.5px !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: var(--macp-control-shadow) !important;
+}
+
+html body.illu-theme-macmodern input[type="checkbox"]:checked {
+    border-color: transparent !important;
+    background: var(--macp-accent) !important;
+}
+
+/* Listes déroulantes : la pastille chevron bleue à droite. */
+html body.illu-theme-macmodern select {
+    padding-right: 26px !important;
+    background-image:
+        url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16' viewBox='0 0 10 16'%3E%3Cpath d='M2 6.4 5 3.6l3 2.8M2 9.6l3 2.8 3-2.8' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+        linear-gradient(var(--macp-accent), var(--macp-accent)) !important;
+    background-position: right 5px center, right 3px center !important;
+    background-size: 10px 16px, 16px calc(100% - 6px) !important;
+    background-repeat: no-repeat !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LION — Mac OS X Lion revisité
+   ══════════════════════════════════════════════════════════════════════ */
+
+html body.illu-theme-maclion {
+    font-family: 'Lucida Grande', 'Helvetica Neue', -apple-system, Helvetica, Arial, sans-serif;
+    --macp-window-radius: 6px;
+    --macp-chrome: #dedede;
+    --macp-panel: #ededed;
+    --macp-lion-metal-top: #f2f2f2;
+    --macp-lion-metal-bot: #cfcfcf;
+    --macp-lion-edge: #9b9b9b;
+}
+
+html body.illu-theme-maclion.theme-dark {
+    --macp-chrome: #3a3a3c;
+    --macp-panel: #333335;
+    --macp-lion-metal-top: #4a4a4c;
+    --macp-lion-metal-bot: #2e2e30;
+    --macp-lion-edge: #1c1c1e;
+}
+
+/* Chrome brossé : dégradé vertical + liseré clair en haut, la signature de Lion. */
+html body.illu-theme-maclion .app-header-container,
+html body.illu-theme-maclion .illu-sub-menubar,
+html body.illu-theme-maclion menu.illu-menubar-root,
+html body.illu-theme-maclion #tool-options-container {
+    background: linear-gradient(180deg, var(--macp-lion-metal-top), var(--macp-lion-metal-bot)) !important;
+    border-bottom: 1px solid var(--macp-lion-edge) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+html body.illu-theme-maclion .window:not(#app-window) {
+    border: 1px solid var(--macp-lion-edge) !important;
+    border-radius: var(--macp-window-radius) !important;
+    background: var(--macp-panel) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34) !important;
+    overflow: hidden !important;
+}
+
+html body.illu-theme-maclion .window:not(#app-window) .title-bar {
+    display: flex !important;
+    align-items: center !important;
+    height: 27px !important;
+    min-height: 27px !important;
+    padding: 0 8px !important;
+    background: linear-gradient(180deg, var(--macp-lion-metal-top), var(--macp-lion-metal-bot)) !important;
+    border-bottom: 1px solid var(--macp-lion-edge) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+html body.illu-theme-maclion .window:not(#app-window) .title-bar-text {
+    flex: 1 !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #3a3a3a !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+html body.illu-theme-maclion.theme-dark .window:not(#app-window) .title-bar-text {
+    color: rgba(255, 255, 255, 0.9) !important;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Pastilles verrées de Lion : reflet en haut, ombre interne en bas. */
+html body.illu-theme-maclion .window:not(#app-window) .title-bar-controls button {
+    background:
+        radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 58%),
+        linear-gradient(180deg, #ff8a7f, #e0443e) !important;
+    box-shadow:
+        inset 0 -1px 1px rgba(0, 0, 0, 0.25),
+        inset 0 0 0 0.5px rgba(0, 0, 0, 0.25) !important;
+}
+
+
+/* Boutons Lion : dégradé blanc → gris, liseré sombre, texte gravé. */
+/* `:not(.illu-scope-btn)` sur les deux branches : sans lui, ce dégradé blanc écrasait
+   le fond accentué des boutons de choix, qui gardaient leur texte blanc — illisible sur
+   fond clair dans les Paramètres. */
+/*
+ * `:not(.welcome-dialog-start-btn)` & co : ce dégradé blanc est celui des boutons
+ * ordinaires. Sans l'exclusion il écrasait aussi les boutons d'action principaux, qui
+ * gardaient leur texte blanc — « Commencer à dessiner » apparaissait vide.
+ */
+html body.illu-theme-maclion #tool-options-container button:not(.tool-btn):not(.illu-scope-btn),
+html body.illu-theme-maclion .window:not(#app-window) button:not(.title-bar-controls button):not(.tool-btn):not(.illu-scope-btn):not(.welcome-dialog-start-btn):not(.btn.primary):not(.illu-crop-btn-primary):not(.illu-rbgg-apply-btn):not(.illu-lvl-btn-ok) {
+    border: 1px solid #a4a4a4 !important;
+    border-radius: 4px !important;
+    background: linear-gradient(180deg, #ffffff, #e2e2e2) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 1px 1px rgba(0, 0, 0, 0.10) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+html body.illu-theme-maclion.theme-dark #tool-options-container button:not(.tool-btn):not(.illu-scope-btn),
+html body.illu-theme-maclion.theme-dark .window:not(#app-window) button:not(.title-bar-controls button):not(.tool-btn):not(.illu-scope-btn):not(.welcome-dialog-start-btn):not(.btn.primary):not(.illu-crop-btn-primary):not(.illu-rbgg-apply-btn):not(.illu-lvl-btn-ok) {
+    border-color: #1c1c1e !important;
+    background: linear-gradient(180deg, #565658, #3c3c3e) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 1px rgba(0, 0, 0, 0.4) !important;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Sélection Lion : dégradé bleu vif plutôt qu'un aplat. */
+html body.illu-theme-maclion #layers-list .layer-row.active,
+html body.illu-theme-maclion #history-list .list-item.active {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 78%, #ffffff),
+        var(--macp-accent)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+    border-radius: 4px !important;
+}
+
+/* Curseurs Lion : rail creusé, bouton bombé. */
+html body.illu-theme-maclion input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px !important;
+    border-radius: 3px !important;
+    background: linear-gradient(180deg, #b8b8b8, #d6d6d6) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html body.illu-theme-maclion input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px !important;
+    height: 15px !important;
+    margin-top: -5px !important;
+    border: 1px solid #8f8f8f !important;
+    border-radius: 50% !important;
+    background: linear-gradient(180deg, #ffffff, #dcdcdc) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* ---- Ruban : conteneurs de groupe -----------------------------------------
+ *
+ * Les groupes de bascules dessinaient leur propre cadre, qui doublait celui des
+ * pastilles : deux bordures concentriques autour des mêmes boutons. Le groupe
+ * redevient un simple conteneur d'espacement, comme dans une barre d'outils macOS.
+ */
+html body.illu-theme-mac #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* En-tête d'outil : encart neutre, sans liseré pointillé coloré. */
+/* Habillage seulement : imposer la boîte faisait grandir l'en-tête d'outil (78 px sur
+   Lion contre 64 sur les thèmes Windows), et le ruban entier suivait. */
+html body.illu-theme-mac #tool-options-container .illu-tool-header {
+    color: var(--macp-label) !important;
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: var(--macp-radius) !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: var(--macp-control-shadow) !important;
+}
+
+html body.illu-theme-mac #tool-options-container .illu-tool-header :is(span, i, svg, .opt-tool-name) {
+    color: var(--macp-label) !important;
+    text-shadow: none !important;
+}
+
+/* Le corps du groupe ne doit pas forcer de retour à la ligne prématuré. */
+/* Le corps du groupe garde le flux commun à tous les thèmes : le reprendre renvoyait
+   les libellés sous les icônes au lieu de les laisser à côté. */
+
+/* ---- Barre d'onglets -----------------------------------------------------
+ *
+ * Comme sur le thème Windows : la barre d'onglets ne pose ni fond ni bordure,
+ * seules les vignettes de document se dessinent.
+ */
+html body.illu-theme-mac :is(#tab-bar, #tab-bar-scroll, .tab-bar-inner) {
+    background: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* En-tête d'outil : l'identifiant l'emporte sur le liseré pointillé du ruban. */
+html body.illu-theme-mac #tool-main-header {
+    border: 1px solid var(--macp-control-border) !important;
+    border-radius: var(--macp-radius) !important;
+    background: var(--macp-control-bg) !important;
+    box-shadow: var(--macp-control-shadow) !important;
+}
+
+/* ---- États des contrôles : survol, appui, actif --------------------------
+ *
+ * Ces états avaient disparu en refondant les pastilles du ruban. Ils sont regroupés
+ * ici pour que la règle de lisibilité soit tenue au même endroit : le texte et les
+ * glyphes ne passent en blanc que lorsque le fond est effectivement rempli.
+ */
+
+/* Survol : voile neutre, la teinte du texte ne bouge pas. */
+html body.illu-theme-macmodern #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):not(.illu-mode-toggle-item *):hover:not(:disabled),
+html body.illu-theme-macmodern #tool-options-container .illu-icon-toggle:not(.illu-mode-toggle-item *):not(.active):not(.illu-icon-toggle--on):hover,
+html body.illu-theme-macmodern #tool-main-header:hover {
+    color: var(--macp-label) !important;
+    background: color-mix(in srgb, var(--macp-control-bg) 88%, var(--macp-label)) !important;
+    border-color: color-mix(in srgb, var(--macp-control-border) 60%, var(--macp-label)) !important;
+}
+
+/* Appui : le voile s'accentue, comme un bouton macOS enfoncé. */
+html body.illu-theme-mac #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):not(.illu-mode-toggle-item *):active:not(:disabled),
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:active {
+    background: color-mix(in srgb, var(--macp-control-bg) 74%, var(--macp-label)) !important;
+}
+
+/* Survol d'un item déjà actif : l'accent s'éclaircit, le texte reste blanc. */
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle--on):hover,
+html body.illu-theme-mac #tool-options-container .illu-mode-toggle-item:has(.illu-icon-toggle.active):hover,
+html body.illu-theme-mac #tool-options-container .illu-icon-toggle:not(.illu-mode-toggle-item *):is(.active, .illu-icon-toggle--on):hover,
+html body.illu-theme-mac #tool-options-container button.active:hover {
+    color: var(--macp-on-accent) !important;
+    background: color-mix(in srgb, var(--macp-accent) 86%, #ffffff) !important;
+    border-color: transparent !important;
+}
+
+/* Bouton accentué de la barre de menus. */
+html body.illu-theme-mac .menubar-contact-btn:hover {
+    color: var(--macp-on-accent) !important;
+    background: color-mix(in srgb, var(--macp-accent) 86%, #ffffff) !important;
+}
+
+html body.illu-theme-mac .menubar-contact-btn:active {
+    background: color-mix(in srgb, var(--macp-accent) 84%, #000000) !important;
+}
+
+/* Palette d'outils : l'outil courant est rempli, son glyphe passe donc en blanc. */
+html body.illu-theme-mac .tool-btn:hover:not(.active) {
+    background: var(--macp-hover) !important;
+}
+
+html body.illu-theme-mac .tool-btn.active {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+    border-color: transparent !important;
+}
+
+html body.illu-theme-mac .tool-btn.active :is(i, svg, span) {
+    color: var(--macp-on-accent) !important;
+}
+
+html body.illu-theme-mac .tool-btn.active svg [fill]:not([fill="none"]) {
+    fill: var(--macp-on-accent) !important;
+}
+
+html body.illu-theme-mac .tool-btn.active svg [stroke]:not([stroke="none"]) {
+    stroke: var(--macp-on-accent) !important;
+}
+
+/* Boutons de la barre d'outils des palettes (calques, historique). */
+html body.illu-theme-mac .window:not(#app-window) .layer-palette-toolbar button:hover:not(:disabled) {
+    background: var(--macp-hover) !important;
+}
+
+html body.illu-theme-mac .window:not(#app-window) .layer-palette-toolbar button:active:not(:disabled) {
+    background: var(--macp-press) !important;
+}
+
+/* Rangées de choix des Paramètres : l'option retenue est remplie. */
+html body.illu-theme-mac .illu-scope-btn:hover:not(.illu-scope-btn--active) {
+    background: var(--macp-hover) !important;
+}
+
+html body.illu-theme-mac .illu-scope-btn--active {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+    border-color: transparent !important;
+}
+
+html body.illu-theme-mac .illu-scope-btn--active :is(i, svg, span) {
+    color: var(--macp-on-accent) !important;
+}
+
+/* ---- Parité avec les thèmes Windows --------------------------------------
+ *
+ * Mesures relevées au banc de comparaison (les quatre thèmes, mêmes surfaces) :
+ * ce bloc ne sert qu'à ramener les écarts de géométrie, jamais l'habillage.
+ */
+
+/* Boutons de choix des Paramètres : 29 px sur Flat, 26 sur Windows 98 ; les thèmes
+   macOS descendaient à 21. On s'aligne sur la fourchette. */
+/* 29 px comme sur Flat : les thèmes macOS descendaient à 21, la fenêtre Paramètres
+   n'avait plus la même densité que sur les thèmes Windows. */
+html body.illu-theme-mac #settings-overlay .illu-scope-btn,
+html body.illu-theme-mac #welcome-overlay .illu-scope-btn,
+html body.illu-theme-mac .illu-scope-btn.illu-settings-scope-btn {
+    min-height: 29px !important;
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+}
+
+/* La rangée d'outils garde la hauteur des thèmes Windows. */
+html body.illu-theme-mac .illu-sub-menubar {
+    min-height: var(--illu-submenubar-h, 32px) !important;
+}
+
+/* La barre d'onglets ne doit pas être repoussée : l'en-tête gauche garde sa largeur. */
+html body.illu-theme-mac .app-header-left {
+    min-width: 0 !important;
+}
+
+/* Barre de menus : les thèmes macOS la posaient à 30 px (24 px par entrée, texte 13 px)
+   contre 23 px sur les thèmes Windows. L'en-tête entier suivait. */
+html body.illu-theme-mac #app-window .window-body > menu.illu-menubar-root,
+html body.illu-theme-mac menu[role="menubar"] {
+    min-height: 23px !important;
+    padding: 1px 6px !important;
+}
+
+html body.illu-theme-mac menu[role="menubar"] > li[role="menuitem"] {
+    min-height: 20px !important;
+    padding: 1px 7px !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+}
+
+/* Barre d'état : 24 px côté macOS contre 33 px côté Windows. */
+html body.illu-theme-mac #app-status-bar,
+html body.illu-theme-mac #app-status-bar.status-bar {
+    min-height: 33px !important;
+}
+
+html body.illu-theme-mac #app-status-bar .status-bar-cell {
+    min-height: 22px !important;
+}
+
+/*
+ * Sélecteur d'outil du ruban : les thèmes macOS imposent min-height 22px à tous les
+ * <select>, ce qui l'empêchait de remplir sa cellule. L'en-tête d'outil passait alors
+ * de 64 à 78 px sur Lion, et le ruban entier avec lui.
+ */
+html body.illu-theme-mac #tool-main-header .illu-tool-picker-select.illu-select-mini,
+html body.illu-theme-mac #tool-main-header .illu-tool-picker-select,
+html body.illu-theme-mac #tool-main-header select {
+    height: 100% !important;
+    min-height: 100% !important;
+    padding: 0 !important;
+}
+
+/* Boutons de la palette d'outils : 26 px comme sur les thèmes Windows. Lion les posait
+   à 28, ce qui allongeait la palette de 24 px sur douze rangées. */
+html body.illu-theme-mac #win-tools .tool-btn,
+html body.illu-theme-mac .tool-btn {
+    width: 26px !important;
+    min-width: 26px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+}
+
+/* ---- Boutons de choix : états explicites --------------------------------
+ *
+ * Regroupés ici avec une spécificité suffisante pour passer devant les habillages
+ * génériques de bouton des deux thèmes macOS. La règle de lisibilité reste la même :
+ * le texte ne passe en blanc que sur un fond réellement rempli.
+ */
+/*
+ * macOS moderne : surfaces plates, c'est la grammaire du système.
+ * Lion : surfaces verrées — les aplatir lui retirait sa signature, donc son dégradé
+ * est conservé au repos et repris, teinté, au survol et à l'état actif.
+ */
+html body.illu-theme-macmodern .illu-scope-btn-row .illu-scope-btn {
+    color: var(--macp-label) !important;
+    background: var(--macp-control-bg) !important;
+    background-image: none !important;
+    text-shadow: none !important;
+}
+
+html body.illu-theme-macmodern .illu-scope-btn-row .illu-scope-btn:hover:not(.illu-scope-btn--active) {
+    color: var(--macp-label) !important;
+    background: color-mix(in srgb, var(--macp-accent) 14%, var(--macp-control-bg)) !important;
+    background-image: none !important;
+}
+
+html body.illu-theme-macmodern .illu-scope-btn-row .illu-scope-btn--active {
+    color: var(--macp-on-accent) !important;
+    background: var(--macp-accent) !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+html body.illu-theme-macmodern .illu-scope-btn-row .illu-scope-btn--active:hover {
+    background: color-mix(in srgb, var(--macp-accent) 86%, #ffffff) !important;
+}
+
+/* ---- Lion : le verre, partout ------------------------------------------- */
+
+html body.illu-theme-maclion .illu-scope-btn-row .illu-scope-btn {
+    color: var(--macp-label) !important;
+    background: linear-gradient(180deg, #ffffff, #e2e2e2) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 1px 1px rgba(0, 0, 0, 0.10) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+html body.illu-theme-maclion.theme-dark .illu-scope-btn-row .illu-scope-btn {
+    background: linear-gradient(180deg, #565658, #3c3c3e) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 1px rgba(0, 0, 0, 0.4) !important;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+html body.illu-theme-maclion .illu-scope-btn-row .illu-scope-btn:hover:not(.illu-scope-btn--active) {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 16%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 26%, #e2e2e2)) !important;
+}
+
+/* Actif : le dégradé bleu verré de Lion, teinté par l'accentuation. */
+html body.illu-theme-maclion .illu-scope-btn-row .illu-scope-btn--active {
+    color: #ffffff !important;
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 76%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 92%, #000000)) !important;
+    border-color: color-mix(in srgb, var(--macp-accent) 78%, #000000) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.42),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.18) !important;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+html body.illu-theme-maclion .illu-scope-btn-row .illu-scope-btn--active:hover {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 64%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 84%, #000000)) !important;
+}
+
+html body.illu-theme-mac .illu-scope-btn-row .illu-scope-btn--active :is(i, svg, span) {
+    color: var(--macp-on-accent) !important;
+}
+
+/* Bouton désactivé : jamais de texte blanc sur fond clair. */
+html body.illu-theme-mac .illu-scope-btn-row .illu-scope-btn:disabled,
+html body.illu-theme-mac .illu-scope-btn-row .illu-scope-btn[disabled] {
+    color: var(--macp-label-3) !important;
+    background: var(--macp-control-bg) !important;
+}
+
+/* Lion : survol verré sur les contrôles du ruban, plutôt qu'un voile plat. */
+html body.illu-theme-maclion #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover:not(:disabled),
+html body.illu-theme-maclion #tool-main-header:hover {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 14%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 24%, #e6e6e6)) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 1px 1px rgba(0, 0, 0, 0.10) !important;
+}
+
+html body.illu-theme-maclion.theme-dark #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):hover:not(:disabled),
+html body.illu-theme-maclion.theme-dark #tool-main-header:hover {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 26%, #565658),
+        color-mix(in srgb, var(--macp-accent) 34%, #3c3c3e)) !important;
+}
+
+/* Lion : bascule sélectionnée dans le ruban, en verre accentué. */
+html body.illu-theme-maclion #tool-options-container .illu-icon-toggle:is(.active, .illu-icon-toggle--on) {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 30%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 46%, #e2e2e2)) !important;
+    border-color: color-mix(in srgb, var(--macp-accent) 70%, #000000) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LION — le verre, étendu
+   ══════════════════════════════════════════════════════════════════════
+
+   Tout l'habillage passe par `box-shadow: inset` plutôt que par `border` :
+   une bordure ajouterait 2 px à la boîte et décalerait l'alignement en colonnes
+   du ruban, durement obtenu. Le rendu est le même, la géométrie ne bouge pas. */
+
+/* Regroupements de bascules : le contrôle segmenté de Lion — un bloc verré unique,
+   les boutons séparés par un filet, plutôt que des boutons flottants côte à côte. */
+html body.illu-theme-maclion #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) {
+    border-radius: 4px !important;
+    background: linear-gradient(180deg, #fdfdfd, #dedede) !important;
+    box-shadow:
+        inset 0 0 0 1px #a4a4a4,
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 1px 1px rgba(0, 0, 0, 0.08) !important;
+    overflow: hidden !important;
+}
+
+html body.illu-theme-maclion.theme-dark #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) {
+    background: linear-gradient(180deg, #525254, #3a3a3c) !important;
+    box-shadow:
+        inset 0 0 0 1px #1c1c1e,
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        0 1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Filet de séparation entre les segments du groupe. */
+html body.illu-theme-maclion #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) > * + * {
+    box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.16), inset 2px 0 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+html body.illu-theme-maclion.theme-dark #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) > * + * {
+    box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.5), inset 2px 0 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Le segment sélectionné s'enfonce, comme un contrôle segmenté enfoncé. */
+html body.illu-theme-maclion #tool-options-container :is(.illu-icon-toggle-group, .illu-mode-toggle-group) .illu-icon-toggle:is(.active, .illu-icon-toggle--on) {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--macp-accent) 74%, #ffffff),
+        color-mix(in srgb, var(--macp-accent) 94%, #000000)) !important;
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.30),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.24) !important;
+}
+
+/* Conteneurs de groupe du ruban : panneau brossé, séparés par un filet gravé. */
+html body.illu-theme-maclion .illu-ribbon-group {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)) !important;
+    border-right: 0 !important;
+    box-shadow:
+        inset -1px 0 0 rgba(0, 0, 0, 0.14),
+        inset -2px 0 0 rgba(255, 255, 255, 0.55) !important;
+}
+
+html body.illu-theme-maclion.theme-dark .illu-ribbon-group {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)) !important;
+    box-shadow:
+        inset -1px 0 0 rgba(0, 0, 0, 0.5),
+        inset -2px 0 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/*
+ * Barres de titre. Lion posait un dégradé brossé avec une cassure douce à mi-hauteur :
+ * clair au-dessus, plus soutenu en dessous, un liseré blanc en haut et un trait sombre
+ * en bas. C'est ce relief qu'on retrouve ici, sur les fenêtres comme sur le chrome.
+ */
+html body.illu-theme-maclion .window:not(#app-window) .title-bar {
+    background: linear-gradient(180deg,
+        #f6f6f6 0%,
+        #e9e9e9 48%,
+        #dcdcdc 52%,
+        #c9c9c9 100%) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.10) !important;
+}
+
+html body.illu-theme-maclion.theme-dark .window:not(#app-window) .title-bar {
+    background: linear-gradient(180deg,
+        #4e4e50 0%,
+        #444446 48%,
+        #3a3a3c 52%,
+        #2c2c2e 100%) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Fenêtre active : le titre se détache un peu plus, comme sous Lion. */
+html body.illu-theme-maclion .app-header-container,
+html body.illu-theme-maclion .illu-sub-menubar,
+html body.illu-theme-maclion menu.illu-menubar-root,
+html body.illu-theme-maclion #tool-options-container {
+    background: linear-gradient(180deg,
+        #f4f4f4 0%,
+        #e6e6e6 48%,
+        #dadada 52%,
+        #c9c9c9 100%) !important;
+}
+
+html body.illu-theme-maclion.theme-dark .app-header-container,
+html body.illu-theme-maclion.theme-dark .illu-sub-menubar,
+html body.illu-theme-maclion.theme-dark menu.illu-menubar-root,
+html body.illu-theme-maclion.theme-dark #tool-options-container {
+    background: linear-gradient(180deg,
+        #4c4c4e 0%,
+        #424244 48%,
+        #383839 52%,
+        #2b2b2d 100%) !important;
+}
+
+/* Barre d'état : même brossage, refermé par le bas. */
+html body.illu-theme-maclion #app-status-bar {
+    background: linear-gradient(180deg, #ededed, #d4d4d4) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+html body.illu-theme-maclion.theme-dark #app-status-bar {
+    background: linear-gradient(180deg, #444446, #313133) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}

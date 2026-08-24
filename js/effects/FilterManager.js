@@ -1217,7 +1217,8 @@ window.FilterManager = {
     startChromaPick(target) {
         this._chromaPickTarget = target === 'B' ? 'B' : 'A';
         window._chromaKeyPickActive = true;
-        document.body.style.cursor = 'crosshair';
+        if (typeof window.illuSetForcedCursor === 'function') window.illuSetForcedCursor('crosshair');
+        else document.body.style.cursor = 'crosshair';
         this.preview();
     },
 
@@ -2861,7 +2862,8 @@ window.FilterManager = {
         this._cancelActiveWorkerPreview();
         this._effectPreviewIsFinal = false;
         window._chromaKeyPickActive = false;
-        document.body.style.cursor = '';
+        if (typeof window.illuClearForcedCursor === 'function') window.illuClearForcedCursor();
+        else document.body.style.cursor = '';
         document.body.classList.remove('effect-dialog-open');
         const shell = document.getElementById('effect-dialog');
         if (shell) shell.style.display = 'none';
@@ -2886,7 +2888,8 @@ window.FilterManager = {
         this._cancelActiveWorkerPreview();
         this._effectPreviewIsFinal = false;
         window._chromaKeyPickActive = false;
-        document.body.style.cursor = '';
+        if (typeof window.illuClearForcedCursor === 'function') window.illuClearForcedCursor();
+        else document.body.style.cursor = '';
         document.getElementById('effect-dialog').style.display = 'none';
         this._effectDialogDidClose();
         this._tearDownVhsEffectDialogUI();
@@ -3237,7 +3240,8 @@ window.FilterManager = {
         document.getElementById('effect-dialog').style.display = 'none';
         this._effectDialogDidClose();
         window._chromaKeyPickActive = false;
-        document.body.style.cursor = '';
+        if (typeof window.illuClearForcedCursor === 'function') window.illuClearForcedCursor();
+        else document.body.style.cursor = '';
         const base = illuEffectTitle('chromaAlphaMask', 'Incrustation (masque alpha)');
         this._commitEffectHistory(base);
         this._frozenSnapshots = null;

@@ -11,11 +11,13 @@
 body.illu-theme-macmodern {
     color-scheme: light;
 
-    --cata-accent: #0a64c8;
-    --cata-accent-hover: #1476d4;
-    --cata-accent-pressed: #0754aa;
-    --cata-focus: rgba(10, 100, 200, 0.28);
-    --cata-selection: #0a64c8;
+    /* Sur macOS l'accentuation est un réglage système : on suit celle de l'application
+       plutôt qu'un bleu figé. Le bleu macOS reste le repli. */
+    --cata-accent: var(--mp-accent, #0a64c8);
+    --cata-accent-hover: color-mix(in srgb, var(--mp-accent, #0a64c8) 88%, #ffffff);
+    --cata-accent-pressed: color-mix(in srgb, var(--mp-accent, #0a64c8) 82%, #000000);
+    --cata-focus: color-mix(in srgb, var(--mp-accent, #0a64c8) 30%, transparent);
+    --cata-selection: var(--mp-accent, #0a64c8);
     --cata-selection-text: #ffffff;
 
     --cata-label: #1d1d1f;
@@ -96,12 +98,17 @@ body.illu-theme-macmodern {
     --mac-scrollbar-thumb: var(--cata-scrollbar);
     --mac-scrollbar-thumb-hover: var(--cata-scrollbar-hover);
 
-    --mp-accent: var(--cata-accent);
-    --mp-accent-rgb: 10, 100, 200;
+    /*
+     * Ni --mp-accent ni --mp-accent-rgb ici. Les redéfinir sur `body` masquait la
+     * valeur posée en ligne sur <html> par le réglage d'accentuation : le thème
+     * ignorait le choix de l'utilisateur. Et depuis que --cata-accent dérive de
+     * --mp-accent, les réintroduire créait un cycle qui retombait sur le bleu par
+     * défaut — d'où un bouton actif bleu au milieu d'icônes orange.
+     */
     --mp-teal: var(--cata-accent);
     --mp-teal-dark: var(--cata-accent-pressed);
     --mp-focus: var(--cata-accent);
-    --mp-accent-muted: rgba(10, 100, 200, 0.16);
+    --mp-accent-muted: color-mix(in srgb, var(--cata-accent) 16%, transparent);
     --mp-menu-hover-bg: var(--cata-selection);
     --mp-menu-hover-fg: var(--cata-selection-text);
     --mp-radius: var(--cata-control-radius);
@@ -132,11 +139,11 @@ body.illu-theme-macmodern {
 body.illu-theme-macmodern.theme-dark {
     color-scheme: dark;
 
-    --cata-accent: #0a84ff;
-    --cata-accent-hover: #2394ff;
-    --cata-accent-pressed: #0070dc;
-    --cata-focus: rgba(10, 132, 255, 0.34);
-    --cata-selection: #0a64c8;
+    --cata-accent: var(--mp-accent, #0a84ff);
+    --cata-accent-hover: color-mix(in srgb, var(--mp-accent, #0a84ff) 86%, #ffffff);
+    --cata-accent-pressed: color-mix(in srgb, var(--mp-accent, #0a84ff) 80%, #000000);
+    --cata-focus: color-mix(in srgb, var(--mp-accent, #0a84ff) 34%, transparent);
+    --cata-selection: var(--mp-accent, #0a84ff);
 
     --cata-label: rgba(255, 255, 255, 0.91);
     --cata-label-secondary: rgba(255, 255, 255, 0.62);
@@ -176,7 +183,6 @@ body.illu-theme-macmodern.theme-dark {
         0 2px 8px rgba(0, 0, 0, 0.38);
 
     --mac-accent-rgb: 10, 132, 255;
-    --mp-accent-rgb: 10, 132, 255;
     background: var(--cata-workspace-bottom) !important;
 }
 
@@ -730,10 +736,11 @@ body.illu-theme-macmodern .tool-options-bar .opt-grp::after {
     content: none !important;
 }
 
+/* Les libellés de groupe du ruban restent affichés, comme sur les thèmes Windows :
+   seuls ceux de la barre compacte historique sont masqués. */
 body.illu-theme-macmodern .tool-options-bar :is(
     .opt-grp-label,
-    .ribbon-group-label,
-    .illu-ribbon-group-label
+    .ribbon-group-label
 ) {
     display: none !important;
 }
@@ -788,10 +795,16 @@ body.illu-theme-macmodern .tool-options-bar :is(
     border-left: 1px solid var(--cata-border-soft) !important;
 }
 
-body.illu-theme-macmodern .tool-options-bar .illu-icon-toggle,
-body.illu-theme-macmodern #tool-pinned-toggles .illu-icon-toggle,
-body.illu-theme-macmodern .tool-options-bar .opt-bar-btn,
-body.illu-theme-macmodern #tool-options-container button:not(.tool-btn):not(.illu-scope-btn),
+/*
+ * Le carré de 26 px ne vaut que pour les boutons qui n'affichent qu'un glyphe.
+ * `:not(:has(.illu-mode-toggle-lbl))` écarte ceux qui portent leur libellé à
+ * l'intérieur (Copier, Coller…) : ils étaient rognés à 26 px et leur texte
+ * disparaissait, d'où des boutons de tailles incohérentes dans le ruban.
+ */
+body.illu-theme-macmodern .tool-options-bar .illu-icon-toggle:not(:has(.illu-mode-toggle-lbl)),
+body.illu-theme-macmodern #tool-pinned-toggles .illu-icon-toggle:not(:has(.illu-mode-toggle-lbl)),
+body.illu-theme-macmodern .tool-options-bar .opt-bar-btn:not(:has(.illu-mode-toggle-lbl)),
+body.illu-theme-macmodern #tool-options-container button:not(.tool-btn):not(.illu-scope-btn):not(:has(.illu-mode-toggle-lbl)),
 body.illu-theme-macmodern .illu-menubar-icon-btn {
     width: 26px !important;
     min-width: 26px !important;
@@ -1205,8 +1218,14 @@ body.illu-theme-macmodern #layers-list.list-box {
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07) !important;
 }
 
-body.illu-theme-macmodern .list-item,
-body.illu-theme-macmodern #layers-list.list-box .list-item.layer-row {
+/*
+ * `:not(.active)` est indispensable : ce sélecteur pèse (1,4,1) et écrasait donc le
+ * fond de la ligne sélectionnée, y compris celui posé plus bas. La ligne restait
+ * transparente pendant que ses enfants passaient au blanc — d'où le nom de calque
+ * blanc sur blanc. La sélection est habillée par css/theme-mac-polish.css.
+ */
+body.illu-theme-macmodern .list-item:not(.active),
+body.illu-theme-macmodern #layers-list.list-box .list-item.layer-row:not(.active) {
     min-height: 23px !important;
     margin: 1px 3px !important;
     color: var(--cata-label) !important;
@@ -1460,8 +1479,11 @@ body.illu-theme-macmodern li[role="menuitem"] > ul[role="menu"] ul[role="menu"] 
     margin-top: -4px !important;
 }
 
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"],
-body.illu-theme-macmodern #context-menu .ctx-item {
+/* `:not(.divider)` : les séparateurs portent eux aussi role="menuitem". Sans cette
+   exclusion ils héritaient de la boîte d'une entrée (flex, 22 px, padding) et le filet
+   de séparation disparaissait des menus. */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"]:not(.divider):not([role="separator"]),
+body.illu-theme-macmodern #context-menu .ctx-item:not(.ctx-sep) {
     position: relative !important;
     display: flex !important;
     align-items: center !important;
@@ -1481,11 +1503,13 @@ body.illu-theme-macmodern #context-menu .ctx-item {
     text-shadow: none !important;
 }
 
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon {
+/* Même garde `:not(.divider)` que la règle de base, sinon celle-ci repasse devant
+   et la gouttière d'icône disparaît : le libellé se retrouve sous son icône. */
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon:not(.divider):not([role="separator"]) {
     padding-left: 34px !important;
 }
 
-body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check {
+body.illu-theme-macmodern:not(.theme-aero):not(.theme-luna):not(.theme-modern) ul[role="menu"] li[role="menuitem"].menu-row-icon.menu-toggle-check:not(.divider):not([role="separator"]) {
     padding-left: 50px !important;
 }
 
@@ -1542,25 +1566,35 @@ body.illu-theme-macmodern #context-menu .ctx-item:is(:hover, .active):not([aria-
     text-shadow: none !important;
 }
 
-body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) *,
-body.illu-theme-macmodern #context-menu .ctx-item:is(:hover, .active):not([aria-disabled="true"]) * {
+/*
+ * Descendants DIRECTS uniquement (`> `). Avec un `*` descendant, l'entrée ouverte
+ * repeignait en blanc tout ce qu'elle contient — y compris le sous-menu, qui en est un
+ * descendant : ses libellés devenaient blancs sur fond clair. Le sous-menu doit garder
+ * ses propres couleurs et sa propre sélection.
+ */
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > *,
+body.illu-theme-macmodern #context-menu .ctx-item:is(:hover, .active):not([aria-disabled="true"]) > * {
     color: var(--cata-selection-text) !important;
 }
 
-body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg {
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > :is(.menu-icon, .menu-check) :is(i, svg),
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > :is(i, svg) {
     color: var(--cata-selection-text) !important;
     fill: currentColor !important;
 }
 
-body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg [fill]:not([fill="none"]) {
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > :is(.menu-icon, .menu-check) svg [fill]:not([fill="none"]),
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > svg [fill]:not([fill="none"]) {
     fill: currentColor !important;
 }
 
-body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) svg [stroke]:not([stroke="none"]) {
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > :is(.menu-icon, .menu-check) svg [stroke]:not([stroke="none"]),
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > svg [stroke]:not([stroke="none"]) {
     stroke: currentColor !important;
 }
 
-body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) i::before {
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > :is(.menu-icon, .menu-check) i::before,
+body.illu-theme-macmodern ul[role="menu"] li[role="menuitem"]:is(:hover, .active, [aria-selected="true"]):not([aria-disabled="true"]) > i::before {
     color: var(--cata-selection-text) !important;
 }
 
@@ -1937,12 +1971,14 @@ html body.illu-theme-macmodern.theme-dark ul[role="menu"] li[role="menuitem"]:no
     filter: grayscale(1) brightness(1.75) !important;
 }
 
+/* La teinte de sélection suit l'accentuation choisie par l'utilisateur, comme sur macOS,
+   au lieu d'un bleu figé qui ignorait le réglage. */
 html body.illu-theme-macmodern #layers-list .layer-row.active,
 html body.illu-theme-macmodern #layers-list .layer-row.layer-row--dyn-filter.active,
 html body.illu-theme-macmodern #layers-list .layer-row.layer-row--alpha-mask.active {
-    color: #ffffff !important;
+    color: var(--cata-selection-text, #ffffff) !important;
     border-color: transparent !important;
-    background-color: #0a64c8 !important;
+    background-color: var(--cata-selection, #0a64c8) !important;
     background-image: none !important;
 }
 

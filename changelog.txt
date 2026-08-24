@@ -1,5 +1,14 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.9.34,2 (24/08/26)
+- Création d'un toggle développement pour masquer des elements.
+- Mise a jours des themes MacOS (DEV)
+- Mise a jours du pack d'icone de l'app (DEV)
+       > Icones colloré
+       > Icones en 3D
+- Mise a jours visuel du volet d'annimation
+- Ajout nouvel langues
+
 2.9.29,3 (23/08/26)
 - Correction en profondeur du traitement des photos raw
 - Correction traitement 14bit

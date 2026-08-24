@@ -3230,8 +3230,44 @@ function illuBindSettingsToggleRows() {
 function syncSettingsLangScopeFromStorage() {
     const row = document.getElementById('settings-lang-scope-row');
     if (!row || !window.IlluI18n || typeof window.IlluI18n.getLang !== 'function') return;
-    illuSettingsScopeSetActive(row, window.IlluI18n.getLang() === 'en' ? 'en' : 'fr');
+    illuSettingsScopeSetActive(row, window.IlluI18n.getLang());
 }
+
+/**
+ * Construit automatiquement les boutons de langue (Paramètres + Bienvenue) depuis
+ * les langues déclarées dans i18n (window.IlluI18n.LANG_CODES / LANG_META).
+ * Chaque bouton affiche le drapeau (emoji) + le libellé natif (data-i18n).
+ */
+function illuBuildLangScopeRows() {
+    if (!window.IlluI18n || !Array.isArray(window.IlluI18n.LANG_CODES)) return;
+    const codes = window.IlluI18n.LANG_CODES;
+    const meta = window.IlluI18n.LANG_META || {};
+    let current = 'fr';
+    if (typeof window.IlluI18n.getLang === 'function') current = window.IlluI18n.getLang();
+    ['welcome-lang-scope-row', 'settings-lang-scope-row'].forEach((id) => {
+        const row = document.getElementById(id);
+        if (!row) return;
+        row.textContent = '';
+        codes.forEach((code) => {
+            const m = meta[code] || {};
+            const labelKey = m.labelKey || 'settings.lang' + code.toUpperCase();
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'illu-scope-btn illu-settings-scope-btn';
+            btn.setAttribute('data-value', code);
+            if (code === current) btn.classList.add('illu-scope-btn--active');
+            btn.setAttribute('aria-pressed', code === current ? 'true' : 'false');
+            let inner = '';
+            if (m.flag) inner += '<span class="illu-lang-flag" aria-hidden="true">' + m.flag + '</span>';
+            let label = code;
+            if (typeof window.IlluI18n.t === 'function') label = window.IlluI18n.t(labelKey);
+            inner += '<span data-i18n="' + labelKey + '">' + label + '</span>';
+            btn.innerHTML = inner;
+            row.appendChild(btn);
+        });
+    });
+}
+window.illuBuildLangScopeRows = illuBuildLangScopeRows;
 
 function syncSettingsLayoutScopeFromStorage() {
     const row = document.getElementById('settings-layout-scope-row');
@@ -3256,19 +3292,180 @@ function syncSettingsAutosaveScopeFromStorage() {
 }
 
 function illuEnforceLockedAppearanceStorage() {
+    // illu_icon_style n'est plus verrouillé ici : il est de nouveau réglable
+    // (Paramètres › Apparence › Style d'icônes), voir illuApplyIconStyle().
     try {
         localStorage.setItem('illu_beta_skin', 'none');
-        localStorage.setItem('illu_icon_style', 'monochrome');
     } catch (e) { /* ignore */ }
 }
 window.illuEnforceLockedAppearanceStorage = illuEnforceLockedAppearanceStorage;
 
+/* ---- Style d'icônes -----------------------------------------------------
+ *
+ * Deux axes indépendants, réglés dans Paramètres › Apparence :
+ *
+ *   PALETTE  standard | accent | colored   (clé illu_icon_style)
+ *   RELIEF   flat     | 3d                 (clé illu_icon_relief)
+ *
+ * Ils se combinent : « coloré + 3D » donne les teintes par famille en dégradé verré,
+ * « standard + 3D » un relief gris. Tout le rendu est dans css/icon-styles.css ; ici
+ * on ne fait que porter les deux valeurs sur <html>, en attributs. Aucune icône n'est
+ * remplacée dans le DOM, donc celles créées après coup adoptent le style sans que le
+ * code appelant ait à s'en occuper.
+ */
+const ILLU_ICON_STYLES = ['standard', 'accent', 'colored'];
+const ILLU_ICON_RELIEFS = ['flat', '3d'];
+const ILLU_ICON_STYLE_KEY = 'illu_icon_style';
+const ILLU_ICON_RELIEF_KEY = 'illu_icon_relief';
+
+function illuNormalizeIconStyle(v) {
+    // '3d' était une palette dans la première version du réglage : on le rattrape.
+    if (v === '3d') return 'standard';
+    return ILLU_ICON_STYLES.includes(v) ? v : 'standard';
+}
+window.illuNormalizeIconStyle = illuNormalizeIconStyle;
+
+function illuNormalizeIconRelief(v) {
+    return ILLU_ICON_RELIEFS.includes(v) ? v : 'flat';
+}
+window.illuNormalizeIconRelief = illuNormalizeIconRelief;
+
+function illuIconStyle() {
+    try {
+        return illuNormalizeIconStyle(localStorage.getItem(ILLU_ICON_STYLE_KEY));
+    } catch (e) {
+        return 'standard';
+    }
+}
+window.illuIconStyle = illuIconStyle;
+
+function illuIconRelief() {
+    try {
+        // Reprise de l'ancien réglage : la palette « 3d » devient le relief « 3d ».
+        if (localStorage.getItem(ILLU_ICON_STYLE_KEY) === '3d') return '3d';
+        return illuNormalizeIconRelief(localStorage.getItem(ILLU_ICON_RELIEF_KEY));
+    } catch (e) {
+        return 'flat';
+    }
+}
+window.illuIconRelief = illuIconRelief;
+
+/** Porte les deux axes sur <html>. Les valeurs neutres retirent l'attribut. */
+function illuApplyIconStyle() {
+    const root = document.documentElement;
+    if (!root) return;
+    const style = illuIconStyle();
+    const relief = illuIconRelief();
+    if (style === 'standard') root.removeAttribute('data-illu-icon-style');
+    else root.setAttribute('data-illu-icon-style', style);
+    if (relief === 'flat') root.removeAttribute('data-illu-icon-relief');
+    else root.setAttribute('data-illu-icon-relief', relief);
+
+    const styleRow = document.getElementById('settings-icon-style-row');
+    const reliefRow = document.getElementById('settings-icon-relief-row');
+    if (typeof illuSettingsScopeSetActive === 'function') {
+        if (styleRow) illuSettingsScopeSetActive(styleRow, style);
+        if (reliefRow) illuSettingsScopeSetActive(reliefRow, relief);
+    }
+}
+window.illuApplyIconStyle = illuApplyIconStyle;
+
+function illuSetIconStyle(v) {
+    try {
+        localStorage.setItem(ILLU_ICON_STYLE_KEY, illuNormalizeIconStyle(v));
+    } catch (e) { /* ignore */ }
+    illuApplyIconStyle();
+}
+window.illuSetIconStyle = illuSetIconStyle;
+
+function illuSetIconRelief(v) {
+    try {
+        localStorage.setItem(ILLU_ICON_RELIEF_KEY, illuNormalizeIconRelief(v));
+    } catch (e) { /* ignore */ }
+    illuApplyIconStyle();
+}
+window.illuSetIconRelief = illuSetIconRelief;
+
+/* ---- Mode développement -------------------------------------------------
+ *
+ * Interrupteur global (Paramètres + fenêtre de bienvenue) qui débloque ce qui n'est
+ * pas prêt pour tout le monde. Quand il est actif :
+ *   — aucune statistique de visite n'est envoyée (voir trackVisit dans index.html,
+ *     qui lit la clé directement : il s'exécute avant ce fichier) ;
+ *   — les thèmes macOS (Lion / moderne) apparaissent dans le choix de thème ;
+ *   — l'entrée de menu « Visionneuse d'icônes… » redevient visible.
+ * L'affichage lui-même est porté par la classe `illu-dev-mode` sur <body> : tout ce
+ * qui est réservé au mode dev porte la classe `illu-dev-only` dans le HTML.
+ */
+const ILLU_DEV_MODE_KEY = 'illu_dev_mode';
+
+function illuDevModeEnabled() {
+    try {
+        return localStorage.getItem(ILLU_DEV_MODE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+window.illuDevModeEnabled = illuDevModeEnabled;
+
+/** Répercute le mode développement sur la page (classe <body> + rangées de réglages). */
+function illuApplyDevMode() {
+    const on = illuDevModeEnabled();
+    if (document.body) document.body.classList.toggle('illu-dev-mode', on);
+    document.querySelectorAll('#welcome-dev-mode, #settings-dev-mode').forEach((cb) => {
+        cb.checked = on;
+    });
+    if (typeof window.syncIlluSettingsToggleRows === 'function') {
+        window.syncIlluSettingsToggleRows(document);
+    }
+    // Un thème macOS choisi en mode dev ne doit pas rester actif une fois le mode coupé :
+    // illuNormalizeThemeVariant le ramène à « flat », il suffit de réappliquer.
+    if (window.IlluTheme && typeof window.IlluTheme.applyFromStorage === 'function') {
+        window.IlluTheme.applyFromStorage();
+    }
+    if (typeof illuSyncThemeVariantRows === 'function') {
+        let v = 'flat';
+        try {
+            v = illuNormalizeThemeVariant(localStorage.getItem('illu_theme_variant'));
+        } catch (e) { /* ignore */ }
+        illuSyncThemeVariantRows(v);
+    }
+}
+window.illuApplyDevMode = illuApplyDevMode;
+
+function illuSetDevMode(on) {
+    try {
+        localStorage.setItem(ILLU_DEV_MODE_KEY, on ? '1' : '0');
+    } catch (e) { /* ignore */ }
+    illuApplyDevMode();
+}
+window.illuSetDevMode = illuSetDevMode;
+
+/** Branche les deux bascules (Paramètres et bienvenue) sur le même réglage. */
+function illuBindDevModeToggles() {
+    document.querySelectorAll('#welcome-dev-mode, #settings-dev-mode').forEach((cb) => {
+        if (cb.dataset.illuDevBound === '1') return;
+        cb.dataset.illuDevBound = '1';
+        cb.addEventListener('change', () => illuSetDevMode(!!cb.checked));
+    });
+}
+window.illuBindDevModeToggles = illuBindDevModeToggles;
+
 /** Variantes de thème d'interface (bureau). Catégorie Windows : flat, classic. macOS : maclion, macmodern. */
 const ILLU_THEME_VARIANTS = ['flat', 'classic', 'maclion', 'macmodern'];
 
-/** Défaut = 'flat' : c'est le thème réellement rendu au premier lancement (lien CSS non désactivé). */
+/** Variantes réservées au mode développement (pas encore prêtes pour tout le monde). */
+const ILLU_DEV_ONLY_THEME_VARIANTS = ['maclion', 'macmodern'];
+
+/**
+ * Défaut = 'flat' : c'est le thème réellement rendu au premier lancement (lien CSS non désactivé).
+ * Une variante réservée au mode dev retombe sur 'flat' quand le mode est coupé — la valeur
+ * enregistrée n'est pas écrasée pour autant, elle revient telle quelle en réactivant le mode.
+ */
 function illuNormalizeThemeVariant(v) {
-    return ILLU_THEME_VARIANTS.includes(v) ? v : 'flat';
+    if (!ILLU_THEME_VARIANTS.includes(v)) return 'flat';
+    if (ILLU_DEV_ONLY_THEME_VARIANTS.includes(v) && !illuDevModeEnabled()) return 'flat';
+    return v;
 }
 window.illuNormalizeThemeVariant = illuNormalizeThemeVariant;
 
@@ -3303,9 +3500,8 @@ function syncSettingsBetaSkinFromStorage() {
 }
 
 function syncSettingsIconStyleFromStorage() {
-    illuEnforceLockedAppearanceStorage();
     const row = document.getElementById('settings-icon-style-row');
-    if (row) illuSettingsScopeSetActive(row, 'monochrome');
+    if (row) illuSettingsScopeSetActive(row, illuIconStyle());
 }
 
 function syncSettingsControlsLayoutFromStorage() {
@@ -3335,12 +3531,16 @@ function illuBindSettingsScopeRows() {
                 window.IlluI18n &&
                 typeof window.IlluI18n.setLang === 'function'
             ) {
-                window.IlluI18n.setLang(value === 'en' ? 'en' : 'fr');
+                window.IlluI18n.setLang(value === 'fr' ? 'fr' : value);
                 if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
                 if (typeof window.EditorManager !== 'undefined' && window.EditorManager) {
                     if (typeof window.EditorManager.updateTabUI === 'function') window.EditorManager.updateTabUI();
                     if (typeof window.EditorManager.updateLayerUI === 'function') window.EditorManager.updateLayerUI();
                 }
+            } else if (row.id === 'settings-icon-style-row') {
+                illuSetIconStyle(value);
+            } else if (row.id === 'settings-icon-relief-row') {
+                illuSetIconRelief(value);
             } else if (row.id === 'settings-resample-scope-row') {
                 try {
                     localStorage.setItem(ILLU_RESAMPLE_KEY, value);
@@ -3389,6 +3589,7 @@ function syncSettingsFormFromStorage() {
         } catch (e) { /* ignore */ }
     }
     syncSettingsLangScopeFromStorage();
+    illuApplyDevMode();
     syncSettingsThemeVariantScopeFromStorage();
     syncSettingsBetaSkinFromStorage();
     syncSettingsIconStyleFromStorage();
@@ -3596,12 +3797,13 @@ window.showWelcomeDialog = function (force) {
     if (window.IlluI18n) window.IlluI18n.apply();
 
     // Sync UI with storage values for the welcome window elements
+    illuApplyDevMode();
     syncSettingsThemeVariantScopeFromStorage();
     syncSettingsLayoutScopeFromStorage();
     syncSettingsLangScopeFromStorage();
     const welcomeLang = document.getElementById('welcome-lang-scope-row');
     if (welcomeLang && window.IlluI18n && typeof window.IlluI18n.getLang === 'function') {
-        illuSettingsScopeSetActive(welcomeLang, window.IlluI18n.getLang() === 'en' ? 'en' : 'fr');
+        illuSettingsScopeSetActive(welcomeLang, window.IlluI18n.getLang());
     }
     const welcomeLayout = document.getElementById('welcome-layout-scope-row');
     if (welcomeLayout && typeof window.getUILayoutMode === 'function') {
@@ -4743,10 +4945,11 @@ window.IlluTheme = {
 
         document.body.classList.remove('illu-flat-colored-icons', 'illu-colored-icons');
 
+        // Passe par le normaliseur : c'est lui qui ramène une variante réservée au
+        // mode développement sur 'flat' quand ce mode est coupé.
         let themeVariant = 'flat';
         try {
-            const stored = localStorage.getItem('illu_theme_variant');
-            if (ILLU_THEME_VARIANTS.includes(stored)) themeVariant = stored;
+            themeVariant = illuNormalizeThemeVariant(localStorage.getItem('illu_theme_variant'));
         } catch(e) {}
 
         // En mode mobile, theme-mobile-modern.css prend le relais visuellement.
@@ -4798,6 +5001,9 @@ function initSettingsLiveApply() {
     if (!ov || ov.dataset.illuLiveApply === '1') return;
     ov.dataset.illuLiveApply = '1';
     illuBindSettingsToggleRows();
+    illuBindDevModeToggles();
+    illuApplyDevMode();
+    illuApplyIconStyle();
 
     const applyDarkFromForm = () => {
         const dk = document.getElementById('settings-theme-dark');
@@ -4829,7 +5035,7 @@ function initSettingsLiveApply() {
         const row = document.getElementById('settings-lang-scope-row');
         const lang = illuSettingsScopeGetValue(row, 'fr');
         if (window.IlluI18n && typeof window.IlluI18n.setLang === 'function') {
-            window.IlluI18n.setLang(lang === 'en' ? 'en' : 'fr');
+            window.IlluI18n.setLang(lang === 'fr' ? 'fr' : lang);
             if (typeof window.IlluI18n.apply === 'function') window.IlluI18n.apply();
         }
         if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
@@ -4884,6 +5090,7 @@ function initSettingsLiveApply() {
     });
 
     illuBindSettingsScopeRows();
+    if (typeof window.illuBuildLangScopeRows === 'function') window.illuBuildLangScopeRows();
     window.illuBindWelcomeWindow();
     const langRow = document.getElementById('settings-lang-scope-row');
     if (langRow) langRow.addEventListener('click', applyLangFromForm);
@@ -5415,7 +5622,7 @@ window.illuBindWelcomeWindow = function () {
                 const sr = document.getElementById('settings-lang-scope-row');
                 if (sr) illuSettingsScopeSetActive(sr, value);
                 if (window.IlluI18n && typeof window.IlluI18n.setLang === 'function') {
-                    window.IlluI18n.setLang(value === 'en' ? 'en' : 'fr');
+                    window.IlluI18n.setLang(value === 'fr' ? 'fr' : value);
                     if (typeof window.refreshChromeDocTitle === 'function') window.refreshChromeDocTitle();
                     if (typeof window.EditorManager !== 'undefined' && window.EditorManager) {
                         if (typeof window.EditorManager.updateTabUI === 'function') window.EditorManager.updateTabUI();

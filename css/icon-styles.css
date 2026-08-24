@@ -1,0 +1,774 @@
+/*
+ * Styles d'icônes — deux axes indépendants
+ * ========================================
+ *
+ * Réglage : Paramètres › Apparence › Style d'icônes. Deux choix séparés :
+ *
+ *   PALETTE  standard | accent | colored   → attribut data-illu-icon-style sur <html>
+ *   RELIEF   flat     | 3d                 → attribut data-illu-icon-relief sur <html>
+ *
+ * Ils se combinent : « coloré + 3D » donne les teintes par famille en dégradé verré,
+ * « standard + 3D » un relief gris, etc. Les deux attributs sont posés dès le script
+ * d'amorçage, avant le premier rendu.
+ *
+ * DEUX FAMILLES D'ICÔNES SONT TRAITÉES :
+ *   — FontAwesome : le glyphe est peint par ::before, on repeint ce pseudo-élément ;
+ *   — le sprite maison (icons/illu-sprite.svg) : ses symboles lisent
+ *     --illu-icon-stroke / --illu-icon-accent, on redéfinit ces variables, et le
+ *     dégradé verré du mode 3D est le gradient #illu-icon-gloss défini dans le sprite.
+ *
+ * Aucune icône n'est remplacée dans le DOM : celles créées après coup suivent aussi.
+ *
+ * AJOUTER UNE ICÔNE : ranger la classe `.fa-…` dans la liste de la famille qui lui
+ * convient (bloc PALETTE › coloré). Une icône oubliée prend la teinte neutre `misc`.
+ */
+
+/*
+ * Jetons de famille. Déclarés sur `body` et NON sur `:root` : les thèmes redéfinissent
+ * leurs couleurs sous `body.theme-dark`, et une substitution faite sur :root figerait
+ * les valeurs claires.
+ */
+body {
+    --ico-red: #d93a40;
+    --ico-green: #1f9254;
+    --ico-green2: #0f8f7a;
+    --ico-blue: #2563eb;
+    --ico-violet: #7c3aed;
+    --ico-pink: #d61f69;
+    --ico-cyan: #0284c7;
+    --ico-orange: #ea6a0a;
+    --ico-indigo: #4f46e5;
+    --ico-amber: #c98a04;
+    --ico-amber2: #e07b00;
+    --ico-teal: #0d8f8f;
+    --ico-slate: #5b6b80;
+    --ico-brand: #3a4552;
+    --ico-misc: #5b6b80;
+}
+
+body.theme-dark {
+    --ico-red: #ff7b7f;
+    --ico-green: #4fd08a;
+    --ico-green2: #3fd3ba;
+    --ico-blue: #7aa7ff;
+    --ico-violet: #b393ff;
+    --ico-pink: #ff77aa;
+    --ico-cyan: #4cc4f5;
+    --ico-orange: #ffa04d;
+    --ico-indigo: #9d97ff;
+    --ico-amber: #ffc93f;
+    --ico-amber2: #ffb648;
+    --ico-teal: #3fcfcf;
+    --ico-slate: #a3b3c7;
+    --ico-brand: #c2cddb;
+    --ico-misc: #a3b3c7;
+}
+
+/*
+ * Dégradés verrés du mode 3D. La cassure nette au milieu fait le reflet ; le bas est
+ * nettement assombri et le haut moins éclairci qu'un simple lavis, sinon les teintes
+ * claires (ambre, jaune) perdaient tout contraste et le jeu d'icônes manquait
+ * d'homogénéité — chaque icône doit garder sa teinte reconnaissable.
+ */
+body {
+    --ico3d-red: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-red) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-red) 84%, #ffffff) 45%,
+        var(--ico-red) 51%,
+        color-mix(in srgb, var(--ico-red) 58%, #000000) 100%);
+    --ico3d-green: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-green) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-green) 84%, #ffffff) 45%,
+        var(--ico-green) 51%,
+        color-mix(in srgb, var(--ico-green) 58%, #000000) 100%);
+    --ico3d-green2: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-green2) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-green2) 84%, #ffffff) 45%,
+        var(--ico-green2) 51%,
+        color-mix(in srgb, var(--ico-green2) 58%, #000000) 100%);
+    --ico3d-blue: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-blue) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-blue) 84%, #ffffff) 45%,
+        var(--ico-blue) 51%,
+        color-mix(in srgb, var(--ico-blue) 58%, #000000) 100%);
+    --ico3d-violet: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-violet) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-violet) 84%, #ffffff) 45%,
+        var(--ico-violet) 51%,
+        color-mix(in srgb, var(--ico-violet) 58%, #000000) 100%);
+    --ico3d-pink: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-pink) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-pink) 84%, #ffffff) 45%,
+        var(--ico-pink) 51%,
+        color-mix(in srgb, var(--ico-pink) 58%, #000000) 100%);
+    --ico3d-cyan: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-cyan) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-cyan) 84%, #ffffff) 45%,
+        var(--ico-cyan) 51%,
+        color-mix(in srgb, var(--ico-cyan) 58%, #000000) 100%);
+    --ico3d-orange: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-orange) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-orange) 84%, #ffffff) 45%,
+        var(--ico-orange) 51%,
+        color-mix(in srgb, var(--ico-orange) 58%, #000000) 100%);
+    --ico3d-indigo: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-indigo) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-indigo) 84%, #ffffff) 45%,
+        var(--ico-indigo) 51%,
+        color-mix(in srgb, var(--ico-indigo) 58%, #000000) 100%);
+    --ico3d-amber: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-amber) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-amber) 84%, #ffffff) 45%,
+        var(--ico-amber) 51%,
+        color-mix(in srgb, var(--ico-amber) 58%, #000000) 100%);
+    --ico3d-amber2: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-amber2) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-amber2) 84%, #ffffff) 45%,
+        var(--ico-amber2) 51%,
+        color-mix(in srgb, var(--ico-amber2) 58%, #000000) 100%);
+    --ico3d-teal: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-teal) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-teal) 84%, #ffffff) 45%,
+        var(--ico-teal) 51%,
+        color-mix(in srgb, var(--ico-teal) 58%, #000000) 100%);
+    --ico3d-slate: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-slate) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-slate) 84%, #ffffff) 45%,
+        var(--ico-slate) 51%,
+        color-mix(in srgb, var(--ico-slate) 58%, #000000) 100%);
+    --ico3d-brand: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-brand) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-brand) 84%, #ffffff) 45%,
+        var(--ico-brand) 51%,
+        color-mix(in srgb, var(--ico-brand) 58%, #000000) 100%);
+    --ico3d-misc: linear-gradient(180deg,
+        color-mix(in srgb, var(--ico-misc) 62%, #ffffff) 0%,
+        color-mix(in srgb, var(--ico-misc) 84%, #ffffff) 45%,
+        var(--ico-misc) 51%,
+        color-mix(in srgb, var(--ico-misc) 58%, #000000) 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PALETTE › accent
+   ══════════════════════════════════════════════════════════════════ */
+
+/*
+ * Dégradé de la couleur d'accentuation vers la couleur de texte du thème. On n'utilise
+ * pas `currentColor` dans le dégradé : le ::before met sa propre couleur à transparent
+ * pour laisser voir le fond découpé, et `currentColor` s'y résoudrait donc à
+ * transparent. --mp-text est une couleur concrète, et elle suit déjà le thème.
+ */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    html[data-illu-icon-style="accent"] :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before {
+        background-image: linear-gradient(150deg,
+            var(--mp-accent, #0d7a7a) 0%,
+            var(--mp-accent, #0d7a7a) 40%,
+            color-mix(in srgb, var(--mp-accent, #0d7a7a) 34%, var(--mp-text, #1c1c1c)) 74%,
+            var(--mp-text, #1c1c1c) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+    }
+}
+
+/* Sprite : le trait se teinte d'accentuation, les aplats déjà accentués s'affirment. */
+html[data-illu-icon-style="accent"] {
+    --illu-icon-stroke: color-mix(in srgb, var(--mp-accent, #0d7a7a) 58%, var(--mp-text, #1c1c1c));
+    --illu-icon-accent: var(--mp-accent, #0d7a7a);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PALETTE › coloré
+   ══════════════════════════════════════════════════════════════════ */
+
+html[data-illu-icon-style="colored"] :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before {
+    color: var(--ico-misc);
+}
+
+/* destructif */
+html[data-illu-icon-style="colored"] .fa-border-none::before,
+html[data-illu-icon-style="colored"] .fa-broom::before,
+html[data-illu-icon-style="colored"] .fa-circle-xmark::before,
+html[data-illu-icon-style="colored"] .fa-droplet-slash::before,
+html[data-illu-icon-style="colored"] .fa-eraser::before,
+html[data-illu-icon-style="colored"] .fa-file-circle-xmark::before,
+html[data-illu-icon-style="colored"] .fa-minus::before,
+html[data-illu-icon-style="colored"] .fa-rectangle-xmark::before,
+html[data-illu-icon-style="colored"] .fa-square-minus::before,
+html[data-illu-icon-style="colored"] .fa-trash::before,
+html[data-illu-icon-style="colored"] .fa-trash-can::before,
+html[data-illu-icon-style="colored"] .fa-window-minimize::before,
+html[data-illu-icon-style="colored"] .fa-x::before,
+html[data-illu-icon-style="colored"] .fa-xmark::before {
+    color: var(--ico-red);
+}
+
+/* validation */
+html[data-illu-icon-style="colored"] .fa-bullseye::before,
+html[data-illu-icon-style="colored"] .fa-check::before,
+html[data-illu-icon-style="colored"] .fa-check-double::before,
+html[data-illu-icon-style="colored"] .fa-circle-dot::before,
+html[data-illu-icon-style="colored"] .fa-file-circle-plus::before,
+html[data-illu-icon-style="colored"] .fa-forward::before,
+html[data-illu-icon-style="colored"] .fa-play::before,
+html[data-illu-icon-style="colored"] .fa-plus::before,
+html[data-illu-icon-style="colored"] .fa-square-plus::before {
+    color: var(--ico-green);
+}
+
+/* nature / météo */
+html[data-illu-icon-style="colored"] .fa-city::before,
+html[data-illu-icon-style="colored"] .fa-cloud::before,
+html[data-illu-icon-style="colored"] .fa-hurricane::before,
+html[data-illu-icon-style="colored"] .fa-mountain::before,
+html[data-illu-icon-style="colored"] .fa-rocket::before,
+html[data-illu-icon-style="colored"] .fa-smog::before,
+html[data-illu-icon-style="colored"] .fa-snowflake::before,
+html[data-illu-icon-style="colored"] .fa-sun::before,
+html[data-illu-icon-style="colored"] .fa-temperature-half::before,
+html[data-illu-icon-style="colored"] .fa-water::before {
+    color: var(--ico-green2);
+}
+
+/* fichier & presse-papiers */
+html[data-illu-icon-style="colored"] .fa-clipboard::before,
+html[data-illu-icon-style="colored"] .fa-clipboard-list::before,
+html[data-illu-icon-style="colored"] .fa-clone::before,
+html[data-illu-icon-style="colored"] .fa-copy::before,
+html[data-illu-icon-style="colored"] .fa-door-open::before,
+html[data-illu-icon-style="colored"] .fa-download::before,
+html[data-illu-icon-style="colored"] .fa-file-export::before,
+html[data-illu-icon-style="colored"] .fa-floppy-disk::before,
+html[data-illu-icon-style="colored"] .fa-folder-open::before,
+html[data-illu-icon-style="colored"] .fa-paper-plane::before,
+html[data-illu-icon-style="colored"] .fa-paste::before,
+html[data-illu-icon-style="colored"] .fa-print::before,
+html[data-illu-icon-style="colored"] .fa-scroll::before,
+html[data-illu-icon-style="colored"] .fa-upload::before {
+    color: var(--ico-blue);
+}
+
+/* dessin & tracé */
+html[data-illu-icon-style="colored"] .fa-bezier-curve::before,
+html[data-illu-icon-style="colored"] .fa-braille::before,
+html[data-illu-icon-style="colored"] .fa-crop::before,
+html[data-illu-icon-style="colored"] .fa-crop-simple::before,
+html[data-illu-icon-style="colored"] .fa-draw-polygon::before,
+html[data-illu-icon-style="colored"] .fa-paintbrush::before,
+html[data-illu-icon-style="colored"] .fa-pen-nib::before,
+html[data-illu-icon-style="colored"] .fa-pencil::before,
+html[data-illu-icon-style="colored"] .fa-scissors::before,
+html[data-illu-icon-style="colored"] .fa-stamp::before,
+html[data-illu-icon-style="colored"] .fa-wand-magic::before,
+html[data-illu-icon-style="colored"] .fa-wand-magic-sparkles::before {
+    color: var(--ico-violet);
+}
+
+/* couleur & remplissage */
+html[data-illu-icon-style="colored"] .fa-candy-cane::before,
+html[data-illu-icon-style="colored"] .fa-circle-half-stroke::before,
+html[data-illu-icon-style="colored"] .fa-clover::before,
+html[data-illu-icon-style="colored"] .fa-droplet::before,
+html[data-illu-icon-style="colored"] .fa-eye-dropper::before,
+html[data-illu-icon-style="colored"] .fa-fill::before,
+html[data-illu-icon-style="colored"] .fa-fill-drip::before,
+html[data-illu-icon-style="colored"] .fa-gem::before,
+html[data-illu-icon-style="colored"] .fa-palette::before,
+html[data-illu-icon-style="colored"] .fa-swatchbook::before,
+html[data-illu-icon-style="colored"] .fa-tape::before {
+    color: var(--ico-pink);
+}
+
+/* affichage & zoom */
+html[data-illu-icon-style="colored"] .fa-compress::before,
+html[data-illu-icon-style="colored"] .fa-desktop::before,
+html[data-illu-icon-style="colored"] .fa-expand::before,
+html[data-illu-icon-style="colored"] .fa-external-link::before,
+html[data-illu-icon-style="colored"] .fa-eye::before,
+html[data-illu-icon-style="colored"] .fa-eye-slash::before,
+html[data-illu-icon-style="colored"] .fa-glasses::before,
+html[data-illu-icon-style="colored"] .fa-magnifying-glass::before,
+html[data-illu-icon-style="colored"] .fa-magnifying-glass-minus::before,
+html[data-illu-icon-style="colored"] .fa-magnifying-glass-plus::before,
+html[data-illu-icon-style="colored"] .fa-maximize::before,
+html[data-illu-icon-style="colored"] .fa-table-columns::before,
+html[data-illu-icon-style="colored"] .fa-up-right-and-down-left-from-center::before,
+html[data-illu-icon-style="colored"] .fa-up-right-from-square::before {
+    color: var(--ico-cyan);
+}
+
+/* image & média */
+html[data-illu-icon-style="colored"] .fa-camera::before,
+html[data-illu-icon-style="colored"] .fa-camera-retro::before,
+html[data-illu-icon-style="colored"] .fa-chart-column::before,
+html[data-illu-icon-style="colored"] .fa-chart-line::before,
+html[data-illu-icon-style="colored"] .fa-clapperboard::before,
+html[data-illu-icon-style="colored"] .fa-film::before,
+html[data-illu-icon-style="colored"] .fa-image::before,
+html[data-illu-icon-style="colored"] .fa-image-portrait::before,
+html[data-illu-icon-style="colored"] .fa-images::before,
+html[data-illu-icon-style="colored"] .fa-wave-square::before {
+    color: var(--ico-orange);
+}
+
+/* texte */
+html[data-illu-icon-style="colored"] .fa-align-center::before,
+html[data-illu-icon-style="colored"] .fa-align-left::before,
+html[data-illu-icon-style="colored"] .fa-align-right::before,
+html[data-illu-icon-style="colored"] .fa-bold::before,
+html[data-illu-icon-style="colored"] .fa-comment::before,
+html[data-illu-icon-style="colored"] .fa-comment-dots::before,
+html[data-illu-icon-style="colored"] .fa-font::before,
+html[data-illu-icon-style="colored"] .fa-italic::before,
+html[data-illu-icon-style="colored"] .fa-list::before,
+html[data-illu-icon-style="colored"] .fa-terminal::before,
+html[data-illu-icon-style="colored"] .fa-text-height::before {
+    color: var(--ico-indigo);
+}
+
+/* forme & objet */
+html[data-illu-icon-style="colored"] .fa-border-all::before,
+html[data-illu-icon-style="colored"] .fa-border-style::before,
+html[data-illu-icon-style="colored"] .fa-circle::before,
+html[data-illu-icon-style="colored"] .fa-cube::before,
+html[data-illu-icon-style="colored"] .fa-layer-group::before,
+html[data-illu-icon-style="colored"] .fa-object-group::before,
+html[data-illu-icon-style="colored"] .fa-object-ungroup::before,
+html[data-illu-icon-style="colored"] .fa-shapes::before,
+html[data-illu-icon-style="colored"] .fa-square::before,
+html[data-illu-icon-style="colored"] .fa-star::before,
+html[data-illu-icon-style="colored"] .fa-table-cells::before,
+html[data-illu-icon-style="colored"] .fa-table-cells-large::before,
+html[data-illu-icon-style="colored"] .fa-vector-square::before {
+    color: var(--ico-amber);
+}
+
+/* alerte & information */
+html[data-illu-icon-style="colored"] .fa-bolt::before,
+html[data-illu-icon-style="colored"] .fa-bug::before,
+html[data-illu-icon-style="colored"] .fa-circle-info::before,
+html[data-illu-icon-style="colored"] .fa-circle-question::before,
+html[data-illu-icon-style="colored"] .fa-lightbulb::before {
+    color: var(--ico-amber2);
+}
+
+/* transformation */
+html[data-illu-icon-style="colored"] .fa-arrow-right-arrow-left::before,
+html[data-illu-icon-style="colored"] .fa-arrows-left-right::before,
+html[data-illu-icon-style="colored"] .fa-arrows-rotate::before,
+html[data-illu-icon-style="colored"] .fa-arrows-up-down::before,
+html[data-illu-icon-style="colored"] .fa-arrows-up-down-left-right::before,
+html[data-illu-icon-style="colored"] .fa-left-right::before,
+html[data-illu-icon-style="colored"] .fa-magnet::before,
+html[data-illu-icon-style="colored"] .fa-repeat::before,
+html[data-illu-icon-style="colored"] .fa-right-left::before,
+html[data-illu-icon-style="colored"] .fa-rotate::before,
+html[data-illu-icon-style="colored"] .fa-rotate-left::before,
+html[data-illu-icon-style="colored"] .fa-rotate-right::before,
+html[data-illu-icon-style="colored"] .fa-ruler::before,
+html[data-illu-icon-style="colored"] .fa-ruler-horizontal::before,
+html[data-illu-icon-style="colored"] .fa-ruler-vertical::before,
+html[data-illu-icon-style="colored"] .fa-shuffle::before,
+html[data-illu-icon-style="colored"] .fa-turn-down::before,
+html[data-illu-icon-style="colored"] .fa-up-down::before,
+html[data-illu-icon-style="colored"] .fa-up-down-left-right::before {
+    color: var(--ico-teal);
+}
+
+/* navigation & réglages */
+html[data-illu-icon-style="colored"] .fa-angle-down::before,
+html[data-illu-icon-style="colored"] .fa-angle-up::before,
+html[data-illu-icon-style="colored"] .fa-angles-down::before,
+html[data-illu-icon-style="colored"] .fa-angles-up::before,
+html[data-illu-icon-style="colored"] .fa-arrow-down::before,
+html[data-illu-icon-style="colored"] .fa-arrow-left::before,
+html[data-illu-icon-style="colored"] .fa-arrow-right::before,
+html[data-illu-icon-style="colored"] .fa-arrow-up::before,
+html[data-illu-icon-style="colored"] .fa-backward-fast::before,
+html[data-illu-icon-style="colored"] .fa-backward-step::before,
+html[data-illu-icon-style="colored"] .fa-bars::before,
+html[data-illu-icon-style="colored"] .fa-caret-left::before,
+html[data-illu-icon-style="colored"] .fa-caret-right::before,
+html[data-illu-icon-style="colored"] .fa-chevron-down::before,
+html[data-illu-icon-style="colored"] .fa-chevron-right::before,
+html[data-illu-icon-style="colored"] .fa-circle-notch::before,
+html[data-illu-icon-style="colored"] .fa-clock-rotate-left::before,
+html[data-illu-icon-style="colored"] .fa-ellipsis::before,
+html[data-illu-icon-style="colored"] .fa-filter::before,
+html[data-illu-icon-style="colored"] .fa-fingerprint::before,
+html[data-illu-icon-style="colored"] .fa-forward-fast::before,
+html[data-illu-icon-style="colored"] .fa-forward-step::before,
+html[data-illu-icon-style="colored"] .fa-gear::before,
+html[data-illu-icon-style="colored"] .fa-history::before,
+html[data-illu-icon-style="colored"] .fa-microchip::before,
+html[data-illu-icon-style="colored"] .fa-pause::before,
+html[data-illu-icon-style="colored"] .fa-right-from-bracket::before,
+html[data-illu-icon-style="colored"] .fa-sliders::before,
+html[data-illu-icon-style="colored"] .fa-spinner::before,
+html[data-illu-icon-style="colored"] .fa-undo::before,
+html[data-illu-icon-style="colored"] .fa-user::before {
+    color: var(--ico-slate);
+}
+
+/* marques */
+html[data-illu-icon-style="colored"] .fa-font-awesome::before,
+html[data-illu-icon-style="colored"] .fa-github::before {
+    color: var(--ico-brand);
+}
+
+/* Sprite : il est déjà multicolore, on l'aligne sur la même intensité que FontAwesome. */
+html[data-illu-icon-style="colored"] {
+    --illu-icon-stroke: var(--ico-slate);
+    --illu-icon-accent: var(--mp-accent, #0d7a7a);
+}
+
+html[data-illu-icon-style="colored"] svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]) {
+    filter: saturate(1.18) contrast(1.04);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RELIEF › 3D
+   ══════════════════════════════════════════════════════════════════ */
+
+/*
+ * Le relief seul manquait de contraste : le reflet blanc du dessus mangeait les
+ * teintes claires et rien ne détachait l'icône du fond. On ajoute donc un liseré
+ * sombre très serré, en plus de l'ombre portée — c'est lui qui rend le jeu homogène,
+ * quelle que soit la teinte de la famille.
+ */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    html[data-illu-icon-relief="3d"] :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before {
+        background-image: var(--ico3d-misc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        filter:
+            drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.42))
+            drop-shadow(0 1px 0 rgba(255, 255, 255, 0.42))
+            drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.32));
+    }
+
+    /* destructif */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-border-none::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-broom::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-xmark::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-droplet-slash::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-eraser::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-file-circle-xmark::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-minus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-rectangle-xmark::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-square-minus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-trash::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-trash-can::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-window-minimize::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-x::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-xmark::before {
+        background-image: var(--ico3d-red);
+    }
+
+    /* validation */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bullseye::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-check::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-check-double::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-dot::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-file-circle-plus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-forward::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-play::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-plus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-square-plus::before {
+        background-image: var(--ico3d-green);
+    }
+
+    /* nature / météo */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-city::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-cloud::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-hurricane::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-mountain::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-rocket::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-smog::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-snowflake::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-sun::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-temperature-half::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-water::before {
+        background-image: var(--ico3d-green2);
+    }
+
+    /* fichier & presse-papiers */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clipboard::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clipboard-list::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clone::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-copy::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-door-open::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-download::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-file-export::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-floppy-disk::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-folder-open::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-paper-plane::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-paste::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-print::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-scroll::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-upload::before {
+        background-image: var(--ico3d-blue);
+    }
+
+    /* dessin & tracé */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bezier-curve::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-braille::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-crop::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-crop-simple::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-draw-polygon::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-paintbrush::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-pen-nib::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-pencil::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-scissors::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-stamp::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-wand-magic::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-wand-magic-sparkles::before {
+        background-image: var(--ico3d-violet);
+    }
+
+    /* couleur & remplissage */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-candy-cane::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-half-stroke::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clover::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-droplet::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-eye-dropper::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-fill::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-fill-drip::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-gem::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-palette::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-swatchbook::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-tape::before {
+        background-image: var(--ico3d-pink);
+    }
+
+    /* affichage & zoom */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-compress::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-desktop::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-expand::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-external-link::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-eye::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-eye-slash::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-glasses::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-magnifying-glass::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-magnifying-glass-minus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-magnifying-glass-plus::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-maximize::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-table-columns::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-up-right-and-down-left-from-center::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-up-right-from-square::before {
+        background-image: var(--ico3d-cyan);
+    }
+
+    /* image & média */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-camera::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-camera-retro::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-chart-column::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-chart-line::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clapperboard::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-film::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-image::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-image-portrait::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-images::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-wave-square::before {
+        background-image: var(--ico3d-orange);
+    }
+
+    /* texte */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-align-center::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-align-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-align-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bold::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-comment::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-comment-dots::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-font::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-italic::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-list::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-terminal::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-text-height::before {
+        background-image: var(--ico3d-indigo);
+    }
+
+    /* forme & objet */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-border-all::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-border-style::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-cube::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-layer-group::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-object-group::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-object-ungroup::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-shapes::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-square::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-star::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-table-cells::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-table-cells-large::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-vector-square::before {
+        background-image: var(--ico3d-amber);
+    }
+
+    /* alerte & information */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bolt::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bug::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-info::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-question::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-lightbulb::before {
+        background-image: var(--ico3d-amber2);
+    }
+
+    /* transformation */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrow-right-arrow-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrows-left-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrows-rotate::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrows-up-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrows-up-down-left-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-left-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-magnet::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-repeat::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-right-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-rotate::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-rotate-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-rotate-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-ruler::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-ruler-horizontal::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-ruler-vertical::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-shuffle::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-turn-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-up-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-up-down-left-right::before {
+        background-image: var(--ico3d-teal);
+    }
+
+    /* navigation & réglages */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-angle-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-angle-up::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-angles-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-angles-up::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrow-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrow-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrow-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-arrow-up::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-backward-fast::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-backward-step::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-bars::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-caret-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-caret-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-chevron-down::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-chevron-right::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-circle-notch::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-clock-rotate-left::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-ellipsis::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-filter::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-fingerprint::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-forward-fast::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-forward-step::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-gear::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-history::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-microchip::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-pause::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-right-from-bracket::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-sliders::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-spinner::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-undo::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-user::before {
+        background-image: var(--ico3d-slate);
+    }
+
+    /* marques */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-font-awesome::before,
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="colored"] .fa-github::before {
+        background-image: var(--ico3d-brand);
+    }
+
+    /* Palette « accent » en relief : le verre prend la couleur d'accentuation. */
+    html[data-illu-icon-relief="3d"][data-illu-icon-style="accent"] :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before {
+        background-image: linear-gradient(180deg,
+            color-mix(in srgb, var(--mp-accent, #0d7a7a) 62%, #ffffff) 0%,
+            color-mix(in srgb, var(--mp-accent, #0d7a7a) 84%, #ffffff) 45%,
+            var(--mp-accent, #0d7a7a) 51%,
+            color-mix(in srgb, var(--mp-accent, #0d7a7a) 58%, #000000) 100%);
+    }
+
+    /* Sur fond sombre le reflet blanc s'efface, l'ombre porte davantage. */
+    body.theme-dark html[data-illu-icon-relief="3d"] :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+    html[data-illu-icon-relief="3d"] body.theme-dark :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before {
+        filter:
+            drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 1px 0 rgba(255, 255, 255, 0.14))
+            drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+    }
+}
+
+/*
+ * Sprite en relief : les aplats sont remplis par le dégradé #illu-icon-gloss défini
+ * dans icons/illu-sprite.svg (ses arrêts dérivent de currentColor), et l'icône reçoit
+ * le même liseré + la même ombre que les glyphes FontAwesome, pour que les deux jeux
+ * se ressemblent vraiment.
+ */
+html[data-illu-icon-relief="3d"] svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]) {
+    filter:
+        drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.38))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.40))
+        drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.30));
+}
+
+html[data-illu-icon-relief="3d"] svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]) [fill]:not([fill="none"]):not([fill^="url"]) {
+    fill: url(#illu-icon-gloss);
+}
+
+body.theme-dark html[data-illu-icon-relief="3d"] svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]) {
+    filter:
+        drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.5))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.12))
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Contextes qui doivent rester neutres
+   ══════════════════════════════════════════════════════════════════
+
+   Une icône posée sur un fond plein (bouton actif, bouton accentué, barre de titre)
+   garde la couleur de son texte, sinon elle devient illisible. `.illu-ico-plain` est
+   l'échappatoire à poser au cas par cas. */
+
+html[data-illu-icon-style] .illu-scope-btn--active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-scope-btn--active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-scope-btn--active svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-icon-toggle--on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-icon-toggle--on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-icon-toggle--on svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-icon-toggle.active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-icon-toggle.active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-icon-toggle.active svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] button.illu-anim-on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] button.illu-anim-on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] button.illu-anim-on svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-anim-sel-info--on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-anim-sel-info--on :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-anim-sel-info--on svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .btn.primary :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .btn.primary :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .btn.primary svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .title-bar :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .title-bar :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .title-bar svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .menubar-contact-btn :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .menubar-contact-btn :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .menubar-contact-btn svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-mode-toggle-item:has(.illu-icon-toggle--on) :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-mode-toggle-item:has(.illu-icon-toggle--on) :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-mode-toggle-item:has(.illu-icon-toggle--on) svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .layer-row.active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .layer-row.active :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .layer-row.active svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-ico-plain :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-ico-plain :is(.fa, .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab)::before,
+html[data-illu-icon-relief] .illu-ico-plain svg:is(.illu-shape-ico, .illu-anim-ico, [class*="illu-"]),
+html[data-illu-icon-style] .illu-ico-plain::before {
+    background-image: none !important;
+    color: currentColor !important;
+    -webkit-text-fill-color: currentColor !important;
+    filter: none !important;
+}
+

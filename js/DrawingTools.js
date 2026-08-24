@@ -1188,6 +1188,9 @@ function illuResolveToolCursor(key, fallback) {
 window.updateMainCanvasCursor = function () {
     const el = document.getElementById('main-canvas-container');
     if (!el) return;
+    // Un curseur imposé (pipette d'effet, pioche SVG, panoramique) prime sur l'outil :
+    // on ne réécrit rien, la règle CSS liée à data-illu-forced-cursor s'en charge.
+    if (typeof window.illuForcedCursor === 'function' && window.illuForcedCursor()) return;
     if (typeof EditorManager === 'undefined' || !EditorManager.activeProject) {
         el.style.cursor = '';
         const ws = document.getElementById('workspace');

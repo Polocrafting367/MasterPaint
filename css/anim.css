@@ -8,45 +8,50 @@
     display: none !important;
 }
 
+/* Géométrie : sur :root, car --anim-panel-h est piloté en ligne par le JS
+   (setPanelHeight → documentElement.style). */
 :root {
     --anim-panel-h: 148px;
     --anim-cell-w: 22px;
     --anim-row-h: 24px;
     --anim-label-w: 148px;
-    --anim-bg: #f0f0f0;
-    --anim-bg-alt: #e4e4e4;
-    --anim-surface: #ffffff;
-    --anim-border: #b9b9b9;
-    --anim-text: #1c1c1c;
-    --anim-muted: #6a6a6a;
-    --anim-accent: var(--mp-accent, #2b6cff);
-    --anim-cel: #3a3a3a;
-    --anim-hold: #9aa7c7;
-    --anim-key: #d08a17;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --anim-bg: #2a2b2e;
-        --anim-bg-alt: #232427;
-        --anim-surface: #313236;
-        --anim-border: #45464b;
-        --anim-text: #ececec;
-        --anim-muted: #9a9ba0;
-        --anim-cel: #e6e6e6;
-        --anim-hold: #5c6a92;
-    }
-}
+/*
+ * Palette : aucune couleur figée — tout dérive des jetons de thème (--mp-*), pour que
+ * la frise suive le thème actif (Win98, Win10, macOS Lion/Moderne, Photoshop…) et son
+ * variant sombre sans règle dédiée.
+ *
+ * Déclarés sur `body` et NON sur `:root` : les thèmes redéfinissent les --mp-* sur
+ * `body.theme-dark`. Une substitution faite sur :root figerait les valeurs claires
+ * (la substitution a lieu là où la propriété est déclarée), et le panneau resterait
+ * clair en mode sombre. Les valeurs de repli ne servent que si aucun thème n'est chargé.
+ */
+body {
+    --anim-accent: var(--mp-accent, var(--mp-teal, #0d7a7a));
+    --anim-accent-rgb: var(--mp-accent-rgb, 13, 122, 122);
+    --anim-on-accent: #ffffff;
 
-body.theme-dark {
-    --anim-bg: #2a2b2e;
-    --anim-bg-alt: #232427;
-    --anim-surface: #313236;
-    --anim-border: #45464b;
-    --anim-text: #ececec;
-    --anim-muted: #9a9ba0;
-    --anim-cel: #e6e6e6;
-    --anim-hold: #5c6a92;
+    --anim-bg: var(--mp-dock-bg, var(--mp-surface, #f0f0f0));
+    --anim-bg-alt: var(--mp-surface-deep, #e4e4e4);
+    --anim-surface: var(--mp-surface, #ffffff);
+    --anim-border: var(--mp-dock-border, var(--mp-inset-top, #b9b9b9));
+    --anim-text: var(--mp-text, #1c1c1c);
+    --anim-muted: color-mix(in srgb, var(--anim-text) 58%, var(--anim-surface));
+
+    --anim-font: var(--mp-font, "Segoe UI", system-ui, Arial, sans-serif);
+    --anim-font-size: var(--mp-ui-font-small, 12px);
+    --anim-radius: var(--mp-radius, 4px);
+
+    /* Voiles accentués : sélection, tête de lecture, survol de menu. */
+    --anim-veil-soft: rgba(var(--anim-accent-rgb), 0.10);
+    --anim-veil: rgba(var(--anim-accent-rgb), 0.16);
+    --anim-veil-strong: rgba(var(--anim-accent-rgb), 0.30);
+
+    /* Sémantiques de la frise (teintées par le texte pour rester lisibles en sombre). */
+    --anim-hold: color-mix(in srgb, var(--anim-accent) 55%, var(--anim-surface));
+    --anim-key: color-mix(in srgb, #f0a020 80%, var(--anim-text));
+    --anim-danger: #c94a4a;
 }
 
 #illu-anim-panel {
@@ -62,7 +67,8 @@ body.theme-dark {
     border-top: 1px solid var(--anim-border);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.18);
     z-index: 900;
-    font-size: 12px;
+    font-family: var(--anim-font);
+    font-size: var(--anim-font-size);
     user-select: none;
     -webkit-user-select: none;
 }
@@ -98,6 +104,23 @@ body.illu-anim-active.illu-anim-floating #app-window {
 /* Palettes flottantes (Paint.NET) au-dessus du panneau d'animation. */
 body.illu-anim-active .floating-window {
     z-index: 950;
+}
+
+/* ---- Icônes (FontAwesome + sprite interne) ------------------------------- */
+
+/* Les glyphes suivent la couleur du bouton : texte normal, --anim-on-accent une fois actif. */
+.illu-anim-ico {
+    font-size: 12px;
+    line-height: 1;
+    color: inherit;
+}
+
+svg.illu-anim-ico {
+    width: 15px;
+    height: 15px;
+    display: block;
+    fill: none;
+    flex: 0 0 auto;
 }
 
 /* Poignée de redimensionnement (bord haut du panneau). */
@@ -144,23 +167,40 @@ body.illu-anim-active .floating-window {
     border: 1px solid var(--anim-border);
     background: var(--anim-surface);
     color: var(--anim-text);
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     cursor: pointer;
+    font-family: inherit;
     font-size: 13px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 5px;
 }
 
 .illu-anim-toolbar button:hover {
     border-color: var(--anim-accent);
 }
 
-.illu-anim-toolbar button.illu-anim-on {
-    background: var(--anim-accent);
-    color: #fff;
-    border-color: var(--anim-accent);
+/*
+ * État actif des bascules (pelure d'oignon, boucle, ping-pong…).
+ * Les thèmes habillent tous les <button> par un sélecteur très spécifique
+ * (`body:not(…) button:not(…):not(…)` ≈ 0,6,3), et les thèmes macOS y ajoutent
+ * `!important` : sans cela l'accent ne passait jamais et les bascules paraissaient
+ * toujours éteintes. On ne force QUE cet état — au repos, fond, bordure, rayon et
+ * métriques restent entièrement ceux du thème.
+ */
+#illu-anim-panel .illu-anim-toolbar button.illu-anim-on {
+    background: var(--anim-accent) !important;
+    color: var(--anim-on-accent) !important;
+    border-color: var(--anim-accent) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+#illu-anim-panel .illu-anim-toolbar button.illu-anim-on:hover {
+    background: color-mix(in srgb, var(--anim-accent) 84%, var(--anim-text)) !important;
+    border-color: var(--anim-accent) !important;
 }
 
 .illu-anim-toolbar .illu-anim-sep {
@@ -183,8 +223,9 @@ body.illu-anim-active .floating-window {
     border: 1px solid var(--anim-border);
     background: var(--anim-surface);
     color: var(--anim-text);
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     padding: 0 4px;
+    font-family: inherit;
 }
 
 .illu-anim-onion-opts {
@@ -206,18 +247,20 @@ body.illu-anim-active .floating-window {
     border: 1px solid var(--anim-border);
     background: var(--anim-surface);
     color: var(--anim-text);
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     padding: 0 3px;
+    font-family: inherit;
 }
 .illu-anim-onion-num input[type='range'] {
     width: 64px;
+    accent-color: var(--anim-accent);
 }
 .illu-anim-onion-tint {
     width: 22px;
     height: 22px;
     padding: 0;
     border: 1px solid var(--anim-border);
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     background: var(--anim-surface);
     cursor: pointer;
 }
@@ -295,12 +338,12 @@ body.illu-anim-active .floating-window {
 
 .illu-anim-ruler-cell.illu-anim-playhead-col,
 .illu-anim-cell.illu-anim-playhead-col {
-    box-shadow: inset 0 0 0 9999px rgba(43, 108, 255, 0.10);
+    box-shadow: inset 0 0 0 9999px var(--anim-veil-soft);
 }
 
 .illu-anim-ruler-cell.illu-anim-playhead-col {
     background: var(--anim-accent);
-    color: #fff;
+    color: var(--anim-on-accent);
 }
 
 /* Lignes de calque */
@@ -311,13 +354,18 @@ body.illu-anim-active .floating-window {
 }
 
 .illu-anim-track-label.illu-anim-active {
-    background: rgba(43, 108, 255, 0.14);
+    background: var(--anim-veil);
     box-shadow: inset 3px 0 0 var(--anim-accent);
 }
 
 .illu-anim-track-label .illu-anim-vis {
     color: var(--anim-muted);
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+.illu-anim-track-label .illu-anim-vis:hover {
+    color: var(--anim-accent);
 }
 
 .illu-anim-cell {
@@ -400,8 +448,8 @@ body.illu-anim-active .floating-window {
 
 /* Cellules sélectionnées : voile accentué + liseré, lisible par-dessus la miniature. */
 .illu-anim-cell.illu-anim-sel {
-    background: rgba(43, 108, 255, 0.28);
-    box-shadow: inset 0 0 0 1px rgba(43, 108, 255, 0.75);
+    background: var(--anim-veil-strong);
+    box-shadow: inset 0 0 0 1px var(--anim-accent);
 }
 .illu-anim-cell.illu-anim-sel.illu-anim-cel {
     box-shadow: inset 0 0 0 2px var(--anim-accent);
@@ -413,12 +461,12 @@ body.illu-anim-active .floating-window {
 
 /* Colonnes de la règle couvertes par la sélection. */
 .illu-anim-ruler-cell.illu-anim-sel-col {
-    background: rgba(43, 108, 255, 0.32);
+    background: var(--anim-veil-strong);
     color: var(--anim-text);
 }
 .illu-anim-ruler-cell.illu-anim-sel-col.illu-anim-playhead-col {
     background: var(--anim-accent);
-    color: #fff;
+    color: var(--anim-on-accent);
 }
 
 /* Compteur de sélection dans la barre d'outils. */
@@ -429,24 +477,23 @@ body.illu-anim-active .floating-window {
     min-width: 0;
 }
 .illu-anim-sel-info.illu-anim-sel-info--on {
-    color: #fff;
+    color: var(--anim-on-accent);
     background: var(--anim-accent);
     border-radius: 9px;
     padding: 2px 7px;
 }
 
-/* Boutons de fermeture : la croix replie la frise, ⏏ quitte le mode animation. */
-.illu-anim-toolbar button.illu-anim-close-btn,
+/* Le trait bas réduit la frise, la sortie de piste quitte le mode animation. */
+.illu-anim-toolbar button.illu-anim-collapse-btn,
 .illu-anim-toolbar button.illu-anim-exit-btn {
     margin-left: 0;
 }
 .illu-anim-toolbar button.illu-anim-exit-btn {
     margin-left: 8px;
 }
-.illu-anim-toolbar button.illu-anim-close-btn:hover {
-    background: #c94a4a;
-    border-color: #c94a4a;
-    color: #fff;
+/* Réduire n'est pas destructif : survol neutre, pas de rouge. */
+#illu-anim-panel .illu-anim-toolbar button.illu-anim-collapse-btn:hover {
+    border-color: var(--anim-accent) !important;
 }
 
 /* ---- Menus flottants de la frise ---------------------------------------- */
@@ -454,23 +501,25 @@ body.illu-anim-active .floating-window {
 .illu-anim-menu {
     position: fixed;
     z-index: 12000;
-    background: var(--anim-surface);
+    background: var(--mp-menu-submenu-bg, var(--anim-surface));
     color: var(--anim-text);
     border: 1px solid var(--anim-border);
-    border-radius: 6px;
+    border-radius: var(--anim-radius);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
     padding: 4px;
     min-width: 200px;
-    font-size: 12px;
+    font-family: var(--anim-font);
+    font-size: var(--anim-font-size);
 }
 .illu-anim-menu-item {
     padding: 6px 10px;
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     cursor: pointer;
     white-space: nowrap;
 }
 .illu-anim-menu-item:hover {
-    background: rgba(43, 108, 255, 0.16);
+    background: var(--mp-menu-hover-bg, var(--anim-veil));
+    color: var(--mp-menu-hover-fg, var(--anim-text));
 }
 .illu-anim-menu-item--off {
     opacity: 0.45;
@@ -501,19 +550,25 @@ button.illu-anim-open-btn {
     line-height: 1;
     padding: 2px 8px;
     border: 1px solid var(--anim-border);
-    border-radius: 4px;
+    border-radius: var(--anim-radius);
     background: var(--anim-surface);
     color: var(--anim-text);
     cursor: pointer;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 button.illu-anim-open-btn:hover {
     border-color: var(--anim-accent);
 }
-button.illu-anim-open-btn.illu-anim-on {
-    background: var(--anim-accent);
-    border-color: var(--anim-accent);
-    color: #fff;
+/* Idem hors du panneau, pour le bouton logé dans la barre d'état. */
+button#illu-anim-open-btn.illu-anim-on {
+    background: var(--anim-accent) !important;
+    border-color: var(--anim-accent) !important;
+    color: var(--anim-on-accent) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
 }
 
 /* ---- Portée « Images » de la fenêtre d'effet (mode animation) ------------- */

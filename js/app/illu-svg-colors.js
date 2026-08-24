@@ -56,7 +56,8 @@
 
     function startEyedropper() {
         _eyedropperActive = true;
-        document.body.style.cursor = 'crosshair';
+        if (typeof window.illuSetForcedCursor === 'function') window.illuSetForcedCursor('crosshair');
+        else document.body.style.cursor = 'crosshair';
         const indicator = document.getElementById('svg-eyedropper-indicator');
         if (indicator) indicator.style.display = 'block';
 
@@ -89,7 +90,8 @@
 
         function stopEyedropper() {
             _eyedropperActive = false;
-            document.body.style.cursor = '';
+            if (typeof window.illuClearForcedCursor === 'function') window.illuClearForcedCursor();
+            else document.body.style.cursor = '';
             const indicator = document.getElementById('svg-eyedropper-indicator');
             if (indicator) indicator.style.display = 'none';
             document.removeEventListener('mousemove', onMove);

@@ -1241,15 +1241,21 @@ body.illu-theme-maclion #context-menu .ctx-item:hover {
     text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.26);
 }
 
+/*
+ * Enfants DIRECTS. En descendant (` .menu-icon`), le survol d'une entrée à sous-menu
+ * blanchissait aussi les icônes du sous-menu ouvert, qui en est un descendant :
+ * icônes blanches sur fond clair.
+ */
 body.illu-theme-maclion ul[role="menu"] li[role="menuitem"]:hover > span,
-body.illu-theme-maclion ul[role="menu"] li[role="menuitem"]:hover .menu-icon,
-body.illu-theme-maclion ul[role="menu"] li[role="menuitem"]:hover .menu-icon i,
-body.illu-theme-maclion #context-menu .ctx-item:hover .ctx-shortcut {
+body.illu-theme-maclion ul[role="menu"] li[role="menuitem"]:hover > .menu-icon,
+body.illu-theme-maclion ul[role="menu"] li[role="menuitem"]:hover > .menu-icon i,
+body.illu-theme-maclion #context-menu .ctx-item:hover > .ctx-shortcut {
     color: #ffffff !important;
 }
 
-body.illu-theme-maclion ul[role="menu"] li[role="menuitem"] .menu-icon,
-body.illu-theme-maclion ul[role="menu"] li[role="menuitem"] .menu-check {
+body.illu-theme-maclion ul[role="menu"] li[role="menuitem"] > .menu-icon,
+body.illu-theme-maclion ul[role="menu"] li[role="menuitem"] > .menu-check,
+body.illu-theme-maclion ul[role="menu"] li[role="menuitem"] > .menu-icon i {
     color: var(--mp-menu-icon) !important;
 }
 

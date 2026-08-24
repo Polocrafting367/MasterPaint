@@ -1151,6 +1151,25 @@ body.illu-pdn-dock-active #win-colors #palette-grid.palette-grid--flow {
     max-width: 96vw;
 }
 
+/* Drapeau devant le libellé dans les boutons de langue (Paramètres/Bienvenue) */
+.illu-lang-flag {
+    margin-right: 5px;
+    font-size: 1.05em;
+    vertical-align: -1px;
+}
+
+/* Rangées de langue : autoriser le retour à la ligne pour ne pas écraser les libellés */
+#settings-lang-scope-row,
+#welcome-lang-scope-row {
+    flex-wrap: wrap;
+}
+
+#settings-lang-scope-row .illu-scope-btn,
+#welcome-lang-scope-row .illu-scope-btn {
+    flex: 1 1 auto;
+    min-width: 92px;
+}
+
 #settings-overlay .settings-dialog-window-body,
 #welcome-overlay .welcome-dialog-body {
     padding: 8px 10px !important;
@@ -1318,7 +1337,7 @@ body.theme-dark #welcome-overlay .welcome-dialog-start-btn {
 }
 
 #welcome-overlay .settings-dialog-aside {
-    flex: 0 0 60%;
+    flex: 0 0 55%;
     min-width: 0;
     overflow: auto;
     padding-right: 4px;
@@ -1507,12 +1526,25 @@ body.theme-dark #welcome-overlay .welcome-dialog-start-btn {
     text-align: right;
 }
 
-#settings-overlay .settings-toggle-input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-    pointer-events: none;
+/*
+ * La case native ne doit jamais se voir : c'est la rangée Non/Oui qui la pilote.
+ * La règle ne visait que #settings-overlay ; ailleurs (fenêtre de bienvenue, thèmes
+ * qui redéfinissent l'apparence des cases) la case réapparaissait à côté du toggle.
+ */
+#settings-overlay .settings-toggle-input,
+#welcome-overlay .settings-toggle-input,
+input.settings-toggle-input {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    pointer-events: none !important;
 }
 
 #settings-overlay .illu-settings-toggle-row {
@@ -3806,7 +3838,7 @@ body.illu-mobile-ui .settings-table-row:has(#welcome-ui-base-row) {
     background: var(--mp-surface, #c0c0c0) !important;
     /* restore solid theme background color */
     border-top: 1px solid var(--mp-raised-top, #fff);
-    min-height: 32px;
+    min-height: var(--illu-submenubar-h, 32px);
     padding: 0 !important;
     /* remove padding */
     box-sizing: border-box;
@@ -4575,4 +4607,246 @@ body.illu-svg-mode-active .svg-rotation-handle {
 .tab-bar-inner .tab.active .tab-anim-badge,
 .tab-bar-outer .tab.active .tab-anim-badge {
     opacity: 1;
+}
+
+/* ---- Mode développement -------------------------------------------------
+ *
+ * Interrupteur global des Paramètres / de la fenêtre de bienvenue. Tout ce qui n'est
+ * pas prêt pour tout le monde porte `.illu-dev-only` et n'apparaît que sous
+ * `body.illu-dev-mode` (posée dès le script d'amorçage, avant le premier rendu).
+ * `!important` est nécessaire : les thèmes forcent `display: flex !important` sur les
+ * lignes de menu et sur les rangées de boutons de réglage.
+ */
+/* Les sélecteurs sont scopés par ID : sans cela, une règle de thème du type
+   `body.illu-theme-macmodern .illu-scope-btn-row { display: flex !important }`
+   (0,2,0) repasse devant et la rangée réapparaît. */
+.illu-dev-only,
+#settings-overlay .illu-dev-only,
+#welcome-overlay .illu-dev-only,
+#menu-win-icon-viewer {
+    display: none !important;
+}
+
+body.illu-dev-mode .illu-dev-only,
+body.illu-dev-mode #settings-overlay .illu-dev-only,
+body.illu-dev-mode #welcome-overlay .illu-dev-only,
+body.illu-dev-mode #menu-win-icon-viewer {
+    display: flex !important;
+}
+
+/* Les rangées de réglage réservées au mode dev retrouvent leur disposition en colonne. */
+body.illu-dev-mode #settings-overlay .settings-table-row.illu-dev-only,
+body.illu-dev-mode #welcome-overlay .settings-table-row.illu-dev-only {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* La rangée macOS reprend la disposition en bloc des étiquettes de catégorie. */
+body.illu-dev-mode .illu-theme-cat-label.illu-dev-only,
+body.illu-dev-mode #settings-overlay .illu-theme-cat-label.illu-dev-only,
+body.illu-dev-mode #welcome-overlay .illu-theme-cat-label.illu-dev-only {
+    display: block !important;
+}
+
+/* Bascule « Activer mode développement », sous la liste des raccourcis clavier. */
+#settings-overlay .settings-dev-mode-row,
+#welcome-overlay .settings-dev-mode-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dotted var(--mp-dock-border, #b8b8b8);
+}
+
+#settings-overlay .settings-dev-mode-main,
+#welcome-overlay .settings-dev-mode-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+#settings-overlay .settings-dev-mode-title,
+#welcome-overlay .settings-dev-mode-title {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#settings-overlay .settings-dev-mode-hint,
+#welcome-overlay .settings-dev-mode-hint {
+    font-size: 9px;
+    line-height: 1.35;
+    opacity: 0.75;
+}
+
+/* ---- Curseur imposé sur la pile de la toile ------------------------------
+ *
+ * Les modes « pioche » (pipette d'une fenêtre d'effet, choix de couleur SVG) et le
+ * panoramique posaient `document.body.style.cursor`. Au-dessus de la toile ça ne se
+ * voyait pas : #main-canvas-container porte son propre curseur en style en ligne, qui
+ * l'emporte sur l'héritage. L'attribut est posé sur <html> par illuSetForcedCursor().
+ */
+html[data-illu-forced-cursor] #main-canvas-container,
+html[data-illu-forced-cursor] #main-canvas-container *,
+html[data-illu-forced-cursor] #workspace,
+html[data-illu-forced-cursor] #workspace-wrapper {
+    cursor: inherit !important;
+}
+
+/* Les enfants de la toile suivent le curseur de l'outil même s'ils interceptent le
+   pointeur (calque SVG, pile de calques pixel) — sauf style en ligne explicite. */
+#main-canvas-container > svg,
+#main-canvas-container > canvas,
+#main-canvas-container > .pixel-layer-stack,
+#main-canvas-container #svg-layers {
+    cursor: inherit;
+}
+
+/* ---- Hauteur des barres sur écran court ---------------------------------
+ *
+ * La largeur était déjà gérée (les barres défilent horizontalement), mais pas la
+ * hauteur : l'en-tête et les options d'outil occupaient 142 px fixes, si bien que sur
+ * une fenêtre basse il ne restait presque rien à la zone de travail et la toile
+ * débordait de son cadre. Ces trois mesures pilotent les hauteurs concernées et
+ * décroissent par paliers ; les barres rendent ainsi de la place à la toile.
+ *
+ *   --illu-submenubar-h   : rangée d'outils sous la barre de menus  (main.css)
+ *   --illu-ribbon-group-h : groupes du ruban d'options   (illu-tool-ribbon.css)
+ *   --illu-optbar-row-h   : rangées d'options héritées   (style.css)
+ */
+:root {
+    --illu-submenubar-h: 32px;
+    --illu-ribbon-group-h: 84px;
+    --illu-optbar-row-h: 30px;
+}
+
+@media (max-height: 720px) {
+    :root {
+        --illu-ribbon-group-h: 72px;
+        --illu-optbar-row-h: 28px;
+    }
+}
+
+@media (max-height: 600px) {
+    :root {
+        --illu-submenubar-h: 28px;
+        --illu-ribbon-group-h: 60px;
+        --illu-optbar-row-h: 25px;
+    }
+}
+
+@media (max-height: 500px) {
+    :root {
+        --illu-submenubar-h: 24px;
+        --illu-ribbon-group-h: 50px;
+        --illu-optbar-row-h: 22px;
+    }
+}
+
+@media (max-height: 420px) {
+    :root {
+        --illu-submenubar-h: 22px;
+        --illu-ribbon-group-h: 42px;
+        --illu-optbar-row-h: 20px;
+    }
+}
+
+/* Filet de sécurité : sur une fenêtre vraiment basse, les options d'outil ne prennent
+   pas plus du quart de la hauteur ; au-delà elles défilent verticalement plutôt que de
+   repousser la toile hors de l'écran. Réservé à ces hauteurs-là, car le défilement
+   rogne les fenêtres volantes du ruban. */
+@media (max-height: 520px) {
+    #tool-options-container,
+    .tool-options-container {
+        max-height: 26dvh;
+        overflow-y: auto;
+    }
+}
+
+/* La zone de travail doit toujours pouvoir se réduire : sans min-height:0 un enfant
+   flex refuse de passer sous sa taille de contenu et pousse la barre d'état dehors. */
+#workspace,
+#workspace-wrapper,
+#editor-dock-row {
+    min-height: 0;
+}
+
+/* Rangée d'outils sous les menus : ses boutons imposent leur hauteur (line-height posé
+   en !important par le thème), le min-height du conteneur ne suffit donc pas à la
+   comprimer. On réduit les boutons eux-mêmes sur les fenêtres basses. */
+@media (max-height: 600px) {
+    .illu-menubar-toolbar {
+        padding-top: 1px !important;
+        padding-bottom: 1px !important;
+    }
+
+    .illu-menubar-toolbar .illu-menubar-icon-btn {
+        line-height: 22px !important;
+        min-height: 22px !important;
+        height: 22px !important;
+        padding: 0 6px !important;
+    }
+}
+
+@media (max-height: 500px) {
+    .illu-menubar-toolbar .illu-menubar-icon-btn {
+        line-height: 20px !important;
+        min-height: 20px !important;
+        height: 20px !important;
+        padding: 0 5px !important;
+    }
+}
+
+@media (max-height: 420px) {
+    .illu-menubar-toolbar {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .illu-menubar-toolbar .illu-menubar-icon-btn {
+        line-height: 18px !important;
+        min-height: 18px !important;
+        height: 18px !important;
+        padding: 0 4px !important;
+    }
+}
+
+/* ---- Bouton « Signaler un bug » de la barre de menus ---------------------
+ *
+ * Ces déclarations vivaient dans l'attribut style du <div>, dont le
+ * `background … !important` était intouchable : sur les thèmes macOS le dégradé
+ * partait d'une teinte claire et le texte, blanc en dur, devenait illisible.
+ * Ici les thèmes peuvent reprendre la main.
+ */
+.menubar-contact-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(180deg, var(--mp-title, #1e4a8c) 0%, var(--mp-accent, #0d7a7a) 100%);
+    border: 2px solid;
+    border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top);
+    border-radius: 0;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.menubar-contact-btn .menu-icon {
+    width: 12px;
+    text-align: center;
+    color: inherit;
+}
+
+.menubar-contact-btn .menu-icon i {
+    font-size: 11px;
+    color: inherit;
+}
+
+.menubar-contact-btn > span[data-i18n] {
+    font-weight: 600;
+    color: inherit;
 }

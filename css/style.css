@@ -535,7 +535,7 @@ li[role="menuitem"] ul[role="menu"] li[role="menuitem"] ul[role="menu"] {
     align-items: center;
     gap: 4px 6px;
     font-size: 11px;
-    min-height: 30px;
+    min-height: var(--illu-optbar-row-h, 30px);
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;

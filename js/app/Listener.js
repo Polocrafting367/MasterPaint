@@ -282,7 +282,10 @@ window.addEventListener('pointerdown', (e) => {
         window.isPanning = true;
         window.panStart = { x: e.clientX, y: e.clientY };
         window.panDragOrigin = { x: p.canvasPanX || 0, y: p.canvasPanY || 0 };
-        document.body.style.cursor = 'grabbing';
+        // illuSetForcedCursor : poser body.style.cursor seul ne se voit pas au-dessus
+        // de la toile, qui porte son propre curseur en style en ligne.
+        if (typeof window.illuSetForcedCursor === 'function') window.illuSetForcedCursor('grabbing');
+        else document.body.style.cursor = 'grabbing';
         const ws = document.getElementById('workspace');
         if (ws) ws.style.cursor = 'grabbing';
         e.preventDefault();
@@ -306,7 +309,8 @@ window.addEventListener('pointermove', (e) => {
 function illuEndMiddlePan() {
     if (!window.isPanning) return;
     window.isPanning = false;
-    document.body.style.cursor = '';
+    if (typeof window.illuClearForcedCursor === 'function') window.illuClearForcedCursor();
+    else document.body.style.cursor = '';
     const ws = document.getElementById('workspace');
     if (ws) ws.style.cursor = '';
     if (typeof window.updateMainCanvasCursor === 'function') window.updateMainCanvasCursor();

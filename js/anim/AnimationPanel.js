@@ -63,11 +63,53 @@
         return fallback;
     }
 
-    function btn(label, title, onClick, cls) {
+    /**
+     * Icône FontAwesome (bibliothèque déjà chargée par l'application).
+     * @param {string} name nom sans préfixe de style, ex. 'fa-play'
+     */
+    function faIcon(name) {
+        const i = DOC.createElement('i');
+        i.className = 'fa-solid ' + name + ' illu-anim-ico';
+        i.setAttribute('aria-hidden', 'true');
+        return i;
+    }
+
+    /**
+     * Icône du sprite interne (icons/illu-sprite.svg), pour les deux notions que
+     * FontAwesome ne couvre pas : pelure d'oignon et dessiner-puis-avancer.
+     */
+    function spriteIcon(id) {
+        const NS = 'http://www.w3.org/2000/svg';
+        const svg = DOC.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'illu-anim-ico');
+        svg.setAttribute('viewBox', '0 0 16 16');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        const use = DOC.createElementNS(NS, 'use');
+        use.setAttribute('href', '#' + id);
+        svg.appendChild(use);
+        return svg;
+    }
+
+    /** Échange le glyphe FontAwesome d'un bouton (lecture ⇄ pause, œil ouvert/barré). */
+    function setBtnIcon(el, name) {
+        const i = el && el.querySelector('i.illu-anim-ico');
+        if (i) i.className = 'fa-solid ' + name + ' illu-anim-ico';
+    }
+
+    /**
+     * Bouton de la barre d'outils. `icon` est un nom FontAwesome ('fa-play') ou un nœud
+     * déjà construit (spriteIcon). Les boutons n'ont pas de libellé visible : le titre
+     * fait aussi office d'étiquette accessible.
+     */
+    function btn(icon, title, onClick, cls) {
         const b = DOC.createElement('button');
         b.type = 'button';
-        b.textContent = label;
-        if (title) b.title = title;
+        b.appendChild(typeof icon === 'string' ? faIcon(icon) : icon);
+        if (title) {
+            b.title = title;
+            b.setAttribute('aria-label', title);
+        }
         if (cls) b.className = cls;
         b.addEventListener('click', onClick);
         return b;
@@ -396,12 +438,12 @@
         const bar = DOC.createElement('div');
         bar.className = 'illu-anim-toolbar';
 
-        bar.appendChild(btn('⏮', t('anim.first', 'Première image'), () => window.IlluAnim.gotoFirst(em())));
-        bar.appendChild(btn('◀', t('anim.prev', 'Image précédente'), () => window.IlluAnim.step(em(), -1)));
-        playBtn = btn('▶', t('anim.play', 'Lecture / Pause'), () => window.IlluAnim.togglePlay(em()));
+        bar.appendChild(btn('fa-backward-fast', t('anim.first', 'Première image'), () => window.IlluAnim.gotoFirst(em())));
+        bar.appendChild(btn('fa-backward-step', t('anim.prev', 'Image précédente'), () => window.IlluAnim.step(em(), -1)));
+        playBtn = btn('fa-play', t('anim.play', 'Lecture / Pause'), () => window.IlluAnim.togglePlay(em()));
         bar.appendChild(playBtn);
-        bar.appendChild(btn('▶▶', t('anim.next', 'Image suivante'), () => window.IlluAnim.step(em(), 1)));
-        bar.appendChild(btn('⏭', t('anim.last', 'Dernière image'), () => window.IlluAnim.gotoLast(em())));
+        bar.appendChild(btn('fa-forward-step', t('anim.next', 'Image suivante'), () => window.IlluAnim.step(em(), 1)));
+        bar.appendChild(btn('fa-forward-fast', t('anim.last', 'Dernière image'), () => window.IlluAnim.gotoLast(em())));
 
         bar.appendChild(sep());
 
@@ -419,18 +461,18 @@
 
         bar.appendChild(sep());
 
-        bar.appendChild(btn('＋', t('anim.addFrame', 'Ajouter une image'), () =>
+        bar.appendChild(btn('fa-plus', t('anim.addFrame', 'Ajouter une image'), () =>
             withAnimHistory(t('anim.addFrame', 'Ajouter une image'), () => window.IlluAnim.addFrame(em()))));
-        bar.appendChild(btn('⧉', t('anim.dupCel', 'Dupliquer le cel'), () =>
+        bar.appendChild(btn('fa-copy', t('anim.dupCel', 'Dupliquer le cel'), () =>
             withAnimHistory(t('anim.dupCel', 'Dupliquer le cel'), () => window.IlluAnim.duplicateCel(em()))));
-        bar.appendChild(btn('⤵', t('anim.insertFrame', 'Insérer une image ici'), () =>
+        bar.appendChild(btn('fa-turn-down', t('anim.insertFrame', 'Insérer une image ici'), () =>
             withAnimHistory(t('anim.insertFrame', 'Insérer une image ici'), () => window.IlluAnim.insertFrame(em()))));
-        bar.appendChild(btn('🗑', t('anim.delFrame', 'Supprimer l’image'), () =>
+        bar.appendChild(btn('fa-trash', t('anim.delFrame', 'Supprimer l’image'), () =>
             withAnimHistory(t('anim.delFrame', 'Supprimer l’image'), () => window.IlluAnim.removeFrame(em()))));
 
         bar.appendChild(sep());
 
-        onionBtn = btn('🧅', t('anim.onion', 'Pelure d’oignon'), () => {
+        onionBtn = btn(spriteIcon('illu-icon-anim-onion'), t('anim.onion', 'Pelure d’oignon'), () => {
             const a = anim();
             if (!a) return;
             a.onionSkin = !a.onionSkin;
@@ -443,11 +485,11 @@
         // Contrôles de profondeur de la pelure d'oignon (nb d'images avant/après + opacité).
         onionOpts = DOC.createElement('span');
         onionOpts.className = 'illu-anim-onion-opts';
-        const mkNum = (label, title, get, set, min, max) => {
+        const mkNum = (icon, title, get, set, min, max) => {
             const wrap = DOC.createElement('label');
             wrap.className = 'illu-anim-onion-num';
             wrap.title = title;
-            wrap.textContent = label;
+            wrap.appendChild(faIcon(icon));
             const inp = DOC.createElement('input');
             inp.type = 'number';
             inp.min = String(min);
@@ -466,16 +508,16 @@
             wrap.appendChild(inp);
             return { wrap, inp };
         };
-        const beforeCtl = mkNum('◀', t('anim.onionBefore', 'Images précédentes affichées'),
+        const beforeCtl = mkNum('fa-caret-left', t('anim.onionBefore', 'Images précédentes affichées'),
             () => (anim() ? anim().onionBefore : 1), (a, v) => (a.onionBefore = v), 0, 10);
-        const afterCtl = mkNum('▶', t('anim.onionAfter', 'Images suivantes affichées'),
+        const afterCtl = mkNum('fa-caret-right', t('anim.onionAfter', 'Images suivantes affichées'),
             () => (anim() ? anim().onionAfter : 1), (a, v) => (a.onionAfter = v), 0, 10);
         onionBeforeInput = beforeCtl.inp;
         onionAfterInput = afterCtl.inp;
         const opaWrap = DOC.createElement('label');
         opaWrap.className = 'illu-anim-onion-num';
         opaWrap.title = t('anim.onionOpacity', 'Opacité des fantômes');
-        opaWrap.textContent = 'α';
+        opaWrap.appendChild(faIcon('fa-circle-half-stroke'));
         onionOpacityInput = DOC.createElement('input');
         onionOpacityInput.type = 'range';
         onionOpacityInput.min = '5';
@@ -509,7 +551,7 @@
         const tintAfter = mkTint(t('anim.onionTintAfter', 'Teinte images suivantes'),
             () => (anim() ? anim().onionTintAfter || '#ff3b3b' : '#ff3b3b'), (a, v) => (a.onionTintAfter = v));
         // Toutes les couches.
-        onionAllBtn = btn('👥', t('anim.onionAll', 'Pelure sur toutes les couches'), () => {
+        onionAllBtn = btn('fa-layer-group', t('anim.onionAll', 'Pelure sur toutes les couches'), () => {
             const a = anim();
             if (!a) return;
             a.onionAllLayers = !a.onionAllLayers;
@@ -527,15 +569,15 @@
         bar.appendChild(sep());
 
         // Inversion / ping-pong / draw & step.
-        bar.appendChild(btn('⇄', t('anim.reverse', 'Inverser l’animation'), () =>
+        bar.appendChild(btn('fa-arrow-right-arrow-left', t('anim.reverse', 'Inverser l’animation'), () =>
             withAnimHistory(t('anim.reverse', 'Inverser l’animation'), () => window.IlluAnim.reverseAnimation(em()))));
-        pingpongBtn = btn('⇋', t('anim.pingpong', 'Lecture aller-retour (ping-pong)'), () => {
+        pingpongBtn = btn('fa-arrows-left-right', t('anim.pingpong', 'Lecture aller-retour (ping-pong)'), () => {
             window.IlluAnim.togglePingPong(em());
             const a = anim();
             pingpongBtn.classList.toggle('illu-anim-on', !!(a && a.pingpong));
         });
         bar.appendChild(pingpongBtn);
-        drawStepBtn = btn('✎▶', t('anim.drawStep', 'Avancer d’une image après chaque tracé'), () => {
+        drawStepBtn = btn(spriteIcon('illu-icon-anim-draw-step'), t('anim.drawStep', 'Avancer d’une image après chaque tracé'), () => {
             const a = anim();
             if (!a) return;
             a.drawStep = !a.drawStep;
@@ -546,7 +588,7 @@
         bar.appendChild(sep());
 
         // Boucle de lecture + durée totale de la frise.
-        loopBtn = btn('🔁', t('anim.loop', 'Lecture en boucle'), () => {
+        loopBtn = btn('fa-repeat', t('anim.loop', 'Lecture en boucle'), () => {
             window.IlluAnim.toggleLoop(em());
             const a = anim();
             loopBtn.classList.toggle('illu-anim-on', !!(a && a.loop));
@@ -573,7 +615,7 @@
         bar.appendChild(sep());
 
         // Opérations groupées sur la sélection (effacer, décaler, cadence…).
-        const selBtn = btn('▦', t('anim.selMenu', 'Sélection d’images : opérations groupées'), (ev) => {
+        const selBtn = btn('fa-table-cells', t('anim.selMenu', 'Sélection d’images : opérations groupées'), (ev) => {
             const r = ev.currentTarget.getBoundingClientRect();
             openSelectionMenu(r.left, r.bottom + 2);
         });
@@ -588,14 +630,15 @@
         readoutEl.className = 'illu-anim-frame-readout';
         bar.appendChild(readoutEl);
 
-        // Fermeture : ⏏ quitte le mode animation (aplatit), ✕ replie seulement la frise.
-        const exitBtn = btn('⏏', t('anim.exitMode', 'Quitter le mode animation (aplatit sur l’image courante)'), () => {
+        // Sortie de piste : quitter le mode animation (aplatit). Trait bas : réduire la frise.
+        const exitBtn = btn('fa-right-from-bracket', t('anim.exitMode', 'Quitter le mode animation (aplatit sur l’image courante)'), () => {
             requestExitAnimationMode();
         }, 'illu-anim-exit-btn');
         bar.appendChild(exitBtn);
-        const closeBtn = btn('✕', t('anim.closePanel', 'Fermer la frise (le mode animation reste actif)'), () => {
+        // Réduction, pas fermeture : le mode animation reste actif, seule la frise se replie.
+        const closeBtn = btn('fa-window-minimize', t('anim.collapsePanel', 'Réduire la frise (le mode animation reste actif)'), () => {
             collapsePanel(true);
-        }, 'illu-anim-close-btn');
+        }, 'illu-anim-collapse-btn');
         bar.appendChild(closeBtn);
 
         panel.appendChild(bar);
@@ -896,7 +939,7 @@
 
         if (fpsInput) fpsInput.value = String(a.fps || 12);
         if (playBtn) {
-            playBtn.textContent = a.playing ? '⏸' : '▶';
+            setBtnIcon(playBtn, a.playing ? 'fa-pause' : 'fa-play');
             playBtn.classList.toggle('illu-anim-on', !!a.playing);
         }
         if (onionBtn) onionBtn.classList.toggle('illu-anim-on', !!a.onionSkin);
@@ -953,7 +996,7 @@
             if (li === e.activeLayerIndex) lab.classList.add('illu-anim-active');
             const vis = DOC.createElement('span');
             vis.className = 'illu-anim-vis';
-            vis.textContent = layer.visible ? '👁' : '﹣';
+            vis.appendChild(faIcon(layer.visible ? 'fa-eye' : 'fa-eye-slash'));
             vis.title = t('anim.toggleVis', 'Visibilité');
             vis.addEventListener('click', (ev) => {
                 ev.stopPropagation();
@@ -1073,7 +1116,10 @@
         openBtn.type = 'button';
         openBtn.id = 'illu-anim-open-btn';
         openBtn.className = 'illu-anim-open-btn';
-        openBtn.textContent = '🎬 ' + t('anim.timeline', 'Frise');
+        openBtn.appendChild(faIcon('fa-film'));
+        const openLbl = DOC.createElement('span');
+        openLbl.textContent = t('anim.timeline', 'Frise');
+        openBtn.appendChild(openLbl);
         openBtn.title = t('anim.togglePanel', 'Afficher / masquer la frise chronologique');
         openBtn.addEventListener('click', togglePanelCollapsed);
         cell.appendChild(openBtn);

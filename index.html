@@ -106,6 +106,11 @@
     <link rel="stylesheet" href="css/anim.css">
     <!-- Chargée en dernier : reprend la main sur les gabarits d'effet historiques -->
     <link rel="stylesheet" href="css/effects-compact.css">
+    <!-- Styles d'icônes (Standard / Accent / Coloré / 3D) : en dernier, il repeint les glyphes -->
+    <link rel="stylesheet" href="css/icon-styles.css">
+    <!-- Finition macOS : chargée après tout le reste, car theme-mac-*.css sont chargés
+         très tôt et ne peuvent pas corriger ce que les feuilles suivantes imposent -->
+    <link rel="stylesheet" href="css/theme-mac-polish.css">
     <style>
         .menubar-contact-btn:hover {
             filter: brightness(1.15) contrast(1.1);
@@ -156,6 +161,27 @@
             root.style.setProperty('--illu-splash-desk', deskHex);
             document.body.style.backgroundColor = deskHex;
             window._illuSplashDeskColor = deskHex;
+
+            // Mode développement : posé avant le premier rendu pour que ce qui lui est
+            // réservé (.illu-dev-only) ne clignote pas à l'ouverture.
+            try {
+                if (localStorage.getItem('illu_dev_mode') === '1') {
+                    document.body.classList.add('illu-dev-mode');
+                }
+            } catch (e) { /* ignore */ }
+
+            // Style d'icônes : posé avant le premier rendu pour éviter que les icônes
+            // apparaissent en noir puis se colorent.
+            try {
+                var ics = localStorage.getItem('illu_icon_style');
+                var icr = localStorage.getItem('illu_icon_relief');
+                // '3d' était une palette dans la première version : on le relit en relief.
+                if (ics === '3d') { icr = '3d'; ics = 'standard'; }
+                if (['accent', 'colored'].indexOf(ics) >= 0) {
+                    root.setAttribute('data-illu-icon-style', ics);
+                }
+                if (icr === '3d') root.setAttribute('data-illu-icon-relief', '3d');
+            } catch (e) { /* ignore */ }
         })();
     </script>
 
@@ -329,7 +355,7 @@
                                     <span class="menu-icon"  aria-hidden="true" aria-hidden="true" data-icon-key="menu.winWelcomeInfo"></span>
                                     <span data-i18n="menu.winWelcomeInfo">Bienvenue / Informations…</span>
                                 </li>
-                                <li role="menuitem" class="menu-row-icon"
+                                <li role="menuitem" class="menu-row-icon" id="menu-win-icon-viewer"
                                     onclick="window.openIconViewerWindow && window.openIconViewerWindow()">
                                     <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-icons"></i></span>
                                     <span data-i18n="menu.winIconViewer">Visionneuse d'icônes…</span>
@@ -740,11 +766,13 @@
                                 onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
                                     class="fa-solid fa-expand" aria-hidden="true"></i></button>
                         </div>
-                        <div class="menubar-contact-btn" onclick="openContactModal('MasterPaint')" role="button"
-                            style="background: linear-gradient(180deg, var(--mp-title) 0%, var(--mp-accent) 100%) !important; padding: 2px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 1px rgba(0,0,0,0.4); border: 2px solid; border-color: var(--mp-raised-top) var(--mp-raised-bot) var(--mp-raised-bot) var(--mp-raised-top); border-radius: 0; font-size: 11px;">
-                            <span class="menu-icon" aria-hidden="true" style="color: #fff; width: 12px; text-align: center;"><i
-                                    class="fa-solid fa-bug" style="font-size: 11px;"></i></span>
-                            <span data-i18n="menu.contact" style="font-weight: 600; color: #fff;">Signaler un bug</span>
+                        <!-- Habillage dans css/main.css (.menubar-contact-btn) : en style en ligne
+                             avec !important, aucun thème ne pouvait le corriger — d'où un texte
+                             blanc sur fond clair sur les thèmes macOS. -->
+                        <div class="menubar-contact-btn" onclick="openContactModal('MasterPaint')" role="button">
+                            <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-bug"
+                                    aria-hidden="true"></i></span>
+                            <span data-i18n="menu.contact">Signaler un bug</span>
                         </div>
                     </div>
                 </div> <!-- End of illu-menu-and-sub-wrapper -->
@@ -3769,6 +3797,20 @@
                                     </li>
                                 </ul>
                             </div>
+                            <div class="settings-dev-mode-row">
+                                <div class="settings-dev-mode-main">
+                                    <span class="settings-dev-mode-title" data-i18n="settings.devMode">Activer mode développement</span>
+                                    <span class="settings-dev-mode-hint" data-i18n="settings.devModeHint">Coupe l’envoi des statistiques de visite et débloque les options expérimentales (thèmes macOS, visionneuse d’icônes).</span>
+                                </div>
+                                <input type="checkbox" id="welcome-dev-mode" class="settings-toggle-input" hidden>
+                                <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-settings-toggle-row"
+                                    data-illu-toggle-for="welcome-dev-mode" role="group" data-i18n-aria-label="settings.devMode">
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                        data-value="0" data-i18n="settings.toggleOff" aria-pressed="true">Off</button>
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                        data-value="1" data-i18n="settings.toggleOn" aria-pressed="false">On</button>
+                                </div>
+                            </div>
                     </aside>
                     <div class="settings-dialog-main welcome-dialog-main" data-i18n-aria-label="settings.paramsAside">
                         <fieldset class="settings-fieldset-compact">
@@ -3859,8 +3901,8 @@
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
                                         </div>
-                                        <div class="illu-theme-cat-label">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="welcome-ui-base-row-mac" role="group">
+                                        <div class="illu-theme-cat-label illu-dev-only">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row illu-dev-only" id="welcome-ui-base-row-mac" role="group">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
@@ -4045,6 +4087,20 @@
                                 <li><kbd>[</kbd> <kbd>]</kbd> taille pinceau / crayon / gomme</li>
                                 <li data-i18n="settings.shortcutMove">Déplacer : flèches 1 px · Ctrl + flèche 10 px</li>
                             </ul>
+                            <div class="settings-dev-mode-row">
+                                <div class="settings-dev-mode-main">
+                                    <span class="settings-dev-mode-title" data-i18n="settings.devMode">Activer mode développement</span>
+                                    <span class="settings-dev-mode-hint" data-i18n="settings.devModeHint">Coupe l’envoi des statistiques de visite et débloque les options expérimentales (thèmes macOS, visionneuse d’icônes).</span>
+                                </div>
+                                <input type="checkbox" id="settings-dev-mode" class="settings-toggle-input" hidden>
+                                <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-settings-toggle-row"
+                                    data-illu-toggle-for="settings-dev-mode" role="group" data-i18n-aria-label="settings.devMode">
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                        data-value="0" data-i18n="settings.toggleOff" aria-pressed="true">Off</button>
+                                    <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                        data-value="1" data-i18n="settings.toggleOn" aria-pressed="false">On</button>
+                                </div>
+                            </div>
                             <div class="settings-aside-block"
                                 style="margin-top: 15px; border-top: 1px solid var(--mp-dock-border); padding-top: 15px;">
                                 <button type="button" class="btn primary" onclick="openContactModal('Settings')"
@@ -4146,8 +4202,8 @@
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="flat" aria-pressed="true">Flat Design</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="classic" aria-pressed="false">Windows 98</button>
                                         </div>
-                                        <div class="illu-theme-cat-label">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
-                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row" id="settings-ui-base-row-mac" role="group">
+                                        <div class="illu-theme-cat-label illu-dev-only">macOS <span class="illu-beta-tag" data-i18n="common.beta">BETA</span></div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row illu-dev-only" id="settings-ui-base-row-mac" role="group">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
@@ -4174,6 +4230,30 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="settings-table-row illu-dev-only">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.iconStyle">Style d'icônes</div>
+                                        <div class="settings-table-hint" data-i18n="settings.iconStyleHint">S'applique à toutes les icônes de l'interface.</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-icon-style-row"
+                                            role="group" data-i18n-aria-label="settings.iconStyle">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                                data-value="standard" data-i18n="settings.iconStyleStandard" aria-pressed="true">Standard</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                                data-value="accent" data-i18n="settings.iconStyleAccent" aria-pressed="false">Accent</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                                data-value="colored" data-i18n="settings.iconStyleColored" aria-pressed="false">Coloré</button>
+                                        </div>
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-icon-relief-row"
+                                            role="group" data-i18n-aria-label="settings.iconRelief">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
+                                                data-value="flat" data-i18n="settings.iconReliefFlat" aria-pressed="true">Plat</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn"
+                                                data-value="3d" data-i18n="settings.iconRelief3d" aria-pressed="false">3D</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </fieldset>
 
@@ -4185,12 +4265,6 @@
                                 <button type="button"
                                     class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
                                     data-value="none" aria-pressed="true">Aucun</button>
-                            </div>
-                            <div class="illu-scope-btn-row illu-settings-scope-btn-row" id="settings-icon-style-row"
-                                role="group">
-                                <button type="button"
-                                    class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active"
-                                    data-value="monochrome" aria-pressed="true">Moderne</button>
                             </div>
                         </div>
                         <fieldset class="settings-fieldset-compact">
@@ -4773,6 +4847,12 @@
         }
 
         function trackVisit(pageName = "Paint net") {
+            // Mode développement : aucune télémétrie ne quitte la page.
+            // Lu directement dans localStorage — trackVisit s'exécute avant app.js.
+            try {
+                if (localStorage.getItem('illu_dev_mode') === '1') return;
+            } catch (e) { /* ignore */ }
+
             // 1. Générer ou récupérer un ID Appareil unique
             let deviceId = localStorage.getItem('app_device_id');
             if (!deviceId) {

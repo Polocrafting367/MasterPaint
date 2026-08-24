@@ -117,7 +117,7 @@ body.illu-toolbar-ribbon .illu-ribbon-group {
     justify-content: flex-start;
     padding: 2px 4px 0;
     border-right: 1px solid rgba(0, 0, 0, 0.14);
-    min-height: 84px;
+    min-height: var(--illu-ribbon-group-h, 84px);
     height: auto;
     overflow: visible;
 }

@@ -1,128 +1,105 @@
 /**
- * Curseurs outils — symboles dans icons/illu-sprite.svg (#illu-cursor-*).
- * Poignées sélection : 2 symboles (droite / angle) × 4 rotations = 8 curseurs.
+ * Curseurs outils — mots-clés CSS standard uniquement.
+ *
+ * Les curseurs étaient auparavant fabriqués à partir des symboles `#illu-cursor-*` du
+ * sprite, sérialisés en `url("data:image/svg+xml,…")`. C'est ce qui les rendait
+ * capricieux : le sprite est chargé par `fetch` après le premier rendu, donc tant qu'il
+ * n'était pas arrivé (ou s'il échouait) chaque outil retombait silencieusement sur un
+ * curseur différent, et l'apparence changeait en cours de session. On s'en tient
+ * désormais aux curseurs du système — disponibles immédiatement et identiques partout.
+ *
+ * Les valeurs ci-dessous sont exactement les replis qui étaient déjà déclarés pour
+ * chaque outil : le comportement attendu ne change pas, il devient seulement constant.
  */
 (function () {
     'use strict';
 
-    const SPRITE_ROOT_ID = 'illu-shape-icons-sprite';
-    const CURSOR_CENTER = 12;
-
-    const CURSOR_SPECS = {
-        crosshair: { symbol: 'illu-cursor-crosshair', hx: 12, hy: 12, fallback: 'crosshair' },
-        eyedropper: { symbol: 'illu-cursor-eyedropper', hx: 5, hy: 18, fallback: 'crosshair' },
-        move: { symbol: 'illu-cursor-move', hx: 12, hy: 12, fallback: 'move' },
-        zoomIn: { symbol: 'illu-cursor-zoom-in', hx: 10, hy: 10, fallback: 'zoom-in' },
-        zoomOut: { symbol: 'illu-cursor-zoom-out', hx: 10, hy: 10, fallback: 'zoom-out' },
-        pencil: { symbol: 'illu-cursor-pencil', hx: 5, hy: 20, fallback: 'crosshair' },
-        pen: { symbol: 'illu-cursor-pen', hx: 6, hy: 19, fallback: 'crosshair' },
-        wand: { symbol: 'illu-cursor-wand', hx: 6, hy: 6, fallback: 'crosshair' },
-        bucket: { symbol: 'illu-cursor-bucket', hx: 6, hy: 20, fallback: 'cell' },
-        eraser: { symbol: 'illu-cursor-eraser', hx: 11, hy: 14, fallback: 'cell' },
-        text: { symbol: 'illu-cursor-text', hx: 12, hy: 12, fallback: 'text' },
-        pointer: { symbol: 'illu-cursor-pointer', hx: 4, hy: 4, fallback: 'default' },
-        copy: { symbol: 'illu-cursor-copy', hx: 7, hy: 7, fallback: 'copy' },
-        grab: { symbol: 'illu-cursor-grab', hx: 12, hy: 12, fallback: 'grab' }
+    /** Curseur système par rôle d'outil. */
+    const TOOL_CURSORS = {
+        crosshair: 'crosshair',
+        eyedropper: 'crosshair',
+        move: 'move',
+        zoomIn: 'zoom-in',
+        zoomOut: 'zoom-out',
+        pencil: 'crosshair',
+        pen: 'crosshair',
+        wand: 'crosshair',
+        bucket: 'cell',
+        eraser: 'cell',
+        text: 'text',
+        pointer: 'default',
+        copy: 'copy',
+        grab: 'grab'
     };
 
-    /** n/e/s/w = resize-ns ; nw/ne/se/sw = resize-nwse */
-    const RESIZE_HANDLES = [
-        { name: 'n-resize', symbol: 'illu-cursor-resize-ns', angle: 0 },
-        { name: 'e-resize', symbol: 'illu-cursor-resize-ns', angle: 90 },
-        { name: 's-resize', symbol: 'illu-cursor-resize-ns', angle: 180 },
-        { name: 'w-resize', symbol: 'illu-cursor-resize-ns', angle: 270 },
-        { name: 'nw-resize', symbol: 'illu-cursor-resize-nwse', angle: 0 },
-        { name: 'ne-resize', symbol: 'illu-cursor-resize-nwse', angle: 90 },
-        { name: 'se-resize', symbol: 'illu-cursor-resize-nwse', angle: 180 },
-        { name: 'sw-resize', symbol: 'illu-cursor-resize-nwse', angle: 270 }
-    ];
+    /** Poignées de sélection : les noms système sont déjà les bons curseurs. */
+    const RESIZE_CURSORS = {
+        'n-resize': 'n-resize',
+        'e-resize': 'e-resize',
+        's-resize': 's-resize',
+        'w-resize': 'w-resize',
+        'nw-resize': 'nw-resize',
+        'ne-resize': 'ne-resize',
+        'se-resize': 'se-resize',
+        'sw-resize': 'sw-resize'
+    };
 
-    function svgCursorDataUrl(svg, hotX, hotY, fallback) {
-        const enc = encodeURIComponent(svg).replace(/'/g, '%27');
-        return `url("data:image/svg+xml,${enc}") ${hotX | 0} ${hotY | 0}, ${fallback || 'default'}`;
-    }
+    window.IlluCursors = Object.assign({}, TOOL_CURSORS, { _resize: RESIZE_CURSORS });
 
-    function symbolInnerHtml(symbolEl) {
-        if (!symbolEl) return '';
-        const parts = symbolEl.querySelectorAll(':scope > *');
-        let inner = '';
-        parts.forEach((node) => {
-            inner += new XMLSerializer().serializeToString(node);
-        });
-        if (!inner) inner = symbolEl.innerHTML || '';
-        return inner;
-    }
-
-    function symbolToSvgString(symbolEl) {
-        if (!symbolEl) return '';
-        const vb = symbolEl.getAttribute('viewBox') || '0 0 24 24';
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="${vb}">${symbolInnerHtml(symbolEl)}</svg>`;
-    }
-
-    function buildRotatedCursor(symbolId, angleDeg, fallback) {
-        const root = document.getElementById(SPRITE_ROOT_ID);
-        const sym = root && root.querySelector(`#${symbolId}`);
-        if (!sym) return fallback;
-        const vb = sym.getAttribute('viewBox') || '0 0 24 24';
-        const inner = symbolInnerHtml(sym);
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="${vb}"><g transform="rotate(${angleDeg} ${CURSOR_CENTER} ${CURSOR_CENTER})">${inner}</g></svg>`;
-        return svgCursorDataUrl(svg, CURSOR_CENTER, CURSOR_CENTER, fallback);
-    }
-
-    function buildCursorsFromSprite() {
-        const root = document.getElementById(SPRITE_ROOT_ID);
-        const out = {};
-        if (!root) return out;
-        Object.keys(CURSOR_SPECS).forEach((key) => {
-            const spec = CURSOR_SPECS[key];
-            const sym = root.querySelector(`#${spec.symbol}`);
-            if (!sym) return;
-            const svg = symbolToSvgString(sym);
-            if (!svg) return;
-            out[key] = svgCursorDataUrl(svg, spec.hx, spec.hy, spec.fallback);
-        });
-        return out;
-    }
-
-    function buildResizeCursorsFromSprite() {
-        const out = {};
-        RESIZE_HANDLES.forEach((h) => {
-            out[h.name] = buildRotatedCursor(h.symbol, h.angle, h.name);
-        });
-        return out;
-    }
-
-    function applyIlluCursors() {
-        const built = buildCursorsFromSprite();
-        const resize = buildResizeCursorsFromSprite();
-        window.IlluCursors = Object.assign({}, window.IlluCursors || {}, built);
-        window.IlluCursors._resize = resize;
-        const tabWrap = document.getElementById('tab-bar-scroll');
-        if (tabWrap && tabWrap.dataset.illuTabScrollInit && typeof window.illuGrabCursor === 'function') {
-            tabWrap.style.cursor = window.illuGrabCursor();
-        }
-        if (Object.keys(built).length || Object.keys(resize).length) {
-            window.dispatchEvent(new CustomEvent('illuCursorsReady'));
-        }
-    }
-
-    /** Curseur outil (data URL SVG ou repli CSS). */
+    /** Curseur outil. `fallback` ne sert plus qu'aux clés inconnues. */
     window.illuToolCursor = function (key, fallback) {
-        const C = window.IlluCursors;
-        if (C && C[key]) return C[key];
+        const v = TOOL_CURSORS[key];
+        if (v) return v;
         return fallback != null ? fallback : 'default';
     };
 
     /** Poignée rotation / défilement onglets (main ouverte). */
     window.illuGrabCursor = function () {
-        return window.illuToolCursor('grab', 'grab');
+        return 'grab';
     };
 
     /** Loupe : zoom avant par défaut, zoom arrière si Alt (comme clic outil). */
     window.illuZoomToolCursor = function () {
-        return window._illuZoomAltPressed
-            ? window.illuToolCursor('zoomOut', 'zoom-out')
-            : window.illuToolCursor('zoomIn', 'zoom-in');
+        return window._illuZoomAltPressed ? 'zoom-out' : 'zoom-in';
+    };
+
+    /** Curseur poignée sélection (nw-resize, n-resize, move, …). */
+    window.illuResizeHandleCursor = function (systemName) {
+        if (!systemName) return 'default';
+        if (systemName === 'move') return 'move';
+        return RESIZE_CURSORS[systemName] || systemName;
+    };
+
+    /* ---- Curseur forcé (pipette d'effet, pioche de couleur SVG, panoramique) -------
+     *
+     * Ces modes posaient `document.body.style.cursor`, ce qui ne se voyait jamais
+     * au-dessus de la toile : `#main-canvas-container` porte son propre curseur en
+     * style en ligne, et il l'emporte sur celui hérité de <body>. On passe donc par un
+     * attribut sur <html> qu'une règle CSS applique à toute la pile de la toile.
+     */
+    const FORCED_ATTR = 'data-illu-forced-cursor';
+
+    /** @param {string|null} value curseur CSS à imposer, ou null/'' pour rendre la main. */
+    window.illuSetForcedCursor = function (value) {
+        const root = document.documentElement;
+        if (!root) return;
+        if (value) {
+            root.setAttribute(FORCED_ATTR, String(value));
+            if (document.body) document.body.style.cursor = String(value);
+        } else {
+            root.removeAttribute(FORCED_ATTR);
+            if (document.body) document.body.style.cursor = '';
+        }
+    };
+
+    window.illuClearForcedCursor = function () {
+        window.illuSetForcedCursor(null);
+    };
+
+    /** Le curseur imposé est-il actif ? (lu par updateMainCanvasCursor) */
+    window.illuForcedCursor = function () {
+        const root = document.documentElement;
+        return (root && root.getAttribute(FORCED_ATTR)) || '';
     };
 
     window._illuZoomAltPressed = false;
@@ -145,26 +122,21 @@
     document.addEventListener('keyup', syncZoomAltFromEvent);
     document.addEventListener('pointermove', syncZoomAltFromEvent, { passive: true });
 
-    /** Curseur poignée sélection (nw-resize, n-resize, move, …). */
-    window.illuResizeHandleCursor = function (systemName) {
-        if (!systemName) return 'default';
-        if (systemName === 'move' && window.IlluCursors && window.IlluCursors.move) {
-            return window.IlluCursors.move;
-        }
-        const r = window.IlluCursors && window.IlluCursors._resize;
-        if (r && r[systemName]) return r[systemName];
-        return systemName;
+    /** Conservé : plus rien à reconstruire, mais des appelants existants s'y réfèrent. */
+    window.illuRebuildToolCursors = function () {
+        if (typeof window.updateMainCanvasCursor === 'function') window.updateMainCanvasCursor();
     };
 
-    window.IlluCursors = { _resize: {} };
-    window.illuRebuildToolCursors = applyIlluCursors;
-
-    document.addEventListener('illuSpriteLoaded', applyIlluCursors);
+    // Les curseurs sont disponibles dès l'exécution de ce fichier : on prévient tout de
+    // suite. L'évènement est écouté sur `document` (DrawingTools) ; `window` est gardé
+    // pour d'éventuels appelants historiques.
+    function announce() {
+        document.dispatchEvent(new CustomEvent('illuCursorsReady'));
+        window.dispatchEvent(new CustomEvent('illuCursorsReady'));
+    }
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            if (document.getElementById(SPRITE_ROOT_ID)) applyIlluCursors();
-        });
-    } else if (document.getElementById(SPRITE_ROOT_ID)) {
-        applyIlluCursors();
+        document.addEventListener('DOMContentLoaded', announce);
+    } else {
+        announce();
     }
 })();
