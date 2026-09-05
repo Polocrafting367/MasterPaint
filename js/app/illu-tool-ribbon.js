@@ -4,8 +4,14 @@
 (function () {
     'use strict';
 
-    const SELECT_ACTION_TOOLS = new Set(['select', 'move', 'wand', 'direct-select', 'deform', 'warp-4']);
-    const SELECTION_TOOLS = new Set(['select', 'wand', 'direct-select']);
+    const SELECT_ACTION_TOOLS = new Set([
+        'select', 'move', 'wand', 'direct-select', 'deform', 'warp-4',
+        'quick-select', 'object-select', 'magnetic-lasso', 'poly-lasso'
+    ]);
+    const SELECTION_TOOLS = new Set([
+        'select', 'wand', 'direct-select',
+        'quick-select', 'object-select', 'magnetic-lasso', 'poly-lasso'
+    ]);
 
     const ACTION_RIBBON_GROUPS = [
         {
@@ -107,6 +113,11 @@
     const PARAM_RIBBON_GROUPS = [
         { id: 'size', labelKey: 'ribbon.groupSize', selectors: ['#opt-grp-size-params'] },
         { id: 'wand', labelKey: 'ribbon.groupWand', selectors: ['#opt-grp-wand-params'] },
+        {
+            id: 'smartsel',
+            labelKey: 'ribbon.groupSmartSelect',
+            selectors: ['#opt-grp-smartsel-params']
+        },
         { id: 'eyedropper', labelKey: 'ribbon.groupEyedropper', selectors: ['#opt-grp-eyedropper-params'] },
         { id: 'fill', labelKey: 'ribbon.groupFill', selectors: ['#opt-grp-fill-params'] },
         {
@@ -572,6 +583,10 @@
                     active =
                         typeof window.illuShouldShowShapePickerRibbon === 'function' &&
                         window.illuShouldShowShapePickerRibbon();
+                } else if (id === 'select-picker') {
+                    active =
+                        typeof window.illuShouldShowSelectPickerRibbon === 'function' &&
+                        window.illuShouldShowSelectPickerRibbon();
                 } else if (id === 'selection') {
                     active =
                         !isVectorDoc && (SELECTION_TOOLS.has(tool) || SELECT_ACTION_TOOLS.has(tool));
@@ -663,6 +678,9 @@
                 else if (id === 'wand') {
                     /* Baguette : pixel uniquement, masqué en mode SVG/vecteur */
                     active = !isVectorDoc && paramIds.has('opt-grp-wand-params');
+                } else if (id === 'smartsel') {
+                    /* Sélections assistées : pixel uniquement */
+                    active = !isVectorDoc && paramIds.has('opt-grp-smartsel-params');
                 } else if (id === 'eyedropper') {
                     /* Pipette : pixel uniquement, masqué en mode SVG/vecteur */
                     active = !isVectorDoc && paramIds.has('opt-grp-eyedropper-params');
@@ -1480,7 +1498,7 @@
  * sur l'attribut hidden centralise tout, quel que soit le code qui ouvre/ferme. */
 (function illuRibbonDropdownPortal() {
     'use strict';
-    const PORTAL_SEL = '.illu-generic-dropdown-popup, #illu-shape-picker-popup';
+    const PORTAL_SEL = '.illu-generic-dropdown-popup, #illu-shape-picker-popup, #illu-select-picker-popup';
 
     function headerFor(pop) {
         if (pop.id === 'illu-shape-picker-popup') {

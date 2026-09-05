@@ -40,6 +40,32 @@ document.getElementById('wand-tolerance')?.addEventListener('input', (e) => {
     if (window.EditorManager) EditorManager.toolProps.wandTolerance = parseInt(e.target.value, 10);
 });
 
+/* --- Sélections assistées : qualité + réglages par outil ------------------
+ * Chaque curseur écrit dans toolProps et, pour la sélection rapide, relance le
+ * calcul sur le trait déjà peint : on voit l'effet du réglage sans redessiner. */
+document.getElementById('smartsel-quality')?.addEventListener('change', (e) => {
+    if (window.EditorManager) EditorManager.toolProps.smartSelectQuality = e.target.value;
+    if (window.IlluSmartSelect) window.IlluSmartSelect.refreshQuick();
+});
+
+[
+    ['smartsel-brush', 'smartSelectBrush'],
+    ['smartsel-tolerance', 'smartSelectTolerance'],
+    ['smartsel-frequency', 'magneticFrequency'],
+    ['smartsel-width', 'magneticWidth']
+].forEach(([id, propName]) => {
+    document.getElementById(id)?.addEventListener('input', (e) => {
+        const valEl = document.getElementById(id + '-val');
+        if (valEl) valEl.textContent = e.target.value;
+        if (window.EditorManager) {
+            EditorManager.toolProps[propName] = parseInt(e.target.value, 10);
+        }
+        if (propName === 'smartSelectTolerance' && window.IlluSmartSelect) {
+            window.IlluSmartSelect.refreshQuick();
+        }
+    });
+});
+
 /** Molette sur un select : option précédente / suivante (sélecteur d’outil, listes, etc.). */
 window.illuStepSelectOnWheel = function (select, deltaY) {
     if (!select || select.tagName !== 'SELECT' || select.disabled || select.multiple) return false;
@@ -780,6 +806,13 @@ document.addEventListener('contextmenu', (e) => {
                     window.illuApplyVectorToolPropsToSelection({ livePreview: true });
                 }
             }
+        },
+        'smartsel-quality': (val) => {
+            if (typeof EditorManager !== 'undefined') {
+                EditorManager.toolProps.smartSelectQuality =
+                    val === 'fast' || val === 'slow' ? val : 'medium';
+            }
+            if (window.IlluSmartSelect) window.IlluSmartSelect.refreshQuick();
         },
         'tool-shape-mode': (val) => {
             if (typeof EditorManager !== 'undefined') EditorManager.toolProps.shapeStrokeMode = val;

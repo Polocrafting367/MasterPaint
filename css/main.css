@@ -2287,6 +2287,54 @@ body.illu-mobile-ui #illu-alert-overlay .illu-alert-window {
     color: #444;
 }
 
+.illu-export-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.illu-export-name__label {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.illu-export-name__field {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+    padding-right: 6px;
+    background: #fff;
+    border: 2px solid;
+    border-color: var(--mp-inset-bot, #808080) var(--mp-inset-top, #dfdfdf) var(--mp-inset-top, #dfdfdf) var(--mp-inset-bot, #808080);
+    border-radius: 2px;
+}
+
+.illu-export-name__field:focus-within {
+    outline: 1px dotted #0a246a;
+    outline-offset: 1px;
+}
+
+.illu-export-name__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: inherit;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.illu-export-name__ext {
+    font-size: 11px;
+    color: #555;
+    white-space: nowrap;
+    opacity: 0.85;
+}
+
 .illu-export-quick {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2450,6 +2498,19 @@ body.theme-dark .illu-export-local-status {
 
 body.theme-dark .illu-export-dialog__lead {
     color: #ccc;
+}
+
+body.theme-dark .illu-export-name__field {
+    background: #23232e;
+    border-color: #555;
+}
+
+body.theme-dark .illu-export-name__input {
+    color: #eee;
+}
+
+body.theme-dark .illu-export-name__ext {
+    color: #aaa;
 }
 
 body.theme-dark .illu-export-quick-btn {
@@ -4849,4 +4910,23 @@ html[data-illu-forced-cursor] #workspace-wrapper {
 .menubar-contact-btn > span[data-i18n] {
     font-weight: 600;
     color: inherit;
+}
+
+/* ── Fenêtres de dialogue déplaçables (js/app/illu-dialog-drag.js) ───────────
+   La barre de titre d'une boîte de dialogue devient une poignée, comme celle
+   des palettes flottantes. Double-clic dessus : retour au centrage d'origine. */
+.window:not(.floating-window) > .title-bar {
+    cursor: move;
+}
+.window:not(.floating-window) > .title-bar button,
+.window:not(.floating-window) > .title-bar input,
+.window:not(.floating-window) > .title-bar select {
+    cursor: default;
+}
+.window.illu-dialog-free {
+    /* Une fois déplacée, la fenêtre ne dépend plus du centrage de sa surcouche. */
+    z-index: 1;
+}
+.window.illu-dialog-free.dragging {
+    user-select: none;
 }

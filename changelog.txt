@@ -1,5 +1,28 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+2.9.40 (05/09/26) — version finale
+Correction de bug multiples non repercorie, et flm de laissé le carabiat de l'ia
+- fin du projet j'en ai marre
+
+2.9.39 (30/08/26)
+- Champ "Nom du fichier" dans la fenêtre d'export : nommer le fichier avant
+  le téléchargement (PNG, JPEG, SVG, .illu, .pdn, ICO, animations...).
+  Laissé vide, le nom du projet est utilisé comme avant.
+- Correction : la tolérance du seau de remplissage ignorait la transparence.
+  À fond, l'écart d'alpha toléré plafonnait à 60 % : une zone opaque ne
+  rejoignait jamais une zone transparente. Un pixel totalement transparent
+  n'est plus comparé en couleur (il n'en a pas), seul son alpha compte.
+- Correction : la poignée de rotation ne faisait rien avec l'outil Déformation
+  4 coins (Q) — ni rotation live ni résultat au relâchement. Le mouvement était
+  capté par la session de déformation au lieu du code de rotation.
+- Ajout d'outils de selections
+- Fenetre qui étais fixé peuvent maintenant être déplacées
+
+2.9.37 (27/08/26)
+- Amélioration de la selection
+- Rendu en live de la déformation (qui etais absente)
+- Correction de la grille de couleur (remplaçant de la roue coloré) quand activé
+
 2.9.34,2 (24/08/26)
 - Création d'un toggle développement pour masquer des elements.
 - Mise a jours des themes MacOS (DEV)

@@ -1391,3 +1391,70 @@ body.illu-mobile-shell-active .illu-camera-raw-overlay {
     min-width: 0;
     height: 16px;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Outils d'image (Image › Bordure d'image, Image › Étendre la zone de travail)
+ * ---------------------------------------------------------------------------
+ * Les deux dialogues vivent dans #effect-dialog. On garde la ligne compacte des
+ * effets, on ajoute juste la case « uniforme », le nuancier et le rappel de
+ * taille. Tout est scopé au contenu du dialogue : aucun effet de bord ailleurs.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+#effect-dialog-content .illu-imgtool-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: var(--mp-ui-font-small, 11px);
+}
+
+#effect-dialog-content .illu-imgtool-row > label {
+    flex: 0 0 auto;
+}
+
+/* display:flex l'emporterait sur [hidden] : on rétablit la priorité. */
+#effect-dialog-content .illu-imgtool-row[hidden] {
+    display: none;
+}
+
+#effect-dialog-content .illu-imgtool-unified-row {
+    margin-top: 0;
+    margin-bottom: 2px;
+}
+
+#effect-dialog-content .illu-imgtool-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    cursor: default;
+}
+
+#effect-dialog-content .illu-imgtool-check input[type="checkbox"] {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+/* Nuancier natif : on efface le chrome du navigateur pour rester dans le thème. */
+#effect-dialog-content .illu-imgtool-swatch {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 21px;
+    padding: 1px;
+    border: 1px solid var(--mp-inset-top, rgba(128, 128, 128, .55));
+    background: var(--mp-window-bg, #d4d0c8);
+    cursor: default;
+}
+
+#effect-dialog-content .illu-imgtool-color-pick {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    font-size: var(--mp-ui-font-small, 11px);
+    min-width: 0;
+}
+
+#effect-dialog-content .illu-imgtool-preview {
+    margin: 8px 0 0;
+    font-size: 10px;
+    opacity: .78;
+}

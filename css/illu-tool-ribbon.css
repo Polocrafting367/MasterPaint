@@ -3436,3 +3436,14 @@ html #illu-cutout-mode-group, #illu-cutout-action-group {
     --group-grid-cols: none !important;
     --group-grid-rows: none !important;
 }
+/* Sélecteur d'outils de sélection : même gabarit que le catalogue de formes. */
+body.illu-toolbar-ribbon #illu-select-picker-icon.illu-tool-header-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* [hidden] doit primer sur le display:block du ruban : sans ça, la cellule
+ * « Outil » restait affichée à côté du sélecteur censé la remplacer. */
+body.illu-toolbar-ribbon #tool-main-header[hidden] {
+    display: none;
+}

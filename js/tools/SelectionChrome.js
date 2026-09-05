@@ -72,6 +72,34 @@
             this.invalidateFast();
         },
 
+        /**
+         * Efface immédiatement les poignées (#svg-ui) — même frame que le marching-ants.
+         * Sans cela, les 8 poignées de l'ancienne sélection restent visibles jusqu'au
+         * prochain drawUI() (relâchement de la souris), en décalage d'une frame sur Échap.
+         */
+        clearHandlesNow() {
+            if (this._isVectorDocumentMode()) return false;
+            const svgUI = document.getElementById('svg-ui');
+            if (!svgUI) return false;
+            if (svgUI.firstChild) svgUI.innerHTML = '';
+            if (typeof EditorManager !== 'undefined') EditorManager._lastDrawUiSignature = null;
+            return true;
+        },
+
+        /** Début d'un tracé de sélection (rubber-band / lasso) : les poignées disparaissent tout de suite. */
+        beginDraft() {
+            window.selectionDraftActive = true;
+            this.clearHandlesNow();
+        },
+
+        /** Fin du tracé : drawUI redessinera les poignées sur la nouvelle sélection. */
+        endDraft() {
+            if (!window.selectionDraftActive) return false;
+            window.selectionDraftActive = false;
+            if (typeof EditorManager !== 'undefined') EditorManager._lastDrawUiSignature = null;
+            return true;
+        },
+
         _isVectorDocumentMode() {
             return typeof EditorManager !== 'undefined' && EditorManager.mode === 'vector';
         },
@@ -369,5 +397,19 @@
 
     window.scheduleSelectionChromeRefresh = function (extra) {
         SelectionChrome.scheduleInteractive(extra || {});
+    };
+
+    window.selectionDraftActive = false;
+
+    window.clearSelectionHandlesNow = function () {
+        return SelectionChrome.clearHandlesNow();
+    };
+
+    window.beginSelectionDraftChrome = function () {
+        SelectionChrome.beginDraft();
+    };
+
+    window.endSelectionDraftChrome = function () {
+        return SelectionChrome.endDraft();
     };
 })();

@@ -817,6 +817,54 @@
             .slice(0, 80) || 'export';
     }
 
+    const EXPORT_EXT_BY_FMT = {
+        illu: 'illu',
+        svg: 'svg',
+        png: 'png',
+        jpeg: 'jpg',
+        webp: 'webp',
+        gif: 'gif',
+        ico: 'ico',
+        pdn: 'pdn',
+        'gif-anim': 'gif',
+        mp4: 'mp4',
+        webm: 'webm',
+        sheet: 'png',
+        zip: 'zip'
+    };
+
+    /** Extension affichee a cote du champ « Nom du fichier ». */
+    function exportExtForFormat(fmt) {
+        return EXPORT_EXT_BY_FMT[fmt] || 'png';
+    }
+
+    /** Noms saisis dans la boite d'export, memorises par projet pour la session. */
+    const exportNameByProject = new WeakMap();
+
+    function rememberExportFileName() {
+        const el = document.getElementById('export-filename');
+        const proj = window.EditorManager && window.EditorManager.activeProject;
+        if (!el || !proj) return;
+        const v = el.value.trim();
+        if (v) exportNameByProject.set(proj, v);
+        else exportNameByProject.delete(proj);
+    }
+
+    /** Nom brut saisi par l'utilisateur (chaine vide si le champ est laisse vide). */
+    function getExportTypedName(overrides) {
+        if (overrides && overrides.name) return String(overrides.name).trim();
+        const el = document.getElementById('export-filename');
+        return el && typeof el.value === 'string' ? el.value.trim() : '';
+    }
+
+    /** Nom de fichier saisi, sinon le nom du projet, sinon `fallback`. */
+    function getExportBaseName(fallback, overrides) {
+        const typed = getExportTypedName(overrides);
+        if (typed) return sanitizeFilename(typed);
+        const em = window.EditorManager;
+        return sanitizeFilename((em && em.activeProject && em.activeProject.name) || fallback || 'export');
+    }
+
     function downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -1086,6 +1134,39 @@
             }
         };
 
+        // Extension affichee : celle du panneau « Autres formats » quand il est
+        // ouvert, sinon celle de l'export rapide (SVG en vecteur, PNG sinon).
+        const syncExportNameExt = () => {
+            const extEl = document.getElementById('export-filename-ext');
+            if (!extEl) return;
+            const isVecNow = !!(em && em.activeProject && em.activeProject.mode === 'vector');
+            const v = morePanel && morePanel.open && fmt ? fmt.value : isVecNow ? 'svg' : 'png';
+            extEl.textContent = `.${exportExtForFormat(v)}`;
+        };
+
+        const nameEl = document.getElementById('export-filename');
+        if (nameEl) {
+            const proj = em && em.activeProject;
+            const remembered = proj ? exportNameByProject.get(proj) : '';
+            nameEl.value = remembered || (proj && proj.name ? String(proj.name) : '');
+            nameEl.placeholder = sanitizeFilename(proj && proj.name);
+            if (!nameEl.dataset.illuExportNameBound) {
+                nameEl.dataset.illuExportNameBound = '1';
+                nameEl.addEventListener('input', rememberExportFileName);
+                nameEl.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    rememberExportFileName();
+                    const panel = document.getElementById('export-more-panel');
+                    const btn =
+                        panel && panel.open
+                            ? document.getElementById('export-dialog-ok')
+                            : document.getElementById('export-quick-image');
+                    if (btn) btn.click();
+                });
+            }
+        }
+
         const syncOpts = () => {
             const v = fmt ? fmt.value : 'illu';
             const isVecNow = !!(em && em.activeProject && em.activeProject.mode === 'vector');
@@ -1106,6 +1187,7 @@
                 if (loopEl) loopEl.parentElement.parentElement.style.display = v === 'gif-anim' ? '' : 'none';
             }
             if (scopeRow) scopeRow.style.display = v === 'illu' ? 'flex' : 'none';
+            syncExportNameExt();
         };
 
         if (fmt) {
@@ -1119,7 +1201,8 @@
         if (morePanel && !morePanel.dataset.illuExportBound) {
             morePanel.dataset.illuExportBound = '1';
             morePanel.addEventListener('toggle', () => {
-                if (morePanel.open && fmt) syncOpts();
+                if (fmt) syncOpts();
+                else syncExportNameExt();
             });
         }
 
@@ -1249,7 +1332,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
             const fps = overrides.fps || (fpsEl ? parseInt(fpsEl.value, 10) : 0) || (anim ? anim.fps : 12);
             const loop = loopEl ? !!loopEl.checked : true;
             const wholeRange = !rangeEl || rangeEl.value !== 'current';
-            const base = sanitizeFilename(em.activeProject?.name) || 'animation';
+            const base = getExportBaseName('animation', overrides);
             const format = fmt === 'gif-anim' ? 'gif' : fmt;
             const ext = format === 'gif' ? 'gif' : format === 'mp4' ? 'mp4' : format === 'sheet' ? 'png' : format === 'zip' ? 'zip' : 'webm';
             const eopts = {
@@ -1293,7 +1376,8 @@ function applyBitDepthReduction(ctx, width, height, bits) {
             
             // Apply project scope filtering
             let payload = null;
-            let filename = 'MasterPaint-session.illu';
+            const typedName = getExportTypedName(overrides);
+            let filename = typedName ? `${sanitizeFilename(typedName)}.illu` : 'MasterPaint-session.illu';
             
             if (scope === 'current' && em.activeProject) {
                 // [AMELIORATION] Détection automatique des calques alpha associés
@@ -1309,7 +1393,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
                     });
                 }
                 payload = em.serializeWorkspacePayload(projectsToSerialize, { includeHistory });
-                filename = `${sanitizeFilename(em.activeProject.name || 'project')}.illu`;
+                filename = `${getExportBaseName('project', overrides)}.illu`;
             } else {
                 payload = em.serializeWorkspacePayload(null, { includeHistory });
             }
@@ -1336,7 +1420,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
                 return;
             }
             const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            downloadBlob(blob, `${sanitizeFilename(em.activeProject?.name)}.svg`);
+            downloadBlob(blob, `${getExportBaseName('image', overrides)}.svg`);
             hideExportDialog();
             return;
         }
@@ -1349,7 +1433,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
                     : scaleEl
                       ? parseFloat(scaleEl.value)
                       : 2;
-            const base = sanitizeFilename(em.activeProject?.name || 'image');
+            const base = getExportBaseName('image', overrides);
             const runVectorPng = (canvas) => {
                 const bitsEl = document.getElementById('export-colors-bits');
                 const bitsValue =
@@ -1388,7 +1472,7 @@ function applyBitDepthReduction(ctx, width, height, bits) {
         }
 
         const canvas = compositePixelCanvas();
-        const base = sanitizeFilename(em.activeProject?.name || 'image');
+        const base = getExportBaseName('image', overrides);
 
         if (fmt === 'pdn') {
             if (!window.PdnFile || typeof window.PdnFile.exportPaintDotNetNativePdn !== 'function') {

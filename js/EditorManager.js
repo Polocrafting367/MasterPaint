@@ -55,6 +55,20 @@ const EditorManager = {
         /** Baguette : `contiguous` = zone connexe (cadre) ; `similar` = couleur + tolérance (masque / contour). */
         wandMode: 'contiguous',
         /**
+         * Sélections assistées (rapide / objet / lasso magnétique).
+         * `smartSelectQuality` pilote la résolution de travail et l'effort de calcul :
+         * 'fast' ≈ 480 px de côté, 'medium' ≈ 900, 'slow' ≈ 1800.
+         */
+        smartSelectQuality: 'medium',
+        /** Sélection rapide : diamètre du pinceau de graines, en pixels document. */
+        smartSelectBrush: 24,
+        /** Sélection rapide : 0 = très strict, 100 = très permissif. */
+        smartSelectTolerance: 45,
+        /** Lasso magnétique : distance entre deux ancres posées automatiquement (px). */
+        magneticFrequency: 45,
+        /** Lasso magnétique : largeur de recherche du contour autour du tracé (px). */
+        magneticWidth: 24,
+        /**
          * Mode « couleur » uniquement : si true, clic = tous les pixels proches sur le calque ;
          * si false (défaut), zone connexe autour du clic (même tolérance), avec contour réel.
          */
@@ -229,6 +243,12 @@ const EditorManager = {
         this._originalColorWheelImageData = grid
             ? this.buildColorGridImageData(canvas.width, canvas.height)
             : this.buildColorWheelDiscImageData(canvas.width, canvas.height);
+        /* Base changée (taille ou disposition) : cache d'affichage et repère obsolètes. */
+        this._colorWheelBaseSerial = (this._colorWheelBaseSerial | 0) + 1;
+        this._colorWheelDisplayImageData = null;
+        this._colorWheelDisplayKey = '';
+        this._colorPickerGridMarker = null;
+        this._colorPickerGridLastX = null;
         if (this.updateColorWheelForMode) this.updateColorWheelForMode();
     },
 
@@ -661,14 +681,31 @@ const EditorManager = {
         this.applyProjectColorModeToLayer(l);
     },
 
-    updateColorWheelForMode() {
+    /**
+     * Image affichée dans le sélecteur (base + filtre du mode projet), sans le repère.
+     * Mise en cache : c'est aussi la source de lecture des clics — échantillonner le
+     * canvas lui-même reviendrait à relire les anneaux du repère (noir/blanc) dès que
+     * le curseur les survole, ce qui faisait sauter le point pendant un glissé lent.
+     */
+    getColorPickerDisplayImageData() {
         const canvas = document.getElementById('color-wheel');
-        if (!canvas || !this._originalColorWheelImageData) return;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
+        if (!canvas || !this._originalColorWheelImageData) return null;
         const p = this.activeProject;
-        if (!p) return;
-        const img = new ImageData(new Uint8ClampedArray(this._originalColorWheelImageData.data), canvas.width, canvas.height);
+        if (!p) return null;
+
+        /* La palette RAL peut arriver après le premier rendu : sa taille entre dans la
+           clé pour que le cache se régénère une fois le script chargé. */
+        const ralLen = typeof RAL_COLORS !== 'undefined' && RAL_COLORS ? RAL_COLORS.length : 0;
+        const key = `${canvas.width}x${canvas.height}|${p.mode}|${this._colorWheelBaseSerial | 0}|${ralLen}`;
+        if (this._colorWheelDisplayImageData && this._colorWheelDisplayKey === key) {
+            return this._colorWheelDisplayImageData;
+        }
+
+        const img = new ImageData(
+            new Uint8ClampedArray(this._originalColorWheelImageData.data),
+            canvas.width,
+            canvas.height
+        );
         const d_ = img.data;
 
         if (p.mode === 'pixel-cmjn') {
@@ -693,26 +730,77 @@ const EditorManager = {
             const colors = typeof RAL_COLORS !== 'undefined' ? RAL_COLORS : [];
             if (colors.length > 0) {
                 for (let i = 0; i < d_.length; i += 4) {
-                    if (d_[i+3] > 0) {
+                    if (d_[i + 3] > 0) {
                         let bestDist = Infinity;
                         let best = colors[0];
                         for (let c of colors) {
                             const dr = d_[i] - c.r;
-                            const dg = d_[i+1] - c.g;
-                            const db = d_[i+2] - c.b;
-                            const dist = dr*dr + dg*dg + db*db;
+                            const dg = d_[i + 1] - c.g;
+                            const db = d_[i + 2] - c.b;
+                            const dist = dr * dr + dg * dg + db * db;
                             if (dist < bestDist) {
                                 bestDist = dist;
                                 best = c;
                             }
                         }
                         d_[i] = best.r;
-                        d_[i+1] = best.g;
-                        d_[i+2] = best.b;
+                        d_[i + 1] = best.g;
+                        d_[i + 2] = best.b;
                     }
                 }
             }
         }
+
+        this._colorWheelDisplayImageData = img;
+        this._colorWheelDisplayKey = key;
+        return img;
+    },
+
+    /**
+     * Position du repère dans la grille (teinte × luminosité, saturation 100 %).
+     *
+     * La grille contient de nombreux doublons : toute la ligne du haut est noire,
+     * toute celle du bas est blanche, et les modes CMJN / tramé / RAL quantifient
+     * l'affichage. Recalculer l'abscisse depuis le RGB (`rgbToHsl`) ferait donc
+     * sauter le point — la teinte d'un quasi-noir est détruite par l'arrondi 8 bits
+     * et vaut 0 pour un noir ou un blanc pur. On mémorise donc le point cliqué et on
+     * ne repasse par la couleur que si elle a été changée ailleurs (hexa, RAL,
+     * pipette, nuancier).
+     */
+    _gridMarkerPos(canvas, activeCol) {
+        const m = this._colorPickerGridMarker;
+        if (m && m.target === this.activeColorTarget) {
+            if (m.r < 0) {
+                /* Première synchro après le clic : adopte la couleur finale (post-quantification). */
+                m.r = activeCol.r;
+                m.g = activeCol.g;
+                m.b = activeCol.b;
+            }
+            if (m.r === activeCol.r && m.g === activeCol.g && m.b === activeCol.b) {
+                this._colorPickerGridLastX = m.x;
+                return { x: m.x, y: m.y };
+            }
+            this._colorPickerGridMarker = null;
+        }
+
+        const hsl = this.rgbToHslPrecise(activeCol.r, activeCol.g, activeCol.b);
+        /* Gris, noir, blanc : teinte indéfinie — garder l'abscisse courante plutôt
+           que de renvoyer le point à gauche (h = 0). */
+        const x =
+            hsl.s < 1
+                ? (this._colorPickerGridLastX != null ? this._colorPickerGridLastX : canvas.width / 2)
+                : (hsl.h / 360) * canvas.width;
+        this._colorPickerGridLastX = x;
+        return { x, y: (hsl.l / 100) * canvas.height };
+    },
+
+    updateColorWheelForMode() {
+        const canvas = document.getElementById('color-wheel');
+        if (!canvas || !this._originalColorWheelImageData) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const img = this.getColorPickerDisplayImageData();
+        if (!img) return;
         ctx.putImageData(img, 0, 0);
 
         // Draw selected color marker/indicator
@@ -721,20 +809,21 @@ const EditorManager = {
         let mx = canvas.width / 2;
         let my = canvas.height / 2;
         if (grid) {
-            const hsl = this.rgbToHsl(activeCol.r, activeCol.g, activeCol.b);
-            mx = (hsl.h / 360) * canvas.width;
-            my = (hsl.l / 100) * canvas.height;
+            const pos = this._gridMarkerPos(canvas, activeCol);
+            mx = pos.x;
+            my = pos.y;
         } else {
-            const hsv = this.rgbToHsv(activeCol.r, activeCol.g, activeCol.b);
+            const hsv = this.rgbToHsvPrecise(activeCol.r, activeCol.g, activeCol.b);
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
             const r = canvas.width / 2;
-            const theta = ((hsv.h - 180) * Math.PI) / 180; // Wait, let's look at buildColorWheelDiscImageData: const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360; -> so dy, dx has angle theta. Let's make sure it matches atan2 logic: angle in radians is hsv.h * Math.PI / 180
             const thetaRad = (hsv.h * Math.PI) / 180;
             const dist = (hsv.s / 100) * r;
             mx = cx + dist * Math.cos(thetaRad);
             my = cy + dist * Math.sin(thetaRad);
         }
+        mx = Math.max(0, Math.min(canvas.width, mx));
+        my = Math.max(0, Math.min(canvas.height, my));
 
         // Outer black shadow ring
         ctx.beginPath();
@@ -2455,7 +2544,9 @@ const EditorManager = {
         if (isDrawingGlobal || window.selectionPixelWarpActive || window.selectionBoundsResizeActive) {
             return false;
         }
-        return !!(this.toolProps && this.toolProps.allowOutsideCanvas) && this._layerExtendsOutsideDocument(layer);
+        const outsideAllowed =
+            !!(this.toolProps && this.toolProps.allowOutsideCanvas) || !!layer._floatingMoveOverflow;
+        return outsideAllowed && this._layerExtendsOutsideDocument(layer);
     },
 
     /**
@@ -5583,9 +5674,17 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
     /**
      * Agrandit le tampon du calque pour contenir le rectangle donné en coordonnées **locales** (origine tampon).
      */
-    _expandLayerBufferToIncludeLocalRect(layer, x, y, w, h) {
+    /**
+     * @param {{force?: boolean}} [opts] force : agrandir même sans « Hors toile »
+     *   (sélection flottante : le contenu sorti de la toile survit jusqu’à la désélection).
+     */
+    _expandLayerBufferToIncludeLocalRect(layer, x, y, w, h, opts) {
         if (!layer || !layer.buffer) return;
-        if (typeof window.illuAllowsOutsideCanvasContent === 'function' && !window.illuAllowsOutsideCanvasContent()) {
+        if (
+            !(opts && opts.force) &&
+            typeof window.illuAllowsOutsideCanvasContent === 'function' &&
+            !window.illuAllowsOutsideCanvasContent()
+        ) {
             return;
         }
         const bw = layer.buffer.width;
@@ -6893,6 +6992,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             window.selectionRotationDragActive ? 1 : 0,
             window.selectionPixelWarpActive ? 1 : 0,
             window.selectionIsWarpQuad ? 1 : 0,
+            window.selectionDraftActive ? 1 : 0,
             this.getCanvasZoomLevel().toFixed(4),
             sb ? `${sb.x},${sb.y},${sb.w},${sb.h}` : 'nosb'
         ];
@@ -7423,6 +7523,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (typeof window.illuInvalidatePendingWandWorker === 'function') {
             window.illuInvalidatePendingWandWorker();
         }
+        /* Plus de sélection active → on rogne enfin ce qui dépassait de la toile. */
+        if (this.finalizeFloatingSelectionOverflow()) {
+            this.saveHistory('Rognage à la toile', { patchActiveLayer: true });
+        }
         if (typeof window.illuPurgeSelectionOverlayAndGhostDom === 'function') {
             window.illuPurgeSelectionOverlayAndGhostDom();
         } else if (typeof window.cancelSelectionInteractionState === 'function') {
@@ -7442,6 +7546,10 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             overlay.style.display = 'none';
             overlay.innerHTML = '';
         }
+        /* Les 8 poignées doivent disparaître dans la même frame que le marching-ants,
+           pas au drawUI() du render() qui suit. */
+        window.selectionDraftActive = false;
+        if (typeof window.clearSelectionHandlesNow === 'function') window.clearSelectionHandlesNow();
         window.clearAnchors && window.clearAnchors();
         if (typeof window.disarmSelectionRectFreeCornersArm === 'function') window.disarmSelectionRectFreeCornersArm();
         if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
@@ -7570,6 +7678,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             !layerSmallerThanCanvas &&
             typeof window.selectionMatchesActiveLayer === 'function' &&
             window.selectionMatchesActiveLayer();
+        /* Tracé de sélection en cours : aucune poignée (elles appartiendraient encore
+           à l'ancienne sélection, dont le marching-ants a déjà disparu). */
         const showSelChrome =
             sb &&
             ov &&
@@ -7577,7 +7687,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             !window.selectionInverted &&
             sb.w > 2 &&
             sb.h > 2 &&
-            !hideChromeMove;
+            !hideChromeMove &&
+            !window.selectionDraftActive;
 
         if (showSelChrome) {
             const hideResizeForRotation =
@@ -8930,17 +9041,51 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const canvas = document.getElementById('color-wheel');
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        let y = e.clientY - rect.top;
+        /* Le canvas est étiré par CSS dans certaines dispositions (Photoshop ancré,
+           mobile) : convertir les coordonnées client en pixels du tampon. */
+        const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+        const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+        let x = (e.clientX - rect.left) * scaleX;
+        let y = (e.clientY - rect.top) * scaleY;
 
         if (this.isColorPickerGridMode()) {
-            // Dans la grille (Grid), on utilise getImageData, mais on clamp les coordonnées
-            x = Math.max(0, Math.min(canvas.width - 1, x));
-            y = Math.max(0, Math.min(canvas.height - 1, y));
-            try {
-                const data = canvas.getContext('2d', { willReadFrequently: true }).getImageData(x, y, 1, 1).data;
-                this.setColorFromRGB(data[0], data[1], data[2]);
-            } catch(err) {}
+            const px = Math.max(0, Math.min(canvas.width - 1, Math.floor(x)));
+            const py = Math.max(0, Math.min(canvas.height - 1, Math.floor(y)));
+            /* Lire l'image d'affichage en cache, pas le canvas : celui-ci porte déjà
+               les anneaux noir/blanc du repère, qu'un glissé lent survole. */
+            const img = this.getColorPickerDisplayImageData();
+            let r;
+            let g;
+            let b;
+            if (img && img.width === canvas.width && img.height === canvas.height) {
+                const i = (py * img.width + px) * 4;
+                r = img.data[i];
+                g = img.data[i + 1];
+                b = img.data[i + 2];
+            } else {
+                try {
+                    const data = canvas
+                        .getContext('2d', { willReadFrequently: true })
+                        .getImageData(px, py, 1, 1).data;
+                    r = data[0];
+                    g = data[1];
+                    b = data[2];
+                } catch (err) {
+                    return;
+                }
+            }
+            /* Le repère reste là où l'utilisateur a cliqué : la couleur seule ne
+               permet pas de retrouver la case (doublons noir / blanc / quantifiés).
+               r = -1 : la couleur définitive sera adoptée au premier rendu. */
+            this._colorPickerGridMarker = {
+                x: px + 0.5,
+                y: py + 0.5,
+                target: this.activeColorTarget,
+                r: -1,
+                g: -1,
+                b: -1
+            };
+            this.setColorFromRGB(r, g, b);
         } else {
             // Dans la roue (Wheel), on calcule mathématiquement pour que le glisser hors du cercle accroche le bord
             const cx = canvas.width / 2;
@@ -9211,6 +9356,46 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             h /= 6;
         }
         return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    },
+
+    /**
+     * Variante non arrondie de rgbToHsl : l'arrondi au degré / au pourcent entier
+     * faisait avancer le repère du sélecteur par paliers pendant un glissé.
+     */
+    rgbToHslPrecise(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0;
+        const l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: h * 360, s: s * 100, l: l * 100 };
+    },
+
+    /** Variante non arrondie de rgbToHsv (repère de la roue). */
+    rgbToHsvPrecise(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const d = max - min;
+        let h = 0;
+        const s = max === 0 ? 0 : d / max;
+        if (max !== min) {
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: h * 360, s: s * 100, v: max * 100 };
     },
 
     rgbToHsv(r, g, b) {
@@ -9721,6 +9906,31 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         layer.buffer = newBuf;
         layer.x = 0;
         layer.y = 0;
+    },
+
+    /**
+     * Sélection flottante : après un déplacement débordant de la toile, le tampon du calque a été
+     * agrandi pour garder les pixels sortis — on peut ressortir puis revenir sans rien perdre.
+     * La désélection est le seul moment où ce contenu est réellement coupé.
+     * @returns {boolean} true si un calque a effectivement été rogné
+     */
+    finalizeFloatingSelectionOverflow() {
+        if (!this.isPixelMode || !this.activeProject) return false;
+        const keepOutside =
+            typeof window.illuAllowsOutsideCanvasContent === 'function' &&
+            window.illuAllowsOutsideCanvasContent();
+        let cropped = false;
+        for (let i = 0; i < this.layers.length; i++) {
+            const l = this.layers[i];
+            if (!l || !l._floatingMoveOverflow) continue;
+            delete l._floatingMoveOverflow;
+            /* « Hors toile » actif : l’utilisateur veut justement garder le débordement. */
+            if (keepOutside) continue;
+            if (!this._layerExtendsOutsideDocument(l)) continue;
+            this._fitLayerBufferToDocumentSize(l);
+            cropped = true;
+        }
+        return cropped;
     },
 
     /** Calques pixel : tampon = dimensions du document, position (0,0) — le collage volant reste dans importStagingBuffer. */
@@ -11143,6 +11353,8 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         const H = this.height;
         p.layers.forEach((layer) => {
             if (!layer || !layer.buffer) return;
+            /* Sélection flottante en cours : le débordement est conservé jusqu’à la désélection. */
+            if (layer._floatingMoveOverflow) return;
             const needs =
                 (layer.x | 0) !== 0 ||
                 (layer.y | 0) !== 0 ||
@@ -11194,6 +11406,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         buffer: this.cloneCanvas(al.buffer),
                         x: al.x,
                         y: al.y,
+                        floatingMoveOverflow: !!al._floatingMoveOverflow,
                         name: al.name,
                         visible: al.visible,
                         opacity: al.opacity != null ? al.opacity : 1,
@@ -11217,6 +11430,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         visible: l.visible,
                         x: l.x,
                         y: l.y,
+                        floatingMoveOverflow: !!l._floatingMoveOverflow,
                         opacity: l.opacity,
                         blendMode: l.blendMode || 'source-over',
                         alphaMaskProjectId: l.alphaMaskProjectId != null ? l.alphaMaskProjectId : null,
@@ -11326,6 +11540,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 patch: {
                     x: p.x,
                     y: p.y,
+                    floatingMoveOverflow: !!p.floatingMoveOverflow,
                     name: p.name,
                     visible: p.visible,
                     opacity: p.opacity,
@@ -11466,6 +11681,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     buffer,
                     x: patch.x,
                     y: patch.y,
+                    floatingMoveOverflow: !!patch.floatingMoveOverflow,
                     name: patch.name,
                     visible: patch.visible,
                     opacity: patch.opacity,
@@ -11494,6 +11710,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         visible: s.visible,
                         x: s.x,
                         y: s.y,
+                        _floatingMoveOverflow: !!s.floatingMoveOverflow,
                         opacity: s.opacity,
                         blendMode: s.blendMode || 'source-over',
                         alphaMaskProjectId: s.alphaMaskProjectId != null ? s.alphaMaskProjectId : null,
@@ -11676,6 +11893,7 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                         buffer: this.cloneCanvas(p.buffer),
                         x: p.x,
                         y: p.y,
+                        _floatingMoveOverflow: !!p.floatingMoveOverflow,
                         name: p.name,
                         visible: p.visible,
                         opacity: p.opacity,

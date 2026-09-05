@@ -924,7 +924,10 @@ window.syncCalloutStyleLivePreview = function () {
 let currentElement = null; // For vector mode
 
 /** Désactivés en mode vecteur (réservés au bitmap / sélection pixel). */
-const TOOL_PIXEL_ONLY = new Set(['wand', 'warp-4', 'pencil', 'eraser', 'deform']);
+const TOOL_PIXEL_ONLY = new Set([
+    'wand', 'warp-4', 'pencil', 'eraser', 'deform',
+    'quick-select', 'object-select', 'magnetic-lasso', 'poly-lasso'
+]);
 
 function isPixelWarpOrDeformTool() {
     const t = window.activeTool;
@@ -939,6 +942,26 @@ const TOOL_OPTIONS_UI = {
     select: { label: 'Sélection', actionGroups: [], paramGroups: [] },
     move: { label: 'Déplacer', actionGroups: [], paramGroups: [] },
     wand: { label: 'Baguette', actionGroups: [], paramGroups: ['opt-grp-wand-params'] },
+    'quick-select': {
+        label: 'Sélection rapide',
+        actionGroups: [],
+        paramGroups: ['opt-grp-smartsel-params']
+    },
+    'object-select': {
+        label: "Sélection d'objet",
+        actionGroups: [],
+        paramGroups: ['opt-grp-smartsel-params']
+    },
+    'magnetic-lasso': {
+        label: 'Lasso magnétique',
+        actionGroups: [],
+        paramGroups: ['opt-grp-smartsel-params']
+    },
+    'poly-lasso': {
+        label: 'Lasso polygonal',
+        actionGroups: [],
+        paramGroups: ['opt-grp-smartsel-params']
+    },
     eyedropper: { label: 'Pipette', actionGroups: [], paramGroups: ['opt-grp-eyedropper-params'] },
     brush: {
         label: 'Pinceau',
@@ -1240,6 +1263,10 @@ window.updateMainCanvasCursor = function () {
         eraser: illuResolveToolCursor('eraser', 'cell'),
         fill: illuResolveToolCursor('bucket', 'cell'),
         wand: illuResolveToolCursor('wand', 'crosshair'),
+        'quick-select': illuResolveToolCursor('pencil', 'crosshair'),
+        'object-select': cross,
+        'magnetic-lasso': cross,
+        'poly-lasso': cross,
         text: illuResolveToolCursor('text', 'text'),
         gradient: cross,
         select: cross,
@@ -1348,6 +1375,33 @@ window.updateToolOptionsBar = function () {
     }
     if (showShapePickerRibbon && typeof window.illuSyncShapePickerUI === 'function') {
         window.illuSyncShapePickerUI(window.illuActiveShapeVariant || t);
+    }
+
+    /* Alvéole « Sélection » : baguette, sélection rapide/objet, lassos magnétique et
+     * polygonal. Trois de ces outils n'ont plus de case dans la boîte à outils, ce
+     * menu est leur seul point d'entrée — comme le catalogue de formes. */
+    const showSelectPickerRibbon =
+        typeof window.illuShouldShowSelectPickerRibbon === 'function' &&
+        window.illuShouldShowSelectPickerRibbon();
+    const selectPickerWrap = document.getElementById('illu-select-picker-wrap');
+    if (selectPickerWrap) {
+        selectPickerWrap.hidden = !showSelectPickerRibbon;
+        const group = selectPickerWrap.closest('.illu-ribbon-group');
+        if (group) group.hidden = !showSelectPickerRibbon;
+    }
+    if (showSelectPickerRibbon) {
+        if (toolHeader) toolHeader.hidden = true;
+        if (typeof window.illuSyncSelectPickerUI === 'function') window.illuSyncSelectPickerUI(t);
+    } else if (typeof window.illuCloseSelectPickerPopup === 'function') {
+        window.illuCloseSelectPickerPopup();
+    }
+
+    /* Quand un sélecteur (formes ou sélection) prend la place de la cellule
+     * « Outil », on masque son alvéole entière : masquer le seul en-tête laissait
+     * une cellule vide surmontée de son libellé. */
+    if (toolHeader) {
+        const toolGroup = toolHeader.closest('.illu-ribbon-group');
+        if (toolGroup) toolGroup.hidden = !!toolHeader.hidden;
     }
     if (typeof window.illuSyncShapeFamilyToolboxBtn === 'function') {
         window.illuSyncShapeFamilyToolboxBtn();
@@ -1971,6 +2025,43 @@ window.updateToolOptionsBar = function () {
     const capEndEl = document.getElementById('tool-line-cap-end');
     if (capStartEl) capStartEl.value = EditorManager.toolProps.lineCapStart || 'none';
     if (capEndEl) capEndEl.value = EditorManager.toolProps.lineCapEnd || 'none';
+    /* Sélections assistées : qualité + jauges, et masquage des lignes hors sujet
+       (la taille de pinceau ne concerne que la sélection rapide, la fréquence et
+       la portée que le lasso magnétique). */
+    const smartQualSel = document.getElementById('smartsel-quality');
+    if (smartQualSel) {
+        const q = EditorManager.toolProps.smartSelectQuality || 'medium';
+        if (smartQualSel.value !== q) smartQualSel.value = q;
+    }
+    [
+        ['smartsel-brush', 'smartSelectBrush', 24],
+        ['smartsel-tolerance', 'smartSelectTolerance', 45],
+        ['smartsel-frequency', 'magneticFrequency', 45],
+        ['smartsel-width', 'magneticWidth', 24]
+    ].forEach(([id, propName, dflt]) => {
+        const sl = document.getElementById(id);
+        if (!sl) return;
+        const v = EditorManager.toolProps[propName] ?? dflt;
+        sl.value = String(v);
+        const vEl = document.getElementById(id + '-val');
+        if (vEl) vEl.textContent = String(v);
+        if (typeof window.syncIlluGaugeForRange === 'function') window.syncIlluGaugeForRange(sl);
+    });
+    const smartBrushRow = document.getElementById('smartsel-brush-row');
+    const smartTolRow = document.getElementById('smartsel-tol-row');
+    const smartFreqRow = document.getElementById('smartsel-freq-row');
+    const smartWidthRow = document.getElementById('smartsel-width-row');
+    const smartSep1 = document.getElementById('smartsel-sep-1');
+    const isQuickSel = t === 'quick-select';
+    const isMagnetic = t === 'magnetic-lasso';
+    /* Le lasso polygonal n'a ni fréquence ni portée : ses segments sont droits. */
+    const isSmartSel = isQuickSel || isMagnetic || t === 'object-select' || t === 'poly-lasso';
+    if (smartBrushRow) smartBrushRow.hidden = !isQuickSel;
+    if (smartTolRow) smartTolRow.hidden = !isQuickSel;
+    if (smartFreqRow) smartFreqRow.hidden = !isMagnetic;
+    if (smartWidthRow) smartWidthRow.hidden = !isMagnetic;
+    if (smartSep1) smartSep1.hidden = !isQuickSel && !isMagnetic;
+
     const fillModeSel = document.getElementById('fill-mode');
     if (fillModeSel) {
         const fm = EditorManager.toolProps.fillMode === 'layer' ? 'layer' : 'contiguous';
@@ -2265,13 +2356,20 @@ function buildPixelColorMatchFn(d, idx0, tolUi) {
             d[i] === r0 && d[i + 1] === g0 && d[i + 2] === b0 && d[i + 3] === a0;
     }
     const rgbMax = Math.max(24, t * 1.75);
-    const alphaOkMax = Math.max(40, t * 1.2);
+    /* Le curseur va jusqu'à 128 : à fond, l'écart d'alpha toléré doit couvrir
+       toute la plage 0→255, sinon une zone opaque ne rejoint jamais une zone
+       transparente quelle que soit la tolérance. */
+    const alphaOkMax = Math.max(40, t * 2);
     return (i) => {
+        const aI = d[i + 3];
+        const da = Math.abs(aI - a0);
+        /* Un pixel totalement transparent n'a pas de couleur (le canvas force son
+           RVB à 0) : le comparer en RVB n'a aucun sens, seul l'alpha décide. */
+        if (a0 === 0 || aI === 0) return da <= alphaOkMax;
         const dr = d[i] - r0,
             dg = d[i + 1] - g0,
             db = d[i + 2] - b0;
         const distRgb = Math.sqrt(dr * dr + dg * dg + db * db);
-        const da = Math.abs(d[i + 3] - a0);
         return distRgb <= rgbMax && da <= alphaOkMax;
     };
 }
@@ -3758,6 +3856,7 @@ function illuBeginNewSelectionRectDrag(e) {
     window.selectionBounds = { x: startX, y: startY, w: 0, h: 0 };
     deformWarpNewRectDrag = true;
     isDrawing = true;
+    if (typeof window.beginSelectionDraftChrome === 'function') window.beginSelectionDraftChrome();
     if (typeof window.scheduleSelectionOverlayOnly === 'function') {
         window.scheduleSelectionOverlayOnly();
     } else if (typeof window.refreshSelectionVisual === 'function') {
@@ -4736,7 +4835,12 @@ function initTools() {
             }
 
             // Reset selection mode if switching away from selection tools
-            if (!['select', 'wand', 'direct-select'].includes(window.activeTool)) {
+            if (
+                ![
+                    'select', 'wand', 'direct-select',
+                    'quick-select', 'object-select', 'magnetic-lasso', 'poly-lasso'
+                ].includes(window.activeTool)
+            ) {
                 window.selectionMode = 'new';
             }
 
@@ -4757,6 +4861,9 @@ function initTools() {
             if (window.activeTool !== 'cubic-3') {
                 setVectorQuadBezierClickState(null);
                 window._quadBezierPreviewDoc = null;
+            }
+            if (prev !== window.activeTool && window.IlluSmartSelect) {
+                window.IlluSmartSelect.cancel();
             }
             if (EditorManager.isPixelMode && prev !== window.activeTool) {
                 if (typeof window.commitPixelTextSession === 'function') window.commitPixelTextSession(true);
@@ -5604,6 +5711,15 @@ function onGlobalMouseMove(e) {
        d'une toile zoomée : la toile se déplace dans la direction du bord touché. */
     if (!ILLU_EDGE_AUTOPAN._inTick) {
         illuEdgeAutoPanUpdate(e.clientX, e.clientY, e.shiftKey);
+    }
+    /* Sélections assistées : le lasso magnétique suit le pointeur bouton relâché,
+       il faut donc traiter le mouvement avant le test isDrawing plus bas. */
+    if (
+        window.IlluSmartSelect &&
+        window.IlluSmartSelect.isGesturing() &&
+        window.IlluSmartSelect.onPointerMove(e, getPos(e))
+    ) {
+        return;
     }
     /* Glisser depuis le bouton central Déformation : pointermove porte le tracé ; mousemove seul est peu fiable (foreignObject SVG). Sans PointerEvent, on garde mousemove. Idem session warp (poignée centre / capture). */
     if (
@@ -8751,6 +8867,18 @@ function handleMouseDown(e) {
         return;
     }
 
+    /* Sélections assistées : elles gèrent tout le geste (pinceau, cadre, lasso). */
+    if (
+        EditorManager.isPixelMode &&
+        window.IlluSmartSelect &&
+        window.IlluSmartSelect.isActive() &&
+        window.IlluSmartSelect.onPointerDown(e, pos)
+    ) {
+        isDrawing = false;
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        return;
+    }
+
     if (EditorManager.isPixelMode && window.activeTool === 'wand') {
         magicWandAt(pos, e);
         isDrawing = false;
@@ -10605,6 +10733,34 @@ function illuPixelMoveOrDeformTool() {
 }
 
 /** Réinitialise l’état « déplacement sélection » pour éviter qu’un ancien glisser ne bloque le déplacement du calque. */
+/**
+ * Validation d’un déplacement de sélection : le tampon du calque est agrandi pour accueillir
+ * la zone déposée, même hors toile. Les pixels sortis sont ainsi conservés — on peut ressortir
+ * puis revenir sans rien perdre ; ils ne sont coupés qu’à la désélection
+ * (EditorManager.finalizeFloatingSelectionOverflow).
+ */
+function illuExpandActiveLayerForMoveCommit() {
+    const l = EditorManager.activeLayer;
+    const sb = window.selectionBounds;
+    if (!l || !l.buffer || !sb) return;
+    if (typeof EditorManager._expandLayerBufferToIncludeLocalRect !== 'function') return;
+    EditorManager._expandLayerBufferToIncludeLocalRect(
+        l,
+        sb.x - l.x,
+        sb.y - l.y,
+        sb.w,
+        sb.h,
+        { force: true }
+    );
+    if (
+        !illuAllowsOutsideCanvasContent() &&
+        typeof EditorManager._layerExtendsOutsideDocument === 'function' &&
+        EditorManager._layerExtendsOutsideDocument(l)
+    ) {
+        l._floatingMoveOverflow = true;
+    }
+}
+
 function illuResetMoveSelectionDragArtifacts() {
     illuRestoreMoveSelectionLayerSnapshot();
     isMovingSelection = false;
@@ -11453,6 +11609,24 @@ function illuRestoreMoveSelectionLayerSnapshot() {
     delete l._movePixelsHoleCleared;
 }
 
+/**
+ * Perce le trou source sur la cible réelle du warp : tampon du calque, ou tampon de
+ * placement (collage volant / image importée) quand la session tourne en mode staging.
+ * Sans ça, le commit dessinait le résultat par-dessus l’original resté intact →
+ * l’ancien tracé restait visible sous la version réduite (« fantôme »).
+ */
+function illuClearWarpSourceRegionOnWarpTarget(l) {
+    if (!l || !selectionWarpSourceClearBounds) return false;
+    const buf = selectionWarpImportStagingMode ? l.importStagingBuffer : l.buffer;
+    if (!buf) return false;
+    const ctx = buf.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.save();
+    illuClearSelectionWarpSourceRegion(ctx);
+    ctx.restore();
+    return true;
+}
+
 function illuClearSelectionWarpSourceRegion(ctx) {
     if (!ctx || !selectionWarpSourceClearBounds) return;
     const b = selectionWarpSourceClearBounds;
@@ -11600,6 +11774,7 @@ window.cancelSelectionInteractionState = function () {
     }
     selectionCombineBackup = null;
     lassoDrawingPoints = null;
+    window.selectionDraftActive = false;
     window.selectionRotationDragActive = false;
     window.selectionPreviewAngleRad = 0;
     if (typeof window.illuPurgeSelectionWarpSession === 'function') {
@@ -11633,6 +11808,8 @@ window.illuPurgeSelectionOverlayAndGhostDom = function () {
             ov.innerHTML = '';
         }
     }
+    window.selectionDraftActive = false;
+    if (typeof window.clearSelectionHandlesNow === 'function') window.clearSelectionHandlesNow();
     if (typeof window.illuSelectionLoupeHide === 'function') window.illuSelectionLoupeHide();
     if (typeof window.cancelSelectionInteractionState === 'function') window.cancelSelectionInteractionState();
     illuResetMoveSelectionDragArtifacts();
@@ -11900,10 +12077,28 @@ function illuDstQuadArrayIsAxisRect(dq, eps) {
     );
 }
 
+/**
+ * Aperçu « cadre droit » : le quad destination est un rectangle aligné sur les axes,
+ * donc un simple drawImage suffit (pas de warp projectif par pixel). Assez rapide pour
+ * suivre le pointeur à chaque frame — on court-circuite throttle et worker.
+ * Exclut la rotation (quad non aligné) et la déformation 4 coins libre.
+ */
+function illuWarpPreviewIsCheapAxisRect() {
+    if (!selectionWarpBackupCanvas || !window.selectionWarpQuad) return false;
+    if (window.selectionRotationDragActive) return false;
+    if (Math.abs(window.selectionPreviewAngleRad || 0) > 1e-6) return false;
+    return illuQuadObjectIsAxisRect(window.selectionWarpQuad);
+}
+
 /** Déformation rectangulaire (outil Déformation / cadre verrouillé) : commit par scale drawImage. */
 function illuShouldUseAxisRectWarpCommit(state) {
     if (!state || state.invalid || !selectionWarpBackupCanvas) return false;
-    if (window.activeTool === 'deform' && selectionWarpDeformRect) return true;
+    /* Le raccourci drawImage ne sait pas faire tourner : il ne vaut que si le quad de
+       destination est encore aligné sur les axes. Sinon (rotation), la rotation était
+       purement perdue et la source était recopiée dans sa boîte englobante — d’où le doublon. */
+    if (window.activeTool === 'deform' && selectionWarpDeformRect) {
+        return illuQuadObjectIsAxisRect(window.selectionWarpQuad) && illuDstQuadArrayIsAxisRect(state.dstQuad);
+    }
     if (
         window.activeTool === 'warp-4' &&
         typeof window.illuIsWarpQuadRectLockActive === 'function' &&
@@ -13159,7 +13354,14 @@ window.runSelectionWarpPreview = function (opts) {
     const isFinal = !!(opts.isFinal || opts.forceCommit);
     const isPreview = !!opts.preview;
 
-    if (!isFinal && !opts.immediate) {
+    /* Aperçu instantané quand le résultat est un simple drawImage (Déformation, cadre verrouillé). */
+    const cheapAxisRect = !isFinal && illuWarpPreviewIsCheapAxisRect();
+    /* Le worker s'auto-régule déjà (1 job en vol + 1 en attente) et illuScheduleSelectionWarpPreview
+       coalesce par frame : le throttle temporel n'ajoutait que ~50 ms de retard à l'aperçu. */
+    const workerPaced =
+        !isFinal && !!selectionWarpWorkerSessionId && illuWarpWorkerSupported();
+
+    if (!isFinal && !opts.immediate && !cheapAxisRect && !workerPaced) {
         if (selectionWarpThrottleTimeout) {
             clearTimeout(selectionWarpThrottleTimeout);
             selectionWarpThrottleTimeout = null;
@@ -13182,6 +13384,13 @@ window.runSelectionWarpPreview = function (opts) {
     state.stride = 1;
     /* Validation finale : thread principal uniquement (évite promesse worker jamais résolue + fenêtre bloquée). */
     if (isFinal) {
+        illuRunSelectionWarpPreviewSync(state);
+        return Promise.resolve();
+    }
+
+    if (cheapAxisRect && !state.invalid && illuShouldUseAxisRectWarpCommit(state)) {
+        /* Un job worker encore en vol rendrait une frame périmée par-dessus : on l'invalide. */
+        selectionWarpWorkerLatestJobId = ++selectionWarpWorkerJobSeq;
         illuRunSelectionWarpPreviewSync(state);
         return Promise.resolve();
     }
@@ -13311,14 +13520,7 @@ window.finishSelectionPixelWarp = async function () {
     if (l) delete l._warpSrcHoleCleared; // Prevent overwriting baked result in illuRemoveWarpPreviewOverlay()
 
     const wasImportFloating = !!(l && l.importPlacementPending);
-    if (l && !selectionWarpImportStagingMode && l.buffer) {
-        const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
-        if (ctx) {
-            ctx.save();
-            illuClearSelectionWarpSourceRegion(ctx);
-            ctx.restore();
-        }
-    }
+    illuClearWarpSourceRegionOnWarpTarget(l);
 
     if (l) {
         if (l._ghostDragHide) delete l._ghostDragHide;
@@ -13354,11 +13556,13 @@ window.finishSelectionPixelWarp = async function () {
         const stillFloating = l && l.importPlacementPending;
         if (!stillFloating) {
             const hist =
-                window.activeTool === 'warp-4'
-                    ? 'Déformation 4 coins'
-                    : window.activeTool === 'deform'
-                        ? 'Déformation'
-                        : 'Déformation pixels (sélection)';
+                selectionWarpHandleId === 'rot'
+                    ? 'Rotation sélection'
+                    : window.activeTool === 'warp-4'
+                        ? 'Déformation 4 coins'
+                        : window.activeTool === 'deform'
+                            ? 'Déformation'
+                            : 'Déformation pixels (sélection)';
 
             if (EditorManager.mode === 'pixel-dither' && l && l.buffer) {
                 const lctx = l.buffer.getContext('2d', { willReadFrequently: true });
@@ -13466,9 +13670,7 @@ window.illuCommitAnyActiveInteractionSynchronously = function () {
 
     // 1. Commit de l'outil de déplacement de pixels (isMovingSelection)
     if (typeof isMovingSelection !== 'undefined' && isMovingSelection && typeof moveBufferCanvas !== 'undefined' && moveBufferCanvas) {
-        if (EditorManager.toolProps && EditorManager.toolProps.allowOutsideCanvas && typeof EditorManager._expandLayerBufferToIncludeLocalRect === 'function' && window.selectionBounds) {
-            EditorManager._expandLayerBufferToIncludeLocalRect(l, window.selectionBounds.x - l.x, window.selectionBounds.y - l.y, window.selectionBounds.w, window.selectionBounds.h);
-        }
+        illuExpandActiveLayerForMoveCommit();
         const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
         if (ctx && window.selectionBounds) {
             const sb = window.selectionBounds;
@@ -13529,14 +13731,7 @@ window.illuCommitAnyActiveInteractionSynchronously = function () {
         const state = illuPrepareSelectionWarpPreviewState({ isFinal: true, forceCommit: true });
         if (state) {
             state.stride = 1;
-            if (!selectionWarpImportStagingMode && l.buffer) {
-                const ctx = l.buffer.getContext('2d', { willReadFrequently: true });
-                if (ctx) {
-                    ctx.save();
-                    illuClearSelectionWarpSourceRegion(ctx);
-                    ctx.restore();
-                }
-            }
+            illuClearWarpSourceRegionOnWarpTarget(l);
             illuRunSelectionWarpPreviewSync(state);
         }
 
@@ -13620,10 +13815,11 @@ window.bakeSelectionRotation = function (angleRad) {
         };
         /* Reset de l’angle preview avant de finaliser pour ne pas doubler le rendu. */
         window.selectionPreviewAngleRad = 0;
-        window.startSelectionPixelWarp(null, 'c');
+        window.startSelectionPixelWarp(null, 'rot');
         window.selectionWarpQuad = nq;
         window.finishSelectionPixelWarp();
-        return;
+        /* La session warp écrit sa propre entrée d’historique : l’appelant ne doit pas en rajouter. */
+        return 'warp';
     }
 
     const lx = l.x;
@@ -13703,9 +13899,10 @@ window.startSelectionRotationDrag = function (e) {
     const isWarp4 = window.selectionIsWarpQuad && window.selectionKind === 'lasso' && window.selectionLassoPoints && window.selectionLassoPoints.length === 4;
     if (!sb || (window.selectionKind !== 'rect' && !isWarp4) || window._illuFinishingWarp) return;
 
-    /* warp-4 : aperçu warp temps réel ; déform → aperçu angle + bake (comme Déplacer). */
+    /* warp-4 et Déformation : aperçu warp temps réel (le bake différé perdait la rotation
+       sur un quad déjà déformé et recopiait la source dans sa boîte englobante). */
     if (
-        window.activeTool === 'warp-4' &&
+        (window.activeTool === 'warp-4' || window.activeTool === 'deform') &&
         !window.selectionPixelWarpActive &&
         !window._illuFinishingWarp
     ) {
@@ -14145,6 +14342,7 @@ function startPixel(pos, e) {
         }
         if (!combineDown) window.selectionKind = 'lasso';
         lassoDrawingPoints = [{ x: startX, y: startY }];
+        if (typeof window.beginSelectionDraftChrome === 'function') window.beginSelectionDraftChrome();
         if (typeof window.scheduleSelectionOverlayOnly === 'function') {
             window.scheduleSelectionOverlayOnly({ lassoPoints: lassoDrawingPoints });
         } else {
@@ -14217,6 +14415,7 @@ function startPixel(pos, e) {
         window.selectionIsWarpQuad = false;
         window.selectionPreviewAngleRad = 0;
         window.selectionBounds = { x: startX, y: startY, w: 0, h: 0 };
+        if (typeof window.beginSelectionDraftChrome === 'function') window.beginSelectionDraftChrome();
         if (typeof window.scheduleSelectionOverlayOnly === 'function') {
             window.scheduleSelectionOverlayOnly();
         } else {
@@ -14480,7 +14679,15 @@ function updatePixel(pos, pointerEv) {
         }
     }
 
-    if (window.selectionPixelWarpActive && window.selectionWarpQuad && !window._illuFinishingWarp) {
+    /* La rotation par la poignée est traitée plus bas (elle fait pivoter le quad en bloc).
+       Sans cette garde, updateSelectionWarpFromPointer() capterait le mouvement avec le
+       handle « rot », qu'il ne sait pas traiter : ni aperçu live ni résultat au relâchement. */
+    if (
+        window.selectionPixelWarpActive &&
+        window.selectionWarpQuad &&
+        !window._illuFinishingWarp &&
+        !window.selectionRotationDragActive
+    ) {
         window.updateSelectionWarpFromPointer(pos.x, pos.y);
         if (window.illuSelectionLoupeActive && pointerEv) {
             const anchor =
@@ -14717,8 +14924,8 @@ function updatePixel(pos, pointerEv) {
         da = ang - selectionRotateStartPreview;
         window.selectionPreviewAngleRad = ang;
 
-        if (window.selectionPixelWarpActive && window.selectionWarpQuad && window.selectionWarpQuadAtStart) {
-            const q0 = window.selectionWarpQuadAtStart;
+        if (window.selectionPixelWarpActive && window.selectionWarpQuad && selectionWarpQuadAtStart) {
+            const q0 = selectionWarpQuadAtStart;
             const cos = Math.cos(da);
             const sin = Math.sin(da);
             const rotatePoint = (p) => {
@@ -14736,6 +14943,7 @@ function updatePixel(pos, pointerEv) {
                 bl: rotatePoint(q0.bl)
             };
             illuScheduleSelectionWarpPreview({ preview: true });
+            illuScheduleWarpChromeRefresh();
         }
 
         scheduleSelectionChromeRefresh({ forceFullSelectionOverlay: true, forceDrawUI: true });
@@ -14921,6 +15129,15 @@ function updatePixel(pos, pointerEv) {
 }
 
 function handleMouseUp(e) {
+    if (
+        window.IlluSmartSelect &&
+        window.IlluSmartSelect.isGesturing() &&
+        window.IlluSmartSelect.onPointerUp(e, getPos(e))
+    ) {
+        isDrawing = false;
+        return;
+    }
+    if (typeof window.endSelectionDraftChrome === 'function') window.endSelectionDraftChrome();
     if (typeof illuEdgeAutoPanStop === 'function') illuEdgeAutoPanStop();
     if (typeof window.illuClearSnapGuides === 'function') window.illuClearSnapGuides();
     if (window.activeTool === 'pen' && window.VectorEngine && window.VectorEngine.isPenActive()) {
@@ -14959,8 +15176,9 @@ function handleMouseUp(e) {
         if (window.selectionPixelWarpActive) {
             window.finishSelectionPixelWarp();
         } else if (Math.abs(ang) > 1e-3) {
-            window.bakeSelectionRotation(ang);
-            EditorManager.saveHistory('Rotation sélection', { patchActiveLayer: true });
+            if (window.bakeSelectionRotation(ang) !== 'warp') {
+                EditorManager.saveHistory('Rotation sélection', { patchActiveLayer: true });
+            }
         }
         window.refreshSelectionVisual();
         EditorManager.render();
@@ -15444,9 +15662,7 @@ function handleMouseUp(e) {
         }
 
         if (illuPixelMoveOrDeformTool() && isMovingSelection) {
-            if (EditorManager.toolProps && EditorManager.toolProps.allowOutsideCanvas && typeof EditorManager._expandLayerBufferToIncludeLocalRect === 'function' && window.selectionBounds) {
-                EditorManager._expandLayerBufferToIncludeLocalRect(EditorManager.activeLayer, window.selectionBounds.x - EditorManager.activeLayer.x, window.selectionBounds.y - EditorManager.activeLayer.y, window.selectionBounds.w, window.selectionBounds.h);
-            }
+            illuExpandActiveLayerForMoveCommit();
             const sb = window.selectionBounds;
             const lx = EditorManager.activeLayer.x;
             const ly = EditorManager.activeLayer.y;
@@ -17229,6 +17445,7 @@ window.finalizePendingPixelLiveEdits = function () {
 
         if (isDrawing) {
             if (isRectSelectionTool()) {
+                if (typeof window.endSelectionDraftChrome === 'function') window.endSelectionDraftChrome();
                 let sbr = window.selectionBounds;
                 sbr = illuFinalizeRectSelectionBounds(sbr, startX, startY);
                 window.selectionBounds = sbr;
@@ -17254,6 +17471,7 @@ window.finalizePendingPixelLiveEdits = function () {
                 lassoDrawingPoints = null;
                 selectionCombineBackup = null;
                 window.selectionCombineGhost = null;
+                if (typeof window.endSelectionDraftChrome === 'function') window.endSelectionDraftChrome();
                 if (typeof window.refreshSelectionVisual === 'function') window.refreshSelectionVisual();
                 isDrawing = false;
                 done = true;

@@ -398,6 +398,11 @@
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.editRedo"></span><span
                                         data-i18n="menu.editRedo">Rétablir</span></li>
                                 <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" id="menu-edit-expand-selection"
+                                    onclick="showSelectionExpandDialog()"><span class="menu-icon" aria-hidden="true"><i
+                                            class="fa-solid fa-up-right-and-down-left-from-center"></i></span><span
+                                        data-i18n="menu.editExpandSelection">Étendre / réduire la sélection…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" id="menu-edit-vectorize" aria-disabled="true"
                                     onclick="illuMenuVectorizeBitmap()"><span class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-bezier-curve"></i></span><span
@@ -427,6 +432,9 @@
                                 <li role="menuitem" class="menu-row-icon" onclick="showExtendCanvasDialog()"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageExtendWork"></span><span
                                         data-i18n="menu.imageExtendWork">Étendre la zone de travail…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showImageBorderDialog()"><span class="menu-icon"
+                                         aria-hidden="true" data-icon-key="menu.imageBorder"></span><span
+                                        data-i18n="menu.imageBorder">Bordure d'image…</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="showPixelTransformDialog()"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.imageTransform"></span><span
@@ -832,6 +840,10 @@
                                 <option value="select" data-i18n="tool.select">Sélection</option>
                                 <option value="direct-select" data-i18n="tool.direct-select">Lasso</option>
                                 <option value="wand" data-i18n="tool.wand">Baguette</option>
+                                <option value="quick-select" data-i18n="tool.quick-select">Sélection rapide</option>
+                                <option value="object-select" data-i18n="tool.object-select">Sélection d'objet</option>
+                                <option value="magnetic-lasso" data-i18n="tool.magnetic-lasso">Lasso magnétique</option>
+                                <option value="poly-lasso" data-i18n="tool.poly-lasso">Lasso polygonal</option>
                                 <option value="move" data-i18n="tool.move">Déplacer</option>
                                 <option value="warp-4" data-i18n="tool.warp-4">Déform. 4 coins</option>
                                 <option value="deform" data-i18n="tool.deform">Déformation</option>
@@ -888,6 +900,28 @@
                         </div>
                     </div>
                     <span class="illu-ribbon-group-label" data-i18n="ribbon.groupShapePicker">Forme</span>
+                </div>
+
+                <!-- Sélecteur d'outils de sélection : même mécanique que le catalogue de
+                     formes. La baguette et le lasso magnétique restent dans la boîte à
+                     outils ; sélection rapide / objet / lasso polygonal vivent ici. -->
+                <div class="illu-ribbon-group" data-illu-ribbon-group="select-picker">
+                    <div class="illu-ribbon-group-body">
+                        <div id="illu-select-picker-wrap" class="illu-shape-picker-wrap illu-select-picker-wrap" hidden>
+                            <div id="illu-select-picker-header" class="illu-tool-header illu-shape-picker-header"
+                                tabindex="0" role="button" aria-haspopup="menu" aria-controls="illu-select-picker-popup"
+                                aria-expanded="false" data-i18n-aria-label="selectPicker.ariaLabel">
+                                <span class="illu-tool-picker illu-shape-picker-trigger" aria-hidden="true">
+                                    <span id="illu-select-picker-icon" class="illu-tool-header-icon"
+                                        aria-hidden="true"></span>
+                                    <span id="illu-select-picker-label" class="illu-tool-picker-label">Baguette</span>
+                                    <i class="fa-solid fa-chevron-down illu-tool-picker-chevron" aria-hidden="true"></i>
+                                </span>
+                            </div>
+                            <div id="illu-select-picker-popup" class="illu-shape-picker-popup" hidden role="menu"></div>
+                        </div>
+                    </div>
+                    <span class="illu-ribbon-group-label" data-i18n="ribbon.groupSelectPicker">Sélection</span>
                 </div>
 
 
@@ -1132,6 +1166,72 @@
                                 <span class="illu-gauge-val" id="wand-tolerance-val">32</span>
                                 <input type="range" id="wand-tolerance" class="illu-gauge-input" min="0" max="128"
                                     value="32">
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- Sélection rapide / objet / lasso magnétique : qualité + réglages par outil -->
+                    <div id="opt-grp-smartsel-params" class="opt-grp illu-ribbon-param-pack" hidden>
+                        <span class="illu-icon-toggle-group illu-mode-toggle-group"
+                            data-i18n-title="smartSel.quality">
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="smartsel-quality"
+                                    data-illu-value="fast" data-i18n-title="smartSel.qualityFastHint"><i
+                                        class="fa-solid fa-gauge-high" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="smartSel.qualityFast">Rapide</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="smartsel-quality"
+                                    data-illu-value="medium" data-i18n-title="smartSel.qualityMediumHint"><i
+                                        class="fa-solid fa-gauge" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="smartSel.qualityMedium">Moyen</span>
+                            </span>
+                            <span class="illu-mode-toggle-item">
+                                <button type="button" class="illu-icon-toggle" data-illu-sync="smartsel-quality"
+                                    data-illu-value="slow" data-i18n-title="smartSel.qualitySlowHint"><i
+                                        class="fa-solid fa-gauge-simple-high" aria-hidden="true"></i></button>
+                                <span class="illu-mode-toggle-lbl" data-i18n="smartSel.qualitySlow">Lent</span>
+                            </span>
+                        </span>
+                        <div class="opt-sep" id="smartsel-sep-1"></div>
+                        <span class="field-row illu-gauge-field" id="smartsel-brush-row">
+                            <label for="smartsel-brush" class="illu-opt-lbl" data-i18n="smartSel.brushShort"
+                                data-i18n-title="smartSel.brush">Taille</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="smartsel-brush-val">24</span>
+                                <input type="range" id="smartsel-brush" class="illu-gauge-input" min="2" max="200"
+                                    value="24">
+                            </span>
+                        </span>
+                        <span class="field-row illu-gauge-field" id="smartsel-tol-row">
+                            <label for="smartsel-tolerance" class="illu-opt-lbl" data-i18n="smartSel.toleranceShort"
+                                data-i18n-title="smartSel.tolerance">Tol.</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="smartsel-tolerance-val">45</span>
+                                <input type="range" id="smartsel-tolerance" class="illu-gauge-input" min="0" max="100"
+                                    value="45">
+                            </span>
+                        </span>
+                        <span class="field-row illu-gauge-field" id="smartsel-freq-row">
+                            <label for="smartsel-frequency" class="illu-opt-lbl" data-i18n="smartSel.frequencyShort"
+                                data-i18n-title="smartSel.frequency">Fréq.</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="smartsel-frequency-val">45</span>
+                                <input type="range" id="smartsel-frequency" class="illu-gauge-input" min="10" max="200"
+                                    value="45">
+                            </span>
+                        </span>
+                        <span class="field-row illu-gauge-field" id="smartsel-width-row">
+                            <label for="smartsel-width" class="illu-opt-lbl" data-i18n="smartSel.widthShort"
+                                data-i18n-title="smartSel.width">Portée</label>
+                            <span class="illu-gauge-wrap">
+                                <span class="illu-gauge-fill" aria-hidden="true"></span>
+                                <span class="illu-gauge-val" id="smartsel-width-val">24</span>
+                                <input type="range" id="smartsel-width" class="illu-gauge-input" min="6" max="80"
+                                    value="24">
                             </span>
                         </span>
                     </div>
@@ -2239,6 +2339,12 @@
                             <option value="contiguous">contiguous</option>
                             <option value="similar">similar</option>
                         </select>
+                        <select id="smartsel-quality" style="display:none !important;" aria-hidden="true"
+                            tabindex="-1">
+                            <option value="fast">fast</option>
+                            <option value="medium" selected>medium</option>
+                            <option value="slow">slow</option>
+                        </select>
                         <select id="fill-mode" style="display:none !important;" aria-hidden="true" tabindex="-1">
                             <option value="contiguous">contiguous</option>
                             <option value="layer">layer</option>
@@ -2316,11 +2422,28 @@
                                             viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                                             <use href="#illu-icon-tool-direct-select" />
                                         </svg></button>
-                                    <button class="tool-btn" id="tool-wand" data-i18n-title="title.toolWand"><i
-                                            class="fa-solid fa-wand-magic-sparkles"></i></button>
+                                    <button class="tool-btn" id="tool-wand" data-i18n-title="title.toolWand"><svg
+                                            class="tool-icon illu-wand-tool-ico" width="20" height="20"
+                                            viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-wand" />
+                                        </svg></button>
+                                    <button class="tool-btn" id="tool-magnetic-lasso"
+                                        data-i18n-title="title.toolMagneticLasso"><svg
+                                            class="tool-icon illu-magnetic-lasso-tool-ico" width="20" height="20"
+                                            viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-magnetic-lasso" />
+                                        </svg></button>
+                                    <button class="tool-btn" id="tool-poly-lasso"
+                                        data-i18n-title="title.toolPolyLasso"><svg
+                                            class="tool-icon illu-poly-lasso-tool-ico" width="20" height="20"
+                                            viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-poly-lasso" />
+                                        </svg></button>
                                     <button class="tool-btn" id="btn-deselect" type="button"
-                                        data-i18n-title="title.btnDeselect"><i
-                                            class="fa-solid fa-rectangle-xmark"></i></button>
+                                        data-i18n-title="title.btnDeselect"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-sel-deselect" />
+                                        </svg></button>
 
                                 </div>
                                 <div class="tool-group">
@@ -2337,8 +2460,11 @@
                                         </svg></button>
 
                                     <button class="tool-btn" id="tool-eyedropper"
-                                        data-i18n-title="title.toolEyedropper"><i
-                                            class="fa-solid fa-eye-dropper"></i></button>
+                                        data-i18n-title="title.toolEyedropper"><svg class="tool-icon"
+                                            width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"
+                                            focusable="false">
+                                            <use href="#illu-icon-tool-eyedropper" />
+                                        </svg></button>
 
                                     <button class="tool-btn" id="tool-move" data-i18n-title="title.toolMove"><i
                                             class="fa-solid fa-arrows-up-down-left-right"></i></button>
@@ -2351,22 +2477,37 @@
                                             class="fa-solid fa-expand"></i></button>
                                 </div>
                                 <div class="tool-group" data-pixel-only-group="">
-                                    <button class="tool-btn" data-pixel-only="" id="tool-brush" data-i18n-title="title.toolBrush"><i
-                                            class="fa-solid fa-paintbrush"></i></button>
-                                    <button class="tool-btn" data-pixel-only="" id="tool-pencil" data-i18n-title="title.toolPencil"><i
-                                            class="fa-solid fa-pencil"></i></button>
+                                    <button class="tool-btn" data-pixel-only="" id="tool-brush"
+                                        data-i18n-title="title.toolBrush"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-brush" />
+                                        </svg></button>
+                                    <button class="tool-btn" data-pixel-only="" id="tool-pencil"
+                                        data-i18n-title="title.toolPencil"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-pencil" />
+                                        </svg></button>
 
                                     <button class="tool-btn" data-pixel-only="" id="tool-gradient"
-                                        data-i18n-title="title.toolGradient"><svg class="tool-icon"
-                                            style="width: 16px; height: 16px;" viewBox="0 0 16 16" aria-hidden="true">
+                                        data-i18n-title="title.toolGradient"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                                             <use href="#illu-icon-tool-gradient" />
                                         </svg></button>
-                                    <button class="tool-btn" data-pixel-only="" id="tool-fill" data-i18n-title="title.toolFill"><i
-                                            class="fa-solid fa-fill-drip"></i></button>
-                                    <button class="tool-btn" data-pixel-only="" id="tool-eraser" data-i18n-title="title.toolEraser"><i
-                                            class="fa-solid fa-eraser"></i></button>
-                                    <button class="tool-btn" data-pixel-only="" id="tool-text" data-i18n-title="title.toolText"><i
-                                            class="fa-solid fa-font"></i></button>
+                                    <button class="tool-btn" data-pixel-only="" id="tool-fill"
+                                        data-i18n-title="title.toolFill"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-bucket" />
+                                        </svg></button>
+                                    <button class="tool-btn" data-pixel-only="" id="tool-eraser"
+                                        data-i18n-title="title.toolEraser"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-eraser" />
+                                        </svg></button>
+                                    <button class="tool-btn" data-pixel-only="" id="tool-text"
+                                        data-i18n-title="title.toolText"><svg class="tool-icon" width="20"
+                                            height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <use href="#illu-icon-tool-text" />
+                                        </svg></button>
                                 </div>
                                 <div class="tool-group tool-group--grid2 tool-group--shapes">
                                     <button type="button" id="tool-shapes-family"
@@ -2388,6 +2529,18 @@
                                             class="fa-solid fa-minus"></i></button>
                                 </div>
                                 <div class="illu-tool-hidden-shelf" aria-hidden="true">
+                                    <button class="tool-btn" id="tool-quick-select"
+                                        data-i18n-title="title.toolQuickSelect"><svg class="tool-icon"
+                                            width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"
+                                            focusable="false">
+                                            <use href="#illu-icon-tool-quick-select" />
+                                        </svg></button>
+                                    <button class="tool-btn" id="tool-object-select"
+                                        data-i18n-title="title.toolObjectSelect"><svg class="tool-icon"
+                                            width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"
+                                            focusable="false">
+                                            <use href="#illu-icon-tool-object-select" />
+                                        </svg></button>
                                     <button class="tool-btn" id="tool-rect" data-i18n-title="title.toolRect"><i
                                             class="fa-regular fa-square"></i></button>
                                     <button class="tool-btn" type="button" id="tool-triangle"
@@ -3549,6 +3702,17 @@
             <div class="window-body illu-export-dialog__body">
                 <p class="illu-export-dialog__lead" data-i18n="dlg.exportLead">Un clic pour l’essentiel — ou plus de
                     formats ci-dessous.</p>
+
+                <div class="illu-export-name">
+                    <label class="illu-export-name__label" for="export-filename"
+                        data-i18n="dlg.exportFileName">Nom du fichier</label>
+                    <div class="illu-export-name__field">
+                        <input type="text" id="export-filename" class="illu-export-name__input" autocomplete="off"
+                            spellcheck="false" data-i18n-title="dlg.exportFileNameHint"
+                            title="Laissez vide pour utiliser le nom du projet.">
+                        <span class="illu-export-name__ext" id="export-filename-ext" aria-hidden="true">.png</span>
+                    </div>
+                </div>
 
                 <div class="illu-export-quick" role="group" aria-label="Export rapide">
                     <button type="button" class="illu-export-quick-btn" id="export-quick-image"
@@ -4718,6 +4882,7 @@
     <script src="js/DrawingTools.js"></script>
     <script src="js/app/illu-shape-tools.js"></script>
     <script src="js/app/illu-shape-picker.js"></script>
+    <script src="js/app/illu-select-picker.js"></script>
     <script src="js/app/illu-tool-ribbon.js"></script>
     <script src="js/app/illu-ribbon-overflow.js"></script>
     <script src="js/effects/RemoveBgIntelligent.js"></script>
@@ -4743,6 +4908,10 @@
     <script src="js/tools/IlluCropInteractive.js"></script>
     <script src="js/effects/ContentAwareFill.js"></script>
     <script src="js/tools/GuidedCutoutTool.js"></script>
+    <script src="js/app/illu-dialog-drag.js"></script>
+    <script src="js/tools/select-core.js"></script>
+    <script src="js/tools/SmartSelectTools.js"></script>
+    <script src="js/tools/SelectionExpand.js"></script>
     <script src="js/io/PdnFile.js?v=20260621-pdn-meta-fix"></script>
     <script src="js/openpdn/PdnBlendModes.js"></script>
     <script src="js/openpdn/OpenPdnCatalog.js"></script>
@@ -4768,6 +4937,7 @@
     <script src="js/anim/GifImport.js"></script>
     <script src="js/anim/AnimationPanel.js"></script>
     <script src="js/app/app.js"></script>
+    <script src="js/app/illu-image-tools.js"></script>
     <script src="js/app/Listener.js"></script>
     <script src="js/app/illu-mobile.js"></script>
     <script src="js/app/illu-mobile-shell.js"></script>
@@ -4846,7 +5016,34 @@
             });
         }
 
+        /**
+         * Hôtes autorisés à envoyer une visite. Liste blanche volontaire : tout le
+         * reste (localhost / XAMPP, adresse IP du réseau local, file://, aperçus,
+         * copies posées sur un autre domaine) n'envoie rien.
+         *
+         * Sans cela, chaque rechargement depuis le poste de développement écrivait
+         * une visite en production. Le mode développement ne suffit pas à couvrir ce
+         * cas : il est stocké dans localStorage, qui est cloisonné par origine —
+         * l'activer sur masterpaint.fr ne coupe rien sur http://localhost, et
+         * inversement. Ajouter ici un domaine s'il s'en ajoute un au site.
+         */
+        const TRACK_ALLOWED_HOSTS = [
+            'masterpaint.fr',
+            'www.masterpaint.fr',
+            'polocrafting.fr',
+            'www.polocrafting.fr'
+        ];
+
+        function trackingHostAllowed(host) {
+            const h = String(host == null ? location.hostname : host).toLowerCase();
+            return TRACK_ALLOWED_HOSTS.indexOf(h) >= 0;
+        }
+        window.trackingHostAllowed = trackingHostAllowed;
+
         function trackVisit(pageName = "Paint net") {
+            // Poste de développement / origine inconnue : aucune télémétrie.
+            if (!trackingHostAllowed()) return;
+
             // Mode développement : aucune télémétrie ne quitte la page.
             // Lu directement dans localStorage — trackVisit s'exécute avant app.js.
             try {

@@ -112,12 +112,17 @@
 
 <symbol id="illu-icon-tool-gradient" viewBox="0 0 16 16">
   <defs>
-    <linearGradient id="illu-sg-tool-g-new" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="illu-sg-tool-g-new" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="var(--illu-icon-stroke, #1e293b)"/>
       <stop offset="100%" stop-color="var(--illu-icon-bg, #ffffff)"/>
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="12" height="12" rx="1.5" fill="url(#illu-sg-tool-g-new)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5"/>
+  <rect x="1.5" y="2.25" width="13" height="11.5" rx="2" fill="url(#illu-sg-tool-g-new)"
+        stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3"/>
+  <circle cx="4.15" cy="11.05" r="1.15" fill="none"
+          stroke="var(--illu-icon-stroke, #1e293b)" stroke-width=".85"/>
+  <circle cx="11.85" cy="4.95" r="1.15" fill="var(--illu-icon-accent, #3b82f6)"
+          stroke="var(--illu-icon-stroke, #1e293b)" stroke-width=".85"/>
 </symbol>
 
 <symbol id="illu-icon-tool-deform" viewBox="0 0 16 16">
@@ -161,20 +166,15 @@
 </symbol>
 
 <symbol id="illu-icon-tool-direct-select" viewBox="0 0 16 16">
-  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linecap="round">
-    <path d="M 3 7.5 C 3.5 5, 4.5 3.5, 6 2.5"/>
-    <path d="M 7.5 2 C 8.5 2, 9.5 2.2, 10.5 2.5"/>
-    <path d="M 12 3 C 13.5 4, 14 6, 12.5 9.5"/>
-  </g>
-
-  <g fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.25" stroke-linejoin="round">
-    <rect x="1" y="6.5" width="2.5" height="2.5" rx="0.5"/>
-    <rect x="5.5" y="1" width="2.5" height="2.5" rx="0.5"/>
-    <rect x="10.5" y="1.5" width="2.5" height="2.5" rx="0.5"/>
-  </g>
-
-  <path d="M 7.5 8.5 L 13.5 14.5 L 11 15 L 12.5 16.5 L 11.5 17 L 10 15 L 7.5 15.5 Z" 
-        fill="var(--illu-icon-stroke, #1e293b)" 
+  <!-- Lasso à main levée : un seul tracé continu qui suit le pointeur (pas de
+       points d'ancrage — l'outil ne pose aucun nœud). -->
+  <path d="M 7.6 13.4 C 3.6 13.1, 1.2 11, 1.6 8.2 C 2 5.2, 5 2.6, 8.6 2.5 C 12 2.4, 14.6 4.4, 14.4 6.9 C 14.25 8.7, 12.9 10.1, 11 10.7"
+        fill="none"
+        stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.35"
+        stroke-linecap="round"/>
+  <path d="M 9.2 9.4 L 14.6 14.8 L 12.3 15.1 L 13.4 16.6 L 12.3 17.1 L 11.2 15.4 L 9.3 16.2 Z"
+        fill="var(--illu-icon-accent, #3b82f6)"
         stroke="none"/>
 </symbol>
 
@@ -247,7 +247,7 @@
       <stop offset="100%" stop-color="var(--illu-icon-accent, #3b82f6)" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="12" height="12" rx="1.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5"/>
+  <rect x="2" y="2" width="12" height="12" rx="1.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5"/>
   <path d="M 2 2 h 6 v 6 h -6 z M 8 8 h 6 v 6 h -6 z" fill="var(--illu-icon-accent-subtle, #bfdbfe)" opacity="0.5"/>
   <rect x="2" y="2" width="12" height="12" rx="1.5" fill="url(#illu-sg-meth-simp-new)"/>
   <path d="M 4 8 H 11 M 9 5.5 L 12 8 L 9 10.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -260,7 +260,7 @@
       <stop offset="100%" stop-color="var(--illu-icon-accent, #3b82f6)" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect x="2" y="2" width="12" height="12" rx="1.5" fill="var(--illu-icon-bg, #ffffff)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5"/>
+  <rect x="2" y="2" width="12" height="12" rx="1.5" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5"/>
   <path d="M 2 2 h 6 v 6 h -6 z M 8 8 h 6 v 6 h -6 z" fill="var(--illu-icon-accent-subtle, #bfdbfe)" opacity="0.5"/>
   <rect x="2" y="2" width="12" height="12" rx="1.5" fill="url(#illu-sg-meth-smrt-new)"/>
   <path d="M 8 4 L 9.2 6.5 L 12 6.9 L 10 8.8 L 10.5 11.5 L 8 10.2 L 5.5 11.5 L 6 8.8 L 4 6.9 L 6.8 6.5 Z" fill="#eab308" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.5" stroke-linejoin="round"/>
@@ -439,5 +439,167 @@
   <path d="M3 13.2h8.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
   <polyline points="9.9,11.4 12.6,13.2 9.9,15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </symbol>
+
+
+<!-- ============================================================
+     OUTILS PIXEL : icones maison (remplacent les glyphes FontAwesome
+     generiques). Trait = var(illu-icon-stroke), aplat = var(illu-icon-accent) :
+     elles suivent donc les trois palettes (standard / accent / colore) et le
+     relief 3D sans code en plus. Aucun fond opaque : le corps des icones reste
+     transparent, seul le trait et l'aplat d'accentuation sont peints.
+     ============================================================ -->
+
+<symbol id="illu-icon-tool-brush" viewBox="0 0 16 16">
+  <path d="M9.15 6.45 12.9 1.6a1.25 1.25 0 0 1 1.85 1.65L10.4 7.4z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="m7.9 5.85 2.4 2.4-1.55 1.55-2.4-2.4z"
+        fill="var(--illu-icon-stroke, #1e293b)"/>
+  <path d="M6.55 7.25 8.9 9.6l-2.65 3.65c-.85 1.15-2.55 1.5-4.6 1.05 1.1-.55 1.55-1.25 1.55-2.2 0-1.45.8-2.7 2.05-3.55z"
+        fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.2 12.1c.85.25 1.65.1 2.25-.55" fill="none"
+        stroke="var(--illu-icon-accent-subtle, #bfdbfe)" stroke-width=".9" stroke-linecap="round"/>
+</symbol>
+
+<symbol id="illu-icon-tool-pencil" viewBox="0 0 16 16">
+  <path d="M10.65 1.75a1.7 1.7 0 0 1 2.4 0l1.2 1.2a1.7 1.7 0 0 1 0 2.4L6.1 13.5 1.55 14.45l.95-4.55z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.15" stroke-linejoin="round"/>
+  <path d="m9.55 2.85 3.6 3.6" fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.15"/>
+  <path d="m2.5 9.9 3.6 3.6-4.55.95z" fill="none"
+        stroke="var(--illu-icon-stroke, #1e293b)" stroke-width=".75" stroke-linejoin="round"/>
+  <path d="m10.65 1.75 3.6 3.6-1.1 1.1-3.6-3.6z" fill="var(--illu-icon-accent, #3b82f6)"/>
+  <path d="m1.55 14.45 2.05-.43-1.62-1.62z" fill="var(--illu-icon-stroke, #1e293b)"/>
+</symbol>
+
+<symbol id="illu-icon-tool-bucket" viewBox="0 0 16 16">
+  <path d="m2.05 3.35 3.1-1.55 7.25 7.25-5.2 5.2a1.65 1.65 0 0 1-2.35 0L1.7 11.1a1.65 1.65 0 0 1 0-2.35l4.15-4.15"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2.05 8.4h8.25" fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.05" stroke-linecap="round"/>
+  <path d="M13.65 9.75c1.05 1.4 1.55 2.35 1.55 3.05a1.55 1.55 0 0 1-3.1 0c0-.7.5-1.65 1.55-3.05z"
+        fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width=".8" stroke-linejoin="round"/>
+</symbol>
+
+<symbol id="illu-icon-tool-eraser" viewBox="0 0 16 16">
+  <path d="m2.05 8.25 5.8-5.8a1.75 1.75 0 0 1 2.5 0l3.2 3.2a1.75 1.75 0 0 1 0 2.5l-5.3 5.3H5.6l-3.55-3.2a1.4 1.4 0 0 1 0-2z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="m2.05 8.25 2.85-2.85 5.05 5.05-3 3H5.6l-3.55-3.2a1.4 1.4 0 0 1 0-2z"
+        fill="var(--illu-icon-accent, #3b82f6)"/>
+  <path d="m4.9 5.4 5.05 5.05" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.05"/>
+  <path d="M7 13.45h7.2" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25" stroke-linecap="round"/>
+</symbol>
+
+<symbol id="illu-icon-tool-text" viewBox="0 0 16 16">
+  <path d="M2 2.1h12v4H12.1V4.3H9.25v8.9h1.85v1.7H4.9v-1.7h1.85V4.3H3.9V6H2z"
+        fill="var(--illu-icon-stroke, #1e293b)"/>
+  <path d="M4.9 13.2h6.2v1.7H4.9z" fill="var(--illu-icon-accent, #3b82f6)"/>
+</symbol>
+
+<symbol id="illu-icon-tool-eyedropper" viewBox="0 0 16 16">
+  <path d="m8.75 4.15 3.1 3.1-6.2 6.2-3.9.8.8-3.9z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="m3.35 9.55 3.1 3.1-.8.8-3.9.8.8-3.9z"
+        fill="var(--illu-icon-accent-subtle, #bfdbfe)"/>
+  <path d="m7.8 5.1 3.1 3.1" fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.15"/>
+  <path d="m9.65 3.25 3.1 3.1 1.4-1.4a2.2 2.2 0 0 0-3.1-3.1z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="m9.65 3.25 3.1 3.1-.9.9-3.1-3.1z" fill="var(--illu-icon-accent, #3b82f6)"/>
+  <circle cx="2.2" cy="14.05" r="1" fill="var(--illu-icon-accent, #3b82f6)"/>
+</symbol>
+
+<!-- ============================================================
+     OUTILS DE SELECTION : la baguette et les trois outils deportes
+     dans le selecteur du ruban (selection rapide / objet / lasso
+     polygonal) plus le lasso magnetique.
+     ============================================================ -->
+
+<symbol id="illu-icon-tool-wand" viewBox="0 0 16 16">
+  <path d="M12.4 2.1 13.9 3.6 5.2 12.3 3.7 10.8z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M10.6 3.9 12.1 5.4" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2"/>
+  <path d="M3.4 1.6 4.05 3.35 5.8 4 4.05 4.65 3.4 6.4 2.75 4.65 1 4 2.75 3.35z" fill="var(--illu-icon-accent, #3b82f6)"/>
+  <path d="M11.9 9.3 12.35 10.55 13.6 11 12.35 11.45 11.9 12.7 11.45 11.45 10.2 11 11.45 10.55z" fill="var(--illu-icon-accent, #3b82f6)"/>
+</symbol>
+
+<symbol id="illu-icon-tool-quick-select" viewBox="0 0 16 16">
+  <path d="M1.6 2.5h3.4M11 2.5h3.4M1.6 13.5h3.4M11 13.5h3.4M2.5 1.6v3.4M2.5 10.6v3.4M13.5 1.6v3.4M13.5 10.6v3.4"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M12.4 4.6 11.4 3.6 6.9 8.1l1 1z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.15" stroke-linejoin="round"/>
+  <path d="M6.7 7.9 8.1 9.3l-2 1.9-2.2.5.5-2.2z"
+        fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.1" stroke-linejoin="round"/>
+</symbol>
+
+<symbol id="illu-icon-tool-object-select" viewBox="0 0 16 16">
+  <path d="M1.6 1.4 11 5.15 6.85 6.8l-1.7 4.15z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.15" stroke-linejoin="round"/>
+  <path d="m6.45 7.15 2.55 6.1 2.1-.9-2.55-6.05z"
+        fill="var(--illu-icon-stroke, #1e293b)" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.05" stroke-linejoin="round"/>
+  <path d="M11.8 2.1h2.1v2.1M13.9 11.8v2.1h-2.1M4.2 13.9H2.1v-2.1"
+        fill="none" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="1.35"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+
+<symbol id="illu-icon-tool-magnetic-lasso" viewBox="0 0 16 16">
+  <path d="M8.55 2.15C5.1 1.25 1.4 2.95 1.4 5.8c0 2 1.55 3.45 3.65 4.05l.35 2.4"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3"
+        stroke-linecap="round" stroke-dasharray="2.2 1.55"/>
+  <path d="M9.15 6.55v4.15a3.05 3.05 0 0 0 6.1 0V6.55h-2.3v4.15a.75.75 0 0 1-1.5 0V6.55z"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.05" stroke-linejoin="round"/>
+  <path d="M9.15 6.55h2.3v2.4h-2.3zm3.8 0h2.3v2.4h-2.3z"
+        fill="var(--illu-icon-accent, #3b82f6)"/>
+  <circle cx="5.4" cy="12.25" r="1.25" fill="var(--illu-icon-accent, #3b82f6)"
+          stroke="var(--illu-icon-stroke, #1e293b)" stroke-width=".7"/>
+</symbol>
+
+<symbol id="illu-icon-tool-poly-lasso" viewBox="0 0 16 16">
+  <path d="M2.2 3.15 8.25 1.5l5.55 3.75-1.65 6.15-6.55 2.65-3.8-5.2z"
+        fill="none"
+        stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.25"
+        stroke-linejoin="round" stroke-dasharray="2.15 1.45"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width=".7">
+    <circle cx="2.2" cy="3.15" r="1.35" fill="var(--illu-icon-accent, #3b82f6)"/>
+    <circle cx="8.25" cy="1.5" r="1.25"/>
+    <circle cx="13.8" cy="5.25" r="1.35"/>
+    <circle cx="12.15" cy="11.4" r="1.25"/>
+    <circle cx="5.6" cy="14.05" r="1.35"/>
+    <circle cx="1.8" cy="8.85" r="1.25"/>
+  </g>
+</symbol>
+
+<!-- ============================================================
+     COMMANDES IMAGE : bordure et extension de la zone de travail.
+     ============================================================ -->
+
+<symbol id="illu-icon-image-border" viewBox="0 0 16 16">
+  <path d="M1.4 1.4H14.6V14.6H1.4Z M4.5 4.5H11.5V11.5H4.5Z" fill-rule="evenodd"
+        fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)"
+        stroke-width="1.2" stroke-linejoin="round"/>
+</symbol>
+
+<symbol id="illu-icon-image-extend" viewBox="0 0 16 16">
+  <rect x="1.1" y="1.1" width="13.8" height="13.8" rx="1.3"
+        fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-dasharray="2.4 1.7"/>
+  <rect x="5.3" y="5.3" width="5.4" height="5.4" rx="0.7" fill="var(--illu-icon-accent, #3b82f6)"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 4.6V2.6M6.9 3.7 8 2.6l1.1 1.1"/>
+    <path d="M8 11.4v2M6.9 12.3 8 13.4l1.1-1.1"/>
+    <path d="M4.6 8H2.6M3.7 6.9 2.6 8l1.1 1.1"/>
+    <path d="M11.4 8h2M12.3 6.9 13.4 8l-1.1 1.1"/>
+  </g>
+</symbol>
+
 
 </svg>

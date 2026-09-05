@@ -1924,6 +1924,26 @@ window.syncIlluGaugeForRange = function (rangeEl) {
     wrap.classList.toggle('illu-gauge-wrap--low', pct < 16);
 };
 
+/**
+ * Remplissage des jauges pendant le glissement.
+ *
+ * `syncIlluGaugeForRange` n'était appelée que par updateToolOptionsBar (et par
+ * quelques gestionnaires dédiés) : un curseur sans gestionnaire propre gardait
+ * donc son remplissage figé tant qu'on le déplaçait, puis rattrapait sa valeur
+ * au prochain rafraîchissement de la barre d'outils. Une délégation unique sur
+ * `input` couvre tous les curseurs, y compris ceux ajoutés plus tard.
+ */
+document.addEventListener(
+    'input',
+    (e) => {
+        const el = e.target;
+        if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+        if (!el.classList.contains('illu-gauge-input') && !el.closest('.illu-gauge-wrap')) return;
+        window.syncIlluGaugeForRange(el);
+    },
+    true
+);
+
 window.refreshAllIlluGauges = function () {
     document.querySelectorAll('.illu-gauge-wrap input[type="range"], .illu-range-wrap input[type="range"]').forEach((r) => {
         window.syncIlluGaugeForRange(r);
