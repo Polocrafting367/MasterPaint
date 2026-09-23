@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pointeuse Mobile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="logo.png">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log("Service Worker Enregistré"));
+  }
+</script>
+
+<style> 
+:root {
+        --bg: #121212;
+    }
+
+body.preload,
+    body.preload * {
+        color: var(--bg) !important; 
+        border-color: var(--bg) !important; /* Cache aussi les bordures */
+        background-color: var(--bg) !important; /* Cache les fonds des boutons/inputs */
+        box-shadow: none !important; /* Enlève les ombres éventuelles */
+    }
+
+</style>
+
+
+
+<body>
+<body class="preload">
+
+<div id="change-profile-modal" class="modal-overlay" onclick="closeModal(event, 'change-profile-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Changer de profil</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">
+            Sélectionnez un nouveau profil pour le chrono en cours ou à venir.
+        </p>
+        
+        <div id="profiles-selection-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
+            </div>
+
+        <button class="btn-primary btn-neutral" style="margin-top:15px;" onclick="document.getElementById('change-profile-modal').style.display='none'">Annuler</button>
+    </div>
+</div>
+<!-- ================= PAGE 1: CHRONOMÈTRE ================= -->
+<section id="page-chrono" class="page active">
+    <header>
+        <h1>Chronomètre</h1>
+        <h2 id="current-date-display">--</h2>
+    </header>
+
+    <div id="already-logged-container"></div>
+    
+<div id="today-schedule-info" class="today-info" style="position: relative;">
+ 
+
+    <i class="fas fa-calendar-day"></i> Aujourd'hui : <strong id="today-profile-name">--</strong>
+    <br>
+    <small id="today-profile-hours">--h-- à --h--</small>
+</div>
+
+<button id="btn-change-profile" class="btn-secondary" onclick="openChangeProfileModal()" style="width: 100%;">
+    <i class="fas fa-pen"></i> <span id="btn-change-profile-text">Changer le profil d'horaire</span>
+</button>
+
+
+
+    <div class="timer-container">
+        <div class="timer-circle" id="timer-ui">
+            <div class="timer-time" id="timer-display">00:00</div>
+            <div class="timer-status" id="timer-status">PRÊT</div>
+            <div id="active-edit-btn" class="active-start-edit" style="display:none;" onclick="editActiveStartTime()">
+                Début : <span id="active-start-val">--:--</span> <i class="fas fa-pen" style="font-size:0.9rem; margin-left:5px;"></i>
+            </div>
+        </div>
+
+        <div class="timer-extras">
+            <div id="estimated-end-block" style="display:none;">
+                <div class="estimated-end">Fin prévue à <strong id="estimated-end-display">--:--</strong></div>
+            </div>
+            <div id="overtime-timer-block" style="display:none;">
+                <div class="overtime-live" id="overtime-timer-display">+ 00:00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chrono-footer">
+        <button id="btn-main-action" class="btn-primary" onclick="toggleTimer()">POINTER L'ENTRÉE</button>
+    </div>
+</section>
+
+<!-- ================= PAGE 2: HISTORIQUE ================= -->
+<section id="page-history" class="page">
+    <header>
+        <h1>Historique</h1>
+
+
+        <div class="history-controls">
+            <button class="history-nav-btn" onclick="changeHistoryMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+            <h3 id="hist-month-year" style="margin:0;">--</h3>
+            <button class="history-nav-btn" onclick="changeHistoryMonth(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </header>
+
+    <div class="history-fixed-section">
+<div class="month-stats-row">
+    <div class="stat-card">
+        <span class="stat-val" id="month-hours-total">0h00</span>
+        <span class="stat-label"><i class="fas fa-briefcase"></i> Job</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-val" id="month-night-total" style="color:#85c1e9">0h00</span>
+        <span class="stat-label"><i class="fas fa-moon"></i> Nuit</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-val" id="month-ot-total" style="color:var(--success)">0h00</span>
+        <span class="stat-label"><i class="fas fa-plus"></i> HS</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-val" id="month-night-ot-total" style="color:#84b89a">0h00</span>
+        <span class="stat-label"><i class="fas fa-moon"></i> HS</span>
+    </div>
+</div>
+    </div>
+<br>         <button class="btn-secondary" style="width:100%;" onclick="openAddLogModal()"><i class="fas fa-plus-circle"></i> Ajouter un pointage</button>
+    <div id="history-list">
+        </div>
+</section>
+<!-- ================= PAGE 3: PLANNING (CALENDRIER 100%) ================= -->
+<section id="page-planning" class="page">
+    <header>
+        <h1>Planning</h1>
+    </header>
+
+    <div class="calendar-container-card">
+        <div class="calendar-header">
+            <button class="calendar-nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+            <h3 id="cal-month-year" style="margin:0;">--</h3>
+            <button class="calendar-nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <!-- Jours semaine -->
+        <div class="calendar-week-header">
+            <div class="cal-day-name">L</div><div class="cal-day-name">M</div><div class="cal-day-name">M</div>
+            <div class="cal-day-name">J</div><div class="cal-day-name">V</div><div class="cal-day-name">S</div>
+            <div class="cal-day-name">D</div>
+        </div>
+
+        <!-- Grille jours scrollable -->
+        <div id="calendar-body" class="calendar-grid-body">
+            <!-- Rempli par JS -->
+        </div>
+    </div>
+
+    <p style="text-align:center; color:#666; font-size:0.75rem; margin-top:5px; flex: 0 0 auto;">
+        Appui long pour sélectionner plusieurs jours.
+    </p>
+</section>
+
+<!-- BARRE FLOTTANTE MULTI SELECT -->
+<div id="multi-select-bar">
+    <span id="multi-count">0 sélectionné(s)</span>
+    <div style="display:flex; gap:10px;">
+        <button class="batch-btn" onclick="exitMultiSelect()">Annuler</button>
+        <button class="batch-btn" style="background:white; color:var(--primary); font-weight:bold;" onclick="openBatchModal()">Modifier</button>
+    </div>
+</div>
+
+<!-- MODAL SELECTION JOUR / PROFIL -->
+<div id="day-modal" class="modal-overlay" onclick="closeModal(event, 'day-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 id="modal-date-title" style="margin-top:0;">Modifier le jour</h3>
+
+        <label style="margin-bottom: 10px;">Choisir l'horaire :</label>
+        
+        <div id="modal-profiles-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 15px;">
+            </div>
+
+        <div style="text-align:right; margin-bottom:15px;">
+            <button onclick="goToSettingsFromModal()" class="btn-secondary" style="font-size:0.75rem; padding:4px 8px; border-radius:4px; border:1px solid #555; color:#aaa; width:auto;">
+                <i class="fas fa-cog"></i> Gérer les profils
+            </button>
+        </div>
+
+        <label>Note / Mémo :</label>
+        <textarea id="modal-note" rows="2" placeholder="Ex: Congé, Télétravail..."></textarea>
+
+        <button id="btn-save-modal" class="btn-primary" onclick="saveDaySchedule()">Enregistrer</button>
+    </div>
+</div>
+
+<!-- MODAL COMMENTAIRE HEURES SUP (FIN CHRONO) -->
+<div id="ot-comment-modal" class="modal-overlay">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0; color:var(--success);">Heures Sup. détectées !</h3>
+        <p id="ot-modal-text">Vous avez dépassé l'horaire de --min.</p>
+        <label class="toggle-row">
+            <span>Prendre en compte les Heures Sup.</span>
+            <label class="switch">
+                <input type="checkbox" id="ot-modal-take-account" checked>
+                <span class="slider round"></span>
+            </label>
+        </label>
+        <label>Commentaire (Facultatif) :</label>
+        <textarea id="ot-comment-input" rows="3" placeholder="Motif du dépassement..."></textarea>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-primary" onclick="finalizeStopTimer()">Valider et Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL AJOUT MANUEL (HISTORIQUE) -->
+<div id="add-log-modal" class="modal-overlay" onclick="closeModal(event, 'add-log-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Ajouter un pointage</h3>
+
+        <label>Date :</label>
+        <input type="date" id="add-log-date">
+
+        <label>Horaire théorique :</label>
+        <select id="add-log-profile" onchange="fillAddLogHours()">
+            <option value="">Sélectionner...</option>
+            <!-- JS -->
+        </select>
+
+        <div class="row-inputs">
+            <div>
+                <label>Début</label>
+                <input type="time" id="add-log-start">
+            </div>
+            <div>
+                <label>Fin</label>
+                <input type="time" id="add-log-end">
+            </div>
+        </div>
+
+        <label>Commentaire :</label>
+        <textarea id="add-log-comment" rows="2"></textarea>
+
+        <button class="btn-primary" onclick="saveManualLog()">Ajouter</button>
+    </div>
+</div>
+
+<!-- MODAL AJOUT COMMENTAIRE RAPIDE -->
+<div id="quick-comment-modal" class="modal-overlay" onclick="closeModal(event, 'quick-comment-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Ajouter une note</h3>
+        <input type="hidden" id="quick-comment-index">
+        <textarea id="quick-comment-text" rows="3" placeholder="Votre commentaire..."></textarea>
+        <button class="btn-primary" onclick="saveQuickComment()">Enregistrer</button>
+    </div>
+</div>
+
+<!-- MODAL EDITION LOG (HISTORIQUE) -->
+<div id="edit-log-modal" class="modal-overlay" onclick="closeModal(event, 'edit-log-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Modifier le pointage</h3>
+        <input type="hidden" id="edit-log-index">
+<label>Date du pointage :</label>
+        <input type="date" id="edit-log-date" style="margin-bottom:15px;" onchange="updateEditLogPreview()">
+        <label>Horaire théorique :</label>
+<select id="edit-log-profile" style="margin-bottom:15px;" onchange="updateEditLogPreview()">            </select>
+
+ <div class="row-inputs">
+    <div>
+        <label>Début</label>
+        <input type="time" id="edit-log-start" oninput="updateEditLogPreview()">
+    </div>
+    <div>
+        <label>Fin</label>
+        <input type="time" id="edit-log-end" oninput="updateEditLogPreview()">
+    </div>
+</div>
+
+        <label>Commentaire :</label>
+        <textarea id="edit-log-comment" rows="2"></textarea>
+        
+        <label class="toggle-row">
+            <span>Prendre en compte les Heures Sup.</span>
+            <label class="switch">
+<input type="checkbox" id="edit-log-take-account" onchange="updateEditLogPreview()">                <span class="slider round"></span>
+            </label>
+        </label>
+<div id="validated-ot-container" >
+    <label >Heures supp. validées (HH:mm)</label>
+    <input type="time" id="edit-log-validated-ot">
+</div>
+
+        <div style="display:flex; gap:10px;">
+            <button class="btn-primary btn-danger" style="flex:1" onclick="deleteLog()">Supprimer</button>
+            <button class="btn-primary" style="flex:1" onclick="saveLogEdit()">Sauvegarder</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= PAGE 4: PARAMÈTRES ================= -->
+<section id="page-settings" class="page">
+    <header>
+        <h1>Paramètres</h1>
+        <h2>Configuration</h2>
+    </header>
+
+    <!-- 1. GESTION DES PROFILS (Déplacé en haut) -->
+    <div class="card" id="profile-form-card">
+        <h3 style="margin-top:0;" id="form-title">Créer un profil horaire</h3>
+        <input type="hidden" id="edit-id">
+
+        <input type="text" id="new-p-name" placeholder="Nom (ex: Matin, Soir)">
+
+        <div class="row-inputs">
+            <div>
+                <label>Début</label>
+                <input type="time" id="new-p-start" value="08:00">
+            </div>
+            <div>
+                <label>Fin</label>
+                <input type="time" id="new-p-end" value="16:00">
+            </div>
+        </div>
+
+        <div class="row-inputs">
+            <div>
+                <label>Pause (min)</label>
+                <input type="number" id="new-p-pause" value="30">
+            </div>
+            <div>
+                <label>Couleur du profil</label>
+
+                <div id="current-color-preview" onclick="openColorModal()" style="width:100%; height:45px; border-radius:8px; background:#3498db; border:2px solid #555; cursor:pointer; display:flex; justify-content:center; align-items:center;">
+                    <i class="fas fa-palette" style="color:white; opacity:0.7;"></i>
+                </div>
+                <input type="hidden" id="new-p-color" value="#3498db">
+            </div>
+
+            <div id="color-modal" class="modal-overlay" onclick="closeModal(event, 'color-modal')">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <h3 style="margin-top:0;">Choisir une couleur</h3>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Couleurs optimisées pour la lisibilité (texte blanc).</p>
+
+                    <div id="color-picker-container" >
+                    </div>
+
+                    <button class="btn-primary" style="margin-top:20px;" onclick="document.getElementById('color-modal').style.display='none'">Valider</button>
+                </div>
+            </div>
+        </div>
+
+        <label style="margin-top:10px;">Jours types travaillés :</label>
+        <div class="day-selector" id="new-p-days">
+            <div class="day-circle" onclick="toggleDay(0)">L</div>
+            <div class="day-circle" onclick="toggleDay(1)">M</div>
+            <div class="day-circle" onclick="toggleDay(2)">M</div>
+            <div class="day-circle" onclick="toggleDay(3)">J</div>
+            <div class="day-circle" onclick="toggleDay(4)">V</div>
+            <div class="day-circle" onclick="toggleDay(5)">S</div>
+            <div class="day-circle" onclick="toggleDay(6)">D</div>
+        </div>
+<div class="custom-schedule-section">
+    <button class="btn-secondary" style="width:100%; font-size:0.85rem;" onclick="toggleCustomSelector()">
+        <i class="fas fa-plus-circle"></i> Personnaliser un jour spécifique
+    </button>
+    
+    <div id="custom-day-selector" style="display:none; margin-top:10px; text-align:center;">
+        <p style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">Choisissez le jour à personnaliser :</p>
+        <div class="day-selector">
+            <div class="day-circle" onclick="addCustomDay(0)">L</div>
+            <div class="day-circle" onclick="addCustomDay(1)">M</div>
+            <div class="day-circle" onclick="addCustomDay(2)">M</div>
+            <div class="day-circle" onclick="addCustomDay(3)">J</div>
+            <div class="day-circle" onclick="addCustomDay(4)">V</div>
+            <div class="day-circle" onclick="addCustomDay(5)">S</div>
+            <div class="day-circle" onclick="addCustomDay(6)">D</div>
+        </div>
+    </div>
+
+    <div id="custom-schedules-list" style="margin-top:10px;"></div>
+</div>
+        <button id="btn-save-profile" class="btn-primary" onclick="handleProfileSave()">Ajouter ce profil</button>
+        <button id="btn-cancel-edit" class="btn-primary btn-neutral" onclick="resetForm()" style="display:none; margin-top:10px;">Annuler modification</button>
+    </div>
+
+    <h3>Profils existants</h3>
+    <div id="settings-profiles-list"></div>
+
+<div class="card" style="margin-top:15px;">
+    <h3><i class="fas fa-moon"></i> Plage Heures de Nuit</h3>
+    <div class="row-inputs">
+        <div>
+            <label>Début Nuit</label>
+            <input type="time" id="settings-night-start" onchange="updateSettings()">
+        </div>
+        <div>
+            <label>Fin Nuit</label>
+            <input type="time" id="settings-night-end" onchange="updateSettings()">
+        </div>
+    </div>
+</div>
+    <!-- 2. PARAMETRES DE CALCUL (Déplacé après profils) -->
+<div class="card">
+    <h3>Calcul des Heures</h3>
+    
+    <label class="toggle-row">
+        <span>Activer le calcul des heures supplémentaires</span>
+        <label class="switch">
+            <input type="checkbox" id="setting-calc-ot" onchange="updateSettings()">
+            <span class="slider round"></span>
+        </label>
+    </label>
+
+    <label class="toggle-row">
+        <span>Ignorer l'avance (avant l'heure théorique)</span>
+        <label class="switch">
+            <input type="checkbox" id="setting-ignore-early" onchange="updateSettings()">
+            <span class="slider round"></span>
+        </label>
+    </label>
+
+    <label class="toggle-row">
+        <span>Déduire la pause des heures supplémentaires</span>
+        <label class="switch">
+            <input type="checkbox" id="setting-deduct-pause" onchange="updateSettings()">
+            <span class="slider round"></span>
+        </label>
+    </label>
+
+    <label class="toggle-row">
+        <span>Comptabiliser les retards et absences</span>
+        <label class="switch">
+            <input type="checkbox" id="setting-count-neg" onchange="updateSettings()">
+            <span class="slider round"></span>
+        </label>
+    </label>
+
+    <div class="row-inputs">
+        <div style="flex:2;">
+            <label>Palier d'arrondi du calcul des heurs</label>
+            <input type="number" id="setting-ot-step" value="15" min="1" step="1" onchange="updateSettings()">
+        </div>
+    </div>
+    <p style="font-size:0.8rem; color:#888; margin-top:0;">
+        Ex: Avec un palier de 15 min, si vous faites 25 min d'HS, seules 15 min seront comptabilisées.
+    </p>
+
+    <div class="row-inputs">
+        <div style="flex:2; display: none;">
+            <label>Base horaire hebdomadaire (indicatif)</label>
+            <input type="number" id="setting-weekly-base" value="35" step="0.5" onchange="updateSettings()">
+        </div>
+    </div>
+</div>
+    <!-- 3. EXPORT / IMPORT (Nouveau) -->
+    <div class="card">
+        <h3>Données & Sauvegarde</h3>
+
+
+
+
+        <p style="font-size:0.8rem; color:#888;">Exportez vos données pour les sécuriser ou les transférer.</p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-primary" onclick="exportData()"><i class="fas fa-file-export"></i> Exporter</button>
+            <button class="btn-primary btn-neutral" onclick="triggerImport()"><i class="fas fa-file-import"></i> Importer</button>
+        </div>
+        <input type="file" id="import-file-input" style="display:none" onchange="handleImport(event)" accept=".json">
+<br>
+<label class="toggle-row">
+    <span>Sauvegarde auto. quotidienne</span>
+
+            <label class="switch">
+        <input type="checkbox" id="setting-auto-backup" onchange="updateSettings()">
+        <span class="slider round"></span>
+    </label>
+
+
+    </label>
+        <div style="font-size: 0.8rem; color: #666; margin-top: -5px; padding-left: 2px;">
+        Uniquement possible via l'apk android <br> Retrouver la sauvegarde dans Téléchargement/PointeuseAuto
+    </div>
+    </div>
+
+
+
+
+<footer style="text-align: center; font-size: 0.9em; margin-top: 20px;">
+  <p>© 2026 Pointeuse Heure Supp - Une app <a href="https://polocrafting.fr" style="text-decoration: none; color: orange;">Polocrafting.fr</a></p>
+</footer>
+<div class="card">
+    <h3>Développement</h3>
+    
+    <label class="toggle-row">
+        <span>Forcer le chargement local</span>
+        <label class="switch">
+            <input type="checkbox" id="setting-force-local" onchange="updateSettings()">
+            <span class="slider round"></span>
+        </label>
+    </label>
+    <div style="font-size: 0.8rem; color: #666; margin-top: -5px; padding-left: 2px;">
+        Si activé, l'application utilisera style.css / script.js locaux.
+    </div>
+</div>
+
+
+
+</section>
+
+
+<div id="confirm-week-modal" class="modal-overlay" style="z-index: 300;">
+<div class="modal-content" style="
+    width: 350px; 
+    margin: 0; 
+    text-align: center; 
+    border-radius: 20px 20px 0 0; /* Arrondi seulement en haut */
+    padding-bottom: 20px;
+">        <h3 id="confirm-week-title" style="margin-top:0;">Enregistrer</h3>
+        <p id="confirm-week-text">Voulez-vous appliquer cet horaire à toute la semaine ?</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button id="btn-apply-week" class="btn-primary">Toute la semaine</button>
+            <button id="btn-apply-day" class="btn-secondary">Uniquement ce jour</button>
+        </div>
+    </div>
+</div>
+<div id="edit-start-modal" class="modal-overlay" onclick="closeModal(event, 'edit-start-modal')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Modifier l'heure de début</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Ajustez l'heure à laquelle vous avez commencé.</p>
+        
+        <label>Heure de début :</label>
+        <input type="time" id="edit-active-start-input" style="font-size: 1.2rem; text-align: center;">
+
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="btn-primary btn-neutral" onclick="document.getElementById('edit-start-modal').style.display='none'">Annuler</button>
+                        <button class="btn-primary" onclick="saveActiveStartTime()">Valider</button>
+
+        </div>
+    </div>
+</div>
+<!-- NAVIGATION BASSE -->
+<nav class="bottom-nav">
+    <button class="nav-item active" onclick="navTo('page-chrono', this)">
+        <i class="fas fa-clock"></i> Chrono
+    </button>
+    <button class="nav-item" onclick="navTo('page-history', this)">
+        <i class="fas fa-list-ul"></i> Historique
+    </button>
+    <button class="nav-item" onclick="navTo('page-planning', this)">
+        <i class="fas fa-calendar-alt"></i> Planning
+    </button>
+    <button class="nav-item" onclick="navTo('page-settings', this)">
+        <i class="fas fa-cog"></i> Paramètres
+    </button>
+</nav>
+
+<script>
+  // On définit la fonction pour révéler le site
+  function showSite() {
+      console.log("Révélation du site (suppression de la classe preload)");
+      document.body.classList.remove('preload');
+  }
+(function() {
+    const rawSettings = localStorage.getItem('pt_settings');
+    let forceLocal = false;
+    try {
+        if (rawSettings) forceLocal = JSON.parse(rawSettings).forceLocal || false;
+    } catch(e) {}
+
+    const urlDistant = "https://polocrafting.fr/BD/";
+    const source = forceLocal ? "" : urlDistant;
+
+    let cssReady = false;
+    let jsReady = false;
+
+    // Fonction de vérification finale avec délai
+    const tryShowSite = () => {
+        // On ne lance l'affichage que si le JS est chargé ET le CSS est prêt
+        if (cssReady && jsReady && window.showSite) {
+            // AJOUT DU DÉLAI DE 500ms
+            setTimeout(() => {
+                showSite();
+                console.log("🚀 Site affiché (après 500ms de confort CSS)");
+            }, 350);
+        }
+    };
+
+    // 1. Chargement du CSS
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = source + "style.css";
+    link.onload = () => {
+        cssReady = true;
+        tryShowSite(); // Vérifie si le JS est déjà là
+    };
+    link.onerror = () => {
+        console.error("Erreur CSS, affichage immédiat sans délai");
+        cssReady = true; 
+        jsReady ? showSite() : null; // Si erreur, on n'attend pas forcément les 500ms
+    };
+    document.head.appendChild(link);
+
+    // 2. Chargement du JS
+    const script = document.createElement("script");
+    script.src = source + "script.js";
+    script.onload = () => {
+        jsReady = true;
+        tryShowSite(); // Vérifie si le CSS est déjà là
+    };
+    script.onerror = () => {
+        if (!forceLocal) {
+            const sLocal = document.createElement("script");
+            sLocal.src = "script.js";
+            sLocal.onload = () => { jsReady = true; tryShowSite(); };
+            document.body.appendChild(sLocal);
+        }
+    };
+    document.body.appendChild(script);
+})();
+// Appel immédiat
+loadAppResources();
+</script>
+</html>

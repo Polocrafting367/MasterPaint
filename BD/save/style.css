@@ -1,0 +1,802 @@
+#color-picker-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center; /* Centre les pastilles s'il y a du vide */
+    padding: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.color-dot {
+    flex: 0 0 45px; /* Ne grandit pas, ne rétrécit pas, base de 45px */
+    height: 45px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+}
+
+.color-dot:active {
+    transform: scale(0.9); /* Effet de pression au clic */
+}
+        #no-schedule-warning disabled {
+            display: none;
+        }
+.month-stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px; /* Espace réduit entre les cartes */
+    padding: 10px 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.stat-card {
+    flex: 1; /* Force les 4 cartes à avoir la même largeur */
+    min-width: 0; /* Empêche le contenu de casser la largeur sur mobile */
+    background: #1e1e1e;
+    padding: 10px 4px; /* Padding vertical réduit, horizontal minimal */
+    border-radius: 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border: 1px solid #333;
+}
+
+.stat-val {
+    font-size: 0.95rem; /* Taille de police légèrement réduite */
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap; /* Empêche l'heure de passer sur deux lignes */
+}
+
+.stat-label {
+    font-size: 0.6rem; /* Label très compact */
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 700;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+
+#page-chrono {
+    display: none; /* Reste géré par ton JS pour l'affichage */
+    flex-direction: column;
+    height: 100%; /* Important pour le centrage */
+    padding-bottom: 20px; /* Espace entre le bouton et la nav bar */
+}
+
+#page-chrono.active {
+    display: flex; /* Devient un flex container quand actif */
+}
+
+/* On crée un conteneur qui va pousser le bouton vers le bas */
+.timer-container {
+    flex: 1; /* Prend tout l'espace libre au milieu */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centre verticalement le cercle */
+    align-items: center;     /* Centre horizontalement le cercle */
+}
+#page-chrono .chrono-footer{
+margin-bottom: 20px;
+}
+/* On s'assure que le bouton reste en bas de la section */
+.chrono-footer {
+    width: 100%;
+    padding: 0 20px;
+    margin-top: auto; /* Pousse vers le bas */
+}
+
+select {
+    width: 100%;
+    min-width: 100%;
+    display: block;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    
+    background-color: #2c2c2c;
+    color: white;
+    /* On augmente le padding à droite (40px) pour que le texte ne chevauche pas la flèche */
+    padding: 12px 40px 12px 12px; 
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 16px; /* 16px strict pour éviter le zoom iOS */
+    
+    /* SVG encodé proprement pour Safari */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center; /* Positionnement précis à 12px du bord droit */
+    background-size: 16px;
+    cursor: pointer;
+}
+
+/* Optionnel : Enlever la flèche par défaut de l'IE/Edge */
+select::-ms-expand {
+    display: none;
+}
+/* Fix pour éviter le zoom automatique de Safari sur iPhone lors du clic */
+@media screen and (max-width: 768px) {
+    select, input {
+        font-size: 16px !important;
+    }
+}
+        /* Fixer les en-têtes pour Historique et Paramètres */
+#page-history header, 
+#page-settings header, #page-stats header {
+    /* 1. Fixer en haut */
+    position: sticky;
+    top: -20px; /* On remonte pour annuler le padding par défaut de .page */
+    
+      /* Colle au plafond de .page */
+    margin-bottom: 15px;      /* Espace avec le contenu qui suit */
+
+    /* 3. Style et Flou */
+    background: rgba(18, 18, 18, 0.8); /* Utiliser du RGBA pour voir le flou à travers */
+    backdrop-filter: blur(10px);
+    
+    z-index: 100;
+    padding: 25px 10px 0px 10px;            /* Réintroduit du confort visuel à l'intérieur du header */
+    border-bottom: 1px solid var(--border);
+    box-sizing: border-box;   /* Garantit que le padding ne casse pas la largeur */
+}
+
+/* On s'assure que les statistiques de l'historique restent aussi en haut */
+.history-fixed-section {
+    top: 45px; /* Juste en dessous du titre Historique */
+    background: var(--bg);
+    z-index: 9;
+}
+  /* Badge Nom du jour férié */
+.ferie-name {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    font-size: 0.85rem; /* MODIFIÉ : Taille augmentée (était 0.6rem) */
+    color: #f1c40f;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+    padding: 1px 2px;
+    z-index: 4;
+    line-height: 1.2; /* Ajouté pour le centrage vertical */
+}
+
+/* Formulaire horaires spécifiques */
+.custom-schedule-section {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #444;
+}
+.custom-row-item {
+    background: #252525;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-left: 3px solid var(--primary);
+}
+.custom-row-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: bold; font-size: 0.85rem; color: var(--primary);
+}
+.custom-inputs { display: flex; gap: 5px; }
+.custom-inputs div { flex: 1; }
+.custom-inputs input { padding: 8px; font-size: 0.8rem; margin: 0; }
+.btn-mini-remove { background: none; border: none; color: #e74c3c; cursor: pointer; }
+
+/* --- CSS / STYLES --- */
+:root {
+    --primary: #3498db;
+    --accent: #e74c3c;
+    --success: #2ecc71;
+    --warning: #f1c40f;
+    --ignored: #e67e22; /* Orange pour HS non comptées */
+    --bg: #121212;
+    --card: #1e1e1e;
+    --cardlate: rgba(30,30,30,0.7);
+    --bglate: rgba(18,18,18,0.7);
+
+    --text: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --border: #333;
+    --danger: #e74c3c; /* Rouge pour HS désactivées */
+}
+
+* { box-sizing: border-box; }
+.t-gray { background-color: #7f8c8d; }    /* Avance ignorée */
+.t-blue { background-color: #3498db; }    /* Jour Normal */
+.t-night { background-color: #1a5276; }   /* Nuit Normale */
+.t-green { background-color: #2ecc71; }   /* HS Validées Jour */
+.t-night-ot { background-color: #145a32; } /* HS Validées Nuit */
+.t-orange { background-color: #e67e22; }  /* HS Ignorées (Palier) */
+.t-red { background-color: #c0392b; }     /* HS Désactivées */
+
+/* Style pour jour férié calendrier */
+.ferie-badge {
+    position: absolute; bottom: 2px; right: 2px;
+    font-size: 0.85rem; /* MODIFIÉ : Harmonisé avec ferie-name (était 0.6rem) */
+    color: #f1c40f;
+}
+.cal-day.ferie {
+    border: 2px solid rgba(241, 196, 15, 0.3);
+}
+
+body {
+    margin: 0;
+    font-family: 'Roboto', 'Segoe UI', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+
+}
+
+/* NAVIGATION BASSE */
+.bottom-nav {
+    position: fixed;
+    bottom: 10px; /* Un peu plus haut pour l'esthétique */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    width: 95%; /* Un peu plus de marge sur les côtés */
+    max-width: 750px; /* Sécurité pour ne pas être géant sur PC/Tablette */
+    
+    background: var(--cardlate); /* Assure-toi que cette variable existe, sinon met #222 */
+    backdrop-filter: blur(10px);
+    border-radius: 20px; /* 40px est parfois trop rond pour 5 boutons, 20-25px est mieux */
+    
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); 
+    
+    display: flex;
+    justify-content: space-between; /* Distribue l'espace */
+    align-items: center;
+    padding: 3px; /* Un petit padding interne global */
+    
+    z-index: 100;
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    color: var(--text-muted); /* Ou #888 si la var n'existe pas */
+    
+    /* MAGIE ICI : flex: 1 permet à chaque bouton de prendre 20% exactement */
+    flex: 1; 
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
+    font-size: 0.65rem; /* Texte un peu plus petit pour tenir sur 1 ligne */
+    padding: 8px 0; /* Espace vertical pour le confort tactile */
+    margin: 0 2px; /* Marge latérale minime */
+    
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 17px; /* Arrondi interne */
+    
+    /* Sécurité pour ne pas que le texte casse la mise en page */
+    min-width: 0; 
+    white-space: nowrap;
+    overflow: hidden; 
+}
+
+.nav-item i { 
+    font-size: 1.2rem; /* Icône légèrement réduite pour l'harmonie */
+    margin-bottom: 4px; 
+}
+
+/* État Actif */
+.nav-item.active {
+    color: var(--primary); /* Ou #3498db */
+    background: rgba(255, 255, 255, 0.08);
+    font-weight: bold;
+    /* On supprime la bordure ou on la met transparente pour éviter le décalage de pixel */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); 
+}
+.page {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    height: 100%;
+    padding-bottom: 67px; /* On garde la marge pour la nav ici */
+}
+#page-chrono, #page-planning  {
+    padding: 10px;
+     padding-bottom: 60px;
+}
+#history-list, #settings-profiles-list, #page-settings h3 , .stat-card-grid, .chart-wrapper  {
+    padding: 0 10px;
+
+
+}
+#page-history .btn-secondary, .card {
+    display: block; /* Nécessaire pour que les marges et la largeur s'appliquent correctement */
+    
+    /* 100% de la largeur moins (10px à gauche + 10px à droite) */
+    width: calc(100% - 20px) !important; 
+    margin-left: auto;
+    margin-right: auto;
+}
+.page.active { display: block; animation: fadeIn 0.3s; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+header { margin-bottom: 20px; text-align: center; position: relative; }
+h1 { font-size: 1.5rem; margin: 0; color: var(--primary); }
+h2 { font-size: 0.9rem; color: var(--text-muted); font-weight: normal; margin-top: 5px; }
+
+/* Header controls (boutons supp) */
+.header-btn-right {
+    position: absolute; top: 0; right: 0;
+    background: none; border: none; color: var(--primary);
+    font-size: 0.9rem; cursor: pointer; padding: 5px;
+}
+
+/* COMPOSANTS UI */
+.card {
+    background: var(--card);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+
+#page-settings .card {
+ padding: 15px;
+}
+
+
+button.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: black;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+#page-chrono #btn-main-action {
+height: 125px;
+font-size: 20px;
+}
+button.btn-secondary, #modal-profiles-list {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+}
+
+button.btn-danger { background: var(--accent);   }
+button.btn-warning { background: var(--warning); color: #000; }
+button.btn-neutral { background: #7f8c8d; color: white; }
+
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #2c2c2c;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: white;
+    font-family: inherit;
+}
+
+/* PAGE CHRONO */
+.timer-circle {
+    width: 275px;
+    height: 275px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 4px solid #333;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    transition: all 0.5s ease;
+}
+.timer-time { font-size: 2.6rem; font-weight: bold; font-family: monospace; }
+.timer-status { color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
+.active-start-edit {
+    margin-top: 5px; font-size: 0.9rem; color: #888;
+    background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 15px;
+    cursor: pointer;
+}
+
+/* Styles Chrono Avancé */
+.timer-extras {
+    text-align: center;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    min-height: 50px;
+}
+.estimated-end { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; }
+.overtime-live {
+    color: var(--success);
+    font-weight: bold;
+    font-size: 1.4rem;
+    font-family: monospace;
+    text-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+    display: none;
+}
+
+.today-info {
+    text-align: center;
+    background: rgba(52, 152, 219, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid var(--primary);
+}
+
+/* Bloc "Déjà enregistré" */
+.already-logged-info {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid var(--success);
+    color: var(--success);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    display: none;
+}
+
+/* PAGE HISTORIQUE */
+.history-controls {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;
+}
+.history-nav-btn { background: none; border: none; color: var(--primary); font-size: 1.5rem; cursor: pointer; padding: 0 15px; }
+
+.month-stats-row {
+    display: flex; gap: 10px; 
+}
+.stat-card {
+    flex: 1; background: var(--card); padding: 10px; border-radius: 8px; text-align: center;
+    border: 1px solid var(--border);
+}
+.stat-val { font-weight: bold; font-size: 1.3rem; display: block; }
+.stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; }
+
+.week-header {
+    background: #2a2a2a; color: var(--text-muted); padding: 5px 12px;
+    font-size: 0.8rem; font-weight: bold; border-radius: 4px;
+    margin: 15px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;
+}
+
+.history-item {
+    display: flex;
+    flex-direction: column;
+    border-left: 4px solid transparent;
+    padding-left: 10px;
+    gap: 5px;
+}
+.history-item-top {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+}
+.btn-icon-action i {
+    padding: 5px;
+}
+.history-comment {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-style: italic;
+    background: rgba(255,255,255,0.05); /* Fond un peu plus visible */
+    padding: 5px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Actions dans l'historique */
+.history-actions {
+    display: flex;
+    align-items: center;
+}
+
+.btn-icon-action, .btn-icon-action {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-radius: 50%;
+    transition: background 0.2s;
+    display: flex; justify-content: center; align-items: center;
+}
+.btn-icon-action:active { background: rgba(255,255,255,0.1); }
+
+.btn-edit { color: var(--text-muted); }
+.btn-add-comment { color: var(--primary); animation: pulse 2s infinite; }
+
+@keyframes pulse { 0% { opacity:0.7; } 50% { opacity:1; } 100% { opacity:0.7; } }
+
+/* TIMELINE VISUALIZATION */
+.timeline-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.2);
+    width: 100%;
+    margin-top: 5px;
+}
+.t-seg { height: 100%; }
+.t-gray { background-color: #7f8c8d; }
+.t-blue { background-color: #3498db; }
+.t-green { background-color: #2ecc71; }
+.t-orange { background-color: var(--ignored); }
+
+.overtime-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    background-color: #072c17;
+    color: white;
+    border: 1px solid #145a32;
+}
+.ot-pos { background: #145a32; color: white;}
+.ot-neg { background: rgba(231, 76, 60, 0.2); color: var(--accent); }
+.ot-ignored-text { color: var(--ignored); font-size: 0.9rem; margin-left: 5px; }
+
+/* PAGE PLANNING */
+#page-planning.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#page-planning header { flex: 0 0 auto; margin-bottom: 10px; }
+
+.calendar-container-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 1px;
+    overflow: hidden;
+}
+
+.calendar-header {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.calendar-nav-btn {
+    background: none; border: none; color: var(--primary); font-size: 1.5rem; cursor: pointer; padding: 5px 15px;
+}
+
+.calendar-week-header {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 5px;
+}
+.cal-day-name { text-align: center; font-size: 0.8rem; color: var(--text-muted); }
+
+.calendar-grid-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(min-content, 1fr);
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.cal-day {
+    background: #2c2c2c;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid transparent;
+    padding-top: 15px; /* Place pour le badge semaine */
+    min-height: 50px;
+    overflow: hidden;
+}
+.cal-day.today {
+    border-color: var(--primary);
+    background: rgba(52, 152, 219, 0.1);
+    
+    /* Définit l'épaisseur à 2px */
+    border-width: 2px;
+    
+    /* Indispensable pour que la bordure soit visible */
+    border-style: solid; 
+}
+.cal-day.empty { background: transparent; cursor: default; }
+
+.cal-day.multi-selected {
+    border: 2px solid #fff;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.week-badge {
+    position: absolute; bottom: 1px; left: 1px;
+    font-size: 0.9rem;
+    color: #fff; opacity: 0.7; font-weight: bold;
+    background: rgba(0,0,0,0.6); padding: 2px 4px; border-radius: 4px;
+    z-index: 5;
+}
+
+.cal-day-num {
+    position: absolute; top: 2px; right: 2px;
+    font-size: 0.8rem; font-weight: bold;
+}
+
+.cal-profile-label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-align: center;
+    width: 95%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    padding: 1px 0;
+    border-radius: 2px;
+    margin-top: 2px;
+}
+
+.cal-time-label {
+    font-size: 0.8rem;
+    color: var(--text);
+    opacity: 0.8;
+    margin-top: 1px;
+    font-weight: 500;
+}
+
+.cal-note-preview {
+    font-size: 0.75rem;
+    color: var(--warning);
+    width: 95%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+    opacity: 1;
+    font-weight: bold;
+}
+
+/* BARRE D'ACTION FLOTTANTE POUR MULTI-SELECT */
+#multi-select-bar, #temp-update-popup {
+    position: fixed;
+    bottom: 75px;
+    left: 50%;
+    width: 90%;
+    background: var(--primary);
+    color: white;
+    border-radius: 50px;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    visibility: hidden;
+    transform: translateX(-50%) translateY(125px);
+    transition: transform 0.3s ease, visibility 0.3s;
+}
+
+#multi-select-bar {    background: var(--primary);
+}
+#temp-update-popup {    background: darkgreen;
+}
+
+#multi-select-bar.visible, #temp-update-popup.visible {
+    transform: translateX(-50%) translateY(0);
+    visibility: visible;
+}
+.batch-btn {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; cursor: pointer;
+}
+
+/* MODALS */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); z-index: 200;
+    display: none; justify-content: center; align-items: flex-end;
+}
+.modal-content {
+    background: var(--card); width: 100%; padding: 20px;
+    border-radius: 20px 20px 0 0;
+    animation: slideUp 0.3s;
+    max-height: 90vh; overflow-y: auto;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* CSS PARAMETRES */
+.day-selector { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.day-circle {
+    width: 35px; height: 35px; border-radius: 50%; background: #333; color: #aaa;
+    display: flex; justify-content: center; align-items: center; font-size: 0.8rem;
+    cursor: pointer; border: 2px solid transparent;
+}
+.day-circle.selected { background: var(--primary); color: white; border-color: white; }
+.profile-list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #2c2c2c; padding: 10px; border-radius: 6px; margin-bottom: 8px;
+    border-left: 5px solid transparent;
+}
+.profile-actions { display: flex; gap: 10px; }
+.btn-icon { background: none; border: none; color: #fff; cursor: pointer; font-size: 0.9rem; }
+.row-inputs { display: flex; gap: 10px; }
+.row-inputs > div { flex: 1; }
+label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+.editing-mode { border: 2px solid var(--warning); }
+
+/* TOGGLE SWITCH CSS */
+.toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--primary); }
+input:checked + .slider:before { transform: translateX(24px); }
+
+        .chart-wrapper {
+            margin-top: 25px;
+            padding: 10px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .canvas-container {
+            position: relative; 
+            height: 200px; /* Un peu moins haut pour en mettre 2 */
+            width: 100%; 
+        }
+        canvas.stat-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .stat-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-card {
+            background: #2c2c2c;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 3px solid var(--primary);
+        }
+        .stat-val { font-size: 1.4rem; font-weight: bold; color: #fff; }
+        .stat-label { font-size: 0.8rem; color: #aaa; }
+        .chart-title {
+            font-size: 0.9rem; color: #aaa; margin-bottom: 10px; font-weight: normal; text-transform: uppercase; letter-spacing: 1px;
+        }

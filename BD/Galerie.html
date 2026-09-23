@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+<meta name='description' content='Découvrez ici tous mes projets.'>
+    <title>Mes projets</title>
+       <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px; /* Augmentation de la largeur pour réduire les marges */
+            padding: 5px; /* Moins de padding autour de la page */
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 5px auto; /* Moins de marge en haut et en bas */
+        }
+
+        h1 {
+                        transform: translateY(-20px);
+
+            text-align: center;
+            color: #007BFF;
+            font-size: 2em;
+            margin-bottom: -12px;
+        }
+
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .project {
+            width: 250px;
+            height: 250px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent */
+            border: 1px solid black;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, width 0.3s ease, box-shadow 0.3s ease; /* Ajout de transition pour agrandissement fluide */
+            cursor: pointer;
+        }
+
+        .project:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .project img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .project div {
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            padding: 15px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Ombre sur le texte */
+            letter-spacing: 1px;
+        }
+
+        .project a {
+
+            display: block;
+            text-decoration: none;
+            font-size: 18px;
+            color: white;
+            font-weight: bold;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent */
+            border-top: 1px solid #ddd;
+        }
+
+        .project a:hover {
+            color: #007BFF;
+        }
+
+
+
+@media screen and (max-width: 500px) {
+
+        .project {
+            width: 160px;
+            height: 160px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent */
+            border: 1px solid black;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, width 0.3s ease, box-shadow 0.3s ease; /* Ajout de transition pour agrandissement fluide */
+            cursor: pointer;
+        }
+        .project img {
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+        }
+                .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mes projets</h1>
+        <div class="gallery">
+
+
+
+            <a href="Boot/bios.html" class="project" target="_blank">
+                <img src="Annexe/windows.png" alt="Image du Projet 1">
+                <div>Windows 367</div>
+            </a>
+
+                              <a href="G-MAPP/" class="project" target="_blank">
+                <img src="G-MAPP/IMG/Illu.png" alt="Image du Projet 3">
+                <div>Démo de G-MAPP</div>
+            </a>
+                                          <a href="BD/" class="project" target="_blank">
+                <img src="BD/Illu.png" alt="Image du Projet 3">
+                <div>Pointeuse heur supp</div>
+            </a>
+                  <a href="Annexe/Photos.html" class="project" target="_blank">
+                <img src="Annexe/Photos.jpeg" alt="Image du Projet 2">
+                <div>Photos</div>
+            </a>  
+
+            <a href="Annexe/Blog/index.html" class="project" target="_blank">
+                <img src="Annexe/Blog/illu.png" alt="Image du Projet 3">
+                <div>Blog (non à jour)</div>
+            </a> 
+            <a href="jeux3D/index.html" class="project" target="_blank">
+                <img src="jeux3D/illu.png" alt="Image du Projet 1">
+                <div>jeux NES</div>
+            </a>   
+    
+
+
+
+                                 <a href="STOPMOTION/index.html" class="project" target="_blank">
+                <img src="STOPMOTION/Illu.png" alt="Image du Projet 1">
+                <div>StopMotion Créator</div>
+            </a>
+                                    <a href="Mycraft/index.html" class="project" target="_blank">
+                <img src="Mycraft/Illu.png" alt="Image du Projet 1">
+                <div>My Craft</div>
+            </a>
+                 <a href="Annexe/OOBE.html" class="project" target="_blank">
+                <img src="Annexe/OOBE.jpeg" alt="Image du Projet 1">
+                <div>OOBE (Win. 11)</div>
+            </a>
+ 
+                        <a href="jeux 3d old/index.html" class="project" target="_blank">
+                <img src="jeux 3d old/illu.png" alt="Image du Projet 1">
+                <div>jeux 3D</div>
+            </a>
+
+           <a href="Windows 367 V2/index.html" class="project" target="_blank">
+                <img src="Windows 367 V2/Illu.png" alt="Image du Projet 1">
+                <div>Windows 367 V2</div>
+            </a>
+
+            <a href="Annexe/mosaic.html" class="project" target="_blank">
+                <img src="Annexe/Photomosaic.png" alt="Image du Projet 3">
+                <div>Photomosaic</div>
+            </a>
+            <a href="Annexe/Img.html" class="project" target="_blank">
+                <img src="Annexe/IMG.png" alt="Image du Projet 3">
+                <div>Planning</div>
+            </a>
+
+            <a href="cube/index.html" class="project" target="_blank">
+                <img src="cube/index.png" alt="Image du Projet 3">
+                <div>Jeux chelou</div>
+            </a>
+            <a href="Annexe/jeux couleur.html" class="project" target="_blank">
+                <img src="Annexe/jeux.png" alt="Image du Projet 3">
+                <div>Jeux Couleur</div>
+            </a>
+
+            <a href="Annexe/Fack.html" class="project" target="_blank">
+                <img src="Annexe/Kack.jpeg" alt="Image du Projet 3">
+                <div>Faux bureau</div>
+            </a>
+              <a href="illu/index.html" class="project" target="_blank">
+                <img src="" alt="Image du Projet 2">
+                <div>SVG créator</div>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
