@@ -48,8 +48,18 @@
         if (typeof window.illuApplyShapeCornerRadiusMaxToInputs === 'function') {
             window.illuApplyShapeCornerRadiusMaxToInputs();
         }
-        GAUGE_STEP_CONFIG.forEach((cfg) => {
-            const range = document.getElementById(cfg.id);
+        /* TOUTES les jauges reçoivent la même structure « − [piste] + » (avant : seulement la
+         * liste ci-dessus, d'où des jauges sans boutons ni cadre — Sélection rapide, Détourage…).
+         * Le pas vient de la liste quand il y est défini, sinon du curseur lui-même. */
+        const stepById = {};
+        GAUGE_STEP_CONFIG.forEach((c) => { stepById[c.id] = c.step; });
+        const all = [...document.querySelectorAll('.illu-gauge-wrap input.illu-gauge-input[type="range"]')].map((r) => ({
+            id: r.id,
+            el: r,
+            step: stepById[r.id] || (Number(r.step) > 0 ? Number(r.step) : 1)
+        }));
+        all.forEach((cfg) => {
+            const range = cfg.el;
             if (!range || range.dataset.illuGaugeStepWired === '1') return;
             const wrap = range.closest('.illu-gauge-wrap');
             if (!wrap) return;

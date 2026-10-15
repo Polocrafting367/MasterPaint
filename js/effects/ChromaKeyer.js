@@ -156,6 +156,30 @@
             ];
         },
 
+        /**
+         * Image entière via le moteur Rust (fx_chroma.rs, mêmes formules).
+         * mode 0 : alpha × matte + despill (aperçu) ; mode 1 : unmix + despill sur le RVB,
+         * alpha = round(255 × matte) (masque). Retourne null si le moteur est indisponible.
+         */
+        processRust: function (rgba, w, h, kr, kg, kb, params, mode) {
+            const RS = scope.MasterPaintRust;
+            if (!RS || !RS.isLoaded || typeof RS.supports !== 'function' || !RS.supports('chroma')) return null;
+            const use2 = !!params.useKey2 && params.kr2 !== undefined && params.kr2 !== null;
+            const p = [
+                kr, kg, kb,
+                params.tolerance || 30, params.drift || 50, params.feather || 15,
+                params.clipBlack || 0, params.clipWhite || 100, Math.max(0.1, params.gamma || 1.0),
+                params.spill || 0, params.recover || 0, params.lumaProt || 0,
+                use2 ? 1 : 0, use2 ? params.kr2 : 0, use2 ? params.kg2 : 0, use2 ? params.kb2 : 0,
+                mode ? 1 : 0
+            ];
+            try {
+                return RS.apply('chroma', rgba, w, h, p, 0, h) || null;
+            } catch (e) {
+                return null;
+            }
+        },
+
         /** Applique un groupe de réglages prédéfinis de manière dynamique via la couleur et l'image */
         applyPreset: function (name) {
             let kr = 0, kg = 255, kb = 0;

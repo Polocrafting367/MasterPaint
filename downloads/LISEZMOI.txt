@@ -1,0 +1,10 @@
+﻿MasterPaint 3.0.0 — téléchargements (https://masterpaint.fr/downloads/)
+
+MasterPaint-3.0.0-windows-x64.exe   Version Rust (interface native), portable : aucun installateur, double-clic pour lancer.
+MasterPaint_3.0.0_x64-setup.exe     Version web classique installable (Windows), installeur.
+
+Linux (Flatpak, AppImage) et macOS (.dmg) : produits par GitHub Actions
+(.github/workflows/release.yml, tag v3.0.0), à déposer ici sous les noms :
+  fr.masterpaint.app.flatpak
+  MasterPaint_3.0.0_amd64.AppImage
+  MasterPaint_3.0.0_universal.dmg

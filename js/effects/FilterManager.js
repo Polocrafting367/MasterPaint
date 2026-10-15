@@ -298,8 +298,20 @@ const EFFECT_HISTORY_LABELS = {
     softenportrait: 'Portrait adouci',
     reducenoise: 'Réduction du bruit',
     dents: 'Bosselage',
-    unfocus: 'Flou d’objectif',
-    temptint: 'Température / Teinte'
+    unfocus: 'Flou bokeh / Défocaliser',
+    temptint: 'Température / Teinte',
+    /* Effets ajoutés depuis Paint.NET 5 */
+    invertalpha: "Inverser l'alpha",
+    highlightsshadows: 'Mises en lumière / Ombres',
+    quantize: 'Quantifier',
+    sketchblur: "Flou d'esquisse",
+    morphology: 'Morphologie',
+    turbulence: 'Turbulence',
+    straighten: 'Redresser',
+    rotatezoom: 'Faire pivoter / Zoomer',
+    outline: 'Contour',
+    relief: 'Mise en relief',
+    emboss: 'Embosser'
 };
 
 /** Effets sans implémentation worker : repli sur _previewOneTarget (thread principal). */
@@ -1698,6 +1710,16 @@ window.FilterManager = {
                     { allLayers: this._effectSessionScopeAll, animCels: this._animScopedCelRefs() }
                 );
             }
+        }
+
+        /* Nouvelle graine à chaque ouverture (bruit, cristaux… stables pendant l'aperçu). */
+        this._rustSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
+
+        /* Dialogues des effets Paint.NET (js/effects/pdn-dialogs.js) : prioritaires. */
+        const pdnDialog = window.IlluPdnDialogs ? window.IlluPdnDialogs.html(effect, this) : null;
+        if (pdnDialog) {
+            this.showModal(illuEffectTitle(effect, window.IlluPdnDialogs.title(effect)), pdnDialog);
+            return;
         }
 
         switch (effect) {
@@ -3178,6 +3200,9 @@ window.FilterManager = {
             // On prépare un buffer pour le despill si besoin
             const pixelData = new Uint8ClampedArray(src);
 
+            // Moteur Rust : masque (alpha) + RVB décontaminé calculés en une passe
+            const rk = ChromaKeyer.processRust(src, bw, bh, kr, kg, kb, params, 1);
+
             for (let i = 0; i < src.length; i += 4) {
                 if (selOnly && oldMask) {
                     const p = i / 4;
@@ -3191,7 +3216,15 @@ window.FilterManager = {
                         continue;
                     }
                 }
-                
+                if (rk) {
+                    md[i] = md[i + 1] = md[i + 2] = rk[i + 3];
+                    md[i + 3] = 255;
+                    pixelData[i] = rk[i];
+                    pixelData[i + 1] = rk[i + 1];
+                    pixelData[i + 2] = rk[i + 2];
+                    continue;
+                }
+
                 // 1. Calcul du Masque
                 const keep = ChromaKeyer.computeMatte(src[i], src[i+1], src[i+2], kr, kg, kb, params);
                 const g = Math.round(255 * keep);
@@ -3412,10 +3445,15 @@ window.FilterManager = {
             // bavement chroma d'une ligne à l'autre). Découpé en tuiles, chaque worker
             // recalculait la trame complète pour n'en garder qu'une bande — soit N fois
             // le travail, avec des ruptures aux jointures. Un seul chunk, donc.
-            const chunkCount =
-                effect === 'dropshadow' || effect === 'motionblur' || effect === 'surfaceblur' || effect === 'vhs'
-                    ? 1
-                    : wks.length;
+            /* Moteur Rust : chaque bande est calculée exactement à partir de l'image entière,
+             * ces effets deviennent donc découpables (sauf tramage à diffusion d'erreur). */
+            const RS = window.MasterPaintRust;
+            const RP = window.MasterPaintRustParams;
+            const rustChunks = !!(RS && RP && RS.supports(effect));
+            const singleChunk = rustChunks
+                ? !RP.chunkable(effect, params)
+                : effect === 'dropshadow' || effect === 'motionblur' || effect === 'surfaceblur';
+            const chunkCount = singleChunk || effect === 'vhs' ? 1 : wks.length;
             const stepY = Math.ceil(h / chunkCount);
             
             this._activeBatchChunkCount = chunkCount;
@@ -3501,6 +3539,7 @@ window.FilterManager = {
                     startY, endY,
                     vhsUseLowRes: this._vhsUseLowResPreview,
                     wasmEnabled: localStorage.getItem('settings-wasm-enabled') !== '0',
+                    rustEnabled: localStorage.getItem('settings-rust-enabled') !== '0',
                     webglEnabled: localStorage.getItem('illu_webgl_filters') !== 'false',
                     srcOrig: srcBuffer // NO TRANSFER, clone implicitly!
                 };
@@ -3546,7 +3585,15 @@ window.FilterManager = {
         if (this.currentEffect === 'cabossage') {
             vals._cabossageSeed = this._cabossageSeed >>> 0;
         }
-        
+        /* Graine commune à tous les workers d'un même rendu (bruits, cristaux…) */
+        if (!this._rustSeed) this._rustSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
+        vals._seed = this._rustSeed;
+        if (this.currentEffect === 'turbulence' && window.EditorManager) {
+            const toHex = (c) => '#' + (1 << 24 | c.r << 16 | c.g << 8 | c.b).toString(16).slice(1);
+            if (!vals['ef-tb-from']) vals['ef-tb-from'] = toHex(window.EditorManager.primaryColor);
+            if (!vals['ef-tb-to']) vals['ef-tb-to'] = toHex(window.EditorManager.secondaryColor);
+        }
+
         // Inject global colors for effects that use the palette instead of inputs
         if (this.currentEffect === 'contour' || this.currentEffect === 'duotone' || this.currentEffect === 'vignette' || this.currentEffect === 'clouds') {
             const rgbToHex = (c) => "#" + (1 << 24 | c.r << 16 | c.g << 8 | c.b).toString(16).slice(1);
@@ -3652,10 +3699,44 @@ window.FilterManager = {
                                 MasterPaintWasm.isEffectSupported(this.currentEffect) &&
                                 this.currentEffect !== 'halftone';
             
-            // If Wasm is active AND supported, we skip GPU to ensure Wasm priority
-            const skipGPU = useWasm && wasmSupported && MasterPaintWasm.isLoaded;
+            // --- Moteur Rust : prioritaire sur Wasm AssemblyScript / WebGL / JS ---
+            const RS = window.MasterPaintRust;
+            const RP = window.MasterPaintRustParams;
+            const rustOk = !!(RS && RP && RS.supports(this.currentEffect));
+            const rustParams = rustOk
+                ? RP.build(this.currentEffect, vals, this._effectPreviewPxScale, {
+                    hsvMixParams: this._hsvMixParams, cbParams: this._cbParams, seed: vals._seed
+                })
+                : null;
+            /* Bureau : rendu final natif multi-cœurs. Sinon, effets non découpables ou sans
+             * worker : calcul WASM sur le thread principal. Le reste part dans les workers,
+             * qui exécutent eux aussi le moteur Rust (une bande de lignes chacun). */
+            const rustDirect = !!rustParams && (
+                (isFinal && RS.hasNative) ||
+                !RP.chunkable(this.currentEffect, vals) ||
+                typeof Worker === 'undefined'
+            );
+            const rustViaWorkers = !!rustParams && !rustDirect;
+            let rustApplied = false;
+            if (rustDirect) {
+                let out = null;
+                if (isFinal && RS.hasNative) out = await RS.applyNative(this.currentEffect, this.originalImageData.data, pw, ph, Array.from(rustParams));
+                if (!out) out = RS.apply(this.currentEffect, this.originalImageData.data, pw, ph, rustParams, 0, ph);
+                if (out) {
+                    this.ctx.putImageData(new ImageData(out, pw, ph), 0, 0);
+                    rustApplied = true;
+                    this._usedEngine = RS.hasNative && isFinal ? 'Rust natif' : 'Rust/WASM';
+                }
+            } else if (rustViaWorkers) {
+                this._usedEngine = 'Rust/WASM (workers)';
+            }
 
-            if (skipGPU) {
+            // If Wasm is active AND supported, we skip GPU to ensure Wasm priority
+            const skipGPU = rustApplied || rustViaWorkers || (useWasm && wasmSupported && MasterPaintWasm.isLoaded);
+
+            if (rustApplied || rustViaWorkers) {
+                /* moteur déjà choisi */
+            } else if (skipGPU) {
                 // Pre-log once to avoid flooding
                 if (!this._lastLogEffect || this._lastLogEffect !== this.currentEffect) {
                     console.log(`${logPrefix} [Wasm Engine] Running '${this.currentEffect}'...`);
@@ -3810,9 +3891,9 @@ window.FilterManager = {
                 }
             }
 
-            if (gpuApplied) {
+            if (gpuApplied || rustApplied) {
                 // Skips worker/cpu fallback
-            } else if (this._effectPreferMainThreadPreview(this.currentEffect)) {
+            } else if (!rustViaWorkers && this._effectPreferMainThreadPreview(this.currentEffect)) {
                 this._previewOneTarget(val, pw, ph);
             } else if (typeof Worker !== 'undefined') {
                 if (!gpuApplied && (!useWasm || !wasmSupported)) {
@@ -5137,9 +5218,13 @@ case 'chroma': {
                 // Si c'est le rendu final (quand on clique sur Appliquer/OK), on calcule 100% des pixels (stride = 1)
                 // Si c'est juste la prévisualisation (quand on bouge le slider), on calcule 1 pixel sur 2 (stride = 2). 
                 // Ça divise la charge processeur par 4 !
+                // Moteur Rust : pleine résolution même en aperçu (plus rapide que le JS au pas de 2)
+                const rk = ChromaKeyer.processRust(srcOrig, w, h, kr, kg, kb, params, 0);
+                if (rk) data.set(rk);
                 const stride = this._effectPreviewIsFinal ? 1 : 2;
 
-                for (let y = 0; y < h; y += stride) {
+                // (boucle JS sautée quand le Rust a tout calculé)
+                for (let y = rk ? h : 0; y < h; y += stride) {
                     for (let x = 0; x < w; x += stride) {
                         const i = (y * w + x) * 4;
                         

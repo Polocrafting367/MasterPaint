@@ -2794,13 +2794,16 @@ const EditorManager = {
                 ? stack.querySelector(`canvas.illu-pixel-layer-view[data-layer-id="${L.id}"]`)
                 : null;
         if (activeCv && activeCv.parentNode === stack) {
-            // Placer au-dessus du calque courant plutôt qu'en dessous
-            if (activeCv.nextSibling) {
-                stack.insertBefore(el, activeCv.nextSibling);
-            } else {
-                stack.appendChild(el);
+            // Placer au-dessus du calque courant plutôt qu'en dessous (sans ré-insertion si déjà en place :
+            // chaque déplacement de nœud invalidait les styles de la pile à chaque mouvement de souris)
+            if (el.parentNode !== stack || el.previousSibling !== activeCv) {
+                if (activeCv.nextSibling) {
+                    stack.insertBefore(el, activeCv.nextSibling);
+                } else {
+                    stack.appendChild(el);
+                }
             }
-        } else {
+        } else if (el.parentNode !== stack) {
             stack.appendChild(el);
         }
         return true;
@@ -2818,14 +2821,12 @@ const EditorManager = {
         const activeCv = stackEl.querySelector(`canvas.illu-pixel-layer-view[data-layer-id="${L.id}"]`);
         if (!activeCv || activeCv.parentNode !== stackEl) return;
         const overs = stackEl.querySelectorAll('canvas.illu-stack-preview-overlay');
-        const anchor = activeCv.nextSibling;
+        // Ordre voulu : calque actif puis les aperçus ; on ne déplace que les nœuds mal placés.
+        let prev = activeCv;
         for (let i = 0; i < overs.length; i++) {
             try {
-                if (anchor) {
-                    stackEl.insertBefore(overs[i], anchor);
-                } else {
-                    stackEl.appendChild(overs[i]);
-                }
+                if (prev.nextSibling !== overs[i]) stackEl.insertBefore(overs[i], prev.nextSibling);
+                prev = overs[i];
             } catch (e) {
                 /* ignore */
             }
@@ -2864,6 +2865,7 @@ const EditorManager = {
         const map = this._pixelLayerViewEls;
         const seen = new Set();
         const layers = this.layers;
+        const frameDirty = this._takeFrameViewDirty();
         for (let i = 0; i < layers.length; i++) {
             const l = layers[i];
             seen.add(l.id);
@@ -2890,24 +2892,24 @@ const EditorManager = {
             }
             if (cv.width !== bw) cv.width = bw;
             if (cv.height !== bh) cv.height = bh;
-            cv.style.display = l.visible ? 'block' : 'none';
-            cv.style.left = `${l.x}px`;
-            cv.style.top = `${l.y}px`;
-            cv.style.opacity = this._shouldDimOutsideCanvasLayer(l)
-                ? '1'
-                : String(l.opacity != null ? l.opacity : 1);
-            cv.style.mixBlendMode = this._blendModeToCssMix(l);
-            cv.style.zIndex = String(i + 1);
-            if (this._dynamicFilterLayerDomCssEligible(l)) {
-                cv.style.filter = this._dynamicFilterCssFilterStringForStack(l);
-            } else {
-                cv.style.filter = 'none';
-            }
-            const vctx = cv.getContext('2d', { willReadFrequently: true });
-            vctx.clearRect(0, 0, bw, bh);
+            const st = cv.style;
+            const setSt = (k, v) => {
+                if (st[k] !== v) st[k] = v;
+            };
+            setSt('display', l.visible ? 'block' : 'none');
+            setSt('left', `${l.x}px`);
+            setSt('top', `${l.y}px`);
+            setSt('opacity', this._shouldDimOutsideCanvasLayer(l) ? '1' : String(l.opacity != null ? l.opacity : 1));
+            setSt('mixBlendMode', this._blendModeToCssMix(l));
+            setSt('zIndex', String(i + 1));
+            setSt('filter', this._dynamicFilterLayerDomCssEligible(l) ? this._dynamicFilterCssFilterStringForStack(l) : 'none');
+            // Vue d'affichage : contexte accéléré (GPU). Ne JAMAIS y lire de pixels ; la source de
+            // vérité reste layer.buffer. Avec willReadFrequently, la vue était rendue par le CPU puis
+            // ré-envoyée en entier au compositeur à chaque image (énorme sur les grandes photos).
+            const vctx = this._layerViewContext(cv);
             const hasStrokeIntermediate =
                 this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === l.id;
-            this._paintLayerBufferLocalWithOutsideDim(vctx, l, (ctx2d) => {
+            this._paintLayerView(cv, vctx, l, bw, bh, (ctx2d) => {
                 if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
                     ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
                 } else {
@@ -2919,8 +2921,10 @@ const EditorManager = {
                 if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === l.id) {
                     ctx2d.drawImage(this._shapePreviewCanvas, 0, 0);
                 }
-            });
-            stackEl.appendChild(cv);
+            }, frameDirty);
+            // L'empilement est porté par z-index : inutile de ré-insérer le nœud à chaque rendu
+            // (chaque ré-insertion invalidait les styles de toute la pile).
+            if (cv.parentNode !== stackEl) stackEl.appendChild(cv);
             this._syncImportStagingDomView(stackEl, l, (i + 1) * 10 + 1);
         }
         stackEl.querySelectorAll('canvas.illu-pixel-layer-view[data-layer-id]').forEach((domCv) => {
@@ -2943,6 +2947,117 @@ const EditorManager = {
             }
         }
         this._restackStackPreviewOverlays(stackEl);
+    },
+
+    /**
+     * Zone modifiée du calque actif pendant un tracé (coordonnées locales du calque).
+     * Le pinceau / la gomme l'appellent à chaque touche ; le rendu suivant ne recompose que
+     * ce rectangle au lieu du calque entier. Hors tracé (window.isDrawing faux) : ignorée.
+     */
+    markLayerViewDirty(x, y, w, h) {
+        const l = this.activeLayer;
+        if (!l || !(w > 0) || !(h > 0)) return;
+        const d = this._viewDirty;
+        if (!d || d.id !== l.id) {
+            this._viewDirty = { id: l.id, x0: x, y0: y, x1: x + w, y1: y + h };
+        } else {
+            if (x < d.x0) d.x0 = x;
+            if (y < d.y0) d.y0 = y;
+            if (x + w > d.x1) d.x1 = x + w;
+            if (y + h > d.y1) d.y1 = y + h;
+        }
+    },
+
+    /**
+     * Prend la zone sale pour ce rendu (une seule fois par rendu, avant de parcourir les calques).
+     * Hors tracé, elle est abandonnée : le rendu est alors complet.
+     */
+    _takeFrameViewDirty() {
+        const d = this._viewDirty;
+        this._viewDirty = null;
+        // Seuls les rafraîchissements interactifs d'un geste (render({ viewHint: true })) peuvent
+        // se limiter à la zone indiquée ; validation, annulation, etc. repeignent tout.
+        return window.isDrawing && this._renderViewHint ? d : null;
+    },
+
+    /**
+     * Le prochain rendu n'a rien à repeindre dans les vues de calques (seul un aperçu flottant,
+     * ex. le fantôme de l'outil Déplacer, a bougé). Valable seulement pendant un geste.
+     */
+    markLayerViewUnchanged() {
+        const l = this.activeLayer;
+        if (!l) return;
+        if (!this._viewDirty || this._viewDirty.id !== l.id) {
+            this._viewDirty = { id: l.id, x0: 0, y0: 0, x1: 0, y1: 0 };
+        }
+    },
+
+    /** Rectangle entier borné à la vue (ou null = rendu complet) pour la zone sale `d`. */
+    _dirtyRectForView(d, bw, bh) {
+        const x = Math.max(0, Math.floor(d.x0) - 2);
+        const y = Math.max(0, Math.floor(d.y0) - 2);
+        const x1 = Math.min(bw, Math.ceil(d.x1) + 2);
+        const y1 = Math.min(bh, Math.ceil(d.y1) + 2);
+        if (x1 <= x || y1 <= y) return { x: 0, y: 0, w: 0, h: 0 };
+        // au-delà d'environ la moitié du calque, la recomposition complète est aussi rapide
+        if ((x1 - x) * (y1 - y) > bw * bh * 0.5) return null;
+        return { x, y, w: x1 - x, h: y1 - y };
+    },
+
+    /** Mise à jour partielle d'une vue GPU : composition dans un petit canevas CPU puis putImageData. */
+    _paintViewRegion(vctx, layer, paintFn, d) {
+        if (d.w < 1 || d.h < 1) return;
+        let t = this._viewRegionTmp;
+        if (!t) t = this._viewRegionTmp = document.createElement('canvas');
+        if (t.width < d.w || t.height < d.h) {
+            t.width = Math.max(t.width, d.w);
+            t.height = Math.max(t.height, d.h);
+        }
+        const tctx = t.getContext('2d', { willReadFrequently: true });
+        tctx.setTransform(1, 0, 0, 1, 0, 0);
+        tctx.clearRect(0, 0, d.w, d.h);
+        tctx.save();
+        tctx.translate(-d.x, -d.y);
+        tctx.beginPath();
+        tctx.rect(d.x, d.y, d.w, d.h);
+        tctx.clip();
+        this._paintLayerBufferLocalWithOutsideDim(tctx, layer, paintFn);
+        tctx.restore();
+        vctx.putImageData(tctx.getImageData(0, 0, d.w, d.h), d.x, d.y);
+    },
+
+    /**
+     * Peint une vue de calque : partiellement si un tracé est en cours et que seule une zone a
+     * changé, sinon en entier. Les vues des autres calques ne changent pas pendant un tracé.
+     * @param frameDirty zone sale du rendu courant (_takeFrameViewDirty) ou null
+     * @returns {boolean} true si la vue a été (re)peinte
+     */
+    _paintLayerView(cv, vctx, layer, bw, bh, paintFn, frameDirty) {
+        const filled = cv._illuViewFilled && cv._illuViewW === bw && cv._illuViewH === bh;
+        if (frameDirty && filled) {
+            // tracé en cours sur un autre calque : cette vue est déjà à jour
+            if (frameDirty.id !== layer.id) return false;
+            const d = this._dirtyRectForView(frameDirty, bw, bh);
+            if (d) {
+                this._paintViewRegion(vctx, layer, paintFn, d);
+                return true;
+            }
+        }
+        vctx.clearRect(0, 0, bw, bh);
+        this._paintLayerBufferLocalWithOutsideDim(vctx, layer, paintFn);
+        cv._illuViewFilled = true;
+        cv._illuViewW = bw;
+        cv._illuViewH = bh;
+        return true;
+    },
+
+    /**
+     * Contexte 2D d'une vue d'affichage de calque : accéléré GPU (pas de willReadFrequently).
+     * Les options ne comptent qu'au premier getContext : toutes les vues passent par ici.
+     */
+    _layerViewContext(cv) {
+        if (!cv._illuViewCtx) cv._illuViewCtx = cv.getContext('2d', { alpha: true, desynchronized: false });
+        return cv._illuViewCtx;
     },
 
     /** Vue DOM du collage volant (tampon séparé, hors dimensions du calque). */
@@ -2987,7 +3102,7 @@ const EditorManager = {
         cv.style.zIndex = String(zIndex);
         cv.style.imageRendering = 'pixelated';
         cv.style.setProperty('image-rendering', 'crisp-edges');
-        const vctx = cv.getContext('2d', { willReadFrequently: true });
+        const vctx = this._layerViewContext(cv);
         if (vctx) {
             vctx.imageSmoothingEnabled = false;
             vctx.clearRect(0, 0, iw, ih);
@@ -3034,11 +3149,11 @@ const EditorManager = {
             : String(layer.opacity != null ? layer.opacity : 1);
         cv.style.mixBlendMode = this._blendModeToCssMix(layer);
         cv.style.zIndex = String(i + 1);
-        const vctx = cv.getContext('2d', { willReadFrequently: true });
-        vctx.clearRect(0, 0, bw, bh);
+        const vctx = this._layerViewContext(cv);
         const hasStrokeIntermediate =
             this._strokeIntermediateCanvas && this._strokeIntermediateLayerId === layer.id;
-        this._paintLayerBufferLocalWithOutsideDim(vctx, layer, (ctx2d) => {
+        const frameDirty = this._takeFrameViewDirty();
+        this._paintLayerView(cv, vctx, layer, bw, bh, (ctx2d) => {
             if (hasStrokeIntermediate && this._strokeIntermediateTool === 'eraser') {
                 ctx2d.drawImage(this._strokeIntermediateCanvas, 0, 0);
             } else {
@@ -3050,8 +3165,8 @@ const EditorManager = {
             if (this._shapePreviewCanvas && this._shapePreviewActiveLayerId === layer.id) {
                 ctx2d.drawImage(this._shapePreviewCanvas, 0, 0);
             }
-        });
-        stackEl.appendChild(cv);
+        }, frameDirty);
+        if (cv.parentNode !== stackEl) stackEl.appendChild(cv);
         this._syncImportStagingDomView(stackEl, layer, (i + 1) * 10 + 1);
         this._restackStackPreviewOverlays(stackEl);
     },
@@ -6928,9 +7043,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         if (!container || !p) return { x: 0, y: 0 };
         const now = performance.now();
         let rect = this._cachedPointerRect;
-        // Increase cache duration to 100ms or until explicitly invalidated, 
-        // as the workspace container doesn't move often during a single mouse stroke.
-        if (!rect || now - this._cachedPointerRectAtMs > 100) {
+        this._ensurePointerRectInvalidation(container);
+        // Pendant un geste (bouton enfoncé), la toile ne bouge que via zoom/pan, qui invalident
+        // le cache explicitement : on ne relit jamais la géométrie (pas de mise en page forcée).
+        // Hors geste, relecture au plus toutes les 250 ms par sécurité.
+        const gesture = !!window._illuPointerButtonsDown;
+        if (!rect || (!gesture && now - this._cachedPointerRectAtMs > 250)) {
             rect = container.getBoundingClientRect();
             this._cachedPointerRect = rect;
             this._cachedPointerRectAtMs = now;
@@ -6940,6 +7058,40 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             x: (clientX - rect.left) * (p.width / rect.width),
             y: (clientY - rect.top) * (p.height / rect.height)
         };
+    },
+
+    /** Vide le cache de position de la toile (à appeler après tout déplacement / zoom). */
+    invalidatePointerRect() {
+        this._cachedPointerRect = null;
+        this._cachedPointerRectAtMs = 0;
+    },
+
+    /**
+     * Branche une seule fois les invalidations du cache de position : redimensionnement de
+     * l'espace de travail, défilement, styles de viewport (zoom/pan) et suivi des boutons.
+     */
+    _ensurePointerRectInvalidation(container) {
+        if (this._pointerRectHooks) return;
+        this._pointerRectHooks = true;
+        const inv = () => this.invalidatePointerRect();
+        window.addEventListener('resize', inv, { passive: true });
+        window.addEventListener('scroll', inv, { passive: true, capture: true });
+        const ws = document.getElementById('workspace') || container.parentElement;
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(inv);
+            if (ws) ro.observe(ws);
+            ro.observe(container);
+        }
+        // zoom / pan passent par illuApplyCanvasViewportStyles ou par le style du conteneur
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(inv).observe(container, { attributes: true, attributeFilter: ['style', 'class'] });
+        }
+        const down = (e) => { window._illuPointerButtonsDown = e.buttons || 1; };
+        const up = (e) => { window._illuPointerButtonsDown = e.buttons || 0; };
+        window.addEventListener('pointerdown', down, { capture: true, passive: true });
+        window.addEventListener('pointerup', up, { capture: true, passive: true });
+        window.addEventListener('pointercancel', () => { window._illuPointerButtonsDown = 0; }, { capture: true, passive: true });
+        window.addEventListener('blur', () => { window._illuPointerButtonsDown = 0; });
     },
 
     /** Retourne le rectangle visible (viewport) en coordonnées document logiques. */
@@ -7660,10 +7812,25 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
             return;
         }
 
-        svgUI.innerHTML = '';
+        // Poignées de sélection réutilisées d'une image à l'autre (seules leurs coordonnées
+        // changent). Les recréer à chaque mouvement faisait perdre la capture du pointeur à la
+        // poignée tirée et provoquait une recomposition de style à chaque image.
+        const reusableHandles = new Map();
+        Array.from(svgUI.children).forEach((ch) => {
+            const hid = ch.getAttribute && ch.getAttribute('data-selection-handle');
+            if (hid && (ch.tagName === 'rect' || ch.tagName === 'circle')) reusableHandles.set(ch.tagName + ':' + hid, ch);
+            else ch.remove();
+        });
+        const setAttrIfChanged = (el, name, value) => {
+            const v = String(value);
+            if (el.getAttribute(name) !== v) el.setAttribute(name, v);
+        };
 
         const layer = this.activeLayer;
-        if (!layer) return;
+        if (!layer) {
+            reusableHandles.forEach((el) => el.remove());
+            return;
+        }
 
         const sb = window.selectionBounds;
         const ov = document.getElementById('selection-overlay');
@@ -7939,6 +8106,21 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                     return;
                 }
                 const hHalf = hsz / 2;
+                const reused = reusableHandles.get('rect:' + hnd.id);
+                if (reused) {
+                    reusableHandles.delete('rect:' + hnd.id);
+                    setAttrIfChanged(reused, 'x', hnd.x - hHalf);
+                    setAttrIfChanged(reused, 'y', hnd.y - hHalf);
+                    setAttrIfChanged(reused, 'width', hsz);
+                    setAttrIfChanged(reused, 'height', hsz);
+                    setAttrIfChanged(reused, 'stroke-width', 1 / z);
+                    const cur =
+                        typeof window.illuResizeHandleCursor === 'function'
+                            ? window.illuResizeHandleCursor(hnd.cursor)
+                            : hnd.cursor;
+                    setAttrIfChanged(reused, 'style', `cursor: ${cur}; pointer-events: all; touch-action: none;`);
+                    return;
+                }
             const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 r.setAttribute('x', hnd.x - hHalf);
                 r.setAttribute('y', hnd.y - hHalf);
@@ -8007,7 +8189,16 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 const rx = rhp.x;
                 const ry = rhp.y;
                 const rotR = this.svgUiRotationHandleRadiusDoc();
-                const rh = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                const reusedRot = reusableHandles.get('circle:rot');
+                if (reusedRot) {
+                    reusableHandles.delete('circle:rot');
+                    setAttrIfChanged(reusedRot, 'cx', rx);
+                    setAttrIfChanged(reusedRot, 'cy', ry);
+                    setAttrIfChanged(reusedRot, 'r', rotR);
+                    setAttrIfChanged(reusedRot, 'stroke-width', 1 / this.getCanvasZoomLevel());
+                }
+                const rh = reusedRot ? null : document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                if (rh) {
                 rh.setAttribute('cx', rx);
                 rh.setAttribute('cy', ry);
                 rh.setAttribute('r', String(rotR));
@@ -8054,8 +8245,12 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
                 rh.addEventListener('pointercancel', releaseRotationHandleCapture, { capture: true });
                 rh.addEventListener('lostpointercapture', releaseRotationHandleCapture, { capture: true });
                 svgUI.appendChild(rh);
+                }
             }
         }
+        // poignées de l'image précédente qui n'existent plus (changement d'outil, désélection…)
+        reusableHandles.forEach((el) => el.remove());
+        reusableHandles.clear();
 
         const hi = this._layerListHoverIndex;
         if (hi != null && hi >= 0 && hi < this.layers.length && this.isPixelMode) {
@@ -9557,8 +9752,11 @@ _applyDynamicFilterHalftone(baseImageData, rad, w, h) {
         }
 
         this._renderEpoch = (this._renderEpoch | 0) + 1;
-        this._cachedPointerRect = null;
-        this._cachedPointerRectAtMs = 0;
+        this._renderViewHint = !!(opts && typeof opts === 'object' && opts.viewHint);
+        // Le rendu ne déplace pas la toile : on ne vide PAS ici le cache de position du pointeur
+        // (le vider forçait une mise en page complète à chaque mouvement de souris pendant un
+        // glisser). Il est invalidé par les vrais changements de géométrie : zoom/pan
+        // (applyCanvasViewportOnly), redimensionnement, défilement — voir logicalPointerFromClientXY.
         if (!this.activeProject) return;
         // Mode animation : repointe chaque layer.buffer sur le cel actif au temps courant
         // et applique les transforms interpolées (tween) avant compositing.

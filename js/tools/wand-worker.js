@@ -1,4 +1,4 @@
-self.importScripts('../WasmManager.js');
+self.importScripts('../WasmManager.js', '../rust/RustCore.js');
 
 self.onmessage = async function (e) {
     const {
@@ -10,12 +10,33 @@ self.onmessage = async function (e) {
         tolerance,
         mode,
         requestId,
-        wasmEnabled
+        wasmEnabled,
+        rustEnabled
     } = e.data;
 
     if (!data || !width || !height) {
         self.postMessage({ error: 'Missing parameters', requestId });
         return;
+    }
+
+    /* Moteur Rust (rust/masterpaint-core/src/region.rs) : même règle que ci-dessous
+     * (distance RVBA ≤ tolérance), remplissage par segments au lieu d'une pile de pixels. */
+    if (typeof MasterPaintRust !== 'undefined' && rustEnabled !== false) {
+        self.__mpRustEnabled = true;
+        if (!MasterPaintRust.isLoaded) await MasterPaintRust.init();
+        if (MasterPaintRust.isLoaded) {
+            const mask = MasterPaintRust.region(data, width, height, {
+                x: startX,
+                y: startY,
+                contiguous: mode !== 'similar',
+                rule: 'wand',
+                tolerance
+            });
+            if (mask) {
+                self.postMessage({ mask, requestId, engine: 'rust' }, [mask.buffer]);
+                return;
+            }
+        }
     }
 
     if (typeof MasterPaintWasm !== 'undefined' && wasmEnabled) {

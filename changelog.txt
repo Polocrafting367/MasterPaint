@@ -1,5 +1,14 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+3.0.0 (14/10/26) — début de la migration en Rust
+- Mise à jour en Rust (début) : les effets sont calculés par un moteur Rust, plus rapide
+- Version Windows installable disponible (.exe)
+- Version Linux Flatpak en préparation (construite automatiquement sur GitHub)
+- Interface revue pour se rapprocher de Windows 10/11 (boutons, curseurs, fenêtres)
+- Ajout du ruban (style Word) et de l'affichage classique Paint.NET
+- Nouveaux effets : Rêve, Pastel, Accent de couleur, Transparence, Fondu des bords,
+  Supprimer la poussière, Grille / Damier, Adoucir le contour de l'objet
+
 2.9.40 (05/09/26) — version finale
 Correction de bug multiples non repercorie, et flm de laissé le carabiat de l'ia
 - fin du projet j'en ai marre

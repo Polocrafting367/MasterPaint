@@ -1,4 +1,27 @@
 importScripts('../WasmManager.js');
+try {
+    importScripts('../rust/RustCore.js');
+} catch (e) {
+    /* moteur Rust absent : chemins JS */
+}
+
+/** Numéros des étages dans fx_dynamic.rs (effet Rust « dynstage »). */
+const RUST_DYN_STAGES = {
+    blur: 0, gaussian: 1, sharpen: 2, pixelate: 3, halftone: 4, shadow: 5, grayscale: 6,
+    sepia: 7, invert: 8, brightness: 9, contrast: 10, saturate: 11, hue: 12
+};
+
+function applyRustStage(src, w, h, typ, rad) {
+    const R = self.MasterPaintRust;
+    const code = RUST_DYN_STAGES[typ];
+    if (code === undefined || !R || !R.isLoaded || !R.supports('dynstage')) return null;
+    try {
+        const out = R.apply('dynstage', src, w, h, [code, Number(rad) || 0], 0, h);
+        return out ? new Uint8ClampedArray(out.buffer, out.byteOffset, out.length) : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 function clamp255(v) {
     return v < 0 ? 0 : v > 255 ? 255 : v;
@@ -299,6 +322,8 @@ function applyDynamicFilterStage(src, w, h, typ, rad) {
         const cssOut = applyCssFilterStage(src, w, h, css);
         if (cssOut) return cssOut;
     }
+    const rustOut = applyRustStage(src, w, h, typ, rad);
+    if (rustOut) return rustOut;
     if (
         !dynamicFilterSkipWasm() &&
         typeof MasterPaintWasm !== 'undefined' &&
@@ -464,6 +489,9 @@ self.onmessage = async function (ev) {
     try {
         if (typeof MasterPaintWasm !== 'undefined' && !MasterPaintWasm.isLoaded) {
             await MasterPaintWasm.init();
+        }
+        if (self.MasterPaintRust && msg.rustEnabled !== false && !self.MasterPaintRust.isLoaded) {
+            try { await self.MasterPaintRust.init(); } catch (e) { /* repli JS */ }
         }
         if (msg.type === 'dynamicFilterLayer') {
             const mode = msg.mode | 0;

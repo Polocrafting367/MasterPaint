@@ -72,8 +72,27 @@
         return (_sharedPopup = pop);
     }
 
+    /* Corps de groupe déplacé dans le volet (ses vrais contrôles, pas une copie) */
+    let _liveBody = null;
+    let _liveHome = null;
+
+    function restoreLiveBody() {
+        if (!_liveBody) return;
+        _updatingCount++;
+        try {
+            _liveBody.classList.remove('illu-ribbon-overflow-live');
+            const trigger = _liveHome && _liveHome.querySelector(':scope > .illu-ribbon-group-collapse-trigger');
+            if (_liveHome) _liveHome.insertBefore(_liveBody, trigger ? trigger.nextSibling : _liveHome.firstChild);
+        } finally {
+            _liveBody = null;
+            _liveHome = null;
+            setTimeout(() => { _updatingCount--; }, 0);
+        }
+    }
+
     function closeSharedPopup() {
         if (!_sharedPopup) return;
+        restoreLiveBody();
         _sharedPopup.hidden = true;
         _sharedPopup._triggerGroup = null;
         if (_popupCloseHandler) {
@@ -94,9 +113,22 @@
         const body = group.querySelector('.illu-ribbon-group-body');
         if (!body) return;
 
-        /* Cloner les boutons visibles avec icône + texte côte à côte */
-        const items = body.querySelectorAll('.illu-mode-toggle-item--unified:not([hidden])');
-        if (!items.length) {
+        /* Ruban de bureau (style Word) : le volet reçoit le VRAI corps du groupe — jauges,
+         * listes et boutons restent branchés (une copie perdrait leurs gestionnaires et
+         * dupliquerait leurs id). Il est remis à sa place à la fermeture du volet. */
+        const liveMode = !document.body.classList.contains('illu-mobile-ui');
+        const items = liveMode ? [] : body.querySelectorAll('.illu-mode-toggle-item--unified:not([hidden])');
+        if (liveMode) {
+            _updatingCount++;
+            try {
+                _liveBody = body;
+                _liveHome = group;
+                body.classList.add('illu-ribbon-overflow-live');
+                pop.appendChild(body);
+            } finally {
+                setTimeout(() => { _updatingCount--; }, 0);
+            }
+        } else if (!items.length) {
             const clone = body.cloneNode(true);
             clone.className = 'illu-ribbon-overflow-body-clone';
             pop.appendChild(clone);
@@ -181,7 +213,9 @@
         trigger.setAttribute('aria-haspopup', 'listbox');
         trigger.setAttribute('aria-expanded', 'false');
 
-        const label = _i18n(cfg.labelKey, cfg.id);
+        /* Nom affiché : traduction dédiée, sinon le libellé du groupe (« Affichage »), sinon l'id */
+        const ownLabel = group.querySelector(':scope > .illu-ribbon-group-label');
+        const label = _i18n(cfg.labelKey, (ownLabel && ownLabel.textContent.trim()) || cfg.id);
         trigger.title = label;
         trigger.setAttribute('aria-label', label);
 
@@ -301,6 +335,9 @@
         /* Skip si largeur identique */
         if (Math.abs(containerWidth - _lastWidth) < 1) return;
         _lastWidth = containerWidth;
+        /* La largeur a vraiment changé : remettre le corps éventuellement ouvert dans le volet
+         * à sa place avant de mesurer (un simple changement de hauteur ne ferme pas le volet). */
+        closeSharedPopup();
 
         _updatingCount++;
         try {

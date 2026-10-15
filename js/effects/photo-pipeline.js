@@ -800,9 +800,49 @@
      *        - output : 'u8' (défaut) ou 'float'
      * @returns {Uint8ClampedArray|Float32Array}
      */
+    /**
+     * Même pipeline par le moteur Rust (fx_camraw.rs) pour une source 8 bits et une
+     * sortie 8 bits. Retourne null si le moteur est absent ou le cas non couvert.
+     */
+    function processRust(src, width, height, p, opts) {
+        const RS = global.MasterPaintRust;
+        if (!RS || !RS.isLoaded || typeof RS.supports !== 'function' || !RS.supports('cameraraw')) return null;
+        if (src instanceof Float32Array || opts.output === 'float') return null;
+        const seed = opts.grainSeed || 1;
+        if (!Number.isInteger(seed) || Math.abs(seed) >= 16777216) return null;
+        const num = (v) => (typeof v === 'number' && isFinite(v) ? v : (parseFloat(v) || 0));
+        const maskOn = p.maskOn || {};
+        const params = [
+            p.exposure, p.temp, p.tint, p.shadows, p.blacks, p.highlights, p.whites,
+            p.red, p.redHi, p.redSh, p.green, p.greenHi, p.greenSh, p.blue, p.blueHi, p.blueSh,
+            p.clarity, p.dehaze, p.contrast, p.saturation, p.vibrance, p.sharpen, p.vignette, p.grain,
+            p.grainSharpness != null ? p.grainSharpness : 50,
+            typeof opts.sourceWhite === 'number' && isFinite(opts.sourceWhite) && opts.sourceWhite > 0 ? opts.sourceWhite : 0,
+            opts.fullWidth || 0, opts.fullHeight || 0, seed,
+            (maskOn.shadows === false ? 1 : 0) | (maskOn.blacks === false ? 2 : 0) |
+                (maskOn.highlights === false ? 4 : 0) | (maskOn.whites === false ? 8 : 0)
+        ].map(num);
+        for (const arr of [p.hslHue, p.hslSat, p.hslLum]) {
+            for (let i = 0; i < 8; i++) params.push(arr ? num(arr[i]) : 0);
+        }
+        const curves = [p.curveMaster, p.curveR, p.curveG, p.curveB].map((c) => (curveIsActive(c) ? c : null));
+        curves.forEach((c) => params.push(c ? c.length : 0));
+        curves.forEach((c) => { if (c) c.forEach((pt) => params.push(num(pt.x), num(pt.y))); });
+        try {
+            const out = RS.apply('cameraraw', src, width, height, params, 0, height);
+            return out ? new Uint8ClampedArray(out.buffer, out.byteOffset, out.length) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function process(src, width, height, p, opts) {
         opts = opts || {};
         p = p || {};
+        if (!opts.forceJs) {
+            const fast = processRust(src, width, height, p, opts);
+            if (fast) return fast;
+        }
         const n = width * height;
         const isFloatSrc = (src instanceof Float32Array);
         const outputFloat = opts.output === 'float';

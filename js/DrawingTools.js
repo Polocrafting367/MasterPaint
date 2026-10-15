@@ -165,7 +165,8 @@ window.illuFlushActiveLayerDisplay = function () {
 function illuFlushInteractiveVisualRefresh() {
     if (illuInteractiveVisualNeedRender) {
         if (typeof EditorManager !== 'undefined' && EditorManager.render) {
-            EditorManager.render(illuInteractiveVisualRenderOpts);
+            // viewHint : ce rendu interactif peut se limiter à la zone modifiée pendant le geste
+            EditorManager.render(Object.assign({ viewHint: true }, illuInteractiveVisualRenderOpts));
         }
         illuInteractiveVisualNeedRender = false;
         illuInteractiveVisualRenderOpts = {};
@@ -188,10 +189,38 @@ function scheduleSelectionChromeRefresh(extra) {
             lassoPoints: o.lassoPoints
         });
     }
-    if (extra && extra.forceFullSelectionOverlay && typeof window.updateToolOptionsBar === 'function') {
-        window.updateToolOptionsBar();
+    if (extra && extra.forceFullSelectionOverlay) {
+        illuScheduleToolOptionsBarRefresh();
     }
 }
+
+/**
+ * Mise à jour du ruban / de la barre d'options, différée et regroupée. Pendant un geste
+ * (bouton enfoncé) elle attend le relâchement : la reconstruire à chaque mouvement de souris
+ * coûtait ~45 ms par mouvement et des dizaines de mises en page forcées.
+ */
+let illuToolOptionsBarPending = false;
+function illuScheduleToolOptionsBarRefresh() {
+    if (typeof window.updateToolOptionsBar !== 'function') return;
+    if (illuToolOptionsBarPending) return;
+    illuToolOptionsBarPending = true;
+    const run = () => {
+        illuToolOptionsBarPending = false;
+        window.updateToolOptionsBar();
+    };
+    if (window._illuPointerButtonsDown) {
+        const onUp = () => {
+            window.removeEventListener('pointerup', onUp, true);
+            window.removeEventListener('pointercancel', onUp, true);
+            requestAnimationFrame(run);
+        };
+        window.addEventListener('pointerup', onUp, true);
+        window.addEventListener('pointercancel', onUp, true);
+    } else {
+        requestAnimationFrame(run);
+    }
+}
+window.illuScheduleToolOptionsBarRefresh = illuScheduleToolOptionsBarRefresh;
 
 function canUseSelectionOverlayFast() {
     return window.SelectionChrome ? window.SelectionChrome.canUseRectFast() : false;
@@ -3240,7 +3269,8 @@ function magicWandAt(pos, ev) {
         tolerance: tolUi,
         mode: mode,
         requestId: wandOpId,
-        wasmEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('settings-wasm-enabled') !== '0')
+        wasmEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('settings-wasm-enabled') !== '0'),
+        rustEnabled: (typeof localStorage === 'undefined' || localStorage.getItem('settings-rust-enabled') !== '0')
     }, [imageData.data.buffer]);
 
     worker.onmessage = (e) => {
@@ -3511,6 +3541,11 @@ function stampBrushAt(ctx, tool, lx, ly) {
         return;
     }
 
+    // zone touchée (coordonnées locales du calque) : le prochain rendu ne recompose qu'elle
+    if (typeof EditorManager.markLayerViewDirty === 'function') {
+        const half = (pat === 'square' ? lw * 0.7072 : lw / 2) + 3;
+        EditorManager.markLayerViewDirty(lx - half, ly - half, half * 2, half * 2);
+    }
     let h = EditorManager.toolProps.brushHardness != null ? EditorManager.toolProps.brushHardness : 100;
     if (pat === 'soft') {
         h = Math.min(h, tool === 'eraser' ? 48 : 42);
@@ -5768,7 +5803,8 @@ function illuEdgeAutoPanIsDragActive() {
 /** Rect du workspace mis en cache (évite un reflow à chaque pointermove ; le panneau ne bouge pas pendant un tracé). */
 function illuEdgeAutoPanWorkspaceRect() {
     const now = performance.now();
-    if (ILLU_EDGE_AUTOPAN._wsRect && now - ILLU_EDGE_AUTOPAN._wsRectAt < 400) {
+    // pendant un geste, l'espace de travail ne bouge pas : aucune relecture (pas de reflow forcé)
+    if (ILLU_EDGE_AUTOPAN._wsRect && (window._illuPointerButtonsDown || now - ILLU_EDGE_AUTOPAN._wsRectAt < 400)) {
         return ILLU_EDGE_AUTOPAN._wsRect;
     }
     const ws = document.getElementById('workspace');
@@ -14627,6 +14663,8 @@ function updatePixel(pos, pointerEv) {
             moveGhostLayer.style.left = `${nx}px`;
             moveGhostLayer.style.top = `${ny}px`;
             illuMountPreviewCanvasBeforeSelectionOverlay(moveGhostLayer);
+            // seul le fantôme bouge : le calque (déjà « troué » au départ) n'a pas à être repeint
+            if (typeof EditorManager.markLayerViewUnchanged === 'function') EditorManager.markLayerViewUnchanged();
             illuScheduleInteractiveVisualRefresh({ render: true, selection: true });
             return;
         } else if (EditorManager.activeLayer && moveLayerStartPos) {
@@ -17566,6 +17604,67 @@ function floodFill(startX, startY) {
             if (startX < minX || startX > maxX || startY < minY || startY > maxY) return;
         }
         if ((window.selectionInverted || useColorMaskClip) && !isPixelInActiveSelection(startX, startY, layerX, layerY)) return;
+    }
+
+    /* Moteur Rust (rust/masterpaint-core/src/region.rs) : même règle de couleur, même
+     * connexité ; la sélection est évaluée une seule fois par pixel du cadre autorisé
+     * (isPixelInActiveSelection : rectangle, lasso, masque, rotation, inversion). */
+    const RS = window.MasterPaintRust;
+    if (RS && typeof RS.region === 'function' && RS.isLoaded) {
+        let clip = null;
+        let bx0 = minX, by0 = minY, bx1 = maxX, by1 = maxY;
+        const sb = window.selectionBounds;
+        const plainRect =
+            selectionActive && sb && !window.selectionInverted && !useColorMaskClip &&
+            window.selectionKind !== 'lasso' && window.selectionKind !== 'color' &&
+            Math.abs(window.selectionPreviewAngleRad || 0) <= 1e-6;
+        if (plainRect) {
+            /* rectangle droit : ses bornes exactes suffisent (même test que
+             * isPixelInActiveSelection : rx ≤ px < rx + w), pas besoin de masque */
+            const rx = sb.x - layerX, ry = sb.y - layerY;
+            bx0 = Math.max(minX, Math.ceil(rx));
+            by0 = Math.max(minY, Math.ceil(ry));
+            bx1 = Math.min(maxX, Math.ceil(rx + sb.w) - 1);
+            by1 = Math.min(maxY, Math.ceil(ry + sb.h) - 1);
+            if (bx1 < bx0 || by1 < by0 || startX < bx0 || startX > bx1 || startY < by0 || startY > by1) return;
+        } else if (selectionActive) {
+            clip = new Uint8Array(w * h);
+            for (let py = minY; py <= maxY; py++) {
+                const row = py * w;
+                for (let px = minX; px <= maxX; px++) {
+                    if (isPixelInActiveSelection(px, py, layerX, layerY)) clip[row + px] = 1;
+                }
+            }
+        }
+        /* couleur unie : le moteur peint lui-même la région (aucune boucle par pixel ici) ;
+         * motif et tramage restent peints par applyFillAt */
+        const plainColor = !isDither && !(window._illuFillPattern && EditorManager.toolProps.fillType === 'pattern');
+        const mask = RS.region(data, w, h, {
+            x: startX,
+            y: startY,
+            contiguous: fillMode !== 'layer',
+            rule: 'bucket',
+            tolerance: fillTol,
+            clip,
+            bounds: { x0: bx0, y0: by0, x1: bx1, y1: by1 },
+            fill: plainColor ? [fillRGBA.r, fillRGBA.g, fillRGBA.b, targetA] : null
+        });
+        if (mask) {
+            if (!plainColor) {
+                for (let py = by0; py <= by1; py++) {
+                    const row = py * w;
+                    for (let px = bx0; px <= bx1; px++) {
+                        if (mask[row + px]) applyFillAt(px, py);
+                    }
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            if (fillMode !== 'layer' && typeof EditorManager.quantizeActiveLayerBuffer === 'function') {
+                EditorManager.quantizeActiveLayerBuffer();
+            }
+            EditorManager.render();
+            return;
+        }
     }
 
     if (fillMode === 'layer') {

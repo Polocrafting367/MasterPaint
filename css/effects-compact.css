@@ -1458,3 +1458,76 @@ body.illu-mobile-shell-active .illu-camera-raw-overlay {
     font-size: 10px;
     opacity: .78;
 }
+
+/* ————————————————————————————————————————————————————————————
+ *  Valeur éditable + ⟲ par réglage (EffectDialogUI.attachValueEditor)
+ * ———————————————————————————————————————————————————————————— */
+.fx-compact .fx-val--mirror {
+    display: none !important;
+}
+
+.fx-compact .fx-row input.fx-num {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 20px;
+    padding: 1px 2px 1px 4px;
+    font-size: 11px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+}
+
+.fx-compact .fx-unit {
+    font-size: 10px;
+    opacity: .8;
+    margin-left: -3px;
+}
+
+.fx-compact .fx-reset {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid transparent !important;
+    border-radius: 3px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit;
+    font-size: 10px;
+    opacity: .55;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fx-compact .fx-reset:hover,
+.fx-compact .fx-reset:focus-visible {
+    opacity: 1;
+    border-color: var(--mp-accent, #0078d4) !important;
+    background: color-mix(in srgb, var(--mp-accent, #0078d4) 12%, transparent) !important;
+}
+
+/* Mise en page Paint.NET : intitulé au-dessus, puis piste | valeur | ⟲ (Paint.NET 5 / paint.js) */
+body.illu-layout-pdn .fx-compact .fx-row {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    margin-bottom: 8px;
+}
+
+body.illu-layout-pdn .fx-compact .fx-row > .fx-label {
+    flex: 0 0 100%;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+body.illu-layout-pdn .fx-compact .fx-row input.fx-num {
+    flex-basis: 60px;
+    width: 60px;
+    height: 22px;
+    font-size: 12px;
+}

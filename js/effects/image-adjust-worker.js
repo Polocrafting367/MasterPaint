@@ -1,10 +1,17 @@
 self.importScripts('photo-pipeline.js');
 self.importScripts('image-adjust-core.js');
 self.importScripts('../WasmManager.js');
+try {
+    self.importScripts('../rust/RustCore.js');
+} catch (e) {
+    /* moteur Rust absent : pipeline JS */
+}
 
 // Removed auto-init: settings must be passed via message
 
 let wasmInitPromise = null;
+// Moteur Rust (Camera Raw 8 bits) : chargé une fois, en tâche de fond.
+let rustInitPromise = self.MasterPaintRust ? self.MasterPaintRust.init().catch(() => false) : null;
 
 self.onmessage = async function (ev) {
     const msg = ev.data || {};
@@ -13,6 +20,7 @@ self.onmessage = async function (ev) {
         if (msg.type === 'init') {
              if (typeof MasterPaintWasm !== 'undefined') {
                  MasterPaintWasm.setSettings(msg.settings || {});
+                 if (msg.settings && msg.settings.rustEnabled === false) self.__mpRustEnabled = false;
                  if (msg.settings && msg.settings.wasmEnabled) {
                      wasmInitPromise = MasterPaintWasm.init().catch(err => console.error("WASM Init error:", err));
                  }
@@ -22,6 +30,9 @@ self.onmessage = async function (ev) {
         if (msg.type === 'cameraRaw') {
             if (wasmInitPromise) {
                 await wasmInitPromise;
+            }
+            if (rustInitPromise) {
+                await rustInitPromise;
             }
             const width = msg.width | 0;
             const height = msg.height | 0;

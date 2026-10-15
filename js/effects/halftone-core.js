@@ -125,6 +125,27 @@
             screens.push({ ink: 'k', cos: Math.cos(base), sin: Math.sin(base) });
         }
 
+        // Moteur Rust (fx_halftone.rs, mêmes formules) : calcule directement la tranche.
+        const RS = global.MasterPaintRust;
+        if (RS && RS.isLoaded && typeof RS.supports === 'function' && RS.supports('halftone') && ey > sy) {
+            const ic = ['c', 'm', 'y', 'k'].map((k) => inkCols[k] || ILLU_HALFTONE_INK_COLORS[k]);
+            const params = [
+                o.mode === 'cmyk' ? 2 : o.mode === 'color' ? 1 : 0, cell, o.angle || 0,
+                keepPaper ? 1 : 0, o.useBlack ? 1 : 0, inv ? 1 : 0,
+                density.c, density.m, density.y, density.k, gain
+            ];
+            ic.forEach((c) => params.push(Number(c[0]) || 0, Number(c[1]) || 0, Number(c[2]) || 0));
+            try {
+                const r = RS.apply('halftone', src, w, h, params, sy, ey);
+                if (r) {
+                    if (onProgress) onProgress(100);
+                    return new Uint8ClampedArray(r.buffer, r.byteOffset, r.length);
+                }
+            } catch (e) {
+                /* repli JS */
+            }
+        }
+
         const total = Math.max(1, ey - sy);
         for (let y = sy; y < ey; y++) {
             if (onProgress && (y - sy) % 32 === 0) {

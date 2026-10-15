@@ -92,6 +92,8 @@
 
     function registerServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
+        // Application installée (Tauri) : fichiers locaux, pas de cache hors ligne nécessaire.
+        if (window.__TAURI__ || window.__TAURI_INTERNALS__) return;
         window.addEventListener('load', () => {
             const swUrl = new URL('sw.js', window.location.href).href;
             navigator.serviceWorker

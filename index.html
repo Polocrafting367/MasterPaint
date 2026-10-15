@@ -111,6 +111,12 @@
     <!-- Finition macOS : chargée après tout le reste, car theme-mac-*.css sont chargés
          très tôt et ne peuvent pas corriger ce que les feuilles suivantes imposent -->
     <link rel="stylesheet" href="css/theme-mac-polish.css">
+    <!-- Thème « Paint.NET » (copie de l'interface Paint.NET 5) et barre d'options Paint.NET :
+         en tout dernier, ils reprennent la main sur le chrome (body.illu-theme-pdn / .illu-toolbar-pdn) -->
+    <link rel="stylesheet" href="css/theme-pdn.css" id="theme-link-pdn">
+    <link rel="stylesheet" href="css/toolbar-pdn.css">
+    <link rel="stylesheet" href="css/fluent-ribbon.css">
+    <link rel="stylesheet" href="css/win-controls.css">
     <style>
         .menubar-contact-btn:hover {
             filter: brightness(1.15) contrast(1.1);
@@ -123,6 +129,8 @@
 </head>
 
 <body class="ui-layout-floating illu-splash-active">
+    <!-- chargé en premier : masterpaint.fr/#contact ouvre le formulaire avant la fin du chargement -->
+    <script src="js/contact.js?v=20261016-hash"></script>
     <script>
         (function () {
             function hexToRgb(hex) {
@@ -398,6 +406,30 @@
                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.editRedo"></span><span
                                         data-i18n="menu.editRedo">Rétablir</span></li>
                                 <li role="menuitem" class="divider"></li>
+                                <!-- Commandes du menu Édition de Paint.NET (déjà présentes dans le ruban / clic droit) -->
+                                <li role="menuitem" class="menu-row-icon" onclick="typeof window.ctxCut==='function'&&window.ctxCut()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-scissors"></i></span><span
+                                        data-i18n="ctx.cut">Couper</span><span class="menu-shortcut">Ctrl+X</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="typeof window.ctxCopy==='function'&&window.ctxCopy()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-copy"></i></span><span
+                                        data-i18n="ctx.copy">Copier</span><span class="menu-shortcut">Ctrl+C</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="typeof window.ctxPaste==='function'&&window.ctxPaste()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-paste"></i></span><span
+                                        data-i18n="ctx.paste">Coller</span><span class="menu-shortcut">Ctrl+V</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.selectAll()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-regular fa-square-check"></i></span><span>Tout
+                                        sélectionner</span><span class="menu-shortcut">Ctrl+A</span></li>
+                                <li role="menuitem" class="menu-row-icon"
+                                    onclick="typeof window.illuDeselectLikeCtrlD==='function'?window.illuDeselectLikeCtrlD():EditorManager.deselectAll()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rectangle-xmark"></i></span><span>Désélectionner</span><span class="menu-shortcut">Ctrl+D</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.invertSelection()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-half-stroke"></i></span><span>Inverser
+                                        la sélection</span><span class="menu-shortcut">Ctrl+I</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="typeof window.clearSelectionContent==='function'&&window.clearSelectionContent()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser"></i></span><span
+                                        data-i18n="ctx.clearSel">Effacer la sélection</span><span class="menu-shortcut">Suppr</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" id="menu-edit-expand-selection"
                                     onclick="showSelectionExpandDialog()"><span class="menu-icon" aria-hidden="true"><i
                                             class="fa-solid fa-up-right-and-down-left-from-center"></i></span><span
@@ -462,6 +494,19 @@
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.deleteLayer()"><span class="menu-icon"
                                          aria-hidden="true" aria-hidden="true" data-icon-key="menu.layerDelete"></span><span
                                         data-i18n="menu.layerDelete">Supprimer</span></li>
+                                <!-- Commandes du menu Calques de Paint.NET -->
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.duplicateActiveLayer()"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-clone"></i></span><span>Dupliquer
+                                        le calque</span><span class="menu-shortcut">Ctrl+Maj+D</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.moveLayer(1)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-arrow-up"></i></span><span>Monter
+                                        le calque</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="EditorManager.moveLayer(-1)"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-arrow-down"></i></span><span>Descendre
+                                        le calque</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('rotatezoom')"><span
+                                        class="menu-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span><span>Faire
+                                        pivoter / Zoomer…</span></li>
                                 <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="EditorManager.mergeLayers()"><span
                                         class="menu-icon" aria-hidden="true"><i
@@ -489,91 +534,61 @@
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.adjust">Ajustements</span>
+                            <!-- Ordre et libellés de Paint.NET 5.1 ; ajouts MasterPaint sous le séparateur -->
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="FilterManager.showInstantFilterGallery()">
-                                    <span class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-wand-magic-sparkles"></i></span><span
-                                        data-i18n="menu.instFiltersGallery">Galerie de Filtres…</span>
-                                </li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjAutolevel"></span><span data-i18n="pdn.adjAutoLevel">Auto-niveau</span><span class="menu-shortcut">Ctrl+Maj+L</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-droplet-slash"></i></span><span data-i18n="pdn.adjBlackWhite">Noir et blanc</span><span class="menu-shortcut">Ctrl+Maj+G</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjBrightness"></span><span data-i18n="pdn.adjBrightness">Luminosité / Contraste…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openCurvesForActiveLayer()"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjCurves"></span><span data-i18n="pdn.adjCurves">Courbes…</span><span class="menu-shortcut">Ctrl+Maj+M</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjExposure"></span><span data-i18n="pdn.adjExposure">Exposition…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('highlightsshadows')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-half-stroke"></i></span><span data-i18n="pdn.adjHighlightsShadows">Mises en lumière / Ombres…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjHsv"></span><span data-i18n="pdn.adjHueSat">Teinte / Saturation…</span><span class="menu-shortcut">Ctrl+Maj+U</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invertalpha')"><span class="menu-icon" aria-hidden="true"><i class="fa-regular fa-square"></i></span><span data-i18n="pdn.adjInvertAlpha">Inverser l'alpha</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-half-stroke"></i></span><span data-i18n="pdn.adjInvertColors">Inverser les couleurs</span><span class="menu-shortcut">Ctrl+Maj+I</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openLevelsForActiveLayer()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-chart-column"></i></span><span data-i18n="pdn.adjLevels">Niveaux…</span><span class="menu-shortcut">Ctrl+L</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjPosterize"></span><span data-i18n="pdn.adjPosterize">Postériser…</span><span class="menu-shortcut">Ctrl+Maj+P</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjSepia"></span><span data-i18n="pdn.adjSepia">Sépia</span><span class="menu-shortcut">Ctrl+Maj+E</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('coloraccent')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-droplet"></i></span><span>Accent de couleur…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('transparency')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-chess-board"></i></span><span>Transparence…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('temptint')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjTempTint"></span><span data-i18n="pdn.adjTempTint">Température / Teinte…</span></li>
                                 <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('autolevel')"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjAutolevel"></span><span
-                                        data-i18n="menu.adjAutolevel">Auto-niveau</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="openLevelsForActiveLayer()"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-chart-column"></i></span><span
-                                        data-i18n="menu.adjLevels">Niveaux…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="openCurvesForActiveLayer()"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjCurves"></span><span
-                                        data-i18n="menu.adjCurves">Courbes…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('brightness')"><span class="menu-icon"
-                                         aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjBrightness"></span><span
-                                        data-i18n="menu.adjBrightness">Luminosité / Contraste…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('exposure')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjExposure"></span><span
-                                        data-i18n="menu.adjExposure">Exposition / gamma…</span></li>
-                                <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('temptint')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjTempTint"></span><span
-                                        data-i18n="menu.adjTempTint">Température / Teinte…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('hsv')"><span class="menu-icon"
-                                        aria-hidden="true" aria-hidden="true" data-icon-key="menu.adjHsv"></span><span
-                                        data-i18n="menu.adjHsv">Teinte / Saturation…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vibrance')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjVibrance"></span><span
-                                        data-i18n="menu.adjVibrance">Vibrance / Éclat…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-camera-retro"></i></span><span
-                                        data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
-                                <li role="menuitem" class="divider"></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('grayscale')"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-droplet-slash"></i></span><span
-                                        data-i18n="menu.adjGrayscale">Noir et blanc</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sepia')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjSepia"></span><span
-                                        data-i18n="menu.adjSepia">Sépia</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('invert')"><span
-                                        class="menu-icon" aria-hidden="true"><i
-                                            class="fa-solid fa-circle-half-stroke"></i></span><span
-                                        data-i18n="menu.adjInvert">Inverser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('posterize')"><span class="menu-icon"
-                                         aria-hidden="true" data-icon-key="menu.adjPosterize"></span><span
-                                        data-i18n="menu.adjPosterize">Postériser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vibrance')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjVibrance"></span><span data-i18n="menu.adjVibrance">Vibrance / Éclat…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="openCameraRawForActiveLayer()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-camera-retro"></i></span><span data-i18n="menu.adjCameraRaw">Camera Raw…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="FilterManager.showInstantFilterGallery()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span data-i18n="menu.instFiltersGallery">Galerie de Filtres…</span></li>
                             </ul>
                         </li>
                         <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.effects">Effets</span>
                     <ul role="menu">
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCutout">Détourage</span>
-                            <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="illuGuidedCutoutToolStart()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageCutoutGuided">Détourage par sélection…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
-                            </ul>
-                        </li>
+                        <li role="menuitem" class="menu-row-icon" id="menu-fx-repeat" aria-disabled="true" onclick="window.illuRepeatLastEffect&&window.illuRepeatLastEffect()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-repeat"></i></span><span id="menu-fx-repeat-label" data-i18n="pdn.fxRepeat">Répéter</span><span class="menu-shortcut">Ctrl+F</span></li>
                         <li role="menuitem" class="divider"></li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxArtistic">Artistique</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxArtistic">Artistique</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSketch"></span><span data-i18n="menu.fxSketch">Esquisse…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pencilsketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPencilSketch"></span><span data-i18n="menu.fxPencilSketch">Croquis au crayon…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxOil"></span><span data-i18n="menu.fxOil">Peinture…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSketch"></span><span data-i18n="pdn.fxInkSketch">Croquis à l'encre…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('oil')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxOil"></span><span data-i18n="pdn.fxOilPainting">Peinture à l'huile…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pastel')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-palette"></i></span><span>Pastel…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pencilsketch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPencilSketch"></span><span data-i18n="pdn.fxPencilSketch">Croquis au crayon…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('ascii')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxAscii"></span><span data-i18n="menu.fxAscii">Art ASCII…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('halftone')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxHalftone"></span><span data-i18n="menu.fxHalftone">Trame (Demi-teinte)…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxNoise">Bruit</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxBlurs">Flous</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxAddNoise"></span><span data-i18n="menu.fxAddNoise">Ajouter du bruit…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMedian"></span><span data-i18n="menu.fxMedian">Réduire le bruit…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('reducenoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxReduceNoise"></span><span data-i18n="menu.fxReduceNoise">Réduction du bruit (PDN)…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('argenticgrain')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxArgenticGrain"></span><span data-i18n="menu.fxArgenticGrain">Grain argentique…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDigitalPattern"></span><span data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVhs"></span><span data-i18n="menu.fxVhs">Effet VHS…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unfocus')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxUnfocus"></span><span data-i18n="pdn.fxBokeh">Flou bokeh / Défocaliser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('fragment')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFragment"></span><span data-i18n="pdn.fxFragment">Fragment de flou…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxGaussian"></span><span data-i18n="pdn.fxGaussian">Flou gaussien…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-arrows-left-right"></i></span><span data-i18n="pdn.fxMotionBlur">Flou de déplacement…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRadialBlur"></span><span data-i18n="pdn.fxRadialBlur">Flou radial…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sketchblur')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-pen-fancy"></i></span><span data-i18n="pdn.fxSketchBlur">Flou d'esquisse…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBlurSimple"></span><span data-i18n="pdn.fxSquareBlur">Flou carré…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSurfaceBlur"></span><span data-i18n="pdn.fxSurfaceBlur">Flou de surface…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxZoomBlur"></span><span data-i18n="pdn.fxZoomBlur">Flou de zoom…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxColor">Couleur</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxColor">Couleur</span>
                             <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('quantize')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-swatchbook"></i></span><span data-i18n="pdn.fxQuantize">Quantifier…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('colorbal')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjColorBal"></span><span data-i18n="menu.adjColorBal">Balance des couleurs…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chroma')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-fill-drip"></i></span><span data-i18n="menu.fxChroma">Incrustation…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('chromatic')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxChromatic"></span><span data-i18n="menu.fxChromatic">Aberration chromatique…</span></li>
@@ -582,62 +597,78 @@
                                 <li role="menuitem" class="menu-row-icon" id="menu-fx-cmjn" onclick="applyEffect('cmjn')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxCmjn"></span><span data-i18n="menu.fxCmjn">Conversion de couleur CMJN…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxDistort">Déformer</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxDistort">Déformer</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBulge"></span><span data-i18n="menu.fxBulge">Bosse…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxCrystallize"></span><span data-i18n="menu.fxCrystallize">Cristallisation…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dents')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDents"></span><span data-i18n="menu.fxDents">Bosselage…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFrosted"></span><span data-i18n="menu.fxFrosted">Verre dépoli…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('bulge')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBulge"></span><span data-i18n="pdn.fxBulge">Bosse…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dents')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDents"></span><span data-i18n="pdn.fxDents">Cabossage…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('crystallize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxCrystallize"></span><span data-i18n="pdn.fxCrystallize">Cristallisation…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('frosted')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFrosted"></span><span data-i18n="pdn.fxFrostedGlass">Verre dépoli…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('morphology')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-shapes"></i></span><span data-i18n="pdn.fxMorphology">Morphologie…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span data-i18n="pdn.fxPixelate">Pixéliser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span data-i18n="pdn.fxPolarInversion">Inversion polaire…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span data-i18n="pdn.fxTileReflection">Réflexion mosaïque…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTwist"></span><span data-i18n="pdn.fxTwist">Torsion…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mirrorquad')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMirrorQuad"></span><span data-i18n="menu.fxMirrorQuad">Miroir 4 secteurs…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pinch')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPinch"></span><span data-i18n="menu.fxPinch">Pincement…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('pixelate')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPixelate"></span><span data-i18n="menu.fxPixelate">Pixéliser…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('polarInvert')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxPolarInvert"></span><span data-i18n="menu.fxPolarInvert">Inversion polaire…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('projection3d')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-cube"></i></span><span data-i18n="menu.fxProjection3d">Projection 3D…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('tileReflect')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTileReflect"></span><span data-i18n="menu.fxTileReflect">Réflexion mosaïque…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('twist')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxTwist"></span><span data-i18n="menu.fxTwist">Torsion…</span></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('wave')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxWave"></span><span data-i18n="menu.fxWave">Onde…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxBlur">Flous</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxNoise">Bruit</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('blur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxBlurSimple"></span><span data-i18n="menu.fxBlurSimple">Flou simple…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gaussian')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxGaussian"></span><span data-i18n="menu.fxGaussian">Flou gaussien…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('motionblur')"><span class="menu-icon"><i class="fa-solid fa-arrows-left-right"></i></span><span>Flou de mouvement…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('radialblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRadialBlur"></span><span data-i18n="menu.fxRadialBlur">Flou radial…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('zoomblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxZoomBlur"></span><span data-i18n="menu.fxZoomBlur">Flou de zoom…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('surfaceblur')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSurfaceBlur"></span><span data-i18n="menu.fxSurfaceBlur">Flou de surface…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('fragment')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxFragment"></span><span data-i18n="menu.fxFragment">Fragment…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unfocus')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxUnfocus"></span><span data-i18n="menu.fxUnfocus">Flou d'objectif…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('addnoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxAddNoise"></span><span data-i18n="pdn.fxAddNoise">Ajouter du bruit…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('median')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMedian"></span><span data-i18n="pdn.fxMedian">Médiane…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('reducenoise')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxReduceNoise"></span><span data-i18n="pdn.fxReduceNoise">Réduire le bruit…</span></li>
+                                <li role="menuitem" class="divider"></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('digitalpattern')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDigitalPattern"></span><span data-i18n="menu.fxDigitalPattern">Tramage numérique…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vhs')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVhs"></span><span data-i18n="menu.fxVhs">Effet VHS…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxObject">Objet</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxObject">Objet</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxContour"></span><span data-i18n="menu.fxContour">Contour (Transparence)…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span data-i18n="menu.fxDropShadow">Ombre portée…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dropshadow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxDropShadow"></span><span data-i18n="pdn.fxDropShadow">Ombre portée…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('featherobj')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-feather"></i></span><span>Adoucir le contour de l'objet…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('contour')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxContour"></span><span data-i18n="pdn.fxOutlineObject">Contour d'objet…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxPhoto">Photo</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxPhoto">Photo</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRedEyeRemove"></span><span data-i18n="menu.fxRedEyeRemove">Supprimer les yeux rouges…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftGlow"></span><span data-i18n="menu.fxSoftGlow">Lueur douce…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('sharpen')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjSharpen"></span><span data-i18n="menu.adjSharpen">Netteté…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unsharp')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjUnsharp"></span><span data-i18n="menu.adjUnsharp">Masque flou (netteté)…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softenportrait')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftenPortrait"></span><span data-i18n="menu.fxSoftenPortrait">Portrait adouci…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVignette"></span><span data-i18n="menu.fxVignette">Vignettage…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softglow')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftGlow"></span><span data-i18n="pdn.fxGlow">Éclat…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('redeyeremove')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxRedEyeRemove"></span><span data-i18n="pdn.fxRedEye">Suppression des yeux rouges…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('unsharp')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.adjSharpen"></span><span data-i18n="pdn.fxSharpen">Améliorer la netteté…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('softenportrait')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSoftenPortrait"></span><span data-i18n="pdn.fxSoftenPortrait">Adoucir le portrait…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('dream')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-cloud-moon"></i></span><span>Rêve…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('fadeedge')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-circle-half-stroke"></i></span><span>Fondu des bords…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('removedust')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-broom"></i></span><span>Supprimer la poussière…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('straighten')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-ruler-horizontal"></i></span><span data-i18n="pdn.fxStraighten">Redresser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('vignette')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxVignette"></span><span data-i18n="pdn.fxVignette">Vignette…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxRender">Rendu</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxRender">Rendu</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('clouds')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxClouds"></span><span data-i18n="menu.fxClouds">Nuages…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('julia')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxJulia"></span><span data-i18n="menu.fxJulia">Fractale de Julia…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mandelbrot')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMandelbrot"></span><span data-i18n="menu.fxMandelbrot">Fractale de Mandelbrot…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('clouds')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxClouds"></span><span data-i18n="pdn.fxClouds">Nuages…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('gridcheck')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-border-all"></i></span><span>Grille / Damier…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('julia')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxJulia"></span><span data-i18n="pdn.fxJulia">Fractale de Julia…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('mandelbrot')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxMandelbrot"></span><span data-i18n="pdn.fxMandelbrot">Fractale de Mandelbrot…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('turbulence')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-wind"></i></span><span data-i18n="pdn.fxTurbulence">Turbulence…</span></li>
                             </ul>
                         </li>
-                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.fxStylize">Styliser</span>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="pdn.fxStylize">Styliser</span>
                             <ul role="menu">
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEdges"></span><span data-i18n="menu.fxEdges">Contours…</span></li>
-                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEmboss"></span><span data-i18n="menu.fxEmboss">Relief…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('edges')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEdges"></span><span data-i18n="pdn.fxEdgeDetect">Détection des bords…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('emboss')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxEmboss"></span><span data-i18n="pdn.fxEmboss">Embosser…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('outline')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-draw-polygon"></i></span><span data-i18n="pdn.fxOutline">Contour…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="applyEffect('relief')"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-mountain"></i></span><span data-i18n="pdn.fxRelief">Mise en relief…</span></li>
+                                <li role="menuitem" class="divider"></li>
                                 <li role="menuitem" class="menu-row-icon" onclick="applyEffect('solarize')"><span class="menu-icon" aria-hidden="true" data-icon-key="menu.fxSolarize"></span><span data-i18n="menu.fxSolarize">Solariser…</span></li>
+                            </ul>
+                        </li>
+                        <li role="menuitem" class="divider"></li>
+                        <li role="menuitem" aria-haspopup="true"><span data-i18n="menu.imageCutout">Détourage</span>
+                            <ul role="menu">
+                                <li role="menuitem" class="menu-row-icon" onclick="illuRemoveBackgroundIntelligent()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageRemoveBg">Supprimer le fond (IA)…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="illuGuidedCutoutToolStart()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-eraser" aria-hidden="true"></i></span><span data-i18n="menu.imageCutoutGuided">Détourage par sélection…</span></li>
+                                <li role="menuitem" class="menu-row-icon" onclick="showContentAwareFillDialog()"><span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span data-i18n="menu.editContentAwareFill">Remplissage contenu pris en compte…</span></li>
                             </ul>
                         </li>
                     </ul>
@@ -749,6 +780,28 @@
                                 onclick="typeof window.printCanvasLive==='function'&&window.printCanvasLive()"><i
                                     class="fa-solid fa-print" aria-hidden="true"></i></button>
                             <span class="illu-menubar-toolbar__sep" aria-hidden="true"></span>
+                            <!-- Presse-papiers / sélection : affichés seulement avec la barre « Style Paint.NET » -->
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only" id="illu-tb-cut"
+                                data-i18n-title="ctx.cut" title="Couper"
+                                onclick="typeof window.ctxCut==='function'&&window.ctxCut()"><i
+                                    class="fa-solid fa-scissors" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only" id="illu-tb-copy"
+                                data-i18n-title="ctx.copy" title="Copier"
+                                onclick="typeof window.ctxCopy==='function'&&window.ctxCopy()"><i
+                                    class="fa-solid fa-copy" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only" id="illu-tb-paste"
+                                data-i18n-title="ctx.paste" title="Coller"
+                                onclick="typeof window.ctxPaste==='function'&&window.ctxPaste()"><i
+                                    class="fa-solid fa-paste" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only" id="illu-tb-crop"
+                                title="Rogner à la sélection (Ctrl+Maj+X)"
+                                onclick="typeof EditorManager!=='undefined'&&EditorManager.cropToSelection&&EditorManager.cropToSelection()"><i
+                                    class="fa-solid fa-crop-simple" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only" id="illu-tb-deselect"
+                                data-i18n-title="title.btnDeselect" title="Désélectionner (Ctrl+D)"
+                                onclick="typeof window.finalizePendingPixelLiveEdits==='function'&&window.finalizePendingPixelLiveEdits();typeof EditorManager!=='undefined'&&EditorManager.deselectAll&&EditorManager.deselectAll()"><i
+                                    class="fa-solid fa-rectangle-xmark" aria-hidden="true"></i></button>
+                            <span class="illu-menubar-toolbar__sep illu-pdn-tb-only" aria-hidden="true"></span>
                             <button type="button" class="illu-menubar-icon-btn" id="illu-tb-undo"
                                 data-i18n-title="menubar.tbUndo" title="Annuler"
                                 onclick="typeof undo==='function'&&undo()"><i class="fa-solid fa-rotate-left"
@@ -773,11 +826,19 @@
                                 title="Adapter au workspace"
                                 onclick="typeof fitActiveProjectZoomToWorkspace==='function'&&fitActiveProjectZoomToWorkspace()"><i
                                     class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only opt-toggle-pixelgrid" id="illu-tb-pixel-grid"
+                                data-i18n-title="menu.winPixelGrid" title="Grille de pixels"
+                                onclick="window.toggleIlluPixelGrid&&window.toggleIlluPixelGrid()"><i
+                                    class="fa-solid fa-table-cells" aria-hidden="true"></i></button>
+                            <button type="button" class="illu-menubar-icon-btn illu-pdn-tb-only opt-toggle-rulers" id="illu-tb-rulers"
+                                data-i18n-title="menu.winRulers" title="Règles"
+                                onclick="window.toggleIlluRulers&&window.toggleIlluRulers()"><i
+                                    class="fa-solid fa-ruler-combined" aria-hidden="true"></i></button>
                         </div>
                         <!-- Habillage dans css/main.css (.menubar-contact-btn) : en style en ligne
                              avec !important, aucun thème ne pouvait le corriger — d'où un texte
                              blanc sur fond clair sur les thèmes macOS. -->
-                        <div class="menubar-contact-btn" onclick="openContactModal('MasterPaint')" role="button">
+                        <div class="menubar-contact-btn" onclick="openContactModal('MasterPaint')" role="button" data-i18n-title="menu.contact" title="Signaler un bug">
                             <span class="menu-icon" aria-hidden="true"><i class="fa-solid fa-bug"
                                     aria-hidden="true"></i></span>
                             <span data-i18n="menu.contact">Signaler un bug</span>
@@ -787,6 +848,8 @@
             </div> <!-- End of app-header-left -->
  
             <!-- Tab Bar for MDI (document tabs rendered as miniature boxes with text above thumbnail) -->
+
+
 
         </div> <!-- End of app-header-container -->
 
@@ -4027,6 +4090,7 @@
                                 <label class="settings-accent-swatch" data-i18n-title="accent.teal"><input type="radio"
                                         name="welcome-accent" value="#0d7a7a" checked><span class="settings-accent-face"
                                         style="background:#0d7a7a;" aria-hidden="true"></span></label>
+                                <label class="settings-accent-swatch" data-i18n-title="accent.pdnBlue" title="Bleu Paint.NET"><input type="radio" name="welcome-accent" value="#0078d4"><span class="settings-accent-face" style="background:#0078d4;" aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.cyan"><input type="radio"
                                         name="welcome-accent" value="#0891b2"><span class="settings-accent-face"
                                         style="background:#0891b2;" aria-hidden="true"></span></label>
@@ -4070,6 +4134,17 @@
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
                                         </div>
+                                </div>
+                                <div class="settings-table-row">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.toolbarStyle">Barre d'options</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-toolbar-style-row" id="welcome-toolbar-style-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="ribbon" aria-pressed="true" data-i18n="settings.toolbarStyleRibbon">Ruban MasterPaint</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="pdn" aria-pressed="false" data-i18n="settings.toolbarStylePdn">Style Paint.NET</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="settings-table-row">
                                     <div class="settings-table-main" style="display: flex; align-items: center; gap: 4px;">
@@ -4328,6 +4403,7 @@
                                         name="settings-accent" value="#0d7a7a" checked><span
                                         class="settings-accent-face" style="background:#0d7a7a;"
                                         aria-hidden="true"></span></label>
+                                <label class="settings-accent-swatch" data-i18n-title="accent.pdnBlue" title="Bleu Paint.NET"><input type="radio" name="settings-accent" value="#0078d4"><span class="settings-accent-face" style="background:#0078d4;" aria-hidden="true"></span></label>
                                 <label class="settings-accent-swatch" data-i18n-title="accent.cyan"><input type="radio"
                                         name="settings-accent" value="#0891b2"><span class="settings-accent-face"
                                         style="background:#0891b2;" aria-hidden="true"></span></label>
@@ -4370,6 +4446,17 @@
                                         <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-theme-variant-row illu-dev-only" id="settings-ui-base-row-mac" role="group">
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="maclion" aria-pressed="false">Mac OS X Lion</button>
                                             <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="macmodern" aria-pressed="false">macOS</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-table-row">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title" data-i18n="settings.toolbarStyle">Barre d'options</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <div class="illu-scope-btn-row illu-settings-scope-btn-row illu-toolbar-style-row" id="settings-toolbar-style-row" role="group">
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn illu-scope-btn--active" data-value="ribbon" aria-pressed="true" data-i18n="settings.toolbarStyleRibbon">Ruban MasterPaint</button>
+                                            <button type="button" class="illu-scope-btn illu-settings-scope-btn" data-value="pdn" aria-pressed="false" data-i18n="settings.toolbarStylePdn">Style Paint.NET</button>
                                         </div>
                                     </div>
                                 </div>
@@ -4651,6 +4738,24 @@
                             </div>
                         </fieldset>
                         <fieldset class="settings-fieldset-compact settings-fieldset--flex-rows">
+                            <legend>Souris</legend>
+                            <div class="settings-table">
+                                <div class="settings-table-row settings-table-row--flex">
+                                    <div class="settings-table-main">
+                                        <div class="settings-table-title">Molette de la souris :</div>
+                                        <div class="settings-table-hint">Zoom : la molette zoome (Maj = défilement horizontal).
+                                            Défilement : la molette fait défiler la toile (Maj = horizontal, Ctrl = zoom).</div>
+                                    </div>
+                                    <div class="settings-table-control">
+                                        <select id="settings-wheel-mode" class="settings-table-input">
+                                            <option value="zoom">Zoom</option>
+                                            <option value="scroll">Défilement</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="settings-fieldset-compact settings-fieldset--flex-rows">
                             <legend data-i18n="settings.dataTitle">Données</legend>
                             <div class="settings-table">
                                 <div class="settings-table-row settings-table-row--flex">
@@ -4868,6 +4973,9 @@
     <script src="js/app/WebGLMaskBlend.js"></script>
     <script src="js/app/text-fonts.js"></script>
     <script src="js/WasmManager.js"></script>
+    <!-- Moteur d'effets Rust (build/masterpaint_core.wasm, sources : rust/masterpaint-core) -->
+    <script src="js/rust/RustCore.js"></script>
+    <script src="js/rust/rust-effect-params.js"></script>
     <script src="js/VectorWasm.js"></script>
     <script src="js/app/illu-svg-import.js"></script>
     <script src="js/app/IlluVectorize.js"></script>
@@ -4897,6 +5005,8 @@
     <script src="js/effects/halftone-core.js"></script>
     <script src="js/effects/EffectDialogUI.js"></script>
     <script src="js/effects/FilterManager.js"></script>
+    <script src="js/effects/pdn-dialogs.js"></script>
+    <script src="js/effects/pdn-commands.js"></script>
     <script src="js/app/PixelOverlay.js"></script>
     <script src="js/app/PixelTextEdit.js"></script>
     <script src="js/effects/photo-pipeline.js"></script>
@@ -4918,6 +5028,7 @@
     <script src="js/effects/pdn-effects.js"></script>
     <script src="js/app/WorkspaceIO.js"></script>
     <script src="js/app/i18n.js"></script>
+    <script src="js/app/i18n-pdn.js"></script>
     <script src="js/app/PhotoModeManager.js"></script>
     <script src="js/app/illu-svg-mode.js"></script>
     <script src="js/app/illu-menu-safe-triangle.js"></script>
@@ -4939,15 +5050,20 @@
     <script src="js/app/app.js"></script>
     <script src="js/app/illu-image-tools.js"></script>
     <script src="js/app/Listener.js"></script>
+    <script src="js/app/rust-try.js"></script>
     <script src="js/app/illu-mobile.js"></script>
     <script src="js/app/illu-mobile-shell.js"></script>
     <script src="js/app/illu-mob-tool-switch.js"></script>
     <script src="js/app/illu-pwa.js"></script>
     <script src="js/app/IconViewer.js"></script>
+    <script src="js/app/pdn-chrome.js"></script>
     <script>
         (async function () {
             const P = window.IlluProgress;
             // Initialize Wasm Engine as early as possible
+            if (window.MasterPaintRust) {
+                window.MasterPaintRust.init();
+            }
             if (window.MasterPaintWasm) {
                 window.MasterPaintWasm.init();
             }
@@ -5298,7 +5414,7 @@
             }
         });
     </script>
-    <script src="js/contact.js?v=20260628-cors"></script>
+    
     <script src="js/VectorProperties.js"></script>
     <script id="popover-fallback-script">
         document.addEventListener('beforetoggle', (e) => {

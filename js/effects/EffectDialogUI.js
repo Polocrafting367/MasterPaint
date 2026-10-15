@@ -287,6 +287,109 @@
                 row.insertBefore(readout, track.nextSibling);
             }
         }
+        attachValueEditor(row, input, track, readout && readout !== input && !readout.contains(track) ? readout : null, label);
+    }
+
+    /* ————————————————————————————————————————————————————————————
+     *  Valeur éditable + retour à la valeur par défaut (comme Paint.NET 5)
+     * ———————————————————————————————————————————————————————————— */
+
+    /** Notifie le gabarit comme le ferait l'utilisateur : `oninput=` en ligne, aperçu, persistance. */
+    function fire(input) {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /**
+     * Unité affichée par le gabarit après le nombre (« ° », « % », « px »), ou `null` si
+     * l'affichage n'est pas « nombre + unité » (texte libre, valeur reformatée) : dans ce
+     * cas on garde l'affichage d'origine plutôt que de perdre une information.
+     */
+    function unitOf(text, value) {
+        const t = String(text || '').trim();
+        const m = /^(-?\d+(?:[.,]\d+)?)\s*(.{0,4})$/.exec(t);
+        if (!m) return null;
+        if (Math.abs(parseFloat(m[1].replace(',', '.')) - parseFloat(value)) > 1e-6) return null;
+        return m[2].trim();
+    }
+
+    /**
+     * Remplace l'affichage en lecture seule par une case numérique (saisie au clavier,
+     * flèches ▲▼, molette) et ajoute un bouton ⟲ « valeur par défaut » par réglage.
+     * L'affichage d'origine reste dans le DOM (masqué) : le code qui l'écrit continue
+     * de fonctionner et sert de signal pour resynchroniser la case.
+     */
+    function attachValueEditor(row, input, track, readout, label) {
+        if (input.dataset.fxEditor) return;
+        input.dataset.fxEditor = '1';
+        let anchor = readout && readout.parentElement === row ? readout : track;
+        let num = null;
+        if (readout && readout.tagName === 'INPUT') {
+            num = readout;
+        } else {
+            const unit = readout ? unitOf(readout.textContent, input.value) : '';
+            if (unit !== null) {
+                num = document.createElement('input');
+                num.type = 'number';
+                num.className = 'fx-num';
+                num.min = input.min;
+                num.max = input.max;
+                num.step = input.step || '1';
+                num.value = input.value;
+                if (label) num.setAttribute('aria-label', label.textContent.trim());
+                row.insertBefore(num, anchor.nextSibling);
+                anchor = num;
+                if (unit) {
+                    const u = document.createElement('span');
+                    u.className = 'fx-unit';
+                    u.textContent = unit;
+                    row.insertBefore(u, anchor.nextSibling);
+                    anchor = u;
+                }
+                if (readout) readout.classList.add('fx-val--mirror');
+                const sync = () => {
+                    if (document.activeElement !== num) num.value = input.value;
+                };
+                input.addEventListener('input', sync);
+                input.addEventListener('change', sync);
+                /* Les boutons « RAZ » et la restauration des réglages écrivent l'affichage
+                   sans événement : on suit ses changements de texte. */
+                if (readout) new MutationObserver(sync).observe(readout, { childList: true, characterData: true, subtree: true });
+                num.addEventListener('input', () => {
+                    const v = parseFloat(String(num.value).replace(',', '.'));
+                    if (!Number.isFinite(v)) return;
+                    const lo = parseFloat(input.min);
+                    const hi = parseFloat(input.max);
+                    const c = Math.min(Number.isFinite(hi) ? hi : v, Math.max(Number.isFinite(lo) ? lo : v, v));
+                    if (String(c) !== input.value) {
+                        input.value = String(c);
+                        fire(input);
+                    }
+                });
+                num.addEventListener('blur', () => {
+                    num.value = input.value;
+                });
+            } else if (readout && readout.parentElement === row) {
+                anchor = readout;
+            }
+        }
+        /* Valeur par défaut = valeur écrite dans le gabarit (celle de Paint.NET pour ses effets). */
+        const def = input.getAttribute('value');
+        if (def == null || def === '') return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fx-reset';
+        btn.title = 'Valeur par défaut (' + def + ')';
+        btn.setAttribute('aria-label', btn.title);
+        btn.innerHTML = '<i class="fa-solid fa-rotate-left" aria-hidden="true"></i>';
+        btn.addEventListener('click', () => {
+            if (input.value === def) return;
+            input.value = def;
+            if (num && num !== readout) num.value = def;
+            if (readout && readout.tagName !== 'INPUT' && readout.classList.contains('fx-val--mirror')) readout.textContent = def;
+            fire(input);
+        });
+        row.insertBefore(btn, anchor.nextSibling);
     }
 
     /** Compacte les regroupements (`fieldset`/`legend`) et les paragraphes d'aide. */

@@ -466,6 +466,43 @@
         return out;
     }
 
+    /** Ordre des paramètres du moteur Rust (rust/masterpaint-core/src/fx_vhs.rs). */
+    const VHS_PARAM_ORDER = [
+        'chroma_bleed', 'chroma_blur', 'chroma_saturation', 'edge_sat', 'shadow_sat',
+        'hs_sat', 'chroma_phase', 'shift_y', 'shift_r', 'shift_g',
+        'shift_b', 'crop_padding', 'crop_feather', 'head_switch_freq', 'pixel_size',
+        'luma_contrast', 'luma_brightness', 'luma_smear', 'right_pink', 'right_pink_width',
+        'glitch_intensity', 'head_switch_wave', 'head_switch_noise', 'hs_color_tear',
+        'tear_max_height', 'tear_length', 'tear_thickness', 'jitter_amp', 'dropout_chance',
+        'glitch_jitter', 'glitch_dropouts', 'glitch_tears', 'glitch_noise',
+        'head_switch_rows', 'head_switch_pull', 'jitter_freq', 'dropout_len', 'dropout_thickness',
+        'tear_color', 'noise_intensity_y', 'noise_intensity_c', 'apply_color_cast', 'cast_r', 'cast_g', 'cast_b',
+        'enable_y', 'enable_r', 'enable_g', 'enable_b'
+    ];
+    const TEAR_COLORS = { cyan: 0, magenta: 1, red: 2, green: 3 };
+
+    /**
+     * Cœur VHS : moteur Rust s'il est chargé (même calcul, bien plus rapide), sinon JavaScript.
+     * Le hasard du Rust a sa propre graine : bruit et déchirures diffèrent d'un rendu à l'autre,
+     * comme avec Math.random().
+     */
+    function illuProcessVhsFast(buffer, width, height, p, effectTime) {
+        const RS = global.MasterPaintRust;
+        if (RS && RS.isLoaded && typeof RS.supports === 'function' && RS.supports('vhs')) {
+            const params = VHS_PARAM_ORDER.map((k) => {
+                const v = p[k];
+                if (k === 'tear_color') return v in TEAR_COLORS ? TEAR_COLORS[v] : 4;
+                if (typeof v === 'boolean') return v ? 1 : 0;
+                const n = Number(v);
+                return Number.isFinite(n) ? n : 0;
+            });
+            params.push(Number(effectTime) || 0, (Math.random() * 0xffffffff) >>> 0 || 1);
+            const r = RS.apply('vhs', buffer, width, height, params, 0, height);
+            if (r) return new Uint8Array(r.buffer, r.byteOffset, r.length);
+        }
+        return illuProcessVhsCore(buffer, width, height, p, effectTime);
+    }
+
     /**
      * Pré-traitement « résolution / codec » identique à VIDEO (Analog Video Processor Pro) :
      *  - band_patina (< 1.0) : réduit la résolution interne (patine / flou de bande) ;
@@ -505,7 +542,7 @@
             }
         }
 
-        const out = illuProcessVhsCore(src, iw, ih, p, effectTime);
+        const out = illuProcessVhsFast(src, iw, ih, p, effectTime);
 
         if (scaledDown && hasOC) {
             try {

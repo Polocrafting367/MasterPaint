@@ -51,6 +51,13 @@ var document = {
     } catch (e) {
         console.warn('[filter-worker] WasmManager.js optional load failed', e);
     }
+    /* Moteur Rust (prioritaire) : build/masterpaint_core.wasm */
+    try {
+        illuWorkerImport('../rust/RustCore.js');
+        illuWorkerImport('../rust/rust-effect-params.js');
+    } catch (e) {
+        console.warn('[filter-worker] moteur Rust indisponible', e);
+    }
 })();
 
 let currentImageData = null;
@@ -438,7 +445,25 @@ const FilterManager = {
             this.ctx.putImageData(out, 0, 0);
         };
         const sy = FilterManager._startY || 0, ey = FilterManager._endY || h;
-        
+
+        // --- Moteur Rust (WASM) : prioritaire, calcule exactement la bande [sy, ey) ---
+        const R = self.MasterPaintRust;
+        if (R && R.isLoaded && R.supports(this.currentEffect) && self.MasterPaintRustParams) {
+            const p = self.MasterPaintRustParams.build(this.currentEffect, vals, ps, {
+                hsvMixParams: FilterManager._hsvMixParams,
+                cbParams: FilterManager._cbParams,
+                seed: vals._seed
+            });
+            if (p) {
+                this.reportProgress(5, 'Moteur Rust');
+                const out = R.apply(this.currentEffect, srcOrig, w, h, p, sy, ey);
+                if (out) {
+                    this.ctx.putImageData(new ImageData(out, w, h), 0, 0);
+                    return;
+                }
+            }
+        }
+
         // --- High Performance Wasm Path ---
         // brightness avec température/teinte : le Wasm ne les gère pas → forcer le chemin JS
         const _bcExtra = this.currentEffect === 'brightness' && ((val('ef-bc-temp') || 0) !== 0 || (val('ef-bc-tint') || 0) !== 0);
@@ -1601,6 +1626,10 @@ self.onmessage = async function(e) {
         const d = e.data; FilterManager._startY=d.startY||0; FilterManager._endY=d.endY||d.h; FilterManager._margin=d.margin||0;
         Object.assign(vals, d.params); FilterManager.originalImageData = new ImageData(new Uint8ClampedArray(d.srcOrig),d.w,d.h);
         FilterManager.currentEffect=d.effect; FilterManager._jobId=d.jobId; FilterManager._effectPreviewPxScale=d.ps;
+        if(self.MasterPaintRust){
+            self.__mpRustEnabled = d.rustEnabled !== false;
+            if(self.__mpRustEnabled && !self.MasterPaintRust.isLoaded) await self.MasterPaintRust.init();
+        }
         if(typeof MasterPaintWasm!=='undefined'){
             MasterPaintWasm.setSettings({ wasmEnabled:d.wasmEnabled, webglEnabled:d.webglEnabled });
             if(d.wasmEnabled && !MasterPaintWasm.isLoaded) await MasterPaintWasm.init();

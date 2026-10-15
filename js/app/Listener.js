@@ -385,6 +385,15 @@ if (workspaceEl) {
             return;
         }
 
+        // Paramètre « Molette de la souris » : défilement (Ctrl = zoom) ou zoom
+        if (p && window.illuWheelMode() === 'scroll' && !e.ctrlKey) {
+            e.preventDefault();
+            p.canvasPanX = (p.canvasPanX || 0) - e.deltaX;
+            p.canvasPanY = (p.canvasPanY || 0) - e.deltaY;
+            EditorManager.applyCanvasViewportOnly();
+            return;
+        }
+
         // Molette sur workspace / canevas : zoom (Ctrl optionnel, pixel et SVG)
         if (p) {
             e.preventDefault();
@@ -392,6 +401,25 @@ if (workspaceEl) {
         }
     }, { passive: false });
 }
+
+/** Molette : « zoom » (défaut) ou « scroll » — Paramètres › Souris (partagé avec la version Rust). */
+window.illuWheelMode = function () {
+    try {
+        return localStorage.getItem('illu_wheel_mode') === 'scroll' ? 'scroll' : 'zoom';
+    } catch (e) {
+        return 'zoom';
+    }
+};
+(function bindWheelSetting() {
+    const sel = document.getElementById('settings-wheel-mode');
+    if (!sel) return;
+    sel.value = window.illuWheelMode();
+    sel.addEventListener('change', () => {
+        try {
+            localStorage.setItem('illu_wheel_mode', sel.value === 'scroll' ? 'scroll' : 'zoom');
+        } catch (e) { /* stockage indisponible */ }
+    });
+})();
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -552,6 +580,13 @@ window.addEventListener('keydown', (e) => {
         } else if (typeof EditorManager.deselectAll === 'function') {
             EditorManager.deselectAll();
         }
+        return;
+    }
+
+    /* Ctrl+Maj+D : dupliquer le calque (raccourci de Paint.NET) */
+    if (k === 'd' && e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        if (typeof EditorManager.duplicateActiveLayer === 'function') EditorManager.duplicateActiveLayer();
         return;
     }
 
@@ -1300,22 +1335,30 @@ window.illuRecalculateTabBarWidth = function () {
         if (menuWrapper) {
             const menuRect = menuWrapper.getBoundingClientRect();
             const availableWidth = window.innerWidth - menuRect.right - 25;
-            const finalWidth = Math.max(76, availableWidth);
-            tabBarOuter.style.setProperty('width', `${finalWidth}px`, 'important');
-            tabBarOuter.style.setProperty('max-width', `${finalWidth}px`, 'important');
+            const finalWidth = `${Math.max(76, availableWidth)}px`;
+            // n'écrire que si la largeur change (chaque écriture invalidait la mise en page)
+            if (tabBarOuter.style.getPropertyValue('width') !== finalWidth) {
+                tabBarOuter.style.setProperty('width', finalWidth, 'important');
+                tabBarOuter.style.setProperty('max-width', finalWidth, 'important');
+            }
         } else {
             tabBarOuter.style.removeProperty('width');
             tabBarOuter.style.removeProperty('max-width');
         }
     }
 
-    // Detect overflow and toggle navigation buttons visibility after layout settles
-    requestAnimationFrame(() => {
+    // Détection du débordement après mise en page : une seule mesure par image, même si la
+    // fonction est appelée plusieurs fois (chaque mesure forçait une mise en page complète).
+    if (window._illuTabOverflowRaf) return;
+    window._illuTabOverflowRaf = requestAnimationFrame(() => {
+        window._illuTabOverflowRaf = 0;
         const scrollBox = document.getElementById('tab-bar-scroll');
         const tabBarOuter = document.getElementById('tab-bar-outer');
         if (scrollBox && tabBarOuter) {
             const hasOverflow = scrollBox.scrollWidth > scrollBox.clientWidth;
-            tabBarOuter.classList.toggle('tab-bar-has-overflow', hasOverflow);
+            if (tabBarOuter.classList.contains('tab-bar-has-overflow') !== hasOverflow) {
+                tabBarOuter.classList.toggle('tab-bar-has-overflow', hasOverflow);
+            }
         }
     });
 };

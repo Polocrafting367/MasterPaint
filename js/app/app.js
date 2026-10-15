@@ -3131,6 +3131,11 @@ window.syncColorPanelToUILayout = function () {
             }
         }
     }
+    /* Curseurs RVB / TSV visibles : poser tout de suite leurs dégradés (sinon pistes grises
+     * jusqu'au premier changement de couleur). */
+    if (slidersPanel.style.display !== 'none' && window.EditorManager && typeof window.EditorManager.syncUItoState === 'function') {
+        window.EditorManager.syncUItoState();
+    }
     if (typeof window.refreshPaletteGridLayout === 'function') window.refreshPaletteGridLayout();
 };
 
@@ -3471,7 +3476,8 @@ function illuBindDevModeToggles() {
 }
 window.illuBindDevModeToggles = illuBindDevModeToggles;
 
-/** Variantes de thème d'interface (bureau). Catégorie Windows : flat, classic. macOS : maclion, macmodern. */
+/** Variantes de thème d'interface (bureau). Catégorie Windows : flat, classic. macOS : maclion, macmodern.
+ *  (Paint.NET n'est pas un thème mais une mise en page : voir js/app/pdn-chrome.js.) */
 const ILLU_THEME_VARIANTS = ['flat', 'classic', 'maclion', 'macmodern'];
 
 /** Variantes réservées au mode développement (pas encore prêtes pour tout le monde). */
@@ -3488,6 +3494,58 @@ function illuNormalizeThemeVariant(v) {
     return v;
 }
 window.illuNormalizeThemeVariant = illuNormalizeThemeVariant;
+
+/* ---- Barre d'options : ruban Microsoft ou barre Paint.NET -----------------
+ * Les deux affichent les mêmes contrôles (#tool-options-container) ; seule la
+ * mise en forme change (css/toolbar-pdn.css sous body.illu-toolbar-pdn).
+ * Le téléphone garde toujours le ruban adapté au tactile. */
+const ILLU_TOOLBAR_STYLE_KEY = 'illu_toolbar_style';
+
+/** Défaut : ruban MasterPaint. « pdn » = affichage inspiré de Paint.NET, choisi et mémorisé par l'utilisateur. */
+function illuToolbarStyle() {
+    try {
+        return localStorage.getItem(ILLU_TOOLBAR_STYLE_KEY) === 'pdn' ? 'pdn' : 'ribbon';
+    } catch (e) {
+        return 'ribbon';
+    }
+}
+window.illuToolbarStyle = illuToolbarStyle;
+
+function illuApplyToolbarStyleMode() {
+    if (!document.body) return;
+    // Barre Paint.NET seulement dans la mise en page Paint.NET ; Photoshop / Téléphone gardent le ruban.
+    if (typeof window.illuSyncPdnLayoutClass === 'function') window.illuSyncPdnLayoutClass();
+    const pdn = illuToolbarStyle() === 'pdn' && document.body.classList.contains('illu-layout-pdn');
+    const changed = document.body.classList.contains('illu-toolbar-pdn') !== pdn;
+    document.body.classList.toggle('illu-toolbar-pdn', pdn);
+    // Aspect Paint.NET (menus, fenêtres, barre d'état) : lié à la disposition « Paint.NET »,
+    // pas au choix ruban / barre Paint.NET — ce choix ne change que la barre d'options.
+    // Windows 98 / macOS gardent leur visuel.
+    document.body.classList.toggle(
+        'illu-pdn-look',
+        document.body.classList.contains('illu-layout-pdn') &&
+            !document.body.classList.contains('illu-theme-classic') &&
+            !document.body.classList.contains('illu-theme-mac')
+    );
+    document.querySelectorAll('.illu-toolbar-style-row').forEach((row) => illuSettingsScopeSetActive(row, illuToolbarStyle()));
+    if (changed) {
+        requestAnimationFrame(() => {
+            if (typeof window.illuSyncRibbonOverflow === 'function') window.illuSyncRibbonOverflow();
+            if (typeof window.updateToolOptionsBar === 'function') window.updateToolOptionsBar();
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+}
+window.illuApplyToolbarStyleMode = illuApplyToolbarStyleMode;
+
+function illuSetToolbarStyle(style) {
+    try {
+        localStorage.setItem(ILLU_TOOLBAR_STYLE_KEY, style === 'pdn' ? 'pdn' : 'ribbon');
+    } catch (e) { /* ignore */ }
+    illuApplyToolbarStyleMode();
+}
+window.illuSetToolbarStyle = illuSetToolbarStyle;
+window.addEventListener('illu-mobile-ui-changed', illuApplyToolbarStyleMode);
 
 /**
  * Active le bon bouton parmi TOUTES les rangées de variante (Windows + macOS),
@@ -3566,6 +3624,8 @@ function illuBindSettingsScopeRows() {
                     localStorage.setItem(ILLU_RESAMPLE_KEY, value);
                     window.illuInterpolationMode = value;
                 } catch (e) { /* ignore */ }
+            } else if (row.classList.contains('illu-toolbar-style-row')) {
+                illuSetToolbarStyle(value);
             } else if (row.classList.contains('illu-theme-variant-row')) {
                 try {
                     localStorage.setItem('illu_theme_variant', illuNormalizeThemeVariant(value));
@@ -3611,6 +3671,7 @@ function syncSettingsFormFromStorage() {
     syncSettingsLangScopeFromStorage();
     illuApplyDevMode();
     syncSettingsThemeVariantScopeFromStorage();
+    document.querySelectorAll('.illu-toolbar-style-row').forEach((row) => illuSettingsScopeSetActive(row, illuToolbarStyle()));
     syncSettingsBetaSkinFromStorage();
     syncSettingsIconStyleFromStorage();
     syncSettingsControlsLayoutFromStorage();
@@ -4890,6 +4951,7 @@ window.IlluTheme = {
         '#166534',
         '#059669',
         '#0d7a7a',
+        '#0078d4',
         '#0891b2',
         '#2563eb',
         '#0f2d5c',
@@ -4998,10 +5060,16 @@ window.IlluTheme = {
         setLink(macLionLink, isMacLion);
         setLink(macModernLink, isMacModern);
 
+        // Classe de thème lue par la mise en page Paint.NET (css/theme-pdn.css) : ses couleurs
+        // Paint.NET ne s'appliquent qu'au thème plat, Windows 98 / macOS gardent leur visuel.
+        document.body.classList.toggle('illu-theme-classic', isClassic);
+
         // Classes body pour permettre aux surcouches macOS de cibler le chrome.
         document.body.classList.toggle('illu-theme-mac', isMac);
         document.body.classList.toggle('illu-theme-maclion', isMacLion);
         document.body.classList.toggle('illu-theme-macmodern', isMacModern);
+        if (typeof window.illuSyncPdnLayoutClass === 'function') window.illuSyncPdnLayoutClass();
+        if (typeof illuApplyToolbarStyleMode === 'function') illuApplyToolbarStyleMode();
 
         const deskHex = '#0d8f8f';
         window._illuSplashDeskColor = deskHex;

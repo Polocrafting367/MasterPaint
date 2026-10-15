@@ -21,7 +21,7 @@ function openContactModal(titre) {
         modal.style.display = 'none';
         modal.style.position = 'fixed';
         modal.style.inset = '0';
-        modal.style.zIndex = '5000';
+        modal.style.zIndex = '2147483000'; // au-dessus de tout, écran de démarrage compris
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
         modal.style.padding = '16px';
@@ -161,3 +161,23 @@ async function sendContactData() {
         }
     }
 }
+
+/**
+ * masterpaint.fr/#contact : ouvre le formulaire tout de suite, sans attendre la fin du
+ * chargement de MasterPaint (ce script est chargé au tout début de <body>).
+ */
+(function illuContactFromHash() {
+    const isContact = () => /^#contact\b/i.test(window.location.hash || '');
+    const open = () => {
+        if (isContact()) openContactModal('MasterPaint');
+    };
+    if (document.body) open();
+    else document.addEventListener('DOMContentLoaded', open, { once: true });
+    window.addEventListener('hashchange', open);
+    // à la fermeture, on retire #contact de l'adresse (rechargement sans réouverture)
+    const close0 = window.closeContactModal;
+    window.closeContactModal = function () {
+        close0();
+        if (isContact()) history.replaceState(null, '', window.location.pathname + window.location.search);
+    };
+})();
