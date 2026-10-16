@@ -1,0 +1,48 @@
+{
+  "endpoint": "https://polocrafting.fr/HTCL/api.php",
+  "token": "COLLEZ-ICI-LE-TOKEN-DE-lib/config.php",
+  "source": "pc-bureau",
+  "display": "",
+  "insecure_tls": false,
+
+  "projects": [
+    {
+      "name": "Rendu Blender",
+      "enabled": true,
+      "interval": 1.0,
+      "zone": { "x": 60, "y": 80, "w": 520, "h": 150 },
+
+      "ocr": {
+        "lang": "fra+eng",
+        "psm": 6,
+        "scale": 300,
+        "grayscale": true,
+        "normalize": true,
+        "invert": false,
+        "threshold": 0,
+        "min_chars": 2
+      },
+      "debounce": { "appear": 1, "disappear": 2 },
+      "min_duration_ms": 0,
+
+      "rules": [
+        { "name": "Rendu terminé", "mode": "contains",
+          "match": ["rendu terminé", "render complete"] },
+        { "name": "Avancement", "mode": "regex", "match": "\\b\\d{1,3} ?%" },
+        { "name": "Fenêtre allumée", "mode": "luminosite", "operator": ">", "value": 55 }
+      ]
+    },
+
+    {
+      "name": "Terminal de compilation",
+      "enabled": true,
+      "interval": 2.0,
+      "zone": { "x": 700, "y": 400, "w": 600, "h": 200 },
+      "rules": [
+        { "name": "Erreur", "mode": "contains", "match": ["error", "erreur", "failed"] },
+        { "name": "Changement brusque", "mode": "luminosite",
+          "operator": "variation", "value": 12 }
+      ]
+    }
+  ]
+}

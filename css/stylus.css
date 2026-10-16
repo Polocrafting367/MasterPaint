@@ -1,0 +1,142 @@
+/* ==========================================================================
+   REPÈRE STYLET (#illu-stylus-hud, posé par js/app/illu-stylus.js)
+   --------------------------------------------------------------------------
+   Un stylet survole la dalle avant de la toucher : le navigateur émet des
+   pointermove sans contact, mais rien n'indiquait où la pointe visait. Ce
+   repère suit la pointe au survol comme pendant le tracé.
+
+     · anneau au diamètre réel de l'outil (pinceau / crayon / gomme), mis à
+       jour en pixels écran → il suit le zoom ;
+     · point de visée central, toujours présent ;
+     · pastille gomme quand c'est le bout gomme du stylet ;
+     · légende « x, y px » + pression pendant le contact.
+
+   L'élément est en position fixe et déplacé par transform (pas de reflow), et
+   ne capte aucun événement : il ne doit jamais s'interposer entre le stylet et
+   la toile.
+   ========================================================================== */
+
+.illu-stylus-hud {
+    --illu-stylus-ring: 0px;
+    --illu-stylus-color: var(--mp-accent, #0d7a7a);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 5000;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    will-change: transform;
+    contain: layout style;
+}
+
+/* ── Anneau : empreinte réelle de la pointe ──────────────────────────────── */
+.illu-stylus-hud__ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--illu-stylus-ring);
+    height: var(--illu-stylus-ring);
+    margin: calc(var(--illu-stylus-ring) / -2) 0 0 calc(var(--illu-stylus-ring) / -2);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    /* Double contour clair/sombre : lisible sur une toile blanche comme noire. */
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transition: opacity 90ms linear;
+}
+
+.illu-stylus-hud--ring .illu-stylus-hud__ring {
+    opacity: 1;
+}
+
+/* Bout gomme : anneau pointillé plus épais — à 1 px les tirets se perdent sur
+   un petit diamètre et l'anneau redevient indiscernable de celui du pinceau. */
+.illu-stylus-hud--eraser .illu-stylus-hud__ring {
+    border-width: 2px;
+    border-style: dashed;
+    border-color: #fff;
+}
+
+/* ── Point de visée ──────────────────────────────────────────────────────── */
+.illu-stylus-hud__dot {
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--illu-stylus-color);
+    box-shadow: 0 0 0 1.5px #fff, 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.illu-stylus-hud--contact .illu-stylus-hud__dot {
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--illu-stylus-color), 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Pastille « gomme » ──────────────────────────────────────────────────── */
+.illu-stylus-hud__badge {
+    position: absolute;
+    top: -22px;
+    left: 8px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    background: var(--illu-stylus-color);
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.illu-stylus-hud--eraser .illu-stylus-hud__badge {
+    display: flex;
+}
+
+/* ── Légende : coordonnées document (+ pression au contact) ──────────────── */
+.illu-stylus-hud__readout {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(20, 20, 20, 0.82);
+    color: #fff;
+    font: 600 11px/1.35 var(--mp-ui-font, 'Segoe UI', system-ui, sans-serif);
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Près d'un bord, la légende bascule de l'autre côté du repère plutôt que de
+   sortir de l'écran. */
+.illu-stylus-hud--flip-x .illu-stylus-hud__readout {
+    left: auto;
+    right: 12px;
+}
+
+.illu-stylus-hud--flip-y .illu-stylus-hud__readout {
+    top: auto;
+    bottom: 10px;
+}
+
+.illu-stylus-hud--flip-x .illu-stylus-hud__badge {
+    left: auto;
+    right: 8px;
+}
+
+/* Thème sombre : la légende garde son fond opaque, mais l'anneau doit rester
+   visible sur un fond de toile clair — le double contour s'en charge déjà. */
+body.theme-dark .illu-stylus-hud__readout {
+    background: rgba(0, 0, 0, 0.88);
+}
+
+/* Impression / capture : le repère est un outil d'écran. */
+@media print {
+    .illu-stylus-hud {
+        display: none !important;
+    }
+}

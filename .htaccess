@@ -14,6 +14,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
 
+# 3 bis. Type MIME du WebAssembly (sinon le navigateur refuse la compilation en flux :
+# la version Rust /rust-app/ se charge alors plus lentement)
+AddType application/wasm .wasm
+
 # 4. Compression (gzip) — divise par ~3-5 le poids des JS/CSS/SVG/JSON/WASM
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml

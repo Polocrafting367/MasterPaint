@@ -7,7 +7,12 @@
 (function () {
     'use strict';
 
-    const RUST_URL = '/rust-app/';
+    // URL relative au dossier de l'application : fonctionne à la racine de masterpaint.fr
+    // comme dans un sous-dossier (http://localhost/MasterPaint/).
+    const APP_BASE = (document.currentScript && document.currentScript.src)
+        ? document.currentScript.src.replace(/js\/app\/rust-try\.js.*$/, '')
+        : document.baseURI;
+    const RUST_URL = new URL('rust-app/', APP_BASE).href;
     const SEEN_KEY = 'illu_rust_try_seen';
 
     function goRust() {
@@ -19,8 +24,11 @@
         const st = document.createElement('style');
         st.id = 'illu-rust-try-styles';
         st.textContent = `
-            .illu-rust-try-btn {
-                position: fixed; top: 28px; right: 8px; z-index: 1200;
+            /* #id + !important : la règle générique des boutons de theme-win10-flat.css
+               (body:not(...) button:not(...)) imposait z-index: 1, et la barre d'onglets
+               recouvrait alors le bouton et recevait ses clics. */
+            #illu-rust-try-btn.illu-rust-try-btn {
+                position: fixed !important; top: 28px; right: 8px; z-index: 4950 !important;
                 display: inline-flex; align-items: center; gap: 6px;
                 height: 22px; padding: 0 10px;
                 font: 11px "Segoe UI", sans-serif; color: #1a1a1a;
@@ -53,6 +61,7 @@
         if (document.querySelector('.illu-rust-try-btn')) return;
         const b = document.createElement('button');
         b.type = 'button';
+        b.id = 'illu-rust-try-btn';
         b.className = 'illu-rust-try-btn';
         b.title = 'Ouvrir la nouvelle interface écrite en Rust (plus rapide)';
         b.innerHTML = '<i class="fa-solid fa-rocket" aria-hidden="true"></i> Essayer la version Rust <span class="tag">bêta</span>';
