@@ -602,4 +602,537 @@
 </symbol>
 
 
+
+<!-- Image : recadrer, pivoter, retourner (ruban de la version Rust) -->
+<symbol id="illu-icon-img-crop" viewBox="0 0 16 16">
+  <rect x="5.4" y="5.4" width="5.2" height="5.2" rx="0.6" fill="var(--illu-icon-accent, #3b82f6)"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 1.4V12H14.6"/>
+    <path d="M1.4 4H12V14.6"/>
+  </g>
+</symbol>
+
+<symbol id="illu-icon-img-rot-ccw" viewBox="0 0 16 16">
+  <rect x="6" y="6.4" width="8.4" height="8.2" rx="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.2 8.6A6 6 0 0 1 9.4 2.1"/>
+    <path d="M0.8 7.1 2.2 8.8 3.9 7.4"/>
+  </g>
+</symbol>
+
+<symbol id="illu-icon-img-rot-cw" viewBox="0 0 16 16">
+  <rect x="1.6" y="6.4" width="8.4" height="8.2" rx="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2"/>
+  <g fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13.8 8.6A6 6 0 0 0 6.6 2.1"/>
+    <path d="M15.2 7.1 13.8 8.8 12.1 7.4"/>
+  </g>
+</symbol>
+
+<symbol id="illu-icon-img-flip-h" viewBox="0 0 16 16">
+  <path d="M8 1.2V14.8" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.1" stroke-dasharray="1.6 1.4"/>
+  <path d="M6.2 3.2V12.8H1.4Z" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M9.8 3.2V12.8H14.6Z" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-linejoin="round"/>
+</symbol>
+
+<symbol id="illu-icon-img-flip-v" viewBox="0 0 16 16">
+  <path d="M1.2 8H14.8" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.1" stroke-dasharray="1.6 1.4"/>
+  <path d="M3.2 6.2H12.8V1.4Z" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M3.2 9.8H12.8V14.6Z" fill="var(--illu-icon-accent, #3b82f6)" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="1.2" stroke-linejoin="round"/>
+</symbol>
+
+<!-- ===== Icônes MasterPaint Rust — générées par rust/masterpaint-ui/tools/gen_mpicons.py (ne pas modifier à la main) ===== -->
+<symbol id="illu-icon-mp-new" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21H5V3h9l4 4v5"/><path d="M14 3v4h4"/><path d="M18 14v8M14 18h8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-open" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19V5h6l2 2h8v4"/><path d="M3 19l3.2-8H22l-3.2 8z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-save" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7" y="13" width="10" height="7" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-export" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v5h16v-5"/><path d="M12 3v11M7.5 9.5L12 14l4.5-4.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-print" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-3"/><path d="M7 9V3h10v6"/><rect x="7" y="14" width="10" height="7" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-undo" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/><path d="M8.5 4.5L4 9l4.5 4.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-redo" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/><path d="M15.5 4.5L20 9l-4.5 4.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-zoom" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M14.5 14.5L20 20" stroke-width="2.6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-zoom-in" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M14.5 14.5L20 20" stroke-width="2.6"/><path d="M10 7v6M7 10h6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-zoom-out" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M14.5 14.5L20 20" stroke-width="2.6"/><path d="M7 10h6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-zoom-fit" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="8" y="8" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-close-doc" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21H5V3h9l4 4v5"/><path d="M14 3v4h4"/><path d="M15 15l5 5M20 15l-5 5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-settings" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18.80 12.00L20.83 13.76L20.31 15.44L17.65 15.78L16.81 16.81L17.00 19.48L15.44 20.31L13.33 18.67L12.00 18.80L10.24 20.83L8.56 20.31L8.22 17.65L7.19 16.81L4.52 17.00L3.69 15.44L5.33 13.33L5.20 12.00L3.17 10.24L3.69 8.56L6.35 8.22L7.19 7.19L7.00 4.52L8.56 3.69L10.67 5.33L12.00 5.20L13.76 3.17L15.44 3.69L15.78 6.35L16.81 7.19L19.48 7.00L20.31 8.56L18.67 10.67z" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="12" cy="12" r="2.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-changelog" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="8.5" cy="8" r="1.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="8.5" cy="12" r="1.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="8.5" cy="16" r="1.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M11.5 8h4.5M11.5 12h4.5M11.5 16h3"/></g>
+</symbol>
+<symbol id="illu-icon-mp-about" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="12" cy="7.6" r="1.4" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M12 11v6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-camera" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5L9 4h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-camera-raw" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5L9 4h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/><circle cx="12" cy="13" r="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-cut" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="3" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="17.5" cy="17.5" r="3" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M8.6 15.3L18 3M15.4 15.3L6 3"/></g>
+</symbol>
+<symbol id="illu-icon-mp-copy" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V4.5A1.5 1.5 0 0 1 10.5 3h8A1.5 1.5 0 0 1 20 4.5v10a1.5 1.5 0 0 1-1.5 1.5H15" stroke="var(--illu-icon-accent, #3b82f6)"/><rect x="4" y="7" width="11" height="14" rx="1.5"/><path d="M7 11h5M7 14h5M7 17h3"/></g>
+</symbol>
+<symbol id="illu-icon-mp-paste" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="4" rx="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M9 11h6M9 14h6M9 17h4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-trash" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M9 6V4h6v2"/><path d="M6 6l1 14h10l1-14" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M10 10v6M14 10v6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sel-rect" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1" stroke-dasharray="3 2.4"/><rect x="3.5" y="4.5" width="17" height="15" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sel-new" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sel-add" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="2" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M18 13v8M14 17h8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sel-sub" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="2" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M14 17h8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sel-grow" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="8" stroke-dasharray="3 2.4"/><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-vector" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18C4 8 20 16 20 6"/><path d="M4 18l5-9M20 6l-5 9" stroke-width="1.5"/><rect x="2.5" y="16.5" width="3" height="3" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="18.5" y="4.5" width="3" height="3" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="9" cy="9" r="1.3" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-move" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-line" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5" stroke-width="2.1"/><circle cx="5" cy="19" r="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="19" cy="5" r="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-grid" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-rulers" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v5H8v13H3z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M7 3v2.5M11 3v2.5M15 3v2.5M19 3v2.5M3 12h2.5M3 16h2.5" stroke-width="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-magnet" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 8v4a4.5 4.5 0 0 0 9 0V8" stroke-width="3"/><rect x="5.9" y="3" width="3.2" height="4" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="14.9" y="3" width="3.2" height="4" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-crop-sel" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v16h16M2 6h16v16" stroke-width="2.1"/><rect x="9" y="9" width="6" height="6" stroke-dasharray="3 2.4"/><rect x="9" y="9" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-resize" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="12" height="12" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M13 11l7-7M15 4h5v5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-bounds" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="4.5" y="4.5" width="3" height="3" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><rect x="16.5" y="4.5" width="3" height="3" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><rect x="4.5" y="16.5" width="3" height="3" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><rect x="16.5" y="16.5" width="3" height="3" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-buffer" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 12h12M9 9l-3 3 3 3M15 9l3 3-3 3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-fit-content" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V3h4M21 7V3h-4M3 17v4h4M21 17v4h-4"/><rect x="6" y="6" width="7" height="7" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="15" cy="15" r="3.5" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layers" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 12.5l9 5 9-5"/><path d="M3 16.5l9 5 9-5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-add" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l8 4.5-8 4.5-8-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M2 11.5l8 4.5 4.5-2.5"/><path d="M2 15.5l8 4.5 3-1.7"/><path d="M19 13v8M15 17h8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-delete" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l8 4.5-8 4.5-8-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M2 11.5l8 4.5 4.5-2.5"/><path d="M2 15.5l8 4.5 3-1.7"/><path d="M16 14l5 5M21 14l-5 5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-dup" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="9" y="9" width="12" height="12" rx="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-up" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l8 4.5-8 4.5-8-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M2 11.5l8 4.5 4.5-2.5"/><path d="M2 15.5l8 4.5 3-1.7"/><path d="M19 21v-8M16 16l3-3 3 3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layer-down" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l8 4.5-8 4.5-8-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M2 11.5l8 4.5 4.5-2.5"/><path d="M2 15.5l8 4.5 3-1.7"/><path d="M19 13v8M16 18l3 3 3-3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-channels" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="15" cy="9" r="5" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="12" cy="15" r="5" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-columns" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="4" height="16" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="10" y="4" width="4" height="16" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="16" y="4" width="4" height="16" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-auto-level" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="12" width="3" height="8" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/><rect x="10" y="8" width="3" height="12" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.8" stroke="none"/><rect x="15" y="14" width="3" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/><path d="M18.50 2.30L19.27 4.73L21.70 5.50L19.27 6.27L18.50 8.70L17.73 6.27L15.30 5.50L17.73 4.73z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-bw" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-brightness" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M18.50 12.00L21.50 12.00M16.60 16.60L18.72 18.72M12.00 18.50L12.00 21.50M7.40 16.60L5.28 18.72M5.50 12.00L2.50 12.00M7.40 7.40L5.28 5.28M12.00 5.50L12.00 2.50M16.60 7.40L18.72 5.28"/></g>
+</symbol>
+<symbol id="illu-icon-mp-curves" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v17h17"/><path d="M4 20C10 20 9 6 20 4" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><circle cx="9.5" cy="13" r="1.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="15" cy="6.5" r="1.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-exposure" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 21L21 3" stroke-width="1.5"/><path d="M6 8h4M8 6v4" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><path d="M14 16h4" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-shadows" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12a8.5 8.5 0 0 0 17 0z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-hue-sat" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12L12.00 3.50A8.5 8.5 0 0 1 19.36 7.75z" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><path d="M12 12L19.36 7.75A8.5 8.5 0 0 1 19.36 16.25z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><path d="M12 12L19.36 16.25A8.5 8.5 0 0 1 12.00 20.50z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.49" stroke="none"/><path d="M12 12L12.00 20.50A8.5 8.5 0 0 1 4.64 16.25z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.66" stroke="none"/><path d="M12 12L4.64 16.25A8.5 8.5 0 0 1 4.64 7.75z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.83" stroke="none"/><path d="M12 12L4.64 7.75A8.5 8.5 0 0 1 12.00 3.50z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="12" cy="12" r="8.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-invert-alpha" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="9" height="9" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><rect x="12" y="12" width="9" height="9" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><rect x="3" y="3" width="18" height="18" rx="2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-invert" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 3v18H3z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><circle cx="12" cy="12" r="4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-levels" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M3 20l3-6 3 3 4-9 3 5 2-3 3 10z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-posterize" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="3" y="3" width="4.5" height="18" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><rect x="7.5" y="3" width="4.5" height="18" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="12" y="3" width="4.5" height="18" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><rect x="16.5" y="3" width="4.5" height="18" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-photo" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 17l5-5 4 4 3-3 6 6" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="16" cy="9" r="1.8" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-drop" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.5 4.5 6 7.7 6 10.5a6 6 0 0 1-12 0C6 10.7 8.5 7.5 12 3z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-transparency" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17" stroke-width="1.5"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5H12zM12 12h-8.5a8.5 8.5 0 0 0 8.5 8.5z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.6" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-temperature" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0z"/><circle cx="12" cy="16.5" r="2.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M12 16V8" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><path d="M17 6h3M17 10h2" stroke-width="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-vibrance" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.5 4.5 6 7.7 6 10.5a6 6 0 0 1-12 0C6 10.7 8.5 7.5 12 3z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M19.00 1.60L19.82 4.18L22.40 5.00L19.82 5.82L19.00 8.40L18.18 5.82L15.60 5.00L18.18 4.18z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-gallery" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><rect x="13" y="3" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="3" y="13" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="13" y="13" width="8" height="8" rx="1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-repeat" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 0 1 3-3h13M20 13v2a3 3 0 0 1-3 3H4"/><path d="M17 3l3 3-3 3M7 15l-3 3 3 3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sliders" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="15" cy="12" r="2.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="7" cy="18" r="2.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-palette" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.4-1.9-.5-1.2.2-2.6 1.6-2.6H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11.5" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="10" cy="7" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><circle cx="15" cy="7" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><circle cx="8.5" cy="16" r="1.4" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-ink" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.5-1L18.5 8 16 5.5 5 16.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M14 7.5l2.5 2.5M3 21h6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-oil" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="1.5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M21 9.5l-8.5 8.5" stroke-width="2.4"/><path d="M12.2 18.3c-1.6-.4-2.9.6-3 2.2-.1.6-.4 1-.9 1.2 1.6.4 3.3.1 4.1-.9.7-.8.5-1.8-.2-2.5z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-pastel" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L16 8l3 3L9 21H6z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M16 8l2-2 3 3-2 2M6 18v3"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sketch" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3.5l4 4L11 16l-4.5 1 1-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 21c3-2 5 1 8-1s5 1 8-1" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-ascii" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><path d="M12 15h5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-halftone" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.0" cy="5.0" r="0.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="5.0" cy="9.6" r="0.9333333333333333" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="5.0" cy="14.2" r="1.2666666666666666" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="5.0" cy="18.799999999999997" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="9.6" cy="5.0" r="0.9333333333333333" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="9.6" cy="9.6" r="1.2666666666666666" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="9.6" cy="14.2" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="9.6" cy="18.799999999999997" r="1.9333333333333331" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14.2" cy="5.0" r="1.2666666666666666" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14.2" cy="9.6" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14.2" cy="14.2" r="1.9333333333333331" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14.2" cy="18.799999999999997" r="2.2666666666666666" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="18.799999999999997" cy="5.0" r="1.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="18.799999999999997" cy="9.6" r="1.9333333333333331" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="18.799999999999997" cy="14.2" r="2.2666666666666666" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="18.799999999999997" cy="18.799999999999997" r="2.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-bokeh" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="4.5" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="16" cy="8" r="3" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="14" cy="16" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-fragment" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="14" cy="10" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="10" cy="14" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><circle cx="14" cy="14" r="5" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-gaussian" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><circle cx="12" cy="12" r="6.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><circle cx="12" cy="12" r="4" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-motion" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h8M2 12h10M4 16h7"/><circle cx="16" cy="12" r="4.5" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-radial" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M12 5a7 7 0 0 1 7 7M12 19a7 7 0 0 1-7-7"/><path d="M16.5 3.5A10 10 0 0 1 21 9M7.5 20.5A10 10 0 0 1 3 15" stroke="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sketch-blur" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16" stroke="var(--illu-icon-accent, #3b82f6)"/><path d="M4 17h16" stroke-width="1.5" stroke-opacity=".4"/><path d="M4 9.5h16M4 14.5h16" stroke-width="1.5" stroke-opacity=".25"/></g>
+</symbol>
+<symbol id="illu-icon-mp-square-blur" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><rect x="6" y="6" width="12" height="12" rx="1" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="9" y="9" width="6" height="6" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-surface" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14c3-3 6-3 9 0s6 3 9 0v6H3z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 8c3-3 6-3 9 0s6 3 9 0"/></g>
+</symbol>
+<symbol id="illu-icon-mp-zoom-blur" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M16.00 12.00L21.50 12.00M14.83 14.83L18.72 18.72M12.00 16.00L12.00 21.50M9.17 14.83L5.28 18.72M8.00 12.00L2.50 12.00M9.17 9.17L5.28 5.28M12.00 8.00L12.00 2.50M14.83 9.17L18.72 5.28"/><circle cx="12" cy="12" r="2.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-quantize" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="5" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><rect x="3" y="9" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="3" y="15" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="9" y="3" width="5" height="5" rx="1" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><rect x="9" y="9" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="9" y="15" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="15" y="3" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="15" y="9" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="15" y="15" width="5" height="5" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-chroma-key" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="8" height="10" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M12.5 12h3.5M14.5 10l2 2-2 2" stroke-width="2.1"/><rect x="17" y="7" width="4" height="10" stroke-dasharray="3 2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-chromatic" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="12" r="6.5"/><circle cx="14" cy="12" r="6.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-duotone" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-cmyk" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.8" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="16" cy="8" r="3.8" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><circle cx="8" cy="16" r="3.8" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><circle cx="16" cy="16" r="3.8" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-colormode" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="13" y="3" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.6" stroke="none"/><rect x="3" y="13" width="8" height="8" rx="1" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="13" y="13" width="8" height="8" rx="1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-bulge" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17" stroke-width="1.5"/><path d="M6 6.5c3.5 3 8.5 3 12 0M6 17.5c3.5-3 8.5-3 12 0" stroke="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-dents" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7c3-2 6 2 9 0s6-2 9 0M3 17c3-2 6 2 9 0s6-2 9 0"/><path d="M3 12c3-2 6 2 9 0s6-2 9 0" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-crystal" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l4 5-9 11L3 9z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 9h18M9 4l3 5 3-5M12 9v11" stroke-width="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-frosted" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="7" cy="7" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="12" cy="6" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="17" cy="8" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="8" cy="12" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14" cy="11" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="6" cy="17" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="11" cy="16" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="17" cy="15" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="15" cy="19" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-morphology" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4c3-1 5 2 8 1s5 2 4 6-3 4-2 7-4 3-7 2-6 0-7-3 0-5-1-8 2-4 5-5z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-pixelate" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><rect x="3" y="9" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="3" y="15" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><rect x="9" y="3" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="9" y="9" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><rect x="9" y="15" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="15" y="3" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><rect x="15" y="9" width="6" height="6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="15" y="15" width="6" height="6" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><rect x="3" y="3" width="18" height="18" rx="1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-polar" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-tile" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M12 3v18M3 12h18"/><path d="M3 3l9 9V3zM21 21l-9-9v9z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-twist" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a1.5 1.5 0 0 1 3 0 3 3 0 0 1-6 0 4.5 4.5 0 0 1 9 0 6 6 0 0 1-12 0 7.5 7.5 0 0 1 15 0" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><circle cx="12.8" cy="12" r="1.2" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-mirror4" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/><path d="M12 3.5A8.5 8.5 0 0 1 20.5 12H12zM12 12H3.5a8.5 8.5 0 0 0 8.5 8.5z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-cube" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3l8 4.5-8 4.5-8-4.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M12 12v9"/></g>
+</symbol>
+<symbol id="illu-icon-mp-wave" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c3-3 6 3 9 0s6 3 9 0M3 18c3-3 6 3 9 0s6 3 9 0"/><path d="M3 13c3-3 6 3 9 0s6 3 9 0" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-noise" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="13" cy="4" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="19" cy="9" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="7" cy="12" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="16" cy="15" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="4" cy="19" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="11" cy="19" r="1.15" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="9" cy="7" r="1.15" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="17" cy="4" r="1.15" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="20" cy="19" r="1.15" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="6" cy="16" r="1.15" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-median" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="12" cy="5" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="19" cy="7" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="6" cy="18" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="13" cy="19" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="19" cy="17" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><path d="M3 12h18" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-denoise" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="10" cy="11" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="6" cy="17" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><circle cx="13" cy="18" r="1.1" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><path d="M17.00 2.50L18.08 5.92L21.50 7.00L18.08 8.08L17.00 11.50L15.92 8.08L12.50 7.00L15.92 5.92z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-dither" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3.0" y="3.0" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="3.0" y="12.0" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="7.5" y="7.5" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="7.5" y="16.5" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="12.0" y="3.0" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="12.0" y="12.0" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="16.5" y="7.5" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="16.5" y="16.5" width="4.5" height="4.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.75" stroke="none"/><rect x="3" y="3" width="18" height="18" rx="1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-vhs" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8" cy="11" r="2.3" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="16" cy="11" r="2.3" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M10.3 11h3.4M6 19l1.5-3h9L18 19"/></g>
+</symbol>
+<symbol id="illu-icon-mp-shadow" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2h6a2 2 0 0 0 2-2z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><rect x="4" y="4" width="12" height="12" rx="2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-feather" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/><circle cx="12" cy="12" r="7" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><circle cx="12" cy="12" r="5" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-outline" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="3" y="3" width="18" height="18" rx="4.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-glow" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12.00 4.50L13.59 10.41L19.50 12.00L13.59 13.59L12.00 19.50L10.41 13.59L4.50 12.00L10.41 10.41z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M20.50 12.00L22.50 12.00M12.00 20.50L12.00 22.50M3.50 12.00L1.50 12.00M12.00 3.50L12.00 1.50"/></g>
+</symbol>
+<symbol id="illu-icon-mp-red-eye" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3.4" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sharpen" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 17H3z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M12 9.5v6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-portrait" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M4 21a8 8 0 0 1 16 0"/></g>
+</symbol>
+<symbol id="illu-icon-mp-dream" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9z" fill="var(--illu-icon-accent-subtle, #bfdbfe)"/><path d="M19.00 1.80L19.77 4.23L22.20 5.00L19.77 5.77L19.00 8.20L18.23 5.77L15.80 5.00L18.23 4.23z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M5.00 2.80L5.53 4.47L7.20 5.00L5.53 5.53L5.00 7.20L4.47 5.53L2.80 5.00L4.47 4.47z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-edge-fade" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="5.5" y="5.5" width="13" height="13" rx="3" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/><rect x="8" y="8" width="8" height="8" rx="2" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-dust" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4l-8 8" stroke-width="2.2"/><path d="M12 12l-2-2-6 6c1 2 2.5 3.5 4.5 4.5l6-6z" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="17" cy="16" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="20" cy="19" r="1.2" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-straighten" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15L21 9"/><path d="M3 12h18" stroke="var(--illu-icon-accent, #3b82f6)" stroke-dasharray="2.4 2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-vignette" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v14H3zM12 7.5c-4 0-6.5 2-6.5 4.5S8 16.5 12 16.5s6.5-2 6.5-4.5S16 7.5 12 7.5z" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none" fill-rule="evenodd"/><rect x="3" y="5" width="18" height="14" rx="2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-clouds" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-checker" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="9" height="9" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><rect x="12" y="12" width="9" height="9" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><rect x="3" y="3" width="18" height="18" rx="2"/></g>
+</symbol>
+<symbol id="illu-icon-mp-julia" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="19.5" cy="12.0" r="2.6" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="14.948374789266254" cy="17.792847840399332" r="2.3200000000000003" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="8.763243855095599" cy="16.446730221007748" r="2.04" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.8" stroke="none"/><circle cx="7.556341035410108" cy="11.29014437635538" r="1.76" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.7" stroke="none"/><circle cx="10.924334955075532" cy="8.669392741386694" r="1.48" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.6" stroke="none"/><circle cx="13.77167443572815" cy="10.23614918607402" r="1.2" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/><circle cx="13.425348887937794" cy="12.467312045270068" r="0.9199999999999999" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.45" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-mandelbrot" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="12" r="6" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="6.3" cy="12" r="2.6" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="2.8" cy="12" r="1" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-turbulence" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 16h14a3 3 0 1 1-3 3"/><path d="M3 12h17" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-edges" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 17l5-6 4 4 3-3 6 6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-emboss" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4" stroke-width="1.5"/><rect x="8" y="8" width="8" height="8" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-contour" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/><rect x="3" y="3" width="18" height="18" rx="5.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-relief" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20l6.5-11 4 6 3-4 6.5 9z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-solarize" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 8a4 4 0 0 1 0 8z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M18.50 12.00L21.50 12.00M16.60 16.60L18.72 18.72M12.00 18.50L12.00 21.50M7.40 16.60L5.28 18.72M5.50 12.00L2.50 12.00M7.40 7.40L5.28 5.28M12.00 5.50L12.00 2.50M16.60 7.40L18.72 5.28"/></g>
+</symbol>
+<symbol id="illu-icon-mp-remove-bg" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2.4"/><circle cx="12" cy="9" r="3.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><path d="M5.5 21c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-cutout-sel" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" stroke-dasharray="3 2.4"/><circle cx="8" cy="16" r="2.4" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="16" cy="16" r="2.4" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M9.8 14.4L16 6M14.2 14.4L8 6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-content-fill" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="8" width="8" height="8" stroke-dasharray="3 2.4"/><rect x="8" y="8" width="8" height="8" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.55" stroke="none"/><path d="M18.50 2.70L19.17 4.83L21.30 5.50L19.17 6.17L18.50 8.30L17.83 6.17L15.70 5.50L17.83 4.83z" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-external" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M14 3h7v7M21 3l-9 9" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-restore" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="14" height="12" rx="1.5"/><rect x="3" y="9" width="14" height="12" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 13h14" stroke-width="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-toolbox" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5.5" height="5.5" rx="1.5"/><rect x="3" y="10" width="5.5" height="5.5" rx="1.5"/><rect x="3" y="17" width="5.5" height="5.5" rx="1.5"/><rect x="10" y="3" width="5.5" height="5.5" rx="1.5"/><rect x="10" y="10" width="5.5" height="5.5" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)"/><rect x="10" y="17" width="5.5" height="5.5" rx="1.5"/><rect x="17" y="3" width="5.5" height="5.5" rx="1.5"/><rect x="17" y="10" width="5.5" height="5.5" rx="1.5"/><rect x="17" y="17" width="5.5" height="5.5" rx="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-history" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4.5H8"/><path d="M12 7.5V12l3 2" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-film" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><rect x="8" y="7" width="8" height="10" rx="1" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M5.5 7v1M5.5 11.5v1M5.5 16v1M18.5 7v1M18.5 11.5v1M18.5 16v1" stroke-width="2.1"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sequence" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="14" height="11" rx="1.5"/><rect x="3" y="8" width="14" height="13" rx="1.5" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M3 18l4-4 3 3 2-2 5 5" stroke-width="1.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-menu" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 18h16"/><path d="M4 12h16" stroke="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-bug" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="9" width="10" height="12" rx="5" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="12" cy="6.5" r="2.6" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><path d="M12 11.5v8.5" stroke-width="2.1"/><path d="M7 13H3.5M7 17.5l-3 2M17 13h3.5M17 17.5l3 2M7.6 10.2 4.8 8M16.4 10.2 19.2 8"/></g>
+</symbol>
+<symbol id="illu-icon-mp-filter" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h17l-6.5 8v6.2l-4 2.3v-8.5z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-swap" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14" stroke="var(--illu-icon-accent, #3b82f6)"/><path d="M14.5 4.5 18 8l-3.5 3.5" stroke="var(--illu-icon-accent, #3b82f6)"/><path d="M20 16H6M9.5 12.5 6 16l3.5 3.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-plus" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v15M4.5 12h15" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.8"/></g>
+</symbol>
+<symbol id="illu-icon-mp-gauge" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17.5a8.5 8.5 0 1 1 17 0"/><path d="M6.2 11.3l1.4 1M12 6.5v1.8M17.8 11.3l-1.4 1"/><path d="M12 17.5l4.2-5.2" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/><circle cx="12" cy="17.5" r="2" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-keyboard" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12.5" rx="2.2"/><path d="M6 10h.5M9.5 10h.5M13.5 10h.5M17.5 10h.5M6 14h.5M17.5 14h.5" stroke-width="2.4"/><path d="M9 14.2h6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-folder" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19V6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11z"/><path d="M3 10h18v9H3z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-up" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5.5"/><path d="M6 11l6-6 6 6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-down" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v14.5"/><path d="M6 13l6 6 6-6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-lock" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-unlock" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 0 1 7.7-1.6"/><circle cx="12" cy="15.5" r="1.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-trash-can" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6h15M9.5 6V4h5v2"/><path d="M6.5 6l1 14.5h9l1-14.5z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M10.2 10v6.5M13.8 10v6.5"/></g>
+</symbol>
+<symbol id="illu-icon-mp-grad-linear" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="4.5" y="6.5" width="5" height="11" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><rect x="9.5" y="6.5" width="5" height="11" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/><rect x="14.5" y="6.5" width="5" height="11" fill="var(--illu-icon-accent-subtle, #bfdbfe)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-grad-diamond" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 9-9 9-9-9z"/><path d="M12 7.5l4.5 4.5-4.5 4.5-4.5-4.5z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-download" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5V20h16v-4.5"/><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.4"/></g>
+</symbol>
+<symbol id="illu-icon-mp-image" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 17.5l5-5.2 4 4 3-3 5 5.2z" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/><circle cx="16" cy="9.2" r="1.9" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-signature" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c2.5-5 4.5-9 6-9s-1.5 9 1 9 3-4 4.5-4 1 3 2.5 3 2-1 3-2"/><path d="M3 21h18" stroke="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-info" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="7.8" r="1.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><path d="M12 11v6" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-warning" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5h-19z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M12 9.5v5" stroke-width="2.4"/><circle cx="12" cy="17.3" r="1.3" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-check" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11" stroke="var(--illu-icon-accent, #3b82f6)" stroke-width="2.8"/></g>
+</symbol>
+<symbol id="illu-icon-mp-github" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.2" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="6" cy="19" r="2.2" fill="var(--illu-icon-accent, #3b82f6)"/><circle cx="18" cy="7.5" r="2.2" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M6 7.2v9.6M18 9.7c0 4.5-7 3.5-11 7.6"/></g>
+</symbol>
+<symbol id="illu-icon-mp-web" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" stroke-width="2.1"/><circle cx="12" cy="12" r="9" stroke="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-book" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14c-2.5-1.5-5.5-1.5-8 0z" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></g>
+</symbol>
+<symbol id="illu-icon-mp-star" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-sun" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="var(--illu-icon-accent, #3b82f6)"/><path d="M18.80 12.00L21.50 12.00M16.81 16.81L18.72 18.72M12.00 18.80L12.00 21.50M7.19 16.81L5.28 18.72M5.20 12.00L2.50 12.00M7.19 7.19L5.28 5.28M12.00 5.20L12.00 2.50M16.81 7.19L18.72 5.28"/></g>
+</symbol>
+<symbol id="illu-icon-mp-moon" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z" fill="var(--illu-icon-accent, #3b82f6)"/></g>
+</symbol>
+<symbol id="illu-icon-mp-layout" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8.5h18M8.5 8.5V20"/><rect x="8.5" y="8.5" width="12.5" height="11.5" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-ribbon" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><rect x="5.5" y="6" width="3" height="2" rx="0.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><rect x="10.5" y="6" width="3" height="2" rx="0.5" fill="var(--illu-icon-stroke, #1e293b)" stroke="none"/><rect x="15.5" y="6" width="3" height="2" rx="0.5" fill="var(--illu-icon-accent, #3b82f6)" stroke="none"/></g>
+</symbol>
+<symbol id="illu-icon-mp-phone" viewBox="0 0 16 16">
+  <g transform="scale(0.6666667)" fill="none" stroke="var(--illu-icon-stroke, #1e293b)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3" stroke-width="2.2"/><rect x="8.5" y="5" width="7" height="10.5" rx="1" fill="var(--illu-icon-accent, #3b82f6)" fill-opacity="0.5" stroke="none"/></g>
+</symbol>
+<!-- ===== fin des icônes MasterPaint Rust générées ===== -->
+
 </svg>
