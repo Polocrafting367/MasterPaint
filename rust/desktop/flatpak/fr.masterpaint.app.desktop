@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=MasterPaint
+GenericName=Image Editor
+GenericName[fr]=Éditeur d'images
+Comment=Image editor inspired by Paint.NET
+Comment[fr]=Éditeur d'images inspiré de Paint.NET
+Exec=masterpaint-desktop %F
+Icon=fr.masterpaint.app
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+MimeType=image/png;image/jpeg;image/bmp;image/gif;image/webp;
+Keywords=paint;image;photo;draw;dessin;retouche;
+StartupWMClass=masterpaint-desktop

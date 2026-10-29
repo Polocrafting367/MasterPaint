@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["masterpaint-core", "masterpaint-ui", "desktop"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["polocrafting"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+
+# En développement, les dépendances (egui, image…) sont optimisées : l'interface reste fluide.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1

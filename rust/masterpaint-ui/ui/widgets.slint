@@ -1,0 +1,1505 @@
+// Contrôles Windows 10 de MasterPaint (équivalents de css/win-controls.css, theme-pdn.css).
+import { Theme } from "theme.slint";
+import { IconSpec, Icons } from "types.slint";
+import { MpIcons } from "mpicons.slint";
+
+/// Relief Windows 98 : deux liserés clairs en haut à gauche et sombres en bas à droite
+/// (inversés en creux). Posé par-dessus le contrôle, il ne capte pas la souris.
+export component Bevel inherits Rectangle {
+    in property <bool> sunken;
+    property <color> tl: sunken ? Theme.bevel-lo : Theme.bevel-hi;
+    property <color> br: sunken ? Theme.bevel-hi : Theme.bevel-dk;
+    property <color> tl2: sunken ? Theme.bevel-dk : Theme.window-bg;
+    property <color> br2: sunken ? Theme.window-bg : Theme.bevel-lo;
+    Rectangle { x: 0; y: 0; width: parent.width; height: 1px; background: root.tl; }
+    Rectangle { x: 0; y: 0; width: 1px; height: parent.height; background: root.tl; }
+    Rectangle { x: 0; y: parent.height - 1px; width: parent.width; height: 1px; background: root.br; }
+    Rectangle { x: parent.width - 1px; y: 0; width: 1px; height: parent.height; background: root.br; }
+    Rectangle { x: 1px; y: 1px; width: parent.width - 2px; height: 1px; background: root.tl2; }
+    Rectangle { x: 1px; y: 1px; width: 1px; height: parent.height - 2px; background: root.tl2; }
+    Rectangle { x: 1px; y: parent.height - 2px; width: parent.width - 2px; height: 1px; background: root.br2; }
+    Rectangle { x: parent.width - 2px; y: 1px; width: 1px; height: parent.height - 2px; background: root.br2; }
+}
+
+/// Icône : icône maison (MpIcons : trait du thème + accent) quand l'outil / le bouton en a une,
+/// sinon icône du sprite SVG ou glyphe Font Awesome. Sur fond d'accent (teinte on-accent) :
+/// glyphe, pour garder le contraste.
+export component Icon inherits Rectangle {
+    in property <IconSpec> spec;
+    in property <length> size: 16px;
+    in property <color> tint: Theme.text;
+    width: size;
+    height: size;
+    in property <bool> monochrome: false;
+    property <int> mp: root.monochrome || root.tint == Theme.on-accent ? -1 : MpIcons.for-spec(root.spec);
+    property <image> png: root.mp >= 0 ? MpIcons.images[root.mp] : @image-url("");
+    if root.png.width > 0: Image {
+        source: root.png;
+        width: parent.width;
+        height: parent.height;
+        image-fit: contain;
+    }
+    if root.png.width == 0 && spec.svg-index >= 0 && !monochrome: Image {
+        source: Icons.images[spec.svg-index];
+        width: parent.width;
+        height: parent.height;
+        image-fit: contain;
+    }
+    if spec.svg-index >= 0 && monochrome: Image {
+        source: Icons.images[spec.svg-index];
+        width: parent.width;
+        height: parent.height;
+        colorize: root.tint;
+        image-fit: contain;
+    }
+    if root.png.width == 0 && spec.svg-index < 0 && spec.fa != "": Text {
+        text: spec.fa;
+        font-family: Theme.icon-font;
+        font-weight: spec.fa-weight;
+        font-size: root.size * 0.86;
+        color: root.tint;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+}
+
+/// Glyphe Font Awesome direct.
+export component FaIcon inherits Text {
+    in property <string> glyph;
+    in property <int> weight: 900;
+    in property <length> size: 13px;
+    text: glyph;
+    font-family: Theme.icon-font;
+    font-weight: weight;
+    font-size: size;
+    color: Theme.text;
+    horizontal-alignment: center;
+    vertical-alignment: center;
+}
+
+/// Glyphe d'action : icône maison (MpIcons, style du sprite) quand le glyphe Font Awesome en a
+/// une, sinon le glyphe lui-même (chevrons, croix…). Sur fond d'accent (`on-accent`) ou en
+/// texte simple (autre police) : toujours le glyphe, pour garder le contraste.
+export component GlyphIcon inherits Rectangle {
+    in property <string> glyph;
+    in property <int> weight: 900;
+    in property <length> size: 13px;
+    in property <color> tint: Theme.text;
+    in property <string> font-family: Theme.icon-font;
+    in property <bool> on-accent: false;
+    property <int> mp: root.on-accent || root.font-family != Theme.icon-font ? -1 : MpIcons.for-glyph(root.glyph);
+    width: root.size * 1.25;
+    height: root.size * 1.3;
+    if root.mp >= 0: Image {
+        source: MpIcons.images[root.mp];
+        width: root.size * 1.15;
+        height: root.size * 1.15;
+        image-fit: contain;
+    }
+    if root.mp < 0: Text {
+        width: parent.width;
+        height: parent.height;
+        text: root.glyph;
+        font-family: root.font-family;
+        font-weight: root.weight;
+        font-size: root.size;
+        color: root.tint;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+/// Bouton plat (barre d'outils, ruban, fenêtre Outils) : survol et état coché à l'accent.
+export component FlatButton inherits Rectangle {
+    in property <IconSpec> icon;
+    in property <string> label;
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    in property <length> icon-size: 16px;
+    in property <bool> show-label: true;
+    in property <bool> label-below;
+    /// icône du sprite MasterPaint (prioritaire sur `icon`)
+    in property <image> img;
+    /// info-bulle (par défaut : le libellé d'un bouton sans libellé visible)
+    in property <string> tip;
+    property <string> tip-text: root.tip != "" ? root.tip : root.show-label ? "" : root.label;
+    callback clicked();
+    out property <bool> hovered: ta.has-hover;
+    Timer {
+        interval: 600ms;
+        running: ta.has-hover && !ta.pressed && root.tip-text != "" && !(Tip.shown && Tip.text == root.tip-text);
+        triggered => {
+            Tip.text = root.tip-text;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    background: Theme.win98 ? (checked ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : transparent)
+        : !enabled ? transparent : ta.pressed ? Theme.accent-20 : checked ? Theme.accent-14 : ta.has-hover ? Theme.accent-12 : transparent;
+    border-width: Theme.win98 ? 0px : (checked || (ta.has-hover && enabled)) ? 1px : 0px;
+    border-color: checked ? Theme.accent : Theme.accent-60;
+    border-radius: Theme.ctl-radius;
+    min-width: icon-size + 7px;
+    min-height: icon-size + 7px;
+    ta := TouchArea {
+        mouse-cursor: default;
+        clicked => {
+            Tip.shown = false;
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+        changed has-hover => {
+            if (!self.has-hover && Tip.text == root.tip-text) {
+                Tip.shown = false;
+            }
+        }
+    }
+    if !label-below: HorizontalLayout {
+        padding-left: (root.show-label && root.label != "") ? 6px : 0px;
+        padding-right: (root.show-label && root.label != "") ? 8px : 0px;
+        spacing: 6px;
+        alignment: (root.show-label && root.label != "") ? start : center;
+        VerticalLayout {
+            alignment: center;
+            if root.img.width > 0: Image {
+                width: root.icon-size + 2px;
+                height: root.icon-size + 2px;
+                source: root.img;
+                opacity: root.enabled ? 1 : 0.4;
+            }
+            if root.img.width == 0: Icon {
+                spec: root.icon;
+                size: root.icon-size;
+                tint: root.enabled ? Theme.ribbon-fg : Theme.text-inactive;
+                opacity: root.enabled ? 1 : 0.4;
+            }
+        }
+        if root.show-label && root.label != "": Text {
+            text: root.label;
+            font-size: Theme.font-size;
+            color: root.enabled ? Theme.ribbon-fg : Theme.text-inactive;
+            vertical-alignment: center;
+        }
+    }
+    // Windows 98 : bouton enfoncé quand il est coché ou pressé, en relief au survol
+    if Theme.win98 && enabled && (checked || ta.pressed || ta.has-hover): Bevel {
+        sunken: root.checked || ta.pressed;
+    }
+    if label-below: VerticalLayout {
+        padding: 3px;
+        spacing: 2px;
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            Icon {
+                spec: root.icon;
+                size: root.icon-size;
+                tint: Theme.ribbon-fg;
+            }
+        }
+        Text {
+            text: root.label;
+            font-size: Theme.small-font-size;
+            color: Theme.ribbon-fg;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+/// Bouton façon Windows 11 : coins arrondis, bord discret plus marqué en bas ; bouton
+/// principal plein, à la couleur d'accent. Thème Windows 98 : relief 3D.
+export component W10Button inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary;
+    /// bouton à bascule enfoncé (Grille…)
+    in property <bool> checked;
+    in property <string> tip;
+    /// icône facultative devant le libellé (icônes maison : MpIcons.images)
+    in property <image> icon;
+    property <bool> has-icon: root.icon.width > 0;
+    callback clicked();
+    Timer {
+        interval: 600ms;
+        running: ta.has-hover && !ta.pressed && root.tip != "" && !(Tip.shown && Tip.text == root.tip);
+        triggered => {
+            Tip.text = root.tip;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    property <bool> filled: root.primary && !Theme.win98;
+    height: Theme.win98 ? 22px : 24px;
+    width: max(Theme.win98 ? 0px : 56px, txt.preferred-width + (Theme.win98 ? 16px : 24px) + (root.has-icon ? 22px : 0px));
+    border-radius: Theme.ctl-radius;
+    background: Theme.win98 ? Theme.button-bg
+        : root.filled ? (ta.pressed ? Theme.accent.darker(0.15) : ta.has-hover ? Theme.accent.brighter(0.1) : Theme.accent)
+        : ta.pressed || root.checked ? Theme.accent-14 : ta.has-hover ? (Theme.dark ? Theme.button-bg.brighter(0.15) : Theme.button-bg.darker(0.03)) : Theme.button-bg;
+    border-width: Theme.win98 ? (primary ? 1px : 0px) : 1px;
+    border-color: Theme.win98 ? Theme.bevel-dk : root.filled ? Theme.accent.darker(0.1) : root.checked ? Theme.accent : Theme.dark ? #ffffff17 : #0000001a;
+    // ombre du bas (Windows 11 : bord inférieur un peu plus foncé)
+    if !Theme.win98: Rectangle {
+        x: root.border-radius;
+        y: root.height - 1px;
+        width: root.width - 2 * root.border-radius;
+        height: 1px;
+        background: root.filled ? #00000040 : Theme.dark ? #00000040 : #00000029;
+    }
+    ta := TouchArea {
+        clicked => {
+            Tip.shown = false;
+            root.clicked();
+        }
+        changed has-hover => {
+            if (!self.has-hover && Tip.text == root.tip) {
+                Tip.shown = false;
+            }
+        }
+    }
+    if Theme.win98: Bevel {
+        x: root.primary ? 1px : 0px;
+        y: root.primary ? 1px : 0px;
+        width: parent.width - (root.primary ? 2px : 0px);
+        height: parent.height - (root.primary ? 2px : 0px);
+        sunken: ta.pressed;
+    }
+    if root.has-icon: Image {
+        x: 10px;
+        width: 16px;
+        height: 16px;
+        source: root.icon;
+    }
+    txt := Text {
+        x: root.has-icon ? 30px : 0px;
+        width: parent.width - self.x - (root.has-icon ? 8px : 0px);
+        text: root.text;
+        font-size: Theme.win98 ? Theme.small-font-size : Theme.font-size;
+        color: root.filled ? Theme.on-accent : (ta.pressed && !Theme.win98) ? Theme.text-inactive : Theme.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+/// Curseur Windows 10 : piste fine, partie remplie à l'accent, poignée en étiquette.
+export component W10Slider inherits Rectangle {
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in-out property <float> value: 50;
+    /// piste en dégradé (luminosité, saturation, teinte, canal de couleur…)
+    in property <bool> gradient;
+    in property <brush> track;
+    /// valeur imposée par le parent (liée) : le curseur la signale sans l'écrire
+    in property <bool> controlled;
+    callback changed(float);
+    height: 20px;
+    min-width: 60px;
+    property <length> usable: self.width - 11px;
+    property <float> ratio: (value - minimum) / max(0.0001, maximum - minimum);
+    Rectangle {
+        x: 5px;
+        y: (parent.height - self.height) / 2 - 2px;
+        width: parent.width - 10px;
+        height: root.gradient ? 9px : 5px;
+        border-radius: root.gradient ? 2px : 0px;
+        background: root.gradient ? root.track : Theme.track-bg;
+        border-width: 1px;
+        border-color: Theme.track-border;
+    }
+    Path {
+        x: root.usable * root.ratio;
+        y: (parent.height - 19px) / 2;
+        width: 11px;
+        height: 19px;
+        viewbox-width: 11;
+        viewbox-height: 19;
+        commands: "M0 0 L11 0 L11 13 L5.5 19 L0 13 Z";
+        fill: ta.pressed ? #cccccc : ta.has-hover ? #171717 : Theme.accent;
+    }
+    ta := TouchArea {
+        function set-from(px: length) {
+            let v = clamp(root.minimum + (px - 5px) / root.usable * (root.maximum - root.minimum), root.minimum, root.maximum);
+            if (!root.controlled) {
+                root.value = v;
+            }
+            root.changed(v);
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                self.set-from(self.mouse-x);
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                self.set-from(self.mouse-x);
+            }
+        }
+    }
+}
+
+/// Case à cocher Windows 10.
+export component W10CheckBox inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> tip;
+    callback toggled(bool);
+    /// bascule (clic sur la case ou sur son libellé)
+    public function toggle() {
+        root.checked = !root.checked;
+        root.toggled(root.checked);
+    }
+    property <string> tip-text: root.tip;
+    Timer {
+        interval: 600ms;
+        running: ta.has-hover && !ta.pressed && root.tip-text != "" && !(Tip.shown && Tip.text == root.tip-text);
+        triggered => {
+            Tip.text = root.tip-text;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    width: 15px;
+    height: 15px;
+    border-radius: Theme.ctl-radius - 1px;
+    background: checked && !Theme.win98 ? Theme.accent : Theme.field-bg;
+    border-width: Theme.win98 ? 0px : 1px;
+    border-color: checked ? Theme.accent : (ta.has-hover ? Theme.accent : #333333);
+    if Theme.win98: Bevel {
+        sunken: true;
+    }
+    if checked: FaIcon {
+        glyph: "\u{f00c}";
+        size: 10px;
+        color: Theme.win98 ? Theme.text : Theme.on-accent;
+    }
+    ta := TouchArea {
+        clicked => {
+            Tip.shown = false;
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+        changed has-hover => {
+            if (!self.has-hover && Tip.text == root.tip-text) {
+                Tip.shown = false;
+            }
+        }
+    }
+}
+
+/// Liste déroulante Windows 10 (champ blanc, chevron).
+export component W10ComboBox inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index: 0;
+    callback selected(int);
+    height: 22px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.field-bg;
+    border-width: Theme.win98 ? 0px : 1px;
+    border-color: ta.has-hover ? Theme.accent : Theme.field-border;
+    if Theme.win98: Bevel {
+        sunken: true;
+    }
+    if Theme.win98: Rectangle {
+        border-radius: Theme.ctl-radius;
+        x: parent.width - 18px;
+        y: 2px;
+        width: 16px;
+        height: parent.height - 4px;
+        background: Theme.button-bg;
+        Bevel {
+            sunken: ta.pressed;
+        }
+    }
+    Text {
+        x: 7px;
+        width: parent.width - 26px;
+        height: parent.height;
+        text: root.model[root.current-index];
+        font-size: Theme.font-size;
+        color: Theme.text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    FaIcon {
+        x: parent.width - 18px;
+        width: 14px;
+        height: parent.height;
+        glyph: "\u{f078}";
+        size: 9px;
+    }
+    ta := TouchArea {
+        clicked => {
+            popup.show();
+        }
+    }
+    popup := PopupWindow {
+        x: 0;
+        y: root.height;
+        width: root.width;
+        Rectangle {
+            background: Theme.field-bg;
+            border-width: 1px;
+            border-color: Theme.field-border;
+            border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+            drop-shadow-blur: Theme.win98 ? 0px : 8px;
+            drop-shadow-offset-y: 2px;
+            drop-shadow-color: Theme.window-shadow;
+            VerticalLayout {
+                padding: 3px;
+                for item[i] in root.model: Rectangle {
+                    height: 22px;
+                    border-radius: Theme.ctl-radius;
+                    background: ita.has-hover ? Theme.accent-14 : i == root.current-index ? Theme.accent-12 : transparent;
+                    Text {
+                        x: 6px;
+                        text: item;
+                        font-size: Theme.font-size;
+                        color: Theme.text;
+                        vertical-alignment: center;
+                    }
+                    ita := TouchArea {
+                        clicked => {
+                            root.current-index = i;
+                            root.selected(i);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Bouton de fermeture : rouge quand l'application est active (comme Paint.NET), gris sinon.
+export component CloseButton inherits Rectangle {
+    callback clicked();
+    width: 17px;
+    height: Theme.win98 ? 15px : 17px;
+    background: Theme.win98 ? Theme.button-bg : !Theme.app-active ? Theme.close-inactive : ta.has-hover ? Theme.close-hover : Theme.close-bg;
+    FaIcon {
+        glyph: "\u{f00d}";
+        size: Theme.win98 ? 10px : 11px;
+        color: Theme.win98 ? Theme.text : #ffffff;
+    }
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+    if Theme.win98: Bevel {
+        sunken: ta.pressed;
+    }
+}
+
+/// Fenêtre volante Paint.NET (Outils, Couleurs, Calques, Historique) : déplaçable par
+/// sa barre de titre, ramenée au premier plan au clic.
+export component FloatWindow inherits Rectangle {
+    in property <string> title;
+    in property <length> bounds-width: 10000px;
+    in property <length> bounds-height: 10000px;
+    /// redimensionnable en hauteur (poignées sur les bords haut et bas)
+    in property <bool> resizable;
+    /// redimensionnable en largeur (bords gauche / droit ; coins si aussi en hauteur)
+    in property <bool> resizable-w;
+    in property <length> min-window-width: 120px;
+    in property <length> max-window-width: 100000px;
+    /// fin d'un déplacement ou d'un redimensionnement (palettes : géométrie enregistrée)
+    callback geometry-changed();
+    /// mode téléphone : panneau du bas comme la version web (coins arrondis, poignée à la place
+    /// de la barre de titre, bouton « Fermer » en bas si `sheet-footer`)
+    in property <bool> sheet;
+    in property <bool> sheet-footer: true;
+    property <length> head-h: root.sheet ? 18px : Theme.title-height;
+    property <length> foot-h: root.sheet && root.sheet-footer ? 50px : 0px;
+    /// hauteur de la zone de contenu (sous la barre de titre) : à utiliser pour ancrer en bas
+    out property <length> content-height: root.height - root.head-h - root.foot-h;
+    in property <length> min-window-height: 100px;
+    /// position la plus haute (négative : la fenêtre peut monter sur le ruban et les menus)
+    in property <length> min-y: 0px;
+    /// bord gauche de la zone utile (règles affichées : la palette ne les recouvre pas)
+    in property <length> min-x: 0px;
+    /// palettes : aimantation vers leur place d'origine (`home-x`, `home-y`) et vers les bords
+    /// de l'espace de travail quand on les en approche
+    in property <bool> snap-home;
+    in property <length> home-x;
+    in property <length> home-y;
+    // position visée pendant un glisser (avant aimantation)
+    property <length> drag-nx;
+    property <length> drag-ny;
+    // position et taille en mode flottant (le glisser les modifie), ou imposées quand la
+    // fenêtre est ancrée dans une colonne (disposition Photoshop)
+    in-out property <length> float-x;
+    in-out property <length> float-y;
+    in-out property <length> float-w: 200px;
+    in-out property <length> float-h: 200px;
+    in property <bool> docked;
+    /// disposition Photoshop : barre de titre façon panneau du téléphone (poignée centrée en
+    /// haut, titre plus petit, croix discrète) ; seulement quand la fenêtre est ancrée
+    in property <bool> grip;
+    property <bool> grip-on: root.grip && root.docked && !root.sheet && !Theme.win98;
+    /// palette ancrée déplaçable dans sa colonne : glisser la barre de titre (`dock-drag` donne
+    /// la position verticale du pointeur dans la zone de travail, `dock-drop` au relâchement)
+    in property <bool> dock-movable;
+    callback dock-drag(length);
+    callback dock-drop(length);
+    property <bool> dock-moved;
+    in property <length> dock-x;
+    in property <length> dock-y;
+    in property <length> dock-w;
+    in property <length> dock-h;
+    // téléphone : posée en bas, toute la largeur, non déplaçable (au plus 62 % de la hauteur :
+    // le ruban reste visible) ; écran plus étroit que la fenêtre : réduite et collée à gauche
+    property <bool> auto-dock: PhoneDock.on && !root.docked && !root.sheet;
+    // position bornée à la zone (fenêtre principale réduite : la palette reste atteignable)
+    x: root.docked ? root.dock-x : root.auto-dock ? 0px : root.float-w >= root.bounds-width ? 0px
+        : clamp(root.float-x, root.min-x - root.width + 40px, max(root.min-x, root.bounds-width - 40px));
+    y: root.docked ? root.dock-y : root.auto-dock ? root.bounds-height - self.height - PhoneDock.inset : root.float-h >= root.bounds-height ? 0px
+        : clamp(root.float-y, root.min-y, max(root.min-y, root.bounds-height - Theme.title-height));
+    width: root.docked ? root.dock-w : root.auto-dock ? root.bounds-width : min(root.float-w, root.bounds-width);
+    height: root.docked ? root.dock-h : root.auto-dock ? min(min(root.float-h, (root.bounds-height - PhoneDock.inset) * 0.62), PhoneDock.max-h) : min(root.float-h, root.bounds-height);
+    changed height => {
+        if (root.auto-dock) {
+            PhoneDock.sheet-h = self.height;
+        }
+    }
+    init => {
+        if (root.auto-dock) {
+            PhoneDock.sheet-h = self.height;
+        }
+    }
+    callback close();
+    callback raised();
+    property <bool> glass: Theme.glass && !Theme.win98 && !root.sheet && !root.docked;
+    // barre de titre translucide : le fond de la fenêtre ne commence que sous elle
+    background: root.sheet ? Theme.mob-surface : root.glass ? transparent : Theme.window-bg;
+    border-radius: root.sheet ? 16px : root.docked ? 0px : Theme.window-radius;
+    border-width: Theme.win98 || root.sheet ? 0px : 1px;
+    border-color: Theme.window-border;
+    drop-shadow-blur: root.sheet ? 14px : Theme.win98 || root.docked ? 0px : 10px;
+    drop-shadow-offset-y: root.sheet ? -2px : 2px;
+    drop-shadow-color: root.sheet ? #0000002e : Theme.window-shadow;
+    // un clic n'importe où dans la fenêtre la ramène devant
+    TouchArea {
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+        }
+    }
+    if Theme.win98 && !root.sheet: Bevel { }
+    if root.glass: Rectangle {
+        y: Theme.title-height;
+        height: root.height - Theme.title-height;
+        background: Theme.window-bg;
+        border-bottom-left-radius: Theme.window-radius;
+        border-bottom-right-radius: Theme.window-radius;
+    }
+    if root.sheet: Rectangle {
+        y: 7px;
+        width: 36px;
+        height: 5px;
+        border-radius: 2.5px;
+        background: Theme.mob-muted.with-alpha(0.45);
+    }
+    if !root.sheet: Rectangle {
+        x: Theme.win98 ? 3px : 0px;
+        y: Theme.win98 ? 3px : 0px;
+        width: parent.width - (Theme.win98 ? 6px : 0px);
+        height: Theme.title-height - (Theme.win98 ? 3px : 0px);
+        border-top-left-radius: Theme.window-radius;
+        border-top-right-radius: Theme.window-radius;
+        background: Theme.win98 ? @linear-gradient(90deg, (Theme.app-active ? Theme.title-a : #808080) 0%, (Theme.app-active ? Theme.title-b : #b5b5b5) 100%) : root.grip-on ? Theme.window-bg : root.glass ? Theme.window-title-bg.with-alpha(0.88) : Theme.window-title-bg;
+        drag := TouchArea {
+            mouse-cursor: root.docked && root.dock-movable ? (self.pressed ? MouseCursor.grabbing : MouseCursor.grab)
+                : root.docked || root.auto-dock ? MouseCursor.default : MouseCursor.move;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down) {
+                    root.raised();
+                    root.dock-moved = false;
+                }
+                if (e.kind == PointerEventKind.up && !root.docked && !root.auto-dock) {
+                    root.geometry-changed();
+                }
+                if (e.kind == PointerEventKind.up && root.docked && root.dock-movable && root.dock-moved) {
+                    root.dock-moved = false;
+                    root.dock-drop(root.y + self.mouse-y);
+                }
+            }
+            moved => {
+                // palette ancrée : glissée dans sa colonne pour changer l'ordre (seuil de 6 px)
+                if (self.pressed && root.docked && root.dock-movable && (root.dock-moved || abs(self.mouse-y - self.pressed-y) > 6px)) {
+                    root.dock-moved = true;
+                    root.dock-drag(root.y + self.mouse-y);
+                }
+                if (self.pressed && !root.docked && !root.auto-dock) {
+                    root.drag-nx = clamp(root.x + self.mouse-x - self.pressed-x, root.min-x - root.width + 40px, root.bounds-width - 40px);
+                    root.drag-ny = clamp(root.y + self.mouse-y - self.pressed-y, root.min-y, root.bounds-height - Theme.title-height);
+                    if (root.snap-home) {
+                        // aimantation : place d'origine, sinon bords de l'espace de travail (8 px)
+                        if (abs(root.drag-nx - root.home-x) < 24px && abs(root.drag-ny - root.home-y) < 24px) {
+                            root.drag-nx = root.home-x;
+                            root.drag-ny = root.home-y;
+                        } else {
+                            if (abs(root.drag-nx - root.min-x - 8px) < 16px) {
+                                root.drag-nx = root.min-x + 8px;
+                            }
+                            if (abs(root.drag-nx + root.width + 8px - root.bounds-width) < 16px) {
+                                root.drag-nx = root.bounds-width - root.width - 8px;
+                            }
+                            if (abs(root.drag-ny - root.min-y - 8px) < 16px) {
+                                root.drag-ny = root.min-y + 8px;
+                            }
+                            if (abs(root.drag-ny + root.height + 8px - root.bounds-height) < 16px) {
+                                root.drag-ny = root.bounds-height - root.height - 8px;
+                            }
+                        }
+                    }
+                    root.float-x = root.drag-nx;
+                    root.float-y = root.drag-ny;
+                }
+            }
+        }
+        // poignée (style panneau du téléphone) : petit trait arrondi centré en haut
+        if root.grip-on: Rectangle {
+            y: 4px;
+            width: 30px;
+            height: 4px;
+            border-radius: 2px;
+            background: drag.pressed && root.dock-movable ? Theme.accent : Theme.text-inactive.with-alpha(0.45);
+        }
+        Text {
+            x: root.grip-on ? 8px : 10px;
+            y: root.grip-on ? 5px : 0px;
+            width: parent.width - (root.grip-on ? 28px : 30px);
+            height: parent.height - self.y;
+            text: root.title;
+            font-size: root.grip-on ? Theme.small-font-size : Theme.font-size;
+            font-weight: Theme.win98 ? 700 : root.grip-on ? 600 : 400;
+            color: Theme.win98 ? Theme.title-fg : root.grip-on ? Theme.text-inactive : Theme.app-active ? Theme.text : Theme.text-inactive;
+            vertical-alignment: center;
+            overflow: clip;
+        }
+        if !root.grip-on: CloseButton {
+            x: parent.width - self.width - 4px;
+            y: (parent.height - self.height) / 2;
+            clicked => {
+                root.close();
+            }
+        }
+        // croix discrète : grise, accent au survol
+        if root.grip-on: Rectangle {
+            x: parent.width - self.width - 5px;
+            y: 5px + (parent.height - 5px - self.height) / 2;
+            width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            background: gcta.has-hover ? Theme.accent.with-alpha(0.14) : transparent;
+            FaIcon {
+                glyph: "\u{f00d}";
+                size: 10px;
+                color: gcta.has-hover ? Theme.accent : Theme.text-inactive;
+            }
+            gcta := TouchArea {
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+        // séparation discrète sous la barre (pas de fond de titre en style poignée)
+        if root.grip-on: Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.window-border.with-alpha(0.6);
+        }
+    }
+    Rectangle {
+        y: root.head-h;
+        height: root.content-height;
+        @children
+    }
+    if root.sheet && root.sheet-footer: Rectangle {
+        y: root.height - 50px;
+        height: 50px;
+        Rectangle {
+            y: 0;
+            height: 1px;
+            background: Theme.mob-divider;
+        }
+        Rectangle {
+            y: 9px;
+            width: min(320px, parent.width - 32px);
+            height: 32px;
+            border-radius: 16px;
+            background: sfta.pressed ? Theme.accent.with-alpha(0.32) : Theme.accent.with-alpha(0.2);
+            Text {
+                text: "Fermer";
+                font-size: 15px;
+                font-weight: 700;
+                color: Theme.accent;
+            }
+            sfta := TouchArea {
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+    }
+    // ---- redimensionnement : bords (5 px) et coins (8 px, par-dessus les bords) ----
+    property <bool> can-h: root.resizable && !root.docked && !root.auto-dock && !root.sheet;
+    property <bool> can-w: root.resizable-w && !root.docked && !root.auto-dock && !root.sheet;
+    // déplacement d'un bord (dx / dy depuis l'appui) ; le bord opposé reste en place
+    function drag-left(dx: length) {
+        root.drag-nx = clamp(root.x + dx, max(root.min-x, root.x + root.width - root.max-window-width), root.x + root.width - root.min-window-width);
+        root.float-w = root.x + root.width - root.drag-nx;
+        root.float-x = root.drag-nx;
+    }
+    function drag-right(dx: length) {
+        root.float-w = clamp(root.width + dx, root.min-window-width, max(root.min-window-width, min(root.max-window-width, root.bounds-width - root.x)));
+    }
+    function drag-top(dy: length) {
+        root.drag-ny = clamp(root.y + dy, root.min-y, root.y + root.height - root.min-window-height);
+        root.float-h = root.y + root.height - root.drag-ny;
+        root.float-y = root.drag-ny;
+    }
+    function drag-bottom(dy: length) {
+        root.float-h = clamp(root.height + dy, root.min-window-height, max(root.min-window-height, root.bounds-height - root.y));
+    }
+    if root.resizable && !root.docked: TouchArea {
+        y: root.height - 5px;
+        height: 6px;
+        mouse-cursor: ns-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-bottom(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+    // par le haut : le bas reste en place
+    if root.can-h: TouchArea {
+        y: 0;
+        height: 5px;
+        mouse-cursor: ns-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-top(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+    if root.can-w: TouchArea {
+        x: 0;
+        width: 5px;
+        mouse-cursor: ew-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-left(self.mouse-x - self.pressed-x);
+            }
+        }
+    }
+    if root.can-w: TouchArea {
+        x: root.width - 5px;
+        width: 5px;
+        mouse-cursor: ew-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-right(self.mouse-x - self.pressed-x);
+            }
+        }
+    }
+    if root.can-w && root.can-h: TouchArea {
+        x: 0;
+        y: 0;
+        width: 8px;
+        height: 8px;
+        mouse-cursor: nwse-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-left(self.mouse-x - self.pressed-x);
+                root.drag-top(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+    if root.can-w && root.can-h: TouchArea {
+        x: root.width - 8px;
+        y: 0;
+        width: 8px;
+        height: 8px;
+        mouse-cursor: nesw-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-right(self.mouse-x - self.pressed-x);
+                root.drag-top(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+    if root.can-w && root.can-h: TouchArea {
+        x: 0;
+        y: root.height - 8px;
+        width: 8px;
+        height: 8px;
+        mouse-cursor: nesw-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-left(self.mouse-x - self.pressed-x);
+                root.drag-bottom(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+    if root.can-w && root.can-h: TouchArea {
+        x: root.width - 8px;
+        y: root.height - 8px;
+        width: 8px;
+        height: 8px;
+        mouse-cursor: nwse-resize;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.raised();
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.geometry-changed();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-right(self.mouse-x - self.pressed-x);
+                root.drag-bottom(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+}
+
+/// Mode téléphone : les fenêtres volantes se posent en bas, sur toute la largeur, sans
+/// déplacement (comme la version web) ; `sheet-h` = hauteur de la fenêtre posée, pour cadrer
+/// la toile au-dessus.
+export global PhoneDock {
+    in-out property <bool> on;
+    in-out property <length> sheet-h;
+    /// barre du bas (Filtre, Ajuster…), flottante sur la toile : les fenêtres se posent
+    /// au-dessus (hauteur réelle de la barre, donnée par la fenêtre principale)
+    in-out property <length> inset: on ? 66px : 0px;
+    /// hauteur maximale d'un panneau du bas : il s'arrête sous le ruban et la bande d'outils
+    in-out property <length> max-h: 100000px;
+}
+
+/// Info-bulle commune : nom du bouton survolé sans bouger (comme les title HTML). Chaque bouton
+/// la renseigne après un court délai ; la fenêtre principale l'affiche par-dessus tout.
+export global Tip {
+    in-out property <string> text;
+    in-out property <length> x;
+    in-out property <length> y;
+    in-out property <bool> shown;
+}
+
+/// Ruban trop large pour la fenêtre (comme la version web) : les libellés des boutons
+/// disparaissent et les jauges rétrécissent.
+export global RibbonFit {
+    in-out property <bool> tight;
+    /// encore plus étroit (ou téléphone) : les capsules secondaires disparaissent
+    in-out property <bool> narrow;
+}
+
+/// Jauge du ruban MasterPaint : « Libellé  −  [barre remplie   valeur]  + ».
+/// La barre se règle aussi en glissant dessus.
+export component Gauge inherits HorizontalLayout {
+    in property <string> label;
+    /// info-bulle (par défaut : le libellé de la jauge)
+    in property <string> tip;
+    property <string> tip-text: root.tip != "" ? root.tip : root.label;
+    in property <float> minimum: 1;
+    in property <float> maximum: 100;
+    in property <float> step: 1;
+    in property <length> label-width: 42px;
+    in property <length> bar-width: 100px;
+    in property <string> unit;
+    in-out property <float> value: 10;
+    callback changed(float);
+    spacing: 4px;
+    height: 22px;
+    function set(v: float) {
+        root.value = clamp(round(v / root.step) * root.step, root.minimum, root.maximum);
+        root.changed(root.value);
+    }
+    Timer {
+        interval: 600ms;
+        running: bta.has-hover && !bta.pressed && root.tip-text != "" && !(Tip.shown && Tip.text == root.tip-text);
+        triggered => {
+            Tip.text = root.tip-text;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    if root.label != "": Text {
+        width: root.label-width;
+        text: root.label;
+        font-size: Theme.font-size;
+        color: Theme.ribbon-fg;
+        vertical-alignment: center;
+    }
+    Rectangle {
+        width: 16px;
+        border-radius: Theme.ctl-radius;
+        background: mta.has-hover ? Theme.accent-12 : transparent;
+        FaIcon {
+            glyph: "\u{f068}";
+            size: 9px;
+            color: Theme.ribbon-fg;
+        }
+        mta := TouchArea {
+            clicked => {
+                root.set(root.value - root.step);
+            }
+        }
+    }
+    Rectangle {
+        width: RibbonFit.tight ? min(root.bar-width, 64px) : root.bar-width;
+        border-radius: Theme.ctl-radius;
+        background: Theme.field-bg;
+        border-width: 1px;
+        border-color: bta.has-hover ? Theme.accent : Theme.field-border;
+        Rectangle {
+            x: 1px;
+            y: 1px;
+            height: parent.height - 2px;
+            width: (parent.width - 2px) * clamp((root.value - root.minimum) / max(0.0001, root.maximum - root.minimum), 0, 1);
+            border-radius: Theme.ctl-radius - 1px;
+            background: Theme.accent-32;
+        }
+        Text {
+            x: 4px;
+            width: parent.width - 8px;
+            height: parent.height;
+            text: (root.step < 1 ? round(root.value * 100) / 100 : round(root.value)) + root.unit;
+            font-size: Theme.font-size;
+            font-weight: 600;
+            color: Theme.text;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+        bta := TouchArea {
+            mouse-cursor: ew-resize;
+            function from-x(px: length) {
+                root.set(root.minimum + clamp(px / self.width, 0, 1) * (root.maximum - root.minimum));
+            }
+            changed has-hover => {
+                if (!self.has-hover && Tip.text == root.tip-text) {
+                    Tip.shown = false;
+                }
+            }
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down) {
+                    Tip.shown = false;
+                    self.from-x(self.mouse-x);
+                }
+            }
+            moved => {
+                if (self.pressed) {
+                    self.from-x(self.mouse-x);
+                }
+            }
+            scroll-event(e) => {
+                root.set(root.value + (e.delta-y > 0 ? root.step : -root.step));
+                accept
+            }
+        }
+    }
+    Rectangle {
+        width: 16px;
+        border-radius: Theme.ctl-radius;
+        background: pta.has-hover ? Theme.accent-12 : transparent;
+        FaIcon {
+            glyph: "\u{2b}";
+            size: 12px;
+            color: Theme.ribbon-fg;
+        }
+        pta := TouchArea {
+            clicked => {
+                root.set(root.value + root.step);
+            }
+        }
+    }
+}
+
+/// Jauge des fenêtres (même style que celles du ruban) : « − [barre + valeur] + ».
+/// Glisser ou molette pour régler ; double-clic sur la barre pour saisir la valeur.
+/// Avec `gradient`, la barre montre ce que règle le curseur (luminosité, teinte, canal…).
+export component GaugeBar inherits HorizontalLayout {
+    in property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in property <float> step: 1;
+    in property <bool> gradient;
+    in property <brush> track;
+    callback changed(float);
+    property <bool> editing;
+    property <float> ratio: clamp((root.value - root.minimum) / max(0.0001, root.maximum - root.minimum), 0, 1);
+    pure function fmt(v: float) -> string {
+        return root.step < 1 ? round(v * 100) / 100 : round(v);
+    }
+    function set(v: float) {
+        root.changed(clamp(round(v / root.step) * root.step, root.minimum, root.maximum));
+    }
+    spacing: 2px;
+    height: 22px;
+    min-width: 80px;
+    Rectangle {
+        width: 16px;
+        border-radius: Theme.ctl-radius;
+        background: mta.has-hover ? Theme.accent-12 : transparent;
+        FaIcon {
+            glyph: "\u{f068}";
+            size: 9px;
+            color: Theme.text;
+        }
+        mta := TouchArea {
+            clicked => {
+                root.set(root.value - root.step);
+            }
+        }
+    }
+    Rectangle {
+        horizontal-stretch: 1;
+        border-radius: Theme.ctl-radius;
+        clip: true;
+        background: root.gradient ? root.track : Theme.field-bg;
+        border-width: 1px;
+        border-color: bta.has-hover || root.editing ? Theme.accent : Theme.field-border;
+        if !root.gradient: Rectangle {
+            x: 1px;
+            y: 1px;
+            height: parent.height - 2px;
+            width: (parent.width - 2px) * root.ratio;
+            border-radius: Theme.ctl-radius - 1px;
+            background: Theme.accent-32;
+        }
+        // repère sur une barre en dégradé
+        if root.gradient: Rectangle {
+            x: (parent.width - 4px) * root.ratio;
+            width: 4px;
+            background: #ffffff;
+            border-width: 1px;
+            border-color: #202020;
+            border-radius: 1px;
+        }
+        if !root.editing: Rectangle {
+            x: parent.width - self.width - 3px;
+            y: 3px;
+            width: vt.preferred-width + 6px;
+            height: parent.height - 6px;
+            border-radius: 2px;
+            background: root.gradient ? Theme.field-bg.with-alpha(0.8) : transparent;
+            vt := Text {
+                text: root.fmt(root.value);
+                font-size: Theme.font-size;
+                font-weight: 600;
+                color: Theme.text;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        bta := TouchArea {
+            mouse-cursor: ew-resize;
+            function from-x(px: length) {
+                root.set(root.minimum + clamp(px / self.width, 0, 1) * (root.maximum - root.minimum));
+            }
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && !root.editing) {
+                    self.from-x(self.mouse-x);
+                }
+            }
+            moved => {
+                if (self.pressed && !root.editing) {
+                    self.from-x(self.mouse-x);
+                }
+            }
+            double-clicked => {
+                root.editing = true;
+                ed.text = root.fmt(root.value);
+                ed.focus();
+                ed.select-all();
+            }
+            scroll-event(e) => {
+                root.set(root.value + (e.delta-y > 0 ? root.step : -root.step));
+                accept
+            }
+        }
+        if root.editing: Rectangle {
+            background: Theme.field-bg;
+            border-radius: Theme.ctl-radius;
+        }
+        ed := TextInput {
+            visible: root.editing;
+            x: 4px;
+            width: parent.width - 8px;
+            height: parent.height;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            color: Theme.text;
+            font-size: Theme.font-size;
+            single-line: true;
+            accepted => {
+                if (self.text.is-float()) {
+                    root.set(self.text.to-float());
+                }
+                root.editing = false;
+            }
+            changed has-focus => {
+                if (!self.has-focus && root.editing) {
+                    if (self.text.is-float()) {
+                        root.set(self.text.to-float());
+                    }
+                    root.editing = false;
+                }
+            }
+        }
+    }
+    Rectangle {
+        width: 16px;
+        border-radius: Theme.ctl-radius;
+        background: pta.has-hover ? Theme.accent-12 : transparent;
+        FaIcon {
+            glyph: "\u{2b}";
+            size: 12px;
+            color: Theme.text;
+        }
+        pta := TouchArea {
+            clicked => {
+                root.set(root.value + root.step);
+            }
+        }
+    }
+}
+
+/// Bouton à bascule du ruban (glyphe + libellé), coché à l'accent.
+export component ToggleButton inherits Rectangle {
+    in property <string> glyph;
+    in property <int> weight: 900;
+    in property <string> text;
+    in property <bool> checked;
+    in property <bool> compact;
+    in property <bool> plain-font;  // glyphe Unicode ordinaire (formes géométriques)
+    /// icône du sprite MasterPaint (prioritaire sur le glyphe)
+    in property <image> img;
+    /// info-bulle (par défaut : le texte d'un bouton compact)
+    in property <string> tip;
+    property <string> tip-text: root.tip != "" ? root.tip : root.compact ? root.text : "";
+    callback clicked();
+    height: 26px;
+    width: compact ? 26px : (lbl.preferred-width + 30px);
+    Timer {
+        interval: 600ms;
+        running: ta.has-hover && !ta.pressed && root.tip-text != "" && !(Tip.shown && Tip.text == root.tip-text);
+        triggered => {
+            Tip.text = root.tip-text;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    border-radius: Theme.ctl-radius;
+    background: ta.pressed ? Theme.accent-20 : checked ? Theme.accent-14 : ta.has-hover ? Theme.accent-12 : transparent;
+    border-width: (checked || ta.has-hover) ? 1px : 0px;
+    border-color: checked ? Theme.accent : Theme.accent-60;
+    if root.img.width > 0: Image {
+        x: root.compact ? (parent.width - self.width) / 2 : 5px;
+        width: 16px;
+        height: 16px;
+        source: root.img;
+    }
+    if root.img.width == 0: GlyphIcon {
+        x: root.compact ? (parent.width - self.width) / 2 : 6px;
+        width: 14px;
+        glyph: root.glyph;
+        weight: root.weight;
+        size: root.plain-font ? 14px : 12px;
+        font-family: root.plain-font ? Theme.font : Theme.icon-font;
+        tint: Theme.ribbon-fg;
+    }
+    lbl := Text {
+        visible: !root.compact;
+        x: 25px;
+        text: root.text;
+        font-size: Theme.font-size;
+        color: Theme.ribbon-fg;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        clicked => {
+            Tip.shown = false;
+            root.clicked();
+        }
+        changed has-hover => {
+            if (!self.has-hover && Tip.text == root.tip-text) {
+                Tip.shown = false;
+            }
+        }
+    }
+}
+
+/// Groupe du ruban : contenu, puis libellé centré en bas, séparateur à droite.
+/// En barre classique : « Libellé : » puis le contenu sur une ligne.
+export component RibbonGroup inherits Rectangle {
+    in property <string> label;
+    in property <bool> classic;
+    min-width: classic ? lbl-c.preferred-width + inner.preferred-width + 16px : max(inner.preferred-width, lbl.preferred-width) + 16px;
+    height: classic ? 32px : 88px;
+    lbl-c := Text {
+        visible: root.classic;
+        x: 6px;
+        height: parent.height;
+        text: root.label + " :";
+        font-size: Theme.font-size;
+        color: Theme.ribbon-fg;
+        vertical-alignment: center;
+    }
+    inner := HorizontalLayout {
+        x: root.classic ? lbl-c.preferred-width + 10px : 8px;
+        y: root.classic ? 3px : 5px;
+        height: root.classic ? 26px : 60px;
+        spacing: 2px;
+        @children
+    }
+    lbl := Text {
+        visible: !root.classic;
+        y: 70px;
+        width: parent.width;
+        text: root.label;
+        font-size: Theme.small-font-size;
+        color: Theme.ribbon-label;
+        horizontal-alignment: center;
+    }
+    Rectangle {
+        x: parent.width - 1px;
+        y: 6px;
+        width: 1px;
+        height: parent.height - 12px;
+        background: Theme.ribbon-sep;
+    }
+}
+
+/// Choix exclusif en boutons accolés (Paramètres : « Paint.NET | Photoshop | Téléphone »…).
+/// Windows 11 : piste arrondie, option choisie en pastille claire avec un trait d'accent.
+export component Segmented inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> index;
+    callback selected(int);
+    height: 30px;
+    border-radius: Theme.win98 ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+    background: Theme.win98 ? transparent : Theme.track-bg;
+    border-width: Theme.win98 ? 0px : 1px;
+    border-color: Theme.button-border;
+    HorizontalLayout {
+        padding: Theme.win98 ? 0px : 2px;
+        spacing: Theme.win98 ? 0px : 2px;
+        for o[i] in root.options: Rectangle {
+            horizontal-stretch: 1;
+            border-radius: Theme.ctl-radius;
+            background: Theme.win98 ? (i == root.index ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg)
+                : i == root.index ? Theme.field-bg : sta.has-hover ? Theme.accent-12 : transparent;
+            border-width: !Theme.win98 && i == root.index ? 1px : 0px;
+            border-color: Theme.button-border;
+            if Theme.win98: Bevel {
+                sunken: i == root.index;
+            }
+            // trait d'accent centré sous l'option choisie (comme Windows 11)
+            Rectangle {
+                visible: i == root.index && !Theme.win98;
+                x: (parent.width - self.width) / 2;
+                y: parent.height - 3px;
+                width: min(18px, parent.width - 8px);
+                height: 3px;
+                border-radius: 1.5px;
+                background: Theme.accent;
+            }
+            Text {
+                text: o;
+                color: i == root.index && !Theme.win98 ? Theme.accent : Theme.text;
+                font-weight: i == root.index ? 600 : 400;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            sta := TouchArea {
+                clicked => {
+                    root.index = i;
+                    root.selected(i);
+                }
+            }
+        }
+    }
+}
+
+/// Pied des fenêtres de dialogue (« alvéole » des boutons) : bande un peu plus claire que la
+/// fenêtre, trait en haut, boutons à droite. Un élément `horizontal-stretch: 1` placé avant
+/// les boutons occupe la gauche (texte d'état, case à cocher, boutons secondaires).
+export component DialogFooter inherits Rectangle {
+    height: 44px;
+    background: Theme.footer-bg;
+    border-bottom-left-radius: max(0px, Theme.window-radius - 1px);
+    border-bottom-right-radius: max(0px, Theme.window-radius - 1px);
+    Rectangle {
+        y: 0;
+        height: 1px;
+        background: Theme.window-border;
+    }
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 8px;
+        alignment: end;
+        @children
+    }
+}
+
+/// Champ de saisie Windows 10 : fond blanc, bordure grise, accent au focus.
+export component W10LineEdit inherits Rectangle {
+    in-out property <string> text;
+    in property <InputType> input-type: InputType.text;
+    callback accepted(string);
+    callback edited(string);
+    height: 22px;
+    min-width: 40px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.field-bg;
+    border-width: Theme.win98 ? 0px : 1px;
+    border-color: ti.has-focus ? Theme.accent : hov.has-hover ? Theme.text-inactive : Theme.field-border;
+    if Theme.win98: Bevel {
+        sunken: true;
+    }
+    hov := TouchArea {
+        mouse-cursor: MouseCursor.text;
+        clicked => {
+            ti.focus();
+        }
+    }
+    ti := TextInput {
+        x: 5px;
+        width: parent.width - 10px;
+        height: parent.height;
+        vertical-alignment: center;
+        text <=> root.text;
+        input-type: root.input-type;
+        color: Theme.text;
+        font-size: Theme.font-size;
+        single-line: true;
+        selection-background-color: Theme.accent.with-alpha(0.35);
+        accepted => {
+            root.accepted(self.text);
+        }
+        edited => {
+            root.edited(self.text);
+        }
+    }
+}
+
+/// Valeur numérique saisissable : suit `value` tant qu'on ne la modifie pas au clavier ;
+/// Entrée (ou perte du focus) valide la saisie.
+export component NumEdit inherits Rectangle {
+    in property <float> value;
+    in property <bool> decimals;
+    callback accepted(float);
+    pure function fmt() -> string {
+        return root.decimals ? round(root.value * 100) / 100 : round(root.value);
+    }
+    height: 22px;
+    min-width: 34px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.field-bg;
+    border-width: Theme.win98 ? 0px : 1px;
+    border-color: ti.has-focus ? Theme.accent : Theme.field-border;
+    if Theme.win98: Bevel {
+        sunken: true;
+    }
+    changed value => {
+        if (!ti.has-focus) {
+            ti.text = root.fmt();
+        }
+    }
+    init => {
+        ti.text = root.fmt();
+    }
+    ti := TextInput {
+        x: 4px;
+        width: parent.width - 8px;
+        height: parent.height;
+        vertical-alignment: center;
+        horizontal-alignment: right;
+        color: Theme.text;
+        font-size: Theme.font-size;
+        single-line: true;
+        selection-background-color: Theme.accent.with-alpha(0.35);
+        accepted => {
+            root.accepted(self.text.to-float());
+            self.text = root.fmt();
+        }
+        changed has-focus => {
+            if (!self.has-focus) {
+                if (self.text != root.fmt() && self.text.is-float()) {
+                    root.accepted(self.text.to-float());
+                }
+                self.text = root.fmt();
+            }
+        }
+    }
+}
+
+/// Séparateur vertical (ruban, barres d'outils).
+export component VSep inherits Rectangle {
+    width: 1px;
+    background: Theme.ribbon-sep;
+}

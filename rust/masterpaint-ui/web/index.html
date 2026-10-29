@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET</title>
+    <!-- SEO Meta Tags (FR + EN) -->
+    <meta name="description" content="MasterPaint, l'éditeur photo professionnel en ligne et 100 % gratuit : l'alternative à Paint.NET qui tourne directement dans le navigateur, sur Linux et macOS, sans installation. — A free, professional online photo editor: the Paint.NET alternative running right in your browser, on Linux and macOS, no install required.">
+    <meta name="keywords" content="paint.net, paint.net linux, paint.net macos, paint.net mac, alternative paint.net, paint.net en ligne, paint.net online, éditeur photo en ligne, éditeur photo gratuit, éditeur photo linux, éditeur photo mac, retouche photo en ligne, online photo editor, free photo editor, photo editor linux, photo editor macos, image editor online, calques, filtres, masterpaint">
+    <meta name="author" content="Polocrafting367">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="fr, en">
+    <meta http-equiv="content-language" content="fr, en">
+    <link rel="canonical" href="https://masterpaint.fr/">
+
+    <!-- Open Graph / Réseaux sociaux -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="MasterPaint">
+    <meta property="og:url" content="https://masterpaint.fr/">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:title" content="MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET">
+    <meta property="og:description" content="Retouchez vos photos gratuitement dans le navigateur : l'alternative à Paint.NET pour Linux et macOS, avec calques, filtres et outils pro. — Free, professional photo editing in your browser: the Paint.NET alternative for Linux & macOS.">
+    <meta property="og:image" content="https://masterpaint.fr/IMG/illu.jpeg">
+    <meta property="og:image:secure_url" content="https://masterpaint.fr/IMG/illu.jpeg">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1662">
+    <meta property="og:image:height" content="918">
+    <meta property="og:image:alt" content="Aperçu de l'interface de MasterPaint, éditeur photo en ligne">
+    <!-- image_src : ancien indice d'image d'illustration encore lu par certains crawlers -->
+    <link rel="image_src" href="https://masterpaint.fr/IMG/illu.jpeg">
+
+<link rel="icon" href="favicon.ico">
+<meta name="theme-color" content="#0d8f8f">
+<style>
+  /* écran de démarrage repris de la version HTML (theme-win10-flat.css : .illu-splash) */
+  :root { --desk: #0d8f8f; --bg: #cfcfcf; }
+  :root.dark { --bg: #1f1f1f; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--desk); }
+  body.ready { background: var(--bg); }
+  /* Slint dessine toute l'interface dans ce canevas (WebGL / WebGPU) */
+  #canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+  #loading {
+    position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px 20px; box-sizing: border-box; background: var(--desk);
+    font: 13px "Segoe UI", "Selawik", system-ui, sans-serif; color: #fff;
+    transition: opacity .48s ease-out;
+  }
+  #loading.done { opacity: 0; pointer-events: none; }
+  .frame { position: relative; max-width: min(720px, 92vw); margin: 0 auto; }
+  .frame img { display: block; max-width: 100%; max-height: 82vh; height: auto; background: #fff;
+    min-height: 120px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .brand { position: absolute; left: 0; right: 0; top: 10px; text-align: center; pointer-events: none; }
+  .brand h1, .brand p { color: #fff; text-shadow: 0 4px 8px #000, 0 8px 24px #000, 0 12px 50px #000; }
+  .brand h1 { margin: 0; font-size: clamp(38px, 9vw, 60px); font-weight: 300; letter-spacing: .02em; }
+  .brand p { margin: 0; font-size: clamp(.95rem, 2.6vw, 1.15rem); animation: rise .5s ease-out .15s both; }
+  .brand .tag { font-size: .75em; padding: 1px 6px; margin-left: 6px; border: 1px solid #fff9; border-radius: 3px; vertical-align: 2px; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 6px 12px; box-sizing: border-box;
+    background: linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 100%); }
+  .status { display: flex; justify-content: space-between; margin: 0 4px 3px; font-size: 12px; line-height: 1.35; }
+  .tip { margin: 0 4px 6px; font-size: 12px; opacity: .85; min-height: 1.35em; }
+  .bar { height: 4px; background: rgba(255,255,255,.2); overflow: hidden; }
+  .fill { height: 100%; width: 0; background: #fff; transition: width .18s ease-out; }
+  .fill.indeterminate { width: 35% !important; animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
+  .err { color: #ffb4a8; }
+  /* fenêtre d'erreur (mpReportError) */
+  #mp-error { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+    background: rgba(0,0,0,.45); font: 13px "Segoe UI", system-ui, sans-serif; color: #1a1a1a; }
+  .mp-err-card { width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column;
+    gap: 10px; background: #f3f3f3; border: 1px solid #c6c6c6; border-radius: 8px; padding: 16px 16px 0;
+    box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
+  .mp-err-head { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+  .mp-err-ico { width: 24px; height: 24px; border-radius: 50%; background: #c42b1c; color: #fff;
+    display: grid; place-items: center; font-weight: 700; }
+  .mp-err-txt { margin: 0; line-height: 1.45; }
+  .mp-err-det { min-height: 120px; flex: 1; resize: vertical; font: 11px ui-monospace, Consolas, monospace;
+    border: 1px solid #c6c6c6; border-radius: 5px; padding: 6px; background: #fff; color: #333; }
+  .mp-err-mail { border: 1px solid #c6c6c6; border-radius: 5px; padding: 6px 8px; font: inherit; }
+  .mp-err-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px;
+    margin: 0 -16px; padding: 10px 16px; background: #fafafa; border-top: 1px solid #dcdcdc; }
+  .mp-err-st { flex: 1; color: #666; }
+  .mp-err-foot button { font: inherit; padding: 5px 12px; border-radius: 5px; border: 1px solid #0000001a;
+    background: #fdfdfd; cursor: pointer; }
+  .mp-err-foot button.pri { background: #0f2d5c; color: #fff; border-color: #0f2d5c; }
+  @media (prefers-color-scheme: dark) {
+    #mp-error { color: #f3f3f3; }
+    .mp-err-card { background: #2e2e2e; border-color: #4a4a4a; }
+    .mp-err-det, .mp-err-mail { background: #1f1f1f; color: #ddd; border-color: #4a4a4a; }
+    .mp-err-foot { background: #363636; border-color: #4a4a4a; }
+    .mp-err-foot button { background: #383838; color: #f3f3f3; border-color: #555; }
+  }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="frame">
+    <img id="splash" alt="" width="1000" height="850" decoding="async">
+    <div class="brand">
+      <h1>MasterPaint</h1>
+      <p>Par polocrafting 367<span class="tag">Rust</span></p>
+    </div>
+    <div class="bottom">
+      <div class="tip" id="tip"></div>
+      <div class="status"><span id="step">Téléchargement…</span><span id="pct"></span></div>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+    </div>
+  </div>
+</div>
+<script>
+  // même page à la racine du site (masterpaint.fr/) et dans /rust-app/ : chemins relatifs à la racine
+  window.MP_ROOT = /\/rust-app\/(index\.html)?$/.test(location.pathname) ? '../' : './';
+  // images de démarrage de la version HTML, tirées au sort avec les mêmes poids
+  (function () {
+    const pics = [['IMG/start.png', 45], ['IMG/start1.png', 35], ['IMG/start2.png', 10], ['IMG/start3.png', 10]];
+    let r = Math.random() * 100, src = pics[0][0];
+    for (const [p, w] of pics) { if (r < w) { src = p; break; } r -= w; }
+    document.getElementById('splash').src = MP_ROOT + src;
+    document.querySelector('link[rel=icon]').href = MP_ROOT + 'favicon.ico';
+  })();
+</script>
+<canvas id="canvas" tabindex="0"></canvas>
+<script>
+  // Fenêtre d'erreur de la page : panique du module (l'interface Slint est alors arrêtée et ne peut
+  // plus rien afficher) ou d'un worker de calcul. Message + détails, « Envoyer le signalement »
+  // (même adresse que Signaler un bug), « Copier », « Redémarrer la page » ; « Continuer » quand
+  // l'application tourne encore (erreur d'un worker).
+  (() => {
+    const logs = [];
+    const keep = (kind, a) => {
+      logs.push(new Date().toISOString().slice(11, 19) + ' ' + kind + ' ' + a.map((x) => (x && x.stack) || String(x)).join(' ').slice(0, 400));
+      if (logs.length > 30) logs.shift();
+    };
+    for (const k of ['error', 'warn']) {
+      const f = console[k].bind(console);
+      console[k] = (...a) => { keep(k, a); f(...a); };
+    }
+    let box = null, fatalShown = false;
+    window.mpReportError = (msg, fatal) => {
+      if (fatalShown) return;
+      if (fatal) fatalShown = true;
+      const details = [String(msg), '',
+        'MasterPaint ' + (window.mpVersion || '?') + ' (web)', navigator.userAgent, location.href,
+        new Date().toString(), '', '— journal —', ...logs].join('\n');
+      if (box) box.remove();
+      box = document.createElement('div');
+      box.id = 'mp-error';
+      box.innerHTML = `
+        <div class="mp-err-card" role="alertdialog" aria-labelledby="mp-err-t">
+          <div class="mp-err-head"><span class="mp-err-ico">!</span><b id="mp-err-t"></b></div>
+          <p class="mp-err-txt"></p>
+          <textarea class="mp-err-det" readonly></textarea>
+          <input class="mp-err-mail" type="text" placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)">
+          <div class="mp-err-foot">
+            <span class="mp-err-st"></span>
+            <button data-a="send" class="pri">Envoyer le signalement</button>
+            <button data-a="copy">Copier</button>
+            <button data-a="reload">Redémarrer la page</button>
+            ${fatal ? '' : '<button data-a="close">Continuer</button>'}
+          </div>
+        </div>`;
+      box.querySelector('#mp-err-t').textContent = fatal ? 'MasterPaint s\'est arrêté' : 'Un calcul a échoué';
+      box.querySelector('.mp-err-txt').textContent = fatal
+        ? 'Une erreur a arrêté l\'application. Vos projets ont été sauvegardés automatiquement avant l\'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.'
+        : 'Ce calcul a été abandonné, l\'application continue. Envoyez le signalement pour aider à corriger le problème.';
+      box.querySelector('.mp-err-det').value = details;
+      const st = box.querySelector('.mp-err-st');
+      box.addEventListener('click', async (e) => {
+        const a = e.target && e.target.dataset && e.target.dataset.a;
+        if (a === 'reload') location.reload();
+        else if (a === 'close') { box.remove(); box = null; }
+        else if (a === 'copy') { try { await navigator.clipboard.writeText(details); st.textContent = 'Copié'; } catch (_) { box.querySelector('.mp-err-det').select(); } }
+        else if (a === 'send') {
+          st.textContent = 'Envoi…';
+          try {
+            const r = await fetch('https://polocrafting.fr/contact_save.php', {
+              method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+              body: JSON.stringify({ appTitle: 'MasterPaint (Rust)', type: 'bug', message: details,
+                contact: box.querySelector('.mp-err-mail').value, deviceId: 'rust-web', timestamp: Date.now(),
+                userAgent: 'MasterPaint-Rust/' + (window.mpVersion || '?') + ' (web) ' + navigator.userAgent }),
+            });
+            const j = await r.json().catch(() => ({}));
+            st.textContent = j.success ? 'Envoyé, merci !' : 'Échec de l\'envoi';
+          } catch (_) { st.textContent = 'Échec de l\'envoi (réseau ?)'; }
+        }
+      });
+      document.body.appendChild(box);
+    };
+    // module arrêté sans passer par le panic hook (« unreachable », mémoire épuisée…)
+    window.addEventListener('error', (e) => {
+      const m = String((e.error && e.error.message) || e.message || '');
+      if (/unreachable|RuntimeError|memory access out of bounds|Out of memory/i.test(m)) window.mpReportError(m, true);
+    });
+  })();
+  // état des touches Ctrl / Maj / Alt : Slint (web) transmet les lettres sans ces modificateurs,
+  // ce qui rendait Ctrl+C, Ctrl+V, Ctrl+Z… inopérants dans le navigateur. L'application lit
+  // cet état à chaque touche. Cmd (macOS) compte comme Ctrl.
+  window.mpMods = { ctrl: false, shift: false, alt: false };
+  // clic droit : l'application a ses propres menus contextuels, pas celui du navigateur
+  window.addEventListener('contextmenu', (e) => { if (e.target && e.target.id === 'canvas') e.preventDefault(); }, true);
+  (function () {
+    const sync = (e) => { mpMods.ctrl = e.ctrlKey || e.metaKey; mpMods.shift = e.shiftKey; mpMods.alt = e.altKey; };
+    window.addEventListener('keydown', sync, true);
+    window.addEventListener('keyup', sync, true);
+    window.addEventListener('blur', () => { mpMods.ctrl = mpMods.shift = mpMods.alt = false; });
+  })();
+  // presse-papiers système (comme paintdotjs). Slint/winit appelle preventDefault sur toutes les
+  // touches : le navigateur ne déclenche donc jamais ses évènements copy / cut / paste, et il ne
+  // reste que l'API asynchrone (permission, focus du document : « Document is not focused »).
+  // Ctrl+C / X / V sont donc retenus ici, en phase de capture, avant winit : le navigateur
+  // exécute sa propre copie / collage, sans permission, et nous donne le contenu (image ou
+  // fichier). Seulement quand le focus est sur la toile : dans un champ de texte de Slint
+  // (élément <input> invisible), les touches lui restent.
+  // Les images sont décodées / encodées par le navigateur (codecs natifs, bien plus rapides que
+  // ceux de WebAssembly sur les grandes images).
+  // lastError : dernière raison d'échec (affichée dans la fenêtre d'erreur de l'application)
+  window.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+    const k = (e.key || '').toLowerCase();
+    if ((k === 'c' || k === 'x' || k === 'v') && document.activeElement && document.activeElement.tagName === 'CANVAS') {
+      mpClipboard.keyAt = Date.now();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+  const RAW_RE = /\.(illu|arw|cr2|cr3|nef|dng|raf|orf|rw2|pef)$/i;
+  window.mpClipboard = {
+    lastError: '',
+    keyAt: -1e9,
+    // décode une image avec les codecs du navigateur : { w, h, data (RGBA) }
+    async decode(blob) {
+      const bmp = await createImageBitmap(blob);
+      const cv = document.createElement('canvas');
+      cv.width = bmp.width; cv.height = bmp.height;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(bmp, 0, 0);
+      bmp.close();
+      const id = ctx.getImageData(0, 0, cv.width, cv.height);
+      return { w: cv.width, h: cv.height, data: new Uint8Array(id.data.buffer) };
+    },
+    // copie une image RGBA : le PNG est encodé par le navigateur, la promesse est donnée à
+    // ClipboardItem tout de suite (l'appel reste dans le geste de l'utilisateur)
+    write(rgba, w, h) {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
+          this.lastError = 'API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)';
+          return false;
+        }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length), w, h), 0, 0);
+        const png = new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).then(
+          () => console.log('[MasterPaint] presse-papiers : image copiée (' + w + ' × ' + h + ')'),
+          (e) => { this.lastError = 'écriture refusée : ' + e; console.warn('[MasterPaint] presse-papiers :', this.lastError); });
+        return true;
+      } catch (e) {
+        this.lastError = 'écriture refusée : ' + e;
+        console.warn('[MasterPaint] presse-papiers :', this.lastError);
+        return false;
+      }
+    },
+    // lecture asynchrone (menus Coller) : { w, h, data } ou null
+    async read() {
+      this.lastError = '';
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          this.lastError = 'API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)';
+          return null;
+        }
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const type = item.types.find((t) => t.startsWith('image/'));
+          if (type) return await this.decode(await item.getType(type));
+        }
+        this.lastError = 'le presse-papiers ne contient pas d\'image (' + items.map((i) => i.types.join('+')).join(', ') + ')';
+      } catch (e) {
+        this.lastError = 'lecture refusée : ' + e;
+      }
+      console.warn('[MasterPaint] presse-papiers :', this.lastError);
+      return null;
+    },
+    // Collage du navigateur : image copiée (capture, autre application) OU fichier copié dans
+    // le gestionnaire de fichiers. cbRaw(nom, w, h, RGBA) pour une image décodée ici ;
+    // cb(nom, octets) pour un .illu / RAW ; octets vides = fichier illisible (chemin seul) ;
+    // nom « * » = rien d'utilisable (presse-papiers interne de l'application).
+    claimedAt: -1e9,
+    waiters: [],
+    // attend (ms) qu'un évènement « paste » du navigateur soit pris en charge
+    waitPaste(ms) {
+      return new Promise((res) => {
+        const w = () => { clearTimeout(t); res(true); };
+        const t = setTimeout(() => { this.waiters = this.waiters.filter((x) => x !== w); res(false); }, ms);
+        this.waiters.push(w);
+      });
+    },
+    claim() { this.claimedAt = Date.now(); this.waiters.splice(0).forEach((w) => w()); },
+    onPaste(cb, cbRaw) {
+      document.addEventListener('paste', async (e) => {
+        const dt = e.clipboardData;
+        if (!dt) return;
+        const onCanvas = document.activeElement && document.activeElement.tagName === 'CANVAS';
+        const items = Array.from(dt.items || []);
+        console.log('[MasterPaint] évènement paste :', items.map((i) => i.kind + ':' + i.type).join(', '));
+        let file = Array.from(dt.files || []).find((f) => f.type.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif|ico|tiff?)$/i.test(f.name) || RAW_RE.test(f.name));
+        if (!file) {
+          const item = items.find((i) => i.kind === 'file' && i.type.startsWith('image/'));
+          file = item && item.getAsFile();
+        }
+        if (!file) {
+          if (!onCanvas) return; // texte collé dans un champ de l'application
+          this.claim();
+          e.preventDefault();
+          // fichier copié depuis le gestionnaire sans contenu lisible (liste d'URI seulement)
+          if (items.some((i) => i.type === 'text/uri-list' || i.type === 'x-special/gnome-copied-files')) cb('', new Uint8Array(0));
+          else cb('*', new Uint8Array(0));
+          return;
+        }
+        this.claim();
+        e.preventDefault();
+        const name = file.name || 'Collage';
+        if (RAW_RE.test(name) || !(file.type.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif)$/i.test(name))) {
+          cb(name, new Uint8Array(await file.arrayBuffer()));
+          return;
+        }
+        try {
+          const d = await this.decode(file);
+          cbRaw(name, d.w, d.h, d.data);
+        } catch (err) {
+          // format que le navigateur ne décode pas (ico, tiff…) : décodage par l'application
+          cb(name, new Uint8Array(await file.arrayBuffer()));
+        }
+      }, true);
+    },
+    // copier / couper du navigateur (Ctrl+C / X retenus ci-dessus, ou menu du navigateur)
+    onCopy(cb) {
+      const on = (cut) => (e) => {
+        if (!(document.activeElement && document.activeElement.tagName === 'CANVAS')) return;
+        e.preventDefault();
+        cb(cut);
+      };
+      document.addEventListener('copy', on(false));
+      document.addEventListener('cut', on(true));
+    },
+  };
+  // décodage d'un fichier image par le navigateur (JPEG : bien plus rapide que le décodeur
+  // WebAssembly) : octets en entrée, { w, h, data (RGBA) } en sortie, null si illisible
+  window.mpImage = {
+    async decode(bytes) {
+      try { return await mpClipboard.decode(new Blob([bytes])); } catch (e) { return null; }
+    },
+  };
+  // Aperçu 1:1 hors de la toile : fenêtre séparée du navigateur, un pixel de l'image = un pixel
+  // de l'écran (devicePixelRatio compensé). open() renvoie false si la fenêtre est bloquée.
+  window.mpPreview = {
+    win: null,
+    canvas: null,
+    isOpen() { return !!(this.win && !this.win.closed); },
+    open(w, h) {
+      if (this.isOpen()) { this.win.focus(); return true; }
+      const dpr = window.devicePixelRatio || 1;
+      const ww = Math.min(Math.round(w / dpr) + 24, screen.availWidth - 40);
+      const wh = Math.min(Math.round(h / dpr) + 24, screen.availHeight - 80);
+      const win = window.open('', 'masterpaint-apercu', `popup=yes,width=${Math.max(ww, 240)},height=${Math.max(wh, 180)}`);
+      if (!win) return false;
+      const d = win.document;
+      d.open();
+      d.write('<!doctype html><meta charset="utf-8"><title>Aperçu 1:1 — MasterPaint</title>' +
+        '<style>html,body{margin:0;background:#1e1e1e;}body{display:grid;place-items:center;min-height:100vh;overflow:auto;}' +
+        'canvas{image-rendering:pixelated;background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/16px 16px;}</style>' +
+        '<canvas></canvas>');
+      d.close();
+      this.win = win;
+      this.canvas = d.querySelector('canvas');
+      // retour à l'application quand l'aperçu est fermé
+      win.addEventListener('beforeunload', () => { this.win = null; this.canvas = null; });
+      return true;
+    },
+    update(rgba, w, h) {
+      if (!this.isOpen() || !this.canvas) return;
+      const c = this.canvas;
+      const dpr = this.win.devicePixelRatio || 1;
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+      c.style.width = (w / dpr) + 'px';
+      c.style.height = (h / dpr) + 'px';
+      const id = new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, w * h * 4), w, h);
+      c.getContext('2d').putImageData(id, 0, 0);
+    },
+    close() { if (this.isOpen()) this.win.close(); this.win = null; this.canvas = null; },
+  };
+  // suppression du fond (IA) : même bibliothèque que la version HTML (@imgly/background-removal,
+  // ONNX + WASM, exécutée dans ses propres Workers : la page reste fluide). Pixels RGBA en
+  // entrée et en sortie ; les codecs PNG sont ceux du navigateur (natifs, rapides).
+  window.mpAi = {
+    fn: null,
+    aborted: false,
+    MODULE: window.ILLU_REMOVE_BG_MODULE_URL || 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm',
+    abort() { this.aborted = true; },
+    async removeBg(rgba, w, h, model, progress) {
+      this.aborted = false;
+      const chk = () => { if (this.aborted) throw new Error('ILLU_ABORT'); };
+      progress('module', 0, 0);
+      if (!this.fn) {
+        const mod = await import(this.MODULE);
+        if (!mod || typeof mod.removeBackground !== 'function') throw new Error('module IA invalide');
+        this.fn = mod.removeBackground;
+      }
+      chk();
+      progress('prepare', 0, 0);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length), w, h), 0, 0);
+      const blobIn = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+      chk();
+      const out = await this.fn(blobIn, {
+        model,
+        progress: (k, c, t) => { if (!this.aborted) progress(String(k), c || 0, t || 0); },
+        output: { format: 'image/png', quality: 1 },
+      });
+      chk();
+      progress('apply', 0, 0);
+      const bmp = await createImageBitmap(out);
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      const id = ctx.getImageData(0, 0, w, h);
+      return new Uint8Array(id.data.buffer);
+    },
+  };
+  // sauvegarde automatique de la version Rust : IndexedDB (le stockage local est trop petit)
+  window.mpStore = {
+    db() {
+      return new Promise((res, rej) => {
+        const r = indexedDB.open('masterpaint-rust', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    },
+    async save(bytes) {
+      try {
+        const db = await this.db();
+        return await new Promise((res) => {
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(bytes, 'autosave');
+          tx.oncomplete = () => res(true);
+          tx.onerror = () => res(false);
+        });
+      } catch (e) { return false; }
+    },
+    async load() {
+      try {
+        const db = await this.db();
+        return await new Promise((res) => {
+          const rq = db.transaction('kv').objectStore('kv').get('autosave');
+          rq.onsuccess = () => res(rq.result || null);
+          rq.onerror = () => res(null);
+        });
+      } catch (e) { return null; }
+    },
+  };
+</script>
+<script type="module">
+  const PKG = window.MP_ROOT === './' ? './rust-app/pkg/' : './pkg/';
+  // Calculs lourds hors du fil de l'interface (effets, Photo Mode Pro, RAW, décodage) : workers
+  // qui chargent le même module wasm, déjà compilé (window.mpWasmModule). Deux files : 0 pour
+  // les petits calculs (rendu en direct), 1 pour les longs, pour qu'ils ne retardent pas les
+  // premiers. run() renvoie le résultat (tableau typé) ou null : l'application calcule alors
+  // sur place.
+  window.mpCompute = {
+    // files : 0 calculs courts, 1 longs, 2 haute résolution du Mode Photo Pro (annulable)
+    lanes: [null, null, null],
+    seq: 0,
+    jobs: new Map(),
+    fails: 0,
+    worker(lane) {
+      if (this.lanes[lane]) return this.lanes[lane];
+      if (!window.mpWasmModule || typeof Worker === 'undefined' || this.fails > 2) return null;
+      let w;
+      try {
+        w = new Worker(new URL(PKG + '../mp-worker.js', document.baseURI), { type: 'module' });
+      } catch (e) {
+        this.fails++;
+        return null;
+      }
+      const drop = () => {
+        w.terminate();
+        if (this.lanes[lane] === w) this.lanes[lane] = null;
+        for (const [k, j] of this.jobs) if (j.lane === lane) { this.jobs.delete(k); j.res(null); }
+      };
+      w.onmessage = (e) => {
+        const d = e.data;
+        const j = this.jobs.get(d.job);
+        this.jobs.delete(d.job);
+        // panique dans le calcul : résultat vide (l'application abandonne ce calcul au lieu de le
+        // refaire sur la page, où il planterait aussi) et fenêtre d'erreur avec le message
+        if (j) j.res(d.dead ? new Uint8Array(0) : (d.out || null));
+        if (d.dead && window.mpReportError) window.mpReportError(d.err || 'Erreur dans un calcul', false);
+        // module arrêté (erreur grave dans le calcul) : un nouveau worker au prochain appel
+        if (d.dead) drop();
+      };
+      w.onerror = (e) => {
+        console.warn('[MasterPaint] worker de calcul :', e.message || e);
+        this.fails++;
+        drop();
+      };
+      w.postMessage({ type: 'init', module: window.mpWasmModule });
+      this.lanes[lane] = w;
+      return w;
+    },
+    run(msg, transfer) {
+      const lane = Math.min(msg.lane | 0, 2);
+      const w = this.worker(lane);
+      if (!w) return Promise.resolve(null);
+      const job = ++this.seq;
+      msg.job = job;
+      return new Promise((res) => {
+        this.jobs.set(job, { res, lane });
+        w.postMessage(msg, transfer || []);
+      });
+    },
+    // calculs devenus inutiles (réglage changé) : la file est arrêtée net, ses calculs en
+    // attente rendent un résultat vide (ignoré) ; un worker neuf est créé au prochain appel
+    cancel(lane) {
+      const w = this.lanes[lane];
+      if (!w) return;
+      w.terminate();
+      this.lanes[lane] = null;
+      for (const [k, j] of this.jobs) if (j.lane === lane) { this.jobs.delete(k); j.res(new Uint8Array(0)); }
+    },
+  };
+  // couleur d'accent et thème enregistrés (Paramètres de la version Rust)
+  try {
+    const s = JSON.parse(localStorage.getItem('illu_rust_settings') || '{}');
+    if (s.dark) document.documentElement.classList.add('dark');
+  } catch (e) { /* stockage indisponible */ }
+  const tips = [
+    'Astuce : Ctrl+F répète le dernier effet.',
+    'Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.',
+    'Astuce : Ctrl+Maj+M ouvre les Courbes.',
+    'Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.',
+    'Astuce : Espace + glisser pour se déplacer sur la toile.',
+  ];
+  document.getElementById('tip').textContent = tips[Math.floor(Math.random() * tips.length)];
+  const fill = document.getElementById('fill'), pct = document.getElementById('pct'), step = document.getElementById('step');
+  const mb = (n) => (n / 1048576).toFixed(1) + ' Mo';
+  // téléchargement du module avec progression (le serveur peut le compresser : taille inconnue)
+  async function download(url) {
+    const res = await fetch(url);
+    if (!res.ok || !res.body) return url;
+    const total = +res.headers.get('content-length') || 0;
+    const encoded = res.headers.get('content-encoding');
+    if (!total || encoded) fill.classList.add('indeterminate');
+    const reader = res.body.getReader();
+    const chunks = [];
+    let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      if (total && !encoded) {
+        fill.style.width = Math.min(100, got / total * 100) + '%';
+        pct.textContent = Math.round(got / total * 100) + ' % · ' + mb(got);
+      } else {
+        pct.textContent = mb(got);
+      }
+    }
+    const bytes = new Uint8Array(got);
+    let o = 0;
+    for (const c of chunks) { bytes.set(c, o); o += c.length; }
+    return bytes;
+  }
+  const hide = () => { document.body.classList.add('ready'); document.getElementById('loading').classList.add('done'); };
+  // l'application appelle mpReady() une fois les projets de la session restaurés
+  window.mpReady = hide;
+  window.mpLoadingStep = (text) => { step.textContent = text; pct.textContent = ''; fill.classList.add('indeterminate'); };
+  try {
+    const { default: init } = await import(PKG + 'masterpaint_ui.js');
+    const bytes = await download(PKG + 'masterpaint_ui_bg.wasm');
+    // compilé une fois ici, puis partagé avec les workers de calcul (aucune recompilation)
+    let module = bytes;
+    try {
+      module = typeof bytes === 'string' ? await WebAssembly.compileStreaming(fetch(bytes)) : await WebAssembly.compile(bytes);
+      window.mpWasmModule = module;
+    } catch (e) {
+      console.warn('[MasterPaint] compilation du module :', e);
+      module = bytes;
+    }
+    fill.classList.remove('indeterminate');
+    fill.style.width = '100%';
+    step.textContent = 'Démarrage de l’interface…';
+    // filet de sécurité si l'application ne signale pas qu'elle est prête
+    setTimeout(hide, 30000);
+    await init({ module_or_path: module });
+  } catch (e) {
+    if (String(e).includes('Using exceptions for control flow')) {
+      // boucle d'évènements lancée : l'écran disparaît à l'appel de mpReady()
+    } else {
+      console.error(e);
+      step.innerHTML = '<span class="err">Échec du chargement</span>';
+      pct.textContent = '';
+      document.getElementById('tip').textContent = String(e);
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[package]
+name = "masterpaint-desktop"
+description = "MasterPaint installable (Windows, Linux, macOS, Android) : l'interface web de MasterPaint dans une fenêtre native, moteur Rust natif"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "masterpaint_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "masterpaint-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+masterpaint-core = { path = "../masterpaint-core" }
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

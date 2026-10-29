@@ -1,0 +1,507 @@
+// Fenêtre de bienvenue (comme la version HTML) : affichée aux deux premières ouvertures et par
+// Fichier › Bienvenue / Informations. L'essentiel pour démarrer, quelques réglages rapides
+// (thème, accent, barre d'options, disposition — les mêmes que les Paramètres), un rappel des
+// raccourcis et le projet GitHub. Contenu seul : app.slint le pose dans une FloatWindow (panneau
+// plein écran en mode téléphone).
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { MpIcons } from "mpicons.slint";
+import { FaIcon, W10Button, W10CheckBox, Segmented, DialogFooter } from "widgets.slint";
+
+/// Titre d'une section de la fenêtre, avec son trait d'accent.
+component WelHead inherits HorizontalLayout {
+    in property <string> title;
+    spacing: 6px;
+    alignment: LayoutAlignment.start;
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 3px;
+            height: 14px;
+            border-radius: 1.5px;
+            background: Theme.accent;
+        }
+    }
+    Text {
+        text: root.title;
+        font-size: Theme.font-size + 2px;
+        font-weight: 700;
+        color: Theme.text;
+    }
+}
+
+/// Grand bouton « Démarrer » : icône maison, titre, explication.
+component StartCard inherits Rectangle {
+    in property <int> mp: -1;
+    in property <string> glyph;
+    in property <string> title;
+    in property <string> hint;
+    callback clicked();
+    height: 46px;
+    border-radius: Theme.ctl-radius + 2px;
+    background: ta.pressed ? Theme.accent-20 : ta.has-hover ? Theme.accent-12 : Theme.button-bg;
+    border-width: 1px;
+    border-color: ta.has-hover ? Theme.accent-60 : Theme.button-border;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 10px;
+        Rectangle {
+            width: 24px;
+            if root.mp >= 0: Image {
+                y: (parent.height - 24px) / 2;
+                width: 24px;
+                height: 24px;
+                source: MpIcons.images[root.mp];
+            }
+            if root.mp < 0: FaIcon {
+                width: parent.width;
+                height: parent.height;
+                glyph: root.glyph;
+                size: 18px;
+                color: Theme.accent;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 1px;
+            Text {
+                text: root.title;
+                font-weight: 600;
+                color: Theme.text;
+            }
+            Text {
+                text: root.hint;
+                font-size: Theme.small-font-size;
+                color: Theme.text-inactive;
+                overflow: elide;
+            }
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// Lien discret (texte d'accent souligné au survol).
+component WelLink inherits Text {
+    callback clicked();
+    color: Theme.accent;
+    font-weight: lta.has-hover ? 600 : 400;
+    lta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// « Démarrer » : nouvelle image, ouvrir, projet d'exemple.
+component StartSection inherits VerticalLayout {
+    callback act(string);
+    spacing: 6px;
+    WelHead {
+        title: "Démarrer";
+    }
+    StartCard {
+        mp: 0;
+        title: "Nouvelle image";
+        hint: "Toile vide, taille et fond au choix (Ctrl+N)";
+        clicked => {
+            root.act("new");
+        }
+    }
+    StartCard {
+        mp: 1;
+        title: "Ouvrir une image";
+        hint: "PNG, JPEG, WebP, RAW, projet .illu… ou glisser-déposer (Ctrl+O)";
+        clicked => {
+            root.act("open");
+        }
+    }
+    StartCard {
+        mp: 87;
+        title: "Ouvrir le projet d'exemple";
+        hint: "Calques, masques et filtres dynamiques déjà en place";
+        clicked => {
+            root.act("example");
+        }
+    }
+}
+
+/// Rappel des raccourcis essentiels (la liste complète : fenêtre Raccourcis).
+component ShortcutsSection inherits VerticalLayout {
+    in property <length> w;
+    callback act(string);
+    spacing: 3px;
+    WelHead {
+        title: "Raccourcis essentiels";
+    }
+    for s in [
+        { k: "Ctrl+N · Ctrl+O · Ctrl+S", t: "Nouvelle image, ouvrir, exporter" },
+        { k: "Ctrl+Z · Ctrl+Y", t: "Annuler, rétablir" },
+        { k: "Ctrl+C · Ctrl+X · Ctrl+V", t: "Copier, couper, coller" },
+        { k: "Ctrl+A · Ctrl+D", t: "Tout sélectionner, désélectionner" },
+        { k: "Ctrl+F", t: "Répéter le dernier effet" },
+        { k: "Suppr", t: "Effacer la sélection" },
+        { k: "Entrée · Échap", t: "Valider, annuler (texte, lasso, recadrage…)" },
+        { k: "[ · ]", t: "Taille du pinceau, du crayon, de la gomme" },
+        { k: "Ctrl + molette", t: "Zoomer (molette seule : déplacer la toile)" },
+        { k: "Maj + tracé", t: "Garder les proportions / angles de 15°" },
+    ]: HorizontalLayout {
+        spacing: 8px;
+        Rectangle {
+            width: min(150px, root.w * 0.48);
+            height: 20px;
+            Rectangle {
+                x: 0;
+                width: min(parent.width, kt.preferred-width + 10px);
+                height: 18px;
+                border-radius: Theme.ctl-radius;
+                background: Theme.dark ? #ffffff12 : #0000000a;
+                border-width: 1px;
+                border-color: Theme.button-border;
+                kt := Text {
+                    text: s.k;
+                    font-size: Theme.small-font-size;
+                    font-weight: 600;
+                    color: Theme.text;
+                    overflow: elide;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        Text {
+            text: s.t;
+            color: Theme.text-inactive;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    HorizontalLayout {
+        padding-top: 4px;
+        alignment: LayoutAlignment.start;
+        WelLink {
+            text: "Tous les raccourcis…";
+            clicked => {
+                root.act("shortcuts");
+            }
+        }
+    }
+}
+
+/// Réglages rapides : mêmes propriétés que Paramètres › Apparence / Toile et outils.
+component QuickSettings inherits VerticalLayout {
+    in property <length> w;
+    in-out property <int> toolbar-mode;
+    in-out property <int> layout;
+    in-out property <bool> layout-auto;
+    callback theme(bool, color);
+    callback settings-changed();
+    callback layout-changed(int);
+    callback act(string);
+    spacing: 4px;
+    WelHead {
+        title: "Réglages rapides";
+    }
+    Text {
+        text: "Thème sombre";
+        font-weight: 600;
+        color: Theme.text;
+    }
+    Segmented {
+        options: ["Non", "Oui"];
+        index: Theme.dark ? 1 : 0;
+        selected(i) => {
+            root.theme(i == 1, Theme.accent);
+        }
+    }
+    Text {
+        text: "Couleur d'accentuation";
+        font-weight: 600;
+        color: Theme.text;
+    }
+    // 15 accents (ceux des Paramètres) sur deux lignes : la colonne est étroite
+    for line in [
+        [#b91c1c, #f97316, #b45309, #ca8a04, #166534, #059669, #0d7a7a, #0078d4],
+        [#0891b2, #2563eb, #0f2d5c, #4338ca, #5b21b6, #c026d3, #db2777],
+    ]: HorizontalLayout {
+        spacing: 5px;
+        alignment: LayoutAlignment.start;
+        for a in line: Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: Theme.ctl-radius;
+            background: a;
+            border-width: Theme.accent == a ? 3px : 1px;
+            border-color: Theme.accent == a ? Theme.text : #808080;
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.theme(Theme.dark, a);
+                }
+            }
+        }
+    }
+    Text {
+        text: "Barre d'options";
+        font-weight: 600;
+        color: Theme.text;
+    }
+    Segmented {
+        options: ["Ruban MasterPaint", "Style Paint.NET"];
+        index <=> root.toolbar-mode;
+        selected(i) => {
+            root.settings-changed();
+        }
+    }
+    Text {
+        text: "Disposition de l'interface";
+        font-weight: 600;
+        color: Theme.text;
+    }
+    Segmented {
+        options: ["Paint.NET", "Photoshop", "Téléphone"];
+        index <=> root.layout;
+        selected(i) => {
+            root.layout-changed(i);
+        }
+    }
+    Text {
+        width: root.w;
+        text: "Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.";
+        wrap: word-wrap;
+        font-size: Theme.small-font-size;
+        color: Theme.text-inactive;
+    }
+    HorizontalLayout {
+        spacing: 6px;
+        alignment: LayoutAlignment.start;
+        VerticalLayout {
+            alignment: center;
+            auto-cb := W10CheckBox {
+                checked <=> root.layout-auto;
+                toggled => {
+                    root.settings-changed();
+                }
+            }
+        }
+        Text {
+            text: "Interface tactile automatique sur petit écran";
+            color: Theme.text;
+            vertical-alignment: center;
+            TouchArea {
+                clicked => {
+                    auto-cb.toggle();
+                }
+            }
+        }
+    }
+    HorizontalLayout {
+        padding-top: 4px;
+        alignment: LayoutAlignment.start;
+        WelLink {
+            text: "Tous les paramètres…";
+            clicked => {
+                root.act("settings");
+            }
+        }
+    }
+}
+
+export component WelcomeContent inherits Rectangle {
+    in property <string> version;
+    in-out property <int> toolbar-mode;
+    in-out property <int> layout;
+    in-out property <bool> layout-auto;
+    /// « Ne plus afficher » (réglage `welcomeHide`)
+    in-out property <bool> hide;
+    /// thème sombre, couleur d'accentuation (même chemin que les Paramètres)
+    callback theme(bool, color);
+    /// réglage modifié : à enregistrer
+    callback settings-changed();
+    /// disposition choisie (le choix explicite sur un écran étroit est respecté)
+    callback layout-changed(int);
+    /// new, open, example, github, shortcuts, settings
+    callback action(string);
+    /// « Commencer » : fermer la fenêtre
+    callback start();
+    property <length> pad: 16px;
+    // deux colonnes dès que la place le permet ; sinon (téléphone) tout s'empile
+    property <bool> wide: root.width >= 600px;
+    property <length> inner-w: root.width - 2 * root.pad - 14px;
+    property <length> col-w: root.wide ? (root.inner-w - 20px) / 2 : root.inner-w;
+    ScrollView {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height - 44px;
+        content-height: body.preferred-height + 8px;
+        body := VerticalLayout {
+            padding: root.pad;
+            spacing: 14px;
+            alignment: LayoutAlignment.start;
+            // en-tête : logo, nom, version, présentation
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: LayoutAlignment.start;
+                Image {
+                    width: 52px;
+                    height: 52px;
+                    source: @image-url("../../desktop/icons/128x128.png");
+                }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: LayoutAlignment.start;
+                        Text {
+                            text: "Bienvenue dans MasterPaint";
+                            font-size: Theme.font-size + 7px;
+                            font-weight: 700;
+                            color: Theme.text;
+                        }
+                        Text {
+                            text: "version " + root.version;
+                            color: Theme.text-inactive;
+                            vertical-alignment: bottom;
+                        }
+                    }
+                    Text {
+                        width: root.inner-w - 64px;
+                        text: "Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application.";
+                        wrap: word-wrap;
+                        color: Theme.text-inactive;
+                    }
+                }
+            }
+            Rectangle {
+                height: 1px;
+                background: Theme.window-border;
+            }
+            if root.wide: HorizontalLayout {
+                spacing: 20px;
+                alignment: LayoutAlignment.start;
+                VerticalLayout {
+                    width: root.col-w;
+                    spacing: 16px;
+                    alignment: LayoutAlignment.start;
+                    StartSection {
+                        act(id) => {
+                            root.action(id);
+                        }
+                    }
+                    ShortcutsSection {
+                        w: root.col-w;
+                        act(id) => {
+                            root.action(id);
+                        }
+                    }
+                }
+                QuickSettings {
+                    width: root.col-w;
+                    alignment: LayoutAlignment.start;
+                    w: root.col-w;
+                    toolbar-mode <=> root.toolbar-mode;
+                    layout <=> root.layout;
+                    layout-auto <=> root.layout-auto;
+                    theme(d, a) => {
+                        root.theme(d, a);
+                    }
+                    settings-changed => {
+                        root.settings-changed();
+                    }
+                    layout-changed(i) => {
+                        root.layout-changed(i);
+                    }
+                    act(id) => {
+                        root.action(id);
+                    }
+                }
+            }
+            if !root.wide: VerticalLayout {
+                spacing: 16px;
+                alignment: LayoutAlignment.start;
+                StartSection {
+                    act(id) => {
+                        root.action(id);
+                    }
+                }
+                QuickSettings {
+                    w: root.col-w;
+                    toolbar-mode <=> root.toolbar-mode;
+                    layout <=> root.layout;
+                    layout-auto <=> root.layout-auto;
+                    theme(d, a) => {
+                        root.theme(d, a);
+                    }
+                    settings-changed => {
+                        root.settings-changed();
+                    }
+                    layout-changed(i) => {
+                        root.layout-changed(i);
+                    }
+                    act(id) => {
+                        root.action(id);
+                    }
+                }
+                ShortcutsSection {
+                    w: root.col-w;
+                    act(id) => {
+                        root.action(id);
+                    }
+                }
+            }
+        }
+    }
+    // pied : « Ne plus afficher » à gauche, GitHub et Commencer à droite
+    DialogFooter {
+        y: root.height - 44px;
+        width: root.width;
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: LayoutAlignment.start;
+            VerticalLayout {
+                alignment: center;
+                hide-cb := W10CheckBox {
+                    checked <=> root.hide;
+                    toggled => {
+                        root.settings-changed();
+                    }
+                }
+            }
+            Text {
+                text: "Ne plus afficher au démarrage";
+                color: Theme.text;
+                vertical-alignment: center;
+                TouchArea {
+                    clicked => {
+                        hide-cb.toggle();
+                    }
+                }
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+        W10Button {
+            text: "Projet sur GitHub";
+            tip: "Code source, suivi des problèmes et nouveautés de MasterPaint";
+            clicked => {
+                root.action("github");
+            }
+        }
+        W10Button {
+            text: "Commencer";
+            primary: true;
+            clicked => {
+                root.start();
+            }
+        }
+    }
+}

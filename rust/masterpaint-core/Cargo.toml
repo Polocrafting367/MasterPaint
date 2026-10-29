@@ -1,0 +1,19 @@
+[package]
+name = "masterpaint-core"
+description = "Moteur d'effets pixel de MasterPaint (WASM pour le web, natif multi-thread pour le bureau)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# rlib : utilisé par l'application egui ; cdylib : module WASM autonome de la version web JS
+# (construit par rust/build-wasm.ps1 avec la fonctionnalité « c-abi »).
+crate-type = ["rlib", "cdylib"]
+path = "src/lib.rs"
+
+[features]
+default = []
+# Exports C (mp_apply, mp_alloc…) du module WASM chargé par js/rust/RustCore.js
+c-abi = []
+
+[dependencies]

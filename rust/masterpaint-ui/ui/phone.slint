@@ -1,0 +1,1202 @@
+// Mode téléphone : même disposition que la version web (js/app/illu-mobile-shell.js,
+// css/illu-mobile-shell.css, css/theme-mobile-modern.css) — barre du haut « ☰ Menu », capsule
+// annuler / rétablir, bande d'outils, pilules flottantes, barre du bas, panneaux et tiroir ☰.
+import { Theme } from "theme.slint";
+import { IconSpec, MenuSpec, DocTab, SheetRow } from "types.slint";
+import { Generated } from "generated.slint";
+import { Icon, FaIcon, GlyphIcon } from "widgets.slint";
+import { MpIcons } from "mpicons.slint";
+import { CurrentColors, ColorPicker, ColorSliders, SwatchStrip, PaletteGrid } from "colors.slint";
+
+/// Nuancier étendu (fenêtre Couleurs « Plus >> », panneau Couleurs du téléphone).
+export global Palettes {
+    out property <[color]> full: [#000000, #404040, #ff0000, #ff2200, #ff4500, #ff6700, #ff8a00, #ffae00, #ffd200, #ece200, #d4ef00, #bcfc00, #9dff00, #7bff00, #58ff00, #3cff07, #24ff11, #0bff1c, #00ff35, #00ff59, #00ff7c, #00ffa0, #00ffc4, #00ffe8, #00f2ff, #00d0ff, #00adff, #008aff, #0067ff, #0043ff, #0424ff, #1c17ff, #330bff, #4b00ff, #6d00ff, #9000ff, #b200ff, #1e1e1e, #707070, #7f0000, #7f1100, #7f2100, #7f3200, #7f4300, #7f5500, #7f6700, #757000, #6a7600, #5e7d00, #4f7f00, #3d7f00, #2c7f00, #1e7f03, #127f07, #067f0c, #007f18, #007f2a, #007f3c, #007f4e, #007f61, #007f73, #00797f, #00687f, #00567f, #00457f, #00337f, #00227f, #02127f, #0d0c7f, #17067f, #23007f, #34007f, #46007f, #57007f, #ffffff, #b4b4b4, #ee7272, #ee8372, #ee9472, #eea472, #eeb572, #eec672, #eed872, #ede76b, #deed6c, #ceed71, #beee72, #aeee72, #9dee72, #8fee75, #82ee79, #76ee7f, #72ee8c, #72ee9d, #72eeae, #72eec0, #72eed1, #72eee2, #72e7ee, #72d7ee, #72c6ee, #72b5ee, #72a4ee, #7293ee, #7483ee, #7d7bef, #8a76ee, #9772ee, #a772ee, #b872ee, #c872ee];
+}
+
+/// Barre du haut : « ☰ Menu » | titre du document et sa taille | MASTERPAINT by Polocrafting.
+export component MobTopBar inherits Rectangle {
+    in property <string> title;
+    in property <string> resolution;
+    callback menu();
+    background: Theme.mob-accent-dark;
+    drop-shadow-blur: 8px;
+    drop-shadow-offset-y: 1px;
+    drop-shadow-color: #00000033;
+    HorizontalLayout {
+        padding-right: 10px;
+        burger := Rectangle {
+            width: bl.preferred-width + 44px;
+            background: bta.pressed ? #ffffff24 : transparent;
+            FaIcon {
+                x: 12px;
+                width: 18px;
+                glyph: "\u{f0c9}";
+                size: 17px;
+                color: #ffffffeb;
+            }
+            bl := Text {
+                x: 36px;
+                text: "Menu";
+                font-size: 13px;
+                font-weight: 600;
+                color: #ffffffeb;
+                vertical-alignment: center;
+            }
+            bta := TouchArea {
+                clicked => {
+                    root.menu();
+                }
+            }
+        }
+        // titre : un appui ouvre aussi le tiroir (liste des documents), comme la version web
+        Rectangle {
+            horizontal-stretch: 1;
+            border-radius: 4px;
+            background: tta.pressed ? #ffffff1a : transparent;
+            VerticalLayout {
+                alignment: center;
+                spacing: 1px;
+                padding-left: 6px;
+                padding-right: 6px;
+                Text {
+                    text: root.title;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #ffffff;
+                    horizontal-alignment: center;
+                    overflow: elide;
+                }
+                Text {
+                    text: root.resolution;
+                    font-size: 10px;
+                    color: #ffffff99;
+                    horizontal-alignment: center;
+                }
+            }
+            tta := TouchArea {
+                clicked => {
+                    root.menu();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: "MASTERPAINT";
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+                color: #ffffffeb;
+                horizontal-alignment: right;
+            }
+            Text {
+                text: "by Polocrafting";
+                font-size: 9px;
+                color: #ffffff80;
+                horizontal-alignment: right;
+            }
+        }
+    }
+}
+
+/// Capsule verticale annuler / rétablir (à gauche du ruban).
+export component MobUndoCapsule inherits Rectangle {
+    callback undo();
+    callback redo();
+    width: 36px;
+    border-radius: 10px;
+    background: Theme.mob-capsule;
+    drop-shadow-blur: 10px;
+    drop-shadow-offset-y: 2px;
+    drop-shadow-color: #0000001f;
+    VerticalLayout {
+        padding: 3px;
+        Rectangle {
+            border-radius: 8px;
+            background: uta.pressed ? Theme.mob-accent-tint : transparent;
+            GlyphIcon {
+                glyph: "\u{f2ea}";
+                size: 14px;
+                tint: Theme.accent;
+            }
+            uta := TouchArea {
+                clicked => {
+                    root.undo();
+                }
+            }
+        }
+        Rectangle {
+            height: 1px;
+            background: Theme.mob-divider;
+        }
+        Rectangle {
+            border-radius: 8px;
+            background: rta.pressed ? Theme.mob-accent-tint : transparent;
+            GlyphIcon {
+                glyph: "\u{f2f9}";
+                size: 14px;
+                tint: Theme.accent;
+            }
+            rta := TouchArea {
+                clicked => {
+                    root.redo();
+                }
+            }
+        }
+    }
+}
+
+/// Bande d'outils : pastille de l'outil courant (le chevron replie la bande), puis tous les outils.
+export component MobToolRow inherits Rectangle {
+    in-out property <string> current-tool;
+    in-out property <bool> open: true;
+    /// calque actif qui refuse les pixels ("" / "calque texte" / "verrouillé" / "dossier") :
+    /// outils qui peignent ou déforment grisés (même règle que la fenêtre Outils)
+    in property <string> layer-block;
+    pure function blocked(id: string) -> bool {
+        return root.layer-block != "" && (id == "tool-brush" || id == "tool-pencil" || id == "tool-eraser"
+            || id == "tool-fill" || id == "tool-gradient" || id == "tool-shapes-family" || id == "tool-round-3"
+            || id == "tool-line" || id == "tool-deform" || id == "tool-warp-4"
+            || (id == "tool-move" && root.layer-block == "verrouillé"));
+    }
+    callback tool-selected(string);
+    height: 34px;
+    Rectangle {
+        x: 0;
+        width: 50px;
+        height: parent.height;
+        border-radius: 10px;
+        background: pta.pressed ? Theme.mob-accent-pill : Theme.mob-capsule;
+        drop-shadow-blur: 8px;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-color: #0000001a;
+        Rectangle {
+            x: 4px;
+            y: 4px;
+            width: 26px;
+            height: parent.height - 8px;
+            border-radius: 7px;
+            background: Theme.mob-accent-tint;
+            for t in Generated.tools: Icon {
+                visible: t.id == root.current-tool;
+                spec: t.icon;
+                size: 16px;
+            }
+        }
+        FaIcon {
+            x: 33px;
+            width: 12px;
+            glyph: root.open ? "\u{f053}" : "\u{f054}";
+            size: 10px;
+            color: Theme.mob-text;
+        }
+        pta := TouchArea {
+            clicked => {
+                root.open = !root.open;
+            }
+        }
+    }
+    if root.open: Rectangle {
+        x: 56px;
+        width: parent.width - 56px;
+        height: parent.height;
+        border-radius: 10px;
+        background: Theme.mob-card;
+        drop-shadow-blur: 8px;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-color: #0000001a;
+        clip: true;
+        Flickable {
+            viewport-width: strip.width;
+            viewport-height: self.height;
+            strip := HorizontalLayout {
+                x: 0;
+                y: 0;
+                width: self.preferred-width;
+                height: root.height;
+                padding: 3px;
+                spacing: 2px;
+                // les actions de la fenêtre Outils (désélectionner, ajuster) ont leur place ailleurs
+                for t in Generated.tools: HorizontalLayout {
+                    if t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2": Rectangle {
+                        width: 34px;
+                        opacity: root.blocked(t.id) ? 0.35 : 1;
+                        border-radius: 7px;
+                        background: t.id == root.current-tool ? Theme.mob-accent-pill : tta.pressed ? Theme.mob-divider : transparent;
+                        border-width: t.id == root.current-tool ? 1px : 0px;
+                        border-color: Theme.accent.with-alpha(0.45);
+                        Icon {
+                            spec: t.icon;
+                            size: 17px;
+                            tint: Theme.mob-text;
+                        }
+                        tta := TouchArea {
+                            clicked => {
+                                if (!root.blocked(t.id)) {
+                                    root.current-tool = t.id;
+                                    root.tool-selected(t.id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Bouton rond d'une pilule flottante (Nouveau, Ouvrir, Exporter | Couleurs, Calques, Historique).
+component MobRoundButton inherits Rectangle {
+    in property <string> glyph;
+    in property <bool> checked;
+    callback clicked();
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    background: ta.pressed ? Theme.mob-accent-pill : root.checked ? Theme.mob-accent-tint : transparent;
+    GlyphIcon {
+        glyph: root.glyph;
+        size: 17px;
+        tint: root.checked ? Theme.accent : Theme.mob-text;
+    }
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// Les deux pilules au-dessus de la barre du bas : fichiers à gauche, palettes à droite.
+export component MobPills inherits Rectangle {
+    in property <bool> colors;
+    in property <bool> layers;
+    in property <bool> history;
+    callback action(string);
+    height: 42px;
+    Rectangle {
+        x: 0;
+        width: lp.preferred-width;
+        border-radius: 12px;
+        background: Theme.mob-card;
+        drop-shadow-blur: 10px;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-color: #00000038;
+        lp := HorizontalLayout {
+            padding: 4px;
+            padding-left: 8px;
+            padding-right: 8px;
+            spacing: 4px;
+            MobRoundButton {
+                glyph: "\u{e494}";
+                clicked => {
+                    root.action("new");
+                }
+            }
+            MobRoundButton {
+                glyph: "\u{f07c}";
+                clicked => {
+                    root.action("open");
+                }
+            }
+            MobRoundButton {
+                glyph: "\u{f0c7}";
+                clicked => {
+                    root.action("export");
+                }
+            }
+        }
+    }
+    Rectangle {
+        x: parent.width - self.width;
+        width: rp.preferred-width;
+        border-radius: 12px;
+        background: Theme.mob-card;
+        drop-shadow-blur: 10px;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-color: #00000038;
+        rp := HorizontalLayout {
+            padding: 4px;
+            padding-left: 8px;
+            padding-right: 8px;
+            spacing: 4px;
+            MobRoundButton {
+                glyph: "\u{f53f}";
+                checked: root.colors;
+                clicked => {
+                    root.action("colors");
+                }
+            }
+            MobRoundButton {
+                glyph: "\u{f5fd}";
+                checked: root.layers;
+                clicked => {
+                    root.action("layers");
+                }
+            }
+            MobRoundButton {
+                glyph: "\u{f1da}";
+                checked: root.history;
+                clicked => {
+                    root.action("history");
+                }
+            }
+        }
+    }
+}
+
+/// Barre du bas : Filtre, Ajuster, Déform, Effets, Rotation, Ajuster (zoom), Recadrage.
+/// Fenêtre d'effet ouverte : icônes seules (comme la version web).
+export component MobDock inherits Rectangle {
+    in property <bool> compact;
+    in property <string> active;
+    callback action(string);
+    border-radius: 14px;
+    background: Theme.mob-card;
+    drop-shadow-blur: 14px;
+    drop-shadow-offset-y: -2px;
+    drop-shadow-color: #00000026;
+    clip: true;
+    Flickable {
+        viewport-width: dl.width;
+        viewport-height: self.height;
+        dl := HorizontalLayout {
+            x: 0;
+            y: 0;
+            width: max(root.width, self.preferred-width);
+            height: root.height;
+            padding: 4px;
+            spacing: 2px;
+            alignment: center;
+            for b in [
+                { id: "gallery", g: "\u{f0b0}", t: "Filtre" },
+                { id: "adjust", g: "\u{f1de}", t: "Ajuster" },
+                { id: "deform", g: "\u{e2ca}", t: "Déform" },
+                { id: "effects", g: "\u{f773}", t: "Effets" },
+                { id: "rotate", g: "\u{f2f1}", t: "Rotation" },
+                { id: "fit", g: "\u{f065}", t: "Ajuster" },
+                { id: "crop", g: "\u{f125}", t: "Recadrage" },
+            ]: Rectangle {
+                width: 56px;
+                border-radius: 10px;
+                background: root.active == b.id ? Theme.mob-accent-pill : dta.pressed ? Theme.mob-divider : transparent;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 3px;
+                    GlyphIcon {
+                        glyph: b.g;
+                        size: 18px;
+                        tint: root.active == b.id ? Theme.accent : Theme.mob-text;
+                    }
+                    if !root.compact: Text {
+                        text: b.t;
+                        font-size: 10px;
+                        font-weight: 600;
+                        color: root.active == b.id ? Theme.accent : Theme.mob-text;
+                        horizontal-alignment: center;
+                        overflow: elide;
+                    }
+                }
+                dta := TouchArea {
+                    clicked => {
+                        root.action(b.id);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Panneau du bas (coins arrondis, poignée, bouton « Fermer » facultatif).
+export component MobSheet inherits Rectangle {
+    in property <bool> footer: true;
+    callback close();
+    out property <length> body-y: 18px;
+    out property <length> body-height: root.height - 18px - (root.footer ? 50px : 0px);
+    border-radius: 16px;
+    background: Theme.mob-surface;
+    drop-shadow-blur: 14px;
+    drop-shadow-offset-y: -2px;
+    drop-shadow-color: #0000002e;
+    // un appui sur le panneau ne traverse pas jusqu'à la toile
+    TouchArea { }
+    Rectangle {
+        y: 7px;
+        width: 36px;
+        height: 5px;
+        border-radius: 2.5px;
+        background: Theme.mob-muted.with-alpha(0.45);
+    }
+    Rectangle {
+        y: root.body-y;
+        height: root.body-height;
+        @children
+    }
+    if root.footer: Rectangle {
+        y: root.height - 50px;
+        height: 50px;
+        Rectangle {
+            y: 0;
+            height: 1px;
+            background: Theme.mob-divider;
+        }
+        Rectangle {
+            y: 9px;
+            width: min(320px, parent.width - 32px);
+            height: 32px;
+            border-radius: 16px;
+            background: fta.pressed ? Theme.accent.with-alpha(0.32) : Theme.accent.with-alpha(0.2);
+            Text {
+                text: "Fermer";
+                font-size: 15px;
+                font-weight: 700;
+                color: Theme.accent;
+            }
+            fta := TouchArea {
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+    }
+}
+
+/// Liste d'un panneau de menu (Ajuster, Déform, Effets) : titres de section et entrées.
+export component MobMenuList inherits Rectangle {
+    in property <[SheetRow]> rows;
+    out property <length> wanted-height: col.preferred-height;
+    callback activate(string, string);
+    Flickable {
+        viewport-height: col.preferred-height;
+        col := VerticalLayout {
+            x: 0;
+            width: root.width;
+            padding-left: 14px;
+            padding-right: 14px;
+            padding-top: 4px;
+            padding-bottom: 10px;
+            spacing: 5px;
+            alignment: start;
+            for r in root.rows: Rectangle {
+                height: r.section ? 28px : 30px;
+                if r.section: Text {
+                    x: 4px;
+                    y: 10px;
+                    text: r.label;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.6px;
+                    color: Theme.mob-muted;
+                }
+                if !r.section: row-card := Rectangle {
+                    // indisponible pour le calque actif (calque texte, verrouillé, dossier)
+                    property <bool> blocked: r.badge == "calque texte" || r.badge == "verrouillé" || r.badge == "dossier";
+                    opacity: self.blocked ? 0.5 : 1;
+                    border-radius: 15px;
+                    background: eta.pressed && !self.blocked ? Theme.mob-accent-tint : Theme.mob-card;
+                    drop-shadow-blur: 2px;
+                    drop-shadow-offset-y: 1px;
+                    drop-shadow-color: #00000014;
+                    // icône maison de l'entrée, sinon glyphe à l'accent
+                    property <int> mp: MpIcons.for-menu(r.label, r.fa);
+                    if row-card.mp >= 0: Image {
+                        x: 13px;
+                        y: (parent.height - 20px) / 2;
+                        width: 20px;
+                        height: 20px;
+                        source: MpIcons.images[row-card.mp];
+                        image-fit: contain;
+                    }
+                    if row-card.mp < 0: GlyphIcon {
+                        x: 12px;
+                        width: 22px;
+                        glyph: r.fa;
+                        weight: r.fa-weight;
+                        size: 15px;
+                        tint: Theme.accent;
+                    }
+                    Text {
+                        x: 44px;
+                        width: parent.width - 44px - (r.badge != "" ? 70px : 10px);
+                        text: r.label;
+                        font-size: 14px;
+                        color: Theme.mob-text;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    if r.badge != "": Rectangle {
+                        x: parent.width - 66px;
+                        y: 7px;
+                        width: 58px;
+                        height: 16px;
+                        border-radius: 8px;
+                        background: #f59e0b30;
+                        Text {
+                            text: r.badge;
+                            font-size: 9px;
+                            color: #b45309;
+                        }
+                    }
+                    eta := TouchArea {
+                        clicked => {
+                            if (!parent.blocked) {
+                                root.activate(r.action, r.label);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Titre repliable du tiroir (menu ou sous-menu) : trait d'accent, libellé, flèche.
+component MobDrawerHeader inherits Rectangle {
+    in property <string> text;
+    in property <bool> expanded;
+    in property <bool> small;
+    in property <string> badge;
+    callback clicked();
+    height: root.small ? 34px : 44px;
+    background: ta.pressed ? Theme.mob-divider : transparent;
+    Rectangle {
+        x: 10px;
+        width: 3px;
+        height: 18px;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+    Text {
+        x: 26px;
+        width: parent.width - 60px;
+        text: root.text;
+        font-size: root.small ? 14px : 15px;
+        color: Theme.mob-text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.badge != "": Text {
+        x: parent.width - 96px;
+        width: 60px;
+        text: root.badge;
+        font-size: 9px;
+        color: #b45309;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+    FaIcon {
+        x: parent.width - 30px;
+        width: 16px;
+        glyph: root.expanded ? "\u{f0d7}" : "\u{f0da}";
+        size: 12px;
+        color: Theme.mob-text;
+    }
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// Entrée de menu du tiroir : pilule grise, icône, libellé, marqueur « à venir ».
+component MobDrawerItem inherits Rectangle {
+    in property <string> text;
+    in property <string> fa;
+    in property <int> fa-weight: 900;
+    in property <string> badge;
+    callback clicked();
+    // indisponible pour le calque actif (calque texte, verrouillé, dossier)
+    property <bool> blocked: root.badge == "calque texte" || root.badge == "verrouillé" || root.badge == "dossier";
+    opacity: root.blocked ? 0.5 : 1;
+    height: 30px;
+    border-radius: 5px;
+    background: ta.pressed && !root.blocked ? Theme.mob-accent-tint : Theme.mob-surface-deep;
+    // icône maison de l'entrée (comme les menus du bureau), sinon glyphe
+    property <int> mp: MpIcons.for-menu(root.text, root.fa);
+    if root.mp >= 0: Image {
+        x: 10px;
+        y: (parent.height - 16px) / 2;
+        width: 16px;
+        height: 16px;
+        source: MpIcons.images[root.mp];
+        image-fit: contain;
+    }
+    if root.mp < 0: GlyphIcon {
+        x: 10px;
+        width: 16px;
+        glyph: root.fa;
+        weight: root.fa-weight;
+        size: 12px;
+        tint: Theme.mob-text;
+    }
+    Text {
+        x: 34px;
+        width: parent.width - 34px - (root.badge != "" ? 66px : 8px);
+        text: root.text;
+        font-size: 13px;
+        color: Theme.mob-text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.badge != "": Rectangle {
+        x: parent.width - 62px;
+        y: 7px;
+        width: 56px;
+        height: 16px;
+        border-radius: 8px;
+        background: #f59e0b30;
+        Text {
+            text: root.badge;
+            font-size: 9px;
+            color: #b45309;
+        }
+    }
+    ta := TouchArea {
+        clicked => {
+            if (!root.blocked) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+/// Titre de section du tiroir (DOCUMENTS, FICHIER, MENUS).
+component MobSectionLabel inherits Text {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: Theme.accent;
+}
+
+/// Tiroir ☰ : documents ouverts, historique, tuiles Fichier, menus en accordéon, signaler un bug.
+export component MobDrawer inherits Rectangle {
+    in property <[MenuSpec]> menus;
+    in property <[DocTab]> tabs;
+    in-out property <int> open-menu: -1;
+    in-out property <int> open-sub: -1;
+    callback close();
+    callback menu-action(string, string);
+    callback tab-clicked(int);
+    callback tab-close(int);
+    callback quick(string);
+    // fond assombri : un appui ferme le tiroir
+    Rectangle {
+        background: #00000059;
+        TouchArea {
+            clicked => {
+                root.close();
+            }
+        }
+    }
+    panel := Rectangle {
+        x: 0;
+        width: min(360px, root.width - 52px);
+        height: root.height;
+        background: Theme.mob-surface;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000059;
+        TouchArea { }
+        // en-tête
+        Text {
+            x: 16px;
+            y: 0;
+            height: 56px;
+            text: "Menu";
+            font-size: 17px;
+            font-weight: 600;
+            color: Theme.mob-text;
+            vertical-alignment: center;
+        }
+        Rectangle {
+            x: parent.width - 48px;
+            y: 12px;
+            width: 34px;
+            height: 32px;
+            border-radius: 8px;
+            background: cta.pressed ? Theme.mob-accent-tint : Theme.mob-surface-deep;
+            FaIcon {
+                glyph: "\u{f00d}";
+                size: 15px;
+                color: Theme.mob-text;
+            }
+            cta := TouchArea {
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+        Flickable {
+            y: 56px;
+            height: parent.height - 56px - 52px;
+            viewport-height: body.preferred-height;
+            body := VerticalLayout {
+                x: 0;
+                width: panel.width;
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-bottom: 12px;
+                spacing: 8px;
+                alignment: start;
+                MobSectionLabel {
+                    text: "DOCUMENTS";
+                }
+                for t[ti] in root.tabs: Rectangle {
+                    height: 40px;
+                    border-radius: 10px;
+                    background: t.active ? Theme.mob-accent-tint : tra.pressed ? Theme.mob-divider : Theme.mob-card;
+                    tra := TouchArea {
+                        clicked => {
+                            root.tab-clicked(ti);
+                        }
+                    }
+                    Rectangle {
+                        x: 8px;
+                        width: 26px;
+                        height: 30px;
+                        background: #ffffff;
+                        border-width: 1px;
+                        border-color: Theme.mob-divider;
+                        Image {
+                            width: parent.width - 2px;
+                            height: parent.height - 2px;
+                            source: t.thumb;
+                            image-fit: contain;
+                        }
+                    }
+                    Text {
+                        x: 44px;
+                        width: parent.width - 44px - 40px;
+                        text: t.title;
+                        font-size: 14px;
+                        font-weight: t.active ? 700 : 400;
+                        color: t.active ? Theme.accent : Theme.mob-text;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    Rectangle {
+                        x: parent.width - 34px;
+                        y: 8px;
+                        width: 26px;
+                        height: 24px;
+                        border-radius: 6px;
+                        background: xta.pressed ? Theme.mob-accent-pill : Theme.mob-surface-deep.with-alpha(0.7);
+                        FaIcon {
+                            glyph: "\u{f00d}";
+                            size: 10px;
+                            color: Theme.mob-muted;
+                        }
+                        xta := TouchArea {
+                            clicked => {
+                                root.tab-close(ti);
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 32px;
+                    border-radius: 16px;
+                    background: hta.pressed ? Theme.mob-accent-tint : Theme.mob-card;
+                    Text {
+                        x: 14px;
+                        text: "Historique des actions";
+                        font-size: 14px;
+                        color: Theme.mob-text;
+                        vertical-alignment: center;
+                    }
+                    hta := TouchArea {
+                        clicked => {
+                            root.quick("history");
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 4px;
+                }
+                MobSectionLabel {
+                    text: "FICHIER";
+                }
+                for row in [
+                    [{ id: "new", g: "\u{e494}", t: "Nouveau…" }, { id: "open", g: "\u{f07c}", t: "Ouvrir / Importer image…" }],
+                    [{ id: "export", g: "\u{f0c7}", t: "Exporter…" }, { id: "close-doc", g: "\u{f00d}", t: "Fermer le projet actif…" }],
+                ]: HorizontalLayout {
+                    spacing: 8px;
+                    height: 58px;
+                    for tile in row: Rectangle {
+                        horizontal-stretch: 1;
+                        border-radius: 8px;
+                        background: fta.pressed ? Theme.mob-accent-tint : Theme.mob-surface-deep;
+                        GlyphIcon {
+                            x: 12px;
+                            width: 22px;
+                            glyph: tile.g;
+                            size: 18px;
+                            tint: tile.id == "close-doc" ? Theme.mob-text : Theme.accent;
+                        }
+                        Text {
+                            x: 44px;
+                            width: parent.width - 50px;
+                            text: tile.t;
+                            font-size: 13px;
+                            color: Theme.mob-text;
+                            vertical-alignment: center;
+                            wrap: word-wrap;
+                        }
+                        fta := TouchArea {
+                            clicked => {
+                                root.quick(tile.id);
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 4px;
+                }
+                MobSectionLabel {
+                    text: "MENUS";
+                }
+                for m[mi] in root.menus: VerticalLayout {
+                    MobDrawerHeader {
+                        text: m.title;
+                        expanded: root.open-menu == mi;
+                        clicked => {
+                            root.open-menu = root.open-menu == mi ? -1 : mi;
+                            root.open-sub = -1;
+                        }
+                    }
+                    if root.open-menu == mi: HorizontalLayout {
+                        padding-left: 14px;
+                        spacing: 12px;
+                        Rectangle {
+                            width: 2px;
+                            background: Theme.mob-divider;
+                        }
+                        VerticalLayout {
+                            spacing: 6px;
+                            padding-top: 2px;
+                            padding-bottom: 8px;
+                            for it[ii] in m.items: VerticalLayout {
+                                if it.separator: Rectangle {
+                                    height: 8px;
+                                }
+                                if !it.separator && !it.submenu: MobDrawerItem {
+                                    text: it.label;
+                                    fa: it.fa;
+                                    fa-weight: it.fa-weight;
+                                    badge: it.badge;
+                                    clicked => {
+                                        root.menu-action(it.action, it.label);
+                                    }
+                                }
+                                if it.submenu: MobDrawerHeader {
+                                    small: true;
+                                    text: it.label;
+                                    badge: it.badge;
+                                    expanded: root.open-sub == ii;
+                                    clicked => {
+                                        root.open-sub = root.open-sub == ii ? -1 : ii;
+                                    }
+                                }
+                                if it.submenu && root.open-sub == ii: VerticalLayout {
+                                    padding-left: 14px;
+                                    spacing: 6px;
+                                    for c in it.children: MobDrawerItem {
+                                        text: c.label;
+                                        fa: c.fa;
+                                        fa-weight: c.fa-weight;
+                                        badge: c.badge;
+                                        clicked => {
+                                            root.menu-action(c.action, c.label);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // pied : signaler un bug, crédit
+        Rectangle {
+            y: parent.height - 52px;
+            height: 52px;
+            Rectangle {
+                y: 2px;
+                x: 0;
+                width: parent.width;
+                height: 24px;
+                background: @linear-gradient(180deg, Theme.mob-accent-dark 0%, Theme.accent 100%);
+                bga := TouchArea {
+                    clicked => {
+                        root.quick("bug");
+                    }
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 8px;
+                    FaIcon {
+                        glyph: "\u{f188}";
+                        size: 12px;
+                        color: #ffffff;
+                    }
+                    Text {
+                        text: "Signaler un bug";
+                        font-size: 13px;
+                        color: #ffffff;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+            HorizontalLayout {
+                y: 28px;
+                height: 22px;
+                alignment: center;
+                spacing: 4px;
+                Text {
+                    text: "MasterPaint par";
+                    font-size: 12px;
+                    color: Theme.mob-text;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "Polocrafting 367";
+                    font-size: 12px;
+                    color: Theme.accent;
+                    vertical-alignment: center;
+                    TouchArea {
+                        clicked => {
+                            root.quick("open-author");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Contenu du panneau Couleurs : actions rapides (comme la version web), puis les mêmes blocs que
+/// la fenêtre Couleurs (colors.slint) empilés : couleurs courantes, roue + valeur ou carré +
+/// teinte, nom RAL / CMJN, favoris, récentes, nuancier, curseurs (« Plus »).
+export component MobColors inherits Rectangle {
+    in property <image> wheel;
+    in property <image> grid-image;
+    /// carré S × V + teinte au lieu de la roue
+    in-out property <bool> grid;
+    in-out property <color> primary;
+    in-out property <color> secondary;
+    in-out property <bool> edit-secondary;
+    in property <[float]> comps: [0, 0, 0, 255, 0, 0, 0];
+    in property <string> hex;
+    in property <[color]> mode-palette: [];
+    in property <bool> gray;
+    in property <string> info;
+    in property <[color]> favorites: [];
+    in property <[color]> recents: [];
+    callback wheel-picked(length, length, length, bool);
+    callback hsv-picked(float, float, float, bool);
+    callback component-changed(int, float);
+    callback hex-edited(string);
+    callback pick-screen();
+    callback quick(string);
+    callback fav-add();
+    callback fav-remove(int);
+    // actions rapides : Galerie, Lum./Cont., Teinte/Sat., Inverser, N&B
+    HorizontalLayout {
+        x: 10px;
+        y: 0;
+        width: root.width - 20px;
+        height: 54px;
+        spacing: 6px;
+        for q in [
+            { id: "gallery", g: "\u{e2ca}", t: "Galerie" },
+            { id: "brightness", g: "\u{f185}", t: "Lum./Cont." },
+            { id: "hsv", g: "\u{f53f}", t: "Teinte/Sat." },
+            { id: "invert", g: "\u{f042}", t: "Inverser" },
+            { id: "grayscale", g: "\u{f5c7}", t: "N&B" },
+        ]: Rectangle {
+            horizontal-stretch: 1;
+            border-radius: 8px;
+            background: qta.pressed ? Theme.mob-accent-tint : Theme.mob-card;
+            drop-shadow-blur: 2px;
+            drop-shadow-offset-y: 1px;
+            drop-shadow-color: #00000014;
+            VerticalLayout {
+                alignment: center;
+                spacing: 4px;
+                GlyphIcon {
+                    glyph: q.g;
+                    size: 16px;
+                    tint: Theme.accent;
+                }
+                Text {
+                    text: q.t;
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: Theme.mob-text;
+                    horizontal-alignment: center;
+                    overflow: elide;
+                }
+            }
+            qta := TouchArea {
+                clicked => {
+                    root.quick(q.id);
+                }
+            }
+        }
+    }
+    Rectangle {
+        x: 10px;
+        y: 62px;
+        width: root.width - 20px;
+        height: 1px;
+        background: Theme.mob-divider;
+    }
+    property <color> current: root.edit-secondary ? root.secondary : root.primary;
+    property <bool> expanded;
+    function pick(c: color, right: bool) {
+        if (right != root.edit-secondary) {
+            root.secondary = c;
+        } else {
+            root.primary = c;
+        }
+    }
+    // couleurs courantes (un appui choisit celle que la roue modifie), ⇄
+    cur := CurrentColors {
+        x: 12px;
+        y: 76px;
+        cell: 40px;
+        radius: 8px;
+        primary <=> root.primary;
+        secondary <=> root.secondary;
+        edit-secondary <=> root.edit-secondary;
+        pipette-clicked => {
+            root.pick-screen();
+        }
+    }
+    Text {
+        x: 12px;
+        y: cur.y + cur.height + 4px;
+        text: root.edit-secondary ? "Secondaire" : "Principale";
+        font-size: 11px;
+        color: Theme.mob-muted;
+    }
+    // boutons à droite : roue ↔ carré, « Plus » (la pipette est devant le « + » des favoris)
+    VerticalLayout {
+        x: root.width - 42px;
+        y: 74px;
+        width: 30px;
+        spacing: 6px;
+        for b in [
+            { id: "mode", g: root.grid ? "\u{f111}" : "\u{f0c8}", on: false },
+            { id: "more", g: "\u{f1de}", on: root.expanded },
+        ]: Rectangle {
+            height: 30px;
+            border-radius: 8px;
+            background: b.on ? Theme.mob-accent-pill : bta.pressed ? Theme.mob-divider : Theme.mob-card;
+            GlyphIcon {
+                glyph: b.g;
+                size: 13px;
+                tint: b.on ? Theme.accent : Theme.mob-text;
+            }
+            bta := TouchArea {
+                clicked => {
+                    if (b.id == "mode") {
+                        root.grid = !root.grid;
+                    } else {
+                        root.expanded = !root.expanded;
+                    }
+                }
+            }
+        }
+    }
+    // roue ou carré de toutes les couleurs, centré entre les couleurs et les boutons
+    property <length> pick-side: clamp(root.width - 88px - 50px - 12px, 110px, 190px);
+    picker := ColorPicker {
+        x: 88px + max(0px, (root.width - 88px - 50px - self.width) / 2);
+        y: 72px;
+        width: root.pick-side;
+        height: root.pick-side;
+        wheel: root.wheel;
+        grid-image: root.grid-image;
+        square: root.grid;
+        filtered: root.mode-palette.length > 0;
+        gray: root.gray;
+        comps: root.comps;
+        edit-secondary: root.edit-secondary;
+        wheel-picked(x, y, s, r) => {
+            root.wheel-picked(x, y, s, r);
+        }
+        hsv-picked(h, s, v, r) => {
+            root.hsv-picked(h, s, v, r);
+        }
+    }
+    property <length> info-y: max(picker.y + picker.height, 186px) + 10px;
+    property <length> info-h: root.info != "" ? 24px : 0px;
+    if root.info != "": Rectangle {
+        x: 10px;
+        y: root.info-y;
+        width: root.width - 20px;
+        height: 18px;
+        border-radius: 9px;
+        background: Theme.mob-accent-tint;
+        Text {
+            text: root.info;
+            font-size: 11px;
+            font-weight: 600;
+            color: Theme.mob-text;
+            overflow: elide;
+        }
+    }
+    // favoris : « + » ajoute la couleur modifiée (la retire si elle y est déjà)
+    favs := SwatchStrip {
+        x: 10px;
+        y: root.info-y + root.info-h;
+        width: root.width - 20px;
+        cell: 26px;
+        gap: 4px;
+        radius: 13px;
+        add-button: true;
+        removable: true;
+        current: root.current;
+        colors: root.favorites;
+        add => {
+            root.fav-add();
+        }
+        pick(c, r) => {
+            root.pick(c, r);
+        }
+        remove(i) => {
+            root.fav-remove(i);
+        }
+    }
+    // nuancier sur toute la largeur (RAL : les 216 teintes)
+    property <[color]> swatches: root.mode-palette.length > 0 ? root.mode-palette : Palettes.full;
+    pal := PaletteGrid {
+        x: 10px;
+        y: favs.y + favs.height + 6px;
+        width: root.width - 20px;
+        swatches: root.swatches;
+        cols: root.swatches.length > 120 ? 24 : 37;
+        row-h: root.swatches.length > 120 ? 13px : 17px;
+        pick(c, r) => {
+            root.pick(c, r);
+        }
+    }
+    // « Plus » : RVB, TSV, hexadécimal, alpha
+    sliders := ColorSliders {
+        visible: root.expanded;
+        x: 10px;
+        y: pal.y + pal.height + 10px;
+        width: root.width - 20px;
+        height: root.expanded ? self.wanted-height : 0px;
+        two-columns: self.width >= 330px;
+        comps: root.comps;
+        current: root.current;
+        hex: root.hex;
+        component-changed(i, v) => {
+            root.component-changed(i, v);
+        }
+        hex-edited(t) => {
+            root.hex-edited(t);
+        }
+    }
+    out property <length> wanted-height: (root.expanded ? sliders.y + sliders.height : pal.y + pal.height) + 8px;
+}

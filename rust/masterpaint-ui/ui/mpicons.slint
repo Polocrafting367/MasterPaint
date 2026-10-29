@@ -1,0 +1,527 @@
+// Fichier généré par tools/gen_mpicons.py — ne pas modifier à la main.
+// Icônes maison de MasterPaint, au style du sprite (icons/illu-sprite.svg) : trait épais aux
+// couleurs du thème, aplats à la couleur d'accentuation ; images rendues par theme.rs
+// (render_icons) à chaque changement de ces couleurs. Les fonctions renvoient un index dans
+// `images` (-1 : pas d'icône maison).
+import { IconSpec } from "types.slint";
+
+export global MpIcons {
+    in property <[image]> images;
+    /// icône d'un outil / d'un bouton de la barre rapide ou du ruban (sprite ou glyphe d'origine)
+    public pure function for-spec(s: IconSpec) -> int {
+        return s.svg-index >= 0 ? by-svg(s.svg-index) : by-fa(s.fa);
+    }
+    pure function by-svg(i: int) -> int {
+        return i == 0 ? 30
+            : i == 1 ? 33
+            : i == 2 ? 32
+            : i == 3 ? 31
+            : i == 4 ? 26
+            : i == 5 ? 34
+            : i == 6 ? 35
+            : i == 7 ? 36
+            : i == 8 ? 38
+            : i == 9 ? 39
+            : i == 10 ? 40
+            : i == 11 ? 41
+            : i == 12 ? 42
+            : i == 13 ? 43
+            : i == 14 ? 44
+            : i == 15 ? 45
+            : i == 16 ? 27
+            : i == 17 ? 25
+            : i == 18 ? 47
+            : i == 19 ? 48
+            : i == 20 ? 49
+            : i == 21 ? 50
+            : i == 22 ? 51
+            : i == 23 ? 52
+            : i == 24 ? 53
+            : i == 25 ? 54
+            : -1;
+    }
+    pure function by-fa(g: string) -> int {
+        return g == "\u{e494}" ? 0
+            : g == "\u{f07c}" ? 1
+            : g == "\u{f0c7}" ? 2
+            : g == "\u{f02f}" ? 4
+            : g == "\u{f2ea}" ? 5
+            : g == "\u{f2f9}" ? 6
+            : g == "\u{f010}" ? 9
+            : g == "\u{f00e}" ? 8
+            : g == "\u{f0c5}" ? 18
+            : g == "\u{f0ea}" ? 19
+            : g == "\u{f1f8}" ? 20
+            : g == "\u{f2ed}" ? 178
+            : g == "\u{f84c}" ? 55
+            : g == "\u{f545}" ? 56
+            : g == "\u{f076}" ? 57
+            : g == "\u{f0fe}" ? 23
+            : g == "\u{f146}" ? 24
+            : g == "\u{f0c4}" ? 17
+            : g == "\u{f019}" ? 3
+            : g == "\u{f030}" ? 15
+            : g == "\u{f083}" ? 16
+            : g == "\u{e5a1}" ? 11
+            : g == "\u{f013}" ? 12
+            : g == "\u{f085}" ? 12
+            : g == "\u{f05a}" ? 14
+            : g == "\u{f14a}" ? 25
+            : g == "\u{f410}" ? 26
+            : g == "\u{f5fd}" ? 67
+            : g == "\u{f24d}" ? 70
+            : g == "\u{f062}" ? 174
+            : g == "\u{f063}" ? 175
+            : g == "\u{f2f1}" ? 63
+            : g == "\u{f248}" ? 73
+            : g == "\u{f247}" ? 66
+            : g == "\u{f0db}" ? 74
+            : g == "\u{f53f}" ? 95
+            : g == "\u{f1da}" ? 163
+            : g == "\u{f125}" ? 58
+            : g == "\u{f31e}" ? 60
+            : g == "\u{f363}" ? 93
+            : g == "\u{f201}" ? 79
+            : g == "\u{f185}" ? 78
+            : g == "\u{f06e}" ? 160
+            : g == "\u{f35d}" ? 159
+            : g == "\u{f1de}" ? 94
+            : g == "\u{f188}" ? 167
+            : g == "\u{f0c9}" ? 166
+            : g == "\u{f1fb}" ? 36
+            : g == "\u{e2ca}" ? 33
+            : g == "\u{f1fc}" ? 38
+            : g == "\u{f303}" ? 39
+            : g == "\u{f575}" ? 41
+            : g == "\u{f576}" ? 112
+            : g == "\u{f12d}" ? 20
+            : g == "\u{f031}" ? 43
+            : g == "\u{f61f}" ? 44
+            : g == "\u{f03e}" ? 193
+            : g == "\u{f302}" ? 165
+            : g == "\u{f065}" ? 10
+            : g == "\u{f0b0}" ? 168
+            : g == "\u{f773}" ? 128
+            : g == "\u{f042}" ? 77
+            : g == "\u{f3fd}" ? 171
+            : g == "\u{f11c}" ? 172
+            : g == "\u{f362}" ? 169
+            : g == "\u{f067}" ? 170
+            : g == "\u{2b}" ? 170
+            : g == "\u{f023}" ? 176
+            : g == "\u{f09c}" ? 177
+            : g == "\u{f07b}" ? 173
+            : g == "\u{f65e}" ? 173
+            : g == "\u{f05e}" ? 26
+            : g == "\u{f071}" ? 196
+            : g == "\u{f09b}" ? 198
+            : g == "\u{f0ac}" ? 199
+            : g == "\u{f02d}" ? 200
+            : g == "\u{f005}" ? 201
+            : g == "\u{f186}" ? 203
+            : g == "\u{f0eb}" ? 87
+            : g == "\u{f43c}" ? 147
+            : g == "\u{f2a1}" ? 101
+            : g == "\u{f5c3}" ? 86
+            : g == "\u{f4db}" ? 133
+            : g == "\u{f51a}" ? 131
+            : g == "\u{f530}" ? 113
+            : g == "\u{f120}" ? 100
+            : g == "\u{f1b2}" ? 127
+            : g == "\u{f390}" ? 161
+            : g == "\u{f46d}" ? 13
+            : g == "\u{f00c}" ? 197
+            : g == "\u{f5cb}" ? 21
+            : g == "\u{f047}" ? 37
+            : g == "\u{f002}" ? 7
+            : g == "\u{f0c8}" ? 22
+            : g == "\u{f068}" ? 46
+            : -1;
+    }
+    /// icône d'une entrée de menu, d'après son libellé puis son glyphe
+    public pure function for-menu(label: string, fa: string) -> int {
+        return menu-0(label) >= 0 ? menu-0(label) : menu-1(label) >= 0 ? menu-1(label) : menu-fa(fa);
+    }
+    pure function menu-fa(g: string) -> int {
+        return g == "\u{e494}" ? 0
+            : g == "\u{f07c}" ? 1
+            : g == "\u{f0c7}" ? 2
+            : g == "\u{f02f}" ? 4
+            : g == "\u{f2ea}" ? 5
+            : g == "\u{f2f9}" ? 6
+            : g == "\u{f010}" ? 9
+            : g == "\u{f00e}" ? 8
+            : g == "\u{f0c5}" ? 18
+            : g == "\u{f0ea}" ? 19
+            : g == "\u{f1f8}" ? 20
+            : g == "\u{f2ed}" ? 69
+            : g == "\u{f84c}" ? 55
+            : g == "\u{f545}" ? 56
+            : g == "\u{f076}" ? 57
+            : g == "\u{f0fe}" ? 23
+            : g == "\u{f146}" ? 24
+            : g == "\u{f0c4}" ? 17
+            : g == "\u{f019}" ? 3
+            : g == "\u{f030}" ? 15
+            : g == "\u{f083}" ? 16
+            : g == "\u{e5a1}" ? 11
+            : g == "\u{f013}" ? 12
+            : g == "\u{f085}" ? 12
+            : g == "\u{f05a}" ? 14
+            : g == "\u{f14a}" ? 25
+            : g == "\u{f410}" ? 26
+            : g == "\u{f5fd}" ? 67
+            : g == "\u{f24d}" ? 70
+            : g == "\u{f062}" ? 71
+            : g == "\u{f063}" ? 72
+            : g == "\u{f2f1}" ? 63
+            : g == "\u{f248}" ? 73
+            : g == "\u{f247}" ? 66
+            : g == "\u{f0db}" ? 74
+            : g == "\u{f53f}" ? 95
+            : g == "\u{f1da}" ? 163
+            : g == "\u{f125}" ? 58
+            : g == "\u{f31e}" ? 60
+            : g == "\u{f363}" ? 93
+            : g == "\u{f201}" ? 79
+            : g == "\u{f185}" ? 78
+            : g == "\u{f06e}" ? 160
+            : g == "\u{f35d}" ? 159
+            : g == "\u{f1de}" ? 94
+            : g == "\u{f188}" ? 167
+            : g == "\u{f0c9}" ? 166
+            : g == "\u{f1fb}" ? 36
+            : g == "\u{e2ca}" ? 33
+            : g == "\u{f1fc}" ? 38
+            : g == "\u{f303}" ? 39
+            : g == "\u{f575}" ? 41
+            : g == "\u{f576}" ? 112
+            : g == "\u{f12d}" ? 20
+            : g == "\u{f031}" ? 43
+            : g == "\u{f61f}" ? 44
+            : g == "\u{f03e}" ? 193
+            : g == "\u{f302}" ? 165
+            : g == "\u{f065}" ? 10
+            : g == "\u{f0b0}" ? 168
+            : g == "\u{f773}" ? 128
+            : g == "\u{f042}" ? 77
+            : g == "\u{f3fd}" ? 171
+            : g == "\u{f11c}" ? 172
+            : g == "\u{f362}" ? 169
+            : g == "\u{f067}" ? 170
+            : g == "\u{2b}" ? 170
+            : g == "\u{f023}" ? 176
+            : g == "\u{f09c}" ? 177
+            : g == "\u{f07b}" ? 173
+            : g == "\u{f65e}" ? 173
+            : g == "\u{f05e}" ? 26
+            : g == "\u{f071}" ? 196
+            : g == "\u{f09b}" ? 198
+            : g == "\u{f0ac}" ? 199
+            : g == "\u{f02d}" ? 200
+            : g == "\u{f005}" ? 201
+            : g == "\u{f186}" ? 203
+            : g == "\u{f0eb}" ? 87
+            : g == "\u{f43c}" ? 147
+            : g == "\u{f2a1}" ? 101
+            : g == "\u{f5c3}" ? 86
+            : g == "\u{f4db}" ? 133
+            : g == "\u{f51a}" ? 131
+            : g == "\u{f530}" ? 113
+            : g == "\u{f120}" ? 100
+            : g == "\u{f1b2}" ? 127
+            : g == "\u{f390}" ? 161
+            : g == "\u{f46d}" ? 13
+            : g == "\u{f00c}" ? 197
+            : g == "\u{f5cb}" ? 21
+            : g == "\u{f047}" ? 37
+            : g == "\u{f002}" ? 7
+            : -1;
+    }
+    /// icône d'un glyphe Font Awesome posé directement (GlyphIcon) ; -1 : garder le glyphe
+    public pure function for-glyph(g: string) -> int {
+        return glyph-0(g) >= 0 ? glyph-0(g) : glyph-1(g) >= 0 ? glyph-1(g) : -1;
+    }
+    pure function menu-0(l: string) -> int {
+        return l == "Nouveau..." ? 0
+            : l == "Ouvrir / Importer image…" ? 1
+            : l == "Exporter…" ? 3
+            : l == "Photo Mode Pro…" ? 15
+            : l == "Ouvrir projet dans Photo Mode Pro" ? 15
+            : l == "Espace de couleur :" ? 116
+            : l == "Bitmap (Couleurs)" ? 116
+            : l == "Tramé (Noir et Blanc)" ? 101
+            : l == "Couleurs RAL (Limité)" ? 95
+            : l == "Espace de travail CMJN" ? 115
+            : l == "Fermer le projet actif…" ? 11
+            : l == "Paramètres…" ? 12
+            : l == "Historique des versions..." ? 13
+            : l == "Bienvenue / Informations…" ? 14
+            : l == "Annuler" ? 5
+            : l == "Rétablir" ? 6
+            : l == "Couper" ? 17
+            : l == "Copier" ? 18
+            : l == "Coller" ? 19
+            : l == "Tout sélectionner" ? 25
+            : l == "Désélectionner" ? 26
+            : l == "Inverser la sélection" ? 27
+            : l == "Effacer sélection" ? 20
+            : l == "Étendre / réduire la sélection…" ? 28
+            : l == "Vectoriser un bitmap…" ? 29
+            : l == "Recadrage" ? 58
+            : l == "Régler la zone de travail à la sélection (Ctrl+Maj+X)" ? 59
+            : l == "Redimensionner…" ? 60
+            : l == "Recadrer (sélection sur la toile)…" ? 58
+            : l == "Étendre la zone de travail…" ? 61
+            : l == "Bordure d'image…" ? 62
+            : l == "Rotation et retournement…" ? 63
+            : l == "Calque actif : position et taille…" ? 64
+            : l == "Tampon du calque = dimensions de la toile" ? 65
+            : l == "Ajuster la page au contenu" ? 66
+            : l == "Ajouter un calque" ? 68
+            : l == "Supprimer" ? 69
+            : l == "Dupliquer le calque" ? 70
+            : l == "Monter le calque" ? 71
+            : l == "Descendre le calque" ? 72
+            : l == "Faire pivoter / Zoomer…" ? 63
+            : l == "Fusionner" ? 73
+            : l == "Séparer canaux RVB (3 calques)" ? 75
+            : l == "Centrer la sélection horizontalement" ? 48
+            : l == "Centrer la sélection verticalement" ? 51
+            : l == "Centrer la sélection (H + V)" ? 53
+            : l == "Auto-niveau" ? 76
+            : l == "Noir et blanc" ? 77
+            : l == "Luminosité / Contraste…" ? 78
+            : l == "Courbes…" ? 79
+            : l == "Exposition…" ? 80
+            : l == "Mises en lumière / Ombres…" ? 81
+            : l == "Teinte / Saturation…" ? 82
+            : l == "Inverser l'Alpha" ? 83
+            : l == "Inverser les couleurs" ? 84
+            : l == "Niveaux…" ? 85
+            : l == "Postériser…" ? 86
+            : l == "Sépia" ? 87
+            : l == "Accent de couleur…" ? 88
+            : l == "Transparence…" ? 89
+            : l == "Température / Teinte…" ? 90
+            : l == "Vibrance / Éclat…" ? 91
+            : l == "Camera Raw…" ? 16
+            : l == "Galerie de Filtres…" ? 92
+            : l == "Artistique" ? 95
+            : l == "Croquis à l'encre…" ? 96
+            : l == "Peinture à l'huile…" ? 97
+            : l == "Pastel…" ? 98
+            : l == "Croquis au crayon…" ? 99
+            : l == "Art ASCII…" ? 100
+            : l == "Trame (Demi-teinte)…" ? 101
+            : l == "Flous" ? 104
+            : l == "Flou bokeh / Défocaliser…" ? 102
+            : l == "Fragment de flou…" ? 103
+            : l == "Flou gaussien…" ? 104
+            : l == "Flou de déplacement…" ? 105
+            : l == "Flou radial…" ? 106
+            : l == "Flou d'esquisse…" ? 107
+            : l == "Flou carré…" ? 108
+            : l == "Flou de surface…" ? 109
+            : l == "Flou de zoom…" ? 110
+            : l == "Couleur" ? 82
+            : l == "Quantifier…" ? 111
+            : l == "Balance des couleurs…" ? 94
+            : l == "Incrustation (couleur → transparence)…" ? 112
+            : l == "Aberration chromatique…" ? 113
+            : l == "Séparer les canaux RVB…" ? 74
+            : l == "Duo-tone…" ? 114
+            : l == "Conversion de couleur RAL…" ? 95
+            : l == "Conversion de couleur CMJN…" ? 115
+            : -1;
+    }
+    pure function menu-1(l: string) -> int {
+        return l == "Déformer" ? 128
+            : l == "Bosse…" ? 117
+            : l == "Cabossage…" ? 118
+            : l == "Cristallisation…" ? 119
+            : l == "Verre dépoli…" ? 120
+            : l == "Morphologie…" ? 121
+            : l == "Pixéliser…" ? 122
+            : l == "Inversion polaire…" ? 123
+            : l == "Réflexion mosaïque…" ? 124
+            : l == "Torsion…" ? 125
+            : l == "Miroir 4 secteurs…" ? 126
+            : l == "Projection 3D…" ? 127
+            : l == "Onde…" ? 128
+            : l == "Bruit" ? 129
+            : l == "Ajouter du bruit…" ? 129
+            : l == "Médiane…" ? 130
+            : l == "Réduire le bruit…" ? 131
+            : l == "Tramage numérique…" ? 132
+            : l == "Effet VHS…" ? 133
+            : l == "Objet" ? 134
+            : l == "Ombre portée…" ? 134
+            : l == "Adoucir le contour de l'objet…" ? 135
+            : l == "Contour d'objet…" ? 136
+            : l == "Photo" ? 15
+            : l == "Éclat…" ? 137
+            : l == "Suppression des yeux rouges…" ? 138
+            : l == "Améliorer la netteté…" ? 139
+            : l == "Adoucir le portrait…" ? 140
+            : l == "Rêve…" ? 141
+            : l == "Fondu des bords…" ? 142
+            : l == "Supprimer la poussière…" ? 143
+            : l == "Redresser…" ? 144
+            : l == "Vignette…" ? 145
+            : l == "Rendu" ? 146
+            : l == "Nuages…" ? 146
+            : l == "Grille / Damier…" ? 147
+            : l == "Fractale de Julia…" ? 148
+            : l == "Fractale de Mandelbrot…" ? 149
+            : l == "Turbulence…" ? 150
+            : l == "Styliser" ? 151
+            : l == "Détection des bords…" ? 151
+            : l == "Embosser…" ? 152
+            : l == "Contour…" ? 153
+            : l == "Mise en relief…" ? 154
+            : l == "Solariser…" ? 155
+            : l == "Détourage" ? 17
+            : l == "Supprimer le fond (IA)…" ? 156
+            : l == "Détourage par sélection…" ? 157
+            : l == "Remplissage contenu pris en compte…" ? 158
+            : l == "Aperçu toile 1:1 (fenêtre)…" ? 159
+            : l == "Grille de pixels" ? 55
+            : l == "Règles" ? 56
+            : l == "Aimantation des bords" ? 57
+            : l == "Paramètres aimantation…" ? 94
+            : l == "Toutes les options du ruban" ? 160
+            : l == "Hors toile" ? 54
+            : l == "Réinitialiser le bureau..." ? 161
+            : l == "Outils" ? 162
+            : l == "Couleurs" ? 95
+            : l == "Calques" ? 67
+            : l == "Historique" ? 163
+            : l == "Objets SVG" ? 29
+            : l == "Animation (frise)" ? 164
+            : l == "Importer une séquence d’images (frames)…" ? 165
+            : l == "Nouveau dossier" ? 173
+            : l == "Grouper dans un dossier" ? 173
+            : l == "Dégrouper" ? 1
+            : l == "Verrouiller / déverrouiller le calque" ? 176
+            : l == "Verrouiller le calque" ? 176
+            : l == "Déverrouiller le calque" ? 177
+            : l == "Pixelliser le calque" ? 122
+            : l == "Répéter Sépia" ? 93
+            : l == "Signaler un bug" ? 167
+            : l == "Effacer" ? 20
+            : l == "Grille" ? 55
+            : l == "Aimantation" ? 57
+            : l == "Palettes volantes (Paint.NET)" ? 204
+            : l == "Palettes : ancrage fixe (style Adobe)" ? 204
+            : l == "Interface : mode téléphone (menu ☰, palettes en colonnes)" ? 206
+            : l == "Préréglages créatifs" ? 92
+            : l == "Supprimer le calque" ? 69
+            : -1;
+    }
+    pure function glyph-0(g: string) -> int {
+        return g == "\u{e494}" ? 0
+            : g == "\u{f07c}" ? 1
+            : g == "\u{f0c7}" ? 2
+            : g == "\u{f02f}" ? 4
+            : g == "\u{f2ea}" ? 5
+            : g == "\u{f2f9}" ? 6
+            : g == "\u{f010}" ? 9
+            : g == "\u{f00e}" ? 8
+            : g == "\u{f0c5}" ? 18
+            : g == "\u{f0ea}" ? 19
+            : g == "\u{f1f8}" ? 20
+            : g == "\u{f2ed}" ? 178
+            : g == "\u{f84c}" ? 55
+            : g == "\u{f545}" ? 56
+            : g == "\u{f076}" ? 57
+            : g == "\u{f0fe}" ? 23
+            : g == "\u{f146}" ? 24
+            : g == "\u{f0c4}" ? 17
+            : g == "\u{f019}" ? 3
+            : g == "\u{f030}" ? 15
+            : g == "\u{f083}" ? 16
+            : g == "\u{e5a1}" ? 11
+            : g == "\u{f013}" ? 12
+            : g == "\u{f085}" ? 12
+            : g == "\u{f05a}" ? 14
+            : g == "\u{f14a}" ? 25
+            : g == "\u{f410}" ? 26
+            : g == "\u{f5fd}" ? 67
+            : g == "\u{f24d}" ? 70
+            : g == "\u{f062}" ? 174
+            : g == "\u{f063}" ? 175
+            : g == "\u{f2f1}" ? 63
+            : g == "\u{f248}" ? 73
+            : g == "\u{f247}" ? 66
+            : g == "\u{f0db}" ? 74
+            : g == "\u{f53f}" ? 95
+            : g == "\u{f1da}" ? 163
+            : g == "\u{f125}" ? 58
+            : g == "\u{f31e}" ? 60
+            : g == "\u{f363}" ? 93
+            : g == "\u{f201}" ? 79
+            : g == "\u{f185}" ? 78
+            : g == "\u{f06e}" ? 160
+            : g == "\u{f35d}" ? 159
+            : g == "\u{f1de}" ? 94
+            : g == "\u{f188}" ? 167
+            : g == "\u{f0c9}" ? 166
+            : g == "\u{f1fb}" ? 36
+            : g == "\u{e2ca}" ? 33
+            : g == "\u{f1fc}" ? 38
+            : g == "\u{f303}" ? 39
+            : g == "\u{f575}" ? 41
+            : g == "\u{f576}" ? 112
+            : g == "\u{f12d}" ? 42
+            : g == "\u{f031}" ? 43
+            : g == "\u{f61f}" ? 44
+            : g == "\u{f03e}" ? 193
+            : g == "\u{f302}" ? 165
+            : g == "\u{f065}" ? 10
+            : g == "\u{f0b0}" ? 168
+            : -1;
+    }
+    pure function glyph-1(g: string) -> int {
+        return g == "\u{f773}" ? 128
+            : g == "\u{f042}" ? 77
+            : g == "\u{f3fd}" ? 171
+            : g == "\u{f11c}" ? 172
+            : g == "\u{f362}" ? 169
+            : g == "\u{f067}" ? 170
+            : g == "\u{2b}" ? 170
+            : g == "\u{f023}" ? 176
+            : g == "\u{f09c}" ? 177
+            : g == "\u{f07b}" ? 173
+            : g == "\u{f65e}" ? 173
+            : g == "\u{f05e}" ? 26
+            : g == "\u{f071}" ? 196
+            : g == "\u{f09b}" ? 198
+            : g == "\u{f0ac}" ? 199
+            : g == "\u{f02d}" ? 200
+            : g == "\u{f005}" ? 201
+            : g == "\u{f186}" ? 203
+            : g == "\u{f0eb}" ? 87
+            : g == "\u{f43c}" ? 147
+            : g == "\u{f2a1}" ? 101
+            : g == "\u{f5c3}" ? 86
+            : g == "\u{f4db}" ? 133
+            : g == "\u{f51a}" ? 131
+            : g == "\u{f530}" ? 113
+            : g == "\u{f120}" ? 100
+            : g == "\u{f1b2}" ? 127
+            : g == "\u{f390}" ? 161
+            : g == "\u{f46d}" ? 13
+            : g == "\u{f00c}" ? 197
+            : g == "\u{f5cb}" ? 21
+            : g == "\u{f047}" ? 37
+            : g == "\u{f002}" ? 7
+            : g == "\u{f0c8}" ? 182
+            : g == "\u{f111}" ? 179
+            : g == "\u{f192}" ? 180
+            : g == "\u{f5c7}" ? 181
+            : g == "\u{f337}" ? 190
+            : g == "\u{f219}" ? 191
+            : -1;
+    }
+}

@@ -1,0 +1,812 @@
+// Mode Photo Pro : même disposition que la version web (js/app/PhotoModeManager.js,
+// css/photo-mode.css) — interface sombre type Lightroom, toile au centre, pellicule en bas,
+// réglages à droite (en bas sur téléphone).
+import { Theme } from "theme.slint";
+import { FaIcon } from "widgets.slint";
+
+export struct PmThumb {
+    name: string,
+    thumb: image,
+    active: bool,
+    modified: bool,
+}
+
+/// Bouton de l'en-tête : 0 accent, 1 secondaire (gris), 2 danger (rouge).
+component PmButton inherits Rectangle {
+    in property <string> glyph;
+    in property <string> text;
+    in property <int> kind;
+    callback clicked();
+    height: 30px;
+    width: lbl.text != "" ? lbl.preferred-width + 38px : 32px;
+    border-radius: 4px;
+    background: root.kind == 0 ? (ta.pressed ? Theme.accent.darker(25%) : ta.has-hover ? Theme.accent.darker(12%) : Theme.accent)
+        : root.kind == 2 ? (ta.has-hover ? #e74c3c : #c0392b)
+        : (ta.pressed ? #3a3a3a : ta.has-hover ? #555555 : #444444);
+    FaIcon {
+        x: lbl.text != "" ? 11px : (parent.width - self.width) / 2;
+        width: 14px;
+        glyph: root.glyph;
+        size: 12px;
+        color: #ffffff;
+    }
+    lbl := Text {
+        x: 30px;
+        text: root.text;
+        font-size: 12px;
+        color: #ffffff;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// Curseur sombre : libellé, valeur (accent), piste remplie depuis zéro, double-clic = zéro.
+component PmSlider inherits Rectangle {
+    in property <string> label;
+    in property <float> value;
+    in property <float> minimum: -100;
+    in property <float> maximum: 100;
+    in property <float> reset-value: 0;
+    callback changed(float);
+    height: 36px;
+    property <float> ratio: clamp((root.value - root.minimum) / (root.maximum - root.minimum), 0, 1);
+    property <float> zero: clamp((root.reset-value - root.minimum) / (root.maximum - root.minimum), 0, 1);
+    Text {
+        x: 0;
+        y: 2px;
+        text: root.label;
+        font-size: 11px;
+        color: #cccccc;
+    }
+    Text {
+        x: parent.width - 44px;
+        y: 2px;
+        width: 44px;
+        text: round(root.value);
+        font-size: 11px;
+        font-weight: 700;
+        color: Theme.accent.brighter(35%);
+        horizontal-alignment: right;
+    }
+    Rectangle {
+        x: 6px;
+        y: 22px;
+        width: parent.width - 12px;
+        height: 4px;
+        border-radius: 2px;
+        background: #3c3c3c;
+        Rectangle {
+            x: min(root.ratio, root.zero) * parent.width;
+            width: abs(root.ratio - root.zero) * parent.width;
+            height: parent.height;
+            border-radius: 2px;
+            background: Theme.accent;
+        }
+    }
+    Rectangle {
+        x: 6px + root.ratio * (parent.width - 12px) - 7px;
+        y: 17px;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: ta.pressed ? #ffffff : #e6e6e6;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+    ta := TouchArea {
+        y: 12px;
+        height: 24px;
+        function set-from(px: length) {
+            root.changed(round(root.minimum + clamp((px - 6px) / (self.width - 12px), 0, 1) * (root.maximum - root.minimum)));
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                self.set-from(self.mouse-x);
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                self.set-from(self.mouse-x);
+            }
+        }
+        double-clicked => {
+            root.changed(root.reset-value);
+        }
+    }
+}
+
+/// Titre de section repliable (majuscules grises), avec « RAZ » (remise à zéro de la section).
+component PmSectionHead inherits Rectangle {
+    in property <string> title;
+    in property <bool> collapsed;
+    in property <bool> resettable: true;
+    callback toggle();
+    callback reset();
+    height: 32px;
+    background: hta.has-hover ? #333333 : #2d2d2d;
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: #333333;
+    }
+    hta := TouchArea {
+        clicked => {
+            root.toggle();
+        }
+    }
+    FaIcon {
+        x: 12px;
+        width: 12px;
+        glyph: root.collapsed ? "\u{f054}" : "\u{f078}";
+        size: 9px;
+        color: #aaaaaa;
+    }
+    Text {
+        x: 32px;
+        text: root.title;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        color: hta.has-hover ? #ffffff : #aaaaaa;
+        vertical-alignment: center;
+    }
+    if root.resettable: Rectangle {
+        x: parent.width - 44px;
+        y: 8px;
+        width: 34px;
+        height: 16px;
+        border-radius: 2px;
+        background: rta.has-hover ? Theme.accent : #ffffff0d;
+        border-width: 1px;
+        border-color: rta.has-hover ? Theme.accent : #ffffff26;
+        Text {
+            text: "RAZ";
+            font-size: 9px;
+            color: rta.has-hover ? #ffffff : #cccccc;
+        }
+        rta := TouchArea {
+            clicked => {
+                root.reset();
+            }
+        }
+    }
+}
+
+export component PhotoMode inherits Rectangle {
+    in property <bool> phone;
+    in property <image> image;
+    in property <int> img-w: 1;
+    in property <int> img-h: 1;
+    in property <int> full-w: 1;
+    in property <[PmThumb]> photos: [];
+    in property <[float]> values: [];
+    in property <[string]> presets: [];
+    in property <int> preset;
+    in property <bool> fx-off;
+    in property <string> info;
+    in property <bool> busy;
+    // zone rendue en haute résolution (0..1 de l'image) par-dessus l'aperçu basse résolution
+    in property <image> hq-image;
+    in property <float> hq-x0;
+    in property <float> hq-y0;
+    in property <float> hq-x1: 1;
+    in property <float> hq-y1: 1;
+    in property <bool> hq-shown;
+    /// zone visible (0..1) et largeur affichée de l'image : rendu haute résolution de cette zone
+    callback view-changed(float, float, float, float, float);
+    callback action(string);
+    callback select(int);
+    callback remove(int);
+    callback set(int, float);
+    callback preset-chosen(int);
+    // sections repliées (Filtres, Lumière, Couleur, Présence, Grading, TSL)
+    in-out property <[bool]> folded: [false, false, false, false, true, true];
+    property <int> hsl-band: 0;
+    property <float> zoom: 1;
+    property <length> pan-x;
+    property <length> pan-y;
+    background: #111111;
+    // un appui ne traverse jamais vers l'éditeur en dessous
+    TouchArea { }
+
+    property <length> head-h: 46px;
+    property <length> side-w: root.phone ? root.width : 300px;
+    property <length> body-h: root.height - root.head-h;
+    property <length> main-w: root.phone ? root.width : root.width - root.side-w;
+    property <length> main-h: root.phone ? root.body-h * 0.55 : root.body-h;
+    property <length> film-h: root.photos.length == 0 ? 0px : root.phone ? 80px : 110px;
+    property <length> view-h: root.main-h - root.film-h;
+    // taille affichée : ajustée à la zone, puis multipliée par le zoom
+    property <float> fit: min((root.main-w - 32px) / (root.img-w * 1px), (root.view-h - 32px) / (root.img-h * 1px));
+    property <length> disp-w: root.img-w * root.fit * root.zoom * 1px;
+    property <length> disp-h: root.img-h * root.fit * root.zoom * 1px;
+    // coin de l'image dans la zone d'affichage
+    property <length> img-x: (root.main-w - root.disp-w) / 2 + root.pan-x;
+    property <length> img-y: (root.view-h - root.disp-h) / 2 + root.pan-y;
+    function report-view() {
+        if (root.disp-w > 0 && root.disp-h > 0) {
+            root.view-changed(
+                clamp(-root.img-x / root.disp-w, 0, 1),
+                clamp(-root.img-y / root.disp-h, 0, 1),
+                clamp((root.main-w - root.img-x) / root.disp-w, 0, 1),
+                clamp((root.view-h - root.img-y) / root.disp-h, 0, 1),
+                root.disp-w / 1px);
+        }
+    }
+    init => {
+        root.report-view();
+    }
+    changed disp-w => {
+        root.report-view();
+    }
+    changed disp-h => {
+        root.report-view();
+    }
+    changed pan-x => {
+        root.report-view();
+    }
+    changed pan-y => {
+        root.report-view();
+    }
+    changed main-w => {
+        root.report-view();
+    }
+    changed view-h => {
+        root.report-view();
+    }
+
+    // ================= en-tête =================
+    Rectangle {
+        height: root.head-h;
+        y: 0;
+        background: #252526;
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: #333333;
+        }
+        FaIcon {
+            x: 16px;
+            width: 18px;
+            glyph: "\u{f030}";
+            size: 15px;
+            color: #ffffff;
+        }
+        if !root.phone: Text {
+            x: 42px;
+            text: "Mode Photo Pro";
+            font-size: 15px;
+            font-weight: 500;
+            color: #ffffff;
+            vertical-alignment: center;
+        }
+        HorizontalLayout {
+            x: parent.width - self.preferred-width - 10px;
+            y: 8px;
+            height: 30px;
+            spacing: 6px;
+            PmButton {
+                glyph: "\u{2b}";
+                text: root.phone ? "Importer" : "Importer photos";
+                clicked => {
+                    root.action("import");
+                }
+            }
+            PmButton {
+                glyph: "\u{f35d}";
+                text: root.phone ? "" : "Ouvrir";
+                kind: 1;
+                clicked => {
+                    root.action("open-editor");
+                }
+            }
+            PmButton {
+                glyph: "\u{f56e}";
+                text: root.phone ? "Exporter" : "Exporter…";
+                clicked => {
+                    root.action("export");
+                }
+            }
+            PmButton {
+                glyph: "\u{f0c5}";
+                text: root.phone ? "" : "Appliquer à toutes";
+                kind: 1;
+                clicked => {
+                    root.action("apply-all");
+                }
+            }
+            PmButton {
+                glyph: "\u{f00d}";
+                kind: 2;
+                clicked => {
+                    root.action("close");
+                }
+            }
+        }
+    }
+
+    // ================= toile =================
+    Rectangle {
+        x: 0;
+        y: root.head-h;
+        width: root.main-w;
+        height: root.view-h;
+        background: @radial-gradient(circle, #222222 0%, #000000 100%);
+        clip: true;
+        if root.photos.length > 0: Rectangle {
+            x: (parent.width - root.disp-w) / 2 + root.pan-x;
+            y: (parent.height - root.disp-h) / 2 + root.pan-y;
+            width: root.disp-w;
+            height: root.disp-h;
+            background: #000000;
+            drop-shadow-blur: 30px;
+            drop-shadow-color: #000000;
+            Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.image;
+                image-fit: fill;
+                image-rendering: root.zoom > 1.5 ? pixelated : smooth;
+            }
+            if root.hq-shown && !root.fx-off: Image {
+                x: root.hq-x0 * parent.width;
+                y: root.hq-y0 * parent.height;
+                width: (root.hq-x1 - root.hq-x0) * parent.width;
+                height: (root.hq-y1 - root.hq-y0) * parent.height;
+                source: root.hq-image;
+                image-fit: fill;
+            }
+        }
+        // glisser = déplacer, molette = zoom, double-clic = ajuster
+        TouchArea {
+            mouse-cursor: root.zoom > 1 ? MouseCursor.move : MouseCursor.default;
+            moved => {
+                if (self.pressed) {
+                    root.pan-x += self.mouse-x - self.pressed-x;
+                    root.pan-y += self.mouse-y - self.pressed-y;
+                }
+            }
+            double-clicked => {
+                root.zoom = 1;
+                root.pan-x = 0;
+                root.pan-y = 0;
+            }
+            scroll-event(e) => {
+                root.zoom = clamp(root.zoom * (e.delta-y > 0 ? 1.15 : 1 / 1.15), 0.2, 12);
+                accept
+            }
+        }
+        // photo sans pellicule : invitation à importer
+        if root.photos.length == 0: VerticalLayout {
+            alignment: center;
+            spacing: 18px;
+            FaIcon {
+                glyph: "\u{f302}";
+                size: 48px;
+                color: #333333;
+            }
+            Text {
+                text: "Aucune photo chargée. Importez vos fichiers JPG, PNG, WebP…";
+                font-size: 13px;
+                color: #d4d4d4;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+            HorizontalLayout {
+                alignment: center;
+                PmButton {
+                    glyph: "\u{2b}";
+                    text: "Importer photos";
+                    clicked => {
+                        root.action("import");
+                    }
+                }
+            }
+        }
+        if root.photos.length > 0 && root.info != "": Text {
+            x: 12px;
+            y: 10px;
+            text: root.info;
+            font-size: 11px;
+            color: #ffffffb0;
+        }
+        if root.busy: Rectangle {
+            x: parent.width - 86px;
+            y: 10px;
+            width: 74px;
+            height: 22px;
+            border-radius: 11px;
+            background: #141414d9;
+            Text {
+                text: "Rendu…";
+                font-size: 11px;
+                color: #ffffff;
+            }
+        }
+        // badge de zoom : facteur, ajuster, effets ON / OFF
+        if root.photos.length > 0: Rectangle {
+            x: 14px;
+            y: parent.height - 46px;
+            width: zl.preferred-width + 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #141414d9;
+            border-width: 1px;
+            border-color: #ffffff26;
+            zl := HorizontalLayout {
+                x: 12px;
+                height: parent.height;
+                spacing: 8px;
+                Text {
+                    text: (root.phone ? "" : "Zoom : ") + round(root.disp-w / (root.full-w * 1px) * 100) + " %";
+                    font-size: 11px;
+                    color: #ffffffe6;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    width: 24px;
+                    y: 4px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: fta.has-hover ? #ffffff26 : #ffffff0d;
+                    FaIcon {
+                        glyph: "\u{f065}";
+                        size: 11px;
+                        color: #ffffff;
+                    }
+                    fta := TouchArea {
+                        clicked => {
+                            root.zoom = 1;
+                            root.pan-x = 0;
+                            root.pan-y = 0;
+                        }
+                    }
+                }
+                Rectangle {
+                    y: 4px;
+                    height: 24px;
+                    width: tl.preferred-width + 34px;
+                    border-radius: 12px;
+                    background: root.fx-off ? #e74c3c : tta.has-hover ? #ffffff33 : #ffffff1a;
+                    FaIcon {
+                        x: 9px;
+                        width: 12px;
+                        glyph: "\u{e2ca}";
+                        size: 11px;
+                        color: #ffffff;
+                    }
+                    tl := Text {
+                        x: 26px;
+                        text: root.fx-off ? "OFF" : "ON";
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        vertical-alignment: center;
+                    }
+                    tta := TouchArea {
+                        clicked => {
+                            root.action("fx");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ================= pellicule =================
+    if root.photos.length > 0: Rectangle {
+        x: 0;
+        y: root.head-h + root.view-h;
+        width: root.main-w;
+        height: root.film-h;
+        background: #1e1e1e;
+        Rectangle {
+            y: 0;
+            height: 1px;
+            background: #333333;
+        }
+        Flickable {
+            viewport-width: fl.width;
+            viewport-height: self.height;
+            fl := HorizontalLayout {
+                x: 0;
+                y: 0;
+                width: self.preferred-width;
+                height: root.film-h;
+                padding: root.phone ? 6px : 12px;
+                spacing: 10px;
+                for p[i] in root.photos: Rectangle {
+                    width: root.phone ? 80px : 100px;
+                    border-radius: 4px;
+                    background: p.active ? #333333 : pta.has-hover ? #222222 : #000000;
+                    border-width: 2px;
+                    border-color: p.active ? Theme.accent : pta.has-hover ? #555555 : #333333;
+                    clip: true;
+                    Image {
+                        width: parent.width - 4px;
+                        height: parent.height - 4px;
+                        source: p.thumb;
+                        image-fit: contain;
+                        opacity: p.active || pta.has-hover ? 1 : 0.7;
+                    }
+                    pta := TouchArea {
+                        clicked => {
+                            root.select(i);
+                        }
+                    }
+                    if p.modified: Rectangle {
+                        x: parent.width - 14px;
+                        y: 6px;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: #ffaa00;
+                    }
+                    if p.active || root.phone || pta.has-hover: Rectangle {
+                        x: 4px;
+                        y: 4px;
+                        width: 18px;
+                        height: 18px;
+                        border-radius: 9px;
+                        background: xta.has-hover ? #ff4d4d : #00000099;
+                        FaIcon {
+                            glyph: "\u{f00d}";
+                            size: 9px;
+                            color: #ffffff;
+                        }
+                        xta := TouchArea {
+                            clicked => {
+                                root.remove(i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ================= réglages =================
+    Rectangle {
+        x: root.phone ? 0 : root.main-w;
+        y: root.phone ? root.head-h + root.main-h : root.head-h;
+        width: root.side-w;
+        height: root.phone ? root.body-h - root.main-h : root.body-h;
+        background: #252526;
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: root.phone ? parent.width : 1px;
+            height: root.phone ? 2px : parent.height;
+            background: root.phone ? #444444 : #333333;
+        }
+        Flickable {
+            x: root.phone ? 0 : 1px;
+            y: root.phone ? 2px : 0;
+            width: parent.width - (root.phone ? 0 : 1px);
+            height: parent.height - (root.phone ? 2px : 0);
+            viewport-height: side.preferred-height;
+            side := VerticalLayout {
+                x: 0;
+                width: parent.width;
+                alignment: start;
+                // ---- Filtres & Reset ----
+                PmSectionHead {
+                    title: "FILTRES & RESET";
+                    resettable: false;
+                    collapsed: root.folded[0];
+                    toggle => {
+                        root.folded[0] = !root.folded[0];
+                    }
+                }
+                if !root.folded[0]: VerticalLayout {
+                    padding: 14px;
+                    spacing: 8px;
+                    Text {
+                        text: "Préréglages créatifs";
+                        font-size: 10px;
+                        color: #cccccc;
+                    }
+                    pcombo := Rectangle {
+                        height: 26px;
+                        border-radius: 3px;
+                        background: #111111;
+                        border-width: 1px;
+                        border-color: cta.has-hover ? Theme.accent : #333333;
+                        Text {
+                            x: 8px;
+                            width: parent.width - 30px;
+                            text: root.presets[root.preset];
+                            font-size: 12px;
+                            color: #cccccc;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                        FaIcon {
+                            x: parent.width - 20px;
+                            width: 12px;
+                            glyph: "\u{f078}";
+                            size: 9px;
+                            color: #aaaaaa;
+                        }
+                        cta := TouchArea {
+                            clicked => {
+                                plist.show();
+                            }
+                        }
+                        plist := PopupWindow {
+                            x: 0;
+                            y: parent.height;
+                            width: parent.width;
+                            Rectangle {
+                                background: #1b1b1b;
+                                border-width: 1px;
+                                border-color: #3a3a3a;
+                                VerticalLayout {
+                                    padding: 3px;
+                                    for n[k] in root.presets: Rectangle {
+                                        height: 24px;
+                                        background: ita.has-hover ? Theme.accent : k == root.preset ? #333333 : transparent;
+                                        Text {
+                                            x: 8px;
+                                            text: n;
+                                            font-size: 12px;
+                                            color: #eeeeee;
+                                            vertical-alignment: center;
+                                        }
+                                        ita := TouchArea {
+                                            clicked => {
+                                                root.preset-chosen(k);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        height: 30px;
+                        PmButton {
+                            horizontal-stretch: 1;
+                            glyph: "\u{f0e2}";
+                            text: "Réinitialiser";
+                            kind: 1;
+                            clicked => {
+                                root.action("reset");
+                            }
+                        }
+                        PmButton {
+                            horizontal-stretch: 1;
+                            glyph: "\u{f2f9}";
+                            text: "Rotation";
+                            clicked => {
+                                root.action("rotate");
+                            }
+                        }
+                    }
+                }
+                // ---- sections de curseurs (indices du moteur Camera Raw) ----
+                for sec[si] in [
+                    { title: "LUMIÈRE", auto: true, sliders: [
+                        { i: 0, l: "Exposition", mn: -150, mx: 150 }, { i: 18, l: "Contraste", mn: -80, mx: 80 },
+                        { i: 5, l: "Hautes lumières", mn: -170, mx: 170 }, { i: 3, l: "Ombres", mn: -170, mx: 170 },
+                        { i: 6, l: "Blancs", mn: -140, mx: 140 }, { i: 4, l: "Noirs", mn: -140, mx: 140 }] },
+                    { title: "COULEUR ET SATURATION", auto: false, sliders: [
+                        { i: 1, l: "Température", mn: -100, mx: 100 }, { i: 2, l: "Teinte", mn: -100, mx: 100 },
+                        { i: 20, l: "Vibrance", mn: -90, mx: 90 }, { i: 19, l: "Saturation", mn: -80, mx: 80 }] },
+                    { title: "PRÉSENCE ET DÉTAIL", auto: false, sliders: [
+                        { i: 16, l: "Clarté (micro-contraste)", mn: -70, mx: 70 }, { i: 17, l: "Correction du voile", mn: -70, mx: 70 },
+                        { i: 22, l: "Vignettage", mn: -85, mx: 85 }, { i: 21, l: "Netteté (piqué)", mn: 0, mx: 100 },
+                        { i: 23, l: "Grain film", mn: 0, mx: 100 }, { i: 24, l: "Piqué du grain", mn: 0, mx: 100 }] },
+                    { title: "COLOR GRADING (RVB)", auto: false, sliders: [
+                        { i: 7, l: "Rouge", mn: -80, mx: 80 }, { i: 8, l: "Rouge — hautes lumières", mn: -70, mx: 70 }, { i: 9, l: "Rouge — ombres", mn: -70, mx: 70 },
+                        { i: 10, l: "Vert", mn: -80, mx: 80 }, { i: 11, l: "Vert — hautes lumières", mn: -70, mx: 70 }, { i: 12, l: "Vert — ombres", mn: -70, mx: 70 },
+                        { i: 13, l: "Bleu", mn: -80, mx: 80 }, { i: 14, l: "Bleu — hautes lumières", mn: -70, mx: 70 }, { i: 15, l: "Bleu — ombres", mn: -70, mx: 70 }] },
+                ]: VerticalLayout {
+                    PmSectionHead {
+                        title: sec.title;
+                        collapsed: root.folded[si + 1];
+                        toggle => {
+                            root.folded[si + 1] = !root.folded[si + 1];
+                        }
+                        reset => {
+                            root.action("reset-section:" + si);
+                        }
+                    }
+                    if !root.folded[si + 1]: VerticalLayout {
+                        padding: 14px;
+                        padding-top: 10px;
+                        spacing: 4px;
+                        if sec.auto: HorizontalLayout {
+                            alignment: end;
+                            PmButton {
+                                glyph: "\u{e2ca}";
+                                text: "Auto";
+                                kind: 1;
+                                clicked => {
+                                    root.action("auto");
+                                }
+                            }
+                        }
+                        for s in sec.sliders: PmSlider {
+                            label: s.l;
+                            minimum: s.mn;
+                            maximum: s.mx;
+                            reset-value: s.i == 24 ? 50 : 0;
+                            value: root.values[s.i];
+                            changed(v) => {
+                                root.set(s.i, v);
+                            }
+                        }
+                    }
+                }
+                // ---- mélangeur TSL : une couleur à la fois ----
+                PmSectionHead {
+                    title: "MÉLANGEUR DE COULEURS (TSL)";
+                    collapsed: root.folded[5];
+                    toggle => {
+                        root.folded[5] = !root.folded[5];
+                    }
+                    reset => {
+                        root.action("reset-section:4");
+                    }
+                }
+                if !root.folded[5]: VerticalLayout {
+                    padding: 14px;
+                    padding-top: 10px;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        height: 24px;
+                        for c[ci] in [#e53935, #fb8c00, #fdd835, #43a047, #00acc1, #1e88e5, #8e24aa, #d81b60]: Rectangle {
+                            horizontal-stretch: 1;
+                            border-radius: 12px;
+                            background: c;
+                            border-width: ci == root.hsl-band ? 2px : 0px;
+                            border-color: #ffffff;
+                            TouchArea {
+                                clicked => {
+                                    root.hsl-band = ci;
+                                }
+                            }
+                        }
+                    }
+                    Text {
+                        text: ["Rouges", "Oranges", "Jaunes", "Verts", "Aquas", "Bleus", "Violets", "Magentas"][root.hsl-band];
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: #eeeeee;
+                    }
+                    PmSlider {
+                        label: "Teinte";
+                        value: root.values[30 + root.hsl-band];
+                        changed(v) => {
+                            root.set(30 + root.hsl-band, v);
+                        }
+                    }
+                    PmSlider {
+                        label: "Saturation";
+                        value: root.values[38 + root.hsl-band];
+                        changed(v) => {
+                            root.set(38 + root.hsl-band, v);
+                        }
+                    }
+                    PmSlider {
+                        label: "Luminance";
+                        value: root.values[46 + root.hsl-band];
+                        changed(v) => {
+                            root.set(46 + root.hsl-band, v);
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 24px;
+                }
+            }
+        }
+    }
+}

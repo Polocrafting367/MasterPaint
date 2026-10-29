@@ -1,0 +1,5 @@
+# Fichiers de compilation hors du dépôt : dossier « MasterPaint-build » à côté de « MasterPaint »
+# (plusieurs Go : ils ne partent ni sur GitHub ni sur le serveur). Chemin relatif au dossier rust/.
+# La variable CARGO_TARGET_DIR reste prioritaire (GitHub Actions l'utilise pour garder rust/target).
+[build]
+target-dir = "../../MasterPaint-build/target"

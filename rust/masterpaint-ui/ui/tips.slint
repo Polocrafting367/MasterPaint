@@ -1,0 +1,96 @@
+// Généré par tools/gen_tips.py depuis tools/tips.json : descriptions des info-bulles (clé = titre).
+export global Tips {
+    public pure function desc(t: string) -> string {
+        if (t == "Nouveau document…") { return "Crée une image vide : choisissez sa taille, son fond et son mode (Ctrl+N)."; }
+        if (t == "Ouvrir") { return "Ouvre une image, une photo RAW ou un projet .illu dans un nouvel onglet (Ctrl+O). Vous pouvez aussi glisser un fichier sur la page."; }
+        if (t == "Exporter / enregistrer…") { return "Enregistre l'image : PNG, JPEG, WebP, BMP… ou projet .illu pour garder les calques (Ctrl+S)."; }
+        if (t == "Imprimer") { return "Imprime l'image aplatie."; }
+        if (t == "Annuler") { return "Annule la dernière action (Ctrl+Z). L'historique garde toutes les étapes."; }
+        if (t == "Rétablir") { return "Refait l'action annulée (Ctrl+Y)."; }
+        if (t == "Zoom arrière") { return "Réduit l'affichage. Ctrl + molette fait la même chose sous le curseur."; }
+        if (t == "Zoom avant") { return "Agrandit l'affichage. Ctrl + molette fait la même chose sous le curseur."; }
+        if (t == "Adapter au workspace") { return "Ajuste le zoom pour voir toute l'image dans la fenêtre."; }
+        if (t == "Ajuster à la fenêtre") { return "Ajuste le zoom pour voir toute l'image dans la fenêtre."; }
+        if (t == "Signaler un bug") { return "Ouvre le formulaire de contact : décrivez le problème, le journal de l'application est joint."; }
+        if (t == "Inverser la sélection") { return "Sélectionne tout ce qui ne l'était pas (Ctrl+I)."; }
+        if (t == "Tout sélectionner") { return "Sélectionne toute la toile (Ctrl+A)."; }
+        if (t == "Sélection / baguette / lasso") { return "Choisit l'outil de sélection : rectangle, lasso, baguette magique…"; }
+        if (t == "Nouvelle sélection") { return "La nouvelle sélection remplace l'ancienne."; }
+        if (t == "Ajouter à la sélection") { return "La nouvelle zone est ajoutée à la sélection existante (union)."; }
+        if (t == "Soustraire de la sélection") { return "La nouvelle zone est retirée de la sélection existante."; }
+        if (t == "Copier") { return "Copie la sélection (ou le calque) dans le presse-papiers (Ctrl+C), aussi vers les autres applications."; }
+        if (t == "Coller") { return "Colle l'image du presse-papiers comme nouveau calque déplaçable (Ctrl+V)."; }
+        if (t == "Aligner la sélection à gauche de la toile") { return "Colle la sélection contre le bord gauche de la toile."; }
+        if (t == "Centrer la sélection horizontalement sur la toile") { return "Place la sélection au milieu de la toile, sur l'axe horizontal."; }
+        if (t == "Aligner la sélection à droite de la toile") { return "Colle la sélection contre le bord droit de la toile."; }
+        if (t == "Effacer sélection") { return "Vide les pixels de la sélection (Suppr)."; }
+        if (t == "Aligner la sélection en haut de la toile") { return "Colle la sélection contre le bord haut de la toile."; }
+        if (t == "Centrer la sélection verticalement sur la toile") { return "Place la sélection au milieu de la toile, sur l'axe vertical."; }
+        if (t == "Aligner la sélection en bas de la toile") { return "Colle la sélection contre le bord bas de la toile."; }
+        if (t == "Centrer la sélection sur la toile") { return "Place la sélection exactement au centre de la toile."; }
+        if (t == "Grille de pixels") { return "Affiche la grille entre les pixels (visible à fort zoom)."; }
+        if (t == "Règles") { return "Affiche les règles graduées en pixels sur les bords de la toile."; }
+        if (t == "Autoriser le contenu hors de la toile") { return "Le contenu qui dépasse de la toile est gardé (zone de travail illimitée) au lieu d'être coupé. Réglage rendu à la toile par « Supprimer le contenu hors toile »."; }
+        if (t == "Aimantation") { return "Les bords de la sélection et des calques se collent aux repères, aux bords et aux autres objets."; }
+        if (t == "Masquer cette palette") { return "Ferme la palette d'outils (rouvrez-la par le menu Fenêtre)."; }
+        if (t == "Sélection rectangulaire") { return "Dessine une sélection rectangulaire. Maj = carré, Ctrl = ajoute, Alt = soustrait."; }
+        if (t == "Sélection à la volée") { return "Sélection au lasso à main levée : tracez le contour en gardant le bouton appuyé."; }
+        if (t == "Baguette") { return "Sélectionne d'un clic les pixels voisins de couleur proche. Réglez la tolérance dans les options."; }
+        if (t == "Lasso magnétique") { return "Le contour se colle aux bords de l'image pendant que vous le suivez."; }
+        if (t == "Lasso polygonal") { return "Cliquez point par point pour tracer un contour à segments droits ; double-clic pour fermer."; }
+        if (t == "Désélectionner") { return "Retire la sélection (Ctrl+D)."; }
+        if (t == "Déformation 4 coins") { return "Déforme le calque en déplaçant ses quatre coins (perspective)."; }
+        if (t == "Déformation") { return "Déforme le calque librement : tirez les points pour le tordre."; }
+        if (t == "Pipette") { return "Prélève la couleur d'un pixel ; maintenez le bouton appuyé pour la voir changer. Clic droit : couleur secondaire."; }
+        if (t == "Déplacer la sélection ou le calque") { return "Déplace la sélection (contenu inclus) ou le calque. Maj = bloque un axe."; }
+        if (t == "Zoom") { return "Cliquez pour agrandir, clic droit pour réduire, ou encadrez la zone à voir."; }
+        if (t == "Pinceau") { return "Peint avec la couleur principale (clic gauche) ou secondaire (clic droit). Taille et dureté dans les options."; }
+        if (t == "Crayon") { return "Trace des pixels nets, sans lissage."; }
+        if (t == "Dégradé") { return "Type de dégradé et couleurs."; }
+        if (t == "Remplissage") { return "Remplit d'un clic la zone de couleur voisine avec la couleur principale."; }
+        if (t == "Gomme") { return "Efface vers la transparence (ou la couleur secondaire sur le fond)."; }
+        if (t == "Texte") { return "Ajoute du texte : cliquez sur la toile puis tapez. Police, taille et style dans les options."; }
+        if (t == "Formes multiples") { return "Dessine des formes : rectangle, ellipse, polygones, étoiles, flèches… Choix de la forme dans les options."; }
+        if (t == "Rectangle à coins arrondis") { return "Dessine un rectangle dont les coins sont arrondis."; }
+        if (t == "Ligne") { return "Trace une ligne ou une courbe de Bézier modifiable."; }
+        if (t == "Sélection rapide") { return "Sélectionne un objet en peignant dessus (pas encore transféré dans la version Rust)."; }
+        if (t == "Sélection d'objet") { return "Détecte l'objet sous le curseur (pas encore transféré dans la version Rust)."; }
+        if (t == "Rectangle") { return "Dessine un rectangle (Maj = carré)."; }
+        if (t == "Triangle isocèle") { return "Dessine un triangle isocèle."; }
+        if (t == "Cercle / Ellipse") { return "Dessine une ellipse (Maj = cercle)."; }
+        if (t == "Étoile") { return "Dessine une étoile à branches réglables."; }
+        if (t == "Contigu") { return "Activé : seuls les pixels reliés à celui cliqué sont pris. Désactivé : toute l'image est parcourue."; }
+        if (t == "Calque") { return "La sélection ou le remplissage se base sur le calque actif seulement."; }
+        if (t == "Global") { return "La sélection ou le remplissage se base sur l'image visible (tous les calques)."; }
+        if (t == "Tol.") { return "Tolérance : écart de couleur accepté. Plus elle est haute, plus la zone prise est grande."; }
+        if (t == "Taille") { return "Diamètre de l'outil (pinceau, gomme…) ou corps du texte, en pixels."; }
+        if (t == "Taille / trait") { return "Taille de l'outil, ou épaisseur du trait pour une forme."; }
+        if (t == "Dureté") { return "100 % = bord net ; plus bas, le bord devient flou et progressif."; }
+        if (t == "Épaisseur") { return "Épaisseur du trait en pixels."; }
+        if (t == "Rond") { return "Pointe de pinceau ronde."; }
+        if (t == "Doux") { return "Pointe ronde au bord progressif."; }
+        if (t == "Spray") { return "Projette des gouttelettes comme un aérosol."; }
+        if (t == "Carré") { return "Pointe de pinceau carrée."; }
+        if (t == "Contour") { return "Dessine seulement le contour de la forme."; }
+        if (t == "Plein") { return "Remplit la forme avec la couleur secondaire."; }
+        if (t == "Les deux") { return "Contour en couleur principale, remplissage en couleur secondaire."; }
+        if (t == "Lissé") { return "Adoucit le bord des lettres (anticrénelage)."; }
+        if (t == "Linéaire") { return "Dégradé en ligne droite."; }
+        if (t == "Radial") { return "Dégradé qui part d'un centre vers l'extérieur."; }
+        if (t == "Losange") { return "Dégradé en losange autour du point de départ."; }
+        if (t == "Conique") { return "Dégradé qui tourne autour du point de départ."; }
+        if (t == "Sym. X") { return "Symétrie gauche/droite : ce que vous peignez est reflété de l'autre côté de l'axe vertical."; }
+        if (t == "Sym. Y") { return "Symétrie haut/bas : ce que vous peignez est reflété de l'autre côté de l'axe horizontal."; }
+        if (t == "Symétrie") { return "Reflète vos traits par rapport à un ou deux axes (les règles s'affichent pour les placer)."; }
+        if (t == "Forme") { return "Type de forme dessinée."; }
+        if (t == "Recadrer l'image (poignées sur la toile)") { return "Affiche quatre poignées sur la toile : tirez-les pour choisir la zone à garder, puis validez."; }
+        if (t == "Valeur par défaut") { return "Remet ce réglage à sa valeur d'origine."; }
+        if (t == "Masque alpha (actif) — éditer") { return "Le masque règle la transparence du calque : blanc = visible, noir = caché. Cliquez pour le peindre."; }
+        if (t == "Créer / ouvrir le masque alpha") { return "Crée un masque de transparence pour ce calque et l'ouvre dans un onglet à part (niveaux de gris)."; }
+        if (t == "Supprimer le masque α") { return "Retire le masque ; le calque redevient entièrement visible."; }
+        if (t == "Filtre dynamique (effet sous le calque, masqué par l'alpha du calque)") { return "Applique un effet en direct aux calques situés dessous, limité par la transparence de ce calque. Modifiable à tout moment."; }
+        if (t == "Afficher / masquer le calque") { return "Cache ou montre le calque sans le supprimer."; }
+        if (t == "Calque : double-clic pour renommer, glisser pour réordonner") { return "Clic : activer. Double-clic : renommer. Glisser : changer l'ordre. Clic droit : menu."; }
+        return "";
+    }
+}

@@ -1,0 +1,3308 @@
+{
+ "brightness": {
+  "title": "Luminosité / Contraste",
+  "fields": [
+   {
+    "id": "ef-b",
+    "label": "Luminosité",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-c",
+    "label": "Contraste",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "exposure": {
+  "title": "Exposition",
+  "fields": [
+   {
+    "id": "ef-exp",
+    "label": "Exposition",
+    "type": "range",
+    "min": 25,
+    "max": 400,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-gamma",
+    "label": "Gamma",
+    "type": "range",
+    "min": 40,
+    "max": 220,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   }
+  ]
+ },
+ "highlightsshadows": {
+  "title": "Mises en lumière / Ombres",
+  "fields": [
+   {
+    "id": "ef-hs-shadows",
+    "label": "Ombres",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 30,
+    "section": ""
+   },
+   {
+    "id": "ef-hs-highlights",
+    "label": "Mises en lumière",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-hs-clarity",
+    "label": "Clarté",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-hs-radius",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 25,
+    "section": ""
+   }
+  ]
+ },
+ "hsv": {
+  "title": "Teinte / Saturation (TSL)",
+  "fields": [
+   {
+    "id": "ef-h",
+    "label": "Teinte",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-s",
+    "label": "Saturation",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-l",
+    "label": "Luminance",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-0",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-1",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-2",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-3",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-4",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-5",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-6",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslSat-7",
+    "label": "",
+    "type": "range",
+    "min": -70,
+    "max": 70,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-0",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-1",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-2",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-3",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-4",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-5",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-6",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslLum-7",
+    "label": "",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-0",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-1",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-2",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-3",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-4",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-5",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-6",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   },
+   {
+    "id": "ef-hsv-mix-hslHue-7",
+    "label": "",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 1,
+    "value": 0,
+    "section": "Avancé : Mélangeur TSL"
+   }
+  ]
+ },
+ "posterize": {
+  "title": "Postériser",
+  "fields": [
+   {
+    "id": "ef-lvl",
+    "label": "Niveaux",
+    "type": "range",
+    "min": 2,
+    "max": 16,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-post-bw",
+    "label": "Noir & blanc (seuil)",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-thr",
+    "label": "Seuil",
+    "type": "range",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 128,
+    "section": ""
+   }
+  ]
+ },
+ "coloraccent": {
+  "title": "Accent de couleur",
+  "fields": [
+   {
+    "id": "ef-ca-color",
+    "label": "Couleur",
+    "type": "color",
+    "value": "#000000",
+    "section": ""
+   },
+   {
+    "id": "ef-ca-tol",
+    "label": "Tolérance",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   }
+  ]
+ },
+ "transparency": {
+  "title": "Transparence",
+  "fields": [
+   {
+    "id": "ef-tr-adj",
+    "label": "Opacité (± %)",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-tr-ignore",
+    "label": "Ignorer les pixels transparents",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-tr-replace",
+    "label": "Remplacer la transparence par la couleur",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "temptint": {
+  "title": "Température / Teinte",
+  "fields": [
+   {
+    "id": "ef-tt-temp",
+    "label": "Température",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-tt-tint",
+    "label": "Teinte",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "vibrance": {
+  "title": "Vibrance",
+  "fields": [
+   {
+    "id": "ef-vibr",
+    "label": "Éclat",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "sketch": {
+  "title": "Croquis à l'encre",
+  "fields": [
+   {
+    "id": "ef-ink",
+    "label": "Contour d'encre",
+    "type": "range",
+    "min": 0,
+    "max": 99,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-ink-color",
+    "label": "Coloriage",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "oil": {
+  "title": "Peinture à l'huile",
+  "fields": [
+   {
+    "id": "ef-oil",
+    "label": "Taille du pinceau",
+    "type": "range",
+    "min": 1,
+    "max": 8,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-oil-coarse",
+    "label": "Grossièreté",
+    "type": "range",
+    "min": 3,
+    "max": 255,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "pastel": {
+  "title": "Pastel",
+  "fields": [
+   {
+    "id": "ef-pa-brush",
+    "label": "Taille du pinceau",
+    "type": "range",
+    "min": 1,
+    "max": 8,
+    "step": 1,
+    "value": 3,
+    "section": ""
+   },
+   {
+    "id": "ef-pa-coarse",
+    "label": "Grossièreté",
+    "type": "range",
+    "min": 3,
+    "max": 255,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-pa-pencil",
+    "label": "Trait de crayon (%)",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-pa-tip",
+    "label": "Pointe du crayon",
+    "type": "range",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   }
+  ]
+ },
+ "pencilsketch": {
+  "title": "Croquis au crayon",
+  "fields": [
+   {
+    "id": "ef-pencil-tip",
+    "label": "Pointe",
+    "type": "range",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-pencil-range",
+    "label": "Plage",
+    "type": "range",
+    "min": -20,
+    "max": 20,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "unfocus": {
+  "title": "Flou bokeh / Défocaliser",
+  "fields": [
+   {
+    "id": "ef-unfocus-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   },
+   {
+    "id": "ef-unfocus-hl",
+    "label": "Hautes lumières",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 55,
+    "section": ""
+   }
+  ]
+ },
+ "fragment": {
+  "title": "Fragment de flou",
+  "fields": [
+   {
+    "id": "ef-frag-n",
+    "label": "Fragments",
+    "type": "range",
+    "min": 2,
+    "max": 50,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-frag-d",
+    "label": "Distance",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   },
+   {
+    "id": "ef-frag-r",
+    "label": "Rotation °",
+    "type": "range",
+    "min": 0,
+    "max": 360,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "gaussian": {
+  "title": "Flou gaussien",
+  "fields": [
+   {
+    "id": "ef-rad",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-blur-edge",
+    "label": "Prendre en compte les bords",
+    "type": "checkbox",
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "motionblur": {
+  "title": "Flou de déplacement",
+  "fields": [
+   {
+    "id": "ef-mblur-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 25,
+    "section": ""
+   },
+   {
+    "id": "ef-mblur-dist",
+    "label": "Distance",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-mblur-center",
+    "label": "Centré",
+    "type": "checkbox",
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "radialblur": {
+  "title": "Flou radial",
+  "fields": [
+   {
+    "id": "ef-rblur-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": 0,
+    "max": 360,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-rblur-inner",
+    "label": "Zone nette (rayon %)",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-rblur-quality",
+    "label": "Qualité",
+    "type": "range",
+    "min": 1,
+    "max": 5,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-rblur-ox",
+    "label": "Décalage X",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-rblur-oy",
+    "label": "Décalage Y",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "sketchblur": {
+  "title": "Flou d'esquisse",
+  "fields": [
+   {
+    "id": "ef-skb-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-skb-var",
+    "label": "Variation",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "blur": {
+  "title": "Flou carré",
+  "fields": [
+   {
+    "id": "ef-rad",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-blur-edge",
+    "label": "Prendre en compte les bords",
+    "type": "checkbox",
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "surfaceblur": {
+  "title": "Flou de surface",
+  "fields": [
+   {
+    "id": "ef-sblur-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 50,
+    "step": 1,
+    "value": 6,
+    "section": ""
+   },
+   {
+    "id": "ef-sblur-t",
+    "label": "Seuil",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 15,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "zoomblur": {
+  "title": "Flou de zoom",
+  "fields": [
+   {
+    "id": "ef-zblur-amount",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-zblur-inner",
+    "label": "Zone nette (rayon %)",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-zblur-ox",
+    "label": "Décalage X",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-zblur-oy",
+    "label": "Décalage Y",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "quantize": {
+  "title": "Quantifier",
+  "fields": [
+   {
+    "id": "ef-q-colors",
+    "label": "Couleurs",
+    "type": "range",
+    "min": 2,
+    "max": 256,
+    "step": 1,
+    "value": 16,
+    "section": ""
+   },
+   {
+    "id": "ef-q-dither",
+    "label": "Tramage",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "colorbal": {
+  "title": "Balance des couleurs",
+  "fields": [
+   {
+    "id": "ef-cb-r",
+    "label": "Rouge",
+    "type": "range",
+    "min": -80,
+    "max": 80,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-cb-g",
+    "label": "Vert",
+    "type": "range",
+    "min": -80,
+    "max": 80,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-cb-b",
+    "label": "Bleu",
+    "type": "range",
+    "min": -80,
+    "max": 80,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-cb-chan-sel",
+    "label": "",
+    "type": "select",
+    "options": [
+     [
+      "curveMaster",
+      "Master (RVB)"
+     ],
+     [
+      "curveR",
+      "Rouge"
+     ],
+     [
+      "curveG",
+      "Vert"
+     ],
+     [
+      "curveB",
+      "Bleu"
+     ]
+    ],
+    "value": "curveMaster",
+    "section": ""
+   }
+  ]
+ },
+ "chroma": {
+  "title": "Incrustation Pro (CIELAB)",
+  "fields": [
+   {
+    "id": "ef-ch-r",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-g",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 255,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-b",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-use2",
+    "label": "chroma.useKey2",
+    "type": "checkbox",
+    "value": 0,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-r2",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-g2",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 180,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-b2",
+    "label": "R",
+    "type": "number",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": "1. Sélection de la cible"
+   },
+   {
+    "id": "ef-ch-tol",
+    "label": "Tolérance",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 0.5,
+    "value": 30,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-feather",
+    "label": "Transition",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 0.5,
+    "value": 15,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-drift",
+    "label": "Précision",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-black",
+    "label": "Clip Noir",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-white",
+    "label": "Clip Blanc",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 100,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-gamma",
+    "label": "Contraste α",
+    "type": "range",
+    "min": 0.1,
+    "max": 3,
+    "step": 0.05,
+    "value": 1,
+    "section": "2. Affinage du masque"
+   },
+   {
+    "id": "ef-ch-luma",
+    "label": "chroma.lumaProt",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "3. Bords et Spill"
+   },
+   {
+    "id": "ef-ch-recover",
+    "label": "chroma.recover",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "3. Bords et Spill"
+   },
+   {
+    "id": "ef-ch-spill",
+    "label": "Despill",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "3. Bords et Spill"
+   }
+  ]
+ },
+ "chromatic": {
+  "title": "Aberration chromatique",
+  "fields": [
+   {
+    "id": "ef-chr",
+    "label": "Décalage (px)",
+    "type": "range",
+    "min": 0,
+    "max": 24,
+    "step": 1,
+    "value": 6,
+    "section": ""
+   }
+  ]
+ },
+ "duotone": {
+  "title": "Duo-tone",
+  "fields": [
+   {
+    "id": "ef-duo-mid",
+    "label": "Mi-ton",
+    "type": "range",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 128,
+    "section": ""
+   }
+  ]
+ },
+ "cmjn": {
+  "title": "Conversion CMJN",
+  "fields": []
+ },
+ "bulge": {
+  "title": "Bosse",
+  "fields": [
+   {
+    "id": "ef-bulge",
+    "label": "Quantité",
+    "type": "range",
+    "min": -100,
+    "max": 100,
+    "step": 1,
+    "value": 40,
+    "section": ""
+   }
+  ]
+ },
+ "dents": {
+  "title": "Cabossage",
+  "fields": [
+   {
+    "id": "ef-dent-scale",
+    "label": "Échelle",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 25,
+    "section": ""
+   },
+   {
+    "id": "ef-dent-refr",
+    "label": "Réfraction",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-dent-rough",
+    "label": "Rugosité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-dent-tension",
+    "label": "Tension",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-dent-seed",
+    "label": "Germe",
+    "type": "range",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "crystallize": {
+  "title": "Cristallisation",
+  "fields": [
+   {
+    "id": "ef-cry",
+    "label": "Cellules",
+    "type": "range",
+    "min": 4,
+    "max": 48,
+    "step": 1,
+    "value": 12,
+    "section": ""
+   }
+  ]
+ },
+ "frosted": {
+  "title": "Verre dépoli",
+  "fields": [
+   {
+    "id": "ef-frost",
+    "label": "Grain",
+    "type": "range",
+    "min": 1,
+    "max": 24,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "morphology": {
+  "title": "Morphologie",
+  "fields": [
+   {
+    "id": "ef-mo-mode",
+    "label": "Mode",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Dilater"
+     ],
+     [
+      "1",
+      "Éroder"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   },
+   {
+    "id": "ef-mo-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 3,
+    "section": ""
+   },
+   {
+    "id": "ef-mo-shape",
+    "label": "Forme",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Cercle"
+     ],
+     [
+      "1",
+      "Carré"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   }
+  ]
+ },
+ "pixelate": {
+  "title": "Pixéliser",
+  "fields": [
+   {
+    "id": "ef-size",
+    "label": "Taille",
+    "type": "range",
+    "min": 2,
+    "max": 50,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   }
+  ]
+ },
+ "polarInvert": {
+  "title": "Inversion polaire",
+  "fields": [
+   {
+    "id": "ef-polar",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 80,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "tileReflect": {
+  "title": "Réflexion mosaïque",
+  "fields": [
+   {
+    "id": "ef-tile",
+    "label": "Taille tuile",
+    "type": "range",
+    "min": 8,
+    "max": 128,
+    "step": 1,
+    "value": 24,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "twist": {
+  "title": "Torsion",
+  "fields": [
+   {
+    "id": "ef-twist",
+    "label": "Angle",
+    "type": "range",
+    "min": -90,
+    "max": 90,
+    "step": 1,
+    "value": 30,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "mirrorquad": {
+  "title": "Miroir 4 secteurs",
+  "fields": []
+ },
+ "projection3d": {
+  "title": "Projection 3D…",
+  "fields": [
+   {
+    "id": "ef-3d-rx",
+    "label": "Axe horizontal °",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-ry",
+    "label": "Axe vertical °",
+    "type": "range",
+    "min": -60,
+    "max": 60,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-f",
+    "label": "Distance caméra",
+    "type": "range",
+    "min": 80,
+    "max": 800,
+    "step": 1,
+    "value": 280,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-z",
+    "label": "Zoom %",
+    "type": "range",
+    "min": 20,
+    "max": 400,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-tl",
+    "label": "Haut gauche",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-tr",
+    "label": "Haut droite",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-br",
+    "label": "Bas droite",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-3d-bl",
+    "label": "Bas gauche",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "wave": {
+  "title": "Déformation en vague",
+  "fields": [
+   {
+    "id": "ef-wave-a",
+    "label": "Amplitude",
+    "type": "range",
+    "min": 0,
+    "max": 80,
+    "step": 1,
+    "value": 12,
+    "section": ""
+   },
+   {
+    "id": "ef-wave-f",
+    "label": "Fréquence",
+    "type": "range",
+    "min": 4,
+    "max": 48,
+    "step": 1,
+    "value": 14,
+    "section": ""
+   },
+   {
+    "id": "ef-ca",
+    "label": "Aberration chromatique",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-ca-amt",
+    "label": "Intensité",
+    "type": "range",
+    "min": 1,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": ""
+   }
+  ]
+ },
+ "addnoise": {
+  "title": "Ajouter du bruit",
+  "fields": [
+   {
+    "id": "ef-noise-int",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 64,
+    "section": ""
+   },
+   {
+    "id": "ef-noise-sat",
+    "label": "Saturation",
+    "type": "range",
+    "min": 0,
+    "max": 400,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-noise-cov",
+    "label": "Couverture",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   }
+  ]
+ },
+ "median": {
+  "title": "Médiane",
+  "fields": [
+   {
+    "id": "ef-med-rad",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-med-pct",
+    "label": "Percentile",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "reducenoise": {
+  "title": "Réduire le bruit",
+  "fields": [
+   {
+    "id": "ef-rn-radius",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 50,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-rn-strength",
+    "label": "Force",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 40,
+    "section": ""
+   }
+  ]
+ },
+ "digitalpattern": {
+  "title": "Tramage numérique",
+  "fields": [
+   {
+    "id": "ef-grain",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 40,
+    "section": ""
+   },
+   {
+    "id": "ef-grain-fine",
+    "label": "Cellule",
+    "type": "range",
+    "min": 2,
+    "max": 30,
+    "step": 1,
+    "value": 15,
+    "section": ""
+   }
+  ]
+ },
+ "vhs": {
+  "title": "Effet VHS",
+  "fields": [
+   {
+    "id": "ef-vhs-preview_max",
+    "label": "Max. aperçu (px)",
+    "type": "range",
+    "min": 200,
+    "max": 900,
+    "step": 20,
+    "value": 480,
+    "section": "▼ Préréglages & aperçu"
+   },
+   {
+    "id": "ef-vhs-enable_y",
+    "label": "Y",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-enable_r",
+    "label": "R",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-enable_g",
+    "label": "V",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-enable_b",
+    "label": "B",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-crop_padding",
+    "label": "Rognage (px)",
+    "type": "range",
+    "min": 0,
+    "max": 64,
+    "step": 1,
+    "value": 6,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-crop_feather",
+    "label": "Fondu bordure",
+    "type": "range",
+    "min": 0,
+    "max": 32,
+    "step": 1,
+    "value": 4,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-shift_y",
+    "label": "Décalage Y",
+    "type": "range",
+    "min": -40,
+    "max": 40,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-shift_r",
+    "label": "Décalage R",
+    "type": "range",
+    "min": -40,
+    "max": 40,
+    "step": 1,
+    "value": -13,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-shift_g",
+    "label": "Décalage V",
+    "type": "range",
+    "min": -40,
+    "max": 40,
+    "step": 1,
+    "value": 8,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-shift_b",
+    "label": "Décalage B",
+    "type": "range",
+    "min": -40,
+    "max": 40,
+    "step": 1,
+    "value": 6,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-luma_contrast",
+    "label": "Contraste luma",
+    "type": "range",
+    "min": 0.5,
+    "max": 2.5,
+    "step": 0.05,
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-luma_brightness",
+    "label": "Luminosité luma",
+    "type": "range",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-chroma_phase",
+    "label": "Phase chroma (°)",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-pixel_size",
+    "label": "Pixelisation",
+    "type": "range",
+    "min": 1,
+    "max": 15,
+    "step": 1,
+    "value": 1,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-band_patina",
+    "label": "Patine / flou bande",
+    "type": "range",
+    "min": 0.2,
+    "max": 1,
+    "step": 0.01,
+    "value": 0.9,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-apply_jpeg",
+    "label": "Flou codec",
+    "type": "checkbox",
+    "value": 0,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-jpeg_quality",
+    "label": "",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 86,
+    "section": "▼ Cadrage & couleur",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-edge_sat",
+    "label": "Sat. bordures",
+    "type": "range",
+    "min": 0,
+    "max": 20,
+    "step": 0.1,
+    "value": 4.8,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-hs_sat",
+    "label": "Sat. bas de bande",
+    "type": "range",
+    "min": -5,
+    "max": 15,
+    "step": 0.1,
+    "value": 0,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-shadow_sat",
+    "label": "Sat. ombres",
+    "type": "range",
+    "min": -5,
+    "max": 5,
+    "step": 0.1,
+    "value": 0,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-apply_color_cast",
+    "label": "Teinte globale",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-cast_r",
+    "label": "Teinte R",
+    "type": "range",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "value": 33,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-cast_g",
+    "label": "Teinte V",
+    "type": "range",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "value": -5,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-cast_b",
+    "label": "Teinte B",
+    "type": "range",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "value": -10,
+    "section": "▼ Colorimétrie",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-chroma_bleed",
+    "label": "Dérive chroma",
+    "type": "range",
+    "min": 0,
+    "max": 80,
+    "step": 1,
+    "value": 12,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-chroma_blur",
+    "label": "Flou chroma",
+    "type": "range",
+    "min": 0,
+    "max": 50,
+    "step": 1,
+    "value": 25,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-chroma_saturation",
+    "label": "Saturation",
+    "type": "range",
+    "min": 0,
+    "max": 50,
+    "step": 0.1,
+    "value": 2.4,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-noise_intensity_y",
+    "label": "Bruit Y",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-noise_intensity_c",
+    "label": "Bruit chroma",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 30,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-glitch_intensity",
+    "label": "Glitch",
+    "type": "range",
+    "min": 0,
+    "max": 15,
+    "step": 0.1,
+    "value": 0,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-jitter_amp",
+    "label": "Jitter",
+    "type": "range",
+    "min": 0,
+    "max": 8,
+    "step": 0.1,
+    "value": 1,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-head_switch_rows",
+    "label": "Bande tête (px)",
+    "type": "range",
+    "min": 0,
+    "max": 300,
+    "step": 1,
+    "value": 95,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-jitter_freq",
+    "label": "Fréq. jitter",
+    "type": "range",
+    "min": 0,
+    "max": 2,
+    "step": 0.01,
+    "value": 0.39,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-luma_smear",
+    "label": "Traînée lumineuse",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-right_pink",
+    "label": "Délavement rose",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-right_pink_width",
+    "label": "Largeur délavement",
+    "type": "range",
+    "min": 0.05,
+    "max": 1,
+    "step": 0.05,
+    "value": 0.4,
+    "section": "▼ Bande & dégradation"
+   },
+   {
+    "id": "ef-vhs-head_switch_pull",
+    "label": "Tirage (pull)",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 24,
+    "section": "▼ Déformation bas de bande",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-head_switch_freq",
+    "label": "Onde fréq.",
+    "type": "range",
+    "min": 0,
+    "max": 2,
+    "step": 0.01,
+    "value": 0.52,
+    "section": "▼ Déformation bas de bande",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-head_switch_wave",
+    "label": "Onde amp.",
+    "type": "range",
+    "min": 0,
+    "max": 5,
+    "step": 0.1,
+    "value": 0.5,
+    "section": "▼ Déformation bas de bande",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-head_switch_noise",
+    "label": "Bruit déchirure",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": "▼ Déformation bas de bande",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-hs_color_tear",
+    "label": "Intensité bandes",
+    "type": "range",
+    "min": 0,
+    "max": 1,
+    "step": 0.05,
+    "value": 0,
+    "section": "▼ Bandes couleur (tracking)",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-tear_color",
+    "label": "Couleur",
+    "type": "select",
+    "options": [
+     [
+      "cyan",
+      "Cyan / Bleu"
+     ],
+     [
+      "magenta",
+      "Magenta / Rose"
+     ],
+     [
+      "red",
+      "Rouge"
+     ],
+     [
+      "green",
+      "Vert"
+     ],
+     [
+      "random",
+      "Aléatoire"
+     ]
+    ],
+    "value": "cyan",
+    "section": "▼ Bandes couleur (tracking)",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-tear_max_height",
+    "label": "Hauteur max (%)",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 20,
+    "section": "▼ Bandes couleur (tracking)",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-tear_length",
+    "label": "Largeur (%)",
+    "type": "range",
+    "min": 10,
+    "max": 100,
+    "step": 1,
+    "value": 80,
+    "section": "▼ Bandes couleur (tracking)",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-tear_thickness",
+    "label": "Épaisseur (px)",
+    "type": "range",
+    "min": 1,
+    "max": 50,
+    "step": 1,
+    "value": 2,
+    "section": "▼ Bandes couleur (tracking)",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-glitch_jitter",
+    "label": "Tremblement",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-glitch_dropouts",
+    "label": "Rayures",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-glitch_tears",
+    "label": "Tracking",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-glitch_noise",
+    "label": "Bruit",
+    "type": "checkbox",
+    "value": 1,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-dropout_chance",
+    "label": "Quantité rayures",
+    "type": "range",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "value": 0,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-dropout_len",
+    "label": "Longueur rayure",
+    "type": "range",
+    "min": 0.01,
+    "max": 1,
+    "step": 0.01,
+    "value": 0.2,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   },
+   {
+    "id": "ef-vhs-dropout_thickness",
+    "label": "Épaisseur rayure",
+    "type": "range",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "value": 2,
+    "section": "▼ Glitch & rayures",
+    "collapsed": 1
+   }
+  ]
+ },
+ "dropshadow": {
+  "title": "Ombre portée",
+  "fields": [
+   {
+    "id": "ef-ds-ox",
+    "label": "Décalage X",
+    "type": "range",
+    "min": -32,
+    "max": 32,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-ds-oy",
+    "label": "Décalage Y",
+    "type": "range",
+    "min": -32,
+    "max": 32,
+    "step": 1,
+    "value": 6,
+    "section": ""
+   },
+   {
+    "id": "ef-ds-blur",
+    "label": "Flou",
+    "type": "range",
+    "min": 0,
+    "max": 40,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-ds-op",
+    "label": "Opacité",
+    "type": "range",
+    "min": 5,
+    "max": 100,
+    "step": 1,
+    "value": 45,
+    "section": ""
+   }
+  ]
+ },
+ "featherobj": {
+  "title": "Adoucir le contour de l'objet",
+  "fields": [
+   {
+    "id": "ef-fo-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 0,
+    "max": 20,
+    "step": 1,
+    "value": 1,
+    "section": ""
+   }
+  ]
+ },
+ "contour": {
+  "title": "Contour d'objet",
+  "fields": [
+   {
+    "id": "ef-contour-width",
+    "label": "Largeur (px)",
+    "type": "range",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "value": 3,
+    "section": ""
+   },
+   {
+    "id": "ef-contour-opacity",
+    "label": "Opacité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-contour-mode",
+    "label": "Position",
+    "type": "select",
+    "options": [
+     [
+      "outside",
+      "Extérieur"
+     ],
+     [
+      "inside",
+      "Intérieur"
+     ],
+     [
+      "both",
+      "Double (Centré)"
+     ]
+    ],
+    "value": "outside",
+    "section": ""
+   },
+   {
+    "id": "ef-contour-corner",
+    "label": "Angles",
+    "type": "select",
+    "options": [
+     [
+      "round",
+      "Arrondi"
+     ],
+     [
+      "miter",
+      "Pointu (Miter)"
+     ]
+    ],
+    "value": "miter",
+    "section": ""
+   }
+  ]
+ },
+ "softglow": {
+  "title": "Éclat",
+  "fields": [
+   {
+    "id": "ef-glow-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 15,
+    "step": 1,
+    "value": 6,
+    "section": ""
+   },
+   {
+    "id": "ef-glow-a",
+    "label": "Force",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 40,
+    "section": ""
+   }
+  ]
+ },
+ "redeyeremove": {
+  "title": "Suppression des yeux rouges",
+  "fields": [
+   {
+    "id": "ef-redeye-tol",
+    "label": "Tolérance",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 70,
+    "section": ""
+   },
+   {
+    "id": "ef-redeye-sat",
+    "label": "Saturation:",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 90,
+    "section": ""
+   }
+  ]
+ },
+ "unsharp": {
+  "title": "Améliorer la netteté",
+  "fields": [
+   {
+    "id": "ef-us-amount",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 300,
+    "step": 1,
+    "value": 80,
+    "section": ""
+   },
+   {
+    "id": "ef-us-radius",
+    "label": "Rayon",
+    "type": "range",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "value": 3,
+    "section": ""
+   },
+   {
+    "id": "ef-us-threshold",
+    "label": "Seuil",
+    "type": "range",
+    "min": 0,
+    "max": 50,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "softenportrait": {
+  "title": "Adoucir le portrait",
+  "fields": [
+   {
+    "id": "ef-soft-softness",
+    "label": "Douceur",
+    "type": "range",
+    "min": 0,
+    "max": 10,
+    "step": 1,
+    "value": 5,
+    "section": ""
+   },
+   {
+    "id": "ef-soft-lighting",
+    "label": "Éclairage",
+    "type": "range",
+    "min": -20,
+    "max": 20,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-soft-warmth",
+    "label": "Chaleur",
+    "type": "range",
+    "min": 0,
+    "max": 20,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   }
+  ]
+ },
+ "dream": {
+  "title": "Rêve",
+  "fields": [
+   {
+    "id": "ef-dream-r",
+    "label": "Rayon",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-dream-vig",
+    "label": "Ajouter une vignette",
+    "type": "checkbox",
+    "value": 1,
+    "section": ""
+   }
+  ]
+ },
+ "fadeedge": {
+  "title": "Fondu des bords",
+  "fields": [
+   {
+    "id": "ef-fe-shape",
+    "label": "Forme",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Rectangulaire"
+     ],
+     [
+      "1",
+      "Circulaire"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   },
+   {
+    "id": "ef-fe-width",
+    "label": "Largeur",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 20,
+    "section": ""
+   },
+   {
+    "id": "ef-fe-power",
+    "label": "Puissance",
+    "type": "range",
+    "min": 0,
+    "max": 10,
+    "step": 0.1,
+    "value": 1,
+    "section": ""
+   }
+  ]
+ },
+ "removedust": {
+  "title": "Supprimer la poussière",
+  "fields": [
+   {
+    "id": "ef-dust-mode",
+    "label": "Supprimer",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Les points blancs"
+     ],
+     [
+      "1",
+      "Les points noirs"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   }
+  ]
+ },
+ "straighten": {
+  "title": "Redresser",
+  "fields": [
+   {
+    "id": "ef-str-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -45,
+    "max": 45,
+    "step": 0.1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "vignette": {
+  "title": "Vignette",
+  "fields": [
+   {
+    "id": "ef-vig",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-vig-blend",
+    "label": "Fusion",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Normal"
+     ],
+     [
+      "1",
+      "Produit"
+     ],
+     [
+      "2",
+      "Superposition"
+     ],
+     [
+      "3",
+      "Incrustation"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   }
+  ]
+ },
+ "clouds": {
+  "title": "Nuages",
+  "fields": [
+   {
+    "id": "ef-clouds-scale",
+    "label": "Échelle",
+    "type": "range",
+    "min": 2,
+    "max": 1000,
+    "step": 1,
+    "value": 250,
+    "section": ""
+   },
+   {
+    "id": "ef-clouds-power",
+    "label": "Rugosité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-clouds-seed",
+    "label": "Germe",
+    "type": "range",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "gridcheck": {
+  "title": "Grille / Damier",
+  "fields": [
+   {
+    "id": "ef-gc-mode",
+    "label": "Motif",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Grille"
+     ],
+     [
+      "1",
+      "Damier"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   },
+   {
+    "id": "ef-gc-size",
+    "label": "Taille",
+    "type": "range",
+    "min": 1,
+    "max": 1000,
+    "step": 1,
+    "value": 33,
+    "section": ""
+   },
+   {
+    "id": "ef-gc-width",
+    "label": "Épaisseur du trait",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-gc-color",
+    "label": "Couleur",
+    "type": "color",
+    "value": "#000000",
+    "section": ""
+   },
+   {
+    "id": "ef-gc-bg",
+    "label": "Fond",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Image source"
+     ],
+     [
+      "1",
+      "Couleur de fond"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   },
+   {
+    "id": "ef-gc-color2",
+    "label": "Couleur de fond",
+    "type": "color",
+    "value": "#ffffff",
+    "section": ""
+   },
+   {
+    "id": "ef-gc-swap",
+    "label": "Inverser les couleurs",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "julia": {
+  "title": "Fractale de Julia",
+  "fields": [
+   {
+    "id": "ef-jl-zoom",
+    "label": "Zoom",
+    "type": "range",
+    "min": 1,
+    "max": 50,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-jl-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-jl-factor",
+    "label": "Facteur",
+    "type": "range",
+    "min": 1,
+    "max": 10,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-jl-quality",
+    "label": "Qualité",
+    "type": "range",
+    "min": 1,
+    "max": 5,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   }
+  ]
+ },
+ "mandelbrot": {
+  "title": "Fractale de Mandelbrot",
+  "fields": [
+   {
+    "id": "ef-mb-zoom",
+    "label": "Zoom",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 10,
+    "section": ""
+   },
+   {
+    "id": "ef-mb-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-mb-factor",
+    "label": "Facteur",
+    "type": "range",
+    "min": 1,
+    "max": 10,
+    "step": 1,
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-mb-quality",
+    "label": "Qualité",
+    "type": "range",
+    "min": 1,
+    "max": 5,
+    "step": 1,
+    "value": 2,
+    "section": ""
+   },
+   {
+    "id": "ef-mb-invert",
+    "label": "Inverser",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "turbulence": {
+  "title": "Turbulence",
+  "fields": [
+   {
+    "id": "ef-tb-noise",
+    "label": "Bruit",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Turbulence"
+     ],
+     [
+      "1",
+      "Somme fractale"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   },
+   {
+    "id": "ef-tb-scale",
+    "label": "Taille",
+    "type": "range",
+    "min": 2,
+    "max": 1000,
+    "step": 1,
+    "value": 200,
+    "section": ""
+   },
+   {
+    "id": "ef-tb-oct",
+    "label": "Octaves",
+    "type": "range",
+    "min": 1,
+    "max": 12,
+    "step": 1,
+    "value": 6,
+    "section": ""
+   },
+   {
+    "id": "ef-tb-rough",
+    "label": "Rugosité",
+    "type": "range",
+    "min": 5,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   },
+   {
+    "id": "ef-tb-blend",
+    "label": "Mode de fusion",
+    "type": "select",
+    "options": [
+     [
+      "0",
+      "Normal"
+     ],
+     [
+      "1",
+      "Produit"
+     ],
+     [
+      "2",
+      "Addition"
+     ],
+     [
+      "3",
+      "Écran"
+     ],
+     [
+      "4",
+      "Incrustation"
+     ],
+     [
+      "5",
+      "Différence"
+     ]
+    ],
+    "value": "0",
+    "section": ""
+   }
+  ]
+ },
+ "edges": {
+  "title": "Détection des bords",
+  "fields": [
+   {
+    "id": "ef-edge",
+    "label": "Sensibilité",
+    "type": "range",
+    "min": 1,
+    "max": 100,
+    "step": 1,
+    "value": 40,
+    "section": ""
+   }
+  ]
+ },
+ "emboss": {
+  "title": "Embosser",
+  "fields": [
+   {
+    "id": "ef-emb-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "outline": {
+  "title": "Contour",
+  "fields": [
+   {
+    "id": "ef-ol-thick",
+    "label": "Épaisseur",
+    "type": "range",
+    "min": 1,
+    "max": 200,
+    "step": 1,
+    "value": 3,
+    "section": ""
+   },
+   {
+    "id": "ef-ol-int",
+    "label": "Intensité",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 50,
+    "section": ""
+   }
+  ]
+ },
+ "relief": {
+  "title": "Mise en relief",
+  "fields": [
+   {
+    "id": "ef-relief-angle",
+    "label": "Angle",
+    "type": "range",
+    "min": -180,
+    "max": 180,
+    "step": 1,
+    "value": 45,
+    "section": ""
+   }
+  ]
+ },
+ "solarize": {
+  "title": "Solariser",
+  "fields": [
+   {
+    "id": "ef-sol",
+    "label": "Seuil",
+    "type": "range",
+    "min": 0,
+    "max": 255,
+    "step": 1,
+    "value": 128,
+    "section": ""
+   }
+  ]
+ },
+ "halftone": {
+  "title": "Trame (Demi-teinte)",
+  "fields": [
+   {
+    "id": "ef-half-mode",
+    "label": "Variante",
+    "type": "select",
+    "options": [
+     [
+      "bw",
+      "Noir & blanc"
+     ],
+     [
+      "color",
+      "Points couleur"
+     ],
+     [
+      "cmyk",
+      "Impression CMJN (cyan / magenta / jaune)"
+     ]
+    ],
+    "value": "bw",
+    "section": ""
+   },
+   {
+    "id": "ef-half-rad",
+    "label": "Taille des points",
+    "type": "range",
+    "min": 1,
+    "max": 50,
+    "step": 1,
+    "value": 4,
+    "section": ""
+   },
+   {
+    "id": "ef-half-angle",
+    "label": "Angle de trame",
+    "type": "range",
+    "min": 0,
+    "max": 90,
+    "step": 1,
+    "value": 45,
+    "section": ""
+   },
+   {
+    "id": "ef-half-paper",
+    "label": "Fond",
+    "type": "select",
+    "options": [
+     [
+      "white",
+      "Papier blanc"
+     ],
+     [
+      "transparent",
+      "Transparent (points seuls)"
+     ]
+    ],
+    "value": "white",
+    "section": ""
+   },
+   {
+    "id": "ef-half-k",
+    "label": "Encre noire (N)",
+    "type": "checkbox",
+    "value": 1,
+    "section": ""
+   },
+   {
+    "id": "ef-half-invert",
+    "label": "Inverser",
+    "type": "checkbox",
+    "value": 0,
+    "section": ""
+   },
+   {
+    "id": "ef-half-dc",
+    "label": "Cyan",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-half-dm",
+    "label": "Magenta (rose)",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-half-dy",
+    "label": "Jaune",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-half-dk",
+    "label": "Noir",
+    "type": "range",
+    "min": 0,
+    "max": 200,
+    "step": 1,
+    "value": 100,
+    "section": ""
+   },
+   {
+    "id": "ef-half-gain",
+    "label": "Engraissement",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "value": 0,
+    "section": ""
+   }
+  ]
+ },
+ "autolevel": {
+  "direct": true
+ },
+ "grayscale": {
+  "direct": true
+ },
+ "invert": {
+  "direct": true
+ },
+ "invertalpha": {
+  "direct": true
+ },
+ "sepia": {
+  "direct": true
+ }
+}

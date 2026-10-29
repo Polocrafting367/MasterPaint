@@ -1,0 +1,1402 @@
+{
+ "menus": [
+  {
+   "title": "Fichier",
+   "items": [
+    {
+     "label": "Nouveau...",
+     "shortcut": "",
+     "fa": "e494",
+     "faw": "900",
+     "action": "fn:showNewProjectDialog()",
+     "children": []
+    },
+    {
+     "label": "Ouvrir / Importer image…",
+     "shortcut": "",
+     "fa": "f07c",
+     "faw": "400",
+     "action": "fn:typeof illuTriggerFileImport==='function'&&illuTriggerFileImport()",
+     "children": []
+    },
+    {
+     "label": "Exporter…",
+     "shortcut": "",
+     "fa": "f019",
+     "faw": "900",
+     "action": "fn:WorkspaceIO&&WorkspaceIO.showExportDialog()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Photo Mode Pro…",
+     "shortcut": "",
+     "fa": "f030",
+     "faw": "900",
+     "action": "fn:typeof PhotoModeManager !== 'undefined' && PhotoModeManager.open()",
+     "children": []
+    },
+    {
+     "label": "Ouvrir projet dans Photo Mode Pro",
+     "shortcut": "",
+     "fa": "f030",
+     "faw": "900",
+     "action": "fn:(function(){ var em = window.EditorManager; if(em && typeof em.openActiveProjectInPhotoModePro === 'function') em.openActiveProjectInPhotoModePro(); })()",
+     "children": []
+    },
+    {
+     "label": "Espace de couleur :",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Bitmap (Couleurs)",
+       "shortcut": "",
+       "fa": "f1fc",
+       "faw": "900",
+       "action": "fn:EditorManager.convertActiveProjectToPixel()",
+       "children": []
+      },
+      {
+       "label": "Tramé (Noir et Blanc)",
+       "shortcut": "",
+       "fa": "f2a1",
+       "faw": "900",
+       "action": "fn:EditorManager.convertActiveProjectToDither()",
+       "children": []
+      },
+      {
+       "label": "Couleurs RAL (Limité)",
+       "shortcut": "",
+       "fa": "f53f",
+       "faw": "900",
+       "action": "fn:EditorManager.convertActiveProjectToRal()",
+       "children": []
+      },
+      {
+       "label": "Espace de travail CMJN",
+       "shortcut": "",
+       "fa": "f02f",
+       "faw": "900",
+       "action": "fn:EditorManager.convertActiveProjectToCmjn()",
+       "children": []
+      }
+     ]
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Fermer le projet actif…",
+     "shortcut": "",
+     "fa": "e5a1",
+     "faw": "900",
+     "action": "fn:EditorManager.requestCloseActiveDocumentFromMenu()",
+     "children": []
+    },
+    {
+     "label": "Paramètres…",
+     "shortcut": "",
+     "fa": "f013",
+     "faw": "900",
+     "action": "fn:showSettingsDialog(true)",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Historique des versions...",
+     "shortcut": "",
+     "fa": "f46d",
+     "faw": "900",
+     "action": "fn:window.showChangelog && window.showChangelog()",
+     "children": []
+    },
+    {
+     "label": "Bienvenue / Informations…",
+     "shortcut": "",
+     "fa": "f05a",
+     "faw": "900",
+     "action": "fn:window.showWelcomeDialog && window.showWelcomeDialog(true)",
+     "children": []
+    }
+   ]
+  },
+  {
+   "title": "Édition",
+   "items": [
+    {
+     "label": "Annuler",
+     "shortcut": "",
+     "fa": "f2ea",
+     "faw": "900",
+     "action": "fn:undo()",
+     "children": []
+    },
+    {
+     "label": "Rétablir",
+     "shortcut": "",
+     "fa": "f2f9",
+     "faw": "900",
+     "action": "fn:redo()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Couper",
+     "shortcut": "Ctrl+X",
+     "fa": "f0c4",
+     "faw": "900",
+     "action": "fn:typeof window.ctxCut==='function'&&window.ctxCut()",
+     "children": []
+    },
+    {
+     "label": "Copier",
+     "shortcut": "Ctrl+C",
+     "fa": "f0c5",
+     "faw": "900",
+     "action": "fn:typeof window.ctxCopy==='function'&&window.ctxCopy()",
+     "children": []
+    },
+    {
+     "label": "Coller",
+     "shortcut": "Ctrl+V",
+     "fa": "f0ea",
+     "faw": "900",
+     "action": "fn:typeof window.ctxPaste==='function'&&window.ctxPaste()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Tout sélectionner",
+     "shortcut": "Ctrl+A",
+     "fa": "f14a",
+     "faw": "400",
+     "action": "fn:EditorManager.selectAll()",
+     "children": []
+    },
+    {
+     "label": "Désélectionner",
+     "shortcut": "Ctrl+D",
+     "fa": "f410",
+     "faw": "900",
+     "action": "fn:typeof window.illuDeselectLikeCtrlD==='function'?window.illuDeselectLikeCtrlD():EditorManager.deselectAll()",
+     "children": []
+    },
+    {
+     "label": "Inverser la sélection",
+     "shortcut": "Ctrl+I",
+     "fa": "f042",
+     "faw": "900",
+     "action": "fn:EditorManager.invertSelection()",
+     "children": []
+    },
+    {
+     "label": "Effacer sélection",
+     "shortcut": "Suppr",
+     "fa": "f12d",
+     "faw": "900",
+     "action": "fn:typeof window.clearSelectionContent==='function'&&window.clearSelectionContent()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Étendre / réduire la sélection…",
+     "shortcut": "",
+     "fa": "f424",
+     "faw": "900",
+     "action": "fn:showSelectionExpandDialog()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Vectoriser un bitmap…",
+     "shortcut": "",
+     "fa": "f55b",
+     "faw": "900",
+     "action": "fn:illuMenuVectorizeBitmap()",
+     "children": []
+    }
+   ]
+  },
+  {
+   "title": "Image",
+   "items": [
+    {
+     "label": "Recadrage",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Régler la zone de travail à la sélection (Ctrl+Maj+X)",
+       "shortcut": "",
+       "fa": "f0c4",
+       "faw": "900",
+       "action": "fn:EditorManager.cropToSelection()",
+       "children": []
+      },
+      {
+       "label": "Redimensionner…",
+       "shortcut": "",
+       "fa": "f31e",
+       "faw": "900",
+       "action": "fn:resizeCanvas()",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Recadrer (sélection sur la toile)…",
+     "shortcut": "",
+     "fa": "f125",
+     "faw": "900",
+     "action": "fn:startIlluInteractiveCrop()",
+     "children": []
+    },
+    {
+     "label": "Étendre la zone de travail…",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "fn:showExtendCanvasDialog()",
+     "children": []
+    },
+    {
+     "label": "Bordure d'image…",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "fn:showImageBorderDialog()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Rotation et retournement…",
+     "shortcut": "",
+     "fa": "f2f1",
+     "faw": "900",
+     "action": "fn:showPixelTransformDialog()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Calque actif : position et taille…",
+     "shortcut": "",
+     "fa": "f065",
+     "faw": "900",
+     "action": "fn:EditorManager.openImageLayerBoundsDialog()",
+     "children": []
+    },
+    {
+     "label": "Tampon du calque = dimensions de la toile",
+     "shortcut": "",
+     "fa": "f07e",
+     "faw": "900",
+     "action": "fn:EditorManager.alignActiveLayerWidthToCanvas()",
+     "children": []
+    },
+    {
+     "label": "Ajuster la page au contenu",
+     "shortcut": "",
+     "fa": "f247",
+     "faw": "900",
+     "action": "fn:EditorManager.expandCanvasToLayers()",
+     "children": []
+    }
+   ]
+  },
+  {
+   "title": "Calques",
+   "items": [
+    {
+     "label": "Ajouter un calque",
+     "shortcut": "",
+     "fa": "f5fd",
+     "faw": "900",
+     "action": "fn:EditorManager.addLayer()",
+     "children": []
+    },
+    {
+     "label": "Supprimer",
+     "shortcut": "",
+     "fa": "f2ed",
+     "faw": "400",
+     "action": "fn:EditorManager.deleteLayer()",
+     "children": []
+    },
+    {
+     "label": "Dupliquer le calque",
+     "shortcut": "Ctrl+Maj+D",
+     "fa": "f24d",
+     "faw": "900",
+     "action": "fn:EditorManager.duplicateActiveLayer()",
+     "children": []
+    },
+    {
+     "label": "Monter le calque",
+     "shortcut": "",
+     "fa": "f062",
+     "faw": "900",
+     "action": "fn:EditorManager.moveLayer(1)",
+     "children": []
+    },
+    {
+     "label": "Descendre le calque",
+     "shortcut": "",
+     "fa": "f063",
+     "faw": "900",
+     "action": "fn:EditorManager.moveLayer(-1)",
+     "children": []
+    },
+    {
+     "label": "Faire pivoter / Zoomer…",
+     "shortcut": "",
+     "fa": "f2f1",
+     "faw": "900",
+     "action": "fx:rotatezoom",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Fusionner",
+     "shortcut": "",
+     "fa": "f248",
+     "faw": "900",
+     "action": "fn:EditorManager.mergeLayers()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Séparer canaux RVB (3 calques)",
+     "shortcut": "",
+     "fa": "f0db",
+     "faw": "900",
+     "action": "fn:EditorManager.splitActiveLayerRgbChannels()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Centrer la sélection horizontalement",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "fn:EditorManager.centerSelection('h')",
+     "children": []
+    },
+    {
+     "label": "Centrer la sélection verticalement",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "fn:EditorManager.centerSelection('v')",
+     "children": []
+    },
+    {
+     "label": "Centrer la sélection (H + V)",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "fn:EditorManager.centerSelection('both')",
+     "children": []
+    }
+   ]
+  },
+  {
+   "title": "Ajustements",
+   "items": [
+    {
+     "label": "Auto-niveau",
+     "shortcut": "Ctrl+Maj+L",
+     "fa": "f1de",
+     "faw": "900",
+     "action": "fx:autolevel",
+     "children": []
+    },
+    {
+     "label": "Noir et blanc",
+     "shortcut": "Ctrl+Maj+G",
+     "fa": "f5c7",
+     "faw": "900",
+     "action": "fx:grayscale",
+     "children": []
+    },
+    {
+     "label": "Luminosité / Contraste…",
+     "shortcut": "",
+     "fa": "f185",
+     "faw": "900",
+     "action": "fx:brightness",
+     "children": []
+    },
+    {
+     "label": "Courbes…",
+     "shortcut": "Ctrl+Maj+M",
+     "fa": "f201",
+     "faw": "900",
+     "action": "fn:openCurvesForActiveLayer()",
+     "children": []
+    },
+    {
+     "label": "Exposition…",
+     "shortcut": "",
+     "fa": "f0e7",
+     "faw": "900",
+     "action": "fx:exposure",
+     "children": []
+    },
+    {
+     "label": "Mises en lumière / Ombres…",
+     "shortcut": "",
+     "fa": "f042",
+     "faw": "900",
+     "action": "fx:highlightsshadows",
+     "children": []
+    },
+    {
+     "label": "Teinte / Saturation…",
+     "shortcut": "Ctrl+Maj+U",
+     "fa": "f53f",
+     "faw": "900",
+     "action": "fx:hsv",
+     "children": []
+    },
+    {
+     "label": "Inverser l'Alpha",
+     "shortcut": "",
+     "fa": "f0c8",
+     "faw": "400",
+     "action": "fx:invertalpha",
+     "children": []
+    },
+    {
+     "label": "Inverser les couleurs",
+     "shortcut": "Ctrl+Maj+I",
+     "fa": "f042",
+     "faw": "900",
+     "action": "fx:invert",
+     "children": []
+    },
+    {
+     "label": "Niveaux…",
+     "shortcut": "Ctrl+L",
+     "fa": "e0e3",
+     "faw": "900",
+     "action": "fn:openLevelsForActiveLayer()",
+     "children": []
+    },
+    {
+     "label": "Postériser…",
+     "shortcut": "Ctrl+Maj+P",
+     "fa": "f5c3",
+     "faw": "900",
+     "action": "fx:posterize",
+     "children": []
+    },
+    {
+     "label": "Sépia",
+     "shortcut": "Ctrl+Maj+E",
+     "fa": "f3e0",
+     "faw": "900",
+     "action": "fx:sepia",
+     "children": []
+    },
+    {
+     "label": "Accent de couleur…",
+     "shortcut": "",
+     "fa": "f043",
+     "faw": "900",
+     "action": "fx:coloraccent",
+     "children": []
+    },
+    {
+     "label": "Transparence…",
+     "shortcut": "",
+     "fa": "f43c",
+     "faw": "900",
+     "action": "fx:transparency",
+     "children": []
+    },
+    {
+     "label": "Température / Teinte…",
+     "shortcut": "",
+     "fa": "f2c9",
+     "faw": "900",
+     "action": "fx:temptint",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Vibrance / Éclat…",
+     "shortcut": "",
+     "fa": "e2ca",
+     "faw": "900",
+     "action": "fx:vibrance",
+     "children": []
+    },
+    {
+     "label": "Camera Raw…",
+     "shortcut": "",
+     "fa": "f083",
+     "faw": "900",
+     "action": "fn:openCameraRawForActiveLayer()",
+     "children": []
+    },
+    {
+     "label": "Galerie de Filtres…",
+     "shortcut": "",
+     "fa": "e2ca",
+     "faw": "900",
+     "action": "fn:FilterManager.showInstantFilterGallery()",
+     "children": []
+    }
+   ]
+  },
+  {
+   "title": "Effets",
+   "items": [
+    {
+     "label": "Répéter Sépia",
+     "shortcut": "Ctrl+F",
+     "fa": "f363",
+     "faw": "900",
+     "action": "fn:window.illuRepeatLastEffect&&window.illuRepeatLastEffect()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Artistique",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Croquis à l'encre…",
+       "shortcut": "",
+       "fa": "f303",
+       "faw": "900",
+       "action": "fx:sketch",
+       "children": []
+      },
+      {
+       "label": "Peinture à l'huile…",
+       "shortcut": "",
+       "fa": "",
+       "faw": "900",
+       "action": "fx:oil",
+       "children": []
+      },
+      {
+       "label": "Pastel…",
+       "shortcut": "",
+       "fa": "f53f",
+       "faw": "900",
+       "action": "fx:pastel",
+       "children": []
+      },
+      {
+       "label": "Croquis au crayon…",
+       "shortcut": "",
+       "fa": "f303",
+       "faw": "900",
+       "action": "fx:pencilsketch",
+       "children": []
+      },
+      {
+       "label": "Art ASCII…",
+       "shortcut": "",
+       "fa": "f120",
+       "faw": "900",
+       "action": "fx:ascii",
+       "children": []
+      },
+      {
+       "label": "Trame (Demi-teinte)…",
+       "shortcut": "",
+       "fa": "f2a1",
+       "faw": "900",
+       "action": "fx:halftone",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Flous",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Flou bokeh / Défocaliser…",
+       "shortcut": "",
+       "fa": "f1ce",
+       "faw": "900",
+       "action": "fx:unfocus",
+       "children": []
+      },
+      {
+       "label": "Fragment de flou…",
+       "shortcut": "",
+       "fa": "f61f",
+       "faw": "900",
+       "action": "fx:fragment",
+       "children": []
+      },
+      {
+       "label": "Flou gaussien…",
+       "shortcut": "",
+       "fa": "f75f",
+       "faw": "900",
+       "action": "fx:gaussian",
+       "children": []
+      },
+      {
+       "label": "Flou de déplacement…",
+       "shortcut": "",
+       "fa": "f07e",
+       "faw": "900",
+       "action": "fx:motionblur",
+       "children": []
+      },
+      {
+       "label": "Flou radial…",
+       "shortcut": "",
+       "fa": "f1ce",
+       "faw": "900",
+       "action": "fx:radialblur",
+       "children": []
+      },
+      {
+       "label": "Flou d'esquisse…",
+       "shortcut": "",
+       "fa": "f5ac",
+       "faw": "900",
+       "action": "fx:sketchblur",
+       "children": []
+      },
+      {
+       "label": "Flou carré…",
+       "shortcut": "",
+       "fa": "f043",
+       "faw": "900",
+       "action": "fx:blur",
+       "children": []
+      },
+      {
+       "label": "Flou de surface…",
+       "shortcut": "",
+       "fa": "f043",
+       "faw": "900",
+       "action": "fx:surfaceblur",
+       "children": []
+      },
+      {
+       "label": "Flou de zoom…",
+       "shortcut": "",
+       "fa": "f04e",
+       "faw": "900",
+       "action": "fx:zoomblur",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Couleur",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Quantifier…",
+       "shortcut": "",
+       "fa": "f5c3",
+       "faw": "900",
+       "action": "fx:quantize",
+       "children": []
+      },
+      {
+       "label": "Balance des couleurs…",
+       "shortcut": "",
+       "fa": "f1de",
+       "faw": "900",
+       "action": "fx:colorbal",
+       "children": []
+      },
+      {
+       "label": "Incrustation (couleur → transparence)…",
+       "shortcut": "",
+       "fa": "f576",
+       "faw": "900",
+       "action": "fx:chroma",
+       "children": []
+      },
+      {
+       "label": "Aberration chromatique…",
+       "shortcut": "",
+       "fa": "f530",
+       "faw": "900",
+       "action": "fx:chromatic",
+       "children": []
+      },
+      {
+       "label": "Séparer les canaux RVB…",
+       "shortcut": "",
+       "fa": "f0db",
+       "faw": "900",
+       "action": "fn:EditorManager.splitActiveLayerRgbChannels()",
+       "children": []
+      },
+      {
+       "label": "Duo-tone…",
+       "shortcut": "",
+       "fa": "f042",
+       "faw": "900",
+       "action": "fx:duotone",
+       "children": []
+      },
+      {
+       "label": "Conversion de couleur RAL…",
+       "shortcut": "",
+       "fa": "f53f",
+       "faw": "900",
+       "action": "fx:ral",
+       "children": []
+      },
+      {
+       "label": "Conversion de couleur CMJN…",
+       "shortcut": "",
+       "fa": "f02f",
+       "faw": "900",
+       "action": "fx:cmjn",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Déformer",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Bosse…",
+       "shortcut": "",
+       "fa": "f192",
+       "faw": "900",
+       "action": "fx:bulge",
+       "children": []
+      },
+      {
+       "label": "Cabossage…",
+       "shortcut": "",
+       "fa": "f83e",
+       "faw": "900",
+       "action": "fx:dents",
+       "children": []
+      },
+      {
+       "label": "Cristallisation…",
+       "shortcut": "",
+       "fa": "f3a5",
+       "faw": "900",
+       "action": "fx:crystallize",
+       "children": []
+      },
+      {
+       "label": "Verre dépoli…",
+       "shortcut": "",
+       "fa": "f2dc",
+       "faw": "900",
+       "action": "fx:frosted",
+       "children": []
+      },
+      {
+       "label": "Morphologie…",
+       "shortcut": "",
+       "fa": "f61f",
+       "faw": "900",
+       "action": "fx:morphology",
+       "children": []
+      },
+      {
+       "label": "Pixéliser…",
+       "shortcut": "",
+       "fa": "f850",
+       "faw": "900",
+       "action": "fx:pixelate",
+       "children": []
+      },
+      {
+       "label": "Inversion polaire…",
+       "shortcut": "",
+       "fa": "f021",
+       "faw": "900",
+       "action": "fx:polarInvert",
+       "children": []
+      },
+      {
+       "label": "Réflexion mosaïque…",
+       "shortcut": "",
+       "fa": "f009",
+       "faw": "900",
+       "action": "fx:tileReflect",
+       "children": []
+      },
+      {
+       "label": "Torsion…",
+       "shortcut": "",
+       "fa": "f751",
+       "faw": "900",
+       "action": "fx:twist",
+       "children": []
+      },
+      {
+       "label": "Miroir 4 secteurs…",
+       "shortcut": "",
+       "fa": "e139",
+       "faw": "900",
+       "action": "fx:mirrorquad",
+       "children": []
+      },
+      {
+       "label": "Projection 3D…",
+       "shortcut": "",
+       "fa": "f1b2",
+       "faw": "900",
+       "action": "fx:projection3d",
+       "children": []
+      },
+      {
+       "label": "Onde…",
+       "shortcut": "",
+       "fa": "f773",
+       "faw": "900",
+       "action": "fx:wave",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Bruit",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Ajouter du bruit…",
+       "shortcut": "",
+       "fa": "2b",
+       "faw": "900",
+       "action": "fx:addnoise",
+       "children": []
+      },
+      {
+       "label": "Médiane…",
+       "shortcut": "",
+       "fa": "f068",
+       "faw": "900",
+       "action": "fx:median",
+       "children": []
+      },
+      {
+       "label": "Réduire le bruit…",
+       "shortcut": "",
+       "fa": "f51a",
+       "faw": "900",
+       "action": "fx:reducenoise",
+       "children": []
+      },
+      {
+       "label": "Tramage numérique…",
+       "shortcut": "",
+       "fa": "f84c",
+       "faw": "900",
+       "action": "fx:digitalpattern",
+       "children": []
+      },
+      {
+       "label": "Effet VHS…",
+       "shortcut": "",
+       "fa": "f4db",
+       "faw": "900",
+       "action": "fx:vhs",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Objet",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Ombre portée…",
+       "shortcut": "",
+       "fa": "f24d",
+       "faw": "900",
+       "action": "fx:dropshadow",
+       "children": []
+      },
+      {
+       "label": "Adoucir le contour de l'objet…",
+       "shortcut": "",
+       "fa": "f52d",
+       "faw": "900",
+       "action": "fx:featherobj",
+       "children": []
+      },
+      {
+       "label": "Contour d'objet…",
+       "shortcut": "",
+       "fa": "f853",
+       "faw": "900",
+       "action": "fx:contour",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Photo",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Éclat…",
+       "shortcut": "",
+       "fa": "f0eb",
+       "faw": "900",
+       "action": "fx:softglow",
+       "children": []
+      },
+      {
+       "label": "Suppression des yeux rouges…",
+       "shortcut": "",
+       "fa": "f070",
+       "faw": "900",
+       "action": "fx:redeyeremove",
+       "children": []
+      },
+      {
+       "label": "Améliorer la netteté…",
+       "shortcut": "",
+       "fa": "f06e",
+       "faw": "900",
+       "action": "fx:unsharp",
+       "children": []
+      },
+      {
+       "label": "Adoucir le portrait…",
+       "shortcut": "",
+       "fa": "f007",
+       "faw": "900",
+       "action": "fx:softenportrait",
+       "children": []
+      },
+      {
+       "label": "Rêve…",
+       "shortcut": "",
+       "fa": "f6c3",
+       "faw": "900",
+       "action": "fx:dream",
+       "children": []
+      },
+      {
+       "label": "Fondu des bords…",
+       "shortcut": "",
+       "fa": "f042",
+       "faw": "900",
+       "action": "fx:fadeedge",
+       "children": []
+      },
+      {
+       "label": "Supprimer la poussière…",
+       "shortcut": "",
+       "fa": "f51a",
+       "faw": "900",
+       "action": "fx:removedust",
+       "children": []
+      },
+      {
+       "label": "Redresser…",
+       "shortcut": "",
+       "fa": "f547",
+       "faw": "900",
+       "action": "fx:straighten",
+       "children": []
+      },
+      {
+       "label": "Vignette…",
+       "shortcut": "",
+       "fa": "f030",
+       "faw": "900",
+       "action": "fx:vignette",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Rendu",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Nuages…",
+       "shortcut": "",
+       "fa": "f0c2",
+       "faw": "900",
+       "action": "fx:clouds",
+       "children": []
+      },
+      {
+       "label": "Grille / Damier…",
+       "shortcut": "",
+       "fa": "f84c",
+       "faw": "900",
+       "action": "fx:gridcheck",
+       "children": []
+      },
+      {
+       "label": "Fractale de Julia…",
+       "shortcut": "",
+       "fa": "f110",
+       "faw": "900",
+       "action": "fx:julia",
+       "children": []
+      },
+      {
+       "label": "Fractale de Mandelbrot…",
+       "shortcut": "",
+       "fa": "f577",
+       "faw": "900",
+       "action": "fx:mandelbrot",
+       "children": []
+      },
+      {
+       "label": "Turbulence…",
+       "shortcut": "",
+       "fa": "f72e",
+       "faw": "900",
+       "action": "fx:turbulence",
+       "children": []
+      }
+     ]
+    },
+    {
+     "label": "Styliser",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Détection des bords…",
+       "shortcut": "",
+       "fa": "f5ad",
+       "faw": "900",
+       "action": "fx:edges",
+       "children": []
+      },
+      {
+       "label": "Embosser…",
+       "shortcut": "",
+       "fa": "f5bf",
+       "faw": "900",
+       "action": "fx:emboss",
+       "children": []
+      },
+      {
+       "label": "Contour…",
+       "shortcut": "",
+       "fa": "f5ee",
+       "faw": "900",
+       "action": "fx:outline",
+       "children": []
+      },
+      {
+       "label": "Mise en relief…",
+       "shortcut": "",
+       "fa": "f6fc",
+       "faw": "900",
+       "action": "fx:relief",
+       "children": []
+      },
+      {
+       "label": "Solariser…",
+       "shortcut": "",
+       "fa": "f185",
+       "faw": "900",
+       "action": "fx:solarize",
+       "children": []
+      }
+     ]
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Détourage",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": [
+      {
+       "label": "Supprimer le fond (IA)…",
+       "shortcut": "",
+       "fa": "f12d",
+       "faw": "900",
+       "action": "fn:illuRemoveBackgroundIntelligent()",
+       "children": []
+      },
+      {
+       "label": "Détourage par sélection…",
+       "shortcut": "",
+       "fa": "f12d",
+       "faw": "900",
+       "action": "fn:illuGuidedCutoutToolStart()",
+       "children": []
+      },
+      {
+       "label": "Remplissage contenu pris en compte…",
+       "shortcut": "",
+       "fa": "e2ca",
+       "faw": "900",
+       "action": "fn:showContentAwareFillDialog()",
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Outils",
+   "items": [
+    {
+     "label": "Aperçu toile 1:1 (fenêtre)…",
+     "shortcut": "",
+     "fa": "f35d",
+     "faw": "900",
+     "action": "fn:openCanvasLivePreviewWindow()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Grille de pixels",
+     "shortcut": "",
+     "fa": "f84c",
+     "faw": "900",
+     "action": "fn:window.toggleIlluPixelGrid()",
+     "children": []
+    },
+    {
+     "label": "Règles",
+     "shortcut": "",
+     "fa": "f545",
+     "faw": "900",
+     "action": "fn:window.toggleIlluRulers()",
+     "children": []
+    },
+    {
+     "label": "Aimantation des bords",
+     "shortcut": "",
+     "fa": "f076",
+     "faw": "900",
+     "action": "fn:window.toggleIlluSnapToEdges && window.toggleIlluSnapToEdges()",
+     "children": []
+    },
+    {
+     "label": "Paramètres aimantation…",
+     "shortcut": "",
+     "fa": "f1de",
+     "faw": "900",
+     "action": "fn:window.illuOpenSnapSettings && window.illuOpenSnapSettings()",
+     "children": []
+    },
+    {
+     "label": "Toutes les options du ruban",
+     "shortcut": "",
+     "fa": "f06e",
+     "faw": "900",
+     "action": "fn:window.toggleIlluShowAllRibbonOptions()",
+     "children": []
+    },
+    {
+     "label": "Hors toile",
+     "shortcut": "",
+     "fa": "f065",
+     "faw": "900",
+     "action": "fn:window.toggleIlluAllowOutsideCanvas && window.toggleIlluAllowOutsideCanvas()",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Réinitialiser le bureau...",
+     "shortcut": "",
+     "fa": "f390",
+     "faw": "900",
+     "action": "fn:resetWorkspace()",
+     "children": []
+    },
+    {
+     "label": "Interface : mode téléphone (menu ☰, palettes en colonnes)",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": []
+    },
+    {
+     "label": "Palettes : ancrage fixe (style Adobe)",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": []
+    },
+    {
+     "label": "Palettes volantes (Paint.NET)",
+     "shortcut": "",
+     "fa": "",
+     "faw": "900",
+     "action": "",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Outils",
+     "shortcut": "",
+     "fa": "f1fc",
+     "faw": "900",
+     "action": "fn:window.toggleFloatingPaletteVisibility('win-tools')",
+     "children": []
+    },
+    {
+     "label": "Couleurs",
+     "shortcut": "",
+     "fa": "f53f",
+     "faw": "900",
+     "action": "fn:window.toggleFloatingPaletteVisibility('win-colors')",
+     "children": []
+    },
+    {
+     "label": "Calques",
+     "shortcut": "",
+     "fa": "f5fd",
+     "faw": "900",
+     "action": "fn:window.toggleFloatingPaletteVisibility('win-layers')",
+     "children": []
+    },
+    {
+     "label": "Historique",
+     "shortcut": "",
+     "fa": "f1da",
+     "faw": "900",
+     "action": "fn:window.toggleFloatingPaletteVisibility('win-history')",
+     "children": []
+    },
+    {
+     "label": "Objets SVG",
+     "shortcut": "",
+     "fa": "f00c",
+     "faw": "900",
+     "action": "fn:window.toggleFloatingPaletteVisibility('win-svg-objects')",
+     "children": []
+    },
+    {
+     "sep": true
+    },
+    {
+     "label": "Animation (frise)",
+     "shortcut": "",
+     "fa": "e131",
+     "faw": "900",
+     "action": "fn:window.toggleAnimationMode && window.toggleAnimationMode()",
+     "children": []
+    },
+    {
+     "label": "Importer une séquence d’images (frames)…",
+     "shortcut": "",
+     "fa": "f302",
+     "faw": "900",
+     "action": "fn:window.IlluGifImport&&window.IlluGifImport.pickAndImportSequence(window.EditorManager)",
+     "children": []
+    }
+   ]
+  }
+ ],
+ "palette": [
+  "rgb(0, 0, 0)",
+  "rgb(64, 64, 64)",
+  "rgb(255, 0, 0)",
+  "rgb(255, 106, 0)",
+  "rgb(255, 216, 0)",
+  "rgb(182, 255, 0)",
+  "rgb(76, 255, 0)",
+  "rgb(0, 255, 33)",
+  "rgb(0, 255, 144)",
+  "rgb(0, 255, 255)",
+  "rgb(0, 148, 255)",
+  "rgb(0, 38, 255)",
+  "rgb(72, 0, 255)",
+  "rgb(178, 0, 255)",
+  "rgb(30, 30, 30)",
+  "rgb(112, 112, 112)",
+  "rgb(127, 0, 0)",
+  "rgb(127, 51, 0)",
+  "rgb(127, 106, 0)",
+  "rgb(91, 127, 0)",
+  "rgb(38, 127, 0)",
+  "rgb(0, 127, 14)",
+  "rgb(0, 127, 70)",
+  "rgb(0, 127, 127)",
+  "rgb(0, 74, 127)",
+  "rgb(0, 19, 127)",
+  "rgb(33, 0, 127)",
+  "rgb(87, 0, 127)"
+ ]
+}

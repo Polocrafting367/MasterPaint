@@ -1,0 +1,118 @@
+// Types partagés de l'interface.
+
+/// Icône : SVG du sprite MasterPaint, ou glyphe Font Awesome (même jeu que la version web).
+export struct IconSpec {
+    svg-index: int,   // -1 : pas d'icône SVG (index dans Icons.images)
+    fa: string,
+    fa-weight: int,
+}
+
+/// Icônes SVG rendues par le Rust aux couleurs du thème (trait, accent, fond).
+export global Icons {
+    in property <[image]> images;
+}
+
+export struct SubItemSpec {
+    label: string,
+    action: string,
+    badge: string,
+    fa: string,
+    fa-weight: int,
+}
+
+/// Entrée de menu : `action` = « fx:<effet> » ou l'appel JavaScript de la version web.
+export struct MenuItemSpec {
+    label: string,
+    separator: bool,
+    submenu: bool,
+    fa: string,
+    fa-weight: int,
+    shortcut: string,
+    action: string,
+    children: [SubItemSpec],
+    badge: string,
+}
+
+/// Champ d'une fenêtre d'effet : 0 curseur, 1 case à cocher, 2 liste, 3 couleur, 4 texte.
+export struct EffectField {
+    label: string,
+    kind: int,
+    minimum: float,
+    maximum: float,
+    step: float,
+    value: float,
+    text: string,
+    options: [string],
+    default-value: float,
+    swatch: color,
+    // 5 titre de section (repliable), 6 couleur (aperçu, hexa, pipette) ; dégradé de la piste :
+    // 0 aucun, 1 de track-a à track-b, 2 arc-en-ciel (teinte)
+    section: string,
+    collapsed: bool,
+    track-kind: int,
+    track-a: color,
+    track-b: color,
+}
+
+export struct MenuSpec {
+    title: string,
+    items: [MenuItemSpec],
+}
+
+export struct LayerItem {
+    name: string,
+    visible: bool,
+    thumb: image,
+}
+
+/// Onglet d'image (barre des onglets, tiroir du mode téléphone).
+export struct DocTab {
+    title: string,
+    thumb: image,
+    active: bool,
+    // groupe projet + masque α : contour commun (côtés intérieurs ouverts entre les deux onglets)
+    linked: bool,
+    link-left: bool,
+    link-right: bool,
+    /// onglet d'un masque α (niveaux de gris, fond violet)
+    mask: bool,
+}
+
+/// Ligne d'un panneau de menu du mode téléphone (Ajuster, Déform, Effets) : titre de section
+/// ou entrée de menu.
+export struct SheetRow {
+    section: bool,
+    label: string,
+    fa: string,
+    fa-weight: int,
+    action: string,
+    badge: string,
+}
+
+
+/// Bouton de commande d'une fenêtre de choix façon Paint.NET (« Enregistrer — Enregistre
+/// l'image, puis la ferme. »).
+export struct TaskCommand {
+    title: string,
+    text: string,
+    glyph: string,
+}
+
+/// Vignette d'image dans une fenêtre de choix (images non enregistrées).
+export struct TaskThumb {
+    name: string,
+    image: image,
+}
+
+/// Taille prédéfinie (Redimensionner : selon le rapport de l'image).
+export struct SizePreset {
+    label: string,
+    w: string,
+    h: string,
+}
+
+/// Icône du sprite MasterPaint (Visionneuse d'icônes).
+export struct IconEntry {
+    name: string,
+    image: image,
+}

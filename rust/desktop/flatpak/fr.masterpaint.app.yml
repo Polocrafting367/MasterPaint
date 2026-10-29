@@ -1,0 +1,39 @@
+# Flatpak de MasterPaint (Linux).
+#
+# Ancienne version (Tauri). La version Rust (Slint) est empaquetée par ../../build-all.sh
+# (cible flatpak) sur le runtime org.freedesktop.Platform 25.08, sans flatpak-builder.
+#
+# Construction locale (Linux) :
+#   cp ../../target/release/masterpaint-desktop ../../../icons/icon-512.png .
+#   flatpak-builder --user --install --force-clean build-dir fr.masterpaint.app.yml
+id: fr.masterpaint.app
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: masterpaint-desktop
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # ouvrir / enregistrer des images
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+modules:
+  - name: masterpaint
+    buildsystem: simple
+    sources:
+      - type: file
+        path: masterpaint-desktop
+      - type: file
+        path: fr.masterpaint.app.desktop
+      - type: file
+        path: fr.masterpaint.app.metainfo.xml
+      - type: file
+        path: icon-512.png
+    build-commands:
+      - install -Dm755 masterpaint-desktop /app/bin/masterpaint-desktop
+      - install -Dm644 fr.masterpaint.app.desktop /app/share/applications/fr.masterpaint.app.desktop
+      - install -Dm644 fr.masterpaint.app.metainfo.xml /app/share/metainfo/fr.masterpaint.app.metainfo.xml
+      - install -Dm644 icon-512.png /app/share/icons/hicolor/512x512/apps/fr.masterpaint.app.png

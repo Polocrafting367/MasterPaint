@@ -1,0 +1,90 @@
+// Jetons du thème — équivalent des variables CSS --pdn-* / --w10-* de la version web.
+// Valeurs par défaut = thème clair Windows 10 de MasterPaint (relevées dans le navigateur).
+// Le Rust recalcule les teintes d'accent (theme.rs) quand l'accent ou le mode change :
+// un thème personnalisé n'est qu'un autre jeu de valeurs.
+
+export global Theme {
+    in-out property <bool> dark: false;
+    in-out property <bool> app-active: true;
+
+    // accent et ses mélanges avec le fond (≈ color-mix CSS)
+    in-out property <color> accent: #0f2d5c;
+    in-out property <color> accent-12: #e2efef;   // barre rapide
+    in-out property <color> accent-14: #ddeded;   // outil actif
+    in-out property <color> accent-20: #cfe4e4;   // bouton pressé
+    in-out property <color> accent-27: #bdd1d1;   // ligne active (historique)
+    in-out property <color> accent-32: #b1d4d4;   // onglet d'image actif
+    in-out property <color> accent-60: #6eafaf;   // bordure d'onglet
+    in-out property <color> on-accent: #ffffff;
+
+    // surfaces
+    in-out property <color> menubar-bg: #e8e8e8;
+    in-out property <color> ribbon-bg: #ffffff;
+    in-out property <color> ribbon-fg: #242424;
+    in-out property <color> ribbon-label: #616161;
+    in-out property <color> ribbon-sep: #c8c6c4;
+    in-out property <color> workspace-bg: #cfcfcf;
+    in-out property <color> window-bg: #f0f0f0;
+    in-out property <color> window-title-bg: #f3f3f3;
+    in-out property <color> window-border: #cdcdcd;
+    in-out property <color> window-shadow: #00000040;
+    in-out property <color> text: #000000;
+    in-out property <color> text-inactive: #7a7a7a;
+    in-out property <color> statusbar-bg: #f0f0f0;
+    in-out property <color> statusbar-border: #dadada;
+    in-out property <color> list-bg: #f0f0f0;
+    /// pied des fenêtres de dialogue (alvéole des boutons) : un peu plus clair que la fenêtre
+    in-out property <color> footer-bg: #f8f8f8;
+    /// menus déroulants (comme paintdotjs) : fond, colonne des icônes
+    in-out property <color> menu-bg: #ffffff;
+    in-out property <color> menu-gutter: #f3f3f3;
+
+    // contrôles Windows 10
+    in-out property <color> button-bg: #fdfdfd;
+    in-out property <color> button-border: #d0d0d0;
+    in-out property <color> field-bg: #ffffff;
+    in-out property <color> field-border: #adadad;
+    in-out property <color> track-bg: #e1e1e1;
+    in-out property <color> track-border: #d6d6d6;
+    in-out property <color> hover-bg: #e5f1fb;
+    in-out property <color> close-bg: #c75050;
+    in-out property <color> close-hover: #e04343;
+    in-out property <color> close-inactive: #9a9a9a;
+
+    // typographie
+    in-out property <string> font: "Segoe UI";
+    in-out property <length> font-size: 12px;
+    in-out property <length> menu-font-size: 12px;
+    in-out property <length> small-font-size: 11px;
+    out property <string> icon-font: "Font Awesome 6 Free";
+
+    // thème Windows 98 : reliefs 3D, barre de titre en dégradé
+    in-out property <bool> win98: false;
+    /// barre de titre des fenêtres translucide (Paramètres › Apparence)
+    in-out property <bool> glass: false;
+    in-out property <color> bevel-hi: #ffffff;
+    in-out property <color> bevel-lo: #808080;
+    in-out property <color> bevel-dk: #0a0a0a;
+    in-out property <color> title-a: #000080;
+    in-out property <color> title-b: #1084d0;
+    in-out property <color> title-fg: #ffffff;
+
+    // mode téléphone (css/theme-mobile-modern.css de la version web : surfaces iOS, cartes
+    // translucides, barre du haut à l'accent foncé)
+    in-out property <color> mob-surface: #f2f2f7;
+    in-out property <color> mob-surface-deep: #e5e5ea;
+    in-out property <color> mob-card: #ffffffcc;
+    in-out property <color> mob-text: #1a1a1a;
+    in-out property <color> mob-muted: #6e6e73;
+    in-out property <color> mob-divider: #00000014;
+    in-out property <color> mob-accent-dark: #084c4c;
+    in-out property <color> mob-accent-tint: #0f2d5c1f;
+    in-out property <color> mob-accent-pill: #0f2d5c24;
+    in-out property <color> mob-capsule: #f1f6f6;
+
+        // géométrie
+    in-out property <length> window-radius: 8px;
+    /// arrondi des contrôles (boutons, champs, listes) : façon Windows 11 ; 0 en Windows 98
+    in-out property <length> ctl-radius: 5px;
+    in-out property <length> title-height: 26px;
+}

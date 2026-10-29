@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" fill="{STROKE}">
+    <defs>
+      <mask id="mp-mask-sq">
+        <rect width="22" height="22" fill="white"></rect>
+        <circle cx="11" cy="11" r="4.5" fill="black" stroke="black" stroke-width="1.5"></circle>
+        <path d="M17 5.5 L21.5 15.5 L12.5 15.5 Z" fill="black" stroke="black" stroke-width="1.5" stroke-linejoin="round"></path>
+      </mask>
+      
+      <mask id="mp-mask-circ">
+        <rect width="22" height="22" fill="white"></rect>
+        <path d="M17 5.5 L21.5 15.5 L12.5 15.5 Z" fill="black" stroke="black" stroke-width="1.5" stroke-linejoin="round"></path>
+      </mask>
+    </defs>
+
+    <rect x="1.5" y="8" width="7.5" height="7.5" rx="1" fill="none" stroke="{STROKE}" stroke-width="1.35" mask="url(#mp-mask-sq)"></rect>
+
+    <circle cx="11" cy="11" r="4.5" fill="none" stroke="{STROKE}" stroke-width="1.35" mask="url(#mp-mask-circ)"></circle>
+
+    <path d="M17 5.5 L21.5 15.5 L12.5 15.5 Z" fill="none" stroke="{STROKE}" stroke-width="1.35" stroke-linejoin="round"></path>
+  </svg>
