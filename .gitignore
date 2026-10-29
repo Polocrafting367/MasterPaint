@@ -1,0 +1,7 @@
+# Fichiers de compilation : ils vont dans ../MasterPaint-build (voir rust/.cargo/config.toml)
+rust/target/
+/target/
+node_modules/
+# sortie intermédiaire de wasm-bindgen (la version publiée est dans /rust-app/pkg)
+rust/masterpaint-ui/web/pkg/
+*.tmp
