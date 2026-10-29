@@ -32,7 +32,8 @@ async function handleShareTargetPost(request) {
         await storeSharedFile(file);
     }
     const base = new URL(request.url);
-    const dest = new URL('./', base);
+    // image partagée : reçue par la version HTML (html/)
+    const dest = new URL('./html/', base);
     dest.searchParams.set('share', '1');
     return Response.redirect(dest.toString(), 303);
 }
@@ -42,7 +43,7 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method === 'POST' && shareImportPath(url.pathname)) {
         event.respondWith(
             handleShareTargetPost(event.request).catch(() =>
-                Response.redirect('./?share=1', 303)
+                Response.redirect('./html/?share=1', 303)
             )
         );
     }

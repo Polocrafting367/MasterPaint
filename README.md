@@ -27,6 +27,19 @@
 
 ---
 
+## Structure du dépôt
+
+| Dossier | Contenu |
+|---|---|
+| `index.html`, `rust-app/` | Version Rust (Slint) pour le navigateur — page d'accueil du site |
+| `rust/` | Code Rust : `masterpaint-ui` (interface), `masterpaint-core` (moteur d'effets), `desktop` (paquets), `build-all.sh` |
+| `html/` | Version HTML historique (`html/index.html`, `js/`, `css/`, `vendor/`, `build/`…) |
+| `icons/`, `IMG/`, `fonts/` | Ressources partagées par les deux versions |
+| `downloads/` | Applications compilées (Windows, Linux) |
+| `docs/` | Liste de travail du portage Rust |
+
+Compilation : `rust/build-all.sh [web|linux|windows]`.
+
 ## À propos
 
 **MasterPaint** s’inspire de **Paint.NET**, **Photoshop** et **Illustrator**. Créez des images bitmap et vectorielles au même endroit, sans publicité ni traceurs. Tout fonctionne à **100 % en local** : le navigateur peut utiliser `localStorage` et IndexedDB pour une sauvegarde temporaire sur votre machine.

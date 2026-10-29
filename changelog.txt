@@ -1,5 +1,146 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+3.3.0 (28/10/26) — calques en dossiers, calque texte, interface retravaillée
+- Calques : dossiers et sous-dossiers (replier / déplier, glisser dans un dossier, opacité et
+  mode de fusion du dossier, mode « Transfert »), verrouillage (cadenas), enregistrés dans les
+  .illu
+- Calque texte : bouton « Calque texte » à côté de la taille ; le texte reste modifiable (outil
+  Texte), se déplace net (outil Déplacer) et garde ses effets sans les figer (ombre, VHS, flous,
+  déformations, aberration…) ; fenêtre « Effets du calque texte » ; « Pixelliser le calque »
+- Saisie du texte bien plus rapide sur les grandes images (seul le cadre du texte est redessiné,
+  glyphes en cache) et plus fiable (la zone de saisie reprend le focus)
+- Lasso magnétique refait (suit les bords entre deux ancres, glisser ou clic par clic) ; lasso
+  polygonal : se termine par un clic près du départ, double-clic, Entrée, clic droit ou Échap ;
+  Retour arrière retire le dernier point ; tracé des sélections bien plus rapide
+- Historique : les sélections ne créent plus d'étapes ; icône par étape, « Image d'origine » en
+  tête ; opacité et mode de fusion des calques enregistrés
+- Axes de symétrie déplaçables (poignées sur la toile, glisser depuis les règles)
+- Aperçu 1:1 hors de la toile : fenêtre séparée du navigateur sur le web, seconde fenêtre sur le
+  bureau, à l'échelle réelle de l'écran
+- Couleurs : rangée de couleurs favorites (+ pour ajouter, clic droit = couleur secondaire),
+  enregistrée dans les paramètres
+- Échap ferme le menu du clic droit
+- Effets : « Séparer les canaux RVB… » aussi dans Effets › Couleur (couleur ou gris, décalage par
+  canal, recomposition identique à l'original) ; Aberration chromatique réglable (forme, centre,
+  zone nette, couples de canaux, progression) ; l'aberration proposée sur les autres effets suit
+  la force de l'effet (pas d'aberration là où il n'y a pas de flou) ; flous radial et zoom sans
+  anneaux
+- Portée « Tous les calques » : aperçu sur tous les calques, respectée par Ctrl+F / Répéter (qui
+  garde tous les réglages) ; progression affichée jusqu'au dernier calque
+- Aperçu des effets en basse résolution pendant les réglages, pleine résolution à la validation ;
+  Photo Mode Pro : le rendu haute résolution s'interrompt dès qu'un réglage change
+- Effets du menu sur la carte graphique quand elle est disponible (WebGPU dans le navigateur) :
+  flous, netteté, pixeliser, luminosité / contraste, N&B, négatif, sépia
+- Filtres dynamiques ƒ : « Trame d'impression (CMJN) » et « Tramage ordonné (Bayer) »
+- Détourage : « Détourage par sélection… » (plume, étendre / contracter, inverser, masque α lié),
+  « Remplissage contenu… » (extension, fondu, intensité, texture ou dégradé, en arrière-plan),
+  Incrustation : préréglages et « Appliquer en masque α lié »
+- Interface : 166 icônes MasterPaint redessinées (trait noir / blanc selon le thème, détails à la
+  couleur d'accentuation) pour les outils, le ruban et tous les menus, alignées dans les menus ;
+  passage clair / sombre instantané, étoiles de la baguette visibles ; barre du haut et onglets
+  plus clairs ; barre du haut translucide façon Windows 11 (Mica) ;
+  surfaces mieux contrastées, séparateurs dans les menus et le ruban ; sélecteurs Non / Oui et
+  listes déroulantes arrondis ; pied de fenêtre commun, un peu plus clair, partout
+- Paramètres : couleurs d'accent sur une ligne, « Barre d'options » dans Apparence, pages Avancé et
+  Infos techniques fusionnées (Visionneuse d'icônes déplacée ici), boutons GitHub / Notes de
+  version / Version web classique / Projet d'exemple à côté de OK
+- Fenêtres volantes : redimensionnables par les quatre côtés et les coins, aimantées à leur place
+  (décalées sous les règles), taille et position mémorisées ; la palette Outils passe de 2 à
+  6 colonnes selon sa largeur
+- Fenêtre Couleurs refaite (façon Paint.NET) : principale / secondaire, roue ou carré + barre de
+  teinte, curseurs RVB / TSV / alpha en dégradé, HEX, pipette, favoris, couleurs récentes, nuancier ;
+  mise en page compacte ou large selon la largeur
+- Carte graphique (WebGPU dans le navigateur) : composition des calques à l'écran, teinte /
+  saturation, vibrance, température, vignette ; interrupteur et nom de la carte dans Paramètres ›
+  Performances
+- Calque texte, calque verrouillé ou dossier : effets et outils incompatibles grisés (info-bulle) ;
+  menu Calques : Nouveau dossier, Grouper, Dégrouper, Verrouiller, Pixelliser
+- Mode téléphone : panneaux du bas sous le ruban (plus dessous), barre du bas flottante sur la
+  toile ; l'interface choisie (Paint.NET, Photoshop) est respectée sur petit écran
+- Téléchargements : installeur Windows de la version Rust (setup), AppImage Linux à jour
+
+3.2.0 (26/10/26) — version Rust par défaut sur masterpaint.fr
+- La version Rust devient la page d'accueil du site ; la version HTML reste disponible
+  (Paramètres › Avancé › Version web classique). Écran de démarrage repris de la version HTML,
+  affiché jusqu'à la restauration des projets
+- Copier / coller dans le navigateur corrigé (les raccourcis Ctrl+… n'arrivaient pas sans
+  modificateur) : presse-papiers du système comme paintdotjs, même image = même position,
+  autre image = centré ; réglage « Coller dans un nouveau calque / le calque actif » ;
+  Coller dans une nouvelle image (Ctrl+Alt+V)
+- Fenêtres façon Paint.NET : modifications non enregistrées (onglet et fermeture de
+  l'application), glisser-déposer (Ouvrir / Ajouter comme calques), image collée plus grande
+  que la toile ; fenêtre d'erreur avec détails et « Signaler l'erreur »
+- Photos RAW (ARW, CR2, CR3, NEF, RAF, ORF, RW2, DNG, PEF…) ouvertes dans le Mode Photo Pro et
+  traitées en flottant (toute la dynamique du capteur)
+- Hors toile : le contenu déplacé hors de l'image est gardé, affiché autour de la toile et
+  revient quand on le ramène ; enregistré dans les .illu
+- Grandes images : affichage composé à l'échelle de l'écran (bien plus fluide de loin)
+- Recadrer : outil interactif (poignées, rapports 16:9 / 9:16 / 1:1 / 4:3) ; Redimensionner et
+  Taille de la zone de travail : proportions, préréglages selon le rapport, ancrage ; Bordure
+  d'image complète ; Rotation et retournement (image ou calque) ; Exporter : nom, formats,
+  qualité JPEG, profondeur de couleur
+- Interface : boutons et menus arrondis façon Windows 11, info-bulles, zone de sécurité des
+  sous-menus, ruban qui se resserre (barre Paint.NET sur deux lignes), barre d'état allégée,
+  Paramètres réorganisés (Avancé), icônes du sprite MasterPaint (formes, image, fusion…)
+- Pipette : couleur suivie en restant appuyé, HEX / RVB / RAL dans le ruban
+- Filtre dynamique : « Zone dessinée » ou « Partout » ; boutons α et ƒ bien visibles
+- Mode téléphone : fenêtres posées en bas, sur toute la largeur, toile cadrée au-dessus
+- Linux : les boutons de la barre de titre ne bloquent plus les menus
+- Chargement sans blocage : l'ouverture d'un RAW ou d'une grande image affiche une fenêtre de
+  progression (lecture du capteur, dématriçage, aperçu) et travaille en tâche de fond ; la
+  version web ne plantait plus sur les RAW (une horloge interdite dans le navigateur)
+- Navigateur : coller un fichier copié dans le gestionnaire de fichiers (PNG, JPEG, RAW…) ;
+  le bouton Télécharger l'application lance bien le téléchargement
+- Clic droit : menu contextuel sur la toile (outils de sélection ; Ctrl + clic droit avec un
+  outil de dessin), sur les calques et sur les onglets
+- Info-bulles : titre + explication (outils, ruban, jauges, options, calques, onglets)
+- Coller une image venue d'ailleurs : d'abord « nouvel onglet ou image actuelle ? » (réglable
+  dans les Paramètres), puis, si elle dépasse, « agrandir la toile ? »
+- Calculs lourds en arrière-plan, sur le bureau comme dans le navigateur (workers) : aperçus et
+  application des effets, Photo Mode Pro, RAW, décodage des images — l'interface ne se fige
+  plus ; fenêtre de progression pendant l'application d'un effet sur une grande image
+- Grandes images : seules les tuiles visibles à l'écran sont composées (un aperçu réduit sert
+  de fond le temps qu'elles arrivent) ; vue de loin, l'aperçu d'un effet est d'abord calculé à
+  la résolution de l'affichage, puis en pleine résolution après une courte pause
+- Zoom : plus de ralentissement en zoomant (ombre de la toile, grille de pixels et contenu
+  hors toile ne sont plus dessinés à la taille de la toile zoomée)
+- Photo Mode Pro : rendu en deux temps comme la version HTML (basse résolution instantanée
+  pendant qu'un curseur bouge, puis zone visible à la résolution de l'écran) ; interface
+  sombre le temps du mode (sans changer le réglage), menus réduits à ceux du mode (Fichier,
+  Édition, Ajustements), onglets masqués, menus déroulants au-dessus du mode ; réglage
+  automatique mesuré en flottant pour les RAW (hautes lumières au-delà du blanc récupérées)
+- Téléchargement : version Flatpak (Linux) de la 3.2.0
+- Masque α : interface limitée aux niveaux de gris (roue, grille, nuancier), fond violet,
+  pastille « α » sur l'onglet et bandeau « Masque α »
+- Fenêtres d'effet : s'ouvrent aussitôt (l'aperçu suit) ; portée Sélection / Calque actif /
+  Tous les calques ; sur les grandes images, aperçu limité à la zone visible (effets locaux)
+- Outils de symétrie : axes et poignées affichés sur la toile, règles activées
+- Lasso magnétique : le tracé colle aux bords de l'image
+- Menus portés : Aperçu 1:1 (fenêtre), Visionneuse d'icônes, Calque actif : position et taille,
+  Détourage par sélection, Remplissage contenu pris en compte
+- Dossier du projet rangé : la version HTML est dans html/ (Paramètres › Avancé › Version web
+  classique) ; fichiers de compilation et anciens essais supprimés
+
+3.1.0 (23/10/26) — version Rust : mode téléphone, espaces de couleur
+- Mode téléphone de la version Rust refait comme la version web : barre « ☰ Menu »,
+  capsule annuler / rétablir, ruban flottant, bande d'outils, pilules (Nouveau / Ouvrir /
+  Exporter, Couleurs / Calques / Historique), barre du bas (Filtre, Ajuster, Déform, Effets,
+  Rotation, Ajuster, Recadrage), panneaux du bas et tiroir ☰ (documents, Fichier, menus en
+  accordéon, signaler un bug)
+- Espace de couleur porté en Rust (Fichier › Espace de couleur, et fenêtre « Nouvelle image ») :
+  Bitmap RVB, CMJN (encres réelles), RAL (216 teintes). Nom RAL ou pourcentages d'encre de la
+  couleur choisie, nuancier RAL complet, roue filtrée ; effets, courbes et collages ramenés dans
+  l'espace du projet ; enregistré dans les fichiers .illu
+- Mode Photo Pro porté en Rust : pellicule, préréglages, Auto, Lumière / Couleur / Présence /
+  Color grading / TSL, rotation, effets ON/OFF, ouverture dans l'éditeur, export JPEG par lot
+- CMJN : plus de dérive (appliquer plusieurs effets n'éclaircit plus l'image)
+- Nouvelle image : préréglages de taille (1080p, 720p, 1:1, 4/3, A4, Letter)
+- Linux / macOS : police Selawik (équivalent de Segoe UI) dans toute l'interface
+- Téléchargements : Linux (AppImage, archive .tar.gz) et Windows (.exe) compilés ; macOS, iOS,
+  Android et Flatpak indiqués « indisponible » dans l'application
+- Fichiers de compilation sortis du dossier du projet (dossier MasterPaint-build à côté) :
+  le dossier MasterPaint reste léger pour GitHub et le serveur
+
 3.0.0 (14/10/26) — début de la migration en Rust
 - Mise à jour en Rust (début) : les effets sont calculés par un moteur Rust, plus rapide
 - Version Windows installable disponible (.exe)

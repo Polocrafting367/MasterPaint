@@ -3,7 +3,7 @@
   "name": "MasterPaint ",
   "short_name": "MasterPaint",
   "description": "Suite graphique bitmap et vecteur dans le navigateur — retouche, calques, effets.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d8f8f",
