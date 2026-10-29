@@ -1,0 +1,815 @@
+/*
+ * Mise en page « Paint.NET » (Paramètres › Disposition de l'interface › Paint.NET).
+ * Ce n'est pas un thème : deux classes posées par js/app/pdn-chrome.js
+ *   body.illu-layout-pdn : structure Paint.NET (bascules de fenêtres en haut à droite…) ;
+ *   body.illu-pdn-look   : couleurs Paint.NET, seulement avec le thème Flat Design
+ *                          (Windows 98 / macOS gardent leur visuel).
+ * Photoshop et Téléphone ne sont jamais concernés.
+ *
+ * Valeurs relevées sur Paint.NET 5.1 (Windows 11, thème clair) :
+ *   barre de titre / menus  #E8E8E8      barres d'outils       #FFFFFF
+ *   espace de travail       #CFCFCF      bord du canevas       #A3A3A3
+ *   fenêtres flottantes     #F0F0F0      titre flottant        #F3F3F3
+ *   sélection (listes)      #D3DAE9      outil actif           #B4D2E9 + bord #0078D4
+ *   accent / progression    #0078D4      onglet d'image actif  #AECCE3
+ */
+
+/* L'accent reste celui choisi dans Paramètres › Couleur d'accentuation (--mp-accent, posé par
+ * IlluTheme sur :root) ; « Bleu Paint.NET » #0078d4 est simplement la valeur par défaut.
+ * Les teintes claires (sélection, survol, outil actif) en sont dérivées. */
+body.illu-pdn-look {
+    --pdn-chrome: #e8e8e8;
+    --pdn-bar: #ffffff;
+    --pdn-workspace: #cfcfcf;
+    --pdn-float: #f0f0f0;
+    --pdn-float-title: #f3f3f3;
+    --pdn-blue: var(--mp-accent, #0078d4);
+    --pdn-sel: color-mix(in srgb, var(--pdn-blue) 18%, #e4e4e4);
+    --pdn-tool-sel: color-mix(in srgb, var(--pdn-blue) 30%, #ffffff);
+    --pdn-hover: color-mix(in srgb, var(--pdn-blue) 10%, #ffffff);
+    --pdn-hover-border: color-mix(in srgb, var(--pdn-blue) 22%, #ffffff);
+    --pdn-sep: #d6d6d6;
+    --pdn-text-dim: #6d6d6d;
+    --pdn-text: #000000;
+    --pdn-border: #dadada;
+    --pdn-menu-bg: #f9f9f9;
+    --pdn-menu-border: #d0d0d0;
+    --pdn-menu-hover: color-mix(in srgb, var(--pdn-blue) 16%, #ffffff);
+    --pdn-menu-icon: color-mix(in srgb, var(--pdn-blue) 75%, #000000);
+    --pdn-icon: #2b2b2b;
+    --pdn-input: #ffffff;
+    --pdn-control-border: #8d8d8d;
+    --pdn-canvas-edge: #a3a3a3;
+    --pdn-float-border: #cdcdcd;
+    --pdn-tab-hover: color-mix(in srgb, var(--pdn-blue) 12%, #ffffff);
+    --pdn-tab-active: color-mix(in srgb, var(--pdn-blue) 32%, #ffffff);
+    --pdn-tab-active-border: color-mix(in srgb, var(--pdn-blue) 60%, #ffffff);
+    background-color: var(--pdn-chrome) !important;
+    font-family: "Segoe UI", "Segoe UI Variable Text", Tahoma, Arial, sans-serif;
+}
+
+/* La barre d'outils sous les menus prend exactement la largeur de la barre de menus (tous
+ * thèmes, bureau) : width 0 + min-width 100 % → elle ne participe pas au calcul de largeur du
+ * conteneur, qui suit donc la seule barre de menus. */
+body:not(.illu-mobile-ui) .illu-menu-and-sub-wrapper > .illu-sub-menubar {
+    width: 0;
+    min-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Raccourcis clavier alignés à droite dans les menus (tous thèmes) */
+menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"] > .menu-shortcut {
+    margin-left: auto;
+    padding-left: 28px;
+    color: #6d6d6d;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"] > span {
+    white-space: nowrap;
+}
+
+menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"][aria-disabled="true"] {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- fenêtre principale */
+
+body.illu-pdn-look #app-window {
+    border-radius: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: var(--pdn-chrome) !important;
+    font-size: 12px;
+}
+
+body.illu-pdn-look .illu-app-window-body {
+    background: var(--pdn-chrome) !important;
+}
+
+/* ---------------------------------------------------------------- barre de menus (rangée grise) */
+
+body.illu-pdn-look .app-header-container {
+    background: var(--pdn-chrome) !important;
+}
+
+body.illu-pdn-look menu.illu-menubar-root {
+    background: var(--pdn-chrome) !important;
+    border-radius: 0 !important;
+    height: 26px;
+    padding-left: 4px;
+}
+
+body.illu-pdn-look menu.illu-menubar-root > li[aria-haspopup] {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    color: var(--pdn-text) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+/* Menu ouvert : onglet blanc relié à la barre d'outils (comme « Fichier » dans PDN) */
+body.illu-pdn-look menu.illu-menubar-root > li[aria-haspopup]:hover,
+body.illu-pdn-look menu.illu-menubar-root > li[aria-haspopup]:focus-within,
+body.illu-pdn-look menu.illu-menubar-root > li[aria-haspopup].active,
+body.illu-pdn-look menu.illu-menubar-root > li[aria-haspopup][aria-expanded="true"] {
+    background: var(--pdn-bar) !important;
+    color: var(--pdn-text) !important;
+    box-shadow: inset 1px 0 0 var(--pdn-border), inset -1px 0 0 var(--pdn-border), inset 0 1px 0 var(--pdn-border);
+}
+
+/* menus déroulants : style Windows 11 / Paint.NET 5 */
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] {
+    background: var(--pdn-menu-bg) !important;
+    border: 1px solid var(--pdn-menu-border) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18) !important;
+    padding: 3px !important;
+}
+
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"] {
+    color: var(--pdn-text) !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+}
+
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"]:not(.divider):hover,
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] > li[role="menuitem"]:not(.divider):focus-within {
+    background: var(--pdn-menu-hover) !important;
+    color: var(--pdn-text) !important;
+}
+
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] > li.divider {
+    border-top-color: var(--pdn-sep) !important;
+}
+
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] .menu-icon,
+body.illu-pdn-look menu.illu-menubar-root ul[role="menu"] .menu-icon i {
+    color: var(--pdn-menu-icon);
+}
+
+/* ---------------------------------------------------------------- barre d'outils standard (rangée blanche) */
+
+body.illu-pdn-look .illu-sub-menubar {
+    background: var(--pdn-bar) !important;
+    border-top: 1px solid var(--pdn-border);
+    min-height: 26px !important;
+    height: 26px !important;
+}
+
+body.illu-pdn-look .illu-menubar-toolbar {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 1px 2px !important;
+    height: 24px !important;
+    gap: 0 !important;
+}
+
+body.illu-pdn-look .illu-menubar-icon-btn {
+    width: 23px !important;
+    min-width: 23px !important;
+    height: 23px !important;
+    min-height: 23px !important;
+    padding: 0 !important;
+    border: 1px solid transparent !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    justify-content: center;
+    align-items: center;
+    font-size: 13px !important;
+    color: var(--pdn-icon);
+}
+
+body.illu-pdn-look .illu-menubar-icon-btn:hover {
+    background: var(--pdn-hover) !important;
+    border-color: var(--pdn-hover-border) !important;
+}
+
+body.illu-pdn-look .illu-menubar-icon-btn.illu-tb-on,
+body.illu-pdn-look .illu-menubar-icon-btn[aria-pressed="true"] {
+    background: var(--pdn-tool-sel) !important;
+    border-color: var(--pdn-blue) !important;
+}
+
+body.illu-pdn-look .illu-menubar-toolbar__sep {
+    width: 1px !important;
+    height: 16px !important;
+    margin: 0 5px !important;
+    background: var(--pdn-sep) !important;
+    align-self: center;
+}
+
+/* Couleurs d'icônes proches de celles de Paint.NET */
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-new i { color: #5a5a5a; }
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-open i { color: #e8a317; }
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-save i { color: #7b3fa0; }
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-print i { color: #3d5a80; }
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-undo i,
+body.illu-pdn-look.illu-toolbar-pdn #illu-tb-redo i { color: #4a6fa5; }
+body.illu-pdn-look.illu-toolbar-pdn .illu-pdn-tb-btn i { color: #4d6b8a; }
+
+/* Zoom de la barre de commandes : masqué seulement avec la barre « Style Paint.NET » (toolbar-pdn.css). */
+
+
+/* « Signaler un bug » : discret, à droite de la barre d'outils */
+body.illu-pdn-look.illu-toolbar-pdn .menubar-contact-btn {
+    background: transparent !important;
+    color: var(--pdn-text-dim) !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-size: 11px !important;
+    border-radius: 0 !important;
+}
+body.illu-pdn-look.illu-toolbar-pdn .menubar-contact-btn:hover {
+    background: var(--pdn-hover) !important;
+    border-color: var(--pdn-hover-border) !important;
+}
+
+/* ---------------------------------------------------------------- bascules de fenêtres (haut droite) */
+
+.illu-pdn-win-toggles {
+    display: none;
+}
+
+body.illu-layout-pdn .illu-pdn-win-toggles {
+    display: flex;
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    z-index: 5;
+    align-items: center;
+    gap: 1px;
+}
+
+.illu-pdn-win-toggles button {
+    width: 23px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    font-size: 13px;
+    color: #3a5f8a;
+}
+
+.illu-pdn-win-toggles button:hover {
+    background: color-mix(in srgb, var(--mp-accent, #0078d4) 10%, #fff);
+    border-color: color-mix(in srgb, var(--mp-accent, #0078d4) 22%, #fff);
+}
+
+.illu-pdn-win-toggles button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--mp-accent, #0078d4) 22%, #fff);
+    border-color: var(--mp-accent, #0078d4);
+}
+
+.illu-pdn-win-toggles .illu-pdn-win-toggles__sep {
+    width: 1px;
+    height: 16px;
+    background: #c8c8c8;
+    margin: 0 4px;
+}
+
+.illu-pdn-win-toggles .illu-pdn-ico-colors {
+    display: inline-block;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: conic-gradient(#ff3b30, #ffcc00, #34c759, #00c7be, #007aff, #af52de, #ff3b30);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.illu-pdn-win-toggles .illu-pdn-help i { color: #1565c0; }
+
+/* ---------------------------------------------------------------- onglets d'images (miniatures) */
+
+body.illu-pdn-look #tab-bar-outer {
+    background: transparent !important;
+}
+
+body.illu-pdn-look #tab-bar .tab {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+body.illu-pdn-look #tab-bar .tab:hover {
+    background: var(--pdn-tab-hover) !important;
+    border-color: var(--pdn-hover-border) !important;
+}
+
+body.illu-pdn-look #tab-bar .tab.active {
+    background: var(--pdn-tab-active) !important;
+    border-color: var(--pdn-tab-active-border) !important;
+}
+
+/* ---------------------------------------------------------------- barre d'options d'outil (ruban) */
+
+body.illu-pdn-look #tool-options-container {
+    background: var(--pdn-bar) !important;
+    border-bottom: 1px solid var(--pdn-border) !important;
+    box-shadow: none !important;
+}
+
+body.illu-pdn-look .illu-gauge-track {
+    border-color: var(--pdn-control-border) !important;
+    border-radius: 0 !important;
+}
+
+body.illu-pdn-look .illu-gauge-fill {
+    background: var(--pdn-blue) !important;
+}
+
+body.illu-pdn-look .illu-icon-toggle--on,
+body.illu-pdn-look .illu-icon-toggle.active {
+    background: var(--pdn-tool-sel) !important;
+    border-color: var(--pdn-blue) !important;
+}
+
+/* ---------------------------------------------------------------- espace de travail */
+
+body.illu-pdn-look #workspace,
+body.illu-pdn-look #workspace-wrapper,
+body.illu-pdn-look .workspace-dock-center {
+    background: var(--pdn-workspace) !important;
+}
+
+body.illu-pdn-look #workspace canvas.illu-doc-canvas,
+body.illu-pdn-look #canvas-container,
+body.illu-pdn-look .canvas-container {
+    box-shadow: 0 0 0 1px var(--pdn-canvas-edge) !important;
+}
+
+/* ---------------------------------------------------------------- fenêtres flottantes (palettes) */
+
+body.illu-pdn-look .floating-window.palette-panel {
+    background: var(--pdn-float) !important;
+    border: 1px solid var(--pdn-float-border) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16) !important;
+    backdrop-filter: none !important;
+}
+
+body.illu-pdn-look .floating-window.palette-panel > .title-bar {
+    background: var(--pdn-float-title) !important;
+    background-image: none !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    border-radius: 8px 8px 0 0 !important;
+    border: 0 !important;
+}
+
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-text {
+    /* fenêtre active : titre en couleur de texte normale (le gris = Paint.NET en arrière-plan) */
+    color: var(--pdn-text) !important;
+    font-weight: 400 !important;
+    font-size: 12px !important;
+    text-shadow: none !important;
+}
+
+html body.illu-pdn-look #floating-palette-host .floating-window.palette-panel > .title-bar .title-bar-controls button,
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button {
+    width: 19px !important;
+    min-width: 19px !important;
+    height: 19px !important;
+    /* Paint.NET 5.1, application active : case rouge #C75050 19×19, croix blanche.
+       Application en arrière-plan (body.illu-app-inactive) : case grise, croix grise. */
+    background: #c75050 !important;
+    background-image: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+    position: relative;
+}
+
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button::before,
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button::after {
+    filter: none !important;
+    background: #ffffff !important;
+}
+
+html body.illu-pdn-look.illu-app-inactive #floating-palette-host .floating-window.palette-panel > .title-bar .title-bar-controls button,
+body.illu-pdn-look.illu-app-inactive .floating-window.palette-panel > .title-bar .title-bar-controls button {
+    background: var(--pdn-close-bg, #ececec) !important;
+}
+
+html body.illu-pdn-look.illu-app-inactive #floating-palette-host .floating-window.palette-panel > .title-bar .title-bar-controls button::before,
+html body.illu-pdn-look.illu-app-inactive #floating-palette-host .floating-window.palette-panel > .title-bar .title-bar-controls button::after,
+body.illu-pdn-look.illu-app-inactive .floating-window.palette-panel > .title-bar .title-bar-controls button::before,
+body.illu-pdn-look.illu-app-inactive .floating-window.palette-panel > .title-bar .title-bar-controls button::after {
+    background: var(--pdn-close-x, #8a8a8a) !important;
+}
+
+body.illu-pdn-look.illu-app-inactive .floating-window.palette-panel > .title-bar .title-bar-text {
+    color: var(--pdn-text-dim) !important;
+}
+
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button:hover::before,
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button:hover::after {
+    background: #ffffff !important;
+}
+
+html body.illu-pdn-look #floating-palette-host .floating-window.palette-panel > .title-bar .title-bar-controls button:hover,
+body.illu-pdn-look .floating-window.palette-panel > .title-bar .title-bar-controls button:hover {
+    background: #e04343 !important;
+    filter: none;
+}
+
+body.illu-pdn-look .floating-window.palette-panel > .window-body {
+    background: var(--pdn-float) !important;
+}
+
+/* Boîte à outils : 2 colonnes de 24 px, outil actif bleu clair cerclé de bleu */
+body.illu-pdn-look #main-toolbox button {
+    border-radius: 0 !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+}
+
+body.illu-pdn-look #main-toolbox button:hover {
+    background: var(--pdn-hover) !important;
+    border-color: var(--pdn-hover-border) !important;
+}
+
+body.illu-pdn-look #main-toolbox button.active {
+    background: var(--pdn-tool-sel) !important;
+    border-color: var(--pdn-blue) !important;
+}
+
+/* Listes calques / historique */
+body.illu-pdn-look #layers-list,
+body.illu-pdn-look #history-list {
+    background: var(--pdn-float) !important;
+    border: 0 !important;
+}
+
+body.illu-pdn-look #layers-list .layer-item.active,
+body.illu-pdn-look #layers-list .layer-item.selected,
+body.illu-pdn-look #layers-list [aria-selected="true"],
+body.illu-pdn-look #history-list .history-item.active,
+body.illu-pdn-look #history-list .active {
+    background: var(--pdn-sel) !important;
+    color: var(--pdn-text) !important;
+    outline: 1px solid var(--pdn-blue);
+    outline-offset: -1px;
+}
+
+body.illu-pdn-look .layer-palette-toolbar {
+    background: var(--pdn-bar) !important;
+    border-top: 1px solid var(--pdn-border) !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+/* ---------------------------------------------------------------- barre d'état */
+
+body.illu-pdn-look #app-status-bar {
+    background: var(--pdn-float) !important;
+    border-radius: 0 !important;
+    border-top: 1px solid var(--pdn-border) !important;
+    color: var(--pdn-text) !important;
+    padding: 1px 5px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    font-size: 12px !important;
+}
+
+body.illu-pdn-look #app-status-bar .status-bar-cell {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    padding: 2px 10px !important;
+}
+
+/* ---------------------------------------------------------------- dialogues d'effets (style Paint.NET) */
+
+body.illu-pdn-look #effect-dialog-window,
+body.illu-pdn-look .window.illu-dialog {
+    border-radius: 8px !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .title-bar {
+    background: var(--pdn-bar) !important;
+    background-image: none !important;
+    color: var(--pdn-text) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .title-bar-text {
+    color: var(--pdn-text) !important;
+    text-shadow: none !important;
+    font-weight: 400 !important;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"] {
+    accent-color: var(--pdn-blue);
+}
+
+
+/* ---------------------------------------------------------------- Windows 10 sombre
+ * Thème sombre de MasterPaint (body.theme-dark) dans la mise en page Paint.NET : palette sombre
+ * de Paint.NET 5 / paint.js. L'accent (--mp-accent) reste celui choisi par l'utilisateur. */
+body.illu-pdn-look.theme-dark {
+    --pdn-chrome: #202020;
+    --pdn-bar: #202020;
+    --pdn-workspace: #2f2f2f;
+    --pdn-float: #282828;
+    --pdn-float-title: #2b2b2b;
+    --pdn-sel: color-mix(in srgb, var(--pdn-blue) 38%, #282828);
+    --pdn-tool-sel: color-mix(in srgb, var(--pdn-blue) 45%, #202020);
+    --pdn-hover: color-mix(in srgb, var(--pdn-blue) 28%, #202020);
+    --pdn-hover-border: color-mix(in srgb, var(--pdn-blue) 70%, #202020);
+    --pdn-sep: #46464a;
+    --pdn-text-dim: #c8c8c8;
+    --pdn-text: #ffffff;
+    --pdn-border: #3a3a3a;
+    --pdn-menu-bg: #1c1c1c;
+    --pdn-menu-border: #646464;
+    --pdn-menu-hover: color-mix(in srgb, var(--pdn-blue) 30%, #1c1c1c);
+    --pdn-menu-icon: color-mix(in srgb, var(--pdn-blue) 55%, #ffffff);
+    --pdn-icon: #e6e6e6;
+    --pdn-input: #1e1e1e;
+    --pdn-control-border: #8d8d8d;
+    --pdn-canvas-edge: #505050;
+    --pdn-float-border: rgba(195, 195, 195, 0.21);
+    --pdn-tab-hover: color-mix(in srgb, var(--pdn-blue) 25%, #202020);
+    --pdn-tab-active: color-mix(in srgb, var(--pdn-blue) 45%, #202020);
+    --pdn-tab-active-border: var(--pdn-blue);
+    --pdn-close-bg: #333333;
+    --pdn-close-x: #9a9a9a;
+    color: var(--pdn-text);
+    color-scheme: dark;
+}
+
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark #illu-tb-new i { color: #d0d0d0; }
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark #illu-tb-save i { color: #b27fd6; }
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark #illu-tb-print i { color: #8fb0d8; }
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark #illu-tb-undo i,
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark #illu-tb-redo i { color: #7fa6dc; }
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark .illu-pdn-tb-btn i,
+body.illu-pdn-look.illu-toolbar-pdn.theme-dark .illu-menubar-icon-btn i { color: var(--pdn-icon); }
+
+/* textes des fenêtres flottantes et de la barre d'état */
+body.illu-pdn-look.theme-dark .floating-window.palette-panel,
+body.illu-pdn-look.theme-dark .floating-window.palette-panel > .window-body,
+body.illu-pdn-look.theme-dark #app-status-bar,
+body.illu-pdn-look.theme-dark #app-status-bar .status-bar-cell,
+body.illu-pdn-look.theme-dark #layers-list,
+body.illu-pdn-look.theme-dark #history-list {
+    color: var(--pdn-text) !important;
+}
+
+body.illu-pdn-look.theme-dark #main-toolbox button i,
+body.illu-pdn-look.theme-dark #main-toolbox button svg {
+    color: var(--pdn-icon);
+}
+/* ================================================================ contrôles Windows 10/11 (1:1)
+ * Relevés sur Paint.NET 5.1 (dialogues Teinte/Saturation et Postériser, Windows 11, thème clair) :
+ *   fond de dialogue #F0F0F0, barre de titre #F3F3F3
+ *   piste de curseur : 3 px de dégradé entre deux filets #D6D6D6 (5 px au total)
+ *   curseur 11×19 « étiquette » pointe en bas : repos accent #0078D7, survol #171717, glissé #CCCCCC
+ *   bouton 23 px de haut, coins 4 px : repos #FDFDFD / bord #D0D0D0 ; bouton par défaut bord accent ;
+ *   survol #E0EEF9 / bord accent ; enfoncé #CCE4F7 / bord #005499
+ *   case à cocher 13×13, coins 3 px, cochée #005FB8 + coche blanche
+ *   champ numérique blanc, filet bas gris (2 px accent quand il a le focus), flèches ▲▼
+ * L'accent suit la couleur d'accentuation de MasterPaint (--mp-accent). */
+body.illu-pdn-look {
+    --w10-face: #f0f0f0;
+    --w10-btn: #fdfdfd;
+    --w10-btn-border: #d0d0d0;
+    --w10-btn-hover: color-mix(in srgb, var(--pdn-blue) 12%, #ffffff);
+    --w10-btn-press: color-mix(in srgb, var(--pdn-blue) 20%, #ffffff);
+    --w10-btn-press-border: color-mix(in srgb, var(--pdn-blue) 70%, #000000);
+    --w10-text: #000000;
+    --w10-field: #ffffff;
+    --w10-field-line: #7a7a7a;
+    --w10-track-line: #d6d6d6;
+    --w10-track-plain: #e7e7e7;
+    --w10-thumb: var(--pdn-blue);
+    --w10-thumb-hover: #171717;
+    --w10-thumb-press: #cccccc;
+    --w10-check: color-mix(in srgb, var(--pdn-blue) 78%, #000000);
+    --w10-check-border: #8a8a8a;
+    --fx-ramp-a: var(--w10-track-plain);
+    --fx-ramp-b: var(--w10-track-plain);
+}
+
+body.illu-pdn-look.theme-dark {
+    --w10-face: #2b2b2b;
+    --w10-btn: #2d2d2d;
+    --w10-btn-border: #464646;
+    --w10-btn-hover: color-mix(in srgb, var(--pdn-blue) 22%, #2d2d2d);
+    --w10-btn-press: color-mix(in srgb, var(--pdn-blue) 35%, #2d2d2d);
+    --w10-btn-press-border: var(--pdn-blue);
+    --w10-text: #ffffff;
+    --w10-field: #1e1e1e;
+    --w10-field-line: #8d8d8d;
+    --w10-track-line: #555555;
+    --w10-track-plain: #3a3a3a;
+    --w10-thumb-hover: #f0f0f0;
+    --w10-thumb-press: #6e6e6e;
+    --w10-check: var(--pdn-blue);
+    --w10-check-border: #9a9a9a;
+}
+
+/* ---- fenêtres de dialogue */
+body.illu-pdn-look #effect-dialog-window .window-body,
+body.illu-pdn-look #effect-dialog-window {
+    background: var(--w10-face) !important;
+    color: var(--w10-text) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .title-bar {
+    background: var(--pdn-float-title) !important;
+}
+
+/* ---- boutons (OK, Annuler, RAZ…) */
+body.illu-pdn-look #effect-dialog-window .window-body button:not(.fx-reset):not(.illu-scope-btn) {
+    min-height: 23px !important;
+    height: 23px !important;
+    min-width: 75px;
+    padding: 0 10px !important;
+    background: var(--w10-btn) !important;
+    background-image: none !important;
+    border: 1px solid var(--w10-btn-border) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    color: var(--w10-text) !important;
+    text-shadow: none !important;
+    font-weight: 400 !important;
+}
+
+/* bouton par défaut (OK) : seulement le bord accent, les états survol / enfoncé restent ceux des autres */
+body.illu-pdn-look #effect-dialog-window .window-body button#effect-dialog-btn-ok:not(:active) {
+    border-color: var(--pdn-blue) !important;
+}
+
+/* flèches ▲▼ toujours visibles, comme les NumericUpDown de Windows */
+body.illu-pdn-look #effect-dialog-window input[type="number"]::-webkit-inner-spin-button,
+body.illu-pdn-look #effect-dialog-window input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    height: 19px;
+    cursor: default;
+}
+
+body.illu-pdn-look #effect-dialog-window .window-body button:not(.fx-reset):not(.illu-scope-btn):hover {
+    background: var(--w10-btn-hover) !important;
+    border-color: var(--pdn-blue) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .window-body button:not(.fx-reset):not(.illu-scope-btn):active {
+    background: var(--w10-btn-press) !important;
+    border-color: var(--w10-btn-press-border) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .window-body button:focus-visible {
+    outline: 1px dotted var(--w10-text);
+    outline-offset: -4px;
+}
+
+/* ---- ⟲ valeur par défaut : petit carré blanc, icône accent */
+body.illu-pdn-look #effect-dialog-window .fx-compact .fx-reset {
+    flex-basis: 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+    background: var(--w10-btn) !important;
+    border: 1px solid var(--w10-btn-border) !important;
+    border-radius: 4px !important;
+    color: var(--pdn-blue) !important;
+    opacity: 1 !important;
+    font-size: 11px !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .fx-compact .fx-reset:hover {
+    background: var(--w10-btn-hover) !important;
+    border-color: var(--pdn-blue) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .fx-compact .fx-reset:active {
+    background: var(--w10-btn-press) !important;
+    border-color: var(--w10-btn-press-border) !important;
+}
+
+/* ---- champ numérique */
+body.illu-pdn-look #effect-dialog-window .fx-compact .fx-row input[type="number"] {
+    height: 23px !important;
+    background: var(--w10-field) !important;
+    color: var(--w10-text) !important;
+    border: 1px solid var(--w10-btn-border) !important;
+    border-bottom: 1px solid var(--w10-field-line) !important;
+    border-radius: 3px 3px 0 0 !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+}
+
+body.illu-pdn-look #effect-dialog-window .fx-compact .fx-row input[type="number"]:focus {
+    outline: none !important;
+    border-bottom: 2px solid var(--pdn-blue) !important;
+}
+
+/* ---- curseurs : piste fine entre deux filets, curseur en étiquette */
+body.illu-pdn-look #effect-dialog-window .fx-track {
+    height: 5px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--w10-track-line) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range {
+    height: 21px !important;
+    margin: 0 -6px !important;
+    width: calc(100% + 12px) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range::-webkit-slider-thumb {
+    width: 11px;
+    height: 19px;
+    margin-top: -9px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--w10-thumb);
+    clip-path: polygon(0 0, 100% 0, 100% 68%, 50% 100%, 0 68%);
+    cursor: default;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range:hover::-webkit-slider-thumb {
+    background: var(--w10-thumb-hover);
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range:active::-webkit-slider-thumb {
+    background: var(--w10-thumb-press);
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range::-moz-range-thumb {
+    width: 11px;
+    height: 19px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--w10-thumb);
+    clip-path: polygon(0 0, 100% 0, 100% 68%, 50% 100%, 0 68%);
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range:hover::-moz-range-thumb {
+    background: var(--w10-thumb-hover);
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="range"].fx-range:active::-moz-range-thumb {
+    background: var(--w10-thumb-press);
+}
+
+/* ---- cases à cocher */
+body.illu-pdn-look #effect-dialog-window input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px !important;
+    height: 13px !important;
+    min-width: 13px;
+    margin: 0 6px 0 0;
+    border: 1px solid var(--w10-check-border) !important;
+    border-radius: 3px !important;
+    background: var(--w10-field) !important;
+    box-shadow: none !important;
+    vertical-align: middle;
+    position: relative;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="checkbox"]:checked {
+    background: var(--w10-check) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 13'%3E%3Cpath d='M3 6.8 5.3 9 10 4' fill='none' stroke='%23fff' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px 13px no-repeat !important;
+    border-color: var(--w10-check) !important;
+}
+
+body.illu-pdn-look #effect-dialog-window input[type="checkbox"]:hover {
+    border-color: var(--pdn-blue) !important;
+}
+
+/* ---- listes déroulantes */
+body.illu-pdn-look #effect-dialog-window select {
+    height: 23px !important;
+    background-color: var(--w10-btn) !important;
+    color: var(--w10-text) !important;
+    border: 1px solid var(--w10-btn-border) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+}
+
+body.illu-pdn-look #effect-dialog-window select:hover {
+    background-color: var(--w10-btn-hover) !important;
+    border-color: var(--pdn-blue) !important;
+}
