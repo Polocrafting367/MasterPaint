@@ -4,6 +4,7 @@
 //! résultat asynchrone ; l'ancien contenu reste affiché le temps d'une image, puis le
 //! rectangle est remplacé. Les rectangles recomposés par le CPU entre-temps (traits de pinceau)
 //! sont plus récents : ils sont refaits après coup, et un résultat dépassé est jeté.
+//! Navigateur sans WebGPU : passerelle WebGL2 (webgl.rs, `window.mpGL`), résultat immédiat.
 //! Sans carte graphique, accélération coupée, dossiers de calques ou image trop grande pour les
 //! tampons : composition CPU, comme avant.
 
@@ -68,8 +69,8 @@ fn intersect(a: Rect, b: Rect) -> Option<Rect> {
 pub(crate) fn cpu(st: &mut State, target: Target, r: Rect) {
     let ds = step(st, target);
     match target {
-        Target::Display => st.doc.composite_scaled(&mut st.display, ds, r, true),
-        Target::Backdrop => st.doc.composite_scaled(&mut st.backdrop, ds, r, true),
+        Target::Display => st.doc.composite_scaled(&mut st.display, ds, r, false),
+        Target::Backdrop => st.doc.composite_scaled(&mut st.backdrop, ds, r, false),
     }
     if PENDING.with(|p| p.get()) > 0 {
         let g = GEN.with(|g| g.get());
@@ -89,10 +90,21 @@ pub(crate) fn view(app: &AppWindow, st: &mut State, target: Target, r: Rect) {
 pub(crate) fn compose(app: &AppWindow, st: &mut State, target: Target, r: Rect) -> bool {
     if !GPU_ALLOWED.load(std::sync::atomic::Ordering::Relaxed) {
         gpu::compose_forget();
+        #[cfg(target_arch = "wasm32")]
+        crate::webgl::forget();
         return false;
     }
+    // zone d'un calque dynamique affichée en gris : composée sur le processeur (editor::over)
+    if crate::editor::DYN_ZONE_VIEW.load(std::sync::atomic::Ordering::Relaxed) != 0 {
+        return false;
+    }
+    // navigateur sans WebGPU : passerelle WebGL2 (mpGL), résultat relu tout de suite
+    #[cfg(target_arch = "wasm32")]
+    let webgl = gpu::get().is_none() && crate::webgl::available();
+    #[cfg(not(target_arch = "wasm32"))]
+    let webgl = false;
     // pendant un geste : petits rectangles, et chaque envoi du calque actif coûterait plus
-    if !gpu_ready() || st.session.busy() {
+    if !(gpu_ready() || webgl) || st.session.busy() {
         return false;
     }
     let ds = step(st, target);
@@ -106,8 +118,15 @@ pub(crate) fn compose(app: &AppWindow, st: &mut State, target: Target, r: Rect) 
     if (r.2 - r.0) * (r.3 - r.1) * ns * layers < MIN_WORK {
         return false;
     }
+    #[cfg(target_arch = "wasm32")]
+    if webgl {
+        let _ = app;
+        let Some(px) = crate::webgl::compose(&st.doc, ds, r, false) else { return false };
+        write_rows(buffer(st, target), tw, r, &px);
+        return true;
+    }
     let Some(g) = gpu::get() else { return false };
-    let Some(job) = g.compose_submit(&st.doc, ds, r, true) else { return false };
+    let Some(job) = g.compose_submit(&st.doc, ds, r, false) else { return false };
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = app;
@@ -178,8 +197,8 @@ fn arrive(weak: slint::Weak<AppWindow>, gen: u64, doc: u64, ds: usize, target: T
             for a in newer.iter().filter_map(|a| intersect(*a, r)) {
                 let d = step(st, target);
                 match target {
-                    Target::Display => st.doc.composite_scaled(&mut st.display, d, a, true),
-                    Target::Backdrop => st.doc.composite_scaled(&mut st.backdrop, d, a, true),
+                    Target::Display => st.doc.composite_scaled(&mut st.display, d, a, false),
+                    Target::Backdrop => st.doc.composite_scaled(&mut st.backdrop, d, a, false),
                 }
             }
         }

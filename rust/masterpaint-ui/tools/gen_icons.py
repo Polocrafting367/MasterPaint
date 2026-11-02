@@ -37,6 +37,11 @@ def esc(s):
     return s.replace('\\', '\\\\').replace('"', '\\"')
 
 
+def slint_tr(text):
+    if text == 'Annuler': text = 'Annuler la dernière action'
+    return f'@tr("{esc(text)}")' if text else '""'
+
+
 def icon_fields(icon, fallback_name):
     """→ (svg, fa_code, fa_weight) ; svg = nom de fichier ou ''"""
     if not icon:
@@ -87,7 +92,7 @@ def main():
     entries = []
     for t in tools:
         name = slug(t['id'])
-        entries.append(f'        {{ id: "{esc(t["id"])}", title: "{esc(t["title"])}", icon: {spec(t["icon"], name)}, '
+        entries.append(f'        {{ id: "{esc(t["id"])}", title: {slint_tr(t["title"])}, icon: {spec(t["icon"], name)}, '
                        f'x: {t["x"] - x0}px, y: {t["y"] - y0}px, w: {t["w"]}px, h: {t["h"]}px }}')
     lines.append('    out property <[{id: string, title: string, icon: IconSpec, x: length, y: length, w: length, h: length}]> tools: [')
     lines.append(',\n'.join(entries))
@@ -97,7 +102,7 @@ def main():
     entries = []
     for t in quick:
         name = slug(t['id'] or t['title'])
-        entries.append(f'        {{ id: "{esc(t["id"] or slug(t["title"]))}", title: "{esc(t["title"])}", label: "{esc(t["label"])}", '
+        entries.append(f'        {{ id: "{esc(t["id"] or slug(t["title"]))}", title: {slint_tr(t["title"])}, label: {slint_tr(t["label"])}, '
                        f'icon: {spec(t["icon"], name)}, x: {t["x"]}px }}')
     lines.append('    out property <[{id: string, title: string, label: string, icon: IconSpec, x: length}]> quick: [')
     lines.append(',\n'.join(entries))
@@ -107,7 +112,7 @@ def main():
     entries = []
     for t in ribbon:
         name = slug(t['id'] or t['title'])
-        entries.append(f'        {{ id: "{esc(t["id"] or slug(t["title"]))}", title: "{esc(t["title"])}", label: "{esc(t["label"])}", '
+        entries.append(f'        {{ id: "{esc(t["id"] or slug(t["title"]))}", title: {slint_tr(t["title"])}, label: {slint_tr(t["label"])}, '
                        f'icon: {spec(t["icon"], name)}, x: {t["x"]}px, y: {t["y"] - 52}px, w: {t["w"]}px, h: {t["h"]}px }}')
     lines.append('    out property <[{id: string, title: string, label: string, icon: IconSpec, x: length, y: length, w: length, h: length}]> ribbon: [')
     lines.append(',\n'.join(entries))
@@ -117,12 +122,12 @@ def main():
     # « Groupe : » puis ses boutons (chaque bouton rattaché au libellé de groupe le plus proche)
     groups = [g for g in d['groups'] if g['label'] != 'Outil']
     centre = lambda g: g['x'] + g['w'] / 2
-    entries = ['        { kind: 1, id: "", label: "Outil :", icon: ' + spec(None, '') + ' }',
+    entries = ['        { kind: 1, id: "", label: @tr("Outil :"), icon: ' + spec(None, '') + ' }',
                '        { kind: 0, id: "tool-picker", label: "", icon: { svg-index: -1, fa: "\\u{f5cb}", fa-weight: 900 } }']
     for g in groups:
         members = [t for t in ribbon if min(groups, key=lambda h: abs(centre(h) - (t['x'] + t['w'] / 2))) is g]
         entries.append('        { kind: 2, id: "", label: "", icon: ' + spec(None, '') + ' }')
-        entries.append(f'        {{ kind: 1, id: "", label: "{esc(g["label"])} :", icon: ' + spec(None, '') + ' }')
+        entries.append(f'        {{ kind: 1, id: "", label: @tr("{esc(g["label"])} :"), icon: ' + spec(None, '') + ' }')
         for t in members:
             entries.append(f'        {{ kind: 0, id: "{esc(t["id"] or slug(t["title"]))}", label: "", icon: {spec(t["icon"], slug(t["id"] or t["title"]))} }}')
     lines.append('    out property <[{kind: int, id: string, label: string, icon: IconSpec}]> classic: [')
@@ -151,7 +156,7 @@ def main():
         def sub_items(children):
             def fa_of(c):
                 return f'"\\u{{{c["fa"]}}}"' if c.get('fa') else '""'
-            return '[' + ', '.join(f'{{ label: "{esc(c["label"])}", action: "{esc(c.get("action") or "")}", badge: "", '
+            return '[' + ', '.join(f'{{ label: @tr("{esc(c["label"])}"), action: "{esc(c.get("action") or "")}", badge: "", '
                                    f'fa: {fa_of(c)}, fa-weight: {int(c.get("faw") or 900)} }}' for c in children) + ']'
 
         menus = []
@@ -164,12 +169,12 @@ def main():
                 fa = it.get('fa') or ''
                 code = f'"\\u{{{fa}}}"' if fa else '""'
                 kids = it.get('children') or []
-                items.append(f'{{ label: "{esc(it["label"])}", separator: false, submenu: {"true" if kids else "false"}, '
-                             f'fa: {code}, fa-weight: {int(it.get("faw") or 900)}, shortcut: "{esc(shortcut(it))}", '
+                items.append(f'{{ label: {slint_tr(it["label"])}, separator: false, submenu: {"true" if kids else "false"}, '
+                             f'fa: {code}, fa-weight: {int(it.get("faw") or 900)}, shortcut: {slint_tr(shortcut(it))}, '
                              f'action: "{esc(it.get("action") or "")}", children: {sub_items(kids)}, badge: "" }}')
             while items and 'separator: true' in items[-1]:
                 items.pop()
-            menus.append(f'        {{ title: "{esc(m["title"])}", items: [\n            ' + ',\n            '.join(items) + '\n        ] }')
+            menus.append(f'        {{ title: @tr("{esc(m["title"])}"), items: [\n            ' + ',\n            '.join(items) + '\n        ] }')
         lines.append('    out property <[MenuSpec]> menus: [')
         lines.append(',\n'.join(menus))
         lines.append('    ];')

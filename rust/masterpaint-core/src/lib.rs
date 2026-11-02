@@ -42,6 +42,8 @@ pub use util::{cancel_token, cancelled, with_cancel, with_token, CancelToken};
 pub use fx_distort::chromatic_post;
 /// Remplissage de contenu (Effets › Détourage), voir fx_object::content_fill.
 pub use fx_object::content_fill;
+/// Incrustation : couleur du fond détectée sur le pourtour de l'image (bouton « Auto »).
+pub use fx_chroma::detect_key as chroma_detect_key;
 /// Niveaux et taille de point du tramage ordonné ƒ (partagés avec le calcul sur carte graphique).
 pub use fx_dynamic::dither_params;
 

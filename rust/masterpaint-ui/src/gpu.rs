@@ -624,6 +624,33 @@ pub fn menu_supported(name: &str) -> bool {
 
 /// Réglages qui dépendent de la taille de l'image (vignette : centre et rayon de référence,
 /// calculés comme fx_photo::vignette).
+/// Passes à plat pour la passerelle WebGL2 (webgl.rs, `mpGL.runPasses`) : 10 valeurs par passe
+/// (indice du noyau dans `KERNELS`, tampons source / auxiliaire / destination, r, mode, f0..f3).
+fn flat(passes: &[Pass]) -> Vec<f64> {
+    passes
+        .iter()
+        .flat_map(|ps| {
+            let k = KERNELS.iter().position(|n| *n == ps.kernel).unwrap_or(0);
+            [k as f64, ps.src as f64, ps.aux as f64, ps.dst as f64, ps.r as f64, ps.mode as f64, ps.f0 as f64, ps.f1 as f64, ps.f2 as f64, ps.f3 as f64]
+        })
+        .collect()
+}
+
+/// Chaîne d'effets dynamiques à plat (même plan que `run_stack`) et tampon du résultat.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(crate) fn flat_stack(stack: &[(i32, f32)]) -> (Vec<f64>, usize) {
+    let (passes, out) = plan(stack);
+    (flat(&passes), out)
+}
+
+/// Effet du menu à plat (même plan que `run_menu`), None sans équivalent.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(crate) fn flat_menu(name: &str, p: &[f32], w: usize, h: usize) -> Option<(Vec<f64>, usize)> {
+    let (mut passes, out) = menu_plan(name, p)?;
+    size_passes(&mut passes, w, h);
+    Some((flat(&passes), out))
+}
+
 fn size_passes(passes: &mut [Pass], w: usize, h: usize) {
     for ps in passes.iter_mut().filter(|ps| ps.kernel == "vignette") {
         let (wf, hf) = (w as f32, h as f32);

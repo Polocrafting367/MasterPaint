@@ -65,32 +65,48 @@
   .fill.indeterminate { width: 35% !important; animation: slide 1.1s ease-in-out infinite; }
   @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
   .err { color: #ffb4a8; }
-  /* fenêtre d'erreur (mpReportError) */
-  #mp-error { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
-    background: rgba(0,0,0,.45); font: 13px "Segoe UI", system-ui, sans-serif; color: #1a1a1a; }
-  .mp-err-card { width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column;
-    gap: 10px; background: #f3f3f3; border: 1px solid #c6c6c6; border-radius: 8px; padding: 16px 16px 0;
-    box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
-  .mp-err-head { display: flex; align-items: center; gap: 10px; font-size: 15px; }
-  .mp-err-ico { width: 24px; height: 24px; border-radius: 50%; background: #c42b1c; color: #fff;
-    display: grid; place-items: center; font-weight: 700; }
-  .mp-err-txt { margin: 0; line-height: 1.45; }
-  .mp-err-det { min-height: 120px; flex: 1; resize: vertical; font: 11px ui-monospace, Consolas, monospace;
-    border: 1px solid #c6c6c6; border-radius: 5px; padding: 6px; background: #fff; color: #333; }
-  .mp-err-mail { border: 1px solid #c6c6c6; border-radius: 5px; padding: 6px 8px; font: inherit; }
-  .mp-err-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px;
-    margin: 0 -16px; padding: 10px 16px; background: #fafafa; border-top: 1px solid #dcdcdc; }
-  .mp-err-st { flex: 1; color: #666; }
-  .mp-err-foot button { font: inherit; padding: 5px 12px; border-radius: 5px; border: 1px solid #0000001a;
-    background: #fdfdfd; cursor: pointer; }
-  .mp-err-foot button.pri { background: #0f2d5c; color: #fff; border-color: #0f2d5c; }
-  @media (prefers-color-scheme: dark) {
-    #mp-error { color: #f3f3f3; }
-    .mp-err-card { background: #2e2e2e; border-color: #4a4a4a; }
-    .mp-err-det, .mp-err-mail { background: #1f1f1f; color: #ddd; border-color: #4a4a4a; }
-    .mp-err-foot { background: #363636; border-color: #4a4a4a; }
-    .mp-err-foot button { background: #383838; color: #f3f3f3; border-color: #555; }
+  /* Crash and contact dialogs follow MasterPaint, even after WASM has stopped. */
+  :root {
+    --mp-dialog-bg: #f3f3f3; --mp-dialog-fg: #242424; --mp-dialog-muted: #616161;
+    --mp-dialog-border: #c6c6c6; --mp-dialog-field: #fff; --mp-dialog-footer: #fafafa;
+    --mp-dialog-button: #fdfdfd; --mp-dialog-hover: #e8e8e8;
+    --mp-dialog-focus: var(--mp-accent, #0f766e);
   }
+  :root.dark {
+    --mp-dialog-bg: #2e2e2e; --mp-dialog-fg: #f3f3f3; --mp-dialog-muted: #bdbdbd;
+    --mp-dialog-border: #555; --mp-dialog-field: #1f1f1f; --mp-dialog-footer: #282828;
+    --mp-dialog-button: #383838; --mp-dialog-hover: #484848;
+    --mp-dialog-focus: color-mix(in srgb, var(--mp-accent, #0f766e) 45%, white);
+  }
+  #mp-error, #mp-contact { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+    background: rgba(0,0,0,.55); font: 13px "Segoe UI", system-ui, sans-serif; color: var(--mp-dialog-fg); }
+  .mp-err-card { box-sizing: border-box; width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column;
+    gap: 10px; background: var(--mp-dialog-bg); border: 1px solid var(--mp-dialog-border); border-radius: 8px; padding: 16px 16px 0;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4); overflow-y: auto; }
+  #mp-contact { z-index: 101; }
+  #mp-contact label { display: flex; flex-direction: column; gap: 4px; }
+  #mp-contact select, .mp-err-mail, .mp-err-det {
+    min-width: 0; box-sizing: border-box; border: 1px solid var(--mp-dialog-border);
+    border-radius: 5px; padding: 6px 8px; background: var(--mp-dialog-field); color: var(--mp-dialog-fg); font: inherit;
+  }
+  #mp-contact option { background: var(--mp-dialog-field); color: var(--mp-dialog-fg); }
+  .mp-err-head { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+  .mp-err-ico { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #c42b1c; color: #fff;
+    display: grid; place-items: center; font-weight: 700; }
+  .mp-err-txt { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
+  .mp-err-det { min-height: 120px; flex: 1; resize: vertical; font: 11px ui-monospace, Consolas, monospace; }
+  .mp-err-mail::placeholder { color: var(--mp-dialog-muted); opacity: 1; }
+  .mp-err-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px;
+    margin: 0 -16px; padding: 10px 16px; background: var(--mp-dialog-footer); border-top: 1px solid var(--mp-dialog-border); }
+  .mp-err-st { flex: 1; color: var(--mp-dialog-muted); }
+  .mp-err-foot button { font: inherit; padding: 5px 12px; border-radius: 5px; border: 1px solid var(--mp-dialog-border);
+    background: var(--mp-dialog-button); color: var(--mp-dialog-fg); cursor: pointer; }
+  .mp-err-foot button:hover { background: var(--mp-dialog-hover); }
+  .mp-err-foot button.pri { background: var(--mp-dialog-accent, var(--mp-accent, #0f766e)); color: #fff; border-color: transparent; }
+  .mp-err-foot button.pri:hover { filter: brightness(1.15); }
+  .mp-err-foot button:disabled { opacity: .6; cursor: wait; }
+  #mp-error :focus-visible, #mp-contact :focus-visible { outline: 2px solid var(--mp-dialog-focus); outline-offset: 2px; }
+
 </style>
 </head>
 <body>
@@ -99,16 +115,60 @@
     <img id="splash" alt="" width="1000" height="850" decoding="async">
     <div class="brand">
       <h1>MasterPaint</h1>
-      <p>Par polocrafting 367<span class="tag">Rust</span></p>
+      <p><span data-mp-i18n>Par polocrafting 367</span><span class="tag">Rust</span></p>
     </div>
     <div class="bottom">
       <div class="tip" id="tip"></div>
-      <div class="status"><span id="step">Téléchargement…</span><span id="pct"></span></div>
+      <div class="status"><span id="step" data-mp-i18n>Téléchargement…</span><span id="pct"></span></div>
       <div class="bar"><div class="fill" id="fill"></div></div>
     </div>
   </div>
 </div>
 <script>
+// BEGIN GENERATED I18N — tools/gen_lang.py
+const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API unavailable (page insecure? HTTPS required)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API unavailable (page insecure? HTTPS required)","Annuler":"Cancel","Aperçu 1:1 — MasterPaint":"1:1 Preview — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tip: Ctrl+F repeats the last effect.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tip: Ctrl+Shift+M opens Curves.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tip: Space + drag to move around the canvas.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tip: double-click a slider to enter a value with the keyboard.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tip: the ƒ button on a layer applies a dynamic filter in real time.","Autre":"Other","Bug / Erreur":"Bug / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"This calculation has been abandoned, the application continues. Submit the report to help fix the issue.","Collage":"Paste","Contact (facultatif)":"Contact (optional)","Continuer":"Continue","Copier":"Copy","Copié":"Copied","Démarrage de l’interface…":"Starting the interface…","Envoi…":"Sending…","Envoyer":"Send","Envoyer le signalement":"Send the report","Envoyé, merci !":"Sent, thank you!","Fermer l’essai":"Close test","Idée / Amélioration":"Idea / Improvement","MasterPaint s'est arrêté":"MasterPaint has stopped","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online photo editor, a Paint.NET alternative","Message":"Message","Par polocrafting 367":"By polocrafting 367","Redémarrer la page":"Restart page","Remarque":"Comment","Signaler un bug":"Report a bug","Type":"Type","Téléchargement…":"Download…","Un calcul a échoué":"A calculation failed","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"An error stopped the application. Your projects were automatically saved before the error and will be restored upon restart. Submit the report to help fix the issue.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Your email or nickname (optional, for a response)","lecture refusée : ":"reading refused: ","Échec de l'envoi (réseau ?)":"Failed to send (network?)","Échec du chargement":"Failed to load","Écrivez un message":"Write a message","écriture refusée : ":"writing refused: ","— journal —":"— newspaper —"},"es":{" (essai)":" (prueba)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.read no está disponible (¿página no segura? Se requiere HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.write no está disponible (¿página no segura? Se requiere HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Vista previa 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Consejo: Ctrl+F repite el último efecto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Consejo: Ctrl+Mayús+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Consejo: Espacio + arrastrar para moverse por el lienzo.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Consejo: haz doble clic en un control deslizante para introducir el valor con el teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Consejo: el botón ƒ en una capa aplica un filtro dinámico en tiempo real.","Autre":"Otro","Bug / Erreur":"Fallo / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo ha sido abandonado, continúa la solicitud. Envíe el informe para ayudar a solucionar el problema.","Collage":"Collage","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"copiado","Démarrage de l’interface…":"Iniciando la interfaz…","Envoi…":"Enviando…","Envoyer":"enviar","Envoyer le signalement":"enviar el informe","Envoyé, merci !":"Enviado, gracias!","Fermer l’essai":"Cerrar prueba","Idée / Amélioration":"Idea / Mejora","MasterPaint s'est arrêté":"MasterPaint se ha detenido","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos en línea, alternativa a Paint.NET","Message":"Mensaje","Par polocrafting 367":"Por polocrafting 367","Redémarrer la page":"Reiniciar página","Remarque":"Comentario","Signaler un bug":"Informar un error","Type":"Tipo","Téléchargement…":"Descargar…","Un calcul a échoué":"Un cálculo falló","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un error detuvo la aplicación. Sus proyectos se guardaron automáticamente antes del error y se restaurarán al reiniciar. Envíe el informe para ayudar a solucionar el problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Tu correo electrónico o apodo (opcional, para una respuesta)","lecture refusée : ":"lectura rechazada: ","Échec de l'envoi (réseau ?)":"No se pudo enviar (¿red?)","Échec du chargement":"No se pudo cargar","Écrivez un message":"Escribe un mensaje","écriture refusée : ":"escrito rechazado: ","— journal —":"— periódico —"},"de":{" (essai)":" (Test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","Annuler":"Abbrechen","Aperçu 1:1 — MasterPaint":"1:1-Vorschau – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tipp: Strg+F wiederholt den letzten Effekt.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tipp: Strg+Umschalt+M öffnet die Gradationskurven.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tipp: Leertaste + Ziehen, um sich auf der Leinwand zu bewegen.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tipp: Doppelklicken Sie auf einen Schieberegler, um den Wert über die Tastatur einzugeben.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tipp: Die ƒ-Taste auf einer Ebene wendet einen dynamischen Filter in Echtzeit an.","Autre":"Sonstiges","Bug / Erreur":"Fehler / Problem","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Diese Berechnung wurde aufgegeben, die Anwendung läuft weiter. Senden Sie den Bericht, um das Problem zu beheben.","Collage":"Collage","Contact (facultatif)":"Kontakt (optional)","Continuer":"Fortfahren","Copier":"Kopieren","Copié":"Kopiert","Démarrage de l’interface…":"Starten der Schnittstelle…","Envoi…":"Senden…","Envoyer":"Senden","Envoyer le signalement":"Senden Sie den Bericht","Envoyé, merci !":"Gesendet, danke!","Fermer l’essai":"Test schließen","Idée / Amélioration":"Idee / Verbesserung","MasterPaint s'est arrêté":"MasterPaint wurde gestoppt","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online-Fotoeditor, eine Alternative zu Paint.NET","Message":"Nachricht","Par polocrafting 367":"Von Polocrafting 367","Redémarrer la page":"Seite neu starten","Remarque":"Anmerkung","Signaler un bug":"Melden Sie einen Fehler","Type":"Typ","Téléchargement…":"Herunterladen…","Un calcul a échoué":"Eine Berechnung ist fehlgeschlagen","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Ein Fehler hat die Anwendung gestoppt. Ihre Projekte wurden vor dem Fehler automatisch gespeichert und werden beim Neustart wiederhergestellt. Senden Sie den Bericht, um das Problem zu beheben.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Ihre E-Mail-Adresse oder Ihr Spitzname (optional, für eine Antwort)","lecture refusée : ":"Lesung verweigert: ","Échec de l'envoi (réseau ?)":"Senden fehlgeschlagen (Netzwerk?)","Échec du chargement":"Laden fehlgeschlagen","Écrivez un message":"Nachricht schreiben","écriture refusée : ":"Schreiben abgelehnt: ","— journal —":"— Zeitung —"},"it":{" (essai)":" (prova)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read non disponibile (pagina non sicura? HTTPS richiesto)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write non disponibile (pagina non sicura? HTTPS richiesto)","Annuler":"Annulla","Aperçu 1:1 — MasterPaint":"Anteprima 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Suggerimento: Ctrl+F ripete l'ultimo effetto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Suggerimento: Ctrl+Maiusc+M apre Curve.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Suggerimento: Spazio + trascina per spostarti nell'area di disegno.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Suggerimento: fai doppio clic su un cursore per inserire il valore con la tastiera.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Suggerimento: il pulsante ƒ su un livello applica un filtro dinamico in tempo reale.","Autre":"Altro","Bug / Erreur":"Bug / Errore","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Questo calcolo è stato abbandonato, continua la domanda. Invia la segnalazione per contribuire a risolvere il problema.","Collage":"Collage","Contact (facultatif)":"Contatto (facoltativo)","Continuer":"Continua","Copier":"Copia","Copié":"Copiato","Démarrage de l’interface…":"Avvio dell'interfaccia…","Envoi…":"Invio…","Envoyer":"Invia","Envoyer le signalement":"Invia la segnalazione","Envoyé, merci !":"Inviato, grazie!","Fermer l’essai":"Chiudi prova","Idée / Amélioration":"Idea / Miglioramento","MasterPaint s'est arrêté":"MasterPaint si è interrotto","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor fotografico online, alternativa a Paint.NET","Message":"Messaggio","Par polocrafting 367":"Da polocrafting 367","Redémarrer la page":"Riavvia la pagina","Remarque":"Osservazione","Signaler un bug":"Segnala un bug","Type":"Tipo","Téléchargement…":"Scarica…","Un calcul a échoué":"Un calcolo è fallito","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un errore ha interrotto l'applicazione. I tuoi progetti sono stati salvati automaticamente prima dell'errore e verranno ripristinati al riavvio. Invia la segnalazione per contribuire a risolvere il problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"La tua email o nickname (facoltativo, per una risposta)","lecture refusée : ":"lettura rifiutata: ","Échec de l'envoi (réseau ?)":"Impossibile inviare (rete?)","Échec du chargement":"Impossibile caricare","Écrivez un message":"Scrivi un messaggio","écriture refusée : ":"scrittura rifiutata: ","— journal —":"— giornale —"},"pt":{" (essai)":" (teste)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read indisponível (página insegura? É necessário HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write indisponível (página insegura? É necessário HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Visualização 1:1 – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Dica: Ctrl+F repete o último efeito.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Dica: Ctrl+Shift+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Dica: espaço + arraste para mover-se pela tela.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Dica: clique duas vezes em um controle deslizante para inserir o valor pelo teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Dica: o botão ƒ em uma camada aplica um filtro dinâmico em tempo real.","Autre":"Outro","Bug / Erreur":"Falha / Erro","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo foi abandonado, continua o pedido. Envie o relatório para ajudar a corrigir o problema.","Collage":"Colagem","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"Copiado","Démarrage de l’interface…":"Iniciando a interface…","Envoi…":"Enviando…","Envoyer":"Enviar","Envoyer le signalement":"Envie o relatório","Envoyé, merci !":"Enviado, obrigado!","Fermer l’essai":"Fechar teste","Idée / Amélioration":"Ideia / Melhoria","MasterPaint s'est arrêté":"MasterPaint parou","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos online, alternativa ao Paint.NET","Message":"Mensagem","Par polocrafting 367":"Por polocrafting 367","Redémarrer la page":"Página de reinicialização","Remarque":"Observação","Signaler un bug":"Reportar um bug","Type":"Tipo","Téléchargement…":"Baixar…","Un calcul a échoué":"Um cálculo falhou","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Um erro interrompeu o aplicativo. Seus projetos foram salvos automaticamente antes do erro e serão restaurados após a reinicialização. Envie o relatório para ajudar a corrigir o problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Seu e-mail ou apelido (opcional, para resposta)","lecture refusée : ":"leitura recusada: ","Échec de l'envoi (réseau ?)":"Falha ao enviar (rede?)","Échec du chargement":"Falha ao carregar","Écrivez un message":"Escreva uma mensagem","écriture refusée : ":"escrita recusada: ","— journal —":"- jornal -"}};
+// END GENERATED I18N
+(() => {
+  const codes = ['fr', 'en', 'es', 'de', 'it', 'pt'];
+  let language = 'fr';
+  try { language = codes[JSON.parse(localStorage.getItem('illu_rust_settings') || '{}').language] || 'fr'; } catch (_) {}
+  window.mpTr = text => (mpTranslations[language] || {})[text] || text;
+  window.mpTranslateElements = root => {
+    root.querySelectorAll('[data-mp-i18n]').forEach(el => {
+      if (!el.dataset.mpSource) el.dataset.mpSource = el.textContent;
+      el.textContent = mpTr(el.dataset.mpSource);
+    });
+    root.querySelectorAll('[data-mp-placeholder]').forEach(el => el.placeholder = mpTr(el.dataset.mpPlaceholder));
+  };
+  window.mpSetLanguage = code => {
+    language = codes.includes(code) ? code : 'fr';
+    document.documentElement.lang = language;
+    document.title = mpTr("MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET");
+    window.mpTranslateElements(document);
+  };
+  window.mpSetLanguage(language);
+})();
+</script>
+<script>
+  window.mpSetSystemTheme = (color, dark, accent) => {
+    if (!/^#[0-9a-f]{6}$/i.test(color) || !/^#[0-9a-f]{6}$/i.test(accent)) return;
+    document.querySelector('meta[name="theme-color"]').content = color;
+    document.documentElement.classList.toggle('dark', !!dark);
+    document.documentElement.style.setProperty('--mp-accent', accent);
+    document.documentElement.style.setProperty('--mp-dialog-accent', color);
+    document.documentElement.style.setProperty('--desk', color);
+    document.documentElement.style.setProperty('--bg', dark ? '#1f1f1f' : '#cfcfcf');
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('mp_system_theme', JSON.stringify({color, dark: !!dark, accent})); } catch (_) {}
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('illu_rust_settings') || '{}');
+    const accent = /^#[0-9a-f]{6}$/i.test(saved.accent) ? saved.accent : '#0f766e';
+    const cache = JSON.parse(localStorage.getItem('mp_system_theme') || 'null');
+    const color = cache && cache.accent === accent && cache.dark === !!saved.dark
+      ? cache.color : '#' + accent.slice(1).match(/../g).map(v => Math.round(parseInt(v,16)*0.62).toString(16).padStart(2,'0')).join('');
+    window.mpSetSystemTheme(color, !!saved.dark, accent);
+  } catch (_) {}
   // même page à la racine du site (masterpaint.fr/) et dans /rust-app/ : chemins relatifs à la racine
   window.MP_ROOT = /\/rust-app\/(index\.html)?$/.test(location.pathname) ? '../' : './';
   // images de démarrage de la version HTML, tirées au sort avec les mêmes poids
@@ -122,6 +182,80 @@
 </script>
 <canvas id="canvas" tabindex="0"></canvas>
 <script>
+  // Same contact endpoint/payload as html/js/contact.js, available before WASM
+  // starts and after a panic. Nothing is sent until the user clicks Envoyer.
+  window.mpSendContact = async ({type = 'bug', message, contact = ''}) => {
+    let deviceId = 'rust-web';
+    try { deviceId = localStorage.getItem('app_device_id') || deviceId; } catch (_) {}
+    const response = await fetch('https://polocrafting.fr/contact_save.php', {
+      method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'},
+      body: JSON.stringify({appTitle: 'MasterPaint (Rust)', type, message, contact,
+        deviceId, timestamp: Date.now(), userAgent: navigator.userAgent}),
+    });
+    if (!response.ok) throw new Error('Contact HTTP ' + response.status);
+    const result = await response.json();
+    if (result.success !== true) throw new Error('Contact refused');
+    return result;
+  };
+  window.mpOpenContact = () => {
+    let modal = document.getElementById('mp-contact');
+    if (modal) { modal.querySelector('textarea').focus(); return; }
+    modal = document.createElement('div');
+    modal.id = 'mp-contact';
+    modal.innerHTML = `
+      <form class="mp-err-card" role="dialog" aria-modal="true" aria-labelledby="mp-contact-title">
+        <b id="mp-contact-title" data-mp-i18n>Signaler un bug</b>
+        <label><span data-mp-i18n>Type</span>
+          <select name="type"><option value="bug" data-mp-i18n>Bug / Erreur</option>
+            <option value="idee" data-mp-i18n>Idée / Amélioration</option>
+            <option value="remarque" data-mp-i18n>Remarque</option>
+            <option value="autre" data-mp-i18n>Autre</option></select></label>
+        <label for="mp-contact-message" data-mp-i18n>Message</label>
+        <textarea id="mp-contact-message" class="mp-err-det" name="message" rows="6" required></textarea>
+        <label for="mp-contact-info" data-mp-i18n>Contact (facultatif)</label>
+        <input id="mp-contact-info" class="mp-err-mail" name="contact" autocomplete="email">
+        <div class="mp-err-foot">
+          <span class="mp-err-st" role="status" aria-live="polite"></span>
+          <button type="button" data-close data-mp-i18n>Annuler</button>
+          <button type="submit" class="pri" data-mp-i18n>Envoyer</button>
+        </div>
+      </form>`;
+    const before = document.activeElement;
+    const close = () => {
+      modal.remove();
+      if (/^#contact\b/i.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+      if (before && before.isConnected) before.focus();
+    };
+    modal.querySelector('[data-close]').onclick = close;
+    modal.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+      if (e.key === 'Tab') {
+        const fields = [...modal.querySelectorAll('select,textarea,input,button')];
+        if (e.shiftKey && document.activeElement === fields[0]) { e.preventDefault(); fields.at(-1).focus(); }
+        else if (!e.shiftKey && document.activeElement === fields.at(-1)) { e.preventDefault(); fields[0].focus(); }
+      }
+    });
+    modal.querySelector('form').onsubmit = async e => {
+      e.preventDefault();
+      const form = e.currentTarget, button = form.querySelector('[type=submit]');
+      const status = form.querySelector('[role=status]');
+      if (button.disabled) return;
+      const message = form.elements.message.value.trim();
+      if (!message) { status.textContent = mpTr("Écrivez un message"); return; }
+      button.disabled = true; status.textContent = mpTr("Envoi…");
+      try {
+        await window.mpSendContact({type: form.elements.type.value, message, contact: form.elements.contact.value});
+        status.textContent = mpTr("Envoyé, merci !"); form.elements.message.value = '';
+      } catch (_) { status.textContent = mpTr("Échec de l'envoi (réseau ?)"); }
+      finally { button.disabled = false; }
+    };
+    window.mpTranslateElements(modal);
+    document.body.appendChild(modal); modal.querySelector('textarea').focus();
+  };
+  window.openContactModal = window.mpOpenContact;
+  const contactFromHash = () => { if (/^#contact\b/i.test(location.hash)) window.mpOpenContact(); };
+  window.addEventListener('hashchange', contactFromHash);
+  window.addEventListener('DOMContentLoaded', contactFromHash, {once: true});
   // Fenêtre d'erreur de la page : panique du module (l'interface Slint est alors arrêtée et ne peut
   // plus rien afficher) ou d'un worker de calcul. Message + détails, « Envoyer le signalement »
   // (même adresse que Signaler un bug), « Copier », « Redémarrer la page » ; « Continuer » quand
@@ -137,12 +271,13 @@
       console[k] = (...a) => { keep(k, a); f(...a); };
     }
     let box = null, fatalShown = false;
-    window.mpReportError = (msg, fatal) => {
+    // test (Paramètres › Avancé) : présentation d'un plantage, mais l'application continue
+    window.mpReportError = (msg, fatal, test) => {
       if (fatalShown) return;
-      if (fatal) fatalShown = true;
+      if (fatal && !test) fatalShown = true;
       const details = [String(msg), '',
         'MasterPaint ' + (window.mpVersion || '?') + ' (web)', navigator.userAgent, location.href,
-        new Date().toString(), '', '— journal —', ...logs].join('\n');
+        new Date().toString(), '', mpTr("— journal —"), ...logs].join('\n');
       if (box) box.remove();
       box = document.createElement('div');
       box.id = 'mp-error';
@@ -151,38 +286,38 @@
           <div class="mp-err-head"><span class="mp-err-ico">!</span><b id="mp-err-t"></b></div>
           <p class="mp-err-txt"></p>
           <textarea class="mp-err-det" readonly></textarea>
-          <input class="mp-err-mail" type="text" placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)">
+          <input class="mp-err-mail" type="text" data-mp-placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)" placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)">
           <div class="mp-err-foot">
             <span class="mp-err-st"></span>
-            <button data-a="send" class="pri">Envoyer le signalement</button>
-            <button data-a="copy">Copier</button>
-            <button data-a="reload">Redémarrer la page</button>
-            ${fatal ? '' : '<button data-a="close">Continuer</button>'}
+            <button data-a="send" class="pri" data-mp-i18n>Envoyer le signalement</button>
+            <button data-a="copy" data-mp-i18n>Copier</button>
+            <button data-a="reload" data-mp-i18n>Redémarrer la page</button>
+            ${fatal && !test ? '' : '<button data-a="close">' + (test ? mpTr("Fermer l’essai") : mpTr("Continuer")) + '</button>'}
           </div>
         </div>`;
-      box.querySelector('#mp-err-t').textContent = fatal ? 'MasterPaint s\'est arrêté' : 'Un calcul a échoué';
+      box.querySelector('#mp-err-t').textContent = (fatal ? mpTr("MasterPaint s'est arrêté") : mpTr("Un calcul a échoué")) + (test ? mpTr(" (essai)") : '');
       box.querySelector('.mp-err-txt').textContent = fatal
-        ? 'Une erreur a arrêté l\'application. Vos projets ont été sauvegardés automatiquement avant l\'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.'
-        : 'Ce calcul a été abandonné, l\'application continue. Envoyez le signalement pour aider à corriger le problème.';
+        ? mpTr("Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.")
+        : mpTr("Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.");
+      window.mpTranslateElements(box);
       box.querySelector('.mp-err-det').value = details;
       const st = box.querySelector('.mp-err-st');
       box.addEventListener('click', async (e) => {
         const a = e.target && e.target.dataset && e.target.dataset.a;
         if (a === 'reload') location.reload();
         else if (a === 'close') { box.remove(); box = null; }
-        else if (a === 'copy') { try { await navigator.clipboard.writeText(details); st.textContent = 'Copié'; } catch (_) { box.querySelector('.mp-err-det').select(); } }
+        else if (a === 'copy') { try { await navigator.clipboard.writeText(details); st.textContent = mpTr("Copié"); } catch (_) { box.querySelector('.mp-err-det').select(); } }
         else if (a === 'send') {
-          st.textContent = 'Envoi…';
+          const send = e.target;
+          if (send.disabled) return;
+          send.disabled = true;
+          st.textContent = mpTr("Envoi…");
           try {
-            const r = await fetch('https://polocrafting.fr/contact_save.php', {
-              method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-              body: JSON.stringify({ appTitle: 'MasterPaint (Rust)', type: 'bug', message: details,
-                contact: box.querySelector('.mp-err-mail').value, deviceId: 'rust-web', timestamp: Date.now(),
-                userAgent: 'MasterPaint-Rust/' + (window.mpVersion || '?') + ' (web) ' + navigator.userAgent }),
-            });
-            const j = await r.json().catch(() => ({}));
-            st.textContent = j.success ? 'Envoyé, merci !' : 'Échec de l\'envoi';
-          } catch (_) { st.textContent = 'Échec de l\'envoi (réseau ?)'; }
+            await window.mpSendContact({type: 'bug', message: details,
+              contact: box.querySelector('.mp-err-mail').value});
+            st.textContent = mpTr("Envoyé, merci !");
+          } catch (_) { st.textContent = mpTr("Échec de l'envoi (réseau ?)"); }
+          finally { send.disabled = false; }
         }
       });
       document.body.appendChild(box);
@@ -196,6 +331,34 @@
   // état des touches Ctrl / Maj / Alt : Slint (web) transmet les lettres sans ces modificateurs,
   // ce qui rendait Ctrl+C, Ctrl+V, Ctrl+Z… inopérants dans le navigateur. L'application lit
   // cet état à chaque touche. Cmd (macOS) compte comme Ctrl.
+  // Capture pen samples before Slint consumes the pointer event. Keep mouse/finger
+  // pressure neutral; coalesced samples preserve fast strokes on high-rate tablets.
+  window.mpPen = { active: false, penDown: false, pressure: 1, eraser: false, x: 0, y: 0, points: [] };
+  for (const kind of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+    window.addEventListener(kind, (e) => {
+      if (e.target !== document.getElementById('canvas')) return;
+      const p = window.mpPen;
+      if (e.pointerType === 'touch' && p.penDown) {
+        e.preventDefault(); e.stopImmediatePropagation(); return;
+      }
+      p.active = e.pointerType === 'pen';
+      if (p.active) p.penDown = kind !== 'pointerup' && kind !== 'pointercancel' && e.buttons !== 0;
+      p.x = e.clientX; p.y = e.clientY;
+      p.pressure = p.active && Number.isFinite(e.pressure) ? e.pressure : 1;
+      p.eraser = p.active && (e.button === 5 || (e.buttons & 32) !== 0);
+      const samples = p.active && kind === 'pointermove' && e.buttons ? (e.getCoalescedEvents?.() || []) : [];
+      p.points = samples.map(s => [s.clientX, s.clientY, s.pressure]);
+      if (kind === 'pointercancel') { p.active = false; p.penDown = false; p.points = []; }
+    }, { capture: true, passive: false });
+  }
+  for (const kind of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+    window.addEventListener(kind, e => {
+      if (window.mpPen.penDown && e.target === document.getElementById('canvas')) {
+        e.preventDefault(); e.stopImmediatePropagation();
+      }
+    }, {capture:true, passive:false});
+  }
+  window.addEventListener('blur', () => { Object.assign(window.mpPen, {active:false, penDown:false, points:[]}); });
   window.mpMods = { ctrl: false, shift: false, alt: false };
   // clic droit : l'application a ses propres menus contextuels, pas celui du navigateur
   window.addEventListener('contextmenu', (e) => { if (e.target && e.target.id === 'canvas') e.preventDefault(); }, true);
@@ -243,7 +406,7 @@
     write(rgba, w, h) {
       try {
         if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
-          this.lastError = 'API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)';
+          this.lastError = mpTr("API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)");
           return false;
         }
         const cv = document.createElement('canvas');
@@ -252,20 +415,35 @@
         const png = new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
         navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).then(
           () => console.log('[MasterPaint] presse-papiers : image copiée (' + w + ' × ' + h + ')'),
-          (e) => { this.lastError = 'écriture refusée : ' + e; console.warn('[MasterPaint] presse-papiers :', this.lastError); });
+          (e) => { this.lastError = mpTr("écriture refusée : ") + e; console.warn('[MasterPaint] presse-papiers :', this.lastError); });
         return true;
       } catch (e) {
-        this.lastError = 'écriture refusée : ' + e;
+        this.lastError = mpTr("écriture refusée : ") + e;
         console.warn('[MasterPaint] presse-papiers :', this.lastError);
         return false;
       }
+    },
+    async dimensions() {
+      try {
+        if (!navigator.clipboard?.read) return null;
+        for (const item of await navigator.clipboard.read()) {
+          const type = item.types.find(t => t.startsWith('image/'));
+          if (type) {
+            const image = await createImageBitmap(await item.getType(type));
+            const size = { w: image.width, h: image.height };
+            image.close();
+            return size;
+          }
+        }
+      } catch (_) { /* permission denied: retain the dialog's existing dimensions */ }
+      return null;
     },
     // lecture asynchrone (menus Coller) : { w, h, data } ou null
     async read() {
       this.lastError = '';
       try {
         if (!navigator.clipboard || !navigator.clipboard.read) {
-          this.lastError = 'API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)';
+          this.lastError = mpTr("API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)");
           return null;
         }
         const items = await navigator.clipboard.read();
@@ -275,7 +453,7 @@
         }
         this.lastError = 'le presse-papiers ne contient pas d\'image (' + items.map((i) => i.types.join('+')).join(', ') + ')';
       } catch (e) {
-        this.lastError = 'lecture refusée : ' + e;
+        this.lastError = mpTr("lecture refusée : ") + e;
       }
       console.warn('[MasterPaint] presse-papiers :', this.lastError);
       return null;
@@ -318,7 +496,7 @@
         }
         this.claim();
         e.preventDefault();
-        const name = file.name || 'Collage';
+        const name = file.name || mpTr("Collage");
         if (RAW_RE.test(name) || !(file.type.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif)$/i.test(name))) {
           cb(name, new Uint8Array(await file.arrayBuffer()));
           return;
@@ -365,11 +543,12 @@
       if (!win) return false;
       const d = win.document;
       d.open();
-      d.write('<!doctype html><meta charset="utf-8"><title>Aperçu 1:1 — MasterPaint</title>' +
+      d.write('<!doctype html><meta charset="utf-8"><title>MasterPaint</title>' +
         '<style>html,body{margin:0;background:#1e1e1e;}body{display:grid;place-items:center;min-height:100vh;overflow:auto;}' +
         'canvas{image-rendering:pixelated;background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/16px 16px;}</style>' +
         '<canvas></canvas>');
       d.close();
+      d.title = mpTr("Aperçu 1:1 — MasterPaint");
       this.win = win;
       this.canvas = d.querySelector('canvas');
       // retour à l'application quand l'aperçu est fermé
@@ -398,7 +577,7 @@
     abort() { this.aborted = true; },
     async removeBg(rgba, w, h, model, progress) {
       this.aborted = false;
-      const chk = () => { if (this.aborted) throw new Error('ILLU_ABORT'); };
+      const chk = () => { if (this.aborted) throw new Error("ILLU_ABORT"); };
       progress('module', 0, 0);
       if (!this.fn) {
         const mod = await import(this.MODULE);
@@ -461,6 +640,352 @@
     },
   };
 </script>
+<script>
+  // Passerelle WebGL2 (window.mpGL) : composition de l'affichage sur la carte graphique quand le
+  // navigateur n'a pas WebGPU (Firefox, Chrome / Edge sous Linux…). Mêmes formules que le
+  // compute shader COMPOSE / RESOLVE de gpu.rs (16 modes de fusion, masque α, rendus ƒ, 4
+  // échantillons par pixel vu de loin, damier) ; relecture synchrone (readPixels).
+  // Appelée par src/webgl.rs : upload(uid, slot, w, h, data, canaux), retain(uids),
+  // compose(params, plan) → Uint8Array (ou null : le Rust compose alors sur le processeur).
+  (() => {
+    let gl = null, ok = null, progs = null, quad = null;
+    const tex = new Map();      // uid → { main, aux, w, h, auxCh }
+    let acc = [null, null], accW = 0, accH = 0, out = null, outW = 0, outH = 0;
+    const VS = `#version 300 es
+in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+    const BLEND = `
+float hard(float s, float d) { if (s <= 0.5) return d * 2.0 * s; float s2 = 2.0 * s - 1.0; return d + s2 - d * s2; }
+float mixc(int m, float s, float d) {
+  if (m == 1) return s * d;
+  if (m == 2) return s + d - s * d;
+  if (m == 3) return hard(d, s);
+  if (m == 4) {
+    if (s <= 0.5) return d - (1.0 - 2.0 * s) * d * (1.0 - d);
+    float dd = sqrt(d); if (d <= 0.25) dd = ((16.0 * d - 12.0) * d + 4.0) * d;
+    return d + (2.0 * s - 1.0) * (dd - d);
+  }
+  if (m == 5) return hard(s, d);
+  if (m == 6) return min(s, d);
+  if (m == 7) return max(s, d);
+  if (m == 8) { if (d <= 0.0) return 0.0; if (s >= 1.0) return 1.0; return min(d / (1.0 - s), 1.0); }
+  if (m == 9) { if (d >= 1.0) return 1.0; if (s <= 0.0) return 0.0; return 1.0 - min((1.0 - d) / s, 1.0); }
+  if (m == 10) return abs(s - d);
+  if (m == 11) return s + d - 2.0 * s * d;
+  return s;
+}
+float lum(vec3 q) { return 0.3 * q.x + 0.59 * q.y + 0.11 * q.z; }
+vec3 clipc(vec3 q) {
+  float l = lum(q), n = min(min(q.x, q.y), q.z), x = max(max(q.x, q.y), q.z); vec3 o = q;
+  if (n < 0.0) o = vec3(l) + (o - vec3(l)) * l / (l - n);
+  if (x > 1.0) o = vec3(l) + (o - vec3(l)) * (1.0 - l) / (x - l);
+  return o;
+}
+vec3 setl(vec3 q, float l) { return clipc(q + vec3(l - lum(q))); }
+float sat(vec3 q) { return max(max(q.x, q.y), q.z) - min(min(q.x, q.y), q.z); }
+vec3 sets(vec3 q, float s) {
+  float mx = max(max(q.x, q.y), q.z), mn = min(min(q.x, q.y), q.z);
+  if (mx - mn <= 0.0) return vec3(0.0);
+  return (q - vec3(mn)) * s / (mx - mn);
+}
+vec3 blendrgb(int m, vec3 s, vec3 d) {
+  if (m == 12) return setl(sets(s, sat(d)), lum(d));
+  if (m == 13) return setl(sets(d, sat(s)), lum(d));
+  if (m == 14) return setl(s, lum(d));
+  if (m == 15) return setl(d, lum(s));
+  return vec3(mixc(m, s.x, d.x), mixc(m, s.y, d.y), mixc(m, s.z, d.z));
+}`;
+    // u : w, h, ds, ns ; v : x0, y0, off0, off1 ; blend, flags, opacity
+    const LAYER = `#version 300 es
+precision highp float; precision highp int;
+uniform highp sampler2D acc; uniform highp sampler2D lay; uniform highp sampler2D aux;
+uniform ivec4 u; uniform ivec4 v; uniform int blend; uniform int flags; uniform float opacity;
+out vec4 o;
+${BLEND}
+void main() {
+  ivec2 f = ivec2(gl_FragCoord.xy);
+  int ns = u.w; ivec2 pp = ns == 4 ? f / 2 : f; int k = ns == 4 ? (f.x & 1) + 2 * (f.y & 1) : 0;
+  int ox = v.z, oy = v.z;
+  if (ns == 4) { if ((k & 1) == 1) ox = v.w; if (k >= 2) oy = v.w; }
+  int sx = min((v.x + pp.x) * u.z + ox, u.x - 1), sy = min((v.y + pp.y) * u.z + oy, u.y - 1);
+  vec4 a = (flags & 8) == 0 ? texelFetch(acc, f, 0) : vec4(0.0);
+  int dynm = (flags >> 1) & 3;
+  vec4 q = texelFetch(lay, ivec2(sx, sy), 0);
+  if (dynm != 0) {
+    float m = opacity;
+    if (dynm == 1) m = (0.299 * q.x + 0.587 * q.y + 0.114 * q.z) * q.w * opacity;
+    if (m > 0.0) a = a + (texelFetch(aux, ivec2(sx, sy), 0) - a) * m;
+    o = a; return;
+  }
+  float sa = q.w * opacity;
+  if ((flags & 1) == 1) sa *= texelFetch(aux, ivec2(sx, sy), 0).r;
+  if (sa <= 0.0) { o = a; return; }
+  vec3 bl = q.xyz;
+  if (a.w > 0.0 && blend != 0) bl = blendrgb(blend, q.xyz, a.xyz);
+  float ao = sa + a.w * (1.0 - sa);
+  o = vec4((sa * (1.0 - a.w) * q.xyz + sa * a.w * bl + (1.0 - sa) * a.w * a.xyz) / ao, ao);
+}`;
+    const RESOLVE = `#version 300 es
+precision highp float; precision highp int;
+uniform highp sampler2D acc; uniform ivec4 u; uniform ivec4 v; uniform int checker;
+out vec4 o;
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  vec4 col = vec4(0.0);
+  if (u.w == 1) col = texelFetch(acc, p, 0);
+  else {
+    vec3 r = vec3(0.0); float a = 0.0;
+    for (int k = 0; k < 4; k++) { vec4 s = texelFetch(acc, p * 2 + ivec2(k & 1, k >> 1), 0); r += s.xyz * s.w; a += s.w; }
+    if (a > 0.0) col = vec4(r / a, a / 4.0);
+  }
+  vec4 c = col;
+  if (checker == 1) {
+    int x = (v.x + p.x) * u.z, y = (v.y + p.y) * u.z;
+    float chk = (((x >> 3) + (y >> 3)) & 1) == 0 ? 1.0 : 0.8;
+    c = vec4(col.xyz * col.w + vec3(chk * (1.0 - col.w)), 1.0);
+  }
+  o = clamp(c, 0.0, 1.0);
+}`;
+    function prog(fs) {
+      const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      const p = gl.createProgram();
+      gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+      gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+      const loc = {}; for (const n of ['acc', 'lay', 'aux', 'u', 'v', 'blend', 'flags', 'opacity', 'checker']) loc[n] = gl.getUniformLocation(p, n);
+      return { p, loc };
+    }
+    function init() {
+      if (ok !== null) return ok;
+      ok = false;
+      try {
+        const c = document.createElement('canvas');
+        gl = c.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+        if (!gl || !gl.getExtension('EXT_color_buffer_float')) { gl = null; return false; }
+        progs = { layer: prog(LAYER), resolve: prog(RESOLVE) };
+        quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
+        c.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ok = false; tex.clear(); });
+        ok = true;
+      } catch (e) { console.warn('mpGL', e); gl = null; ok = false; }
+      return ok;
+    }
+    function newTex(w, h, ifmt, fmt, type, data) {
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      for (const [k, val] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, val);
+      gl.texImage2D(gl.TEXTURE_2D, 0, ifmt, w, h, 0, fmt, type, data || null);
+      return t;
+    }
+    function target(w, h, ifmt, fmt, type) {
+      const t = newTex(w, h, ifmt, fmt, type, null); const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+      return { t, fb };
+    }
+    function free(tg) { if (tg) { gl.deleteTexture(tg.t); gl.deleteFramebuffer(tg.fb); } }
+    // ---- passes des filtres dynamiques et des effets du menu (même plan que gpu.rs : noyaux
+    // KERNELS, 4 tampons) : textures RVBA8 lues / écrites en entiers exacts (0..255)
+    const KHEAD = `#version 300 es
+precision highp float; precision highp int;
+uniform highp sampler2D srcT; uniform highp sampler2D auxT; uniform uvec4 P; uniform vec4 F;
+out vec4 outc;
+uvec4 ld(sampler2D t, uint x, uint y) { return uvec4(round(texelFetch(t, ivec2(int(x), int(y)), 0) * 255.0)); }
+void st(uvec4 c) { outc = vec4(min(c, uvec4(255u))) / 255.0; }
+uint div_even(uint s, uint n) { uint q = s / n, r = s % n; uint up = (2u * r > n || (2u * r == n && (q & 1u) == 1u)) ? 1u : 0u; return min(q + up, 255u); }
+uint jr(float v) { return uint(clamp(floor(v + 0.5), 0.0, 255.0)); }
+uint rhe(float v) { if (!(v > 0.0)) return 0u; if (v >= 255.0) return 255u; float f = floor(v), d = v - f;
+  if (d > 0.5 || (d == 0.5 && (uint(f) & 1u) == 1u)) return uint(f) + 1u; return uint(f); }
+vec3 rgb_to_hsv(vec3 c) { vec3 n = c / 255.0; float mx = max(n.x, max(n.y, n.z)), mn = min(n.x, min(n.y, n.z)), d = mx - mn; float h = 0.0;
+  if (d > 1e-6) { if (mx == n.x) { h = (n.y - n.z) / d; h = h - 6.0 * trunc(h / 6.0); } else if (mx == n.y) h = (n.z - n.x) / d + 2.0; else h = (n.x - n.y) / d + 4.0;
+    h *= 60.0; if (h < 0.0) h += 360.0; }
+  float s = mx > 1e-6 ? d / mx : 0.0; return vec3(h, s * 255.0, mx * 255.0); }
+vec3 hsv_to_rgb(float h, float s, float v) { float hm = h - 360.0 * trunc(h / 360.0); float hn = ((hm + 360.0) - 360.0 * trunc((hm + 360.0) / 360.0)) / 60.0;
+  float sn = clamp(s / 255.0, 0.0, 1.0), vn = clamp(v / 255.0, 0.0, 1.0); float c = vn * sn; float x = c * (1.0 - abs((hn - 2.0 * trunc(hn / 2.0)) - 1.0)); float m = vn - c;
+  vec3 o = vec3(c, 0.0, x); if (hn < 1.0) o = vec3(c, x, 0.0); else if (hn < 2.0) o = vec3(x, c, 0.0); else if (hn < 3.0) o = vec3(0.0, c, x);
+  else if (hn < 4.0) o = vec3(0.0, x, c); else if (hn < 5.0) o = vec3(x, 0.0, c); return floor((o + m) * 255.0 + 0.5); }
+vec3 tsv_of(vec3 c) { float r = c.x / 255.0, g = c.y / 255.0, b = c.z / 255.0; float mx = max(max(r, g), b), mn = min(min(r, g), b), d = mx - mn;
+  float s = mx != 0.0 ? d / mx : 0.0; float h = 0.0;
+  if (d > 0.0) { if (mx == r) { h = (g - b) / d; if (g < b) h += 6.0; } else if (mx == g) h = (b - r) / d + 2.0; else h = (r - g) / d + 4.0; h /= 6.0; }
+  return vec3(h * 360.0, s * 100.0, mx * 100.0); }
+vec3 rgb_of_tsv(float h0, float s0, float v0) { float h = h0 / 360.0, s = s0 / 100.0, v = v0 / 100.0; float i = floor(h * 6.0); float f = h * 6.0 - i;
+  float p = v * (1.0 - s), q = v * (1.0 - f * s), t = v * (1.0 - (1.0 - f) * s); int ii = int(i); ii = ii - 6 * int(floor(float(ii) / 6.0));
+  vec3 o = vec3(v, p, q); if (ii == 0) o = vec3(v, t, p); else if (ii == 1) o = vec3(q, v, p); else if (ii == 2) o = vec3(p, v, t);
+  else if (ii == 3) o = vec3(p, q, v); else if (ii == 4) o = vec3(t, p, v); return o * 255.0; }
+vec4 cmyk(vec3 c) { vec3 n = c / 255.0; float k = 1.0 - max(n.x, max(n.y, n.z)); if (k >= 0.999) return vec4(0.0, 0.0, 0.0, 1.0);
+  float d = 1.0 - k; return vec4((1.0 - n.x - k) / d, (1.0 - n.y - k) / d, (1.0 - n.z - k) / d, k); }
+void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z, mode = P.w;
+`;
+    const KBODY = {
+      box_pass: `bool horiz = (mode & 1u) == 1u, clampe = (mode & 2u) == 2u; int rr = int(r);
+  int len = horiz ? int(w) : int(h), pos = horiz ? int(id.x) : int(id.y); uvec4 acc = uvec4(0u); uint cnt = 0u;
+  for (int k = -rr; k <= rr; k++) { int q = pos + k; if (q < 0 || q >= len) { if (!clampe) continue; q = clamp(q, 0, len - 1); }
+    acc += horiz ? ld(srcT, uint(q), id.y) : ld(srcT, id.x, uint(q)); cnt += 1u; }
+  if ((mode & 4u) == 4u) { st((acc + uvec4(cnt / 2u)) / cnt); return; }
+  uvec4 o = uvec4(div_even(acc.x, cnt), div_even(acc.y, cnt), div_even(acc.z, cnt), div_even(acc.w, cnt));
+  if (clampe) o.w = ld(srcT, id.x, id.y).w; st(o);`,
+      sharpen: `vec4 s = vec4(ld(auxT, id.x, id.y)), b = vec4(ld(srcT, id.x, id.y)); vec4 o = s + (s - b) * F.x;
+  if (mode == 1u) { vec4 d = s - b; o = mix(s, s + d * F.x, greaterThan(abs(d), vec4(F.y))); }
+  st(uvec4(jr(o.x), jr(o.y), jr(o.z), uint(s.w)));`,
+      pixelate: `uint bs = r; st(ld(srcT, min(w - 1u, (id.x / bs) * bs + bs / 2u), min(h - 1u, (id.y / bs) * bs + bs / 2u)));`,
+      halftone: `uvec4 s = ld(srcT, id.x, id.y); float luma = (0.299 * float(s.x) + 0.587 * float(s.y) + 0.114 * float(s.z)) / 255.0;
+  float freq = 6.283185307179586 / F.x; float ca = 0.7071067811865476, sa = 0.7071067811865476; float xf = float(id.x), yf = float(id.y);
+  float pat = (sin((xf * ca - yf * sa) * freq) + sin((xf * sa + yf * ca) * freq)) / 2.0; uint v = luma >= (pat + 1.0) / 2.0 ? 255u : 0u;
+  st(uvec4(v, v, v, s.w));`,
+      shadow_prep: `st(uvec4(0u, 0u, 0u, ld(srcT, id.x, id.y).w));`,
+      shadow_mix: `uvec4 s = ld(auxT, id.x, id.y), f = ld(srcT, id.x, id.y); float a_s = float(s.w) / 255.0;
+  if (a_s >= 1.0) { st(uvec4(s.xyz, 255u)); return; } if (a_s <= 0.0) { st(f); return; }
+  float a_d = float(f.w) / 255.0, m = 1.0 - a_s, ao = a_s + a_d * m; if (ao <= 0.0) { st(f); return; }
+  vec3 c = (vec3(s.xyz) * a_s + vec3(f.xyz) * a_d * m) * (1.0 / ao); st(uvec4(rhe(c.x), rhe(c.y), rhe(c.z), rhe(floor(ao * 255.0 + 0.5))));`,
+      color: `uvec4 s = ld(srcT, id.x, id.y); vec3 c = vec3(s.xyz); float rf = float(r);
+  if (mode == 6u) { float g = min((5.0 + rf * 8.0) / 100.0, 1.0); float l = c.x * 0.299 + c.y * 0.587 + c.z * 0.114; c = c * (1.0 - g) + vec3(l) * g; }
+  else if (mode == 7u) { float k = min((8.0 + rf * 6.0) / 100.0, 1.0); vec3 sp = vec3(c.x * 0.393 + c.y * 0.769 + c.z * 0.189, c.x * 0.349 + c.y * 0.686 + c.z * 0.168, c.x * 0.272 + c.y * 0.534 + c.z * 0.131); c = c * (1.0 - k) + sp * k; }
+  else if (mode == 8u) { float k = min((12.0 + rf * 7.0) / 100.0, 1.0); c = c * (1.0 - k) + (vec3(255.0) - c) * k; }
+  else if (mode == 9u) c = c * clamp(0.65 + rf * 0.055, 0.4, 2.2);
+  else if (mode == 10u) c = (c - vec3(127.5)) * clamp(0.55 + rf * 0.065, 0.5, 2.2) + vec3(127.5);
+  else if (mode == 11u) { vec3 t = rgb_to_hsv(c); c = hsv_to_rgb(t.x, clamp(t.y * clamp((30.0 + rf * 20.0) / 100.0, 0.0, 4.0), 0.0, 255.0), t.z); }
+  else if (mode == 12u) { vec3 t = rgb_to_hsv(c); float hh = t.x + rf * 14.0; c = hsv_to_rgb(hh - 360.0 * trunc(hh / 360.0), t.y, t.z); }
+  st(uvec4(jr(c.x), jr(c.y), jr(c.z), s.w));`,
+      cell_avg: `uint bs = r; uint x0 = (id.x / bs) * bs, y0 = (id.y / bs) * bs, x1 = min(x0 + bs, w), y1 = min(y0 + bs, h); uvec4 sm = uvec4(0u); uint n = 0u;
+  for (uint y = y0; y < y1; y++) for (uint x = x0; x < x1; x++) { uvec4 q = ld(srcT, x, y); sm += uvec4(q.x * q.w, q.y * q.w, q.z * q.w, q.w); n++; }
+  uvec4 o = uvec4(0u); if (sm.w > 0u) { float a = float(sm.w); o = uvec4(jr(float(sm.x) / a), jr(float(sm.y) / a), jr(float(sm.z) / a), jr(a / float(n))); } st(o);`,
+      adjust: `uvec4 q = ld(srcT, id.x, id.y); vec3 c = vec3(q.xyz), o = c;
+  if (mode == 0u) o = F.x * (c + vec3(F.y - 128.0)) + vec3(128.0 + F.z, 128.0 - F.w, 128.0 - F.z);
+  else if (mode == 1u) o = vec3(0.299 * c.x + 0.587 * c.y + 0.114 * c.z);
+  else if (mode == 2u) o = vec3(255.0) - c;
+  else if (mode == 3u) o = vec3(c.x * 0.393 + c.y * 0.769 + c.z * 0.189, c.x * 0.349 + c.y * 0.686 + c.z * 0.168, c.x * 0.272 + c.y * 0.534 + c.z * 0.131);
+  st(uvec4(jr(o.x), jr(o.y), jr(o.z), q.w));`,
+      print_screen: `float cell = F.x, xf = float(id.x) + 0.5, yf = float(id.y) + 0.5; float ang[4] = float[4](0.2617993877991494, 1.3089969389957472, 0.0, 0.7853981633974483);
+  float ink[4];
+  for (int k = 0; k < 4; k++) { float ca = cos(ang[k]), sa = sin(ang[k]); float u = xf * ca + yf * sa, v = -xf * sa + yf * ca;
+    float cu = (floor(u / cell) + 0.5) * cell, cv = (floor(v / cell) + 0.5) * cell;
+    uint sx = uint(clamp(floor(cu * ca - cv * sa), 0.0, float(w - 1u))), sy = uint(clamp(floor(cu * sa + cv * ca), 0.0, float(h - 1u)));
+    uvec4 q = ld(srcT, sx, sy); vec4 cm = cmyk(vec3(q.xyz)); float cov = k == 0 ? cm.x : k == 1 ? cm.y : k == 2 ? cm.z : cm.w;
+    float rr = cell * sqrt(cov / 3.141592653589793); float d = sqrt((u - cu) * (u - cu) + (v - cv) * (v - cv)); ink[k] = clamp(rr - d + 0.5, 0.0, 1.0); }
+  float paper = 1.0 - ink[3]; uvec4 s = ld(srcT, id.x, id.y);
+  st(uvec4(jr(255.0 * (1.0 - ink[0]) * paper), jr(255.0 * (1.0 - ink[1]) * paper), jr(255.0 * (1.0 - ink[2]) * paper), s.w));`,
+      bayer: `const uint M[64] = uint[64](0u, 32u, 8u, 40u, 2u, 34u, 10u, 42u, 48u, 16u, 56u, 24u, 50u, 18u, 58u, 26u, 12u, 44u, 4u, 36u, 14u, 46u, 6u, 38u, 60u, 28u, 52u, 20u, 62u, 30u, 54u, 22u, 3u, 35u, 11u, 43u, 1u, 33u, 9u, 41u, 51u, 19u, 59u, 27u, 49u, 17u, 57u, 25u, 15u, 47u, 7u, 39u, 13u, 45u, 5u, 37u, 63u, 31u, 55u, 23u, 61u, 29u, 53u, 21u);
+  float t = (float(M[((id.y / r) & 7u) * 8u + ((id.x / r) & 7u)]) + 0.5) / 64.0; uvec4 s = ld(srcT, id.x, id.y); float steps = F.x - 1.0; uvec3 o = uvec3(0u);
+  for (int c = 0; c < 3; c++) { float v = float(s[c]) / 255.0 * steps; float q = floor(v); if (v - q > t) q += 1.0; o[c] = jr(q / steps * 255.0); }
+  st(uvec4(o, s.w));`,
+      adjust2: `uvec4 q = ld(srcT, id.x, id.y); vec3 c = vec3(q.xyz), o = c;
+  if (mode == 0u) { vec3 t = tsv_of(c); o = rgb_of_tsv(mod(t.x + F.x + 720.0, 360.0), clamp(t.y + F.y, 0.0, 100.0), clamp(t.z + F.z, 0.0, 100.0)); }
+  else if (mode == 1u) { float mx = max(max(c.x, c.y), c.z), avg = (c.x + c.y + c.z) / 3.0; float k = 1.0 + F.x * (1.0 - (mx - avg) / 255.0); o = vec3(avg) + (c - vec3(avg)) * k; }
+  else if (mode == 2u) o = vec3(c.x + F.x - F.y * 0.5, c.y + F.y, c.z - F.x - F.y * 0.5);
+  else if (mode == 3u) o = vec3(c.x + F.x * 40.0, c.y + F.x * 8.0, c.z - F.x * 40.0);
+  st(uvec4(jr(o.x), jr(o.y), jr(o.z), q.w));`,
+      vignette: `uvec4 q = ld(srcT, id.x, id.y); float dx = float(id.x) - F.y, dy = float(id.y) - F.z; float d = sqrt(dx * dx + dy * dy) / F.w * F.x * 2.0;
+  float mask = 0.0; if (d <= 0.2) mask = 1.0; else if (d < 0.8) { float t = (d - 0.2) / 0.6; mask = 1.0 - t * t * (3.0 - 2.0 * t); }
+  vec3 m = vec3(float((r >> 16u) & 255u), float((r >> 8u) & 255u), float(r & 255u)) / 255.0; vec3 o = vec3(q.xyz) / 255.0; vec3 f = m;
+  if (mode == 1u) f = o * m; else if (mode == 2u) f = vec3(1.0) - (vec3(1.0) - o) * (vec3(1.0) - m);
+  else if (mode == 3u) f = mix(vec3(1.0) - 2.0 * (vec3(1.0) - o) * (vec3(1.0) - m), 2.0 * o * m, lessThan(o, vec3(0.5)));
+  vec3 res = (o * mask + f * (1.0 - mask)) * 255.0; st(uvec4(jr(res.x), jr(res.y), jr(res.z), q.w));`,
+    };
+    // même ordre que KERNELS (gpu.rs)
+    const KNAMES = ['box_pass', 'sharpen', 'pixelate', 'halftone', 'shadow_prep', 'shadow_mix', 'color', 'cell_avg', 'adjust', 'print_screen', 'bayer', 'adjust2', 'vignette'];
+    const kprogs = {};
+    let pbufs = [], pW = 0, pH = 0;
+    function kprog(name) {
+      if (!kprogs[name]) {
+        const k = prog(KHEAD + KBODY[name] + '\n}');
+        k.srcT = gl.getUniformLocation(k.p, 'srcT'); k.auxT = gl.getUniformLocation(k.p, 'auxT');
+        k.P = gl.getUniformLocation(k.p, 'P'); k.F = gl.getUniformLocation(k.p, 'F');
+        kprogs[name] = k;
+      }
+      return kprogs[name];
+    }
+    window.mpGL = {
+      available() { return init(); },
+      maxSize() { return init() ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 0; },
+      renderer() {
+        if (!init()) return '';
+        const d = gl.getExtension('WEBGL_debug_renderer_info');
+        return String(d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+      },
+      // slot 0 : pixels du calque (RVBA) ; slot 1 : masque α (1 canal) ou rendu ƒ (RVBA)
+      upload(uid, slot, w, h, data, ch) {
+        if (!init()) return false;
+        let e = tex.get(uid);
+        if (!e) { e = { main: null, aux: null }; tex.set(uid, e); }
+        const key = slot === 0 ? 'main' : 'aux';
+        if (e[key]) gl.deleteTexture(e[key]);
+        e[key] = ch === 1 ? newTex(w, h, gl.R8, gl.RED, gl.UNSIGNED_BYTE, data) : newTex(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        return gl.getError() === gl.NO_ERROR;
+      },
+      // calques encore présents : les autres textures sont libérées
+      retain(uids) {
+        const keep = new Set(Array.from(uids));
+        for (const [uid, e] of tex) if (!keep.has(uid)) { if (e.main) gl.deleteTexture(e.main); if (e.aux) gl.deleteTexture(e.aux); tex.delete(uid); }
+      },
+      forget() { if (gl) this.retain([]); },
+      // passes (10 valeurs chacune : noyau, source, auxiliaire, destination, r, mode, f0..f3)
+      // sur 4 tampons w × h, `src` dans le tampon 0 ; résultat : tampon `out` (ou null)
+      runPasses(w, h, passes, out, src) {
+        if (!init()) return null;
+        const max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        if (w > max || h > max || w * h > 50e6 || src.length !== w * h * 4) return null;
+        try {
+          if (w !== pW || h !== pH) { pbufs.forEach(free); pbufs = [0, 1, 2, 3].map(() => target(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE)); pW = w; pH = h; }
+          gl.bindTexture(gl.TEXTURE_2D, pbufs[0].t);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src);
+          gl.viewport(0, 0, w, h);
+          for (let i = 0; i + 9 < passes.length; i += 10) {
+            const [k, a, b, d, r, mode, f0, f1, f2, f3] = Array.from(passes.subarray(i, i + 10));
+            if (d === a || d === b || !KNAMES[k]) return null;
+            const K = kprog(KNAMES[k]); gl.useProgram(K.p);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, pbufs[d].fb);
+            gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, pbufs[a].t);
+            gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, pbufs[b].t);
+            gl.uniform1i(K.srcT, 0); gl.uniform1i(K.auxT, 1);
+            gl.uniform4ui(K.P, w, h, r >>> 0, mode >>> 0); gl.uniform4f(K.F, f0, f1, f2, f3);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+          }
+          gl.bindFramebuffer(gl.FRAMEBUFFER, pbufs[out].fb);
+          const px = new Uint8Array(w * h * 4);
+          gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          return gl.getError() === gl.NO_ERROR ? px : null;
+        } catch (e) { console.warn('mpGL', e); return null; }
+      },
+      // params : w, h, ds, ns, x0, y0, rw, rh, off0, off1, checker
+      // plan : (uid, blend, flags, opacity) par calque visible, de bas en haut
+      compose(params, plan) {
+        if (!init()) return null;
+        const [w, h, ds, ns, x0, y0, rw, rh, off0, off1, checker] = Array.from(params);
+        const aw = ns === 4 ? rw * 2 : rw, ah = ns === 4 ? rh * 2 : rh;
+        const max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        if (aw > max || ah > max) return null;
+        if (aw !== accW || ah !== accH) { free(acc[0]); free(acc[1]); acc = [target(aw, ah, gl.RGBA32F, gl.RGBA, gl.FLOAT), target(aw, ah, gl.RGBA32F, gl.RGBA, gl.FLOAT)]; accW = aw; accH = ah; }
+        if (rw !== outW || rh !== outH) { free(out); out = target(rw, rh, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE); outW = rw; outH = rh; }
+        const L = progs.layer; gl.useProgram(L.p);
+        gl.uniform4i(L.loc.u, w, h, ds, ns); gl.uniform4i(L.loc.v, x0, y0, off0, off1);
+        gl.uniform1i(L.loc.acc, 0); gl.uniform1i(L.loc.lay, 1); gl.uniform1i(L.loc.aux, 2);
+        gl.viewport(0, 0, aw, ah);
+        let cur = 0;
+        for (let i = 0; i + 3 < plan.length; i += 4) {
+          const e = tex.get(plan[i]);
+          if (!e || !e.main) return null;
+          const flags = plan[i + 2] | 0;
+          if ((flags & 7) !== 0 && !e.aux) return null;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, acc[1 - cur].fb);
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc[cur].t);
+          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, e.main);
+          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, e.aux || e.main);
+          gl.uniform1i(L.loc.blend, plan[i + 1] | 0); gl.uniform1i(L.loc.flags, flags); gl.uniform1f(L.loc.opacity, plan[i + 3]);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          cur = 1 - cur;
+        }
+        const R = progs.resolve; gl.useProgram(R.p);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, out.fb); gl.viewport(0, 0, rw, rh);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc[cur].t);
+        gl.uniform1i(R.loc.acc, 0); gl.uniform4i(R.loc.u, w, h, ds, ns); gl.uniform4i(R.loc.v, x0, y0, off0, off1); gl.uniform1i(R.loc.checker, checker);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        const px = new Uint8Array(rw * rh * 4);
+        gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        return gl.getError() === gl.NO_ERROR ? px : null;
+      },
+    };
+  })();
+</script>
 <script type="module">
   const PKG = window.MP_ROOT === './' ? './rust-app/pkg/' : './pkg/';
   // Calculs lourds hors du fil de l'interface (effets, Photo Mode Pro, RAW, décodage) : workers
@@ -510,7 +1035,36 @@
       return w;
     },
     run(msg, transfer) {
-      const lane = Math.min(msg.lane | 0, 2);
+      const lane = Math.max(0, Math.min(msg.lane | 0, 2));
+      // Independent pixel adjustments can use several CPU cores without shared
+      // memory or copying the complete image into every worker. Spatial/global
+      // effects and chromatic postprocessing keep their full-image context.
+      const independent = new Set(['brightness', 'grayscale', 'invert', 'invertalpha', 'sepia', 'exposure', 'posterize', 'threshold', 'solarize', 'hsv', 'vibrance', 'temptint', 'temperature', 'colorbal', 'curves', 'levels', 'duotone', 'cmjn']);
+      const budget = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 8) <= 4 ? 2 : 4));
+      // Reserve room for input/rendering; preview and long-job pools are separate
+      // so cancelling a slider preview cannot abort an export in the background.
+      const count = lane === 0 ? ((navigator.hardwareConcurrency || 2) >= 6 && (navigator.deviceMemory || 8) > 4 ? Math.min(2, budget) : 1) : budget;
+      const base = lane === 0 ? 7 : 3;
+      if (lane <= 1 && msg.type === 'effect' && independent.has(msg.name) && !msg.post?.length && msg.w * msg.h >= 1000000 && count > 1) {
+        const rows = Math.ceil(msg.h / count), stride = msg.w * 4;
+        const parts = [];
+        for (let i = 0, y = 0; y < msg.h; i++, y += rows) {
+          const h = Math.min(rows, msg.h - y);
+          const data = msg.data.slice(y * stride, (y + h) * stride);
+          parts.push(this.dispatch({...msg, h, data}, [data.buffer], base + i));
+        }
+        return Promise.all(parts).then(results => {
+          if (results.some(p => !p)) return null;
+          if (results.some(p => p.length === 0)) return new Uint8Array(0);
+          const out = new Uint8Array(msg.w * msg.h * 4);
+          let offset = 0;
+          for (const part of results) { out.set(part, offset); offset += part.length; }
+          return offset === out.length ? out : null;
+        });
+      }
+      return this.dispatch(msg, transfer, lane);
+    },
+    dispatch(msg, transfer, lane) {
       const w = this.worker(lane);
       if (!w) return Promise.resolve(null);
       const job = ++this.seq;
@@ -523,28 +1077,30 @@
     // calculs devenus inutiles (réglage changé) : la file est arrêtée net, ses calculs en
     // attente rendent un résultat vide (ignoré) ; un worker neuf est créé au prochain appel
     cancel(lane) {
-      const w = this.lanes[lane];
-      if (!w) return;
-      w.terminate();
-      this.lanes[lane] = null;
-      for (const [k, j] of this.jobs) if (j.lane === lane) { this.jobs.delete(k); j.res(new Uint8Array(0)); }
+      for (const id of lane === 1 ? [1, 3, 4, 5, 6] : lane === 0 ? [0, 7, 8] : [lane]) {
+        const w = this.lanes[id];
+        if (!w) continue;
+        w.terminate();
+        this.lanes[id] = null;
+        for (const [k, j] of this.jobs) if (j.lane === id) { this.jobs.delete(k); j.res(new Uint8Array(0)); }
+      }
     },
   };
   // couleur d'accent et thème enregistrés (Paramètres de la version Rust)
   try {
     const s = JSON.parse(localStorage.getItem('illu_rust_settings') || '{}');
-    if (s.dark) document.documentElement.classList.add('dark');
+    document.documentElement.classList.toggle('dark', !!s.dark);
   } catch (e) { /* stockage indisponible */ }
   const tips = [
-    'Astuce : Ctrl+F répète le dernier effet.',
-    'Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.',
-    'Astuce : Ctrl+Maj+M ouvre les Courbes.',
-    'Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.',
-    'Astuce : Espace + glisser pour se déplacer sur la toile.',
+    mpTr("Astuce : Ctrl+F répète le dernier effet."),
+    mpTr("Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel."),
+    mpTr("Astuce : Ctrl+Maj+M ouvre les Courbes."),
+    mpTr("Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier."),
+    mpTr("Astuce : Espace + glisser pour se déplacer sur la toile."),
   ];
   document.getElementById('tip').textContent = tips[Math.floor(Math.random() * tips.length)];
   const fill = document.getElementById('fill'), pct = document.getElementById('pct'), step = document.getElementById('step');
-  const mb = (n) => (n / 1048576).toFixed(1) + ' Mo';
+  const mb = (n) => (n / 1048576).toFixed(1) + mpTr(" Mo");
   // téléchargement du module avec progression (le serveur peut le compresser : taille inconnue)
   async function download(url) {
     const res = await fetch(url);
@@ -575,7 +1131,7 @@
   const hide = () => { document.body.classList.add('ready'); document.getElementById('loading').classList.add('done'); };
   // l'application appelle mpReady() une fois les projets de la session restaurés
   window.mpReady = hide;
-  window.mpLoadingStep = (text) => { step.textContent = text; pct.textContent = ''; fill.classList.add('indeterminate'); };
+  window.mpLoadingStep = (text) => { step.textContent = mpTr(text); pct.textContent = ''; fill.classList.add('indeterminate'); };
   try {
     const { default: init } = await import(PKG + 'masterpaint_ui.js');
     const bytes = await download(PKG + 'masterpaint_ui_bg.wasm');
@@ -590,7 +1146,7 @@
     }
     fill.classList.remove('indeterminate');
     fill.style.width = '100%';
-    step.textContent = 'Démarrage de l’interface…';
+    step.textContent = mpTr("Démarrage de l’interface…");
     // filet de sécurité si l'application ne signale pas qu'elle est prête
     setTimeout(hide, 30000);
     await init({ module_or_path: module });
@@ -599,7 +1155,7 @@
       // boucle d'évènements lancée : l'écran disparaît à l'appel de mpReady()
     } else {
       console.error(e);
-      step.innerHTML = '<span class="err">Échec du chargement</span>';
+      step.textContent = mpTr("Échec du chargement"); step.classList.add("err");
       pct.textContent = '';
       document.getElementById('tip').textContent = String(e);
     }

@@ -180,3 +180,55 @@ mod tests {
         assert!(ed.press(&mut pts, 254.0, 10.0, true) && pts.len() == 2);
     }
 }
+
+/// Preserve editable control points, not just the rendered lookup table.
+pub fn saved_values(ch: &[Points;4], active: usize) -> std::collections::HashMap<String,String> {
+    std::collections::HashMap::from([
+        ("curves-points".into(),serde_json::to_string(ch).unwrap_or_default()),
+        ("curves-channel".into(),active.min(3).to_string()),
+    ])
+}
+pub fn restore_values(values: &std::collections::HashMap<String,String>) -> Option<[Points;4]> {
+    let mut ch: [Points;4] = serde_json::from_str(values.get("curves-points")?).ok()?;
+    for points in &mut ch {
+        if points.len()>256 || points.iter().any(|p|!p.0.is_finite() || !p.1.is_finite()) { return None; }
+        for p in points.iter_mut() { p.0=p.0.clamp(0.0,255.0);p.1=p.1.clamp(0.0,255.0); }
+        points.sort_by(|a,b|a.0.total_cmp(&b.0));
+        points.dedup_by(|a,b|a.0==b.0);
+        if points.is_empty() { *points=identity(); }
+    }
+    Some(ch)
+}
+/// Older projects retained only the combined channel LUTs. Recover a compact,
+/// editable spline with exactly the same 256 sampled output values.
+pub fn from_engine_params(params: &[f32]) -> Option<[Points;4]> {
+    if params.len()!=768 || params.iter().any(|v|!v.is_finite()) { return None; }
+    let mut ch=std::array::from_fn(|_|identity());
+    for k in 1..4 {
+        let target: Vec<u8>=params[(k-1)*256..k*256].iter().map(|v|v.round().clamp(0.0,255.0) as u8).collect();
+        let mut points=vec![(0.0,target[0] as f32),(255.0,target[255] as f32)];
+        while points.len()<256 {
+            let lut=build_lut(&points);
+            let (x,error)=target.iter().zip(lut).enumerate().map(|(i,(a,b))|(i,a.abs_diff(b))).max_by_key(|p|p.1)?;
+            if error==0 { break; }
+            points.push((x as f32,target[x] as f32));points.sort_by(|a,b|a.0.total_cmp(&b.0));
+        }
+        ch[k]=points;
+    }
+    Some(ch)
+}
+
+#[cfg(test)]
+mod stored_curve_tests {
+    use super::*;
+    #[test]
+    fn editable_points_and_legacy_luts_both_round_trip() {
+        let ch=[vec![(0.,0.),(50.,25.),(180.,220.),(255.,255.)],identity(),vec![(0.,15.),(100.,130.),(255.,240.)],identity()];
+        let values=saved_values(&ch,2);
+        assert_eq!(restore_values(&values).unwrap(),ch);
+        assert_eq!(values["curves-channel"],"2");
+        let lut=engine_params(&ch);
+        let restored=from_engine_params(&lut).unwrap();
+        assert_eq!(engine_params(&restored),lut);
+    }
+}

@@ -3,10 +3,13 @@
 // (thème, accent, barre d'options, disposition — les mêmes que les Paramètres), un rappel des
 // raccourcis et le projet GitHub. Contenu seul : app.slint le pose dans une FloatWindow (panneau
 // plein écran en mode téléphone).
+// Téléphone : mise en page à part (onglets Démarrer / Réglages, une seule colonne qui ne défile
+// que verticalement, textes renvoyés à la ligne, grandes cibles tactiles, pas de raccourcis
+// clavier).
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { MpIcons } from "mpicons.slint";
-import { FaIcon, W10Button, W10CheckBox, Segmented, DialogFooter } from "widgets.slint";
+import { FaIcon, W10Button, W10CheckBox, W10ComboBox, Segmented, DialogFooter } from "widgets.slint";
 
 /// Titre d'une section de la fenêtre, avec son trait d'accent.
 component WelHead inherits HorizontalLayout {
@@ -18,7 +21,7 @@ component WelHead inherits HorizontalLayout {
         Rectangle {
             width: 3px;
             height: 14px;
-            border-radius: 1.5px;
+            border-radius: 1.5px * Theme.round;
             background: Theme.accent;
         }
     }
@@ -36,9 +39,13 @@ component StartCard inherits Rectangle {
     in property <string> glyph;
     in property <string> title;
     in property <string> hint;
+    /// téléphone : carte plus haute, explication renvoyée à la ligne (largeur `touch-w`)
+    in property <bool> touch;
+    in property <length> touch-w;
     callback clicked();
-    height: 46px;
-    border-radius: Theme.ctl-radius + 2px;
+    // téléphone : place pour un titre et deux lignes d'explication
+    height: root.touch ? 68px : 46px;
+    border-radius: Theme.ctl-radius + 2px * Theme.round;
     background: ta.pressed ? Theme.accent-20 : ta.has-hover ? Theme.accent-12 : Theme.button-bg;
     border-width: 1px;
     border-color: ta.has-hover ? Theme.accent-60 : Theme.button-border;
@@ -70,11 +77,18 @@ component StartCard inherits Rectangle {
                 font-weight: 600;
                 color: Theme.text;
             }
-            Text {
+            if !root.touch: Text {
                 text: root.hint;
                 font-size: Theme.small-font-size;
                 color: Theme.text-inactive;
                 overflow: elide;
+            }
+            if root.touch: Text {
+                width: max(0px, root.touch-w - 66px);
+                text: root.hint;
+                font-size: Theme.small-font-size;
+                color: Theme.text-inactive;
+                wrap: word-wrap;
             }
         }
     }
@@ -101,31 +115,39 @@ component WelLink inherits Text {
 
 /// « Démarrer » : nouvelle image, ouvrir, projet d'exemple.
 component StartSection inherits VerticalLayout {
+    in property <bool> touch;
+    in property <length> w;
     callback act(string);
-    spacing: 6px;
+    spacing: root.touch ? 8px : 6px;
     WelHead {
-        title: "Démarrer";
+        title: @tr("Démarrer");
     }
     StartCard {
+        touch: root.touch;
+        touch-w: root.w;
         mp: 0;
-        title: "Nouvelle image";
-        hint: "Toile vide, taille et fond au choix (Ctrl+N)";
+        title: @tr("Nouvelle image");
+        hint: root.touch ? @tr("Toile vide, taille et fond au choix") : @tr("Toile vide, taille et fond au choix (Ctrl+N)");
         clicked => {
             root.act("new");
         }
     }
     StartCard {
+        touch: root.touch;
+        touch-w: root.w;
         mp: 1;
-        title: "Ouvrir une image";
-        hint: "PNG, JPEG, WebP, RAW, projet .illu… ou glisser-déposer (Ctrl+O)";
+        title: @tr("Ouvrir une image");
+        hint: root.touch ? @tr("PNG, JPEG, WebP, RAW, projet .illu…") : @tr("PNG, JPEG, WebP, RAW, projet .illu… ou glisser-déposer (Ctrl+O)");
         clicked => {
             root.act("open");
         }
     }
     StartCard {
+        touch: root.touch;
+        touch-w: root.w;
         mp: 87;
-        title: "Ouvrir le projet d'exemple";
-        hint: "Calques, masques et filtres dynamiques déjà en place";
+        title: @tr("Ouvrir le projet d'exemple");
+        hint: @tr("Calques, masques et filtres dynamiques déjà en place");
         clicked => {
             root.act("example");
         }
@@ -138,19 +160,13 @@ component ShortcutsSection inherits VerticalLayout {
     callback act(string);
     spacing: 3px;
     WelHead {
-        title: "Raccourcis essentiels";
+        title: @tr("Raccourcis essentiels");
     }
     for s in [
-        { k: "Ctrl+N · Ctrl+O · Ctrl+S", t: "Nouvelle image, ouvrir, exporter" },
-        { k: "Ctrl+Z · Ctrl+Y", t: "Annuler, rétablir" },
-        { k: "Ctrl+C · Ctrl+X · Ctrl+V", t: "Copier, couper, coller" },
-        { k: "Ctrl+A · Ctrl+D", t: "Tout sélectionner, désélectionner" },
-        { k: "Ctrl+F", t: "Répéter le dernier effet" },
-        { k: "Suppr", t: "Effacer la sélection" },
-        { k: "Entrée · Échap", t: "Valider, annuler (texte, lasso, recadrage…)" },
-        { k: "[ · ]", t: "Taille du pinceau, du crayon, de la gomme" },
-        { k: "Ctrl + molette", t: "Zoomer (molette seule : déplacer la toile)" },
-        { k: "Maj + tracé", t: "Garder les proportions / angles de 15°" },
+        { k: @tr("Ctrl+N · Ctrl+O · Ctrl+S"), t: @tr("Nouvelle image, ouvrir, exporter") },
+        { k: @tr("Ctrl+Z · Ctrl+Y"), t: @tr("Annuler, rétablir") },
+        { k: @tr("Ctrl+C · Ctrl+X · Ctrl+V"), t: @tr("Copier, couper, coller") },
+        { k: @tr("Ctrl + molette"), t: @tr("Zoomer (molette seule : déplacer la toile)") },
     ]: HorizontalLayout {
         spacing: 8px;
         Rectangle {
@@ -186,7 +202,7 @@ component ShortcutsSection inherits VerticalLayout {
         padding-top: 4px;
         alignment: LayoutAlignment.start;
         WelLink {
-            text: "Tous les raccourcis…";
+            text: @tr("Tous les raccourcis…");
             clicked => {
                 root.act("shortcuts");
             }
@@ -206,66 +222,57 @@ component QuickSettings inherits VerticalLayout {
     callback act(string);
     spacing: 4px;
     WelHead {
-        title: "Réglages rapides";
+        title: @tr("Réglages rapides");
     }
     Text {
-        text: "Thème sombre";
+        text: @tr("Thème sombre");
         font-weight: 600;
         color: Theme.text;
     }
     Segmented {
-        options: ["Non", "Oui"];
+        options: [@tr("Non"), @tr("Oui")];
         index: Theme.dark ? 1 : 0;
         selected(i) => {
-            root.theme(i == 1, Theme.accent);
+            root.theme(i == 1, Theme.accent-base);
         }
     }
     Text {
-        text: "Couleur d'accentuation";
+        text: @tr("Couleur d'accentuation");
         font-weight: 600;
         color: Theme.text;
     }
-    // 15 accents (ceux des Paramètres) sur deux lignes : la colonne est étroite
-    for line in [
-        [#b91c1c, #f97316, #b45309, #ca8a04, #166534, #059669, #0d7a7a, #0078d4],
-        [#0891b2, #2563eb, #0f2d5c, #4338ca, #5b21b6, #c026d3, #db2777],
-    ]: HorizontalLayout {
-        spacing: 5px;
-        alignment: LayoutAlignment.start;
-        for a in line: Rectangle {
-            width: 24px;
+    HorizontalLayout {
+        spacing: 4px;
+        alignment: start;
+        for a in Theme.accent-options: Rectangle {
+            width: 20px;
             height: 24px;
             border-radius: Theme.ctl-radius;
             background: a;
-            border-width: Theme.accent == a ? 3px : 1px;
-            border-color: Theme.accent == a ? Theme.text : #808080;
-            TouchArea {
-                mouse-cursor: pointer;
-                clicked => {
-                    root.theme(Theme.dark, a);
-                }
-            }
+            border-width: Theme.accent-base == a ? 3px : 1px;
+            border-color: Theme.accent-base == a ? Theme.text : #808080;
+            TouchArea { mouse-cursor: pointer; clicked => { root.theme(Theme.dark, a); } }
         }
     }
     Text {
-        text: "Barre d'options";
+        text: @tr("Barre d'options");
         font-weight: 600;
         color: Theme.text;
     }
     Segmented {
-        options: ["Ruban MasterPaint", "Style Paint.NET"];
+        options: [@tr("Ruban MasterPaint"), @tr("Style Paint.NET")];
         index <=> root.toolbar-mode;
         selected(i) => {
             root.settings-changed();
         }
     }
     Text {
-        text: "Disposition de l'interface";
+        text: @tr("Disposition de l'interface");
         font-weight: 600;
         color: Theme.text;
     }
     Segmented {
-        options: ["Paint.NET", "Photoshop", "Téléphone"];
+        options: [@tr("Paint.NET"), @tr("Photoshop"), @tr("Téléphone")];
         index <=> root.layout;
         selected(i) => {
             root.layout-changed(i);
@@ -273,7 +280,7 @@ component QuickSettings inherits VerticalLayout {
     }
     Text {
         width: root.w;
-        text: "Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.";
+        text: @tr("Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.");
         wrap: word-wrap;
         font-size: Theme.small-font-size;
         color: Theme.text-inactive;
@@ -291,7 +298,7 @@ component QuickSettings inherits VerticalLayout {
             }
         }
         Text {
-            text: "Interface tactile automatique sur petit écran";
+            text: @tr("Interface tactile automatique sur petit écran");
             color: Theme.text;
             vertical-alignment: center;
             TouchArea {
@@ -305,7 +312,126 @@ component QuickSettings inherits VerticalLayout {
         padding-top: 4px;
         alignment: LayoutAlignment.start;
         WelLink {
-            text: "Tous les paramètres…";
+            text: @tr("Tous les paramètres…");
+            clicked => {
+                root.act("settings");
+            }
+        }
+    }
+}
+
+/// Téléphone : intitulé (renvoyé à la ligne) puis choix sur toute la largeur.
+component PhoneRow inherits VerticalLayout {
+    in property <string> title;
+    in property <string> hint;
+    in property <length> w;
+    spacing: 6px;
+    padding-top: 6px;
+    Text {
+        width: root.w;
+        text: root.title;
+        font-weight: 600;
+        color: Theme.text;
+        wrap: word-wrap;
+    }
+    if root.hint != "": Text {
+        width: root.w;
+        text: root.hint;
+        wrap: word-wrap;
+        font-size: Theme.small-font-size;
+        color: Theme.text-inactive;
+    }
+    @children
+}
+
+/// Téléphone : réglages rapides en une colonne, cibles de 36 px au moins (pas de barre
+/// d'options : le ruban n'existe pas en mode téléphone).
+component PhoneSettings inherits VerticalLayout {
+    in property <length> w;
+    in-out property <int> language;
+    in-out property <int> layout;
+    in-out property <bool> layout-auto;
+    callback language-chosen(int);
+    callback theme(bool, color);
+    callback settings-changed();
+    callback layout-changed(int);
+    callback act(string);
+    spacing: 10px;
+    PhoneRow {
+        w: root.w;
+        title: @tr("Langue");
+        W10ComboBox {
+            width: root.w;
+            height: 36px;
+            model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
+            current-index: root.language;
+            selected(i) => { root.language = i; root.language-chosen(i); root.settings-changed(); }
+        }
+    }
+    PhoneRow {
+        w: root.w;
+        title: @tr("Thème sombre");
+        Segmented {
+            width: root.w;
+            height: 36px;
+            options: [@tr("Non"), @tr("Oui")];
+            index: Theme.dark ? 1 : 0;
+            selected(i) => {
+                root.theme(i == 1, Theme.accent-base);
+            }
+        }
+    }
+    PhoneRow {
+        w: root.w;
+        title: @tr("Couleur d'accentuation");
+        // pastilles réparties sur la largeur (11 couleurs, jamais plus large que l'écran)
+        HorizontalLayout {
+            width: root.w;
+            spacing: 4px;
+            for a in Theme.accent-options: Rectangle {
+                horizontal-stretch: 1;
+                height: 34px;
+                border-radius: Theme.ctl-radius;
+                background: a;
+                border-width: Theme.accent-base == a ? 3px : 1px;
+                border-color: Theme.accent-base == a ? Theme.text : #808080;
+                TouchArea { clicked => { root.theme(Theme.dark, a); } }
+            }
+        }
+    }
+    PhoneRow {
+        w: root.w;
+        title: @tr("Disposition de l'interface");
+        hint: @tr("Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.");
+        Segmented {
+            width: root.w;
+            height: 36px;
+            options: [@tr("Paint.NET"), @tr("Photoshop"), @tr("Téléphone")];
+            index <=> root.layout;
+            selected(i) => {
+                root.layout-changed(i);
+            }
+        }
+    }
+    PhoneRow {
+        w: root.w;
+        title: @tr("Interface tactile automatique sur petit écran");
+        Segmented {
+            width: root.w;
+            height: 36px;
+            options: [@tr("Non"), @tr("Oui")];
+            index: root.layout-auto ? 1 : 0;
+            selected(i) => {
+                root.layout-auto = i == 1;
+                root.settings-changed();
+            }
+        }
+    }
+    HorizontalLayout {
+        padding-top: 4px;
+        alignment: LayoutAlignment.start;
+        WelLink {
+            text: @tr("Tous les paramètres…");
             clicked => {
                 root.act("settings");
             }
@@ -315,6 +441,10 @@ component QuickSettings inherits VerticalLayout {
 
 export component WelcomeContent inherits Rectangle {
     in property <string> version;
+    /// mode téléphone : mise en page tactile à part (voir en tête du fichier)
+    in property <bool> phone;
+    in-out property <int> language;
+    callback language-chosen(int);
     in-out property <int> toolbar-mode;
     in-out property <int> layout;
     in-out property <bool> layout-auto;
@@ -335,7 +465,11 @@ export component WelcomeContent inherits Rectangle {
     property <bool> wide: root.width >= 600px;
     property <length> inner-w: root.width - 2 * root.pad - 14px;
     property <length> col-w: root.wide ? (root.inner-w - 20px) / 2 : root.inner-w;
-    ScrollView {
+    /// téléphone : onglet affiché (0 Démarrer, 1 Réglages)
+    property <int> phone-page: 0;
+    // téléphone : largeur utile de la colonne (marges seules : pas de barre de défilement fixe)
+    property <length> phone-w: max(160px, root.width - 2 * 14px);
+    if !root.phone: ScrollView {
         x: 0;
         y: 0;
         width: root.width;
@@ -361,24 +495,35 @@ export component WelcomeContent inherits Rectangle {
                         spacing: 8px;
                         alignment: LayoutAlignment.start;
                         Text {
-                            text: "Bienvenue dans MasterPaint";
+                            text: @tr("Bienvenue dans MasterPaint");
                             font-size: Theme.font-size + 7px;
                             font-weight: 700;
                             color: Theme.text;
                         }
                         Text {
-                            text: "version " + root.version;
+                            text: @tr("version ") + root.version;
                             color: Theme.text-inactive;
                             vertical-alignment: bottom;
                         }
                     }
                     Text {
                         width: root.inner-w - 64px;
-                        text: "Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application.";
+                        text: @tr("Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application.");
                         wrap: word-wrap;
                         color: Theme.text-inactive;
                     }
                 }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: @tr("Langue"); color: Theme.text-inactive; vertical-alignment: center; }
+                W10ComboBox {
+                    width: 170px;
+                    model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
+                    current-index: root.language;
+                    selected(i) => { root.language = i; root.language-chosen(i); root.settings-changed(); }
+                }
+                Rectangle { horizontal-stretch: 1; }
             }
             Rectangle {
                 height: 1px;
@@ -459,6 +604,114 @@ export component WelcomeContent inherits Rectangle {
             }
         }
     }
+
+    // ---- téléphone : onglets en haut, une colonne qui ne défile que verticalement ----
+    if root.phone: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: 52px;
+        Segmented {
+            x: 14px;
+            y: 8px;
+            width: parent.width - 28px;
+            height: 36px;
+            options: [@tr("Démarrer"), @tr("Réglages")];
+            index <=> root.phone-page;
+        }
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.window-border;
+        }
+    }
+    if root.phone: Flickable {
+        x: 0;
+        y: 52px;
+        width: root.width;
+        height: root.height - 52px - 44px;
+        // largeur imposée : jamais de défilement horizontal
+        content-width: self.width;
+        content-height: max(self.height, pbody.preferred-height + 8px);
+        pbody := VerticalLayout {
+            width: root.width;
+            padding: 14px;
+            spacing: 12px;
+            alignment: LayoutAlignment.start;
+            if root.phone-page == 0: VerticalLayout {
+                spacing: 12px;
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: LayoutAlignment.start;
+                    Image {
+                        width: 44px;
+                        height: 44px;
+                        source: @image-url("../../desktop/icons/128x128.png");
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        Text {
+                            width: root.phone-w - 56px;
+                            text: @tr("Bienvenue dans MasterPaint");
+                            font-size: Theme.font-size + 5px;
+                            font-weight: 700;
+                            color: Theme.text;
+                            wrap: word-wrap;
+                        }
+                        Text {
+                            text: @tr("version ") + root.version;
+                            color: Theme.text-inactive;
+                        }
+                    }
+                }
+                Text {
+                    width: root.phone-w;
+                    text: @tr("Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application.");
+                    wrap: word-wrap;
+                    color: Theme.text-inactive;
+                }
+                StartSection {
+                    touch: true;
+                    w: root.phone-w;
+                    act(id) => {
+                        root.action(id);
+                    }
+                }
+                HorizontalLayout {
+                    alignment: LayoutAlignment.start;
+                    WelLink {
+                        text: @tr("Réglages rapides…");
+                        clicked => {
+                            root.phone-page = 1;
+                        }
+                    }
+                }
+            }
+            if root.phone-page == 1: PhoneSettings {
+                w: root.phone-w;
+                language <=> root.language;
+                layout <=> root.layout;
+                layout-auto <=> root.layout-auto;
+                language-chosen(i) => {
+                    root.language-chosen(i);
+                }
+                theme(d, a) => {
+                    root.theme(d, a);
+                }
+                settings-changed => {
+                    root.settings-changed();
+                }
+                layout-changed(i) => {
+                    root.layout-changed(i);
+                }
+                act(id) => {
+                    root.action(id);
+                }
+            }
+        }
+    }
+
     // pied : « Ne plus afficher » à gauche, GitHub et Commencer à droite
     DialogFooter {
         y: root.height - 44px;
@@ -476,7 +729,7 @@ export component WelcomeContent inherits Rectangle {
                 }
             }
             Text {
-                text: "Ne plus afficher au démarrage";
+                text: root.phone ? @tr("Ne plus afficher") : @tr("Ne plus afficher au démarrage");
                 color: Theme.text;
                 vertical-alignment: center;
                 TouchArea {
@@ -489,15 +742,15 @@ export component WelcomeContent inherits Rectangle {
         Rectangle {
             horizontal-stretch: 1;
         }
-        W10Button {
-            text: "Projet sur GitHub";
-            tip: "Code source, suivi des problèmes et nouveautés de MasterPaint";
+        if !root.phone: W10Button {
+            text: @tr("Projet sur GitHub");
+            tip: @tr("Code source, suivi des problèmes et nouveautés de MasterPaint");
             clicked => {
                 root.action("github");
             }
         }
         W10Button {
-            text: "Commencer";
+            text: @tr("Commencer");
             primary: true;
             clicked => {
                 root.start();

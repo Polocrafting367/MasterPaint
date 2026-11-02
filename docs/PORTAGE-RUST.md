@@ -12,6 +12,72 @@ Compilation : `rust/build-ui-web.sh` (Linux / macOS) ou `build-ui-web.ps1` (Wind
 web ; `cargo build -p masterpaint-ui --release` pour le bureau ;
 `.github/workflows/rust-ui-release.yml` produit l'exe Windows, l'AppImage Linux et le dmg macOS.
 
+## Mise à jour du 01/11/2026
+
+- **Version 3.5.0 (soir du 01/11)** :
+  - Formes : `roundrect` (rayon `ToolOpts.corner-radius`, `ShapeObj::radius`, -1 = 20 % pour
+    les anciens calques), `arrow`, `cross`, `heart`, `callout-rect`, `callout-oval`
+    (`paint::shape_points` + `fit`). Icônes ajoutées au sprite partagé (`shape-ellipse`,
+    `shape-arrow`, `shape-cross`, `shape-heart`, `vec-text`, `vec-shape`) puis `gen_sprite.py`.
+  - Calque SVG pour les formes : `ToolOpts.shape-layer` (réglage `vectorShapes`, vrai par défaut ;
+    texte : `vectorText`, l'ancienne clé `textLayer` est ignorée). `prepare_shape_layer` crée /
+    reprend le calque vectoriel à l'appui, `drop_empty_shape_layer` le retire si rien n'est tracé.
+    Groupe de ruban `VectorGroup` (Formes, Ligne, Texte) ; pastille du calque : rond = formes.
+  - Fenêtre Aide et raccourcis (`ui/info.slint`, bouton Info de la barre d'onglets, `info-tab`) :
+    raccourcis + schémas ƒ / α / texte / SVG. Capture : `--show=info0..info4`.
+  - `ColorPopup` (colors.slint) : sélecteur surgissant tout en Slint (`Colors.hsv`, `to-hsv`) pour
+    les couleurs des Paramètres et des effets (`effect-color-picked` → hexa).
+  - Curseurs d'outils : `MouseCursor.custom` (expérimental Slint 1.18 :
+    `SLINT_ENABLE_EXPERIMENTAL_FEATURES` posé dans build.rs), image SVG faite par
+    `lib.rs::tool_cursor` (croix + icône MpIcons).
+  - Paramètres : « Réinitialiser la section » (`settings-reset(page)`).
+  - Réglages d'outils retenus : `Settings::tool_state` (JSON `toolState`, `tool_state` /
+    `restore_tool_state`), enregistré à chaque changement d'outil, à la fermeture, onglet web masqué.
+  - Pistes : courbes de Bézier et rotation des objets SVG, poignées de redimensionnement d'un objet.
+
+- **Mode Animation (frise)** porté (`src/anim.rs`, `ui/anim.slint`), même modèle que
+  js/anim/AnimationTimeline.js : `Doc::anim` (ips, durée, tête de lecture, boucle, aller-retour,
+  pelure d'oignon), `Layer::cels` (dessin + maintien). `anim::resolve` repointe `Layer::px` sur le
+  dessin de la tête de lecture : outils et effets marchent sans le savoir ; `anim::stash`
+  (appelé par `Doc::commit`) range ce qu'ils ont modifié (comparaison de pointeur, sans parcours).
+  L'historique garde les cels (annuler / rétablir restaure la frise). Frise : lecture, ips,
+  nombre d'images, ajouter / dupliquer / insérer / supprimer, pelure (calque actif ou tous),
+  boucle, aller-retour, inverser, « avancer après chaque tracé », menu d'un dessin (image clé,
+  vierge, effacer, figer, maintenir, copier / coller, répéter, cadence sur 1 / 2 / 3), glisser une
+  image clé. Export GIF animé et planche de sprites, ouverture des GIF animés, Importer une
+  séquence d'images, case « Projet animé » dans Nouvelle image, .illu compatible (`pixel-anim`,
+  `animation`, `cels`). Rotations / retournements appliqués à toutes les images
+  (`anim_map_cels`). Tests : `cargo test -p masterpaint-ui --lib anim::`. Capture : `--demo=anim`.
+  Reste : tween (pistes de propriétés), portée « Images » des effets, sélection multi-images,
+  export MP4 / WebM, redimensionner / recadrer en mode animation (bloqué avec un message).
+- **SVG (bêta)** : panneau Objets SVG (`src/svg_panel.rs`, `ui/svg_objects.slint`), polygones /
+  polylignes libres (`ShapeObj::points`), import SVG simple (`src/svg_import.rs` : rect, circle,
+  ellipse, line, polygon, polyline). Reste : `<path>`, `<text>`, rotations, cadre de l'objet choisi.
+- **Aperçu réduit des effets** : pas choisi par `effects::preview_step` pour garder exacts les
+  réglages de grille (carreaux de Pixeliser, cellules, pinceau…) : mêmes proportions qu'au rendu.
+- **Art ASCII** : rampe recalibrée sur l'encre réelle des glyphes, contraste étalé, couleurs
+  ravivées sur fond sombre, fond noir par défaut.
+- **Bienvenue (téléphone)** : mise en page à part (onglets, une colonne, pas de défilement
+  horizontal, pied au-dessus de la barre du bas) ; inchangée sur PC.
+- **Nouvelle image** : « Conserver les proportions ».
+- **Filtres dynamiques, aperçu rapide** : pendant un réglage (fenêtre d'effet ou curseurs de
+  « Effets appliqués ») sur une image de plus d'1 Mpx, la pile est calculée au pas réduit
+  (`draft_plan` / `editor::draft_stages` : ~700 000 px bureau, 300 000 navigateur, réglages en
+  pixels divisés, grilles exactes, sinon pas plus petit), puis en pleine résolution 320 ms après
+  le dernier réglage (`dyn_refine`). Un calcul pleine résolution en cours ne bloque plus l'aperçu.
+- **Aucun projet ouvert** : fermer le dernier onglet laisse l'application vide (`State::empty`,
+  document fictif 1 × 1 jamais sauvegardé) ; toile masquée, encart « Aucun projet ouvert »
+  (Nouvelle image / Ouvrir), palettes voilées (`FloatWindow.locked`), menus et raccourcis limités
+  à ce qui n'a pas besoin d'image (`NO_DOC_ACTIONS`) ; coller ou déposer une image l'ouvre.
+- **Menus façon Paint.NET / paintdotjs** (`paint_net_order`, la version web et generated.slint
+  inchangés) : Fichier, Édition, Affichage (zoom, grille, règles, aimantation, aperçu 1:1, frise),
+  Image (+ rotations directes Ctrl+H / G / J, Aplatir Ctrl+Maj+F), Calques, Ajustements, Effets,
+  Fenêtre (ex-Outils : palettes, disposition). Coller dans une nouvelle image dans Édition. Bloc
+  des menus élargi selon les titres (`menu-zone`).
+- **Fenêtres d'effet** (comme paintdotjs) : bouton ↺ allumé quand la valeur a changé, double-clic
+  sur le libellé = valeur par défaut, libellés longs au-dessus du curseur, cadran pour les angles
+  (`effects::is_angle`).
+
 ## Mise à jour du 28/10/2026 (3.3.0)
 
 - **Calques** : dossiers / sous-dossiers (`src/groups.rs` : arbre, composition isolée ou
@@ -74,6 +140,66 @@ web ; `cargo build -p masterpaint-ui --release` pour le bureau ;
   visible à la résolution de l'écran après une pause) ; thème sombre imposé sans
   l'enregistrer, menus réduits, onglets masqués, menus au-dessus du mode ; réglage auto RAW
   mesuré en flottant.
+- **Auto de scène** (`src/scene.rs`, 2026-10-30) : grille d'analyse, peau / visage, ciel,
+  sujet par saillance, classement portrait / paysage / contre-jour / nuit / high-key /
+  général ; exposition mesurée sur le sujet (visage), contraste visé, voile, clarté,
+  vibrance, balance des blancs (cases neutres), TSL selon la scène ; compte rendu sous
+  l'image ; bouton « Auto sur toutes ». Pistes : réglages locaux par masque (ciel, sujet,
+  arrière-plan) dans `fx_camraw` (le format des réglages est partagé avec la version web :
+  ajouter les masques après les courbes), détourage IA pour le masque du sujet, profils
+  d'objectif, export 16 bits / HDR.
+- **Mode SVG, formes** (`src/vector.rs`, 2026-10-30) : Formes / Rectangle arrondi / Ligne
+  tracés sur un calque vectoriel (hors sélection) y deviennent des objets `Obj::Shape`
+  (déplaçables à l'outil Déplacer, effets de la pile rejoués, clé .illu `textObject` →
+  `type: "shape"`). Suite : poignées de redimensionnement, couleur / épaisseur modifiables
+  après coup, panneau Objets, chemins (plume), import SVG.
+- **Passerelle WebGL2 (2026-10-30)** : navigateur sans WebGPU → `window.mpGL` (web/index.html)
+  + `src/webgl.rs`. Composition de l'affichage (shaders COMPOSE / RESOLVE portés en GLSL,
+  textures des calques gardées tant qu'ils ne changent pas, relecture synchrone) : testée en
+  Chrome sans écran (navigator.gpu masqué), écart ≤ 1 niveau avec le CPU (fusion, ƒ, opacité).
+  Filtres ƒ et effets du menu accélérés : `mpGL.runPasses` exécute le plan de gpu.rs
+  (`flat_stack` / `flat_menu`, 13 noyaux portés en fragment shaders, entiers exacts via RGBA8).
+  Reste : Camera Raw / mode Photo en WebGL (shaders de FilterShaders.js), aperçus d'effets.
+- **Mode SVG, suite (2026-10-30)** : Calques › Nouveau calque vectoriel (SVG) (calque vide,
+  gardé dans le .illu même sans objet) ; pot de peinture = recolorer l'objet cliqué ; export
+  SVG (`vector::to_svg`, Exporter › SVG) : calques vectoriels sans effets → éléments SVG
+  (rect, ellipse, line, polygon, text/tspan), autres calques → PNG intégrés (masque α
+  appliqué, opacité, mix-blend-mode) ; dossiers ou filtres dynamiques → aplatis en image.
+  Suite : poignées / taille / épaisseur des objets, panneau Objets, plume, import SVG.
+- **Plantage web corrigé** : `export_quick` (web) gardait l'emprunt d'un `if let` pendant un
+  `borrow_mut` → « RefCell already borrowed » (Enregistrer depuis « Modifications non
+  enregistrées »). Paramètres › Avancé › « Essayer la fenêtre de plantage »
+  (`mpReportError(msg, fatal, test)`).
+- **Disposition Photoshop** : Couleurs jamais plus basse que son contenu, Historique ≥ 70 px,
+  Calques ≥ 170 px, palettes ancrées découpées (`clip`) : plus de chevauchement.
+- **Distribution** : `build-all.sh` sans argument compile tout ce que la machine sait faire,
+  une cible en échec n'arrête pas les autres (bilan à la fin) ; noms FIXES dans downloads/
+  (MasterPaint-windows-x64.exe, -windows-setup.exe, -linux-x86_64.tar.gz / .AppImage,
+  MasterPaint.flatpak, -android.apk, -macos.dmg, -ios.ipa), remplacés à chaque compilation ;
+  lanceur AppImage gardé dans `MasterPaint-build/target/appimage-runtime`.
+- **Camera Raw** : à réglages neutres, les couleurs ayant un canal à 255 viraient au blanc
+  (reconstruction des hautes lumières appliquée aux sources 8 bits) ; corrigé dans les 3
+  moteurs (fx_camraw.rs, photo-pipeline.js, FilterShaders.js) : RAW seulement, et seulement
+  si le canal le plus faible est haut. Test `masterpaint-core/tests/camraw_neutral.rs`.
+- **Calques** : ligne dorée (filtre dynamique ƒ) / violette (masque α), liseré à gauche.
+- **Filtres dynamiques, refonte (2026-10-30)** : la pile accepte les effets du menu (type
+  « fx:<moteur>:<réglages>:<titre> », intensité = mélange ; `editor::Stage`, `dyn_chain` :
+  étages du moteur dynamique sur place, effets du menu en arrière-plan) ; un effet du menu
+  appliqué sur un calque dynamique rejoint sa pile ; 30 effets proposés dans la liste (VHS,
+  verre dépoli, miroir 4 secteurs, cristallisation, torsion, vague, huile, croquis, relief,
+  solariser, flous de déplacement / radial / zoom…) ; 12 effets au maximum ; calque passé en
+  gris à l'activation, outils en gris dessus ; fenêtre non modale ouverte au clic sur le
+  calque ; bouton Afficher « Rendu / Zone (N&B) » (`DYN_ZONE_VIEW`, composition CPU).
+  Suite (même jour) : étage « effet du menu » = « fx » + JSON (moteur, réglages, titre,
+  fenêtre d'origine et ses valeurs) ; bouton « Réglages… » qui rouvre la fenêtre et remplace
+  l'étage ; aperçu d'une fenêtre d'effet ou de Courbes sur un calque dynamique par sa pile
+  (`dyn_preview` / `dyn_preview_end`, pile remise à Annuler) ; case on/off par effet (préfixe
+  « off: ») ; Niveaux, Courbes, Camera Raw et ajustements acceptés dans la pile.
+  Reste : glisser-déposer dans la liste, rendu GPU des effets du menu dans la pile, rouvrir
+  Courbes avec ses points.
+- **Icônes web** : femtovg (Slint) marquait « prémultipliés » les SVG décodés par le
+  navigateur → liseré clair en sombre ; copie corrigée `slint-femtovg-wasm` dans
+  `build-ui-web.sh` / `.ps1` (à retirer si Slint corrige `images.rs`).
 - **Zoom** : ombre de la toile bornée à la partie visible, grille de pixels limitée à la zone
   visible, contenu hors toile sans `opacity` (chacun faisait calculer une image à la taille
   de la toile zoomée).

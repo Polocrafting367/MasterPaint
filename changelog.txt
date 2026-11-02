@@ -1,5 +1,118 @@
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+3.5.1 (02/11/26) — modes de projet, fenêtres retravaillées
+- Mode du projet (Image › Mode du projet et fenêtre Nouvelle image) : Pixel, SVG, Animation,
+  Animation SVG ; en mode SVG les nouveaux calques sont des calques SVG et formes / textes
+  restent toujours des objets ; en Animation SVG chaque image de la frise garde ses objets ;
+  le mode s'affiche dans la barre d'état (la frise n'est plus dans le menu Affichage)
+- Nouvelle image refaite : type de projet et espace de couleur sur une ligne, préréglages
+  illustrés, largeur / hauteur liées par un maillon, fond en pastilles, aperçu des proportions ;
+  même maillon dans Redimensionner / Taille de la zone de travail
+- Formes : un seul bouton Polygone (nombre de côtés réglable, 3 = triangle) et un seul bouton
+  Étoile (nombre de branches) ; ruban allégé à deux rangées de 7
+- Textes et formes partagent le même calque SVG (le calque actif ou celui juste au-dessus, sinon
+  un nouveau) ; une sélection n'empêche plus de tracer une forme modifiable
+- Fenêtre Filtre dynamique en cartes (Effet 1, Effet 2… : ↑ ↓ Supprimer, effet, intensité),
+  « + Effet » ouvre le menu Effets
+- Sélecteur de couleur surgissant sur le modèle de la fenêtre Couleurs (roue, RVB, TSV,
+  hexadécimal, couleurs principale / secondaire / récentes)
+- Frise d'animation : boutons répartis sur toute la largeur, avec un petit texte pour les
+  principaux ; les palettes flottantes restent au-dessus de la frise
+- Paramètres : « Réinitialiser la section » sous la langue ; ruban : « Modifiable » ne change
+  plus de largeur, « Lissé » aligné sur les boutons d'alignement, curseur Taille aligné sur la
+  liste des polices
+- Pot de peinture sur une forme SVG : clic dedans = remplissage (couleur à part, le trait reste),
+  clic sur le contour = couleur du trait ; exporté tel quel en SVG
+- Taille du pinceau, épaisseur, rayon, taille du texte : maximums recalculés pour l'image
+  active (passer d'une image de 3000 px à une de 500 px ramène les curseurs à 500 px)
+- Paramètres › Toile et outils : disposition et molette de la souris en tête ; Aide : section
+  Souris complète (molette, clics droits, doubles-clics, frise, glisser-déposer), plus de
+  raccourcis coupés en bas
+- Menu des outils du ruban aligné sur la palette Outils (boutons centrés, séparateurs) ;
+  fenêtre Télécharger : la dernière ligne (iOS / iPadOS) ne déborde plus
+- Sur un calque SVG (texte ou formes), les outils Formes, Ligne et Pot de peinture ne sont plus
+  grisés : textes et formes s'ajoutent au même calque
+- Couleurs des Paramètres et des effets : la vraie fenêtre Couleurs (roue / carré, « Plus »,
+  favoris, récentes) s'ouvre contre la case cliquée
+- Curseurs d'outils (croix + icône) dessinés par MasterPaint : visibles aussi dans le navigateur,
+  et pour les outils de déformation
+- Onglets : pastille ANIM, SVG ou ANIM SVG selon le type du projet (rien en pixel)
+- Fenêtre › Réinitialiser le bureau : remet aussi les palettes à leur place d'origine
+- Formes « vivantes » comme Paint.NET : après le tracé, cadre à 8 poignées, poignée de
+  rotation, déplacement ; couleurs, épaisseur, style, rayon, côtés, branches modifiables en
+  direct depuis le ruban ; posée par Entrée, Échap ou un clic à côté (objet SVG si « Modifiable »,
+  pixels sinon) ; Ctrl+Z l'annule ; un clic sur une forme SVG la reprend
+- « Les deux » : contour de la couleur principale, intérieur de la couleur secondaire
+- Ligne : mode Droite ou Courbe (deux points intermédiaires pour la courber), bouts de début et
+  de fin (droit, rond, flèche pleine, flèche vide, losange) et trait continu / tirets /
+  pointillés, avec aperçus ; exportés en SVG
+- Ruban : le réglage de forme (rayon, côtés, branches) passe sous « Modifiable »
+- Zoom de l'interface (bureau) : la toile et ses marges restent justes après un agrandissement
+  ou un redimensionnement de la fenêtre
+
+3.5.0 (01/11/26) — animation, formes SVG modifiables, aide illustrée, réglages retenus
+- Animation (frise) dans la version Rust : images, durées d'exposition, maintien, pelure
+  d'oignon, lecture en boucle / aller-retour, copier / coller / répéter une image, inverser,
+  « avancer après chaque tracé » ; export GIF animé et planche de sprites ; ouverture des GIF
+  animés et des séquences d'images ; enregistré dans les .illu
+- Formes : rectangle à coins arrondis (rayon réglable), cercle, flèche, croix, cœur, bulles
+  rectangulaire et ovale ; nouvelle icône du cercle
+- Calque SVG : bouton « Modifiable » dans les options des outils Formes, Ligne et Texte, activé
+  par défaut — la forme ou le texte reste un objet retouchable (déplacer, recolorer, exporter en
+  SVG) sur un calque SVG créé au besoin ; éteint (« Pixels ») : tracé en pixels dans le calque
+  actif ; pastille du calque : « T » pour du texte, rond pour des formes
+- Bouton « Info » (à côté de « Télécharger l'application ») : fenêtre Aide et raccourcis avec
+  les raccourcis clavier et souris et des schémas pour les filtres dynamiques ƒ, les masques α,
+  le texte modifiable et les formes SVG
+- Couleurs : sélecteur en fenêtre surgissante (carré, teinte, curseurs R / V / B, couleurs
+  principale / secondaire et récentes) pour les couleurs des Paramètres (damier, fond…) et
+  toutes les couleurs des effets (ombre, contour…)
+- Curseurs d'outils comme Paint.NET : croix précise et icône de l'outil (pinceau, pipette,
+  remplissage, sélections…)
+- Paramètres : bouton « Réinitialiser la section » sur chaque page
+- Les réglages des outils sont retenus d'un lancement à l'autre : dernier outil, taille, dureté,
+  formes, dégradé, police, règles, grille, aimantation, dessin hors toile, palettes affichées
+- Filtres dynamiques ƒ : aperçu rapide en basse résolution pendant le réglage (grandes images),
+  pleine résolution juste après ; l'aperçu réduit garde les mêmes proportions que le rendu final
+  (carreaux de Pixeliser, rayons de flou…)
+- Fenêtres d'effet : cadran pour les angles, bouton ↺ allumé quand un réglage a changé,
+  double-clic sur l'intitulé = valeur par défaut, intitulés longs au-dessus du curseur
+- Menus rangés comme Paint.NET : menu Affichage (zoom, grille, règles, aimantation, frise),
+  menu Fenêtre, rotations Ctrl+H / Ctrl+G / Ctrl+J, Aplatir (Ctrl+Maj+F), Coller dans une
+  nouvelle image
+- Fermer le dernier onglet laisse l'application sans projet (palettes grisées, boutons Nouvelle
+  image / Ouvrir) ; Nouvelle image : « Garder les proportions » et « Image animée »
+- Effet ASCII refait (glyphes mesurés, contraste étalé) ; fenêtre de bienvenue adaptée au
+  téléphone (onglets Démarrer / Réglages, plus de défilement horizontal)
+- SVG (bêta) : panneau Objets SVG (afficher, verrouiller, ordre, supprimer), ouverture des
+  fichiers .svg en objets modifiables
+
+3.4.0 (30/10/26) — Photo Pro intelligent, mode SVG, filtres dynamiques refaits
+- Photo Pro : bouton Auto qui analyse la scène (visage / portrait, paysage et ciel, contre-jour,
+  nuit, image claire) : exposition mesurée sur le sujet, contraste, ombres / hautes lumières,
+  voile, clarté, vibrance, balance des blancs et couleurs adaptés ; compte rendu sous la photo ;
+  nouveau bouton « Auto sur toutes » (chaque photo analysée séparément)
+- Camera Raw : les couleurs vives (rouge, orange, jaune, vert, cyan) ne virent plus au blanc à
+  l'ouverture ; la reconstruction des hautes lumières ne sert plus qu'aux photos RAW
+- Filtres dynamiques ƒ refaits : le calque devient un calque dynamique (zone en niveaux de gris,
+  blanc = effet actif) ; 30 effets en plus (VHS, verre dépoli, miroir, cristallisation, torsion,
+  vague, peinture à l'huile, croquis, relief, solariser, flous de déplacement / radial / zoom…) ;
+  tout effet ou ajustement du menu (Niveaux, Courbes, Camera Raw…) appliqué sur ce calque
+  rejoint sa liste, avec aperçu en direct ; « Réglages… » pour le modifier, case on/off par
+  effet, jusqu'à 12 effets ; fenêtre volante non bloquante ; affichage « Rendu / Zone (N&B) »
+- Calques : ligne dorée pour un calque dynamique, violette pour un calque à masque α ; ordre des
+  boutons du bas : +, −, dossier, dupliquer, fusionner, monter, descendre
+- Mode SVG : Calques › Nouveau calque vectoriel ; formes (rectangles, ellipses, lignes, formes
+  multiples) gardées en objets déplaçables, recolorables au pot de peinture ; export SVG (formes
+  et textes restent vectoriels)
+- Disposition Photoshop : les palettes ne peuvent plus se chevaucher ni écraser leur contenu
+- Navigateur sans WebGPU (Firefox, Chrome / Edge sous Linux…) : l'affichage des calques est
+  composé par la carte graphique en WebGL2 (avant : processeur seul)
+- Icônes nettes en thème sombre dans le navigateur (plus de liseré clair autour)
+- Paramètres › Avancé : « Essayer la fenêtre de plantage » ; plantage corrigé lors de
+  l'enregistrement depuis « Modifications non enregistrées » (navigateur)
+- Téléchargements : noms de fichiers fixes, toujours la dernière version
+
 3.3.0 (28/10/26) — calques en dossiers, calque texte, interface retravaillée
 - Calques : dossiers et sous-dossiers (replier / déplier, glisser dans un dossier, opacité et
   mode de fusion du dossier, mode « Transfert »), verrouillage (cadenas), enregistrés dans les

@@ -336,6 +336,14 @@
      "children": []
     },
     {
+     "label": "Nouveau calque vectoriel (SVG)",
+     "shortcut": "",
+     "fa": "f55b",
+     "faw": "900",
+     "action": "rust:newVectorLayer",
+     "children": []
+    },
+    {
      "label": "Supprimer",
      "shortcut": "",
      "fa": "f2ed",

@@ -8,6 +8,12 @@ use serde_json::{json, Value};
 pub struct Settings {
     pub accent: u32,
     pub dark: bool,
+    pub checker_light: u32,
+    pub checker_dark: u32,
+    pub checker_size: u32,
+    pub workspace_color: Option<u32>,
+    pub default_primary: u32,
+    pub default_secondary: u32,
     pub toolbar_mode: i32,
     pub wheel_scroll: bool,
     pub history_max: usize,
@@ -35,6 +41,8 @@ pub struct Settings {
     /// onglets ; image zoomée lissée
     pub rounded: bool,
     pub glass: bool,
+    pub title_transparent: bool,
+    pub title_blurred: bool,
     pub header_preview: bool,
     pub zoom_smooth: bool,
     /// aimantation : taille des cases (1/N de la largeur), force d'attraction (%), grille
@@ -51,6 +59,8 @@ pub struct Settings {
     pub color_square: bool,
     /// outil Texte : chaque texte crée un calque texte modifiable
     pub text_layer: bool,
+    /// outils Formes / Ligne : les formes restent des objets modifiables (calque SVG)
+    pub shape_layer: bool,
     /// lasso magnétique : force d'attraction aux bords (0..100 %) et écart entre ancres (px)
     pub magnet_strength: f32,
     pub magnet_freq: f32,
@@ -64,13 +74,23 @@ pub struct Settings {
     /// disposition Photoshop, colonne de droite : place de Couleurs, Historique, Calques
     /// (0 = en haut) puis hauteurs de Couleurs (0 = automatique) et d'Historique (px)
     pub ps_dock: [f32; 5],
+    /// réglages des outils et de l'affichage tels qu'on les a laissés (dernier outil, tailles,
+    /// formes, règles, aimantation, hors toile, palettes affichées…) : objet JSON tenu par
+    /// lib.rs (`tool_state` / `restore_tool_state`), Null tant que rien n'est retenu
+    pub tool_state: Value,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            accent: 0x0f2d5c,
+            accent: 0x0f766e,
             dark: false,
+            checker_light: 0xffffff,
+            checker_dark: 0xcccccc,
+            checker_size: 8,
+            workspace_color: None,
+            default_primary: 0x000000,
+            default_secondary: 0xffffff,
             toolbar_mode: 0,
             wheel_scroll: false,
             history_max: 40,
@@ -88,6 +108,8 @@ impl Default for Settings {
             paste_ask: true,
             rounded: true,
             glass: true,
+            title_transparent: true,
+            title_blurred: false,
             header_preview: true,
             zoom_smooth: false,
             snap_div: 48,
@@ -97,13 +119,15 @@ impl Default for Settings {
             fav_colors: Vec::new(),
             recent_colors: Vec::new(),
             color_square: false,
-            text_layer: false,
+            text_layer: true,
+            shape_layer: true,
             magnet_strength: 60.0,
             magnet_freq: 32.0,
             palettes: Vec::new(),
             welcome_count: 0,
             welcome_hide: false,
             ps_dock: [0.0, 1.0, 2.0, 0.0, 150.0],
+            tool_state: Value::Null,
         }
     }
 }
@@ -113,6 +137,12 @@ impl Settings {
         json!({
             "accent": format!("#{:06x}", self.accent),
             "dark": self.dark,
+            "checkerLight": self.checker_light,
+            "checkerDark": self.checker_dark,
+            "checkerSize": self.checker_size,
+            "workspaceColor": self.workspace_color,
+            "defaultPrimary": self.default_primary,
+            "defaultSecondary": self.default_secondary,
             "toolbarMode": self.toolbar_mode,
             "wheelMode": if self.wheel_scroll { "scroll" } else { "zoom" },
             "historyMax": self.history_max,
@@ -130,6 +160,8 @@ impl Settings {
             "pasteAsk": self.paste_ask,
             "rounded": self.rounded,
             "glass": self.glass,
+            "titleTransparent": self.title_transparent,
+            "titleBlurred": self.title_blurred,
             "headerPreview": self.header_preview,
             "zoomSmooth": self.zoom_smooth,
             "snapDiv": self.snap_div,
@@ -139,7 +171,8 @@ impl Settings {
             "favColors": self.fav_colors.iter().map(|c| format!("#{c:08x}")).collect::<Vec<_>>(),
             "recentColors": self.recent_colors.iter().map(|c| format!("#{c:08x}")).collect::<Vec<_>>(),
             "colorSquare": self.color_square,
-            "textLayer": self.text_layer,
+            "vectorText": self.text_layer,
+            "vectorShapes": self.shape_layer,
             "welcomeCount": self.welcome_count,
             "welcomeHide": self.welcome_hide,
             "magnetStrength": self.magnet_strength,
@@ -152,6 +185,7 @@ impl Settings {
                 "colorsH": self.ps_dock[3],
                 "historyH": self.ps_dock[4],
             },
+            "toolState": self.tool_state,
         })
     }
 
@@ -165,6 +199,12 @@ impl Settings {
                 .and_then(|s| u32::from_str_radix(s.trim_start_matches('#'), 16).ok())
                 .unwrap_or(d.accent),
             dark: v.get("dark").and_then(|b| b.as_bool()).unwrap_or(d.dark),
+            checker_light: i("checkerLight", d.checker_light as i64).clamp(0, 0xffffff) as u32,
+            checker_dark: i("checkerDark", d.checker_dark as i64).clamp(0, 0xffffff) as u32,
+            checker_size: i("checkerSize", 8).clamp(2, 32) as u32,
+            workspace_color: v.get("workspaceColor").and_then(|v| v.as_u64()).map(|v| (v & 0xffffff) as u32),
+            default_primary: i("defaultPrimary", 0).clamp(0, 0xffffff) as u32,
+            default_secondary: i("defaultSecondary", 0xffffff).clamp(0, 0xffffff) as u32,
             toolbar_mode: i("toolbarMode", 0) as i32,
             wheel_scroll: v.get("wheelMode").and_then(|w| w.as_str()) == Some("scroll"),
             history_max: i("historyMax", d.history_max as i64).clamp(5, 500) as usize,
@@ -182,6 +222,8 @@ impl Settings {
             paste_ask: v.get("pasteAsk").and_then(|b| b.as_bool()).unwrap_or(true),
             rounded: v.get("rounded").and_then(|b| b.as_bool()).unwrap_or(true),
             glass: v.get("glass").and_then(|b| b.as_bool()).unwrap_or(true),
+            title_transparent: v.get("titleTransparent").and_then(|v| v.as_bool()).unwrap_or(true),
+            title_blurred: v.get("titleBlurred").and_then(|v| v.as_bool()).unwrap_or(false),
             header_preview: v.get("headerPreview").and_then(|b| b.as_bool()).unwrap_or(true),
             zoom_smooth: v.get("zoomSmooth").and_then(|b| b.as_bool()).unwrap_or(false),
             snap_div: i("snapDiv", 48).clamp(4, 128) as u32,
@@ -211,7 +253,9 @@ impl Settings {
                 })
                 .unwrap_or_default(),
             color_square: v.get("colorSquare").and_then(|b| b.as_bool()).unwrap_or(false),
-            text_layer: v.get("textLayer").and_then(|b| b.as_bool()).unwrap_or(false),
+            // l'ancienne clé « textLayer » (éteinte par défaut avant le 01/11/2026) est ignorée
+            text_layer: v.get("vectorText").and_then(|b| b.as_bool()).unwrap_or(true),
+            shape_layer: v.get("vectorShapes").and_then(|b| b.as_bool()).unwrap_or(true),
             welcome_count: i("welcomeCount", 0).clamp(0, 1000) as u32,
             welcome_hide: v.get("welcomeHide").and_then(|b| b.as_bool()).unwrap_or(false),
             magnet_strength: v.get("magnetStrength").and_then(|n| n.as_f64()).map(|n| n.clamp(0.0, 100.0) as f32).unwrap_or(60.0),
@@ -242,6 +286,7 @@ impl Settings {
                     Some([o[0], o[1], o[2], h("colorsH", 0.0).max(0.0), h("historyH", 150.0).max(70.0)])
                 })
                 .unwrap_or(d.ps_dock),
+            tool_state: v.get("toolState").cloned().unwrap_or(Value::Null),
         }
     }
 
@@ -312,7 +357,7 @@ pub const SHORTCUTS: &[(&str, &str)] = &[
     ("Ctrl+O", "Ouvrir une image ou un projet .illu"),
     ("Ctrl+S / Ctrl+Maj+S", "Exporter (PNG, JPEG, WebP, BMP, .illu)"),
     ("", "Édition"),
-    ("Ctrl+Z", "Annuler"),
+    ("Ctrl+Z", "Annuler la dernière action"),
     ("Ctrl+Y / Ctrl+Maj+Z", "Rétablir"),
     ("Ctrl+X / Ctrl+C / Ctrl+V", "Couper / copier / coller"),
     ("Ctrl+A", "Tout sélectionner"),
@@ -353,17 +398,66 @@ pub const SHORTCUTS: &[(&str, &str)] = &[
     ("L", "Ligne"),
     ("[ / ]", "Taille du pinceau"),
     ("X", "Échanger couleurs principale et secondaire"),
-    ("", "Affichage et souris"),
+    ("", "Affichage"),
     ("Ctrl + / Ctrl −", "Zoom avant / arrière"),
     ("Ctrl+0", "Ajuster à la fenêtre"),
-    ("Molette", "Zoom ou défilement (Paramètres › Souris)"),
+    ("Ctrl+H / Ctrl+G", "Rotation de 90° (horaire / antihoraire)"),
+    ("Ctrl+J", "Rotation de 180°"),
+    ("Ctrl+Maj+F", "Aplatir l'image"),
+    ("Entrée", "Valider la transformation ou le lasso polygonal"),
+    ("", "Souris"),
+    ("Molette", "Zoom ou défilement, au choix (Paramètres › Toile et outils › Souris)"),
+    ("Ctrl + molette", "Zoom autour du pointeur"),
     ("Maj + molette", "Défilement horizontal"),
-    ("Ctrl + molette", "Zoom"),
     ("Clic du milieu / Espace + glisser", "Déplacer la vue"),
-    ("Clic droit (pinceau…)", "Peindre avec la couleur secondaire"),
+    ("Clic droit (pinceau, formes…)", "Peindre avec la couleur secondaire"),
+    ("Clic droit (sélections)", "Menu contextuel de la toile"),
     ("Clic droit (Déplacer)", "Rotation des pixels soulevés"),
     ("Maj (poignées)", "Conserver les proportions / rotation par 15°"),
     ("Alt (poignées)", "Redimensionner depuis le centre"),
     ("Ctrl / Alt (sélection)", "Ajouter / retirer de la sélection"),
-    ("Entrée", "Valider la transformation ou le lasso polygonal"),
+    ("Double-clic (nom d'un calque)", "Renommer le calque"),
+    ("Clic droit (calque, onglet)", "Menu du calque / de l'onglet"),
+    ("Glisser un calque", "Changer l'ordre des calques"),
+    ("Clic droit (roue de couleurs)", "Choisir la couleur secondaire"),
+    ("Double-clic (intitulé d'un réglage)", "Remettre la valeur par défaut (fenêtres d'effet)"),
+    ("Double-clic (case de la frise)", "Image clé à cette image"),
+    ("Glisser une case de la frise", "Déplacer le dessin"),
+    ("Clic droit (case de la frise)", "Menu du dessin (maintenir, copier, répéter…)"),
+    ("Glisser un fichier sur la fenêtre", "Ouvrir l'image ou le projet"),
 ];
+
+#[cfg(test)]
+mod display_preferences_tests {
+    use super::*;
+    #[test]
+    fn independent_title_switch_defaults_and_round_trip() {
+        for old in [json!({}), json!({"glass": true, "titleTranslucency": 35, "titleBlur": 12})] {
+            let cfg = Settings::from_json(&old);
+            assert_eq!((cfg.title_transparent, cfg.title_blurred), (true, false));
+        }
+        for (transparent, blurred) in [(false, true), (true, false), (true, true), (false, false)] {
+            let mut cfg = Settings::default();
+            cfg.title_transparent = transparent;
+            cfg.title_blurred = blurred;
+            let read = Settings::from_json(&cfg.to_json());
+            assert_eq!((read.title_transparent, read.title_blurred), (transparent, blurred));
+        }
+    }
+    #[test]
+    fn colors_round_trip_and_legacy_defaults() {
+        let mut cfg = Settings::default();
+        cfg.checker_light = 0x112233;
+        cfg.checker_dark = 0x445566;
+        cfg.checker_size = 12;
+        cfg.workspace_color = Some(0x776655);
+        cfg.default_primary = 0x123456;
+        cfg.default_secondary = 0xabcdef;
+        let parsed = Settings::from_json(&cfg.to_json());
+        assert_eq!((parsed.checker_light, parsed.checker_dark, parsed.checker_size), (0x112233, 0x445566, 12));
+        assert_eq!((parsed.workspace_color, parsed.default_primary, parsed.default_secondary), (Some(0x776655), 0x123456, 0xabcdef));
+        let old = Settings::from_json(&json!({"dark": true}));
+        assert_eq!((old.checker_light, old.checker_dark, old.checker_size), (0xffffff, 0xcccccc, 8));
+        assert_eq!(old.workspace_color, None);
+    }
+}

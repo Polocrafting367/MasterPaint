@@ -165,11 +165,11 @@ impl ColorMode {
         match self {
             ColorMode::Ral => {
                 let r = &RAL[ral_index(c)];
-                format!("{} · {}", r.0, r.4)
+                format!("{} · {}", r.0, crate::i18n::tr(r.4))
             }
             ColorMode::Cmjn => {
                 let [cc, m, y, k] = cmyk_percent(c);
-                format!("C {cc} %  M {m} %  J {y} %  N {k} %")
+                crate::i18n::tr_format!("C {cc} %  M {m} %  J {y} %  N {k} %")
             }
             _ => String::new(),
         }

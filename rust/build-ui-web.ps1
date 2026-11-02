@@ -25,7 +25,21 @@ if (-not (Test-Path (Join-Path $rawDst '.patched'))) {
     New-Item (Join-Path $rawDst '.patched') -ItemType File | Out-Null
 }
 $rawPath = $rawDst -replace '\\', '/'
-cargo build -p masterpaint-ui --lib --target wasm32-unknown-unknown --release --config "patch.crates-io.rawler.path='$rawPath'"
+# Slint (femtovg) marque « alpha prémultiplié » les SVG décodés par le navigateur, alors que
+# WebGL les envoie en alpha droit : liseré clair autour des icônes en thème sombre (même
+# correctif que build-ui-web.sh)
+$fvSrc = Get-ChildItem (Join-Path $cargoHome 'registry\src') -Directory | ForEach-Object { Join-Path $_.FullName 'i-slint-renderer-femtovg-1.18.1' } | Where-Object { Test-Path $_ } | Select-Object -First 1
+$fvDst = Join-Path $target 'slint-femtovg-wasm'
+if (-not (Test-Path (Join-Path $fvDst '.patched'))) {
+    if (Test-Path $fvDst) { Remove-Item $fvDst -Recurse -Force }
+    Copy-Item $fvSrc $fvDst -Recurse
+    $f = Join-Path $fvDst 'images.rs'
+    $t = Get-Content $f -Raw
+    Set-Content $f ($t -replace 'image_flags \| femtovg::ImageFlags::PREMULTIPLIED(\r?\n)', 'image_flags$1') -NoNewline
+    New-Item (Join-Path $fvDst '.patched') -ItemType File | Out-Null
+}
+$fvPath = $fvDst -replace '\\', '/'
+cargo build -p masterpaint-ui --lib --target wasm32-unknown-unknown --release --config "patch.crates-io.rawler.path='$rawPath'" --config "patch.crates-io.i-slint-renderer-femtovg.path='$fvPath'"
 if ($LASTEXITCODE) { throw 'compilation wasm' }
 $pkg = Join-Path $target 'web-pkg'
 wasm-bindgen (Join-Path $target 'wasm32-unknown-unknown\release\masterpaint_ui.wasm') --target web --no-typescript --out-dir $pkg

@@ -6,7 +6,7 @@ import { ScrollView } from "std-widgets.slint";
 export component PreviewWindow inherits Window {
     in property <image> source;
     in property <string> info;
-    title: "Aperçu 1:1 — MasterPaint";
+    title: @tr("Aperçu 1:1 — MasterPaint");
     icon: @image-url("../../desktop/icons/128x128.png");
     background: #1e1e1e;
     preferred-width: min(root.source.width * 1phx + 24px, 1200px);

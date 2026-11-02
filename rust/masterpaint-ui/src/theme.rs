@@ -8,6 +8,39 @@ fn rgb(hex: u32) -> Color {
     Color::from_rgb_u8((hex >> 16) as u8, (hex >> 8) as u8, hex as u8)
 }
 
+// Stable palette identities are saved; display shades adapt to each theme.
+const ACCENTS: [u32; 11] = [0xb91c1c, 0xc2410c, 0xa16207, 0x15803d, 0x0f766e,
+    0x0369a1, 0x1d4ed8, 0x0f2d5c, 0x4338ca, 0x7e22ce, 0xbe185d];
+
+fn luminance(c: Color) -> f32 {
+    let linear = |v: u8| { let v = v as f32 / 255.0; if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) } };
+    0.2126 * linear(c.red()) + 0.7152 * linear(c.green()) + 0.0722 * linear(c.blue())
+}
+
+fn contrast(a: Color, b: Color) -> f32 {
+    let (a, b) = (luminance(a), luminance(b));
+    (a.max(b) + 0.05) / (a.min(b) + 0.05)
+}
+
+fn accent_shade(base: Color, dark: bool) -> Color {
+    let surface = rgb(if dark { 0x2e2e2e } else { 0xffffff });
+    let end = rgb(if dark { 0xffffff } else { 0x000000 });
+    for step in 0..=100 {
+        let shade = mix(base, end, 1.0 - step as f32 / 100.0);
+        if contrast(shade, surface) >= 4.5 { return shade; }
+    }
+    end
+}
+
+fn palette_accent(c: Color) -> Color {
+    let distance = |v: &u32| {
+        let v = rgb(*v);
+        let d = |a: u8, b: u8| (a as i32 - b as i32).pow(2);
+        d(c.red(), v.red()) + d(c.green(), v.green()) + d(c.blue(), v.blue())
+    };
+    rgb(*ACCENTS.iter().min_by_key(|v| distance(v)).unwrap())
+}
+
 /// `p` d'accent mélangé au fond `base` (comme `color-mix(in srgb, accent p%, base)`).
 fn mix(accent: Color, base: Color, p: f32) -> Color {
     let m = |a: u8, b: u8| (a as f32 * p + b as f32 * (1.0 - p)).round() as u8;
@@ -93,9 +126,33 @@ pub fn icon_entries(app: &AppWindow) -> Vec<crate::IconEntry> {
     .collect()
 }
 
+/// Keep browser chrome and Android system bars in sync with the actual header.
+fn sync_system_theme(dark: bool, base: Color, bar: Color) {
+    #[cfg(target_os = "android")]
+    crate::android_io::system_theme(bar, contrast(bar,rgb(0x000000)) > contrast(bar,rgb(0xffffff)));
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::JsCast;
+        if let Some(w)=web_sys::window() {
+            if let Ok(f)=js_sys::Reflect::get(&w,&"mpSetSystemTheme".into()) {
+                if let Some(f)=f.dyn_ref::<js_sys::Function>() {
+                    let _=f.call3(&w,&hex(bar).into(),&dark.into(),&hex(base).into());
+                }
+            }
+        }
+    }
+    #[cfg(not(any(target_os = "android",target_arch = "wasm32")))]
+    let _=(dark,base,bar);
+    #[cfg(target_os = "android")]
+    let _=(dark,base);
+}
+
 /// Applique le thème : sombre ou clair, accent, et style (Paramètres › Thème d'interface :
 /// 0 Flat Design, 1 Windows 98).
 pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
+    let base_accent = palette_accent(accent);
+    let accent = accent_shade(base_accent, dark);
+    sync_system_theme(dark, base_accent, mix(accent, rgb(0x000000), 0.62));
     render_icons(app, dark, accent);
     let t = app.global::<Theme>();
     let win98 = app.get_set_theme_style() == 1;
@@ -103,14 +160,18 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
     let round = !win98 && app.get_set_rounded();
     t.set_win98(win98);
     t.set_glass(!win98 && app.get_set_glass());
+    t.set_title_transparent(!win98 && app.get_set_title_transparent());
+    t.set_title_blurred(!win98 && app.get_set_title_blurred());
     t.set_window_radius(if round { 8.0 } else { 0.0 });
     t.set_ctl_radius(if round { 5.0 } else { 0.0 });
+    t.set_round(if round { 1.0 } else { 0.0 });
     t.set_title_height(if win98 { 24.0 } else { 26.0 });
     // Segoe UI n'existe que sous Windows : ailleurs (web, Linux, macOS), Selawik, intégrée
     // (mêmes métriques, licence libre), plutôt qu'une police de repli du système
     #[cfg(not(windows))]
     t.set_font("Selawik".into());
     t.set_dark(dark);
+    t.set_accent_base(base_accent);
     t.set_accent(accent);
     let base = if dark { rgb(0x2b2b2b) } else { rgb(0xffffff) };
     t.set_accent_12(mix(accent, base, 0.12));
@@ -119,9 +180,7 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
     t.set_accent_27(mix(accent, base, 0.27));
     t.set_accent_32(mix(accent, base, 0.32));
     t.set_accent_60(mix(accent, base, 0.60));
-    // texte sur l'accent : blanc sauf accent très clair
-    let lum = 0.2126 * accent.red() as f32 + 0.7152 * accent.green() as f32 + 0.0722 * accent.blue() as f32;
-    t.set_on_accent(if lum > 170.0 { rgb(0x000000) } else { rgb(0xffffff) });
+    t.set_on_accent(if contrast(accent, rgb(0x000000)) > contrast(accent, rgb(0xffffff)) { rgb(0x000000) } else { rgb(0xffffff) });
 
     // paliers de surfaces distincts (barre de menus < ruban < fenêtres, listes en creux, pied
     // des dialogues un peu plus clair) : menus, ruban et fenêtres ne se confondent plus
@@ -232,5 +291,21 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         // survols et lignes actives : sur fond argent, la teinte d'accent reste lisible
         t.set_accent_12(mix(accent, face, 0.18));
         t.set_accent_14(mix(accent, face, 0.22));
+    }
+}
+
+#[cfg(test)]
+mod contrast_tests {
+    use super::*;
+    #[test]
+    fn each_palette_accent_is_readable_in_both_themes() {
+        for hex in ACCENTS {
+            for dark in [false, true] {
+                let shade = accent_shade(rgb(hex), dark);
+                assert!(contrast(shade, rgb(if dark { 0x2e2e2e } else { 0xffffff })) >= 4.5);
+                assert!(contrast(shade, rgb(0xffffff)).max(contrast(shade, rgb(0x000000))) >= 4.5);
+                assert_eq!(palette_accent(rgb(hex)), rgb(hex));
+            }
+        }
     }
 }

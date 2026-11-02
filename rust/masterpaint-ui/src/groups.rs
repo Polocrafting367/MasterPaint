@@ -15,6 +15,7 @@ const MAX_DEPTH: usize = 32;
 pub(crate) struct Node<'a> {
     pub l: &'a Layer,
     pub kids: Vec<Node<'a>>,
+    isolate_filters: bool,
 }
 
 /// Arbre des calques visibles (un dossier masqué masque tout son contenu). Un calque dont le
@@ -25,7 +26,14 @@ pub(crate) fn visible_tree(doc: &Doc) -> Vec<Node<'_>> {
         doc.layers
             .iter()
             .filter(|l| eff_parent(l, groups) == p && l.visible && l.opacity > 0.0)
-            .map(|l| Node { l, kids: if l.group && depth < MAX_DEPTH { build(doc, groups, l.uid, depth + 1) } else { Vec::new() } })
+            .map(|l| {
+                let kids = if l.group && depth < MAX_DEPTH { build(doc, groups, l.uid, depth + 1) } else { Vec::new() };
+                // Adjustment filters always stay inside their immediate folder, even
+                // when its ordinary blending mode is Pass Through.
+                let isolate_filters = kids.iter().any(|n: &Node| n.l.dynamic_mode != 1
+                    && n.l.dynamic.as_ref().is_some_and(|s| s.iter().any(|(kind, _)| !kind.starts_with(crate::editor::DYN_OFF))));
+                Node { l, kids, isolate_filters }
+            })
             .collect()
     }
     build(doc, &groups, 0, 0)
@@ -55,7 +63,7 @@ pub(crate) fn pixel_tree(doc: &Doc, nodes: &[Node], i: usize, mut acc: (f32, f32
         if m <= 0.0 || n.kids.is_empty() {
             continue;
         }
-        if n.l.pass {
+        if n.l.pass && !n.isolate_filters {
             let inner = pixel_tree(doc, &n.kids, i, acc);
             acc = if m >= 1.0 { inner } else { lerp(acc, inner, m) };
         } else {
@@ -100,6 +108,26 @@ impl Doc {
                 return true;
             }
             p = self.index_of_uid(p).map(|j| self.layers[j].parent).unwrap_or(0);
+        }
+        false
+    }
+
+    /// A dynamic filter is scoped to its immediate containing folder. Pass Through
+    /// never broadens that filter to siblings or layers outside the folder.
+    pub(crate) fn isolating_group(&self, k: usize) -> Option<u64> {
+        let parent = self.layers[k].parent;
+        self.index_of_uid(parent).filter(|&j| self.layers[j].group).map(|_| parent)
+    }
+
+    /// Visibility through every ancestor, used to avoid computing hidden filters.
+    pub(crate) fn visible_at(&self, k: usize) -> bool {
+        if !self.layers[k].visible || self.layers[k].opacity <= 0.0 { return false; }
+        let mut parent = self.layers[k].parent;
+        for _ in 0..MAX_DEPTH {
+            if parent == 0 { return true; }
+            let Some(j) = self.index_of_uid(parent) else { return true };
+            if !self.layers[j].visible || self.layers[j].opacity <= 0.0 { return false; }
+            parent = self.layers[j].parent;
         }
         false
     }
@@ -228,7 +256,7 @@ impl Doc {
     /// haut de son contenu.
     pub fn add_layer_in(&mut self) {
         let n = self.layers.iter().filter(|l| !l.group).count() + 1;
-        let mut l = Layer::new(&format!("Calque {n}"), self.w, self.h, [0, 0, 0, 0]);
+        let mut l = Layer::new(&crate::i18n::tr_format!("Calque {n}"), self.w, self.h, [0, 0, 0, 0]);
         let a = self.active;
         if self.layers[a].group {
             l.parent = self.layers[a].uid;
@@ -244,7 +272,7 @@ impl Doc {
     /// Nouveau dossier vide au-dessus du calque actif (même dossier parent).
     pub fn add_group(&mut self) {
         let n = self.layers.iter().filter(|l| l.group).count() + 1;
-        let mut g = self.new_group(&format!("Dossier {n}"));
+        let mut g = self.new_group(&crate::i18n::tr_format!("Dossier {n}"));
         let a = self.active;
         g.parent = self.layers[a].parent;
         self.layers.insert(a + 1, g);
@@ -254,7 +282,7 @@ impl Doc {
     /// Range le calque actif (et son contenu) dans un nouveau dossier.
     pub fn group_active(&mut self) {
         let n = self.layers.iter().filter(|l| l.group).count() + 1;
-        let mut g = self.new_group(&format!("Dossier {n}"));
+        let mut g = self.new_group(&crate::i18n::tr_format!("Dossier {n}"));
         let a = self.active;
         g.parent = self.layers[a].parent;
         self.layers[a].parent = g.uid;
@@ -310,7 +338,7 @@ impl Doc {
             }
         }
         if let Some(top) = block.last_mut() {
-            top.name = format!("{} copie", top.name);
+            top.name = crate::i18n::tr_format!("{} copie", top.name);
         }
         let n = block.len();
         let at = e + 1;

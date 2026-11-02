@@ -1,0 +1,253 @@
+// Panneau « Objets SVG (bêta) » (Fenêtre › Objets SVG) : objets du calque vectoriel actif.
+// L'état vit dans le global `SvgPanel`, rempli et écouté par src/svg_panel.rs ; app.slint
+// pose seulement le contenu `SvgObjectsContent` dans une FloatWindow.
+import { ListView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { W10Button, W10Slider, GlyphIcon, Tip } from "widgets.slint";
+
+/// Ligne de la liste des objets (le plus haut en premier).
+export struct SvgObjRow {
+    index: int,      // indice dans les objets du calque (0 = dessous)
+    name: string,    // « Rectangle », « Ellipse », « Texte : … »
+    glyph: string,   // icône Font Awesome
+    swatch: color,   // couleur de l'objet
+}
+
+/// État du panneau (src/svg_panel.rs).
+export global SvgPanel {
+    in-out property <bool> open;
+    /// le calque actif est un calque vectoriel
+    in property <bool> is-vector;
+    in property <string> layer-name;
+    in property <[SvgObjRow]> rows;
+    in property <int> count;
+    /// objet choisi (indice dans les objets du calque), -1 = aucun
+    in-out property <int> selected: -1;
+    /// objet choisi : 0 aucun, 1 forme, 2 trait (ligne, polyligne), 3 texte
+    in property <int> obj-kind;
+    in property <color> obj-color;
+    in property <float> obj-width: 2;
+    /// 0 contour, 1 plein, 2 les deux
+    in property <int> obj-style;
+    callback select(int);
+    /// « new-layer », « up », « down », « duplicate », « delete », « color »
+    callback action(string);
+    /// épaisseur du trait (valeur, étape d'historique : au relâchement)
+    callback width-edited(float, bool);
+    callback style-edited(int);
+}
+
+/// Petit bouton à glyphe (grisé si indisponible), comme ceux des lignes de calques.
+component SvgMiniButton inherits Rectangle {
+    in property <string> glyph;
+    in property <string> tip;
+    in property <bool> enabled: true;
+    callback clicked();
+    width: 26px;
+    height: 24px;
+    border-radius: Theme.ctl-radius;
+    background: ta.has-hover && root.enabled ? Theme.accent-14 : transparent;
+    border-width: ta.has-hover && root.enabled ? 1px : 0px;
+    border-color: Theme.accent;
+    opacity: root.enabled ? 1 : 0.4;
+    GlyphIcon {
+        glyph: root.glyph;
+        size: 12px;
+    }
+    Timer {
+        interval: 600ms;
+        running: ta.has-hover && root.tip != "" && !(Tip.shown && Tip.text == root.tip);
+        triggered => {
+            Tip.text = root.tip;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + root.height + 4px;
+            Tip.shown = true;
+        }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            Tip.shown = false;
+            root.clicked();
+        }
+        changed has-hover => {
+            if (!self.has-hover && Tip.text == root.tip) {
+                Tip.shown = false;
+            }
+        }
+    }
+}
+
+/// Contenu du panneau (sous la barre de titre de la FloatWindow).
+export component SvgObjectsContent inherits Rectangle {
+    // hauteur des réglages de l'objet choisi (bas du panneau)
+    property <length> props-h: SvgPanel.obj-kind == 1 ? 112px : SvgPanel.obj-kind == 2 ? 80px : SvgPanel.obj-kind == 3 ? 66px : 0px;
+
+    // ---- calque actif non vectoriel : explication et création ----
+    if !SvgPanel.is-vector: VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: 12px;
+        spacing: 12px;
+        alignment: start;
+        Text {
+            text: @tr("Le calque actif n'est pas un calque vectoriel. Les objets SVG (formes, textes) vivent sur un calque vectoriel, où ils restent modifiables : position, ordre, couleur, trait.");
+            wrap: word-wrap;
+            font-size: Theme.font-size;
+            color: Theme.text;
+        }
+        HorizontalLayout {
+            alignment: start;
+            W10Button {
+                text: @tr("Nouveau calque vectoriel");
+                primary: true;
+                tip: @tr("Ajoute un calque vectoriel vide au-dessus du calque actif");
+                clicked => { SvgPanel.action("new-layer"); }
+            }
+        }
+    }
+
+    // ---- liste des objets du calque vectoriel ----
+    if SvgPanel.is-vector: Rectangle {
+        width: parent.width;
+        height: parent.height;
+        Text {
+            x: 10px; y: 4px; width: parent.width - 20px; height: 20px;
+            text: @tr("Calque : ") + SvgPanel.layer-name;
+            font-size: Theme.small-font-size; color: Theme.text-inactive;
+            overflow: elide; vertical-alignment: center;
+        }
+        ListView {
+            x: 6px; y: 26px; width: parent.width - 12px;
+            height: max(30px, parent.height - 26px - 34px - root.props-h);
+            for r in SvgPanel.rows: Rectangle {
+                height: 26px;
+                border-radius: Theme.ctl-radius;
+                background: r.index == SvgPanel.selected ? Theme.accent-27 : rta.has-hover ? Theme.accent-12 : transparent;
+                rta := TouchArea {
+                    clicked => { SvgPanel.select(r.index); }
+                }
+                GlyphIcon {
+                    x: 6px;
+                    y: (parent.height - self.height) / 2;
+                    glyph: r.glyph;
+                    size: 12px;
+                }
+                Text {
+                    x: 30px; width: parent.width - 30px - 26px;
+                    text: r.name;
+                    font-size: Theme.font-size;
+                    color: Theme.text;
+                    font-weight: r.index == SvgPanel.selected ? 600 : 400;
+                    overflow: elide; vertical-alignment: center;
+                }
+                // pastille de la couleur de l'objet
+                Rectangle {
+                    x: parent.width - 20px; y: (parent.height - 14px) / 2;
+                    width: 14px; height: 14px;
+                    border-radius: 3px;
+                    background: r.swatch;
+                    border-width: 1px;
+                    border-color: Theme.field-border;
+                }
+            }
+        }
+        if SvgPanel.count == 0: Text {
+            x: 12px; y: 34px; width: parent.width - 24px;
+            text: @tr("Aucun objet : tracez une forme (Formes, Rectangle arrondi, Ligne) ou un texte sur ce calque.");
+            wrap: word-wrap; font-size: Theme.font-size; color: Theme.text-inactive;
+        }
+
+        // ---- ordre, copie, suppression ----
+        HorizontalLayout {
+            x: 6px; y: parent.height - root.props-h - 30px; height: 26px;
+            spacing: 2px;
+            SvgMiniButton {
+                glyph: "\u{f062}"; tip: @tr("Monter l'objet (dessiné par-dessus)");
+                enabled: SvgPanel.selected >= 0 && SvgPanel.selected < SvgPanel.count - 1;
+                clicked => { SvgPanel.action("up"); }
+            }
+            SvgMiniButton {
+                glyph: "\u{f063}"; tip: @tr("Descendre l'objet");
+                enabled: SvgPanel.selected > 0;
+                clicked => { SvgPanel.action("down"); }
+            }
+            SvgMiniButton {
+                glyph: "\u{f24d}"; tip: @tr("Dupliquer l'objet");
+                enabled: SvgPanel.selected >= 0;
+                clicked => { SvgPanel.action("duplicate"); }
+            }
+            SvgMiniButton {
+                glyph: "\u{f2ed}"; tip: @tr("Supprimer l'objet");
+                enabled: SvgPanel.selected >= 0;
+                clicked => { SvgPanel.action("delete"); }
+            }
+        }
+        Rectangle {
+            x: 0; y: parent.height - root.props-h - 2px; width: parent.width; height: 1px;
+            visible: root.props-h > 0;
+            background: Theme.window-border;
+        }
+
+        // ---- réglages de l'objet choisi ----
+        if SvgPanel.obj-kind > 0: HorizontalLayout {
+            x: 10px; y: parent.height - root.props-h + 6px; width: parent.width - 20px; height: 24px;
+            spacing: 6px;
+            Text { width: 70px; text: @tr("Couleur"); color: Theme.text; font-size: Theme.font-size; vertical-alignment: center; }
+            Rectangle {
+                width: 24px;
+                Rectangle {
+                    y: 2px; width: 24px; height: 20px;
+                    border-radius: 3px;
+                    background: SvgPanel.obj-color;
+                    border-width: 1px;
+                    border-color: Theme.field-border;
+                }
+            }
+            W10Button {
+                text: @tr("Couleur principale");
+                tip: @tr("Donne la couleur principale à l'objet (son opacité est gardée)");
+                clicked => { SvgPanel.action("color"); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+        if SvgPanel.obj-kind == 1 || SvgPanel.obj-kind == 2: HorizontalLayout {
+            x: 10px; y: parent.height - root.props-h + 38px; width: parent.width - 20px; height: 22px;
+            spacing: 6px;
+            Text { width: 70px; text: @tr("Épaisseur"); color: Theme.text; font-size: Theme.font-size; vertical-alignment: center; }
+            W10Slider {
+                controlled: true; minimum: 1; maximum: 50; value: SvgPanel.obj-width;
+                tip: @tr("Épaisseur du trait (pixels)");
+                changed(v) => { SvgPanel.width-edited(v, false); }
+                released(v) => { SvgPanel.width-edited(v, true); }
+            }
+            Text { width: 40px; text: round(SvgPanel.obj-width) + " px"; color: Theme.text; font-size: Theme.small-font-size; horizontal-alignment: right; vertical-alignment: center; }
+        }
+        if SvgPanel.obj-kind == 1: HorizontalLayout {
+            x: 10px; y: parent.height - root.props-h + 70px; width: parent.width - 20px; height: 24px;
+            spacing: 4px;
+            Text { width: 72px; text: @tr("Style"); color: Theme.text; font-size: Theme.font-size; vertical-alignment: center; }
+            W10Button {
+                text: @tr("Contour"); checked: SvgPanel.obj-style == 0;
+                tip: @tr("Trait seul");
+                clicked => { SvgPanel.style-edited(0); }
+            }
+            W10Button {
+                text: @tr("Plein"); checked: SvgPanel.obj-style == 1;
+                tip: @tr("Remplissage seul");
+                clicked => { SvgPanel.style-edited(1); }
+            }
+            W10Button {
+                text: @tr("Les deux"); checked: SvgPanel.obj-style == 2;
+                tip: @tr("Remplissage et trait");
+                clicked => { SvgPanel.style-edited(2); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+        if SvgPanel.obj-kind == 3: Text {
+            x: 10px; y: parent.height - root.props-h + 36px; width: parent.width - 20px; height: 24px;
+            text: @tr("Texte : modifiez-le à l'outil Texte (clic sur le texte).");
+            wrap: word-wrap; font-size: Theme.small-font-size; color: Theme.text-inactive;
+        }
+    }
+}

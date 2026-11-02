@@ -179,7 +179,9 @@ ICONS = {
     'wand': P('M3.5 20.5l11-11', w=2.6) + P('M14.5 9.5l2-2', 'a', w=2.8) + star(18, 6, 4.6) + star(8.5, 4.5, 2.8) + star(20, 14, 2.6),
     'warp4': P('M5 6l14-2 2 15-17 1z', 'fo', .2) + R(3.7, 4.7, 2.6, 2.6, 0, 'f') + R(17.7, 2.7, 2.6, 2.6, 0, 'f') + R(19.7, 17.7, 2.6, 2.6, 0, 'f') + R(2.7, 18.7, 2.6, 2.6, 0, 'f'),
     'deform': P('M4 4c4 2 12 2 16 0v16c-4-2-12-2-16 0z', 'fo', .2) + P('M4 12c4 2 12 2 16 0M12 4.8c-2 4-2 10.4 0 14.4', w=1.1) + C(12, 13, 2, 'f'),
-    'eyedropper': P('M13 7l-8.5 8.5L4 20l4.5-.5L17 11') + P('M14.2 3.8a2.6 2.6 0 0 1 3.7 0l2.3 2.3a2.6 2.6 0 0 1 0 3.7L18 12l-6-6z', 'fo', .9) + P('M6.5 15.5h5', 'a', w=1.6),
+    # pipette : tube au trait, poire (ampoule) pleine à la couleur d'accent, liquide dans le tube
+    'eyedropper': P('M13 7l-8.5 8.5L4 20l4.5-.5L17 11') + P('M14.2 3.8a2.6 2.6 0 0 1 3.7 0l2.3 2.3a2.6 2.6 0 0 1 0 3.7L18 12l-6-6z', 'f')
+                  + P('M11.5 6.5l6 6', w=2.4) + P('M5.6 16.4l4.6-4.6', 'a', w=2.2),
     'move': P('M12 3v18M3 12h18') + P('M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3', 'a', w=1.9),
     'brush': P('M20.5 3.5L11.5 12.5', w=2.6) + P('M11 13c-2.5-.5-4.5 1-4.8 3.6C6 18.8 5 20 3.5 20.5c3 .8 6.6.4 8.3-1.6 1.4-1.6 1.3-4-.8-5.9z', 'f'),
     'pencil': P('M15.5 4.5l4 4L9 19l-5 1 1-5z', 'fo', .35) + P('M5 15l4 4M13.5 6.5l4 4'),
@@ -322,14 +324,14 @@ ICONS = {
 REUSE = {
     'lasso': 'tool-direct-select', 'wand': 'tool-wand', 'lasso-magnetic': 'tool-magnetic-lasso',
     'lasso-poly': 'tool-poly-lasso', 'sel-none': 'sel-deselect', 'warp4': 'sel-free-corners',
-    'deform': 'tool-deform', 'eyedropper': 'tool-eyedropper', 'brush': 'tool-brush', 'pencil': 'tool-pencil',
+    'deform': 'tool-deform', 'brush': 'tool-brush', 'pencil': 'tool-pencil',
     'gradient': 'tool-gradient', 'bucket': 'tool-bucket', 'eraser': 'tool-eraser', 'text': 'tool-text',
     'shapes': 'tool-shapes-family', 'roundrect': 'shape-round', 'sel-invert': 'sel-invert', 'sel-all': 'sel-all',
     'align-left': 'sel-align-left', 'align-center-h': 'sel-center-h', 'align-right': 'sel-align-right',
     'align-top': 'sel-align-top', 'align-center-v': 'sel-center-v', 'align-bottom': 'sel-align-bottom',
     'align-center': 'sel-center-both', 'outside-canvas': 'outside-canvas', 'crop': 'img-crop',
     'rotate': 'img-rot-cw', 'border': 'image-border', 'canvas-size': 'image-extend', 'merge': 'layer-merge',
-    'eye': 'svg-obj-visible',
+    'eye': 'svg-obj-visible', 'layer-delete': 'svg-obj-delete',
 }
 for _k, _v in REUSE.items():
     ICONS[_k] = S(_v)
@@ -343,6 +345,7 @@ ICONS.update({
     'filter': P('M3.5 4.5h17l-6.5 8v6.2l-4 2.3v-8.5z', 'fo'),
     'swap': P('M4 8h14', 'a') + P('M14.5 4.5 18 8l-3.5 3.5', 'a') + P('M20 16H6M9.5 12.5 6 16l3.5 3.5'),
     'plus': P('M12 4.5v15M4.5 12h15', 'a', w=2.8),
+    'minus': P('M4.5 12h15', 'a', w=2.8),
     'gauge': P('M3.5 17.5a8.5 8.5 0 1 1 17 0') + P('M6.2 11.3l1.4 1M12 6.5v1.8M17.8 11.3l-1.4 1')
              + P('M12 17.5l4.2-5.2', 'a', w=2.4) + C(12, 17.5, 2, 's'),
     'keyboard': R(2.5, 6, 19, 12.5, 2.2) + P('M6 10h.5M9.5 10h.5M13.5 10h.5M17.5 10h.5M6 14h.5M17.5 14h.5', w=2.4)
@@ -374,7 +377,17 @@ ICONS.update({
     'layout': R(3, 4, 18, 16, 2) + P('M3 8.5h18M8.5 8.5V20') + R(8.5, 8.5, 12.5, 11.5, 0, 'f', .5),
     'ribbon': R(3, 4, 18, 16, 2) + P('M3 10h18') + R(5.5, 6, 3, 2, 0.5, 's') + R(10.5, 6, 3, 2, 0.5, 's') + R(15.5, 6, 3, 2, 0.5, 'f'),
     'phone': R(6.5, 2.5, 11, 19, 2.5) + P('M10.5 18.5h3', w=2.2) + R(8.5, 5, 7, 10.5, 1, 'f', .5),
+    # alignement du texte (outil Texte) : lignes au trait, ligne d'accent
+    'text-left': P('M4 5.5h16M4 14.5h16') + P('M4 10h10M4 19h10', 'a', w=2.4),
+    'text-center': P('M4 5.5h16M4 14.5h16') + P('M7 10h10M7 19h10', 'a', w=2.4),
+    'text-right': P('M4 5.5h16M4 14.5h16') + P('M10 10h10M10 19h10', 'a', w=2.4),
+    # effets / préréglages : baguette et éclats (distincte de l'outil Baguette magique)
+    'fx': P('M4 20l10.5-10.5', w=2.6) + P('M13 8.5l2.5 2.5') + star(17.5, 6.5, 4.2) + star(7, 6, 2.6) + star(18.5, 16.5, 2.4),
+    'grad-conic': C(12, 12, 8.5) + P('M12 12V3.5a8.5 8.5 0 0 1 8.5 8.5z', 'f') + P('M12 12l-6 6', 'a', w=2.4),
 })
+# reprises du sprite pour des icônes ajoutées ci-dessus (même rang)
+for _k, _v in {'unlock': 'svg-obj-unlocked', 'trash-can': 'svg-obj-delete'}.items():
+    ICONS[_k] = S(_v)
 
 # ------------------------------------------------------------------ correspondances
 
@@ -465,13 +478,17 @@ COMMON = {
     'f071': 'warning', 'f09b': 'github', 'f0ac': 'web', 'f02d': 'book', 'f005': 'star', 'f186': 'moon',
     'f0eb': 'photo', 'f43c': 'checker', 'f2a1': 'halftone', 'f5c3': 'posterize', 'f4db': 'vhs',
     'f51a': 'denoise', 'f530': 'chromatic', 'f120': 'ascii', 'f1b2': 'cube', 'f390': 'restore',
-    'f46d': 'changelog', 'f00c': 'check', 'f5cb': 'sel-rect', 'f047': 'move', 'f002': 'zoom',
+    'f46d': 'changelog', 'f5cb': 'sel-rect', 'f047': 'move', 'f002': 'zoom',
+    'f715': 'line', 'f0b2': 'move', 'f424': 'resize', 'f0d0': 'fx', 'f56e': 'export', 'f0e2': 'restore',
+    'f017': 'history', 'f036': 'text-left', 'f037': 'text-center', 'f038': 'text-right', 'f0ec': 'merge',
+    'f07e': 'sym-x', 'f07d': 'sym-y', 'f1c5': 'image',
 }
 # outils / barre rapide / ruban / boutons à IconSpec (Icon)
 SPEC_FA = dict(COMMON, **{'f0c8': 'sel-new', 'f068': 'line', 'f12d': 'trash'})
 # glyphes directs (GlyphIcon : pinceaux, dégradés, fenêtre Couleurs, téléphone, Paramètres…)
 GLYPH = dict(COMMON, **{'f0c8': 'brush-square', 'f111': 'brush-round', 'f192': 'brush-soft',
-                        'f5c7': 'brush-spray', 'f337': 'grad-linear', 'f219': 'grad-diamond'})
+                        'f5c7': 'brush-spray', 'f337': 'grad-linear', 'f219': 'grad-diamond', 'f1ce': 'grad-conic',
+                        'f068': 'minus'})
 # entrées de menu absentes de la table (menu contextuel, entrées ajoutées) : d'après leur glyphe
 MENU_FA = dict(COMMON, **{'f12d': 'trash', 'f2ed': 'layer-delete', 'f062': 'layer-up', 'f063': 'layer-down'})
 
@@ -550,7 +567,9 @@ def main():
 
     svg_cases = [(str(k), idx[v]) for k, v in SPEC_SVG.items()]
     fa_cases = [(u(k), idx[v]) for k, v in SPEC_FA.items()]
-    menu_items = chunks([(q(k), idx[v]) for k, v in MENU.items()], 90)
+    # libellés comparés traduits (@tr) : l'icône suit l'entrée de menu dans toutes les langues
+    MENU['Annuler la dernière action'] = MENU['Annuler']
+    menu_items = chunks([((q(k) if '{' in k else f'@tr({q(k)})'), idx[v]) for k, v in MENU.items()], 90)
     mfa_cases = [(u(k), idx[v]) for k, v in MENU_FA.items()]
     gl = chunks([(u(k), idx[v]) for k, v in GLYPH.items()])
     fns = []

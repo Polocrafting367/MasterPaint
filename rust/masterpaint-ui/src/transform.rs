@@ -29,7 +29,7 @@ pub enum Kind {
     MovePixels,
     /// Déplacer la sélection seule (contour)
     MoveSelection,
-    /// Déformation : 8 poignées + centre, sans rotation
+    /// Déformation : 8 poignées + centre, rotation autour du cadre (comme Déplacer)
     Deform,
     /// 4 coins libres (homographie)
     Warp,
@@ -278,7 +278,7 @@ impl Floating {
     /// Ce que saisit un clic en (x, y) ; `tol` = tolérance en pixels du document
     /// (poignées), `rot` = largeur de la zone de rotation autour du cadre.
     pub fn hit(&self, x: f32, y: f32, tol: f32, rot: f32, right_button: bool) -> Grab {
-        if right_button && self.kind == Kind::MovePixels {
+        if right_button && matches!(self.kind, Kind::MovePixels | Kind::Deform | Kind::Warp) {
             return Grab::Rotate;
         }
         let d = |p: Pt| ((p.0 - x).powi(2) + (p.1 - y).powi(2)).sqrt();
@@ -286,13 +286,17 @@ impl Floating {
             if let Some((i, _)) = self.corners().iter().enumerate().map(|(i, p)| (i, d(*p))).filter(|(_, dd)| *dd <= tol).min_by(|a, b| a.1.total_cmp(&b.1)) {
                 return Grab::Corner(i as u8);
             }
+            let q = self.corners();
+            if !inside(&q, (x, y)) && (0..4).any(|i| seg_dist((x, y), q[i], q[(i + 1) % 4]) <= rot) {
+                return Grab::Rotate;
+            }
             return Grab::Translate;
         }
         let hs = self.handles();
         if let Some((i, _)) = hs.iter().take(8).enumerate().map(|(i, h)| (i, d(h.0))).filter(|(_, dd)| *dd <= tol).min_by(|a, b| a.1.total_cmp(&b.1)) {
             return Grab::Edge(i as u8);
         }
-        if self.kind == Kind::MovePixels || self.kind == Kind::MoveSelection {
+        if matches!(self.kind, Kind::MovePixels | Kind::MoveSelection | Kind::Deform) {
             let q = self.corners();
             if !inside(&q, (x, y)) {
                 let e = (0..4).map(|i| seg_dist((x, y), q[i], q[(i + 1) % 4])).fold(f32::MAX, f32::min);
@@ -324,6 +328,14 @@ impl Floating {
                     a = (a / st).round() * st;
                 }
                 self.angle = a;
+                if let Some(q) = start.quad {
+                    let delta = a - start.angle;
+                    let (c, s) = (delta.cos(), delta.sin());
+                    self.quad = Some(q.map(|p| {
+                        let (x, y) = (p.0 - start.cx, p.1 - start.cy);
+                        (start.cx + x * c - y * s, start.cy + x * s + y * c)
+                    }));
+                }
             }
             Grab::Edge(e) => {
                 // axes locaux (le contenu peut être tourné)
@@ -601,6 +613,21 @@ mod tests {
         }
         d.sel = Some(m);
         d
+    }
+
+    #[test]
+    fn deformation_and_corner_warp_offer_rotation_outside_the_frame() {
+        for kind in [Kind::Deform, Kind::Warp] {
+            let mut doc = Doc::new(40, 40, [255; 4], "rotate");
+            doc.select_all();
+            let mut f = Floating::lift(&mut doc, kind, false).unwrap();
+            assert_eq!(f.hit(44.0, 20.0, 2.0, 8.0, false), Grab::Rotate);
+            f.quad = Some(f.corners());
+            let start = f.snapshot();
+            f.drag(&start, Grab::Rotate, (40.0, 20.0), (20.0, 40.0), false, false);
+            let corner = f.corners()[0];
+            assert!((corner.0 - 40.0).abs() < 0.01 && corner.1.abs() < 0.01);
+        }
     }
 
     #[test]

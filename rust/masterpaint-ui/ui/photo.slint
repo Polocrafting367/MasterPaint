@@ -2,7 +2,7 @@
 // css/photo-mode.css) — interface sombre type Lightroom, toile au centre, pellicule en bas,
 // réglages à droite (en bas sur téléphone).
 import { Theme } from "theme.slint";
-import { FaIcon } from "widgets.slint";
+import { FaIcon, GlyphIcon } from "widgets.slint";
 
 export struct PmThumb {
     name: string,
@@ -19,16 +19,18 @@ component PmButton inherits Rectangle {
     callback clicked();
     height: 30px;
     width: lbl.text != "" ? lbl.preferred-width + 38px : 32px;
-    border-radius: 4px;
+    border-radius: 4px * Theme.round;
     background: root.kind == 0 ? (ta.pressed ? Theme.accent.darker(25%) : ta.has-hover ? Theme.accent.darker(12%) : Theme.accent)
         : root.kind == 2 ? (ta.has-hover ? #e74c3c : #c0392b)
         : (ta.pressed ? #3a3a3a : ta.has-hover ? #555555 : #444444);
-    FaIcon {
+    GlyphIcon {
         x: lbl.text != "" ? 11px : (parent.width - self.width) / 2;
         width: 14px;
         glyph: root.glyph;
         size: 12px;
-        color: #ffffff;
+        tint: #ffffff;
+        // fond accent ou rouge : glyphe blanc (contraste) ; bouton gris : icône maison
+        on-accent: root.kind != 1;
     }
     lbl := Text {
         x: 30px;
@@ -77,13 +79,13 @@ component PmSlider inherits Rectangle {
         y: 22px;
         width: parent.width - 12px;
         height: 4px;
-        border-radius: 2px;
+        border-radius: 2px * Theme.round;
         background: #3c3c3c;
         Rectangle {
             x: min(root.ratio, root.zero) * parent.width;
             width: abs(root.ratio - root.zero) * parent.width;
             height: parent.height;
-            border-radius: 2px;
+            border-radius: 2px * Theme.round;
             background: Theme.accent;
         }
     }
@@ -92,7 +94,7 @@ component PmSlider inherits Rectangle {
         y: 17px;
         width: 14px;
         height: 14px;
-        border-radius: 7px;
+        border-radius: 7px * Theme.round;
         background: ta.pressed ? #ffffff : #e6e6e6;
         border-width: 2px;
         border-color: Theme.accent;
@@ -159,12 +161,12 @@ component PmSectionHead inherits Rectangle {
         y: 8px;
         width: 34px;
         height: 16px;
-        border-radius: 2px;
+        border-radius: 2px * Theme.round;
         background: rta.has-hover ? Theme.accent : #ffffff0d;
         border-width: 1px;
         border-color: rta.has-hover ? Theme.accent : #ffffff26;
         Text {
-            text: "RAZ";
+            text: @tr("RAZ");
             font-size: 9px;
             color: rta.has-hover ? #ffffff : #cccccc;
         }
@@ -269,16 +271,16 @@ export component PhotoMode inherits Rectangle {
             height: 1px;
             background: #333333;
         }
-        FaIcon {
+        GlyphIcon {
             x: 16px;
             width: 18px;
             glyph: "\u{f030}";
             size: 15px;
-            color: #ffffff;
+            tint: #ffffff;
         }
         if !root.phone: Text {
             x: 42px;
-            text: "Mode Photo Pro";
+            text: @tr("Mode Photo Pro");
             font-size: 15px;
             font-weight: 500;
             color: #ffffff;
@@ -291,14 +293,14 @@ export component PhotoMode inherits Rectangle {
             spacing: 6px;
             PmButton {
                 glyph: "\u{2b}";
-                text: root.phone ? "Importer" : "Importer photos";
+                text: root.phone ? @tr("Importer") : @tr("Importer photos");
                 clicked => {
                     root.action("import");
                 }
             }
             PmButton {
                 glyph: "\u{f35d}";
-                text: root.phone ? "" : "Ouvrir";
+                text: root.phone ? "" : @tr("Ouvrir");
                 kind: 1;
                 clicked => {
                     root.action("open-editor");
@@ -306,17 +308,26 @@ export component PhotoMode inherits Rectangle {
             }
             PmButton {
                 glyph: "\u{f56e}";
-                text: root.phone ? "Exporter" : "Exporter…";
+                text: root.phone ? @tr("Exporter") : @tr("Exporter…");
                 clicked => {
                     root.action("export");
                 }
             }
             PmButton {
                 glyph: "\u{f0c5}";
-                text: root.phone ? "" : "Appliquer à toutes";
+                text: root.phone ? "" : @tr("Appliquer à toutes");
                 kind: 1;
                 clicked => {
                     root.action("apply-all");
+                }
+            }
+            // réglage automatique de chaque photo selon sa scène (portrait, paysage, nuit…)
+            PmButton {
+                glyph: "\u{e2ca}";
+                text: root.phone ? "" : @tr("Auto sur toutes");
+                kind: 1;
+                clicked => {
+                    root.action("auto-all");
                 }
             }
             PmButton {
@@ -384,13 +395,14 @@ export component PhotoMode inherits Rectangle {
         if root.photos.length == 0: VerticalLayout {
             alignment: center;
             spacing: 18px;
-            FaIcon {
+            GlyphIcon {
                 glyph: "\u{f302}";
                 size: 48px;
-                color: #333333;
+                tint: #333333;
+                opacity: 0.35;
             }
             Text {
-                text: "Aucune photo chargée. Importez vos fichiers JPG, PNG, WebP…";
+                text: @tr("Aucune photo chargée. Importez vos fichiers JPG, PNG, WebP…");
                 font-size: 13px;
                 color: #d4d4d4;
                 horizontal-alignment: center;
@@ -400,7 +412,7 @@ export component PhotoMode inherits Rectangle {
                 alignment: center;
                 PmButton {
                     glyph: "\u{2b}";
-                    text: "Importer photos";
+                    text: @tr("Importer photos");
                     clicked => {
                         root.action("import");
                     }
@@ -419,10 +431,10 @@ export component PhotoMode inherits Rectangle {
             y: 10px;
             width: 74px;
             height: 22px;
-            border-radius: 11px;
+            border-radius: 11px * Theme.round;
             background: #141414d9;
             Text {
-                text: "Rendu…";
+                text: @tr("Rendu…");
                 font-size: 11px;
                 color: #ffffff;
             }
@@ -433,7 +445,7 @@ export component PhotoMode inherits Rectangle {
             y: parent.height - 46px;
             width: zl.preferred-width + 32px;
             height: 32px;
-            border-radius: 16px;
+            border-radius: 16px * Theme.round;
             background: #141414d9;
             border-width: 1px;
             border-color: #ffffff26;
@@ -442,7 +454,7 @@ export component PhotoMode inherits Rectangle {
                 height: parent.height;
                 spacing: 8px;
                 Text {
-                    text: (root.phone ? "" : "Zoom : ") + round(root.disp-w / (root.full-w * 1px) * 100) + " %";
+                    text: (root.phone ? "" : @tr("Zoom : ")) + round(root.disp-w / (root.full-w * 1px) * 100) + " %";
                     font-size: 11px;
                     color: #ffffffe6;
                     vertical-alignment: center;
@@ -451,12 +463,12 @@ export component PhotoMode inherits Rectangle {
                     width: 24px;
                     y: 4px;
                     height: 24px;
-                    border-radius: 12px;
+                    border-radius: 12px * Theme.round;
                     background: fta.has-hover ? #ffffff26 : #ffffff0d;
-                    FaIcon {
+                    GlyphIcon {
                         glyph: "\u{f065}";
                         size: 11px;
-                        color: #ffffff;
+                        tint: #ffffff;
                     }
                     fta := TouchArea {
                         clicked => {
@@ -470,18 +482,19 @@ export component PhotoMode inherits Rectangle {
                     y: 4px;
                     height: 24px;
                     width: tl.preferred-width + 34px;
-                    border-radius: 12px;
+                    border-radius: 12px * Theme.round;
                     background: root.fx-off ? #e74c3c : tta.has-hover ? #ffffff33 : #ffffff1a;
-                    FaIcon {
+                    GlyphIcon {
                         x: 9px;
                         width: 12px;
                         glyph: "\u{e2ca}";
                         size: 11px;
-                        color: #ffffff;
+                        tint: #ffffff;
+                        on-accent: root.fx-off;
                     }
                     tl := Text {
                         x: 26px;
-                        text: root.fx-off ? "OFF" : "ON";
+                        text: root.fx-off ? @tr("OFF") : @tr("ON");
                         font-size: 10px;
                         font-weight: 700;
                         color: #ffffff;
@@ -521,7 +534,7 @@ export component PhotoMode inherits Rectangle {
                 spacing: 10px;
                 for p[i] in root.photos: Rectangle {
                     width: root.phone ? 80px : 100px;
-                    border-radius: 4px;
+                    border-radius: 4px * Theme.round;
                     background: p.active ? #333333 : pta.has-hover ? #222222 : #000000;
                     border-width: 2px;
                     border-color: p.active ? Theme.accent : pta.has-hover ? #555555 : #333333;
@@ -543,7 +556,7 @@ export component PhotoMode inherits Rectangle {
                         y: 6px;
                         width: 8px;
                         height: 8px;
-                        border-radius: 4px;
+                        border-radius: 4px * Theme.round;
                         background: #ffaa00;
                     }
                     if p.active || root.phone || pta.has-hover: Rectangle {
@@ -551,7 +564,7 @@ export component PhotoMode inherits Rectangle {
                         y: 4px;
                         width: 18px;
                         height: 18px;
-                        border-radius: 9px;
+                        border-radius: 9px * Theme.round;
                         background: xta.has-hover ? #ff4d4d : #00000099;
                         FaIcon {
                             glyph: "\u{f00d}";
@@ -595,7 +608,7 @@ export component PhotoMode inherits Rectangle {
                 alignment: start;
                 // ---- Filtres & Reset ----
                 PmSectionHead {
-                    title: "FILTRES & RESET";
+                    title: @tr("FILTRES & RESET");
                     resettable: false;
                     collapsed: root.folded[0];
                     toggle => {
@@ -606,13 +619,13 @@ export component PhotoMode inherits Rectangle {
                     padding: 14px;
                     spacing: 8px;
                     Text {
-                        text: "Préréglages créatifs";
+                        text: @tr("Préréglages créatifs");
                         font-size: 10px;
                         color: #cccccc;
                     }
                     pcombo := Rectangle {
                         height: 26px;
-                        border-radius: 3px;
+                        border-radius: 3px * Theme.round;
                         background: #111111;
                         border-width: 1px;
                         border-color: cta.has-hover ? Theme.accent : #333333;
@@ -673,7 +686,7 @@ export component PhotoMode inherits Rectangle {
                         PmButton {
                             horizontal-stretch: 1;
                             glyph: "\u{f0e2}";
-                            text: "Réinitialiser";
+                            text: @tr("Réinitialiser");
                             kind: 1;
                             clicked => {
                                 root.action("reset");
@@ -682,7 +695,7 @@ export component PhotoMode inherits Rectangle {
                         PmButton {
                             horizontal-stretch: 1;
                             glyph: "\u{f2f9}";
-                            text: "Rotation";
+                            text: @tr("Rotation");
                             clicked => {
                                 root.action("rotate");
                             }
@@ -691,21 +704,21 @@ export component PhotoMode inherits Rectangle {
                 }
                 // ---- sections de curseurs (indices du moteur Camera Raw) ----
                 for sec[si] in [
-                    { title: "LUMIÈRE", auto: true, sliders: [
-                        { i: 0, l: "Exposition", mn: -150, mx: 150 }, { i: 18, l: "Contraste", mn: -80, mx: 80 },
-                        { i: 5, l: "Hautes lumières", mn: -170, mx: 170 }, { i: 3, l: "Ombres", mn: -170, mx: 170 },
-                        { i: 6, l: "Blancs", mn: -140, mx: 140 }, { i: 4, l: "Noirs", mn: -140, mx: 140 }] },
-                    { title: "COULEUR ET SATURATION", auto: false, sliders: [
-                        { i: 1, l: "Température", mn: -100, mx: 100 }, { i: 2, l: "Teinte", mn: -100, mx: 100 },
-                        { i: 20, l: "Vibrance", mn: -90, mx: 90 }, { i: 19, l: "Saturation", mn: -80, mx: 80 }] },
-                    { title: "PRÉSENCE ET DÉTAIL", auto: false, sliders: [
-                        { i: 16, l: "Clarté (micro-contraste)", mn: -70, mx: 70 }, { i: 17, l: "Correction du voile", mn: -70, mx: 70 },
-                        { i: 22, l: "Vignettage", mn: -85, mx: 85 }, { i: 21, l: "Netteté (piqué)", mn: 0, mx: 100 },
-                        { i: 23, l: "Grain film", mn: 0, mx: 100 }, { i: 24, l: "Piqué du grain", mn: 0, mx: 100 }] },
-                    { title: "COLOR GRADING (RVB)", auto: false, sliders: [
-                        { i: 7, l: "Rouge", mn: -80, mx: 80 }, { i: 8, l: "Rouge — hautes lumières", mn: -70, mx: 70 }, { i: 9, l: "Rouge — ombres", mn: -70, mx: 70 },
-                        { i: 10, l: "Vert", mn: -80, mx: 80 }, { i: 11, l: "Vert — hautes lumières", mn: -70, mx: 70 }, { i: 12, l: "Vert — ombres", mn: -70, mx: 70 },
-                        { i: 13, l: "Bleu", mn: -80, mx: 80 }, { i: 14, l: "Bleu — hautes lumières", mn: -70, mx: 70 }, { i: 15, l: "Bleu — ombres", mn: -70, mx: 70 }] },
+                    { title: @tr("LUMIÈRE"), auto: true, sliders: [
+                        { i: 0, l: @tr("Exposition"), mn: -150, mx: 150 }, { i: 18, l: @tr("Contraste"), mn: -80, mx: 80 },
+                        { i: 5, l: @tr("Hautes lumières"), mn: -170, mx: 170 }, { i: 3, l: @tr("Ombres"), mn: -170, mx: 170 },
+                        { i: 6, l: @tr("Blancs"), mn: -140, mx: 140 }, { i: 4, l: @tr("Noirs"), mn: -140, mx: 140 }] },
+                    { title: @tr("COULEUR ET SATURATION"), auto: false, sliders: [
+                        { i: 1, l: @tr("Température"), mn: -100, mx: 100 }, { i: 2, l: @tr("Teinte"), mn: -100, mx: 100 },
+                        { i: 20, l: @tr("Vibrance"), mn: -90, mx: 90 }, { i: 19, l: @tr("Saturation"), mn: -80, mx: 80 }] },
+                    { title: @tr("PRÉSENCE ET DÉTAIL"), auto: false, sliders: [
+                        { i: 16, l: @tr("Clarté (micro-contraste)"), mn: -70, mx: 70 }, { i: 17, l: @tr("Correction du voile"), mn: -70, mx: 70 },
+                        { i: 22, l: @tr("Vignettage"), mn: -85, mx: 85 }, { i: 21, l: @tr("Netteté (piqué)"), mn: 0, mx: 100 },
+                        { i: 23, l: @tr("Grain film"), mn: 0, mx: 100 }, { i: 24, l: @tr("Piqué du grain"), mn: 0, mx: 100 }] },
+                    { title: @tr("COLOR GRADING (RVB)"), auto: false, sliders: [
+                        { i: 7, l: @tr("Rouge"), mn: -80, mx: 80 }, { i: 8, l: @tr("Rouge — hautes lumières"), mn: -70, mx: 70 }, { i: 9, l: @tr("Rouge — ombres"), mn: -70, mx: 70 },
+                        { i: 10, l: @tr("Vert"), mn: -80, mx: 80 }, { i: 11, l: @tr("Vert — hautes lumières"), mn: -70, mx: 70 }, { i: 12, l: @tr("Vert — ombres"), mn: -70, mx: 70 },
+                        { i: 13, l: @tr("Bleu"), mn: -80, mx: 80 }, { i: 14, l: @tr("Bleu — hautes lumières"), mn: -70, mx: 70 }, { i: 15, l: @tr("Bleu — ombres"), mn: -70, mx: 70 }] },
                 ]: VerticalLayout {
                     PmSectionHead {
                         title: sec.title;
@@ -725,7 +738,7 @@ export component PhotoMode inherits Rectangle {
                             alignment: end;
                             PmButton {
                                 glyph: "\u{e2ca}";
-                                text: "Auto";
+                                text: @tr("Auto");
                                 kind: 1;
                                 clicked => {
                                     root.action("auto");
@@ -746,7 +759,7 @@ export component PhotoMode inherits Rectangle {
                 }
                 // ---- mélangeur TSL : une couleur à la fois ----
                 PmSectionHead {
-                    title: "MÉLANGEUR DE COULEURS (TSL)";
+                    title: @tr("MÉLANGEUR DE COULEURS (TSL)");
                     collapsed: root.folded[5];
                     toggle => {
                         root.folded[5] = !root.folded[5];
@@ -764,7 +777,7 @@ export component PhotoMode inherits Rectangle {
                         height: 24px;
                         for c[ci] in [#e53935, #fb8c00, #fdd835, #43a047, #00acc1, #1e88e5, #8e24aa, #d81b60]: Rectangle {
                             horizontal-stretch: 1;
-                            border-radius: 12px;
+                            border-radius: 12px * Theme.round;
                             background: c;
                             border-width: ci == root.hsl-band ? 2px : 0px;
                             border-color: #ffffff;
@@ -776,27 +789,27 @@ export component PhotoMode inherits Rectangle {
                         }
                     }
                     Text {
-                        text: ["Rouges", "Oranges", "Jaunes", "Verts", "Aquas", "Bleus", "Violets", "Magentas"][root.hsl-band];
+                        text: [@tr("Rouges"), @tr("Oranges"), @tr("Jaunes"), @tr("Verts"), @tr("Aquas"), @tr("Bleus"), @tr("Violets"), @tr("Magentas")][root.hsl-band];
                         font-size: 11px;
                         font-weight: 600;
                         color: #eeeeee;
                     }
                     PmSlider {
-                        label: "Teinte";
+                        label: @tr("Teinte");
                         value: root.values[30 + root.hsl-band];
                         changed(v) => {
                             root.set(30 + root.hsl-band, v);
                         }
                     }
                     PmSlider {
-                        label: "Saturation";
+                        label: @tr("Saturation");
                         value: root.values[38 + root.hsl-band];
                         changed(v) => {
                             root.set(38 + root.hsl-band, v);
                         }
                     }
                     PmSlider {
-                        label: "Luminance";
+                        label: @tr("Luminance");
                         value: root.values[46 + root.hsl-band];
                         changed(v) => {
                             root.set(46 + root.hsl-band, v);

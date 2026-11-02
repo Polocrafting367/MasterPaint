@@ -4,7 +4,37 @@
 // partagés par la fenêtre volante (ColorsPanel) et le panneau du téléphone (MobColors).
 import { Theme } from "theme.slint";
 import { Generated } from "generated.slint";
-import { FaIcon, GlyphIcon, Icon, W10Button, W10Slider, W10LineEdit, NumEdit } from "widgets.slint";
+import { FaIcon, GlyphIcon, Icon, W10Button, W10Slider, W10LineEdit, NumEdit, HoverTip } from "widgets.slint";
+
+/// Icône colorée de la bascule roue ↔ carré : montre le mode vers lequel on passe — petite
+/// roue (image de la roue déjà calculée par Rust) ou petit carré de toutes les couleurs
+/// (teintes en largeur, blanc en haut, noir en bas, comme `grid_color`).
+export component PickerModeIcon inherits Rectangle {
+    in property <bool> to-square;
+    in property <image> wheel;
+    in property <length> side: 14px;
+    width: root.side;
+    height: root.side;
+    if !root.to-square: Image {
+        width: root.side;
+        height: root.side;
+        source: root.wheel;
+        image-fit: contain;
+        image-rendering: smooth;
+    }
+    if root.to-square: Rectangle {
+        width: root.side;
+        height: root.side;
+        border-radius: 2px * Theme.round;
+        clip: true;
+        background: @linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+        Rectangle {
+            background: @linear-gradient(180deg, #ffffff 0%, #ffffff00 50%, #00000000 50%, #000000 100%);
+        }
+        border-width: 1px;
+        border-color: #00000030;
+    }
+}
 
 /// Petit bouton à icône (bascule roue / carré, pipette, échanger…).
 export component ColorIconButton inherits Rectangle {
@@ -18,10 +48,10 @@ export component ColorIconButton inherits Rectangle {
     background: root.checked ? Theme.accent-20 : ta.has-hover ? Theme.accent-14 : transparent;
     border-width: root.checked ? 1px : 0px;
     border-color: Theme.accent-60;
-    FaIcon {
+    GlyphIcon {
         glyph: root.glyph;
         size: root.glyph-size;
-        color: root.checked ? Theme.accent : Theme.text;
+        tint: root.checked ? Theme.accent : Theme.text;
     }
     ta := TouchArea {
         clicked => {
@@ -39,27 +69,8 @@ export component CurrentColors inherits Rectangle {
     /// côté d'un carré de couleur
     in property <length> cell: 28px;
     in property <length> radius: 3px;
-    callback pipette-clicked();
     width: root.cell * 1.6;
     height: root.cell * 1.6;
-    // pipette (même icône que l'outil) : coin bas-gauche, entre principale et secondaire
-    Rectangle {
-        x: 0;
-        y: root.height - 17px;
-        width: 17px;
-        height: 17px;
-        border-radius: 3px;
-        background: pita.has-hover ? Theme.accent-14 : transparent;
-        Icon {
-            spec: { svg-index: 7, fa: "", fa-weight: 900 };
-            size: 15px;
-        }
-        pita := TouchArea {
-            clicked => {
-                root.pipette-clicked();
-            }
-        }
-    }
     // secondaire
     Rectangle {
         x: root.cell * 0.6;
@@ -98,12 +109,13 @@ export component CurrentColors inherits Rectangle {
         y: 0;
         width: 15px;
         height: 15px;
-        border-radius: 3px;
+        border-radius: 3px * Theme.round;
         background: swta.has-hover ? Theme.accent-14 : transparent;
-        FaIcon {
+        GlyphIcon {
             glyph: "\u{f362}";
             size: 9px;
         }
+        HoverTip { y: parent.height; hovered: swta.has-hover; text: @tr("Échanger les couleurs principale et secondaire"); }
         swta := TouchArea {
             clicked => {
                 let p = root.primary;
@@ -154,7 +166,7 @@ export component ColorPicker inherits Rectangle {
         y: 0;
         width: root.side;
         height: root.side;
-        border-radius: 3px;
+        border-radius: 3px * Theme.round;
         clip: true;
         border-width: 1px;
         border-color: Theme.window-border;
@@ -172,7 +184,7 @@ export component ColorPicker inherits Rectangle {
         y: (root.square ? (root.sat < 0.995 ? root.sat / 2 : 0.5 + (1 - root.val) / 2) * root.side : root.side / 2 - sin(root.hue * 1deg) * root.sat * root.side / 2) - 6px;
         width: 12px;
         height: 12px;
-        border-radius: 6px;
+        border-radius: 6px * Theme.round;
         border-width: 1px;
         border-color: #000000;
         Rectangle {
@@ -180,7 +192,7 @@ export component ColorPicker inherits Rectangle {
             y: 1px;
             width: 10px;
             height: 10px;
-            border-radius: 5px;
+            border-radius: 5px * Theme.round;
             border-width: 2px;
             border-color: #ffffff;
         }
@@ -269,10 +281,10 @@ export component ColorSliders inherits Rectangle {
             VerticalLayout {
                 spacing: 2px;
                 SliderTitle {
-                    text: "RVB";
+                    text: @tr("RVB");
                 }
                 ChannelRow {
-                    label: "R";
+                    label: @tr("R");
                     value: root.comps[0];
                     track: @linear-gradient(90deg, Colors.rgb(0, root.current.green, root.current.blue) 0%, Colors.rgb(255, root.current.green, root.current.blue) 100%);
                     changed(v) => {
@@ -280,7 +292,7 @@ export component ColorSliders inherits Rectangle {
                     }
                 }
                 ChannelRow {
-                    label: "V";
+                    label: @tr("V");
                     value: root.comps[1];
                     track: @linear-gradient(90deg, Colors.rgb(root.current.red, 0, root.current.blue) 0%, Colors.rgb(root.current.red, 255, root.current.blue) 100%);
                     changed(v) => {
@@ -288,7 +300,7 @@ export component ColorSliders inherits Rectangle {
                     }
                 }
                 ChannelRow {
-                    label: "B";
+                    label: @tr("B");
                     value: root.comps[2];
                     track: @linear-gradient(90deg, Colors.rgb(root.current.red, root.current.green, 0) 0%, Colors.rgb(root.current.red, root.current.green, 255) 100%);
                     changed(v) => {
@@ -296,10 +308,10 @@ export component ColorSliders inherits Rectangle {
                     }
                 }
                 if !root.two-columns: SliderTitle {
-                    text: "TSV";
+                    text: @tr("TSV");
                 }
                 if !root.two-columns: ChannelRow {
-                    label: "T";
+                    label: @tr("T");
                     maximum: 360;
                     value: root.comps[4];
                     track: @linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
@@ -308,7 +320,7 @@ export component ColorSliders inherits Rectangle {
                     }
                 }
                 if !root.two-columns: ChannelRow {
-                    label: "S";
+                    label: @tr("S");
                     maximum: 100;
                     value: root.comps[5];
                     track: @linear-gradient(90deg, Colors.hsv(root.comps[4], 0, root.comps[6] / 100) 0%, Colors.hsv(root.comps[4], 1, root.comps[6] / 100) 100%);
@@ -329,10 +341,10 @@ export component ColorSliders inherits Rectangle {
             if root.two-columns: VerticalLayout {
                 spacing: 2px;
                 SliderTitle {
-                    text: "TSV";
+                    text: @tr("TSV");
                 }
                 ChannelRow {
-                    label: "T";
+                    label: @tr("T");
                     maximum: 360;
                     value: root.comps[4];
                     track: @linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
@@ -341,7 +353,7 @@ export component ColorSliders inherits Rectangle {
                     }
                 }
                 ChannelRow {
-                    label: "S";
+                    label: @tr("S");
                     maximum: 100;
                     value: root.comps[5];
                     track: @linear-gradient(90deg, Colors.hsv(root.comps[4], 0, root.comps[6] / 100) 0%, Colors.hsv(root.comps[4], 1, root.comps[6] / 100) 100%);
@@ -364,7 +376,7 @@ export component ColorSliders inherits Rectangle {
             height: 24px;
             spacing: 6px;
             Text {
-                text: "Hexa";
+                text: @tr("Hexa");
                 color: Theme.text;
                 vertical-alignment: center;
             }
@@ -378,7 +390,7 @@ export component ColorSliders inherits Rectangle {
             Rectangle { }
         }
         SliderTitle {
-            text: "Alpha";
+            text: @tr("Alpha");
         }
         ChannelRow {
             label: "";
@@ -396,6 +408,7 @@ export component ColorSliders inherits Rectangle {
 /// ColorAddItem de paintdotjs (la couleur modifiée et un « + ») ou une icône.
 export component SwatchStrip inherits Rectangle {
     in property <[color]> colors: [];
+    in property <bool> gray;
     in property <bool> add-button;
     in property <color> current;
     /// icône de tête quand il n'y a pas de « + » (récentes : horloge)
@@ -423,7 +436,7 @@ export component SwatchStrip inherits Rectangle {
         background: pta.has-hover ? Theme.accent-14 : transparent;
         Icon {
             spec: { svg-index: 7, fa: "", fa-weight: 900 };
-            size: root.cell - 2px;
+            size: max(10px, root.cell - 1px);
         }
         pta := TouchArea {
             clicked => {
@@ -431,9 +444,10 @@ export component SwatchStrip inherits Rectangle {
             }
         }
     }
-    property <int> per-line: max(1, floor((root.width + root.gap) / (root.cell + root.gap)));
-    property <int> lines: max(1, ceil((root.colors.length + root.lead) / root.per-line));
-    out property <length> wanted-height: root.lines * (root.cell + root.gap);
+    // une seule rangée (fenêtre compacte) : autant de cases que de colonnes du nuancier, le
+    // surplus n'est pas affiché ; cases au même pas que le nuancier (bords alignés)
+    property <int> per-line: max(1, floor((root.width + root.gap) / (root.cell + root.gap) + 0.01));
+    out property <length> wanted-height: root.cell;
     height: root.wanted-height;
     if root.add-button: Rectangle {
         x: root.add-x;
@@ -468,21 +482,23 @@ export component SwatchStrip inherits Rectangle {
         y: 0;
         width: root.cell;
         height: root.cell;
-        FaIcon {
+        GlyphIcon {
             glyph: root.glyph;
             size: root.cell * 0.65;
-            color: Theme.text-inactive;
+            tint: Theme.text-inactive;
         }
     }
     for c[i] in root.colors: Rectangle {
-        x: mod(i + root.lead, root.per-line) * (root.cell + root.gap);
-        y: floor((i + root.lead) / root.per-line) * (root.cell + root.gap);
+        visible: i + root.lead < root.per-line;
+        x: (i + root.lead) * (root.cell + root.gap);
+        y: 0;
         width: root.cell;
         height: root.cell;
         border-radius: root.radius;
-        background: c;
+        property <float> luminance: round(0.299 * c.red + 0.587 * c.green + 0.114 * c.blue);
+        background: root.gray ? Colors.rgb(self.luminance, self.luminance, self.luminance) : c;
         border-width: 1px;
-        border-color: cta.has-hover ? Theme.accent : #a0a0a0;
+        border-color: cta.has-hover ? Theme.accent : #c0c0c0;
         cta := TouchArea {
             pointer-event(e) => {
                 if (e.kind == PointerEventKind.down) {
@@ -517,6 +533,7 @@ export component PaletteGrid inherits Rectangle {
         background: c;
         border-width: root.radius > 0px ? 0px : 1px;
         border-color: pta.has-hover ? Theme.accent : #c0c0c0;
+        HoverTip { y: parent.height; hovered: pta.has-hover; text: @tr("RVB") + ": " + c.red + ", " + c.green + ", " + c.blue; }
         pta := TouchArea {
             pointer-event(e) => {
                 if (e.kind == PointerEventKind.down) {
@@ -575,14 +592,11 @@ export component ColorsPanel inherits Rectangle {
         primary <=> root.primary;
         secondary <=> root.secondary;
         edit-secondary <=> root.edit-secondary;
-        pipette-clicked => {
-            root.pick-screen();
-        }
     }
     Text {
         x: 8px;
         y: cur.y + cur.height + 2px;
-        text: root.edit-secondary ? "Secondaire" : "Principale";
+        text: root.edit-secondary ? @tr("Secondaire") : @tr("Principale");
         font-size: Theme.small-font-size;
         color: Theme.text-inactive;
     }
@@ -591,14 +605,24 @@ export component ColorsPanel inherits Rectangle {
         y: 8px;
         height: 22px;
         spacing: 4px;
-        ColorIconButton {
-            glyph: root.square ? "\u{f111}" : "\u{f0c8}";
-            clicked => {
-                root.square = !root.square;
+        // bascule roue ↔ carré : petite icône colorée du mode suivant
+        Rectangle {
+            width: 24px;
+            height: 22px;
+            border-radius: Theme.ctl-radius;
+            background: mta.has-hover ? Theme.accent-14 : transparent;
+            PickerModeIcon {
+                to-square: !root.square;
+                wheel: root.wheel;
+            }
+            mta := TouchArea {
+                clicked => {
+                    root.square = !root.square;
+                }
             }
         }
         W10Button {
-            text: root.expanded ? "<< Moins" : "Plus >>";
+            text: root.expanded ? @tr("<< Moins") : @tr("Plus >>");
             clicked => {
                 root.expanded = !root.expanded;
             }
@@ -633,7 +657,7 @@ export component ColorsPanel inherits Rectangle {
         y: root.info-y;
         width: root.left-w - 16px;
         height: 16px;
-        border-radius: 3px;
+        border-radius: 3px * Theme.round;
         background: Theme.accent-12;
         Text {
             x: 6px;
@@ -646,11 +670,24 @@ export component ColorsPanel inherits Rectangle {
             overflow: elide;
         }
     }
-    // ---- favoris (« + ») ----
+    /// grille commune : nuancier, favoris et récentes ont la même case et le même pas (colonnes
+    /// du nuancier), bords gauche et droit alignés ; pipette et « + » occupent chacun une case
+    property <int> pal-cols: root.big ? (root.use-full ? 36 : 18) : root.use-full ? 37 : 14;
+    property <length> pitch: (root.width - 16px) / max(1, root.pal-cols);
+    property <length> swatch-cell: root.pitch - 1px;
+    // ---- favoris : pipette (icône de l'outil), « + », puis les couleurs ----
     favs := SwatchStrip {
+        gray: root.gray;
         x: 8px;
         y: root.info-y + root.info-h;
         width: root.left-w - 16px;
+        cell: root.swatch-cell;
+        gap: 1px;
+        radius: 0px;
+        pipette: true;
+        pipette-clicked => {
+            root.pick-screen();
+        }
         add-button: true;
         removable: true;
         current: root.current;
@@ -665,7 +702,23 @@ export component ColorsPanel inherits Rectangle {
             root.fav-remove(i);
         }
     }
-    property <length> left-bottom: favs.y + favs.height;
+    // ---- récentes : une rangée, juste sous les favoris (horloge dans une case) ----
+    property <length> left-bottom: favs.y + favs.height + (root.recents.length > 0 ? 1px + root.swatch-cell : 0px);
+    if root.recents.length > 0: recents := SwatchStrip {
+        gray: root.gray;
+        x: 8px;
+        y: favs.y + favs.height + 1px;
+        width: root.left-w - 16px;
+        cell: root.swatch-cell;
+        gap: 1px;
+        radius: 0px;
+        removable: false;
+        glyph: "\u{f017}";
+        colors: root.recents;
+        pick(c, r) => {
+            root.pick(c, r);
+        }
+    }
     // ---- curseurs (« Plus ») : à droite si large, sous le nuancier sinon ----
     sliders := ColorSliders {
         visible: root.expanded;
@@ -691,15 +744,58 @@ export component ColorsPanel inherits Rectangle {
     pal := PaletteGrid {
         x: 8px;
         // (hauteur des curseurs lue sans leur position : pas de boucle de liaison)
-        y: max(root.left-bottom, root.wide && root.expanded ? 8px + sliders.wanted-height : 0px) + 6px;
+        y: max(root.left-bottom, root.wide && root.expanded ? 8px + sliders.wanted-height : 0px) + 4px;
         width: root.width - 16px;
         swatches: root.swatches;
-        cols: root.big ? (root.use-full ? 36 : 18) : root.use-full ? 37 : 14;
-        row-h: root.big ? 11px : 13px;
+        cols: root.pal-cols;
+        row-h: root.pitch;
         pick(c, r) => {
             root.pick(c, r);
         }
     }
     /// hauteur utile de la fenêtre (titre compris) selon la largeur et l'état
     out property <length> wanted-height: (root.expanded && !root.wide ? sliders.y + sliders.height : pal.y + pal.height) + 8px + Theme.title-height;
+}
+
+/// Conversion d'une saisie hexadécimale (RRGGBB, avec ou sans #) en couleur ; alpha nul si la
+/// saisie n'est pas valable (rappel tenu par lib.rs).
+export global ColorUtil {
+    pure callback parse-hex(string) -> color;
+}
+
+/// Fenêtre Couleurs en mode surgissant (Paramètres › couleurs du damier, couleurs des effets :
+/// ombre, contour…) : la même fenêtre que la palette Couleurs (ColorsPanel), posée contre la
+/// case cliquée, qui modifie la couleur de cette case au lieu de la couleur principale. Le
+/// panneau est dans app.slint ; ici l'état et les rappels tenus par lib.rs.
+export global ColorPop {
+    in-out property <bool> open;
+    /// couleur modifiée
+    in-out property <color> color;
+    /// case cliquée (coordonnées de la fenêtre) : la fenêtre s'ouvre dessous, sinon dessus
+    in-out property <length> anchor-x;
+    in-out property <length> anchor-y;
+    in-out property <length> anchor-h;
+    /// destination : « appearance:N » (Paramètres) ou « effect:N » (champ d'effet)
+    in-out property <string> target;
+    /// champs R V B A T S V et hexa de la couleur modifiée (calculés par lib.rs)
+    in property <[float]> comps: [0, 0, 0, 255, 0, 0, 0];
+    in property <string> hex;
+    /// la couleur a changé (geste dans le panneau, nuancier, récentes…) : lib.rs l'applique
+    callback changed(color);
+    callback wheel-picked(length, length, length);
+    callback hsv-picked(float, float, float);
+    callback component-changed(int, float);
+    callback hex-edited(string);
+    /// champs (comps, hex) à recalculer sans rien appliquer (ouverture)
+    callback sync();
+    /// ouvre la fenêtre sur la couleur `c` pour la destination `t`, contre la case (x, y, h)
+    public function show(t: string, c: color, x: length, y: length, h: length) {
+        root.target = t;
+        root.anchor-x = x;
+        root.anchor-y = y;
+        root.anchor-h = h;
+        root.color = c;
+        root.sync();
+        root.open = true;
+    }
 }

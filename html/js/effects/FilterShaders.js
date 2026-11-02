@@ -156,6 +156,7 @@ const float PP_LOCAL_RADIUS_FRAC = 0.045;
 const float PP_LOCAL_MIX = 0.72;
 const float PP_LOCAL_SIGMA = 0.22;
 const float PP_CLIP_FIX_START = 0.90;
+const float PP_CLIP_FIX_MIN_LO = 0.45;
 const float PP_TONE_SHOULDER_START = 0.65;
 const float PP_TONE_DESAT_START = 0.72;
 const float PP_TONE_DESAT_AMOUNT = 0.55;
@@ -195,11 +196,16 @@ float perceptual(float y) { return y <= 0.0 ? 0.0 : pow(y, 1.0 / 2.2); }
 // Rend leur neutralité aux zones brûlées : quand un photosite sature, son
 // canal se fige tandis que les autres montent encore, et le blanc ressort
 // teinté — typiquement en rose.
+// RAW seulement (ceiling <= 0 : source 8 bits, rien à reconstruire) ; seuls les pixels dont le
+// canal le plus faible est haut (blancs teintés), pas les couleurs saturées.
 vec3 reconstructClipped(vec3 c, float ceiling) {
+    if (ceiling <= 0.0) return c;
     float mx = max(c.r, max(c.g, c.b));
     float start = ceiling * PP_CLIP_FIX_START;
     if (mx <= start) return c;
-    float t = clamp((mx - start) / max(1e-6, ceiling - start), 0.0, 1.0);
+    float mn = min(c.r, min(c.g, c.b));
+    float t = clamp((mx - start) / max(1e-6, ceiling - start), 0.0, 1.0)
+        * smoothstep(ceiling * PP_CLIP_FIX_MIN_LO, start, mn);
     return mix(c, vec3(mx), t);
 }
 

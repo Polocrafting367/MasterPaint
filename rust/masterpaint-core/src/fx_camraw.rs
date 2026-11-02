@@ -55,6 +55,9 @@ const LOCAL_RADIUS_FRAC: f64 = 0.045;
 const LOCAL_MIX: f64 = 0.72;
 const CLIP_FIX_START: f64 = 0.90;
 const CLIP_FIX_AMOUNT: f64 = 1.0;
+/// canal le plus faible à partir duquel un pixel est un blanc écrêté (fraction du plafond) :
+/// en dessous, c'est une couleur saturée (rouge, jaune…), laissée intacte
+const CLIP_FIX_MIN_LO: f64 = 0.45;
 const LUMA_R: f64 = 0.2126;
 const LUMA_G: f64 = 0.7152;
 const LUMA_B: f64 = 0.0722;
@@ -743,6 +746,9 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
 
     // ---- passe 1a : reconstruction des hautes lumières, balance des blancs, exposition ----
     let ceiling = sw;
+    // reconstruction des blancs écrêtés : RAW seulement (blanc du capteur connu) — une source
+    // 8 bits n'a pas de canal « figé au plafond », ses couleurs à 255 sont voulues
+    let reconstruct = source_white.is_finite() && source_white > 0.0;
     for i in 0..n {
         let o = i * 4;
         let mut c = match src {
@@ -751,8 +757,9 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
         };
         let mx = if c[0] > c[1] { if c[0] > c[2] { c[0] } else { c[2] } } else if c[1] > c[2] { c[1] } else { c[2] };
         let start = ceiling * CLIP_FIX_START;
-        if mx > start {
-            let t = ((mx - start) / (ceiling - start).max(1e-6)).min(1.0) * CLIP_FIX_AMOUNT;
+        if reconstruct && mx > start {
+            let mn = c[0].min(c[1]).min(c[2]);
+            let t = ((mx - start) / (ceiling - start).max(1e-6)).min(1.0) * smoothstep(ceiling * CLIP_FIX_MIN_LO, start, mn) * CLIP_FIX_AMOUNT;
             if t > 0.0 {
                 for v in c.iter_mut() {
                     *v += (mx - *v) * t;

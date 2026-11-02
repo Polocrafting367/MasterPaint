@@ -8,7 +8,9 @@ export global Theme {
     in-out property <bool> app-active: true;
 
     // accent et ses mélanges avec le fond (≈ color-mix CSS)
-    in-out property <color> accent: #0f2d5c;
+    in-out property <color> accent-base: #0f766e;
+    out property <[color]> accent-options: [#b91c1c, #c2410c, #a16207, #15803d, #0f766e, #0369a1, #1d4ed8, #0f2d5c, #4338ca, #7e22ce, #be185d];
+    in-out property <color> accent: #0f766e;
     in-out property <color> accent-12: #e2efef;   // barre rapide
     in-out property <color> accent-14: #ddeded;   // outil actif
     in-out property <color> accent-20: #cfe4e4;   // bouton pressé
@@ -52,16 +54,18 @@ export global Theme {
     in-out property <color> close-inactive: #9a9a9a;
 
     // typographie
-    in-out property <string> font: "Segoe UI";
+    in-out property <string> font: @tr("Segoe UI");
     in-out property <length> font-size: 12px;
     in-out property <length> menu-font-size: 12px;
     in-out property <length> small-font-size: 11px;
-    out property <string> icon-font: "Font Awesome 6 Free";
+    out property <string> icon-font: @tr("Font Awesome 6 Free");
 
     // thème Windows 98 : reliefs 3D, barre de titre en dégradé
     in-out property <bool> win98: false;
     /// barre de titre des fenêtres translucide (Paramètres › Apparence)
     in-out property <bool> glass: false;
+    in-out property <bool> title-transparent: true;
+    in-out property <bool> title-blurred: false;
     in-out property <color> bevel-hi: #ffffff;
     in-out property <color> bevel-lo: #808080;
     in-out property <color> bevel-dk: #0a0a0a;
@@ -78,13 +82,16 @@ export global Theme {
     in-out property <color> mob-muted: #6e6e73;
     in-out property <color> mob-divider: #00000014;
     in-out property <color> mob-accent-dark: #084c4c;
-    in-out property <color> mob-accent-tint: #0f2d5c1f;
-    in-out property <color> mob-accent-pill: #0f2d5c24;
+    in-out property <color> mob-accent-tint: #0f766e1f;
+    in-out property <color> mob-accent-pill: #0f766e24;
     in-out property <color> mob-capsule: #f1f6f6;
 
         // géométrie
     in-out property <length> window-radius: 8px;
     /// arrondi des contrôles (boutons, champs, listes) : façon Windows 11 ; 0 en Windows 98
     in-out property <length> ctl-radius: 5px;
+    /// 1 : coins arrondis (Paramètres › Apparence) ; 0 : tout est carré (et en Windows 98) —
+    /// multiplie tous les arrondis fixes de l'interface
+    in-out property <float> round: 1;
     in-out property <length> title-height: 26px;
 }

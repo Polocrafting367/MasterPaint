@@ -46,6 +46,8 @@ pub struct Photo {
     pub lh: usize,
     pub live: Arc<Vec<u8>>,
     pub lin_live: Option<Arc<Vec<f32>>>,
+    /// compte rendu du dernier réglage automatique (type de scène, corrections)
+    pub note: String,
 }
 
 /// Source du rendu : image 8 bits ou RAW linéaire.
@@ -123,6 +125,7 @@ impl Photo {
             lh,
             live: Arc::new(live),
             lin_live: None,
+            note: String::new(),
         }
     }
 
@@ -154,6 +157,7 @@ impl Photo {
             lh,
             live: Arc::new(live),
             lin_live: Some(Arc::new(lin_live)),
+            note: String::new(),
         }
     }
 
@@ -384,83 +388,6 @@ fn rot90(px: &[u8], w: usize, h: usize) -> Vec<u8> {
         }
     }
     out
-}
-
-fn srgb_to_linear(c: f32) -> f32 {
-    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
-}
-
-/// Réglage automatique (bouton « Auto » de la section Lumière) : médiane ramenée vers un gris
-/// moyen, hautes lumières et ombres récupérées si elles sont écrêtées, contraste si l'image est
-/// plate. Version simplifiée de suggestAutoParams (image-adjust-core.js).
-pub fn auto_params(prev: &[u8]) -> Vec<f32> {
-    let mut hist = [0u32; 256];
-    let mut n = 0u32;
-    for p in prev.chunks_exact(4).step_by(3) {
-        let l = 0.2126 * p[0] as f32 + 0.7152 * p[1] as f32 + 0.0722 * p[2] as f32;
-        hist[(l as usize).min(255)] += 1;
-        n += 1;
-    }
-    let pct = |q: f32| -> f32 {
-        let target = (q * n as f32) as u32;
-        let mut acc = 0;
-        for (i, c) in hist.iter().enumerate() {
-            acc += c;
-            if acc > target {
-                return i as f32 / 255.0;
-            }
-        }
-        1.0
-    };
-    auto_from(pct(0.005), pct(0.5), pct(0.995))
-}
-
-/// Réglage automatique d'une photo RAW, mesuré sur ses données flottantes (exposition de base
-/// comprise) : les hautes lumières au-delà du blanc, que l'aperçu 8 bits écrête, sont vues et
-/// récupérées d'autant plus qu'elles dépassent.
-pub fn auto_params_lin(lin: &[f32], ev: f32) -> Vec<f32> {
-    let k = 2f32.powf(ev);
-    let mut lum: Vec<f32> = lin.chunks_exact(3).step_by(3).map(|c| linear_to_srgb((0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * k)).collect();
-    if lum.is_empty() {
-        return neutral();
-    }
-    lum.sort_by(f32::total_cmp);
-    let pct = |q: f32| lum[((lum.len() - 1) as f32 * q) as usize];
-    auto_from(pct(0.005), pct(0.5), pct(0.995))
-}
-
-fn linear_to_srgb(v: f32) -> f32 {
-    let v = v.max(0.0);
-    if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
-}
-
-/// Réglages automatiques d'après les centiles 0,5 / 50 / 99,5 % de la luminance (sRVB, 1 = blanc).
-fn auto_from(lo: f32, med: f32, hi: f32) -> Vec<f32> {
-    let mut p = neutral();
-    // exposition : 2 diaphragmes pour 100 (EXPOSURE_STOPS_PER_100), médiane visée 0,45 en sRVB
-    let stops = (srgb_to_linear(0.45) / srgb_to_linear(med.max(0.02))).log2().clamp(-1.6, 1.6);
-    p[0] = (stops * 50.0).round();
-    if hi > 1.0 {
-        // au-delà du blanc (RAW) : la marge du capteur est ramenée dans l'image
-        p[5] = -(35.0 + ((hi - 1.0) * 60.0).min(50.0)).round();
-        p[6] = -20.0;
-    } else if hi > 0.97 {
-        p[5] = -35.0; // hautes lumières
-        p[6] = -15.0; // blancs
-    } else if hi < 0.85 {
-        p[6] = ((0.95 - hi) * 120.0).round().min(40.0);
-    }
-    if lo < 0.02 {
-        p[3] = 25.0; // ombres
-        p[4] = 10.0; // noirs
-    } else if lo > 0.12 {
-        p[4] = -((lo - 0.05) * 120.0).round().min(40.0);
-    }
-    if hi.min(1.0) - lo < 0.7 {
-        p[18] = 15.0; // contraste
-    }
-    p[20] = 12.0; // vibrance
-    p
 }
 
 #[cfg(test)]

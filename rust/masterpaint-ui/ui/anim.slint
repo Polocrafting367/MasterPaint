@@ -1,0 +1,380 @@
+// Frise du mode Animation (portage de js/anim/AnimationPanel.js) : barre de lecture et
+// d'édition, puis grille calques × images. Chaque case : dessin posé (image clé, rond plein),
+// dessin maintenu (trait), trou (vide). Clic : calque actif + image ; double-clic : image clé ;
+// glisser une image clé : la déplacer ; clic droit : menu du dessin. Le moteur est dans
+// src/anim.rs, les actions passent par `action`, `cell`, `cell-op`, `set-value`.
+import { Theme } from "theme.slint";
+import { GlyphIcon, HoverTip, NumEdit, VSep } from "widgets.slint";
+
+/// Ligne de la frise : un calque (le plus haut en premier).
+export struct AnimRow {
+    name: string,
+    /// indice du calque dans le document
+    layer: int,
+    active: bool,
+    visible: bool,
+    /// une valeur par image : 0 trou, 1 dessin posé, 2 dessin maintenu
+    cells: [int],
+}
+
+/// Petit bouton à icône de la barre de la frise (bascule possible).
+component AnimBtn inherits Rectangle {
+    in property <string> glyph;
+    in property <string> tip;
+    in property <bool> on;
+    in property <bool> enabled: true;
+    in property <bool> touch;
+    /// petit texte à droite de l'icône (sur ordinateur seulement : la frise du téléphone est étroite)
+    in property <string> label;
+    property <bool> labelled: root.label != "" && !root.touch;
+    callback clicked();
+    width: root.labelled ? lbl.preferred-width + 34px : root.touch ? 34px : 26px;
+    height: root.touch ? 32px : 24px;
+    border-radius: Theme.ctl-radius;
+    background: root.on ? Theme.accent-20 : ta.pressed ? Theme.accent-20 : ta.has-hover && root.enabled ? Theme.accent-12 : transparent;
+    border-width: root.on ? 1px : 0px;
+    border-color: Theme.accent-60;
+    GlyphIcon {
+        x: root.labelled ? 6px : (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        glyph: root.glyph;
+        size: root.touch ? 14px : 12px;
+        tint: !root.enabled ? Theme.text-inactive : root.on ? Theme.accent : Theme.text;
+    }
+    lbl := Text {
+        visible: root.labelled;
+        x: 26px;
+        height: parent.height;
+        text: root.label;
+        font-size: Theme.small-font-size;
+        color: !root.enabled ? Theme.text-inactive : Theme.text;
+        vertical-alignment: center;
+    }
+    HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: root.tip; }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+/// Entrée du menu d'un dessin (clic droit sur une case).
+component AnimMenuItem inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+    height: 26px;
+    background: ita.has-hover && root.enabled ? Theme.accent-12 : transparent;
+    border-radius: Theme.ctl-radius;
+    Text {
+        x: 10px;
+        width: parent.width - 20px;
+        height: parent.height;
+        text: root.text;
+        color: root.enabled ? Theme.text : Theme.text-inactive;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    ita := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component AnimPanel inherits Rectangle {
+    in property <[AnimRow]> rows;
+    in property <int> frame;
+    in property <int> duration: 24;
+    in property <int> fps: 12;
+    in property <bool> playing;
+    in property <bool> looping: true;
+    in property <bool> pingpong;
+    in property <bool> onion;
+    in property <bool> onion-all;
+    in property <bool> draw-step;
+    /// un dessin a été copié (Coller possible)
+    in property <bool> has-clip;
+    /// mode téléphone : boutons plus grands
+    in property <bool> touch;
+    /// first, prev, play, next, last, add, dup, insert, delete, onion, onion-all, loop,
+    /// pingpong, reverse, draw-step, export-gif, export-sheet, export-frames, exit, collapse
+    callback action(string);
+    /// clic sur une case (indice du calque, image)
+    callback cell(int, int);
+    /// opération sur un dessin : key, blank, clear, hold, holdinf, copy, paste, repeat:N,
+    /// exposure:N, move:N (calque, image)
+    callback cell-op(string, int, int);
+    /// réglage numérique : fps, duration
+    callback set-value(string, int);
+    property <length> cw: root.touch ? 24px : 18px;
+    property <length> rh: root.touch ? 28px : 22px;
+    property <length> name-w: root.touch ? 96px : 130px;
+    property <length> bar-h: root.touch ? 40px : 32px;
+    property <length> head-h: 18px;
+    // case du menu contextuel
+    property <int> menu-layer: -1;
+    property <int> menu-frame: -1;
+    property <length> menu-x;
+    property <length> menu-y;
+    background: Theme.window-bg;
+    clip: true;
+    Rectangle {
+        y: 0;
+        height: 1px;
+        background: Theme.window-border;
+    }
+
+    // ---- barre de lecture et d'édition (défile en largeur sur un écran étroit) ----
+    bar := Flickable {
+        x: 0;
+        y: 1px;
+        width: root.width;
+        height: root.bar-h;
+        content-width: max(self.width, bar-row.preferred-width + 12px);
+        // groupes répartis sur toute la largeur (lecture | réglages | images | options | export |
+        // sortie), les actions principales avec un petit texte
+        bar-row := HorizontalLayout {
+            x: 6px;
+            width: max(bar.width - 12px, self.preferred-width);
+            height: root.bar-h;
+            spacing: 2px;
+            padding-top: (root.bar-h - (root.touch ? 32px : 24px)) / 2;
+            padding-bottom: self.padding-top;
+            AnimBtn { touch: root.touch; glyph: "\u{f049}"; tip: @tr("Première image"); clicked => { root.action("first"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f048}"; tip: @tr("Image précédente"); clicked => { root.action("prev"); } }
+            AnimBtn { touch: root.touch; glyph: root.playing ? "\u{f04c}" : "\u{f04b}"; on: root.playing; label: root.playing ? @tr("Pause") : @tr("Lire"); tip: @tr("Lecture / Pause"); clicked => { root.action("play"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f051}"; tip: @tr("Image suivante"); clicked => { root.action("next"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f050}"; tip: @tr("Dernière image"); clicked => { root.action("last"); } }
+            Text {
+                min-width: 80px;
+                text: @tr("Image ") + (root.frame + 1) + " / " + root.duration;
+                color: Theme.text;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 1; min-width: 6px; }
+            Text { text: @tr("IPS"); color: Theme.text-inactive; vertical-alignment: center; }
+            NumEdit {
+                width: 38px;
+                value: root.fps;
+                accepted(v) => { root.set-value("fps", round(v)); }
+            }
+            Rectangle { width: 4px; }
+            Text { text: @tr("Images"); color: Theme.text-inactive; vertical-alignment: center; }
+            NumEdit {
+                width: 46px;
+                value: root.duration;
+                accepted(v) => { root.set-value("duration", round(v)); }
+            }
+            Rectangle { horizontal-stretch: 1; min-width: 6px; }
+            AnimBtn { touch: root.touch; glyph: "\u{f067}"; label: @tr("Ajouter"); tip: @tr("Ajouter une image à la fin (dessin vierge)"); clicked => { root.action("add"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f24d}"; label: @tr("Dupliquer"); tip: @tr("Dupliquer le dessin sur l'image suivante"); clicked => { root.action("dup"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f3be}"; label: @tr("Insérer"); tip: @tr("Insérer une image ici (décale la suite)"); clicked => { root.action("insert"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f2ed}"; tip: @tr("Supprimer l'image courante"); enabled: root.duration > 1; clicked => { root.action("delete"); } }
+            Rectangle { horizontal-stretch: 1; min-width: 6px; }
+            AnimBtn { touch: root.touch; glyph: "\u{f0c5}"; on: root.onion; label: @tr("Pelure"); tip: @tr("Pelure d'oignon : images voisines en transparence (bleu avant, rouge après)"); clicked => { root.action("onion"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f5fd}"; on: root.onion-all; enabled: root.onion; tip: @tr("Pelure sur tous les calques (sinon le calque actif)"); clicked => { root.action("onion-all"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f363}"; on: root.looping; label: @tr("Boucle"); tip: @tr("Lecture en boucle"); clicked => { root.action("loop"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f337}"; on: root.pingpong; tip: @tr("Lecture aller-retour"); clicked => { root.action("pingpong"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f04e}"; on: root.draw-step; label: @tr("Pas à pas"); tip: @tr("Avancer d'une image après chaque tracé"); clicked => { root.action("draw-step"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f0ec}"; tip: @tr("Inverser l'animation"); clicked => { root.action("reverse"); } }
+            Rectangle { horizontal-stretch: 1; min-width: 6px; }
+            AnimBtn { touch: root.touch; glyph: "\u{f1c5}"; label: @tr("GIF"); tip: @tr("Exporter en GIF animé"); clicked => { root.action("export-gif"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f00a}"; label: @tr("Planche"); tip: @tr("Exporter une planche de sprites (PNG)"); clicked => { root.action("export-sheet"); } }
+            Rectangle { horizontal-stretch: 1; min-width: 6px; }
+            AnimBtn { touch: root.touch; glyph: "\u{f2d1}"; tip: @tr("Réduire la frise (le mode animation reste actif)"); clicked => { root.action("collapse"); } }
+        }
+    }
+    Rectangle {
+        y: root.bar-h + 1px;
+        height: 1px;
+        background: Theme.window-border;
+    }
+
+    // ---- noms des calques (défilent avec la grille en hauteur) ----
+    property <length> grid-y: root.bar-h + 2px;
+    property <length> grid-h: root.height - root.grid-y;
+    Rectangle {
+        x: 0;
+        y: root.grid-y;
+        width: root.name-w;
+        height: root.grid-h;
+        clip: true;
+        background: Theme.dark ? Theme.list-bg : Theme.window-bg.darker(3%);
+        for r[i] in root.rows: Rectangle {
+            x: 0;
+            y: root.head-h + i * root.rh + grid.content-y;
+            height: root.rh;
+            width: parent.width;
+            background: r.active ? Theme.accent-14 : transparent;
+            Text {
+                x: 8px;
+                width: parent.width - 12px;
+                height: parent.height;
+                text: r.name;
+                color: r.visible ? Theme.text : Theme.text-inactive;
+                font-weight: r.active ? 600 : 400;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+            TouchArea {
+                clicked => { root.cell(r.layer, root.frame); }
+            }
+        }
+    }
+    Rectangle {
+        x: root.name-w;
+        y: root.grid-y;
+        width: 1px;
+        height: root.grid-h;
+        background: Theme.window-border;
+    }
+
+    // ---- grille calques × images ----
+    grid := Flickable {
+        x: root.name-w + 1px;
+        y: root.grid-y;
+        width: root.width - root.name-w - 1px;
+        height: root.grid-h;
+        content-width: max(self.width, root.duration * root.cw + 40px);
+        content-height: max(self.height, root.head-h + root.rows.length * root.rh + 4px);
+        // numéros d'image (un sur cinq), clic : aller à l'image
+        for f in root.duration: Rectangle {
+            x: f * root.cw;
+            y: 0;
+            width: root.cw;
+            height: root.head-h;
+            background: f == root.frame ? Theme.accent : mod(f, 5) == 4 ? Theme.accent-12 : transparent;
+            if mod(f, 5) == 4 || f == 0 || f == root.frame: Text {
+                text: f + 1;
+                font-size: 9px;
+                color: f == root.frame ? Theme.on-accent : Theme.text-inactive;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            TouchArea {
+                clicked => { root.cell(-1, f); }
+                moved => {
+                    if (self.pressed) {
+                        root.cell(-1, max(0, min(root.duration - 1, f + floor(self.mouse-x / root.cw))));
+                    }
+                }
+            }
+        }
+        // colonne de la tête de lecture
+        Rectangle {
+            x: root.frame * root.cw;
+            y: root.head-h;
+            width: root.cw;
+            height: max(0px, root.rows.length * root.rh);
+            background: Theme.accent.with-alpha(0.10);
+        }
+        for r[i] in root.rows: Rectangle {
+            x: 0;
+            y: root.head-h + i * root.rh;
+            height: root.rh;
+            width: root.duration * root.cw;
+            background: r.active ? Theme.accent.with-alpha(0.06) : transparent;
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: Theme.window-border.with-alpha(0.6);
+            }
+            for c[f] in r.cells: Rectangle {
+                x: f * root.cw;
+                width: root.cw;
+                height: root.rh;
+                // séparation discrète toutes les 5 images
+                Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    background: mod(f, 5) == 4 ? Theme.window-border : Theme.window-border.with-alpha(0.35);
+                }
+                // dessin maintenu : trait qui prolonge le dessin
+                if c == 2: Rectangle {
+                    x: 0;
+                    y: parent.height / 2 - 1.5px;
+                    width: parent.width;
+                    height: 3px;
+                    background: r.visible ? Theme.accent-60 : Theme.text-inactive.with-alpha(0.5);
+                }
+                // dessin posé (image clé)
+                if c == 1: Rectangle {
+                    x: 2px;
+                    y: 3px;
+                    width: parent.width - 4px;
+                    height: parent.height - 6px;
+                    border-radius: 3px * Theme.round;
+                    background: r.visible ? Theme.accent : Theme.text-inactive;
+                    Rectangle {
+                        width: 6px;
+                        height: 6px;
+                        border-radius: 3px;
+                        background: Theme.on-accent;
+                    }
+                }
+                cta := TouchArea {
+                    double-clicked => { root.cell-op("key", r.layer, f); }
+                    pointer-event(e) => {
+                        if (e.button == PointerEventButton.right && e.kind == PointerEventKind.down) {
+                            root.cell(r.layer, f);
+                            root.menu-layer = r.layer;
+                            root.menu-frame = f;
+                            root.menu-x = min(root.width - 230px, self.absolute-position.x - root.absolute-position.x + self.mouse-x);
+                            root.menu-y = max(0px, min(root.height - 300px, self.absolute-position.y - root.absolute-position.y + self.mouse-y));
+                            menu.show();
+                        } else if (e.button == PointerEventButton.left && e.kind == PointerEventKind.up && c == 1) {
+                            // image clé glissée : déposée sur l'image visée
+                            if (self.mouse-x < 0 || self.mouse-x >= root.cw) {
+                                root.cell-op("move:" + max(0, min(root.duration - 1, f + floor(self.mouse-x / root.cw))), r.layer, f);
+                            }
+                        }
+                    }
+                    clicked => { root.cell(r.layer, f); }
+                }
+            }
+        }
+    }
+    // garde la tête de lecture visible pendant la lecture
+    changed frame => {
+        if (root.frame * root.cw + grid.content-x < 0 || root.frame * root.cw + grid.content-x > grid.width - root.cw) {
+            grid.content-x = min(0px, max(grid.width - grid.content-width, grid.width / 2 - root.frame * root.cw));
+        }
+    }
+
+    // ---- menu d'un dessin (clic droit) ----
+    menu := PopupWindow {
+        x: root.menu-x;
+        y: root.menu-y;
+        width: 230px;
+        Rectangle {
+            background: Theme.menu-bg;
+            border-width: 1px;
+            border-color: Theme.window-border;
+            border-radius: Theme.ctl-radius;
+            drop-shadow-blur: 8px;
+            drop-shadow-color: #00000040;
+            VerticalLayout {
+                padding: 4px;
+                AnimMenuItem { text: @tr("Créer une image clé ici (copie)"); clicked => { root.cell-op("key", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Dessin vierge ici"); clicked => { root.cell-op("blank", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Effacer ce dessin"); clicked => { root.cell-op("clear", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Figer jusqu'à cette image"); clicked => { root.cell-op("hold", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Maintenir jusqu'au dessin suivant"); clicked => { root.cell-op("holdinf", root.menu-layer, root.menu-frame); } }
+                Rectangle { height: 1px; background: Theme.window-border; }
+                AnimMenuItem { text: @tr("Copier le dessin"); clicked => { root.cell-op("copy", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Coller le dessin ici"); enabled: root.has-clip; clicked => { root.cell-op("paste", root.menu-layer, root.menu-frame); } }
+                Rectangle { height: 1px; background: Theme.window-border; }
+                AnimMenuItem { text: @tr("Répéter sur les 2 images suivantes"); clicked => { root.cell-op("repeat:2", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Répéter sur les 4 images suivantes"); clicked => { root.cell-op("repeat:4", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Cadence : animer sur 1"); clicked => { root.cell-op("exposure:1", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Cadence : animer sur 2"); clicked => { root.cell-op("exposure:2", root.menu-layer, root.menu-frame); } }
+                AnimMenuItem { text: @tr("Cadence : animer sur 3"); clicked => { root.cell-op("exposure:3", root.menu-layer, root.menu-frame); } }
+            }
+        }
+    }
+}

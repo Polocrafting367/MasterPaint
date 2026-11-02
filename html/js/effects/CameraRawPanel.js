@@ -191,7 +191,7 @@
                     const gpuParams = Object.assign({}, p, {
                         wbExpGain: [wb.r * expMult, wb.g * expMult, wb.b * expMult],
                         toneWhite: PP.sceneWhite(p, p.sourceWhite),
-                        sceneCeiling: p.sourceWhite || 1.0,
+                        sceneCeiling: p.sourceWhite || 0.0,
                         // Masque local par étape (ombres, noirs, hautes lum., blancs).
                         maskFlags: (function (m) {
                             const on = (k) => (m && m[k] === false ? 0 : 1);

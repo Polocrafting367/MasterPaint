@@ -159,6 +159,9 @@
         /** Reconstruction des hautes lumières écrêtées au niveau du capteur. */
         CLIP_FIX_START: 0.90,
         CLIP_FIX_AMOUNT: 1.0,
+        // canal le plus faible à partir duquel un pixel est un blanc écrêté (fraction du
+        // plafond) : en dessous, couleur saturée (rouge, jaune…) laissée intacte
+        CLIP_FIX_MIN_LO: 0.45,
 
         /** Luminance Rec.709 (linéaire). */
         LUMA_R: 0.2126, LUMA_G: 0.7152, LUMA_B: 0.0722
@@ -439,7 +442,10 @@
         const start = ceiling * K.CLIP_FIX_START;
         if (mx <= start) return c;
         // 0 au seuil, 1 quand le canal le plus fort atteint le plafond.
-        const t = Math.min(1, (mx - start) / Math.max(1e-6, ceiling - start)) * K.CLIP_FIX_AMOUNT;
+        const mn = Math.min(c.r, c.g, c.b);
+        const lo = ceiling * K.CLIP_FIX_MIN_LO;
+        const u = Math.min(1, Math.max(0, (mn - lo) / Math.max(1e-6, start - lo)));
+        const t = Math.min(1, (mx - start) / Math.max(1e-6, ceiling - start)) * u * u * (3 - 2 * u) * K.CLIP_FIX_AMOUNT;
         if (t <= 0) return c;
         c.r += (mx - c.r) * t;
         c.g += (mx - c.g) * t;
@@ -917,6 +923,9 @@
         //            balance des blancs, exposition
         // =================================================================
         const ceiling = (typeof opts.sourceWhite === 'number' && opts.sourceWhite > 0) ? opts.sourceWhite : 1.0;
+        // reconstruction des blancs écrêtés : RAW seulement — une source 8 bits n'a pas de
+        // canal figé au plafond, ses couleurs à 255 sont voulues (sinon elles virent au blanc)
+        const reconstruct = typeof opts.sourceWhite === 'number' && opts.sourceWhite > 0;
         const cc = { r: 0, g: 0, b: 0 };
 
         for (let i = 0, o = 0; i < n; i++, o += 4) {
@@ -932,7 +941,7 @@
             // Rend leur neutralité aux zones brûlées avant toute correction de
             // couleur : sinon la dominante du capteur serait amplifiée.
             cc.r = r; cc.g = g; cc.b = b;
-            reconstructClipped(cc, ceiling);
+            if (reconstruct) reconstructClipped(cc, ceiling);
 
             // Balance des blancs et exposition, fusionnées en un seul gain par canal.
             buf[o] = cc.r * gR;

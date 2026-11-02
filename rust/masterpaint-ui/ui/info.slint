@@ -1,0 +1,570 @@
+// Fenêtre Aide et raccourcis (bouton Info de la barre d'onglets, Bienvenue › Raccourcis, Aide) :
+// raccourcis clavier et souris, puis le fonctionnement des calques particuliers de MasterPaint
+// expliqué avec des schémas dessinés ici (filtres dynamiques ƒ, masques α, texte, objets SVG).
+// Contenu seul : app.slint le pose dans une FloatWindow (panneau plein écran en mode téléphone).
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { Sprite } from "sprite.slint";
+import { FaIcon, Segmented } from "widgets.slint";
+
+/// Petit « paysage » qui sert d'image d'exemple dans les schémas (ciel, soleil, collines) ;
+/// `invert` : mêmes couleurs inversées (effet Inverser des schémas ƒ).
+component SampleImage inherits Rectangle {
+    in property <bool> invert;
+    clip: true;
+    background: @linear-gradient(180deg, (root.invert ? #a35c1f : #5ca3e0) 0%, (root.invert ? #3e1d08 : #c1e2f7) 100%);
+    Rectangle {
+        x: parent.width * 0.62;
+        y: parent.height * 0.14;
+        width: parent.height * 0.3;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: root.invert ? #0a3dc4 : #f5c23b;
+    }
+    Rectangle {
+        x: 0 - parent.width * 0.2;
+        y: parent.height * 0.58;
+        width: parent.width * 0.85;
+        height: parent.height * 0.9;
+        border-radius: self.height / 2;
+        background: root.invert ? #c35fbd : #3ca042;
+    }
+    Rectangle {
+        x: parent.width * 0.4;
+        y: parent.height * 0.68;
+        width: parent.width * 0.9;
+        height: parent.height * 0.8;
+        border-radius: self.height / 2;
+        background: root.invert ? #d988cf : #267730;
+    }
+}
+
+/// Damier de la transparence.
+component Checker inherits Rectangle {
+    clip: true;
+    background: #ffffff;
+    for k in 160: Rectangle {
+        x: mod(k, 16) * 8px;
+        y: floor(k / 16) * 8px;
+        width: 8px;
+        height: 8px;
+        background: mod(mod(k, 16) + floor(k / 16), 2) == 0 ? #ffffff : #cccccc;
+    }
+}
+
+/// Vignette d'un schéma avec sa légende dessous.
+component Tile inherits VerticalLayout {
+    in property <string> caption;
+    spacing: 4px;
+    alignment: start;
+    Rectangle {
+        width: 112px;
+        min-height: 76px;
+        max-height: 76px;
+        border-width: 1px;
+        border-color: Theme.window-border;
+        @children
+    }
+    Text {
+        width: 112px;
+        text: root.caption;
+        wrap: word-wrap;
+        horizontal-alignment: center;
+        font-size: Theme.small-font-size;
+        color: Theme.text-inactive;
+    }
+}
+
+/// Signe entre deux vignettes (+, ×, =).
+component Op inherits Text {
+    font-size: 20px;
+    font-weight: 700;
+    color: Theme.accent;
+    vertical-alignment: center;
+    height: 76px;
+}
+
+/// Schéma « a ∘ b = c » : trois vignettes, en colonne sur téléphone.
+component Formula inherits Rectangle {
+    in property <bool> narrow;
+    in property <string> op: "+";
+    in property <string> cap-a;
+    in property <string> cap-b;
+    in property <string> cap-c;
+    in property <int> kind;  // 0 filtre ƒ, 1 masque α
+    height: lay.preferred-height;
+    lay := HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        Tile {
+            caption: root.cap-a;
+            SampleImage {
+                x: 1px;
+                y: 1px;
+                width: 110px;
+                height: 74px;
+            }
+        }
+        Op { text: root.op; }
+        Tile {
+            caption: root.cap-b;
+            // ƒ : calque gris (blanc = effet) ; α : dégradé blanc → noir (visible → caché)
+            Rectangle {
+                x: 1px;
+                y: 1px;
+                width: 110px;
+                height: 74px;
+                background: root.kind == 0 ? #000000 : @linear-gradient(90deg, #ffffff 0%, #ffffff 25%, #000000 100%);
+                if root.kind == 0: Rectangle {
+                    x: parent.width * 0.5;
+                    y: 8px;
+                    width: parent.width * 0.42;
+                    height: parent.height - 16px;
+                    border-radius: 12px;
+                    background: #ffffff;
+                }
+            }
+        }
+        Op { text: "="; }
+        Tile {
+            caption: root.cap-c;
+            if root.kind == 0: fres := Rectangle {
+                x: 1px;
+                y: 1px;
+                width: 110px;
+                height: 74px;
+                SampleImage {
+                    width: parent.width;
+                    height: parent.height;
+                }
+                // l'effet (Inverser) seulement là où le calque ƒ est blanc
+                Rectangle {
+                    x: parent.width * 0.5;
+                    y: 8px;
+                    width: parent.width * 0.42;
+                    height: parent.height - 16px;
+                    border-radius: 12px;
+                    clip: true;
+                    SampleImage {
+                        x: 0 - parent.x;
+                        y: 0 - parent.y;
+                        width: fres.width;
+                        height: fres.height;
+                        invert: true;
+                    }
+                }
+            }
+            if root.kind == 1: ares := Rectangle {
+                x: 1px;
+                y: 1px;
+                width: 110px;
+                height: 74px;
+                clip: true;
+                Checker {
+                    width: parent.width;
+                    height: parent.height;
+                }
+                // l'image en bandes de moins en moins opaques (suit le dégradé du masque)
+                for k in 11: Rectangle {
+                    x: parent.width * k / 11;
+                    width: parent.width / 11 + 1px;
+                    height: parent.height;
+                    clip: true;
+                    opacity: k < 3 ? 1 : max(0, 1 - (k - 2) / 8.5);
+                    SampleImage {
+                        x: 0 - parent.x;
+                        width: ares.width;
+                        height: ares.height;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Cadre de sélection d'un objet modifiable (trait d'accent et quatre poignées).
+component Handles inherits Rectangle {
+    border-width: 1px;
+    border-color: Theme.accent;
+    for k in 4: Rectangle {
+        x: (mod(k, 2) == 0 ? 0px : parent.width) - 3px;
+        y: (k < 2 ? 0px : parent.height) - 3px;
+        width: 6px;
+        height: 6px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: Theme.accent;
+    }
+}
+
+/// Ligne du panneau Calques (schémas Texte et SVG).
+component MiniLayer inherits Rectangle {
+    in property <string> name;
+    in property <bool> shapes;
+    in property <bool> fx;
+    width: 190px;
+    height: 28px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.accent-14;
+    border-width: 1px;
+    border-color: Theme.accent;
+    Rectangle {
+        x: 6px;
+        y: 4px;
+        width: 38px;
+        height: 20px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: #c0c0c0;
+        Rectangle {
+            x: parent.width - 12px;
+            y: parent.height - 11px;
+            width: 12px;
+            height: 11px;
+            border-radius: 2px * Theme.round;
+            background: Theme.accent;
+            Rectangle {
+                visible: root.shapes;
+                width: 9px;
+                height: 9px;
+                border-radius: 4.5px;
+                border-width: 1.5px;
+                border-color: Theme.on-accent;
+            }
+            Text {
+                visible: !root.shapes;
+                text: "T";
+                font-size: 9px;
+                font-weight: 700;
+                color: Theme.on-accent;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+    Text {
+        x: 52px;
+        height: parent.height;
+        text: root.name;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+    if root.fx: Rectangle {
+        x: parent.width - 26px;
+        y: 4px;
+        width: 20px;
+        height: 20px;
+        border-radius: Theme.ctl-radius;
+        border-width: 1px;
+        border-color: Theme.window-border;
+        Text {
+            text: "fx";
+            font-weight: 700;
+            color: Theme.text;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+/// Titre de section.
+component Head inherits HorizontalLayout {
+    in property <string> title;
+    spacing: 6px;
+    Rectangle {
+        width: 3px;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+    Text {
+        text: root.title;
+        font-size: Theme.font-size * 1.25;
+        font-weight: 700;
+        color: Theme.text;
+    }
+}
+
+/// Paragraphe (renvoyé à la ligne).
+component Para inherits Text {
+    wrap: word-wrap;
+    color: Theme.text;
+}
+
+/// Étape numérotée.
+component Step inherits HorizontalLayout {
+    in property <string> n;
+    in property <string> text;
+    spacing: 8px;
+    alignment: start;
+    VerticalLayout {
+        alignment: start;
+        Rectangle {
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: Theme.accent;
+        Text {
+            text: root.n;
+            font-weight: 700;
+            color: Theme.on-accent;
+        }
+        }
+    }
+    Text {
+        width: root.width - 28px;
+        text: root.text;
+        wrap: word-wrap;
+        color: Theme.text;
+        vertical-alignment: center;
+        min-height: 20px;
+    }
+}
+
+/// Bouton d'option tel qu'il paraît dans la barre d'options (schémas Texte et SVG).
+component OptChip inherits Rectangle {
+    in property <image> img;
+    in property <string> text;
+    width: chl.preferred-width + 16px;
+    height: 28px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.accent-14;
+    border-width: 1px;
+    border-color: Theme.accent;
+    chl := HorizontalLayout {
+        x: 8px;
+        spacing: 6px;
+        Image {
+            y: 6px;
+            width: 16px;
+            height: 16px;
+            source: root.img;
+        }
+        Text {
+            text: root.text;
+            color: Theme.text;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component InfoContent inherits Rectangle {
+    in property <bool> phone;
+    in property <[{keys: string, what: string}]> shortcuts;
+    in-out property <int> tab: 0;
+    property <length> col-w: sv.visible-width - (root.phone ? 24px : 40px);
+
+    tabs := Segmented {
+        x: 10px;
+        y: 8px;
+        width: parent.width - 20px;
+        options: root.phone ? [@tr("Touches"), "ƒ", "α", @tr("Texte"), "SVG"]
+            : [@tr("Raccourcis"), @tr("Filtres dynamiques ƒ"), @tr("Masques α"), @tr("Texte"), @tr("Formes SVG")];
+        index <=> root.tab;
+    }
+    sv := ScrollView {
+        y: tabs.y + tabs.height + 8px;
+        height: parent.height - self.y;
+        // marge sous la dernière ligne (sinon les derniers raccourcis passent sous le bord)
+        content-height: body.preferred-height + 48px;
+        body := VerticalLayout {
+            x: root.phone ? 12px : 20px;
+            y: 8px;
+            width: root.col-w;
+            spacing: 10px;
+
+            // ---- raccourcis ----
+            if root.tab == 0: VerticalLayout {
+                spacing: 2px;
+                Para {
+                    text: @tr("Les raccourcis suivent Paint.NET. Ils se retrouvent aussi dans les infobulles des menus et des boutons.");
+                    color: Theme.text-inactive;
+                }
+                for s in root.shortcuts: HorizontalLayout {
+                    spacing: 10px;
+                    padding-top: s.keys == "" ? 10px : 0px;
+                    min-height: 20px;
+                    Text {
+                        width: root.phone ? 120px : 190px;
+                        text: s.keys;
+                        wrap: word-wrap;
+                        font-weight: 600;
+                        color: Theme.accent;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        width: root.col-w - (root.phone ? 130px : 200px);
+                        text: s.what;
+                        wrap: word-wrap;
+                        font-weight: s.keys == "" ? 700 : 400;
+                        font-size: s.keys == "" ? Theme.font-size * 1.15 : Theme.font-size;
+                        color: Theme.text;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // ---- filtres dynamiques ----
+            if root.tab == 1: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Calque de filtres dynamiques (ƒ)"); }
+                Para {
+                    text: @tr("Un calque ƒ applique des effets à tout ce qui est en dessous, sans rien modifier : ses pixels ne sont qu'une zone en gris. Blanc = effet appliqué, noir = pas d'effet, gris = effet partiel. Si vous retouchez le dessous, l'effet suit.");
+                }
+                Formula {
+                    kind: 0;
+                    cap-a: @tr("Calques du dessous");
+                    cap-b: @tr("Calque ƒ : zone peinte en blanc");
+                    cap-c: @tr("Résultat : l'effet seulement dans la zone");
+                }
+                Step { n: "1"; text: @tr("Panneau Calques : bouton ƒ du calque (ou ajoutez un calque vide puis ƒ)."); }
+                Step { n: "2"; text: @tr("Menu Effets ou Ajustements : l'effet choisi rejoint la pile du calque au lieu d'être appliqué une fois pour toutes."); }
+                Step { n: "3"; text: @tr("Peignez en blanc ou en noir sur le calque ƒ (pinceau, dégradé, sélection + remplissage) pour choisir où l'effet agit."); }
+                Step { n: "4"; text: @tr("Bouton à curseurs du calque (Effets appliqués) : ordre, puissance, réglages, activer / désactiver chaque effet. L'aperçu se calcule vite en basse résolution pendant le réglage, puis en pleine résolution."); }
+            }
+
+            // ---- masques alpha ----
+            if root.tab == 2: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Masque alpha (α)"); }
+                Para {
+                    text: @tr("Le masque α choisit ce qui reste visible d'un calque, sans effacer ses pixels : blanc = visible, noir = caché, gris = semi-transparent. Il se retouche ou se supprime à tout moment, le calque d'origine est intact.");
+                }
+                Formula {
+                    kind: 1;
+                    op: "×";
+                    cap-a: @tr("Calque");
+                    cap-b: @tr("Masque α : blanc → noir");
+                    cap-c: @tr("Résultat : le calque s'efface en douceur");
+                }
+                Step { n: "1"; text: @tr("Panneau Calques : bouton α du calque. Le masque s'ouvre dans son propre onglet (en gris)."); }
+                Step { n: "2"; text: @tr("Peignez-le comme une image : pinceau, gomme, dégradé noir → blanc pour un fondu, effets (flou pour adoucir le bord)."); }
+                Step { n: "3"; text: @tr("Revenez à l'onglet de l'image : le calque s'affiche à travers son masque. La corbeille à côté de α retire le masque."); }
+                Para {
+                    text: @tr("Un calque a soit un masque α, soit un filtre ƒ, pas les deux.");
+                    color: Theme.text-inactive;
+                }
+            }
+
+            // ---- texte ----
+            if root.tab == 3: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Texte modifiable"); }
+                Para {
+                    text: @tr("Avec l'option « Calque SVG » activée (par défaut), chaque texte reste modifiable : police, taille, couleur, contenu et position se changent à tout moment, et les effets qu'on lui applique ne le figent pas.");
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 16px;
+                    Rectangle {
+                        width: 170px;
+                        height: 90px;
+                        background: #ffffff;
+                        border-width: 1px;
+                        border-color: Theme.window-border;
+                        Handles {
+                            x: 22px;
+                            y: 26px;
+                            width: 126px;
+                            height: 38px;
+                            Text {
+                                text: "Bonjour";
+                                font-size: 26px;
+                                font-weight: 700;
+                                color: #c2185b;
+                            }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        OptChip {
+                            img: Sprite.vec-text;
+                            text: @tr("Modifiable");
+                        }
+                        MiniLayer {
+                            name: @tr("Texte 1");
+                            fx: true;
+                        }
+                    }
+                }
+                Step { n: "1"; text: @tr("Outil Texte (T) : cliquez sur l'image et tapez. Entrée = nouvelle ligne, Échap ou clic ailleurs = valider."); }
+                Step { n: "2"; text: @tr("Pour le modifier, recliquez le texte avec l'outil Texte : il reprend sa police, sa taille et sa couleur. L'outil Déplacer le bouge."); }
+                Step { n: "3"; text: @tr("Les effets du menu posés sur un calque texte restent réglables : badge fx du calque (activer, ordre, supprimer)."); }
+                Step { n: "4"; text: @tr("Bouton « Modifiable » relâché : le texte est peint directement dans le calque actif. Calques › Pixelliser le calque fige un calque texte."); }
+            }
+
+            // ---- formes SVG ----
+            if root.tab == 4: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Formes et calques SVG (bêta)"); }
+                Para {
+                    text: @tr("Un calque SVG garde la description de ses objets (formes, textes) au lieu de pixels : on peut les déplacer, les recolorer ou les supprimer après coup, et ils s'exportent en vrai SVG.");
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 16px;
+                    Rectangle {
+                        width: 170px;
+                        height: 100px;
+                        background: #ffffff;
+                        border-width: 1px;
+                        border-color: Theme.window-border;
+                        Rectangle {
+                            x: 14px;
+                            y: 18px;
+                            width: 58px;
+                            height: 44px;
+                            border-radius: 12px;
+                            background: #3b82f6;
+                        }
+                        Rectangle {
+                            x: 96px;
+                            y: 40px;
+                            width: 50px;
+                            height: 50px;
+                            border-radius: 25px;
+                            border-width: 4px;
+                            border-color: #f59e0b;
+                        }
+                        Path {
+                            x: 70px;
+                            y: 8px;
+                            width: 40px;
+                            height: 40px;
+                            viewbox-width: 40;
+                            viewbox-height: 40;
+                            fill: #10b981;
+                            commands: "M20 2 L25 15 L39 15 L28 24 L32 38 L20 30 L8 38 L12 24 L1 15 L15 15 Z";
+                        }
+                        Handles {
+                            x: 94px;
+                            y: 38px;
+                            width: 54px;
+                            height: 54px;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        OptChip {
+                            img: Sprite.vec-shape;
+                            text: @tr("Modifiable");
+                        }
+                        MiniLayer {
+                            name: @tr("Formes 1");
+                            shapes: true;
+                        }
+                    }
+                }
+                Step { n: "1"; text: @tr("Outils Formes, Rectangle arrondi ou Ligne : tracez. Avec « Calque SVG » activé (par défaut), la forme va sur un calque SVG (créé au besoin) et reste un objet."); }
+                Step { n: "2"; text: @tr("Déplacer bouge l'objet sous le pointeur, le Pot de peinture le recolore, Fenêtre › Objets SVG les liste (afficher, verrouiller, ordre, supprimer)."); }
+                Step { n: "3"; text: @tr("Fichier › Exporter › SVG : les calques SVG restent des objets vectoriels, le reste devient une image intégrée. Ouvrir un fichier .svg le reprend en objets."); }
+                Step { n: "4"; text: @tr("Bouton « Modifiable » relâché : la forme est tracée en pixels dans le calque actif. Pour peindre au pinceau sur un calque SVG, il faut le pixelliser (ses objets ne sont alors plus modifiables)."); }
+                Para {
+                    text: @tr("Le mode SVG est en bêta : courbes de Bézier et rotation des objets arrivent plus tard.");
+                    color: Theme.text-inactive;
+                }
+            }
+        }
+    }
+}

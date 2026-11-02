@@ -70,6 +70,13 @@ pub struct Opts {
     pub line_width: f32,
     pub gradient: GradientKind,
     pub shape_kind: String,
+    /// rayon des coins du rectangle arrondi (pixels du document)
+    pub corner: f32,
+    /// ligne : bouts (0 droit, 1 rond, 2 flèche, 3 flèche vide, 4 losange) et trait (0 continu,
+    /// 1 tirets, 2 pointillés)
+    pub cap_start: u8,
+    pub cap_end: u8,
+    pub dash: u8,
     pub sym_x: bool,
     pub sym_y: bool,
     pub primary: [u8; 4],
@@ -94,6 +101,10 @@ impl Default for Opts {
             line_width: 2.0,
             gradient: GradientKind::Linear,
             shape_kind: "rect".into(),
+            corner: 16.0,
+            cap_start: 1,
+            cap_end: 1,
+            dash: 0,
             sym_x: false,
             sym_y: false,
             primary: [0, 0, 0, 255],
@@ -123,6 +134,7 @@ pub enum Outcome {
 struct Drag {
     start: (f32, f32),
     last: (f32, f32),
+    last_radius: f32,
     base: crate::editor::Px,
     base_sel: Option<Vec<u8>>,
     cover: Cover,
@@ -309,8 +321,119 @@ fn livewire(e: &EdgeMap, from: (usize, usize), to: (usize, usize), margin: usize
     path
 }
 
+/// A gesture owns one expandable raster surface. It grows in blocks, never changes the
+/// document's canvas, and reuses its pixels/coverage until release (including outside it).
+struct OutsideStroke {
+    doc: Doc,
+    session: Box<Session>,
+    x: isize,
+    y: isize,
+    owner: (u64, u64),
+    original: crate::editor::Px,
+    original_off: Option<crate::editor::Off>,
+}
+
+fn padded(src: &[u8], channels: usize, w: usize, h: usize, nw: usize, nh: usize, dx: usize, dy: usize) -> Vec<u8> {
+    let mut out = vec![0; nw * nh * channels];
+    for y in 0..h {
+        let dst = ((y + dy) * nw + dx) * channels;
+        out[dst..dst + w * channels].copy_from_slice(&src[y * w * channels..(y + 1) * w * channels]);
+    }
+    out
+}
+
+impl OutsideStroke {
+    fn new(doc: &Doc) -> Self {
+        let (x, y, w, h, px) = if doc.layer().off.is_none() {
+            (0, 0, doc.w, doc.h, doc.layer().px.clone())
+        } else {
+            let (x, y, w, h, pixels) = doc.layer_full(doc.active);
+            (x, y, w, h, pixels.into())
+        };
+        let mut layer = doc.layer().clone();
+        let original = layer.px.clone();
+        let original_off = layer.off.take();
+        layer.px = px;
+        layer.mask = None;
+        let mut scratch = Doc::scratch(w, h, vec![layer]);
+        scratch.mode = doc.mode;
+        scratch.sel = doc.sel.as_ref().map(|m| padded(m, 1, doc.w, doc.h, w, h, (-x) as usize, (-y) as usize));
+        let center = sym_center(doc);
+        scratch.sym = Some((center.0 - x as f32, center.1 - y as f32));
+        Self { doc: scratch, session: Box::default(), x, y,
+            owner: (doc.uid, doc.layer().uid), original, original_off }
+    }
+
+    fn grow(&mut self, main: &Doc, o: &Opts, x: f32, y: f32) -> bool {
+        if !x.is_finite() || !y.is_finite() { return false; }
+        let radius = o.size.max(o.line_width).max(2.0) / 2.0 + 3.0;
+        let mut left = self.x;
+        let mut top = self.y;
+        let mut right = self.x + self.doc.w as isize;
+        let mut bottom = self.y + self.doc.h as isize;
+        for (_, p) in mirrored((x, y), (x, y), o, sym_center(main)) {
+            left = left.min((p.0 - radius).floor() as isize);
+            top = top.min((p.1 - radius).floor() as isize);
+            right = right.max((p.0 + radius).ceil() as isize);
+            bottom = bottom.max((p.1 + radius).ceil() as isize);
+        }
+        let block = 128;
+        if left < self.x { left = left.div_euclid(block) * block; }
+        if top < self.y { top = top.div_euclid(block) * block; }
+        if right > self.x + self.doc.w as isize { right = (right + block - 1).div_euclid(block) * block; }
+        if bottom > self.y + self.doc.h as isize { bottom = (bottom + block - 1).div_euclid(block) * block; }
+        let (nw, nh) = ((right - left) as usize, (bottom - top) as usize);
+        if nw.checked_mul(nh).map_or(true, |n| n > 64_000_000) { return false; }
+        let (w, h) = (self.doc.w, self.doc.h);
+        if (nw, nh) == (w, h) { return true; }
+        let (dx, dy) = ((self.x - left) as usize, (self.y - top) as usize);
+        self.doc.layers[0].px = padded(&self.doc.layers[0].px, 4, w, h, nw, nh, dx, dy).into();
+        self.doc.sel = self.doc.sel.as_ref().map(|m| padded(m, 1, w, h, nw, nh, dx, dy));
+        if let Some(d) = self.session.drag.as_mut() {
+            d.base = padded(&d.base, 4, w, h, nw, nh, dx, dy).into();
+            d.base_sel = d.base_sel.as_ref().map(|m| padded(m, 1, w, h, nw, nh, dx, dy));
+            d.cover.rebase(nw, nh, dx, dy);
+            d.start = (d.start.0 + dx as f32, d.start.1 + dy as f32);
+            d.last = (d.last.0 + dx as f32, d.last.1 + dy as f32);
+            for p in &mut d.points { p.0 += dx as f32; p.1 += dy as f32; }
+        }
+        if let Some(p) = self.doc.sym.as_mut() { p.0 += dx as f32; p.1 += dy as f32; }
+        self.doc.w = nw;
+        self.doc.h = nh;
+        self.x = left;
+        self.y = top;
+        true
+    }
+
+    fn publish(&self, main: &mut Doc, region: Option<(usize, usize, usize, usize)>, final_frame: bool) -> Option<(usize, usize, usize, usize)> {
+        let (w, h) = (main.w, main.h);
+        let (sw, sh) = (self.doc.w, self.doc.h);
+        let r = region.unwrap_or((0, 0, sw, sh));
+        let clip_x = |v: usize| (v as isize + self.x).clamp(0, w as isize) as usize;
+        let clip_y = |v: usize| (v as isize + self.y).clamp(0, h as isize) as usize;
+        let r = (clip_x(r.0), clip_y(r.1), clip_x(r.2), clip_y(r.3));
+        let source = &self.doc.layer().px;
+        let layer = main.layer_mut();
+        if r.2 > r.0 && r.3 > r.1 {
+            for y in r.1..r.3 {
+                let src = (((y as isize - self.y) as usize) * sw + (r.0 as isize - self.x) as usize) * 4;
+                let dst = (y * w + r.0) * 4;
+                layer.px[dst..dst + (r.2 - r.0) * 4].copy_from_slice(&source[src..src + (r.2 - r.0) * 4]);
+            }
+        }
+        let expanded = self.x < 0 || self.y < 0 || self.x + sw as isize > w as isize || self.y + sh as isize > h as isize;
+        let opaque_outside = !final_frame || (0..sh).any(|y| (0..sw).any(|x| {
+            let (dx, dy) = (self.x + x as isize, self.y + y as isize);
+            (dx < 0 || dy < 0 || dx >= w as isize || dy >= h as isize) && source[(y * sw + x) * 4 + 3] > 0
+        }));
+        layer.off = (expanded && opaque_outside).then(|| crate::editor::Off { x: self.x, y: self.y, w: sw, h: sh, px: source.clone() });
+        Some(r)
+    }
+}
+
 #[derive(Default)]
 pub struct Session {
+    outside: Option<OutsideStroke>,
     drag: Option<Drag>,
     /// lasso polygonal en cours (points cliqués)
     pub poly: Vec<(f32, f32)>,
@@ -324,11 +447,59 @@ pub struct Session {
     pub near_tol: f32,
     /// dernier appui (temps, x, y) : double-clic mesuré ici (celui de Slint manque les appuis lents)
     last_press: (f64, f32, f32),
+    /// géométrie de la dernière forme tracée (Formes, Rectangle arrondi, Ligne) : sur un calque
+    /// vectoriel, elle devient un objet modifiable au lieu de pixels
+    pub last_shape: Option<crate::vector::ShapeObj>,
 }
 
 impl Session {
+    /// Pointer path for raster drawing with an expandable layer surface.
+    pub fn outside_pointer(&mut self, tool: Tool, doc: &mut Doc, o: &Opts, kind: i32, x: f32, y: f32, secondary: bool, ctrl: bool, alt: bool) -> Option<Outcome> {
+        if !matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser | Tool::Shape | Tool::RoundRect | Tool::Line | Tool::Gradient) || doc.layer().vector.is_some() {
+            return None;
+        }
+        if kind == 0 {
+            self.cancel(doc);
+            let (mut w, mut h) = (doc.w, doc.h);
+            if let Some(off) = &doc.layer().off {
+                w = (off.x + off.w as isize).max(doc.w as isize).saturating_sub(off.x.min(0)) as usize;
+                h = (off.y + off.h as isize).max(doc.h as isize).saturating_sub(off.y.min(0)) as usize;
+            }
+            if w.checked_mul(h).map_or(true, |n| n > 64_000_000) { return None; }
+            self.outside = Some(OutsideStroke::new(doc));
+        }
+        let mut frame = self.outside.take()?;
+        if frame.owner != (doc.uid, doc.layer().uid) { return Some(Outcome::Nothing); }
+        // Drop the previous frame's shared reference before writing: no bitmap clone per move.
+        doc.layer_mut().off = None;
+        if kind != 2 && !frame.grow(doc, o, x, y) {
+            frame.publish(doc, None, false);
+            self.outside = Some(frame);
+            return Some(Outcome::Message("Image très grande : le traitement peut être lent ou saturer la mémoire."));
+        }
+        let (lx, ly) = (x - frame.x as f32, y - frame.y as f32);
+        let out = match kind {
+            0 => frame.session.press(tool, &mut frame.doc, o, lx, ly, secondary, ctrl, alt),
+            1 => frame.session.moved(tool, &mut frame.doc, o, lx, ly, false),
+            _ => frame.session.release(tool, &mut frame.doc),
+        };
+        let region = match &out { Outcome::Redraw(r) => *r, _ => None };
+        let dirty = frame.publish(doc, region, kind == 2);
+        let out = match out { Outcome::Redraw(_) => Outcome::Redraw(dirty), other => other };
+        if kind == 2 {
+            self.last_shape = frame.session.last_shape.take().map(|mut shape| {
+                shape.a.0 += frame.x as f32; shape.a.1 += frame.y as f32;
+                shape.b.0 += frame.x as f32; shape.b.1 += frame.y as f32;
+                shape
+            });
+        } else {
+            self.outside = Some(frame);
+        }
+        Some(out)
+    }
+
     pub fn busy(&self) -> bool {
-        self.drag.is_some() || self.tracing()
+        self.outside.is_some() || self.drag.is_some() || self.tracing()
     }
 
     /// Lasso polygonal ou magnétique en cours (tracé point par point, sans bouton enfoncé).
@@ -337,6 +508,12 @@ impl Session {
     }
 
     pub fn cancel(&mut self, doc: &mut Doc) {
+        if let Some(frame) = self.outside.take() {
+            if frame.owner == (doc.uid, doc.layer().uid) {
+                doc.layer_mut().px = frame.original;
+                doc.layer_mut().off = frame.original_off;
+            }
+        }
         if let Some(d) = self.drag.take() {
             doc.layer_mut().px = d.base;
             doc.sel = d.base_sel;
@@ -453,6 +630,7 @@ impl Session {
         let (w, h) = (doc.w, doc.h);
         let inside = x >= 0.0 && y >= 0.0 && (x as usize) < w && (y as usize) < h;
         let color = if secondary { o.secondary } else { o.primary };
+        self.last_shape = None;
         match tool {
             Tool::Eyedropper => {
                 if !inside {
@@ -575,6 +753,7 @@ impl Session {
                 self.drag = Some(Drag {
                     start: (x, y),
                     last: (x, y),
+                    last_radius: (o.size / 2.0).max(0.5),
                     base,
                     base_sel: doc.sel.clone(),
                     cover: Cover::new(w, h),
@@ -604,16 +783,30 @@ impl Session {
         let Some(d) = self.drag.as_mut() else { return Outcome::Nothing };
         let color = if d.secondary { o.secondary } else { o.primary };
         let prev = d.last;
+        if !first && prev == (x, y) && matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser)
+            && o.brush != BrushShape::Spray && (d.last_radius - (o.size / 2.0).max(0.5)).abs() < 0.001 {
+            return Outcome::Nothing;
+        }
         d.last = (x, y);
         match tool {
-            Tool::Brush | Tool::Eraser => {
+            Tool::Brush | Tool::Pencil | Tool::Eraser => {
                 let r = (o.size / 2.0).max(0.5);
+                let previous_radius = d.last_radius;
+                d.last_radius = r;
                 for (p0, p1) in mirrored(prev, (x, y), o, sym_center(doc)) {
                     if first {
                         d.seed = d.seed.wrapping_add(1);
-                        d.cover.stamp(p1.0, p1.1, r, o.hardness, o.brush, d.seed);
+                        if tool == Tool::Pencil {
+                            d.cover.stamp_aliased(p1.0, p1.1, r, o.hardness, o.brush, d.seed);
+                        } else {
+                            d.cover.stamp(p1.0, p1.1, r, o.hardness, o.brush, d.seed);
+                        }
                     } else {
-                        d.cover.segment(p0, p1, r, o.hardness, o.brush, &mut d.seed);
+                        if tool == Tool::Pencil {
+                            d.cover.segment_variable_aliased(p0, p1, previous_radius, r, o.hardness, o.brush, &mut d.seed);
+                        } else {
+                            d.cover.segment_variable(p0, p1, previous_radius, r, o.hardness, o.brush, &mut d.seed);
+                        }
                     }
                 }
                 let recent = d.cover.take_recent();
@@ -621,32 +814,40 @@ impl Session {
                 paint::apply_cover_in(&d.base, &mut doc.layers[a].px, &d.cover, recent, color, o.opacity, tool == Tool::Eraser, doc.sel.as_deref());
                 Outcome::Redraw(recent)
             }
-            Tool::Pencil => {
-                for (p0, p1) in mirrored(prev, (x, y), o, sym_center(doc)) {
-                    d.cover.pencil((p0.0.floor() as isize, p0.1.floor() as isize), (p1.0.floor() as isize, p1.1.floor() as isize));
-                }
-                let recent = d.cover.take_recent();
-                let a = doc.active;
-                paint::apply_cover_in(&d.base, &mut doc.layers[a].px, &d.cover, recent, color, 1.0, false, doc.sel.as_deref());
-                Outcome::Redraw(recent)
-            }
             Tool::Line | Tool::Shape | Tool::RoundRect => {
                 if first {
                     return Outcome::Nothing;
                 }
                 let (a, b) = (d.start, (x, y));
-                let mut cov = Cover::new(w, h);
-                let bbox = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
                 let lw = o.line_width.max(1.0);
-                match tool {
-                    Tool::Line => cov.shape(bbox, ShapeStyle::Fill, 0.0, paint::sdf_line(a, b, lw)),
-                    Tool::RoundRect => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, (bbox.2 - bbox.0).min(bbox.3 - bbox.1) * 0.2)),
-                    _ => match o.shape_kind.as_str() {
-                        "rect" => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, 0.0)),
-                        "ellipse" => cov.shape(bbox, o.style, lw, paint::sdf_ellipse(a.0, a.1, b.0, b.1)),
-                        k => cov.shape(bbox, o.style, lw, paint::sdf_polygon(paint::shape_points(k, a.0, a.1, b.0, b.1))),
-                    },
-                }
+                let (kind, style) = match tool {
+                    Tool::Line => ("line".to_string(), ShapeStyle::Fill),
+                    Tool::RoundRect => ("roundrect".to_string(), o.style),
+                    _ => (o.shape_kind.clone(), o.style),
+                };
+                let with_opacity = |mut c: [u8; 4]| {
+                    c[3] = (c[3] as f32 * o.opacity.clamp(0.0, 1.0)).round() as u8;
+                    c
+                };
+                // « Les deux » : contour de la couleur principale, intérieur de la secondaire
+                // (l'inverse au clic droit), comme Paint.NET
+                let other = if d.secondary { o.primary } else { o.secondary };
+                let fill = (tool != Tool::Line && style == ShapeStyle::Both).then(|| with_opacity(other));
+                let shape = crate::vector::ShapeObj {
+                    kind,
+                    a,
+                    b,
+                    style,
+                    width: lw,
+                    color: with_opacity(color),
+                    points: Vec::new(),
+                    radius: o.corner,
+                    fill,
+                    rot: 0.0,
+                    cap_start: o.cap_start,
+                    cap_end: o.cap_end,
+                    dash: o.dash,
+                };
                 // efface l'aperçu précédent (rectangle du trait d'avant) puis applique le nouveau
                 let old = d.cover.dirty;
                 let lay = &mut doc.layers[doc.active].px;
@@ -656,10 +857,27 @@ impl Session {
                         lay[s..e].copy_from_slice(&d.base[s..e]);
                     }
                 }
-                let a = doc.active;
-                paint::apply_cover(&d.base, &mut doc.layers[a].px, &cov, color, o.opacity, false, doc.sel.as_deref());
+                let mut cov = Cover::new(w, h);
+                let ai = doc.active;
+                if tool == Tool::Line || fill.is_some() {
+                    // trait (bouts, tirets) ou forme à deux couleurs : dessinés comme l'objet final
+                    cov.dirty = shape.paint(None, &mut doc.layers[ai].px, w, h);
+                } else {
+                    let bbox = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
+                    match tool {
+                        Tool::RoundRect => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, o.corner)),
+                        _ => match o.shape_kind.as_str() {
+                            "rect" => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, 0.0)),
+                            "roundrect" => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, o.corner)),
+                            "ellipse" => cov.shape(bbox, o.style, lw, paint::sdf_ellipse(a.0, a.1, b.0, b.1)),
+                            k => cov.shape(bbox, o.style, lw, paint::sdf_polygon(paint::shape_points(k, a.0, a.1, b.0, b.1))),
+                        },
+                    }
+                    paint::apply_cover(&d.base, &mut doc.layers[ai].px, &cov, color, o.opacity, false, doc.sel.as_deref());
+                }
                 let dirty = union(old, cov.dirty);
                 d.cover = cov;
+                self.last_shape = Some(shape);
                 Outcome::Redraw(dirty)
             }
             Tool::Gradient => {
@@ -722,6 +940,9 @@ impl Session {
     }
 
     pub fn release(&mut self, tool: Tool, doc: &mut Doc) -> Outcome {
+        if self.outside.is_some() {
+            return self.outside_pointer(tool, doc, &Opts::default(), 2, 0.0, 0.0, false, false, false).unwrap_or(Outcome::Nothing);
+        }
         if tool == Tool::MagneticLasso {
             let Some(m) = self.mag.as_mut() else { return Outcome::Nothing };
             m.pressed = false;
@@ -857,6 +1078,59 @@ fn shift_into(src: &[u8], dst: &mut [u8], w: usize, h: usize, dx: isize, dy: isi
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn painting_across_both_canvas_edges_keeps_canvas_size_and_undo() {
+        let mut doc = Doc::new(8, 8, [0; 4], "outside");
+        let mut session = Session::default();
+        let o = Opts { size: 3.0, primary: [255, 0, 0, 255], ..Default::default() };
+        session.outside_pointer(Tool::Brush, &mut doc, &o, 0, -5.0, 3.0, false, false, false);
+        session.outside_pointer(Tool::Brush, &mut doc, &o, 1, 150.0, 3.0, false, false, false);
+        let out = session.release(Tool::Brush, &mut doc);
+        assert!(matches!(out, Outcome::Commit("Pinceau")));
+        assert_eq!((doc.w, doc.h), (8, 8));
+        let bounds = doc.layer_content_bounds(0).unwrap();
+        assert!(bounds.0 <= -5 && bounds.0 + bounds.2 as isize >= 150);
+        assert!(doc.layer().px[(3 * 8 + 3) * 4 + 3] > 0);
+        doc.commit("Pinceau");
+        doc.undo();
+        assert!(!doc.has_outside());
+        assert!(doc.layer().px.iter().all(|v| *v == 0));
+        doc.redo();
+        assert_eq!(doc.layer_content_bounds(0), Some(bounds));
+    }
+
+    #[test]
+    fn cancelling_outside_gesture_restores_layer_and_existing_margins() {
+        let mut doc = Doc::new(8, 8, [0; 4], "outside");
+        doc.place_layer_content(0, -2, 0, 4, 1, &[255; 16], true);
+        let before = doc.layer_full(0);
+        let mut session = Session::default();
+        let o = Opts::default();
+        session.outside_pointer(Tool::Pencil, &mut doc, &o, 0, -20.0, -20.0, false, false, false);
+        session.outside_pointer(Tool::Pencil, &mut doc, &o, 1, 20.0, 20.0, false, false, false);
+        session.cancel(&mut doc);
+        assert_eq!(doc.layer_full(0), before);
+        assert!(!session.busy());
+    }
+
+    #[test]
+    fn outside_drawing_respects_selection_and_preview_viewport() {
+        let mut doc = Doc::new(8, 8, [0; 4], "outside");
+        doc.select_all();
+        let mut session = Session::default();
+        let o = Opts::default();
+        session.outside_pointer(Tool::Brush, &mut doc, &o, 0, -20.0, -20.0, false, false, false);
+        session.release(Tool::Brush, &mut doc);
+        assert!(!doc.has_outside());
+        assert_eq!(doc.sel.as_ref().unwrap().len(), 64);
+        doc.sel = None;
+        session.outside_pointer(Tool::Brush, &mut doc, &o, 0, -20.0, 4.0, false, false, false);
+        session.release(Tool::Brush, &mut doc);
+        let (_, _, w, h, pixels) = doc.outside_composite_in(Some((-24, 0, -16, 8))).unwrap();
+        assert_eq!((w, h, pixels.len()), (8, 8, 8 * 8 * 4));
+    }
+
+
 
     /// Masque α : la luminance du masque règle la visibilité du calque ; il suit les rotations.
     #[test]

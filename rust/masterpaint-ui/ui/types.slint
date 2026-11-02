@@ -52,6 +52,8 @@ export struct EffectField {
     track-kind: int,
     track-a: color,
     track-b: color,
+    /// curseur d'angle (degrés) : cadran à côté de la piste
+    angle: bool,
 }
 
 export struct MenuSpec {
@@ -76,6 +78,8 @@ export struct DocTab {
     link-right: bool,
     /// onglet d'un masque α (niveaux de gris, fond violet)
     mask: bool,
+    /// type du projet affiché sur l'onglet : « ANIM », « SVG », « ANIM SVG » ; vide en pixel
+    kind: string,
 }
 
 /// Ligne d'un panneau de menu du mode téléphone (Ajuster, Déform, Effets) : titre de section

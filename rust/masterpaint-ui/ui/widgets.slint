@@ -1,7 +1,16 @@
 // Contrôles Windows 10 de MasterPaint (équivalents de css/win-controls.css, theme-pdn.css).
+import { Tips } from "tips.slint";
 import { Theme } from "theme.slint";
 import { IconSpec, Icons } from "types.slint";
 import { MpIcons } from "mpicons.slint";
+
+/// Real GPU backdrop filter: the reserved brush is handled by the workspace renderer.
+/// No image/texture of the project is involved. Keep outside opacity/clip layers.
+component BackdropBlur inherits Rectangle {
+    in property <float> radius;
+    // voile « dépoli » : teinte claire / sombre du thème (pas de vrai flou possible dans Slint)
+    background: Theme.dark ? #00000059 : #ffffff66;
+}
 
 /// Relief Windows 98 : deux liserés clairs en haut à gauche et sombres en bas à droite
 /// (inversés en creux). Posé par-dessus le contrôle, il ne capte pas la souris.
@@ -24,6 +33,24 @@ export component Bevel inherits Rectangle {
 /// Icône : icône maison (MpIcons : trait du thème + accent) quand l'outil / le bouton en a une,
 /// sinon icône du sprite SVG ou glyphe Font Awesome. Sur fond d'accent (teinte on-accent) :
 /// glyphe, pour garder le contraste.
+export component HoverTip inherits Rectangle {
+    in property <bool> hovered;
+    in property <string> text;
+    width: 0px;
+    height: 0px;
+    Timer {
+        interval: 600ms;
+        running: root.hovered && root.text != "" && !(Tip.shown && Tip.text == root.text);
+        triggered => {
+            Tip.text = root.text;
+            Tip.x = root.absolute-position.x;
+            Tip.y = root.absolute-position.y + 4px;
+            Tip.shown = true;
+        }
+    }
+    changed hovered => { if (!root.hovered && Tip.text == root.text) { Tip.shown = false; } }
+}
+
 export component Icon inherits Rectangle {
     in property <IconSpec> spec;
     in property <length> size: 16px;
@@ -56,7 +83,7 @@ export component Icon inherits Rectangle {
         text: spec.fa;
         font-family: Theme.icon-font;
         font-weight: spec.fa-weight;
-        font-size: root.size * 0.86;
+        font-size: round(root.size * 0.86 / 1px) * 1px;
         color: root.tint;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -73,7 +100,7 @@ export component FaIcon inherits Text {
     text: glyph;
     font-family: Theme.icon-font;
     font-weight: weight;
-    font-size: size;
+    font-size: round(root.size / 1px) * 1px;
     color: Theme.text;
     horizontal-alignment: center;
     vertical-alignment: center;
@@ -90,12 +117,14 @@ export component GlyphIcon inherits Rectangle {
     in property <string> font-family: Theme.icon-font;
     in property <bool> on-accent: false;
     property <int> mp: root.on-accent || root.font-family != Theme.icon-font ? -1 : MpIcons.for-glyph(root.glyph);
-    width: root.size * 1.25;
-    height: root.size * 1.3;
+    width: round(root.size * 1.25 / 1px) * 1px;
+    height: round(root.size * 1.3 / 1px) * 1px;
     if root.mp >= 0: Image {
         source: MpIcons.images[root.mp];
-        width: root.size * 1.15;
-        height: root.size * 1.15;
+        x: round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: round((parent.height - self.height) / 2 / 1px) * 1px;
+        width: round(root.size * 1.15 / 1px) * 1px;
+        height: round(root.size * 1.15 / 1px) * 1px;
         image-fit: contain;
     }
     if root.mp < 0: Text {
@@ -124,7 +153,7 @@ export component FlatButton inherits Rectangle {
     in property <image> img;
     /// info-bulle (par défaut : le libellé d'un bouton sans libellé visible)
     in property <string> tip;
-    property <string> tip-text: root.tip != "" ? root.tip : root.show-label ? "" : root.label;
+    property <string> tip-text: root.tip != "" ? root.tip : Tips.desc(root.label) != "" ? Tips.desc(root.label) : root.label;
     callback clicked();
     out property <bool> hovered: ta.has-hover;
     Timer {
@@ -218,15 +247,16 @@ export component W10Button inherits Rectangle {
     /// bouton à bascule enfoncé (Grille…)
     in property <bool> checked;
     in property <string> tip;
+    property <string> tip-text: root.tip != "" ? root.tip : root.text == @tr("Annuler") ? @tr("Ferme cette fenêtre sans appliquer les changements.") : Tips.desc(root.text) != "" ? Tips.desc(root.text) : root.text;
     /// icône facultative devant le libellé (icônes maison : MpIcons.images)
     in property <image> icon;
     property <bool> has-icon: root.icon.width > 0;
     callback clicked();
     Timer {
         interval: 600ms;
-        running: ta.has-hover && !ta.pressed && root.tip != "" && !(Tip.shown && Tip.text == root.tip);
+        running: ta.has-hover && !ta.pressed && root.tip-text != "" && !(Tip.shown && Tip.text == root.tip-text);
         triggered => {
-            Tip.text = root.tip;
+            Tip.text = root.tip-text;
             Tip.x = root.absolute-position.x;
             Tip.y = root.absolute-position.y + root.height + 4px;
             Tip.shown = true;
@@ -255,7 +285,7 @@ export component W10Button inherits Rectangle {
             root.clicked();
         }
         changed has-hover => {
-            if (!self.has-hover && Tip.text == root.tip) {
+            if (!self.has-hover && Tip.text == root.tip-text) {
                 Tip.shown = false;
             }
         }
@@ -286,6 +316,7 @@ export component W10Button inherits Rectangle {
 
 /// Curseur Windows 10 : piste fine, partie remplie à l'accent, poignée en étiquette.
 export component W10Slider inherits Rectangle {
+    in property <string> tip;
     in property <float> minimum: 0;
     in property <float> maximum: 100;
     in-out property <float> value: 50;
@@ -295,6 +326,7 @@ export component W10Slider inherits Rectangle {
     /// valeur imposée par le parent (liée) : le curseur la signale sans l'écrire
     in property <bool> controlled;
     callback changed(float);
+    callback released(float);
     height: 20px;
     min-width: 60px;
     property <length> usable: self.width - 11px;
@@ -330,6 +362,8 @@ export component W10Slider inherits Rectangle {
         pointer-event(e) => {
             if (e.kind == PointerEventKind.down) {
                 self.set-from(self.mouse-x);
+            } else if (e.kind == PointerEventKind.up) {
+                root.released(root.value);
             }
         }
         moved => {
@@ -338,6 +372,8 @@ export component W10Slider inherits Rectangle {
             }
         }
     }
+    HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: root.tip != "" ? root.tip : @tr("Valeur : ") + round(root.value); }
+
 }
 
 /// Case à cocher Windows 10.
@@ -363,7 +399,7 @@ export component W10CheckBox inherits Rectangle {
     }
     width: 15px;
     height: 15px;
-    border-radius: Theme.ctl-radius - 1px;
+    border-radius: max(0px, Theme.ctl-radius - 1px);
     background: checked && !Theme.win98 ? Theme.accent : Theme.field-bg;
     border-width: Theme.win98 ? 0px : 1px;
     border-color: checked ? Theme.accent : (ta.has-hover ? Theme.accent : #333333);
@@ -391,6 +427,7 @@ export component W10CheckBox inherits Rectangle {
 
 /// Liste déroulante Windows 10 (champ blanc, chevron).
 export component W10ComboBox inherits Rectangle {
+    in property <string> tip;
     in property <[string]> model;
     in-out property <int> current-index: 0;
     callback selected(int);
@@ -455,6 +492,8 @@ export component W10ComboBox inherits Rectangle {
                     background: ita.has-hover ? Theme.accent-14 : i == root.current-index ? Theme.accent-12 : transparent;
                     Text {
                         x: 6px;
+                        width: parent.width - 12px;
+                        height: parent.height;
                         text: item;
                         font-size: Theme.font-size;
                         color: Theme.text;
@@ -470,10 +509,13 @@ export component W10ComboBox inherits Rectangle {
             }
         }
     }
+    HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: root.tip != "" ? root.tip : root.model[root.current-index]; }
+
 }
 
 /// Bouton de fermeture : rouge quand l'application est active (comme Paint.NET), gris sinon.
 export component CloseButton inherits Rectangle {
+    in property <string> tip;
     callback clicked();
     width: 17px;
     height: Theme.win98 ? 15px : 17px;
@@ -491,14 +533,22 @@ export component CloseButton inherits Rectangle {
     if Theme.win98: Bevel {
         sunken: ta.pressed;
     }
+    HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: @tr("Fermer"); }
+
 }
 
 /// Fenêtre volante Paint.NET (Outils, Couleurs, Calques, Historique) : déplaçable par
 /// sa barre de titre, ramenée au premier plan au clic.
 export component FloatWindow inherits Rectangle {
     in property <string> title;
+    /// verrouillée (aucun projet ouvert) : contenu grisé et inactif, la fenêtre reste déplaçable
+    in property <bool> locked;
     in property <length> bounds-width: 10000px;
     in property <length> bounds-height: 10000px;
+    /// fenêtre gardée entière dans les bornes (palettes : jamais sur la frise d'animation)
+    in property <bool> keep-inside;
+    /// Modal settings may also use the space above the workspace, within min-y.
+    in property <bool> full-window-area;
     /// redimensionnable en hauteur (poignées sur les bords haut et bas)
     in property <bool> resizable;
     /// redimensionnable en largeur (bords gauche / droit ; coins si aussi en hauteur)
@@ -525,6 +575,18 @@ export component FloatWindow inherits Rectangle {
     in property <bool> snap-home;
     in property <length> home-x;
     in property <length> home-y;
+    /// hauteur d'origine (palettes redimensionnables) ; négative : inchangée à la réinitialisation
+    in property <length> home-h: -1px;
+    property <int> reset-seen: Workspace.reset;
+    changed reset-seen => {
+        if (root.snap-home) {
+            root.float-x = root.home-x;
+            root.float-y = root.home-y;
+            if (root.home-h > 0px) {
+                root.float-h = root.home-h;
+            }
+        }
+    }
     // position visée pendant un glisser (avant aimantation)
     property <length> drag-nx;
     property <length> drag-ny;
@@ -555,10 +617,12 @@ export component FloatWindow inherits Rectangle {
     // position bornée à la zone (fenêtre principale réduite : la palette reste atteignable)
     x: root.docked ? root.dock-x : root.auto-dock ? 0px : root.float-w >= root.bounds-width ? 0px
         : clamp(root.float-x, root.min-x - root.width + 40px, max(root.min-x, root.bounds-width - 40px));
-    y: root.docked ? root.dock-y : root.auto-dock ? root.bounds-height - self.height - PhoneDock.inset : root.float-h >= root.bounds-height ? 0px
-        : clamp(root.float-y, root.min-y, max(root.min-y, root.bounds-height - Theme.title-height));
+    y: root.docked ? root.dock-y : root.auto-dock ? root.bounds-height - self.height - PhoneDock.inset : root.float-h >= root.bounds-height - (root.full-window-area ? root.min-y : 0px) ? (root.full-window-area ? root.min-y : 0px)
+        : clamp(root.float-y, root.min-y, max(root.min-y, root.bounds-height - (root.keep-inside ? self.height : Theme.title-height)));
     width: root.docked ? root.dock-w : root.auto-dock ? root.bounds-width : min(root.float-w, root.bounds-width);
-    height: root.docked ? root.dock-h : root.auto-dock ? min(min(root.float-h, (root.bounds-height - PhoneDock.inset) * 0.62), PhoneDock.max-h) : min(root.float-h, root.bounds-height);
+    height: root.docked ? root.dock-h : root.auto-dock ? min(min(root.float-h, (root.bounds-height - PhoneDock.inset) * 0.62), PhoneDock.max-h) : min(root.float-h, root.bounds-height - (root.full-window-area ? root.min-y : 0px));
+    // ancrée (Photoshop) : le contenu ne déborde jamais sur la palette voisine
+    clip: root.docked;
     changed height => {
         if (root.auto-dock) {
             PhoneDock.sheet-h = self.height;
@@ -571,7 +635,7 @@ export component FloatWindow inherits Rectangle {
     }
     callback close();
     callback raised();
-    property <bool> glass: Theme.glass && !Theme.win98 && !root.sheet && !root.docked;
+    property <bool> glass: (Theme.title-transparent || Theme.title-blurred) && !Theme.win98 && !root.sheet && !root.docked;
     // barre de titre translucide : le fond de la fenêtre ne commence que sous elle
     background: root.sheet ? Theme.mob-surface : root.glass ? transparent : Theme.window-bg;
     border-radius: root.sheet ? 16px : root.docked ? 0px : Theme.window-radius;
@@ -589,9 +653,13 @@ export component FloatWindow inherits Rectangle {
         }
     }
     if Theme.win98 && !root.sheet: Bevel { }
+    // barre de titre translucide : le corps et la barre restent à l'intérieur du liseré de 1 px
+    // (avant, le corps le recouvrait sur les côtés et pas la barre : décalage visible)
     if root.glass: Rectangle {
+        x: 1px;
         y: Theme.title-height;
-        height: root.height - Theme.title-height;
+        width: root.width - 2px;
+        height: root.height - Theme.title-height - 1px;
         background: Theme.window-bg;
         border-bottom-left-radius: Theme.window-radius;
         border-bottom-right-radius: Theme.window-radius;
@@ -600,17 +668,33 @@ export component FloatWindow inherits Rectangle {
         y: 7px;
         width: 36px;
         height: 5px;
-        border-radius: 2.5px;
+        border-radius: 2.5px * Theme.round;
         background: Theme.mob-muted.with-alpha(0.45);
     }
     if !root.sheet: Rectangle {
-        x: Theme.win98 ? 3px : 0px;
-        y: Theme.win98 ? 3px : 0px;
-        width: parent.width - (Theme.win98 ? 6px : 0px);
-        height: Theme.title-height - (Theme.win98 ? 3px : 0px);
+        x: Theme.win98 ? 3px : root.glass ? 1px : 0px;
+        y: Theme.win98 ? 3px : root.glass ? 1px : 0px;
+        width: parent.width - (Theme.win98 ? 6px : root.glass ? 2px : 0px);
+        height: Theme.title-height - (Theme.win98 ? 3px : root.glass ? 1px : 0px);
         border-top-left-radius: Theme.window-radius;
         border-top-right-radius: Theme.window-radius;
-        background: Theme.win98 ? @linear-gradient(90deg, (Theme.app-active ? Theme.title-a : #808080) 0%, (Theme.app-active ? Theme.title-b : #b5b5b5) 100%) : root.grip-on ? Theme.window-bg : root.glass ? Theme.window-title-bg.with-alpha(0.88) : Theme.window-title-bg;
+        background: Theme.win98 ? @linear-gradient(90deg, (Theme.app-active ? Theme.title-a : #808080) 0%, (Theme.app-active ? Theme.title-b : #b5b5b5) 100%) : root.grip-on ? Theme.window-bg : root.glass ? transparent : Theme.window-title-bg;
+        if root.glass && Theme.title-blurred && !root.grip-on: BackdropBlur {
+            radius: 8;
+            width: parent.width;
+            height: parent.height;
+            border-top-left-radius: Theme.window-radius;
+            border-top-right-radius: Theme.window-radius;
+        }
+        if root.glass && !root.grip-on: Rectangle {
+            width: parent.width;
+            height: parent.height;
+            border-top-left-radius: Theme.window-radius;
+            border-top-right-radius: Theme.window-radius;
+            // Slint ne sait pas flouter ce qu'il y a derrière : barre plus couvrante (dépolie en
+            // mode « flou ») pour que le contenu derrière ne gêne pas la lecture
+            background: Theme.window-title-bg.with-alpha(Theme.title-blurred ? 0.94 : Theme.title-transparent ? 0.88 : 1);
+        }
         drag := TouchArea {
             mouse-cursor: root.docked && root.dock-movable ? (self.pressed ? MouseCursor.grabbing : MouseCursor.grab)
                 : root.docked || root.auto-dock ? MouseCursor.default : MouseCursor.move;
@@ -666,7 +750,7 @@ export component FloatWindow inherits Rectangle {
             y: 4px;
             width: 30px;
             height: 4px;
-            border-radius: 2px;
+            border-radius: 2px * Theme.round;
             background: drag.pressed && root.dock-movable ? Theme.accent : Theme.text-inactive.with-alpha(0.45);
         }
         Text {
@@ -694,7 +778,7 @@ export component FloatWindow inherits Rectangle {
             y: 5px + (parent.height - 5px - self.height) / 2;
             width: 18px;
             height: 18px;
-            border-radius: 9px;
+            border-radius: 9px * Theme.round;
             background: gcta.has-hover ? Theme.accent.with-alpha(0.14) : transparent;
             FaIcon {
                 glyph: "\u{f00d}";
@@ -719,6 +803,15 @@ export component FloatWindow inherits Rectangle {
         height: root.content-height;
         @children
     }
+    if root.locked: Rectangle {
+        y: root.head-h;
+        height: root.content-height;
+        background: Theme.window-bg.with-alpha(0.72);
+        // capte clics et molette : rien n'atteint le contenu
+        TouchArea {
+            mouse-cursor: not-allowed;
+        }
+    }
     if root.sheet && root.sheet-footer: Rectangle {
         y: root.height - 50px;
         height: 50px;
@@ -731,10 +824,10 @@ export component FloatWindow inherits Rectangle {
             y: 9px;
             width: min(320px, parent.width - 32px);
             height: 32px;
-            border-radius: 16px;
+            border-radius: 16px * Theme.round;
             background: sfta.pressed ? Theme.accent.with-alpha(0.32) : Theme.accent.with-alpha(0.2);
             Text {
-                text: "Fermer";
+                text: @tr("Fermer");
                 font-size: 15px;
                 font-weight: 700;
                 color: Theme.accent;
@@ -946,6 +1039,12 @@ export global Tip {
 
 /// Ruban trop large pour la fenêtre (comme la version web) : les libellés des boutons
 /// disparaissent et les jauges rétrécissent.
+/// Fenêtre › Réinitialiser le bureau : chaque palette revient à sa place (et sa hauteur)
+/// d'origine quand `reset` change (une palette déplacée n'écoute plus ses liaisons de position).
+export global Workspace {
+    in-out property <int> reset;
+}
+
 export global RibbonFit {
     in-out property <bool> tight;
     /// encore plus étroit (ou téléphone) : les capsules secondaires disparaissent
@@ -962,6 +1061,8 @@ export component Gauge inherits HorizontalLayout {
     in property <float> minimum: 1;
     in property <float> maximum: 100;
     in property <float> step: 1;
+    in property <bool> progressive;
+    property <float> ratio: clamp((root.value - root.minimum)/max(0.0001,root.maximum - root.minimum),0,1);
     in property <length> label-width: 42px;
     in property <length> bar-width: 100px;
     in property <string> unit;
@@ -999,6 +1100,7 @@ export component Gauge inherits HorizontalLayout {
             size: 9px;
             color: Theme.ribbon-fg;
         }
+        HoverTip { y: parent.height; hovered: mta.has-hover && !mta.pressed; text: @tr("Réduire la valeur"); }
         mta := TouchArea {
             clicked => {
                 root.set(root.value - root.step);
@@ -1015,8 +1117,8 @@ export component Gauge inherits HorizontalLayout {
             x: 1px;
             y: 1px;
             height: parent.height - 2px;
-            width: (parent.width - 2px) * clamp((root.value - root.minimum) / max(0.0001, root.maximum - root.minimum), 0, 1);
-            border-radius: Theme.ctl-radius - 1px;
+            width: (parent.width - 2px) * (root.progressive ? sqrt(root.ratio) : root.ratio);
+            border-radius: max(0px, Theme.ctl-radius - 1px);
             background: Theme.accent-32;
         }
         Text {
@@ -1033,7 +1135,8 @@ export component Gauge inherits HorizontalLayout {
         bta := TouchArea {
             mouse-cursor: ew-resize;
             function from-x(px: length) {
-                root.set(root.minimum + clamp(px / self.width, 0, 1) * (root.maximum - root.minimum));
+                let t=clamp(px / self.width,0,1);
+                root.set(root.minimum + (root.progressive ? t*t : t) * (root.maximum - root.minimum));
             }
             changed has-hover => {
                 if (!self.has-hover && Tip.text == root.tip-text) {
@@ -1066,6 +1169,7 @@ export component Gauge inherits HorizontalLayout {
             size: 12px;
             color: Theme.ribbon-fg;
         }
+        HoverTip { y: parent.height; hovered: pta.has-hover && !pta.pressed; text: @tr("Augmenter la valeur"); }
         pta := TouchArea {
             clicked => {
                 root.set(root.value + root.step);
@@ -1105,6 +1209,7 @@ export component GaugeBar inherits HorizontalLayout {
             size: 9px;
             color: Theme.text;
         }
+        HoverTip { y: parent.height; hovered: mta.has-hover && !mta.pressed; text: @tr("Réduire la valeur"); }
         mta := TouchArea {
             clicked => {
                 root.set(root.value - root.step);
@@ -1123,7 +1228,7 @@ export component GaugeBar inherits HorizontalLayout {
             y: 1px;
             height: parent.height - 2px;
             width: (parent.width - 2px) * root.ratio;
-            border-radius: Theme.ctl-radius - 1px;
+            border-radius: max(0px, Theme.ctl-radius - 1px);
             background: Theme.accent-32;
         }
         // repère sur une barre en dégradé
@@ -1133,14 +1238,14 @@ export component GaugeBar inherits HorizontalLayout {
             background: #ffffff;
             border-width: 1px;
             border-color: #202020;
-            border-radius: 1px;
+            border-radius: 1px * Theme.round;
         }
         if !root.editing: Rectangle {
             x: parent.width - self.width - 3px;
             y: 3px;
             width: vt.preferred-width + 6px;
             height: parent.height - 6px;
-            border-radius: 2px;
+            border-radius: 2px * Theme.round;
             background: root.gradient ? Theme.field-bg.with-alpha(0.8) : transparent;
             vt := Text {
                 text: root.fmt(root.value);
@@ -1216,6 +1321,7 @@ export component GaugeBar inherits HorizontalLayout {
             size: 12px;
             color: Theme.text;
         }
+        HoverTip { y: parent.height; hovered: pta.has-hover && !pta.pressed; text: @tr("Augmenter la valeur"); }
         pta := TouchArea {
             clicked => {
                 root.set(root.value + root.step);
@@ -1236,7 +1342,7 @@ export component ToggleButton inherits Rectangle {
     in property <image> img;
     /// info-bulle (par défaut : le texte d'un bouton compact)
     in property <string> tip;
-    property <string> tip-text: root.tip != "" ? root.tip : root.compact ? root.text : "";
+    property <string> tip-text: root.tip != "" ? root.tip : Tips.desc(root.text) != "" ? Tips.desc(root.text) : root.text;
     callback clicked();
     height: 26px;
     width: compact ? 26px : (lbl.preferred-width + 30px);
@@ -1334,6 +1440,7 @@ export component RibbonGroup inherits Rectangle {
 /// Choix exclusif en boutons accolés (Paramètres : « Paint.NET | Photoshop | Téléphone »…).
 /// Windows 11 : piste arrondie, option choisie en pastille claire avec un trait d'accent.
 export component Segmented inherits Rectangle {
+    in property <string> tip;
     in property <[string]> options;
     in-out property <int> index;
     callback selected(int);
@@ -1362,16 +1469,20 @@ export component Segmented inherits Rectangle {
                 y: parent.height - 3px;
                 width: min(18px, parent.width - 8px);
                 height: 3px;
-                border-radius: 1.5px;
+                border-radius: 1.5px * Theme.round;
                 background: Theme.accent;
             }
             Text {
+                width: parent.width;
+                height: parent.height;
+                font-size: Theme.font-size;
                 text: o;
                 color: i == root.index && !Theme.win98 ? Theme.accent : Theme.text;
                 font-weight: i == root.index ? 600 : 400;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
+            HoverTip { y: parent.height; hovered: sta.has-hover && !sta.pressed; text: root.tip != "" ? root.tip : o; }
             sta := TouchArea {
                 clicked => {
                     root.index = i;
@@ -1408,6 +1519,7 @@ export component DialogFooter inherits Rectangle {
 
 /// Champ de saisie Windows 10 : fond blanc, bordure grise, accent au focus.
 export component W10LineEdit inherits Rectangle {
+    in property <string> tip;
     in-out property <string> text;
     in property <InputType> input-type: InputType.text;
     callback accepted(string);
@@ -1445,6 +1557,8 @@ export component W10LineEdit inherits Rectangle {
             root.edited(self.text);
         }
     }
+    HoverTip { y: parent.height; hovered: hov.has-hover && !hov.pressed; text: root.tip != "" ? root.tip : root.text; }
+
 }
 
 /// Valeur numérique saisissable : suit `value` tant qu'on ne la modifie pas au clavier ;

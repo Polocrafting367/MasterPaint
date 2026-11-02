@@ -31,66 +31,286 @@ pub fn dialog(effect: &str) -> Option<(&'static str, &'static [Field])> {
         "contentfill" => return Some(("Remplissage contenu pris en compte", CONTENT_FILL)),
         _ => {}
     }
-    let (_, title, base) = crate::effects_gen::DIALOGS.iter().find(|d| d.0 == effect)?;
     if effect == "chroma" {
-        return Some((title, chroma_fields(base)));
+        return Some(("Incrustation", CHROMA));
     }
+    let (_, title, base) = crate::effects_gen::DIALOGS.iter().find(|d| d.0 == effect)?;
     Some(with_aberration(effect, title, base))
 }
 
-/// Incrustation : préréglages de la version web en tête, « en masque α lié » à la fin.
-fn chroma_fields(base: &'static [Field]) -> &'static [Field] {
-    use std::sync::OnceLock;
-    static F: OnceLock<&'static [Field]> = OnceLock::new();
-    F.get_or_init(|| {
-        let mut v = vec![Field {
-            id: "ef-ck-preset",
-            label: "Préréglage",
-            kind: 2,
-            min: 0.0,
-            max: 0.0,
-            step: 1.0,
-            def: 0.0,
-            def_s: "",
-            options: &[("", "—"), ("default", "Défaut"), ("soft", "Doux"), ("hard", "Fort"), ("shadow", "Ombres"), ("glass", "Verre"), ("despill", "Spill")],
-        }];
-        v.extend_from_slice(base);
-        v.push(Field { id: "ef-ck-mask", label: "Appliquer en masque α lié", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "", options: &[] });
-        Box::leak(v.into_boxed_slice())
+// ------------------------------------------------------------------ incrustation
+// Fenêtre en quatre niveaux : « Essentiel » (couleur du fond + Auto, préréglage, force, vue de
+// contrôle) toujours ouvert ; « Masque », « Débordement de couleur » et « Sortie » repliés.
+// Les identifiants ef-ch-* de la version web sont gardés (réglages enregistrés, Répéter).
+
+const CK_PRESETS: &[(&str, &str)] = &[
+    ("", "—"),
+    ("green", "Écran vert"),
+    ("blue", "Écran bleu"),
+    ("plain", "Fond uni"),
+    ("soft", "Doux"),
+    ("hard", "Fort"),
+    ("hair", "Cheveux / détails fins"),
+    ("glass", "Verre / transparences"),
+    ("shadow", "Ombres conservées"),
+];
+const CK_VIEWS: &[(&str, &str)] = &[
+    ("result", "Résultat"),
+    ("mask", "Masque (noir et blanc)"),
+    ("orig", "Original"),
+    ("checker", "Sur damier"),
+    ("black", "Sur noir"),
+    ("white", "Sur blanc"),
+    ("color", "Sur couleur"),
+];
+const CK_SPILL: &[(&str, &str)] = &[("avg", "Moyenne (doux)"), ("limit", "Limite (standard)"), ("double", "Double limite (fort)")];
+const CK_REPLACE: &[(&str, &str)] = &[("none", "Aucun"), ("neutral", "Gris neutre (garde la luminosité)"), ("color", "Couleur de remplacement")];
+const CK_OUT: &[(&str, &str)] = &[("transparent", "Rendre transparent"), ("mask", "Masque α lié (non destructif)"), ("layer", "Nouveau calque")];
+
+const fn ck_list(id: &'static str, label: &'static str, def: f32, options: &'static [(&'static str, &'static str)]) -> Field {
+    Field { id, label, kind: 2, min: 0.0, max: 0.0, step: 1.0, def, def_s: "", options }
+}
+const fn ck_check(id: &'static str, label: &'static str) -> Field {
+    Field { id, label, kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "", options: &[] }
+}
+/// Composante R / V / B d'une couleur (regroupée en une ligne couleur + pipette).
+const fn ck_chan(id: &'static str, label: &'static str, def: f32) -> Field {
+    slider(id, label, 0.0, 255.0, 1.0, def)
+}
+
+const CHROMA: &[Field] = &[
+    // Essentiel
+    ck_chan("ef-ch-r", "R", 0.0),
+    ck_chan("ef-ch-g", "V", 255.0),
+    ck_chan("ef-ch-b", "B", 0.0),
+    // bouton (kind 7) : libellé du bouton dans def_s
+    Field { id: "ef-ck-auto", label: "Détection", kind: 7, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "Auto : couleur du pourtour", options: &[] },
+    ck_list("ef-ck-preset", "Préréglage", 0.0, CK_PRESETS),
+    slider("ef-ck-force", "Force", 0.0, 100.0, 1.0, 36.0),
+    ck_list("ef-ck-view", "Affichage", 0.0, CK_VIEWS),
+    ck_chan("ef-ck-bgr", "R", 64.0),
+    ck_chan("ef-ck-bgg", "V", 64.0),
+    ck_chan("ef-ck-bgb", "B", 64.0),
+    // Masque
+    slider("ef-ch-tol", "Tolérance", 0.0, 200.0, 0.5, 30.0),
+    slider("ef-ch-feather", "Douceur", 0.0, 100.0, 0.5, 15.0),
+    slider("ef-ch-drift", "Couleur ↔ lumière", 0.0, 100.0, 1.0, 50.0),
+    slider("ef-ck-choke", "Rétrécir / étendre (px)", -20.0, 20.0, 0.5, 0.0),
+    slider("ef-ck-blur", "Plume (px)", 0.0, 30.0, 0.5, 0.0),
+    slider("ef-ch-black", "Clip noir", 0.0, 100.0, 1.0, 0.0),
+    slider("ef-ch-white", "Clip blanc", 0.0, 100.0, 1.0, 100.0),
+    slider("ef-ch-gamma", "Gamma du masque", 0.1, 3.0, 0.05, 1.0),
+    slider("ef-ck-clean", "Nettoyer le fond (px)", 0.0, 10.0, 1.0, 0.0),
+    slider("ef-ck-holes", "Remplir les trous (px)", 0.0, 10.0, 1.0, 0.0),
+    slider("ef-ch-luma", "Protection des lumières", 0.0, 100.0, 1.0, 0.0),
+    ck_check("ef-ch-use2", "Seconde couleur (fond non uniforme)"),
+    ck_chan("ef-ch-r2", "R", 0.0),
+    ck_chan("ef-ch-g2", "V", 180.0),
+    ck_chan("ef-ch-b2", "B", 0.0),
+    slider("ef-ck-tol2", "Tolérance de la 2e couleur", 0.0, 200.0, 0.5, 0.0),
+    // Débordement de couleur
+    slider("ef-ch-spill", "Suppression du débordement", 0.0, 100.0, 1.0, 0.0),
+    ck_list("ef-ck-spm", "Méthode", 1.0, CK_SPILL),
+    ck_list("ef-ck-rep", "Compensation", 1.0, CK_REPLACE),
+    ck_chan("ef-ck-rpr", "R", 128.0),
+    ck_chan("ef-ck-rpg", "V", 128.0),
+    ck_chan("ef-ck-rpb", "B", 128.0),
+    slider("ef-ck-edge", "Correction des bords", 0.0, 100.0, 1.0, 0.0),
+    slider("ef-ch-recover", "Récupération des détails", 0.0, 100.0, 1.0, 0.0),
+    // Sortie
+    ck_list("ef-ck-out", "Destination", 0.0, CK_OUT),
+    slider("ef-ck-shadow", "Garder les ombres", 0.0, 100.0, 1.0, 0.0),
+    ck_check("ef-ck-invert", "Inverser le masque"),
+];
+
+/// Sections de l'incrustation : (effet, champ, section, repliée au départ).
+const CHROMA_SECTIONS: &[(&str, &str, &str, bool)] = {
+    const E: &str = "Essentiel";
+    const M: &str = "Masque";
+    const S: &str = "Débordement de couleur";
+    const O: &str = "Sortie";
+    &[
+        ("chroma", "ef-ch-r", E, false), ("chroma", "ef-ch-g", E, false), ("chroma", "ef-ch-b", E, false),
+        ("chroma", "ef-ck-auto", E, false), ("chroma", "ef-ck-preset", E, false), ("chroma", "ef-ck-force", E, false),
+        ("chroma", "ef-ck-view", E, false), ("chroma", "ef-ck-bgr", E, false), ("chroma", "ef-ck-bgg", E, false), ("chroma", "ef-ck-bgb", E, false),
+        ("chroma", "ef-ch-tol", M, true), ("chroma", "ef-ch-feather", M, true), ("chroma", "ef-ch-drift", M, true),
+        ("chroma", "ef-ck-choke", M, true), ("chroma", "ef-ck-blur", M, true), ("chroma", "ef-ch-black", M, true),
+        ("chroma", "ef-ch-white", M, true), ("chroma", "ef-ch-gamma", M, true), ("chroma", "ef-ck-clean", M, true),
+        ("chroma", "ef-ck-holes", M, true), ("chroma", "ef-ch-luma", M, true), ("chroma", "ef-ch-use2", M, true),
+        ("chroma", "ef-ch-r2", M, true), ("chroma", "ef-ch-g2", M, true), ("chroma", "ef-ch-b2", M, true), ("chroma", "ef-ck-tol2", M, true),
+        ("chroma", "ef-ch-spill", S, true), ("chroma", "ef-ck-spm", S, true), ("chroma", "ef-ck-rep", S, true),
+        ("chroma", "ef-ck-rpr", S, true), ("chroma", "ef-ck-rpg", S, true), ("chroma", "ef-ck-rpb", S, true),
+        ("chroma", "ef-ck-edge", S, true), ("chroma", "ef-ch-recover", S, true),
+        ("chroma", "ef-ck-out", O, true), ("chroma", "ef-ck-shadow", O, true), ("chroma", "ef-ck-invert", O, true),
+    ]
+};
+
+/// Sections propres à une fenêtre définie ici (prioritaires sur celles relevées sur la version
+/// web, `effects_gen::SECTIONS`) : `None` si l'effet n'en a pas.
+pub fn own_sections(effect: &str) -> Option<&'static [(&'static str, &'static str, &'static str, bool)]> {
+    (effect == "chroma").then_some(CHROMA_SECTIONS)
+}
+
+/// Fenêtre dont les couleurs R / V / B n'affichent que la ligne couleur (hexa + pipette), sans
+/// les trois curseurs.
+pub fn compact_colors(effect: &str) -> bool {
+    effect == "chroma"
+}
+
+/// Libellé d'une ligne couleur d'après le premier champ de son trio (`None` : libellé général).
+pub fn color_label(effect: &str, first_id: &str) -> Option<&'static str> {
+    if effect != "chroma" {
+        return None;
+    }
+    Some(match first_id {
+        "ef-ch-r" => "Couleur du fond",
+        "ef-ch-r2" => "Seconde couleur",
+        "ef-ck-bgr" => "Fond d'affichage",
+        "ef-ck-rpr" => "Couleur de remplacement",
+        _ => return None,
     })
 }
 
-/// Préréglage choisi (`changed`) : met à jour les autres réglages. Vrai si des valeurs ont
-/// changé (la fenêtre est alors redessinée).
+/// Force (un seul curseur) → tolérance et douceur cohérentes ; 36 donne 30 / 15 (défaut).
+fn force_to_tol(f: f32) -> (f32, f32) {
+    let f = f.clamp(0.0, 100.0);
+    (4.0 + f * 0.72, 4.0 + f * 0.3)
+}
+
+/// Préréglage ou Force choisi (`changed`) : met à jour les autres réglages. Vrai si des valeurs
+/// ont changé (la fenêtre est alors redessinée).
 pub fn apply_preset(effect: &str, changed: &str, v: &mut Vals) -> bool {
-    if effect != "chroma" || changed != "ef-ck-preset" {
+    if effect != "chroma" {
         return false;
     }
-    // couleur clé : saturée → dérive chroma tolérée, despill utile (comme ChromaKeyer.applyPreset)
+    let set = |v: &mut Vals, id: &str, x: f32| {
+        v.0.insert(id.to_string(), fmt_num(x));
+    };
+    if changed == "ef-ck-force" {
+        let (tol, fea) = force_to_tol(v.g("ef-ck-force", 36.0));
+        set(v, "ef-ch-tol", (tol * 2.0).round() / 2.0);
+        set(v, "ef-ch-feather", (fea * 2.0).round() / 2.0);
+        return true;
+    }
+    if changed != "ef-ck-preset" {
+        return false;
+    }
+    let preset = v.s("ef-ck-preset").to_string();
+    // couleurs types des écrans d'incrustation
+    match preset.as_str() {
+        "green" => {
+            set(v, "ef-ch-r", 0.0);
+            set(v, "ef-ch-g", 177.0);
+            set(v, "ef-ch-b", 64.0);
+        }
+        "blue" => {
+            set(v, "ef-ch-r", 0.0);
+            set(v, "ef-ch-g", 71.0);
+            set(v, "ef-ch-b", 187.0);
+        }
+        _ => {}
+    }
+    // couleur clé saturée → couleur plutôt que lumière, débordement à retirer
     let lab = lab(v.g("ef-ch-r", 0.0), v.g("ef-ch-g", 255.0), v.g("ef-ch-b", 0.0));
     let sat = lab[1].hypot(lab[2]);
     let spill = if sat > 15.0 && lab[0] > 15.0 { 100.0 } else { 0.0 };
     let drift = if sat > 30.0 { 60.0 } else { 100.0 };
-    let (tol, fea) = (30.0f32, 15.0f32);
-    // tol, feather, drift, black, white, spill, recover, luma, gamma
-    let p: [f32; 9] = match v.s("ef-ck-preset") {
-        "default" => [tol, fea, drift, 10.0, 95.0, spill, 0.0, 0.0, 1.0],
-        "soft" => [(tol - 10.0).max(1.0), (fea * 1.8).min(100.0), drift, 5.0, 90.0, spill, 80.0, 40.0, 1.3],
-        "hard" => [tol + (fea / 2.0).round(), 5.0, drift, 30.0, 70.0, (spill / 2.0).round(), 0.0, 0.0, 1.0],
-        "shadow" => [1.0, 100.0, 100.0, 0.0, 85.0, spill, 100.0, 80.0, 1.9],
-        "glass" => [1.0, 100.0, 100.0, 0.0, 100.0, 0.0, 100.0, 0.0, 1.0],
-        "despill" => [tol, 15.0, 50.0, 5.0, 95.0, 100.0, 0.0, 0.0, 1.0],
+    // force, douceur (None : celle de la force), couleur ↔ lumière, clip noir, clip blanc,
+    // débordement, récupération, lumières, gamma, rétrécir, plume, nettoyer, trous, méthode,
+    // compensation, bords, ombres
+    struct Pr(f32, Option<f32>, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, &'static str, &'static str, f32, f32);
+    let p = match preset.as_str() {
+        "green" | "blue" => Pr(40.0, None, 60.0, 5.0, 92.0, 80.0, 30.0, 0.0, 1.0, 0.0, 0.5, 1.0, 1.0, "limit", "neutral", 30.0, 0.0),
+        "plain" | "default" => Pr(30.0, None, drift, 10.0, 95.0, spill, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, "limit", "neutral", 0.0, 0.0),
+        "soft" => Pr(22.0, Some(27.0), drift, 5.0, 90.0, spill, 80.0, 40.0, 1.3, 0.0, 1.0, 0.0, 1.0, "avg", "neutral", 20.0, 0.0),
+        "hard" => Pr(55.0, Some(5.0), drift, 30.0, 70.0, (spill / 2.0).round(), 0.0, 0.0, 1.0, 1.0, 0.0, 2.0, 2.0, "limit", "neutral", 0.0, 0.0),
+        "hair" => Pr(35.0, Some(25.0), 70.0, 0.0, 85.0, 100.0, 100.0, 20.0, 1.2, 0.0, 0.0, 0.0, 0.0, "avg", "neutral", 50.0, 0.0),
+        "glass" => Pr(0.0, Some(100.0), 100.0, 0.0, 100.0, 0.0, 100.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, "limit", "none", 0.0, 0.0),
+        "shadow" => Pr(0.0, Some(100.0), 100.0, 0.0, 85.0, spill, 100.0, 80.0, 1.9, 0.0, 0.0, 0.0, 0.0, "limit", "neutral", 0.0, 70.0),
+        "despill" => Pr(36.0, None, 50.0, 5.0, 95.0, 100.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, "double", "neutral", 30.0, 0.0),
         _ => return false,
     };
-    for (id, x) in ["ef-ch-tol", "ef-ch-feather", "ef-ch-drift", "ef-ch-black", "ef-ch-white", "ef-ch-spill", "ef-ch-recover", "ef-ch-luma", "ef-ch-gamma"].iter().zip(p) {
-        v.0.insert(id.to_string(), fmt_num(x));
+    let (tol, fea) = force_to_tol(p.0);
+    // verre / ombres : tolérance minimale, tout passe par la douceur (comme la version web)
+    let tol = if p.0 == 0.0 { 1.0 } else { (tol * 2.0).round() / 2.0 };
+    set(v, "ef-ck-force", p.0);
+    set(v, "ef-ch-tol", tol);
+    set(v, "ef-ch-feather", p.1.unwrap_or((fea * 2.0).round() / 2.0));
+    for (id, x) in [
+        ("ef-ch-drift", p.2),
+        ("ef-ch-black", p.3),
+        ("ef-ch-white", p.4),
+        ("ef-ch-spill", p.5),
+        ("ef-ch-recover", p.6),
+        ("ef-ch-luma", p.7),
+        ("ef-ch-gamma", p.8),
+        ("ef-ck-choke", p.9),
+        ("ef-ck-blur", p.10),
+        ("ef-ck-clean", p.11),
+        ("ef-ck-holes", p.12),
+        ("ef-ck-edge", p.15),
+        ("ef-ck-shadow", p.16),
+    ] {
+        set(v, id, x);
+    }
+    v.0.insert("ef-ck-spm".into(), p.13.into());
+    v.0.insert("ef-ck-rep".into(), p.14.into());
+    true
+}
+
+/// Bouton d'une fenêtre (champ kind 7) : « Auto » de l'incrustation détecte la couleur du
+/// fond sur le pourtour du calque. Vrai si des valeurs ont changé.
+pub fn run_button(effect: &str, id: &str, v: &mut Vals, px: &[u8], w: usize, h: usize) -> bool {
+    if effect != "chroma" || id != "ef-ck-auto" {
+        return false;
+    }
+    let Some(c) = masterpaint_core::chroma_detect_key(px, w, h) else { return false };
+    for (k, ch) in ["ef-ch-r", "ef-ch-g", "ef-ch-b"].iter().zip(c) {
+        v.0.insert(k.to_string(), ch.to_string());
+    }
+    // couleur détectée : le préréglage adapté (écran vert / bleu, sinon fond uni) sans changer
+    // la couleur trouvée
+    let lab = lab(c[0] as f32, c[1] as f32, c[2] as f32);
+    let sat = lab[1].hypot(lab[2]);
+    let preset = if sat > 30.0 && c[1] > c[0] && c[1] > c[2] {
+        "green"
+    } else if sat > 30.0 && c[2] > c[0] && c[2] > c[1] {
+        "blue"
+    } else {
+        "plain"
+    };
+    let keep = [v.s("ef-ch-r").to_string(), v.s("ef-ch-g").to_string(), v.s("ef-ch-b").to_string()];
+    v.0.insert("ef-ck-preset".into(), preset.into());
+    apply_preset(effect, "ef-ck-preset", v);
+    for (k, s) in ["ef-ch-r", "ef-ch-g", "ef-ch-b"].iter().zip(keep) {
+        v.0.insert(k.to_string(), s);
     }
     true
 }
 
 /// Incrustation appliquée au masque α lié du calque plutôt qu'à ses pixels.
 pub fn chroma_as_mask(effect: &str, v: &Vals) -> bool {
-    effect == "chroma" && v.b("ef-ck-mask", false) > 0.0
+    effect == "chroma" && (v.s("ef-ck-out") == "mask" || v.b("ef-ck-mask", false) > 0.0)
+}
+
+/// Incrustation posée dans un nouveau calque (au-dessus, l'original masqué et intact).
+pub fn chroma_to_layer(effect: &str, v: &Vals) -> bool {
+    effect == "chroma" && v.s("ef-ck-out") == "layer"
+}
+
+/// Réglages réellement appliqués à la validation : les vues de contrôle (masque, original,
+/// sur fond…) ne servent qu'à l'aperçu.
+pub fn for_commit(effect: &str, v: &Vals) -> Vals {
+    let mut out = v.clone();
+    if effect == "chroma" {
+        out.0.insert("ef-ck-view".into(), "result".into());
+    }
+    out
+}
+
+/// L'aperçu affiché n'est pas le résultat (vue de contrôle) : recalcul obligatoire à OK.
+pub fn preview_only(effect: &str, v: &Vals) -> bool {
+    effect == "chroma" && !matches!(v.s("ef-ck-view"), "" | "result")
 }
 
 /// sRGB (0..255) → CIELAB (D65).
@@ -228,6 +448,22 @@ const CONTENT_FILL: &[Field] = &[
         options: &[("0", "Texture (morceaux semblables)"), ("1", "Dégradé lisse")],
     },
     Field { id: "ef-cf-alpha", label: "Conserver la transparence", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+    // méthode des morceaux (mode Texture) : comme le remplissage de Photoshop
+    Field {
+        id: "ef-cf-quality",
+        label: "Qualité",
+        kind: 2,
+        min: 0.0,
+        max: 0.0,
+        step: 1.0,
+        def: 1.0,
+        def_s: "",
+        options: &[("0", "Rapide (une échelle)"), ("1", "Normale (3 échelles)"), ("2", "Haute (5 échelles, grandes structures)")],
+    },
+    slider("ef-cf-patch", "Taille des morceaux (px, 0 = auto)", 0.0, 15.0, 1.0, 0.0),
+    slider("ef-cf-sample", "Zone d'échantillonnage autour (px, 0 = auto)", 0.0, 1024.0, 8.0, 0.0),
+    Field { id: "ef-cf-mirror", label: "Morceaux en miroir (symétries)", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+    slider("ef-cf-adapt", "Adaptation des couleurs %", 0.0, 100.0, 1.0, 50.0),
 ];
 
 /// Réglages de « Séparer les canaux RVB » : (niveaux de gris, décalages [R, V, B], masquer
@@ -246,14 +482,20 @@ pub fn cutout_opts(v: &Vals) -> (f32, i32, bool, bool) {
     (v.g("ef-cut-feather", 2.0).max(0.0), v.g("ef-cut-grow", 0.0).round() as i32, v.b("ef-cut-invert", false) > 0.0, v.b("ef-cut-mask", false) > 0.0)
 }
 
-/// Paramètres de fx_object::content_fill (sans la graine, ajoutée par l'appelant).
-pub fn content_fill_params(v: &Vals) -> Vec<f32> {
+/// Paramètres de fx_object::content_fill (graine en 6e position).
+pub fn content_fill_params(v: &Vals, seed: f32) -> Vec<f32> {
     vec![
         v.g("ef-cf-ext", 4.0),
         v.g("ef-cf-feather", 8.0),
         v.g("ef-cf-detail", 100.0),
         v.s("ef-cf-mode").parse::<f32>().unwrap_or(0.0),
         v.b("ef-cf-alpha", true),
+        seed,
+        v.g("ef-cf-patch", 0.0),
+        v.g("ef-cf-sample", 0.0),
+        v.s("ef-cf-quality").parse::<f32>().unwrap_or(1.0),
+        v.b("ef-cf-mirror", true),
+        v.g("ef-cf-adapt", 50.0),
     ]
 }
 
@@ -345,7 +587,8 @@ const ASCII: &[Field] = &[
         min: 0.0,
         max: 0.0,
         step: 1.0,
-        def: 0.0,
+        // fond noir par défaut : couleurs lisibles (sur transparent, les caractères flottaient)
+        def: 1.0,
         def_s: "",
         options: &[("transparent", "Transparent"), ("black", "Noir"), ("white", "Blanc"), ("secondary", "Couleur secondaire")],
     },
@@ -822,18 +1065,18 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         "chroma" => {
             name = "chroma";
             let c = |id: &str| g(id, 0.0).clamp(0.0, 255.0);
-            let nz = |x: f32, d: f32| if x == 0.0 { d } else { x };
             let use2 = v.b("ef-ch-use2", false) > 0.0 && v.0.contains_key("ef-ch-r2");
+            // 0 est une vraie valeur (douceur nulle, couleur pure…), plus le « || défaut » du JS
             vec![
                 c("ef-ch-r"),
                 c("ef-ch-g"),
                 c("ef-ch-b"),
-                nz(g("ef-ch-tol", 0.0), 30.0),
-                nz(g("ef-ch-drift", 0.0), 50.0),
-                nz(g("ef-ch-feather", 0.0), 15.0),
+                g("ef-ch-tol", 30.0).max(0.0),
+                g("ef-ch-drift", 50.0),
+                g("ef-ch-feather", 15.0).max(0.0),
                 g("ef-ch-black", 0.0),
-                nz(g("ef-ch-white", 0.0), 100.0),
-                nz(g("ef-ch-gamma", 0.0), 1.0).max(0.1),
+                g("ef-ch-white", 100.0),
+                g("ef-ch-gamma", 1.0).max(0.1),
                 g("ef-ch-spill", 0.0),
                 g("ef-ch-recover", 0.0),
                 g("ef-ch-luma", 0.0),
@@ -842,6 +1085,32 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
                 if use2 { c("ef-ch-g2") } else { 0.0 },
                 if use2 { c("ef-ch-b2") } else { 0.0 },
                 0.0,
+                // fx_chroma 17… : masque, débordement, vue, sortie
+                g("ef-ck-choke", 0.0),
+                g("ef-ck-blur", 0.0).max(0.0),
+                g("ef-ck-clean", 0.0).max(0.0).round(),
+                g("ef-ck-holes", 0.0).max(0.0).round(),
+                if use2 { g("ef-ck-tol2", 0.0).max(0.0) } else { 0.0 },
+                match v.s("ef-ck-spm") {
+                    "avg" => 0.0,
+                    "double" => 2.0,
+                    _ => 1.0,
+                },
+                match v.s("ef-ck-rep") {
+                    "neutral" => 1.0,
+                    "color" => 2.0,
+                    _ => 0.0,
+                },
+                g("ef-ck-rpr", 128.0).clamp(0.0, 255.0),
+                g("ef-ck-rpg", 128.0).clamp(0.0, 255.0),
+                g("ef-ck-rpb", 128.0).clamp(0.0, 255.0),
+                g("ef-ck-edge", 0.0),
+                CK_VIEWS.iter().position(|o| o.0 == v.s("ef-ck-view")).unwrap_or(0) as f32,
+                g("ef-ck-bgr", 64.0).clamp(0.0, 255.0),
+                g("ef-ck-bgg", 64.0).clamp(0.0, 255.0),
+                g("ef-ck-bgb", 64.0).clamp(0.0, 255.0),
+                g("ef-ck-shadow", 0.0),
+                v.b("ef-ck-invert", false),
             ]
         }
         "halftone" => {
@@ -961,6 +1230,55 @@ pub fn scale_px(fields: &[Field], v: &Vals, k: f32) -> Vals {
         out.0.insert("ef-ca-amt".to_string(), fmt_num(x * k));
     }
     out
+}
+
+/// Réglages qui fixent une grille ou un motif (taille des carreaux, des cellules, du
+/// pinceau…) : (identifiant, plus petite valeur acceptée par le moteur, valeur entière).
+/// Un aperçu réduit au pas k doit les garder exacts, sinon ses carreaux n'ont pas les
+/// proportions du rendu final (Pixeliser : carreaux plus gros dans l'aperçu).
+const GRID_PX: &[(&str, f32, bool)] = &[
+    ("ef-size", 1.0, true),
+    ("ef-cry", 2.0, false),
+    ("ef-grain-fine", 2.0, false),
+    ("ef-oil", 1.0, true),
+    ("ef-pa-brush", 1.0, false),
+    ("ef-pa-tip", 1.0, false),
+    ("ef-pencil-tip", 1.0, true),
+    ("ef-tile", 4.0, true),
+    ("ef-half-rad", 1.0, false),
+    ("ef-gc-size", 1.0, false),
+    ("ef-gc-width", 1.0, false),
+    ("ef-contour-width", 1.0, true),
+    ("ef-ol-thick", 1.0, false),
+    ("ef-ascii-size", 6.0, true),
+];
+
+/// Pas d'un aperçu réduit (au plus `want`) qui garde les réglages de grille exacts : la
+/// valeur divisée par le pas reste au-dessus du minimum (du moteur et du champ) et entière
+/// si le moteur l'arrondit. 1 : pas de réduction possible sans changer le rendu.
+pub fn preview_step(fields: &[Field], v: &Vals, want: usize) -> usize {
+    (1..=want.max(1))
+        .rev()
+        .find(|&k| {
+            let k = k as f32;
+            GRID_PX.iter().all(|(id, min, int)| {
+                let Some(f) = fields.iter().find(|f| f.id == *id) else { return true };
+                let x = v.g(id, f.def);
+                if x <= 0.0 {
+                    return true;
+                }
+                let r = x / k;
+                r + 1e-4 >= min.max(f.min) && (!int || (r - r.round()).abs() < 1e-4)
+            })
+        })
+        .unwrap_or(1)
+}
+
+/// Réglage d'angle en degrés (cadran dans la fenêtre d'effet) : libellé « Angle… », « …° »,
+/// « Rotation… » ou « Phase… », sur au moins un quart de tour.
+pub fn is_angle(f: &Field) -> bool {
+    let l = f.label.to_lowercase();
+    (l.starts_with("angle") || l.contains('°') || l.starts_with("rotation") || l.contains("phase")) && f.max - f.min >= 90.0
 }
 
 /// Libellé d'un réglage en pixels.

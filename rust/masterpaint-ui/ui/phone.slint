@@ -6,7 +6,7 @@ import { IconSpec, MenuSpec, DocTab, SheetRow } from "types.slint";
 import { Generated } from "generated.slint";
 import { Icon, FaIcon, GlyphIcon } from "widgets.slint";
 import { MpIcons } from "mpicons.slint";
-import { CurrentColors, ColorPicker, ColorSliders, SwatchStrip, PaletteGrid } from "colors.slint";
+import { CurrentColors, ColorPicker, ColorSliders, SwatchStrip, PaletteGrid, PickerModeIcon } from "colors.slint";
 
 /// Nuancier étendu (fenêtre Couleurs « Plus >> », panneau Couleurs du téléphone).
 export global Palettes {
@@ -36,7 +36,7 @@ export component MobTopBar inherits Rectangle {
             }
             bl := Text {
                 x: 36px;
-                text: "Menu";
+                text: @tr("Menu");
                 font-size: 13px;
                 font-weight: 600;
                 color: #ffffffeb;
@@ -51,7 +51,7 @@ export component MobTopBar inherits Rectangle {
         // titre : un appui ouvre aussi le tiroir (liste des documents), comme la version web
         Rectangle {
             horizontal-stretch: 1;
-            border-radius: 4px;
+            border-radius: 4px * Theme.round;
             background: tta.pressed ? #ffffff1a : transparent;
             VerticalLayout {
                 alignment: center;
@@ -82,7 +82,7 @@ export component MobTopBar inherits Rectangle {
         VerticalLayout {
             alignment: center;
             Text {
-                text: "MASTERPAINT";
+                text: @tr("MASTERPAINT");
                 font-size: 11px;
                 font-weight: 700;
                 letter-spacing: 0.2px;
@@ -90,7 +90,7 @@ export component MobTopBar inherits Rectangle {
                 horizontal-alignment: right;
             }
             Text {
-                text: "by Polocrafting";
+                text: @tr("by Polocrafting");
                 font-size: 9px;
                 color: #ffffff80;
                 horizontal-alignment: right;
@@ -104,7 +104,7 @@ export component MobUndoCapsule inherits Rectangle {
     callback undo();
     callback redo();
     width: 36px;
-    border-radius: 10px;
+    border-radius: 10px * Theme.round;
     background: Theme.mob-capsule;
     drop-shadow-blur: 10px;
     drop-shadow-offset-y: 2px;
@@ -112,7 +112,7 @@ export component MobUndoCapsule inherits Rectangle {
     VerticalLayout {
         padding: 3px;
         Rectangle {
-            border-radius: 8px;
+            border-radius: 8px * Theme.round;
             background: uta.pressed ? Theme.mob-accent-tint : transparent;
             GlyphIcon {
                 glyph: "\u{f2ea}";
@@ -130,7 +130,7 @@ export component MobUndoCapsule inherits Rectangle {
             background: Theme.mob-divider;
         }
         Rectangle {
-            border-radius: 8px;
+            border-radius: 8px * Theme.round;
             background: rta.pressed ? Theme.mob-accent-tint : transparent;
             GlyphIcon {
                 glyph: "\u{f2f9}";
@@ -154,9 +154,11 @@ export component MobToolRow inherits Rectangle {
     /// outils qui peignent ou déforment grisés (même règle que la fenêtre Outils)
     in property <string> layer-block;
     pure function blocked(id: string) -> bool {
-        return root.layer-block != "" && (id == "tool-brush" || id == "tool-pencil" || id == "tool-eraser"
-            || id == "tool-fill" || id == "tool-gradient" || id == "tool-shapes-family" || id == "tool-round-3"
-            || id == "tool-line" || id == "tool-deform" || id == "tool-warp-4"
+        // calque SVG : Formes, Ligne et Pot de peinture restent disponibles (objets)
+        let shapes = id == "tool-fill" || id == "tool-shapes-family" || id == "tool-round-3" || id == "tool-line";
+        return root.layer-block != "" && !(shapes && root.layer-block == "calque texte")
+            && (id == "tool-brush" || id == "tool-pencil" || id == "tool-eraser" || id == "tool-gradient"
+            || shapes || id == "tool-deform" || id == "tool-warp-4"
             || (id == "tool-move" && root.layer-block == "verrouillé"));
     }
     callback tool-selected(string);
@@ -165,7 +167,7 @@ export component MobToolRow inherits Rectangle {
         x: 0;
         width: 50px;
         height: parent.height;
-        border-radius: 10px;
+        border-radius: 10px * Theme.round;
         background: pta.pressed ? Theme.mob-accent-pill : Theme.mob-capsule;
         drop-shadow-blur: 8px;
         drop-shadow-offset-y: 1px;
@@ -175,7 +177,7 @@ export component MobToolRow inherits Rectangle {
             y: 4px;
             width: 26px;
             height: parent.height - 8px;
-            border-radius: 7px;
+            border-radius: 7px * Theme.round;
             background: Theme.mob-accent-tint;
             for t in Generated.tools: Icon {
                 visible: t.id == root.current-tool;
@@ -200,7 +202,7 @@ export component MobToolRow inherits Rectangle {
         x: 56px;
         width: parent.width - 56px;
         height: parent.height;
-        border-radius: 10px;
+        border-radius: 10px * Theme.round;
         background: Theme.mob-card;
         drop-shadow-blur: 8px;
         drop-shadow-offset-y: 1px;
@@ -221,7 +223,7 @@ export component MobToolRow inherits Rectangle {
                     if t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2": Rectangle {
                         width: 34px;
                         opacity: root.blocked(t.id) ? 0.35 : 1;
-                        border-radius: 7px;
+                        border-radius: 7px * Theme.round;
                         background: t.id == root.current-tool ? Theme.mob-accent-pill : tta.pressed ? Theme.mob-divider : transparent;
                         border-width: t.id == root.current-tool ? 1px : 0px;
                         border-color: Theme.accent.with-alpha(0.45);
@@ -252,9 +254,13 @@ component MobRoundButton inherits Rectangle {
     callback clicked();
     width: 34px;
     height: 34px;
-    border-radius: 17px;
+    border-radius: 17px * Theme.round;
     background: ta.pressed ? Theme.mob-accent-pill : root.checked ? Theme.mob-accent-tint : transparent;
     GlyphIcon {
+        x: round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: round((parent.height - self.height) / 2 / 1px) * 1px;
+        width: 24px;
+        height: 24px;
         glyph: root.glyph;
         size: 17px;
         tint: root.checked ? Theme.accent : Theme.mob-text;
@@ -276,7 +282,7 @@ export component MobPills inherits Rectangle {
     Rectangle {
         x: 0;
         width: lp.preferred-width;
-        border-radius: 12px;
+        border-radius: 12px * Theme.round;
         background: Theme.mob-card;
         drop-shadow-blur: 10px;
         drop-shadow-offset-y: 2px;
@@ -309,7 +315,7 @@ export component MobPills inherits Rectangle {
     Rectangle {
         x: parent.width - self.width;
         width: rp.preferred-width;
-        border-radius: 12px;
+        border-radius: 12px * Theme.round;
         background: Theme.mob-card;
         drop-shadow-blur: 10px;
         drop-shadow-offset-y: 2px;
@@ -350,7 +356,7 @@ export component MobDock inherits Rectangle {
     in property <bool> compact;
     in property <string> active;
     callback action(string);
-    border-radius: 14px;
+    border-radius: 14px * Theme.round;
     background: Theme.mob-card;
     drop-shadow-blur: 14px;
     drop-shadow-offset-y: -2px;
@@ -368,33 +374,39 @@ export component MobDock inherits Rectangle {
             spacing: 2px;
             alignment: center;
             for b in [
-                { id: "gallery", g: "\u{f0b0}", t: "Filtre" },
-                { id: "adjust", g: "\u{f1de}", t: "Ajuster" },
-                { id: "deform", g: "\u{e2ca}", t: "Déform" },
-                { id: "effects", g: "\u{f773}", t: "Effets" },
-                { id: "rotate", g: "\u{f2f1}", t: "Rotation" },
-                { id: "fit", g: "\u{f065}", t: "Ajuster" },
-                { id: "crop", g: "\u{f125}", t: "Recadrage" },
+                { id: "gallery", g: "\u{f0b0}", t: @tr("Filtre") },
+                { id: "adjust", g: "\u{f1de}", t: @tr("Ajuster") },
+                { id: "deform", g: "\u{e2ca}", t: @tr("Déform") },
+                { id: "effects", g: "\u{f773}", t: @tr("Effets") },
+                { id: "rotate", g: "\u{f2f1}", t: @tr("Rotation") },
+                { id: "fit", g: "\u{f065}", t: @tr("Ajuster") },
+                { id: "crop", g: "\u{f125}", t: @tr("Recadrage") },
             ]: Rectangle {
                 width: 56px;
-                border-radius: 10px;
+                border-radius: 10px * Theme.round;
                 background: root.active == b.id ? Theme.mob-accent-pill : dta.pressed ? Theme.mob-divider : transparent;
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 3px;
-                    GlyphIcon {
-                        glyph: b.g;
-                        size: 18px;
-                        tint: root.active == b.id ? Theme.accent : Theme.mob-text;
-                    }
-                    if !root.compact: Text {
-                        text: b.t;
-                        font-size: 10px;
-                        font-weight: 600;
-                        color: root.active == b.id ? Theme.accent : Theme.mob-text;
-                        horizontal-alignment: center;
-                        overflow: elide;
-                    }
+                property <length> content-h: root.compact ? 24px : 41px;
+                dock-icon := GlyphIcon {
+                    x: round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: round((parent.height - parent.content-h) / 2 / 1px) * 1px;
+                    width: 24px;
+                    height: 24px;
+                    glyph: b.g;
+                    size: 18px;
+                    tint: root.active == b.id ? Theme.accent : Theme.mob-text;
+                }
+                if !root.compact: Text {
+                    x: 2px;
+                    y: dock-icon.y + dock-icon.height + 3px;
+                    width: parent.width - 4px;
+                    height: 14px;
+                    text: b.t;
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: root.active == b.id ? Theme.accent : Theme.mob-text;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    overflow: elide;
                 }
                 dta := TouchArea {
                     clicked => {
@@ -412,7 +424,7 @@ export component MobSheet inherits Rectangle {
     callback close();
     out property <length> body-y: 18px;
     out property <length> body-height: root.height - 18px - (root.footer ? 50px : 0px);
-    border-radius: 16px;
+    border-radius: 16px * Theme.round;
     background: Theme.mob-surface;
     drop-shadow-blur: 14px;
     drop-shadow-offset-y: -2px;
@@ -423,7 +435,7 @@ export component MobSheet inherits Rectangle {
         y: 7px;
         width: 36px;
         height: 5px;
-        border-radius: 2.5px;
+        border-radius: 2.5px * Theme.round;
         background: Theme.mob-muted.with-alpha(0.45);
     }
     Rectangle {
@@ -443,10 +455,10 @@ export component MobSheet inherits Rectangle {
             y: 9px;
             width: min(320px, parent.width - 32px);
             height: 32px;
-            border-radius: 16px;
+            border-radius: 16px * Theme.round;
             background: fta.pressed ? Theme.accent.with-alpha(0.32) : Theme.accent.with-alpha(0.2);
             Text {
-                text: "Fermer";
+                text: @tr("Fermer");
                 font-size: 15px;
                 font-weight: 700;
                 color: Theme.accent;
@@ -489,9 +501,9 @@ export component MobMenuList inherits Rectangle {
                 }
                 if !r.section: row-card := Rectangle {
                     // indisponible pour le calque actif (calque texte, verrouillé, dossier)
-                    property <bool> blocked: r.badge == "calque texte" || r.badge == "verrouillé" || r.badge == "dossier";
+                    property <bool> blocked: r.badge == @tr("calque texte") || r.badge == @tr("verrouillé") || r.badge == @tr("dossier");
                     opacity: self.blocked ? 0.5 : 1;
-                    border-radius: 15px;
+                    border-radius: 15px * Theme.round;
                     background: eta.pressed && !self.blocked ? Theme.mob-accent-tint : Theme.mob-card;
                     drop-shadow-blur: 2px;
                     drop-shadow-offset-y: 1px;
@@ -528,7 +540,7 @@ export component MobMenuList inherits Rectangle {
                         y: 7px;
                         width: 58px;
                         height: 16px;
-                        border-radius: 8px;
+                        border-radius: 8px * Theme.round;
                         background: #f59e0b30;
                         Text {
                             text: r.badge;
@@ -562,7 +574,7 @@ component MobDrawerHeader inherits Rectangle {
         x: 10px;
         width: 3px;
         height: 18px;
-        border-radius: 1.5px;
+        border-radius: 1.5px * Theme.round;
         background: Theme.accent;
     }
     Text {
@@ -605,10 +617,10 @@ component MobDrawerItem inherits Rectangle {
     in property <string> badge;
     callback clicked();
     // indisponible pour le calque actif (calque texte, verrouillé, dossier)
-    property <bool> blocked: root.badge == "calque texte" || root.badge == "verrouillé" || root.badge == "dossier";
+    property <bool> blocked: root.badge == @tr("calque texte") || root.badge == @tr("verrouillé") || root.badge == @tr("dossier");
     opacity: root.blocked ? 0.5 : 1;
     height: 30px;
-    border-radius: 5px;
+    border-radius: 5px * Theme.round;
     background: ta.pressed && !root.blocked ? Theme.mob-accent-tint : Theme.mob-surface-deep;
     // icône maison de l'entrée (comme les menus du bureau), sinon glyphe
     property <int> mp: MpIcons.for-menu(root.text, root.fa);
@@ -642,7 +654,7 @@ component MobDrawerItem inherits Rectangle {
         y: 7px;
         width: 56px;
         height: 16px;
-        border-radius: 8px;
+        border-radius: 8px * Theme.round;
         background: #f59e0b30;
         Text {
             text: root.badge;
@@ -700,7 +712,7 @@ export component MobDrawer inherits Rectangle {
             x: 16px;
             y: 0;
             height: 56px;
-            text: "Menu";
+            text: @tr("Menu");
             font-size: 17px;
             font-weight: 600;
             color: Theme.mob-text;
@@ -711,7 +723,7 @@ export component MobDrawer inherits Rectangle {
             y: 12px;
             width: 34px;
             height: 32px;
-            border-radius: 8px;
+            border-radius: 8px * Theme.round;
             background: cta.pressed ? Theme.mob-accent-tint : Theme.mob-surface-deep;
             FaIcon {
                 glyph: "\u{f00d}";
@@ -737,11 +749,11 @@ export component MobDrawer inherits Rectangle {
                 spacing: 8px;
                 alignment: start;
                 MobSectionLabel {
-                    text: "DOCUMENTS";
+                    text: @tr("DOCUMENTS");
                 }
                 for t[ti] in root.tabs: Rectangle {
                     height: 40px;
-                    border-radius: 10px;
+                    border-radius: 10px * Theme.round;
                     background: t.active ? Theme.mob-accent-tint : tra.pressed ? Theme.mob-divider : Theme.mob-card;
                     tra := TouchArea {
                         clicked => {
@@ -762,9 +774,26 @@ export component MobDrawer inherits Rectangle {
                             image-fit: contain;
                         }
                     }
+                    // type du projet (animation, SVG) : pastille avant les boutons ; rien en pixel
+                    if t.kind != "": Rectangle {
+                        x: parent.width - 40px - self.width;
+                        y: (parent.height - self.height) / 2;
+                        width: pk.preferred-width + 10px;
+                        height: 16px;
+                        border-radius: 4px * Theme.round;
+                        background: Theme.accent;
+                        pk := Text {
+                            text: t.kind;
+                            font-size: 9px;
+                            font-weight: 800;
+                            color: Theme.on-accent;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
                     Text {
                         x: 44px;
-                        width: parent.width - 44px - 40px;
+                        width: parent.width - 44px - 40px - (t.kind != "" ? 64px : 0px);
                         text: t.title;
                         font-size: 14px;
                         font-weight: t.active ? 700 : 400;
@@ -777,7 +806,7 @@ export component MobDrawer inherits Rectangle {
                         y: 8px;
                         width: 26px;
                         height: 24px;
-                        border-radius: 6px;
+                        border-radius: 6px * Theme.round;
                         background: xta.pressed ? Theme.mob-accent-pill : Theme.mob-surface-deep.with-alpha(0.7);
                         FaIcon {
                             glyph: "\u{f00d}";
@@ -793,11 +822,11 @@ export component MobDrawer inherits Rectangle {
                 }
                 Rectangle {
                     height: 32px;
-                    border-radius: 16px;
+                    border-radius: 16px * Theme.round;
                     background: hta.pressed ? Theme.mob-accent-tint : Theme.mob-card;
                     Text {
                         x: 14px;
-                        text: "Historique des actions";
+                        text: @tr("Historique des actions");
                         font-size: 14px;
                         color: Theme.mob-text;
                         vertical-alignment: center;
@@ -812,17 +841,17 @@ export component MobDrawer inherits Rectangle {
                     height: 4px;
                 }
                 MobSectionLabel {
-                    text: "FICHIER";
+                    text: @tr("FICHIER");
                 }
                 for row in [
-                    [{ id: "new", g: "\u{e494}", t: "Nouveau…" }, { id: "open", g: "\u{f07c}", t: "Ouvrir / Importer image…" }],
-                    [{ id: "export", g: "\u{f0c7}", t: "Exporter…" }, { id: "close-doc", g: "\u{f00d}", t: "Fermer le projet actif…" }],
+                    [{ id: "new", g: "\u{e494}", t: @tr("Nouveau…") }, { id: "open", g: "\u{f07c}", t: @tr("Ouvrir / Importer image…") }],
+                    [{ id: "export", g: "\u{f0c7}", t: @tr("Exporter…") }, { id: "close-doc", g: "\u{f00d}", t: @tr("Fermer le projet actif…") }],
                 ]: HorizontalLayout {
                     spacing: 8px;
                     height: 58px;
                     for tile in row: Rectangle {
                         horizontal-stretch: 1;
-                        border-radius: 8px;
+                        border-radius: 8px * Theme.round;
                         background: fta.pressed ? Theme.mob-accent-tint : Theme.mob-surface-deep;
                         GlyphIcon {
                             x: 12px;
@@ -851,7 +880,7 @@ export component MobDrawer inherits Rectangle {
                     height: 4px;
                 }
                 MobSectionLabel {
-                    text: "MENUS";
+                    text: @tr("MENUS");
                 }
                 for m[mi] in root.menus: VerticalLayout {
                     MobDrawerHeader {
@@ -938,7 +967,7 @@ export component MobDrawer inherits Rectangle {
                         color: #ffffff;
                     }
                     Text {
-                        text: "Signaler un bug";
+                        text: @tr("Signaler un bug");
                         font-size: 13px;
                         color: #ffffff;
                         vertical-alignment: center;
@@ -951,13 +980,13 @@ export component MobDrawer inherits Rectangle {
                 alignment: center;
                 spacing: 4px;
                 Text {
-                    text: "MasterPaint par";
+                    text: @tr("MasterPaint par");
                     font-size: 12px;
                     color: Theme.mob-text;
                     vertical-alignment: center;
                 }
                 Text {
-                    text: "Polocrafting 367";
+                    text: @tr("Polocrafting 367");
                     font-size: 12px;
                     color: Theme.accent;
                     vertical-alignment: center;
@@ -1006,14 +1035,14 @@ export component MobColors inherits Rectangle {
         height: 54px;
         spacing: 6px;
         for q in [
-            { id: "gallery", g: "\u{e2ca}", t: "Galerie" },
-            { id: "brightness", g: "\u{f185}", t: "Lum./Cont." },
-            { id: "hsv", g: "\u{f53f}", t: "Teinte/Sat." },
-            { id: "invert", g: "\u{f042}", t: "Inverser" },
-            { id: "grayscale", g: "\u{f5c7}", t: "N&B" },
+            { id: "gallery", g: "\u{e2ca}", t: @tr("Galerie") },
+            { id: "brightness", g: "\u{f185}", t: @tr("Lum./Cont.") },
+            { id: "hsv", g: "\u{f53f}", t: @tr("Teinte/Sat.") },
+            { id: "invert", g: "\u{f042}", t: @tr("Inverser") },
+            { id: "grayscale", g: "\u{f5c7}", t: @tr("N&B") },
         ]: Rectangle {
             horizontal-stretch: 1;
-            border-radius: 8px;
+            border-radius: 8px * Theme.round;
             background: qta.pressed ? Theme.mob-accent-tint : Theme.mob-card;
             drop-shadow-blur: 2px;
             drop-shadow-offset-y: 1px;
@@ -1067,14 +1096,11 @@ export component MobColors inherits Rectangle {
         primary <=> root.primary;
         secondary <=> root.secondary;
         edit-secondary <=> root.edit-secondary;
-        pipette-clicked => {
-            root.pick-screen();
-        }
     }
     Text {
         x: 12px;
         y: cur.y + cur.height + 4px;
-        text: root.edit-secondary ? "Secondaire" : "Principale";
+        text: root.edit-secondary ? @tr("Secondaire") : @tr("Principale");
         font-size: 11px;
         color: Theme.mob-muted;
     }
@@ -1089,9 +1115,15 @@ export component MobColors inherits Rectangle {
             { id: "more", g: "\u{f1de}", on: root.expanded },
         ]: Rectangle {
             height: 30px;
-            border-radius: 8px;
+            border-radius: 8px * Theme.round;
             background: b.on ? Theme.mob-accent-pill : bta.pressed ? Theme.mob-divider : Theme.mob-card;
-            GlyphIcon {
+            // roue ↔ carré : petite icône colorée du mode suivant ; « Plus » : glyphe
+            if b.id == "mode": PickerModeIcon {
+                to-square: !root.grid;
+                wheel: root.wheel;
+                side: 16px;
+            }
+            if b.id != "mode": GlyphIcon {
                 glyph: b.g;
                 size: 13px;
                 tint: b.on ? Theme.accent : Theme.mob-text;
@@ -1135,7 +1167,7 @@ export component MobColors inherits Rectangle {
         y: root.info-y;
         width: root.width - 20px;
         height: 18px;
-        border-radius: 9px;
+        border-radius: 9px * Theme.round;
         background: Theme.mob-accent-tint;
         Text {
             text: root.info;
@@ -1145,14 +1177,23 @@ export component MobColors inherits Rectangle {
             overflow: elide;
         }
     }
-    // favoris : « + » ajoute la couleur modifiée (la retire si elle y est déjà)
+    // favoris : pipette, « + » (ajoute la couleur modifiée, la retire si elle y est déjà), puis
+    // les couleurs — même pas que le nuancier dessous (bords alignés)
+    property <int> pal-cols: root.swatches.length > 120 ? 24 : 37;
+    property <length> pitch: (root.width - 20px) / root.pal-cols;
+    // cases tactiles : deux colonnes du nuancier par case
     favs := SwatchStrip {
+        gray: root.gray;
         x: 10px;
         y: root.info-y + root.info-h;
         width: root.width - 20px;
-        cell: 26px;
-        gap: 4px;
-        radius: 13px;
+        cell: root.pitch * 2 - 2px;
+        gap: 2px;
+        radius: 6px;
+        pipette: true;
+        pipette-clicked => {
+            root.pick-screen();
+        }
         add-button: true;
         removable: true;
         current: root.current;
@@ -1171,10 +1212,10 @@ export component MobColors inherits Rectangle {
     property <[color]> swatches: root.mode-palette.length > 0 ? root.mode-palette : Palettes.full;
     pal := PaletteGrid {
         x: 10px;
-        y: favs.y + favs.height + 6px;
+        y: favs.y + favs.height + 4px;
         width: root.width - 20px;
         swatches: root.swatches;
-        cols: root.swatches.length > 120 ? 24 : 37;
+        cols: root.pal-cols;
         row-h: root.swatches.length > 120 ? 13px : 17px;
         pick(c, r) => {
             root.pick(c, r);

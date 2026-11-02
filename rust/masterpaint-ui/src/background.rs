@@ -92,14 +92,17 @@ pub(crate) fn spawn(app: &AppWindow, st: &mut State, job: Heavy, done: impl FnOn
         let weak = app.as_weak();
         let done: Done = Box::new(done);
         wasm_bindgen_futures::spawn_local(async move {
-            // effet du menu sur la carte graphique (WebGPU) : calcul asynchrone, la page ne se
-            // fige pas ; sans carte (ou effet sans équivalent) : worker, comme avant
+            // effet du menu sur la carte graphique (WebGPU, sinon WebGL2) : la page ne se fige
+            // pas ; sans carte (ou effet sans équivalent) : worker, comme avant
             if let Heavy::Effect { name, src, w, h, p, post: None } = &job {
                 if *w * *h >= GPU_MIN && GPU_ALLOWED.load(std::sync::atomic::Ordering::Relaxed) && crate::gpu::menu_supported(name) {
                     if let Some(g) = crate::gpu::get() {
                         if let Some(out) = g.run_menu(name, src, *w, *h, p).await {
                             return finish(weak, done, Some(out));
                         }
+                    } else if let Some(out) = crate::webgl::run_menu(name, src, *w, *h, p) {
+                        // sans WebGPU : passerelle WebGL2, résultat immédiat
+                        return finish(weak, done, Some(out));
                     }
                 }
             }

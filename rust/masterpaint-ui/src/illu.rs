@@ -19,7 +19,7 @@ fn decode_data_url(s: &str) -> Option<(usize, usize, Vec<u8>)> {
     Some((w as usize, h as usize, img.into_raw()))
 }
 
-fn png_data_url(w: usize, h: usize, px: &[u8]) -> String {
+pub(crate) fn png_data_url(w: usize, h: usize, px: &[u8]) -> String {
     use image::ImageEncoder;
     let mut out = std::io::Cursor::new(Vec::new());
     // compression rapide : la sauvegarde automatique écrit souvent de grandes images
@@ -91,6 +91,17 @@ fn pixel_project(p: &Value) -> Doc {
                 layer.off = Some(crate::editor::Off { x: lx, y: ly, w: iw, h: ih, px: px.into() });
             }
         }
+        // animation : dessins de la frise (cels), dataUrl à la taille du document
+        if let Some(cels) = l.get("cels").and_then(|c| c.as_array()).filter(|_| p.get("animation").and_then(crate::anim::from_json).is_some()) {
+            for c in cels {
+                let px = c.get("dataUrl").and_then(|d| d.as_str()).filter(|d| !d.is_empty()).and_then(decode_data_url)
+                    .filter(|(iw, ih, _)| *iw == w && *ih == h).map(|(_, _, px)| px).unwrap_or_else(|| vec![0u8; w * h * 4]);
+                let hold = c.get("hold").and_then(|v| v.as_f64()).filter(|v| *v > 0.0).map_or(crate::anim::HOLD_INF, |v| (v as usize).min(crate::anim::HOLD_INF));
+                let vector = c.get("vector").and_then(crate::vector::from_json).map(Box::new);
+                layer.cels.push(crate::anim::Cel { frame: c.get("frame").and_then(|v| v.as_u64()).unwrap_or(0) as usize, hold, px: px.into(), vector });
+            }
+            layer.cels.sort_by_key(|c| c.frame);
+        }
         let stack: Vec<(String, f32)> = l
             .get("dynamicFilterStack")
             .and_then(|s| s.as_array())
@@ -116,6 +127,8 @@ fn pixel_project(p: &Value) -> Doc {
     if doc.layers.is_empty() {
         doc.layers.push(Layer::new("Arrière-plan", w, h, [255, 255, 255, 255]));
     }
+    doc.anim = p.get("animation").and_then(crate::anim::from_json);
+    crate::anim::resolve(&mut doc);
     doc
 }
 
@@ -140,6 +153,7 @@ pub fn load(bytes: &[u8]) -> Result<Loaded, String> {
         }
         let mut doc = pixel_project(p);
         doc.mode = ColorMode::from_illu(mode);
+        doc.vector_mode = p.get("vectorMode").and_then(|v| v.as_bool()).unwrap_or(false);
         let (w, h) = (doc.w, doc.h);
         for (l, lj) in doc.layers.iter_mut().zip(p.get("pixelLayers").and_then(|x| x.as_array()).into_iter().flatten()) {
             let Some(mp) = lj.get("alphaMaskProjectId").filter(|v| !v.is_null()).and_then(|id| find_mask(id)) else { continue };
@@ -245,6 +259,22 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
             if let Some(v) = &l.vector {
                 o["textObject"] = crate::vector::to_json(v);
             }
+            // animation : dessins de la frise (maintien sans fin écrit null, comme la version web)
+            if doc.anim.is_some() && !l.cels.is_empty() {
+                o["cels"] = json!(l
+                    .cels
+                    .iter()
+                    .map(|c| {
+                        let hold = if c.hold >= crate::anim::HOLD_INF { Value::Null } else { json!(c.hold) };
+                        let mut o = json!({ "frame": c.frame, "hold": hold, "dataUrl": png_data_url_cached(doc.w, doc.h, &c.px).as_str() });
+                        // mode Animation SVG : objets du dessin (MasterPaint Rust seulement)
+                        if let Some(v) = &c.vector {
+                            o["vector"] = crate::vector::to_json(v);
+                        }
+                        o
+                    })
+                    .collect::<Vec<_>>());
+            }
             // masque α : projet lié « layerAlphaMask » (comme la version web)
             if let Some(m) = l.mask.as_ref().filter(|m| m.len() == doc.w * doc.h) {
                 let mid = format!("{pid}-mask-{i}");
@@ -269,19 +299,24 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
             o
         })
         .collect();
-    let project = json!({
+    let mut project = json!({
         "id": pid,
         "name": doc.title,
-        "mode": doc.mode.illu(),
+        "mode": if doc.anim.is_some() { "pixel-anim" } else { doc.mode.illu() },
         "width": doc.w,
         "height": doc.h,
         "activeLayerIndex": doc.active,
         "pixelLayers": layers,
         "vectorLayers": [],
+        // mode SVG de MasterPaint Rust (la version web garde « mode » pour le pixel / l'animation)
+        "vectorMode": doc.vector_mode,
         "role": "main",
         "historyIndex": -1,
         "historySerialized": [],
     });
+    if let Some(a) = &doc.anim {
+        project["animation"] = crate::anim::to_json(a);
+    }
     let mut projects = vec![project];
     projects.extend(masks);
     projects

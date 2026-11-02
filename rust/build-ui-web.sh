@@ -22,6 +22,7 @@ if [[ ! -f $raw_dst/.patched ]]; then
     grep -rl 'Instant::now()' "$raw_dst/src" --include=*.rs | grep -v '/bin/' | xargs sed -i 's/Instant::now()/crate::wasm_instant::now()/'
     touch "$raw_dst/.patched"
 fi
+# The workspace renderer patch supplies real backdrop blur and the SVG alpha fix.
 cargo build -p masterpaint-ui --lib --target wasm32-unknown-unknown --release --config "patch.crates-io.rawler.path='$raw_dst'"
 wasm-bindgen "$target/wasm32-unknown-unknown/release/masterpaint_ui.wasm" --target web --no-typescript --out-dir "$target/web-pkg"
 # symboles de débogage (8 Mo) retirés, sauf MP_KEEP_NAMES=1 (profilage dans le navigateur)
