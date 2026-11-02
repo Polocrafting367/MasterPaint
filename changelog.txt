@@ -47,8 +47,15 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
   de fin (droit, rond, flèche pleine, flèche vide, losange) et trait continu / tirets /
   pointillés, avec aperçus ; exportés en SVG
 - Ruban : le réglage de forme (rayon, côtés, branches) passe sous « Modifiable »
-- Zoom de l'interface (bureau) : la toile et ses marges restent justes après un agrandissement
-  ou un redimensionnement de la fenêtre
+- Zoom de l'interface : l'interface remplit toujours la fenêtre (navigateur : plus de vide à
+  droite et en bas au-dessus de 100 %, plus de débordement en dessous) ; bureau : juste aussi
+  après un agrandissement ou un redimensionnement
+- Fenêtre › Réinitialiser le bureau : les palettes déplacées reviennent bien à leur place
+- Courbes et formes vivantes bien plus fluides (seuls les segments proches de chaque pixel sont
+  calculés, seule la zone de la forme est redessinée)
+- Ligne : l'épaisseur passe sous « Modifiable » ; bouts et trait dans l'ordre de la ligne
+  (début, trait, fin)
+- Barres de titre translucides plus couvrantes, alignées sur le corps de la fenêtre
 
 3.5.0 (01/11/26) — animation, formes SVG modifiables, aide illustrée, réglages retenus
 - Animation (frise) dans la version Rust : images, durées d'exposition, maintien, pelure
