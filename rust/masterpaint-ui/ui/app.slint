@@ -2703,7 +2703,7 @@ export component AppWindow inherits Window {
     property <bool> ps-chrome: root.interface-style == 3 && !root.phone;
     property <length> ps-tabs-h: root.ps-chrome ? 27px : 0px;
     property <length> ps-strip: root.ps-chrome && root.docked ? 34px : 0px;
-    property <length> top-height: root.phone ? 48px : root.ps-chrome ? 30px : root.interface-style == 2 ? 63px : 52px;
+    property <length> top-height: root.phone ? 48px : root.ps-chrome ? 30px : 52px;
     // téléphone : le ruban flotte au-dessus de la toile (pas de bande réservée)
     property <int> effective-toolbar-mode: root.toolbar-mode;
     property <length> bar-height: root.phone ? 0px : (effective-toolbar-mode == 0 ? 88px : root.classic-wrap ? 64px : (root.interface-style == 2 ? 35px : 32px)) + root.ps-tabs-h;
@@ -2936,7 +2936,7 @@ export component AppWindow inherits Window {
             // Liseré à deux tons : conserve une limite visible, quelle que soit la photo.
             if !root.pm-open && !root.ps-chrome: Rectangle {
                 x: 0;
-                y: root.interface-style == 2 ? 36px : 25px;
+                y: 25px;
                 width: root.menu-zone;
                 height: 1px;
                 background: Theme.header-edge;
@@ -2999,7 +2999,7 @@ export component AppWindow inherits Window {
             Rectangle {
                 visible: !root.pm-open && !root.ps-chrome;
                 x: 0;
-                y: root.interface-style == 2 ? 37px : 26px;
+                y: 26px;
                 width: root.interface-style == 2 ? root.usable-width : root.menu-zone;
                 height: 26px;
                 background: transparent;
