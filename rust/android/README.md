@@ -1,3 +1,4 @@
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 # MasterPaint Android natif
 
 L'APK contient `libmasterpaint_ui.so`, les ressources Slint et le moteur Rust. Il dessine directement dans une surface Android avec OpenGL ES ; aucune WebView n'est utilisée. Le projet Java ne sert qu'aux sélecteurs de documents et au presse-papiers du système.

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Remplissage de contenu : un motif régulier (rayures) dont un carré est effacé doit être
 //! reconstitué ; la qualité haute (multi-échelle) ne doit pas faire moins bien que la rapide.
 fn stripes(w: usize, h: usize) -> Vec<u8> {

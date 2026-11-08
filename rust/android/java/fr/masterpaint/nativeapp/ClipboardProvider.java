@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 package fr.masterpaint.nativeapp;
 import android.content.*;
 import android.database.*;

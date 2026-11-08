@@ -1,9 +1,11 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Jetons du thème — équivalent des variables CSS --pdn-* / --w10-* de la version web.
 // Valeurs par défaut = thème clair Windows 10 de MasterPaint (relevées dans le navigateur).
 // Le Rust recalcule les teintes d'accent (theme.rs) quand l'accent ou le mode change :
 // un thème personnalisé n'est qu'un autre jeu de valeurs.
 
 export global Theme {
+    in-out property <int> reference-style: 0;
     in-out property <bool> dark: false;
     in-out property <bool> app-active: true;
 
@@ -41,6 +43,12 @@ export global Theme {
     in-out property <color> menu-bg: #ffffff;
     in-out property <color> menu-gutter: #f3f3f3;
 
+    // Séparation de l'en-tête : deux tons restent lisibles sur l'aperçu flouté.
+    out property <color> header-edge: dark ? #ffffff60 : #00000050;
+    out property <color> header-edge-soft: dark ? #00000060 : #ffffffb0;
+    out property <float> header-menu-opacity: dark ? 0.82 : 0.80;
+    out property <float> header-quick-opacity: dark ? 0.80 : 0.78;
+
     // contrôles Windows 10
     in-out property <color> button-bg: #fdfdfd;
     in-out property <color> button-border: #d0d0d0;
@@ -65,7 +73,10 @@ export global Theme {
     /// barre de titre des fenêtres translucide (Paramètres › Apparence)
     in-out property <bool> glass: false;
     in-out property <bool> title-transparent: true;
-    in-out property <bool> title-blurred: false;
+    /// ombres portées (Paramètres › Apparence) ; couleur transparente : rien n'est dessiné
+    in-out property <bool> shadows: true;
+    /// surbrillance au survol ; coupée, passer la souris sur l'interface ne redessine plus rien
+    in-out property <bool> hover-fx: true;
     in-out property <color> bevel-hi: #ffffff;
     in-out property <color> bevel-lo: #808080;
     in-out property <color> bevel-dk: #0a0a0a;
@@ -94,4 +105,13 @@ export global Theme {
     /// multiplie tous les arrondis fixes de l'interface
     in-out property <float> round: 1;
     in-out property <length> title-height: 26px;
+    // présentations de référence (Paint.NET = paintdotjs, Photoshop = PhotoCraft)
+    /// texte des boutons (paintdotjs : boutons clairs à texte noir, même en thème sombre)
+    in-out property <color> button-fg: #000000;
+    /// arrondi des boutons : celui des contrôles, ou en pilule (PhotoCraft)
+    in-out property <length> button-radius: 5px;
+    /// bouton Fermer des fenêtres (paintdotjs : carré de 19 px)
+    in-out property <length> close-size: 17px;
+    /// liseré clair autour des boutons (style Windows 11 de MasterPaint) ; aplat sans relief sinon
+    in-out property <bool> button-relief: true;
 }

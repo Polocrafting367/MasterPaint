@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Fichier généré : polices du dossier fonts/ de MasterPaint (WOFF2).
 // Bureau : intégrées au programme ; web : téléchargées à la demande depuis fonts/.
 use crate::text::Source;

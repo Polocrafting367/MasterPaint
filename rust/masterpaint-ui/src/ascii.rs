@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Effet « Art ASCII » (comme FilterManager.js) : l'image est découpée en cellules de la taille
 //! d'un caractère ; chaque cellule reçoit sa couleur moyenne (pondérée par l'alpha) et le
 //! caractère de la rampe dont la densité correspond à sa luminosité.

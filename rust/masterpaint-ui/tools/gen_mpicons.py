@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Icônes maison de MasterPaint (outils, barre rapide, ruban, menus, boutons) — source unique.
 
   python3 -I gen_mpicons.py
@@ -65,9 +66,49 @@ def P(d, k='o', op=None, w=None, extra=''):
     return f'<path d="{d}"{_attrs(k, op)}{_w(w)}{extra}/>'
 
 
+def dashed_rect(x, y, w, h, r=0):
+    """Cadre pointillé : un angle complet à chaque coin, tirets centrés sur chaque côté, jamais
+    un motif automatique (qui coupe les coins au hasard, et de travers)."""
+    gap = BASE_W + 1.1
+
+    def side(length):
+        arm = min(max(r + 1.4, 3.0), (length - gap) / 2)
+        room = length - 2 * arm
+        for count in (3, 2, 1):
+            dash = (room - (count + 1) * gap) / count
+            if dash >= 1.4:
+                return arm, [(arm + gap + k * (dash + gap), dash) for k in range(count)]
+        return arm, []
+
+    ax, hs = side(w)
+    ay, vs = side(h)
+    x1, y1 = x + w, y + h
+    arc = lambda a, b, sweep: f'A{r} {r} 0 0 {sweep} {a:g} {b:g}' if r else ''
+    d = (f'M{x + ax:g} {y:g}H{x + r:g}{arc(x, y + r, 0)}V{y + ay:g}'
+         f'M{x1 - ax:g} {y:g}H{x1 - r:g}{arc(x1, y + r, 1)}V{y + ay:g}'
+         f'M{x + ax:g} {y1:g}H{x + r:g}{arc(x, y1 - r, 1)}V{y1 - ay:g}'
+         f'M{x1 - ax:g} {y1:g}H{x1 - r:g}{arc(x1, y1 - r, 0)}V{y1 - ay:g}')
+    for s, dash in hs:
+        d += f'M{x + s:.3g} {y:g}h{dash:.3g}M{x + s:.3g} {y1:g}h{dash:.3g}'
+    for s, dash in vs:
+        d += f'M{x:g} {y + s:.3g}v{dash:.3g}M{x1:g} {y + s:.3g}v{dash:.3g}'
+    return f'<path d="{d}"/>'
+
+
 def R(x, y, w, h, rx=0, k='o', op=None, sw=None, extra=''):
+    if k == 'd':
+        return dashed_rect(x, y, w, h, rx)
     r = f' rx="{rx}"' if rx else ''
     return f'<rect x="{x}" y="{y}" width="{w}" height="{h}"{r}{_attrs(k, op)}{_w(sw)}{extra}/>'
+
+
+def framed(name, x, y, width, height, radius, body, kind='o'):
+    """Clip interior artwork to its frame and draw the complete border last."""
+    clip = 'illu-mp-clip-' + name
+    shape = f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{radius}"/>'
+    return (f'<defs><clipPath id="{clip}">{shape}</clipPath></defs>'
+            f'<g clip-path="url(#{clip})">{body}</g>'
+            + R(x, y, width, height, radius, kind))
 
 
 def C(cx, cy, r, k='o', op=None, sw=None):
@@ -94,7 +135,8 @@ def gear(cx=12, cy=12, ro=9, ri=6.8, teeth=8):
     pts = []
     n = teeth * 4
     for i in range(n):
-        a = 2 * math.pi * i / n
+        # une dent centrée sur chaque axe : engrenage symétrique
+        a = 2 * math.pi * (i - 1.5) / n
         r = ro if (i % 4) in (1, 2) else ri
         pts.append(f'{cx + r * math.cos(a):.2f} {cy + r * math.sin(a):.2f}')
     return P('M' + 'L'.join(pts) + 'z', 'fo', .25) + C(cx, cy, 2.6, 'f')
@@ -129,7 +171,7 @@ DROP = 'M12 3c3.5 4.5 6 7.7 6 10.5a6 6 0 0 1-12 0C6 10.7 8.5 7.5 12 3z'
 SCISSORS = C(6.5, 17.5, 3, 'fo', .35) + C(17.5, 17.5, 3, 'fo', .35) + P('M8.6 15.3L18 3M15.4 15.3L6 3')
 PALETTE = (P('M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.4-1.9-.5-1.2.2-2.6 1.6-2.6H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z')
            + C(7.5, 11.5, 1.6, 'f') + C(10, 7, 1.6, 'f', .7) + C(15, 7, 1.6, 'f', .45) + C(8.5, 16, 1.4, 's'))
-CHECK4 = R(3, 3, 9, 9, 0, 'f', .55) + R(12, 12, 9, 9, 0, 'f', .55) + R(3, 3, 18, 18, 2)
+CHECK4 = framed('checker', 3, 3, 18, 18, 2, R(3, 3, 9, 9, 0, 'f', .55) + R(12, 12, 9, 9, 0, 'f', .55))
 
 
 def align(guide, a, b):
@@ -162,7 +204,7 @@ ICONS = {
     'copy': P('M9 7V4.5A1.5 1.5 0 0 1 10.5 3h8A1.5 1.5 0 0 1 20 4.5v10a1.5 1.5 0 0 1-1.5 1.5H15', 'a') + R(4, 7, 11, 14, 1.5) + P('M7 11h5M7 14h5M7 17h3'),
     'paste': R(5, 4, 14, 17, 2) + R(9, 2.5, 6, 4, 1, 'f') + P('M9 11h6M9 14h6M9 17h4'),
     'trash': P('M4 6h16M9 6V4h6v2') + P('M6 6l1 14h10l1-14', 'fo', .25) + P('M10 10v6M14 10v6'),
-    'sel-rect': DASH_RECT + R(3.5, 4.5, 17, 15, 1, 'f', .18),
+    'sel-rect': R(3.5, 4.5, 17, 15, 1, 'f', .18) + DASH_RECT,
     'sel-new': R(5, 5, 14, 14, 2, 'fo', .5),
     'sel-add': R(3, 3, 13, 13, 2, 'fo', .3) + P('M18 13v8M14 17h8', 'a', w=2.2),
     'sel-sub': R(3, 3, 13, 13, 2, 'fo', .3) + P('M14 17h8', 'a', w=2.2),
@@ -203,12 +245,12 @@ ICONS = {
     'align-bottom': align('M3 20h18', (6, 5, 4, 12), (14, 9, 4, 8)),
     'align-center': R(3, 3, 18, 18, 1, 'd') + P('M12 3v18M3 12h18', w=1) + R(8.5, 8.5, 7, 7, 1, 'fo', .55),
     'outside-canvas': R(3, 3, 13, 13, 1) + R(10, 10, 11, 11, 1.5, 'fo', .45, extra=' stroke-dasharray="2.6 2"'),
-    'grid': R(3, 3, 18, 18, 2) + P('M9 3v18M15 3v18M3 9h18M3 15h18', w=1.2) + R(9, 9, 6, 6, 0, 'f', .7),
-    'rulers': P('M3 3h18v5H8v13H3z', 'fo', .3) + P('M7 3v2.5M11 3v2.5M15 3v2.5M19 3v2.5M3 12h2.5M3 16h2.5', w=1.2),
+    'grid': R(9, 9, 6, 6, 0, 'f', .7) + P('M9 3v18M15 3v18M3 9h18M3 15h18', w=1.2) + R(3, 3, 18, 18, 2),
+    'rulers': P('M3 3h18v6H9v12H3z', 'fo', .3) + P('M12 3v2.2M15 3v2.2M18 3v2.2M3 12h2.2M3 15h2.2M3 18h2.2', w=1.2),
     'magnet': P('M7.5 8v4a4.5 4.5 0 0 0 9 0V8', w=3) + R(5.9, 3, 3.2, 4, 0.5, 'f') + R(14.9, 3, 3.2, 4, 0.5, 'f'),
     # --- image / calques
     'crop': P('M6 2v16h16M2 6h16v16', w=1.9) + R(9, 9, 6, 6, 0, 'f', .45),
-    'crop-sel': P('M6 2v16h16M2 6h16v16', w=1.9) + R(9, 9, 6, 6, 0, 'd') + R(9, 9, 6, 6, 0, 'f', .3),
+    'crop-sel': R(9, 9, 6, 6, 0, 'f', .3) + P('M6 2v16h16M2 6h16v16', w=1.9) + R(9, 9, 6, 6, 0, 'd'),
     'resize': R(3, 9, 12, 12, 1.5, 'fo', .3) + P('M13 11l7-7M15 4h5v5', 'a', w=2),
     'canvas-size': R(2.5, 2.5, 19, 19, 1, 'd') + R(7, 7, 10, 10, 1, 'fo', .4),
     'border': P('M3 3h18v18H3zM7 7v10h10V7z', 'f', .45, extra=' fill-rule="evenodd"') + R(3, 3, 18, 18, 1) + R(7, 7, 10, 10),
@@ -217,7 +259,7 @@ ICONS = {
     'layer-buffer': R(3, 5, 18, 14, 2) + P('M6 12h12M9 9l-3 3 3 3M15 9l3 3-3 3', 'a', w=1.8),
     'fit-content': P('M3 7V3h4M21 7V3h-4M3 17v4h4M21 17v4h-4') + R(6, 6, 7, 7, 1, 'fo', .5) + C(15, 15, 3.5, 'fo', .3),
     'layers': LAYERS,
-    'layer-add': LAYERS_S + P('M19 13v8M15 17h8', 'a', w=2.2),
+    'layer-add': LAYERS_S + P('M19 13v8M15 17h7.8', 'a', w=2.2),
     'layer-delete': LAYERS_S + P('M16 14l5 5M21 14l-5 5', 'a', w=2.2),
     'layer-dup': R(3, 3, 12, 12, 1.5, 'fo', .35) + R(9, 9, 12, 12, 1.5),
     'layer-up': LAYERS_S + P('M19 21v-8M16 16l3-3 3 3', 'a', w=2),
@@ -230,16 +272,16 @@ ICONS = {
     'bw': C(12, 12, 8.5) + P('M12 3.5a8.5 8.5 0 0 0 0 17z', 's'),
     'brightness': C(12, 12, 4, 'fo', .6) + rays(12, 12, 6.5, 9.5),
     'curves': P('M4 3v17h17') + P('M4 20C10 20 9 6 20 4', 'a', w=2) + C(9.5, 13, 1.5, 's') + C(15, 6.5, 1.5, 's'),
-    'exposure': R(3, 3, 18, 18, 2) + P('M3 21L21 3', w=1.2) + P('M6 8h4M8 6v4', 'a', w=2) + P('M14 16h4', w=2),
-    'shadows': C(12, 12, 8.5) + P('M3.5 12a8.5 8.5 0 0 0 17 0z', 'f', .55),
+    'exposure': framed('exposure', 3, 3, 18, 18, 2, P('M3 21L21 3', w=1.2) + P('M6 8h4M8 6v4', 'a', w=2) + P('M14 16h4', w=2)),
+    'shadows': P('M3.5 12a8.5 8.5 0 0 0 17 0z', 'f', .55) + C(12, 12, 8.5),
     'hue-sat': wedges(12, 12, 8.5),
     'invert-alpha': CHECK4,
-    'invert': R(3, 3, 18, 18, 2) + P('M21 3v18H3z', 'f', .7) + C(12, 12, 4),
+    'invert': framed('invert', 3, 3, 18, 18, 2, P('M21 3v18H3z', 'f', .7)) + C(12, 12, 4),
     'levels': P('M3 20h18') + P('M3 20l3-6 3 3 4-9 3 5 2-3 3 10z', 'fo', .45),
-    'posterize': R(3, 3, 18, 18, 2) + R(3, 3, 4.5, 18, 0, 'f', .2) + R(7.5, 3, 4.5, 18, 0, 'f', .45) + R(12, 3, 4.5, 18, 0, 'f', .7) + R(16.5, 3, 4.5, 18, 0, 'f', 1),
-    'photo': R(3, 5, 18, 14, 2) + P('M3 17l5-5 4 4 3-3 6 6', 'fo', .5) + C(16, 9, 1.8, 'f'),
+    'posterize': framed('posterize', 3, 3, 18, 18, 2, R(3, 3, 4.5, 18, 0, 'f', .2) + R(7.5, 3, 4.5, 18, 0, 'f', .45) + R(12, 3, 4.5, 18, 0, 'f', .7) + R(16.5, 3, 4.5, 18, 0, 'f', 1)),
+    'photo': framed('photo', 3, 5, 18, 14, 2, P('M3 17.5 8.5 12 12.5 16 16 12.5 21 17.5V19H3z', 'fo', .5) + C(16, 8.7, 1.8, 'f')),
     'drop': P(DROP, 'fo', .45),
-    'transparency': C(12, 12, 8.5) + P('M12 3.5v17M3.5 12h17', w=1) + P('M12 3.5a8.5 8.5 0 0 1 8.5 8.5H12zM12 12h-8.5a8.5 8.5 0 0 0 8.5 8.5z', 'f', .6),
+    'transparency': P('M12 3.5a8.5 8.5 0 0 1 8.5 8.5H12zM12 12h-8.5a8.5 8.5 0 0 0 8.5 8.5z', 'f', .6) + P('M12 3.5v17M3.5 12h17', w=1) + C(12, 12, 8.5),
     'temperature': P('M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0z') + C(12, 16.5, 2.2, 'f') + P('M12 16V8', 'a', w=2) + P('M17 6h3M17 10h2', w=1.2),
     'vibrance': P(DROP, 'fo', .45) + star(19, 5, 3.4, k='s'),
     'gallery': R(3, 3, 8, 8, 1, 'fo', .25) + R(13, 3, 8, 8, 1, 'fo', .5) + R(3, 13, 8, 8, 1, 'fo', .75) + R(13, 13, 8, 8, 1),
@@ -263,28 +305,28 @@ ICONS = {
     'surface': P('M3 14c3-3 6-3 9 0s6 3 9 0v6H3z', 'fo', .45) + P('M3 8c3-3 6-3 9 0s6 3 9 0'),
     'zoom-blur': rays(12, 12, 4, 9.5) + C(12, 12, 2.5, 'f'),
     'quantize': ''.join(R(3 + 6 * i, 3 + 6 * j, 5, 5, 1, 'fo', round(.15 + .1 * (i + 3 * j), 2)) for i in range(3) for j in range(3)),
-    'chroma-key': R(3, 7, 8, 10, 1, 'fo', .8) + P('M12.5 12h3.5M14.5 10l2 2-2 2', w=1.6) + R(17, 7, 4, 10, 0, 'd'),
+    'chroma-key': R(3, 3, 8, 8, 1.5, 'fo', .8) + R(13, 13, 8, 8, 1.5, 'd') + P('M14.5 5.5h1.8a2.2 2.2 0 0 1 2.2 2.2V9.5M16.5 7.7l2 2 2-2', w=1.6),
     'chromatic': C(10, 12, 6.5) + C(14, 12, 6.5, 'a', sw=1.9),
-    'duotone': C(12, 12, 8.5) + P('M12 3.5a8.5 8.5 0 0 0 0 17z', 's') + P('M12 3.5a8.5 8.5 0 0 1 0 17z', 'f', .7),
+    'duotone': P('M12 3.5a8.5 8.5 0 0 0 0 17z', 's') + P('M12 3.5a8.5 8.5 0 0 1 0 17z', 'f', .7) + C(12, 12, 8.5),
     'cmyk': C(8, 8, 3.8, 'f') + C(16, 8, 3.8, 'f', .7) + C(8, 16, 3.8, 'f', .45) + C(16, 16, 3.8, 'fo', .15),
     'colormode': R(3, 3, 8, 8, 1, 'f') + R(13, 3, 8, 8, 1, 'f', .6) + R(3, 13, 8, 8, 1, 'f', .3) + R(13, 13, 8, 8, 1),
-    'bulge': C(12, 12, 8.5) + P('M3.5 12h17M12 3.5v17', w=1) + P('M6 6.5c3.5 3 8.5 3 12 0M6 17.5c3.5-3 8.5-3 12 0', 'a'),
+    'bulge': P('M3.5 12h17M12 3.5v17', w=1) + P('M6 6.5c3.5 3 8.5 3 12 0M6 17.5c3.5-3 8.5-3 12 0', 'a') + C(12, 12, 8.5),
     'dents': P('M3 7c3-2 6 2 9 0s6-2 9 0M3 17c3-2 6 2 9 0s6-2 9 0') + P('M3 12c3-2 6 2 9 0s6-2 9 0', 'a', w=1.9),
     'crystal': P('M7 4h10l4 5-9 11L3 9z', 'fo', .35) + P('M3 9h18M9 4l3 5 3-5M12 9v11', w=1.1),
     'frosted': R(3, 3, 18, 18, 2) + ''.join(C(x, y, 1, 'f') for x, y in ((7, 7), (12, 6), (17, 8), (8, 12), (14, 11), (6, 17), (11, 16), (17, 15), (15, 19))),
     'morphology': P('M8 4c3-1 5 2 8 1s5 2 4 6-3 4-2 7-4 3-7 2-6 0-7-3 0-5-1-8 2-4 5-5z', 'fo', .45),
-    'pixelate': ''.join(R(3 + 6 * i, 3 + 6 * j, 6, 6, 0, 'f', round(.2 + .25 * ((i + j) % 4), 2)) for i in range(3) for j in range(3)) + R(3, 3, 18, 18, 1),
-    'polar': C(12, 12, 8.5) + C(12, 12, 3, 'fo', .5) + P('M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4', 'a', w=1.8),
-    'tile': R(3, 3, 18, 18, 1) + P('M12 3v18M3 12h18') + P('M3 3l9 9V3zM21 21l-9-9v9z', 'f', .5),
+    'pixelate': framed('pixelate', 3, 3, 18, 18, 1, ''.join(R(3 + 6 * i, 3 + 6 * j, 6, 6, 0, 'f', round(.2 + .25 * ((i + j) % 4), 2)) for i in range(3) for j in range(3))),
+    'polar': P('M12 3.5v17M3.5 12h17', 'a', w=1.8) + C(12, 12, 8.5) + C(12, 12, 3, 'fo', .5),
+    'tile': framed('tile', 3, 3, 18, 18, 1, P('M3 3l9 9V3zM21 21l-9-9v9z', 'f', .5) + P('M12 3v18M3 12h18')),
     'twist': P('M12 12a1.5 1.5 0 0 1 3 0 3 3 0 0 1-6 0 4.5 4.5 0 0 1 9 0 6 6 0 0 1-12 0 7.5 7.5 0 0 1 15 0', 'a', w=1.7) + C(12.8, 12, 1.2, 's'),
-    'mirror4': C(12, 12, 8.5) + P('M12 3.5v17M3.5 12h17') + P('M12 3.5A8.5 8.5 0 0 1 20.5 12H12zM12 12H3.5a8.5 8.5 0 0 0 8.5 8.5z', 'f', .55),
+    'mirror4': P('M12 3.5A8.5 8.5 0 0 1 20.5 12H12zM12 12H3.5a8.5 8.5 0 0 0 8.5 8.5z', 'f', .55) + P('M12 3.5v17M3.5 12h17') + C(12, 12, 8.5),
     'cube': P('M12 3l8 4.5v9L12 21l-8-4.5v-9z') + P('M12 3l8 4.5-8 4.5-8-4.5z', 'fo', .45) + P('M12 12v9'),
     'wave': P('M3 8c3-3 6 3 9 0s6 3 9 0M3 18c3-3 6 3 9 0s6 3 9 0') + P('M3 13c3-3 6 3 9 0s6 3 9 0', 'a', w=1.9),
     'noise': ''.join(C(x, y, 1.15, 's') for x, y in ((5, 5), (13, 4), (19, 9), (7, 12), (16, 15), (4, 19), (11, 19)))
              + ''.join(C(x, y, 1.15, 'f') for x, y in ((9, 7), (17, 4), (12, 12), (20, 19), (6, 16))),
     'median': ''.join(C(x, y, 1.1, 's') for x, y in ((5, 6), (12, 5), (19, 7), (6, 18), (13, 19), (19, 17))) + P('M3 12h18', 'a', w=2),
     'denoise': ''.join(C(x, y, 1.1, 's') for x, y in ((5, 6), (10, 11), (6, 17), (13, 18))) + star(17, 7, 4.5),
-    'dither': ''.join(R(3 + 4.5 * i, 3 + 4.5 * j, 4.5, 4.5, 0, 'f', .75) for i in range(4) for j in range(4) if (i + j) % 2 == 0) + R(3, 3, 18, 18, 1),
+    'dither': framed('dither', 3, 3, 18, 18, 1, ''.join(R(3 + 4.5 * i, 3 + 4.5 * j, 4.5, 4.5, 0, 'f', .75) for i in range(4) for j in range(4) if (i + j) % 2 == 0)),
     'vhs': R(2.5, 5, 19, 14, 2) + C(8, 11, 2.3, 'fo', .7) + C(16, 11, 2.3, 'fo', .7) + P('M10.3 11h3.4M6 19l1.5-3h9L18 19'),
     'shadow': P('M16 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2h6a2 2 0 0 0 2-2z', 'f', .55) + R(4, 4, 12, 12, 2),
     'feather': C(12, 12, 9, 'f', .15) + C(12, 12, 7, 'f', .3) + C(12, 12, 5, 'fo', .8),
@@ -293,31 +335,31 @@ ICONS = {
     'red-eye': P('M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z') + C(12, 12, 3.4, 'f') + C(12, 12, 1.2, 's'),
     'sharpen': P('M12 3l9 17H3z', 'fo', .3) + P('M12 9.5v6', 'a', w=2),
     'portrait': C(12, 8, 4, 'fo', .4) + P('M4 21a8 8 0 0 1 16 0'),
-    'dream': P('M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9z', 'fo', .25) + star(19, 5, 3.2) + star(5, 5, 2.2),
+    'dream': P('M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 .5 9.5z', 'fo', .25) + star(20, 4, 2.8) + star(4.5, 5, 2.2),
     'edge-fade': R(3, 3, 18, 18, 2) + R(5.5, 5.5, 13, 13, 3, 'f', .3) + R(8, 8, 8, 8, 2, 'f', .7),
     'dust': P('M20 4l-8 8', w=2.2) + P('M12 12l-2-2-6 6c1 2 2.5 3.5 4.5 4.5l6-6z', 'fo', .45) + C(17, 16, 1, 'f') + C(20, 19, 1.2, 'f'),
-    'straighten': R(3, 4, 18, 16, 2) + P('M3 15L21 9') + P('M3 12h18', 'a', extra=' stroke-dasharray="2.4 2"'),
-    'vignette': P('M3 5h18v14H3zM12 7.5c-4 0-6.5 2-6.5 4.5S8 16.5 12 16.5s6.5-2 6.5-4.5S16 7.5 12 7.5z', 'f', .5, extra=' fill-rule="evenodd"') + R(3, 5, 18, 14, 2),
-    'clouds': P('M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9z', 'fo', .35),
+    'straighten': framed('straighten', 3, 4, 18, 16, 2, P('M3 15L21 9')) + P('M6 12h2M11 12h2M16 12h2', 'a'),
+    'vignette': framed('vignette', 3, 5, 18, 14, 2, P('M3 5h18v14H3zM12 7.5c-4 0-6.5 2-6.5 4.5S8 16.5 12 16.5s6.5-2 6.5-4.5S16 7.5 12 7.5z', 'f', .5, extra=' fill-rule="evenodd"')),
+    'clouds': P('M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 .5 9.5z', 'fo', .35),
     'checker': CHECK4,
     'julia': ''.join(C(12 + (7.5 - i) * math.cos(i * 1.1), 12 + (7.5 - i) * math.sin(i * 1.1), 2.6 - 0.28 * i, 'f', round(1 - .1 * i, 2)) for i in range(7)),
     'mandelbrot': C(14, 12, 6, 'fo', .45) + C(6.3, 12, 2.6, 'fo', .45) + C(2.8, 12, 1, 'f'),
     'turbulence': P('M3 8h11a3 3 0 1 0-3-3M3 16h14a3 3 0 1 1-3 3') + P('M3 12h17', 'a', w=1.9),
-    'edges': R(3, 3, 18, 18, 2) + P('M3 17l5-6 4 4 3-3 6 6', 'a', w=1.9),
-    'emboss': R(4, 4, 16, 16, 2) + P('M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4', w=1.1) + R(8, 8, 8, 8, 0, 'fo', .4),
+    'edges': framed('edges', 3, 3, 18, 18, 2, P('M3 17.5 8.5 12 12.5 16 16 12.5 21 17.5', 'a', w=1.9)),
+    'emboss': framed('emboss', 4, 4, 16, 16, 2, P('M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4', w=1.1)) + R(8, 8, 8, 8, 0, 'fo', .4),
     'contour': R(6, 6, 12, 12, 3, 'a', sw=1.9) + R(3, 3, 18, 18, 5.5),
     'relief': P('M2 20l6.5-11 4 6 3-4 6.5 9z', 'fo', .45),
-    'solarize': C(12, 12, 4) + P('M12 8a4 4 0 0 1 0 8z', 'f') + rays(12, 12, 6.5, 9.5),
-    'remove-bg': R(3, 3, 18, 18, 2, 'd') + C(12, 9, 3.5, 'f') + P('M5.5 21c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5z', 'f'),
+    'solarize': P('M12 8a4 4 0 0 1 0 8z', 'f') + rays(12, 12, 6.5, 9.5) + C(12, 12, 4),
+    'remove-bg': R(3, 3, 18, 18, 2, 'd') + C(12, 8.8, 3.2, 'f') + P('M6.5 18.6c0-3.1 2.4-5 5.5-5s5.5 1.9 5.5 5z', 'f'),
     'cutout-sel': R(3, 3, 18, 18, 1, 'd') + C(8, 16, 2.4, 'fo', .4) + C(16, 16, 2.4, 'fo', .4) + P('M9.8 14.4L16 6M14.2 14.4L8 6'),
-    'content-fill': R(3, 3, 18, 18, 2) + R(8, 8, 8, 8, 0, 'd') + R(8, 8, 8, 8, 0, 'f', .55) + star(18.5, 5.5, 2.8, k='s'),
+    'content-fill': R(3, 3, 18, 18, 2) + R(6.5, 9.5, 8, 8, 0, 'f', .55) + R(6.5, 9.5, 8, 8, 0, 'd') + star(16.6, 7.2, 2.5, k='s'),
     'external': R(3, 6, 14, 14, 2) + P('M14 3h7v7M21 3l-9 9', 'a', w=2),
     'eye': P('M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z') + C(12, 12, 3.2, 'fo', .6),
     'restore': R(7, 3, 14, 12, 1.5) + R(3, 9, 14, 12, 1.5, 'fo', .3) + P('M3 13h14', w=1.2),
     'toolbox': ''.join(R(3 + 7 * i, 3 + 7 * j, 5.5, 5.5, 1.5, 'fo' if (i, j) == (1, 1) else 'o', .8) for i in range(3) for j in range(3)),
     'history': P('M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4.5H8') + P('M12 7.5V12l3 2', 'a', w=2),
     'film': R(3, 4, 18, 16, 2) + R(8, 7, 8, 10, 1, 'fo', .45) + P('M5.5 7v1M5.5 11.5v1M5.5 16v1M18.5 7v1M18.5 11.5v1M18.5 16v1', w=1.8),
-    'sequence': R(7, 3, 14, 11, 1.5) + R(3, 8, 14, 13, 1.5, 'fo', .3) + P('M3 18l4-4 3 3 2-2 5 5', w=1.2),
+    'sequence': R(7, 3, 14, 11, 1.5) + framed('sequence', 3, 8, 14, 13, 1.5, R(3, 8, 14, 13, 0, 'f') + P('M3 18.5 7 14.5 10 17.5 13 14.5 17 18.5', w=1.2)),
 }
 
 # icônes du sprite reprises à la place des dessins ci-dessus (même nom, même rang)
@@ -331,7 +373,7 @@ REUSE = {
     'align-top': 'sel-align-top', 'align-center-v': 'sel-center-v', 'align-bottom': 'sel-align-bottom',
     'align-center': 'sel-center-both', 'outside-canvas': 'outside-canvas', 'crop': 'img-crop',
     'rotate': 'img-rot-cw', 'border': 'image-border', 'canvas-size': 'image-extend', 'merge': 'layer-merge',
-    'eye': 'svg-obj-visible', 'layer-delete': 'svg-obj-delete',
+    'eye': 'svg-obj-visible', 'layer-delete': 'svg-obj-delete', 'eyedropper': 'tool-eyedropper',
 }
 for _k, _v in REUSE.items():
     ICONS[_k] = S(_v)
@@ -339,6 +381,8 @@ for _k, _v in REUSE.items():
 # icônes ajoutées (boutons, mode téléphone, Paramètres, Couleurs…) : à la suite, pour ne pas
 # décaler les rangs déjà utilisés (welcome.slint s'en sert)
 ICONS.update({
+    'render-low': framed('render-low', 3, 3, 18, 18, 2, R(3, 3, 9, 9, 0, 'f') + R(12, 12, 4.5, 4.5, 0, 'f', .5) + R(16.5, 16.5, 4.5, 4.5, 0, 'f', .5)),
+    'render-now': R(3, 3, 18, 18, 2) + P('M9.5 7.5v9l7-4.5z', 'f'),
     'menu': P('M4 6h16M4 18h16') + P('M4 12h16', 'a'),
     'bug': R(7, 9, 10, 12, 5, 'fo') + C(12, 6.5, 2.6, 's') + P('M12 11.5v8.5', w=1.5)
            + P('M7 13H3.5M7 17.5l-3 2M17 13h3.5M17 17.5l3 2M7.6 10.2 4.8 8M16.4 10.2 19.2 8'),
@@ -350,7 +394,7 @@ ICONS.update({
              + P('M12 17.5l4.2-5.2', 'a', w=2.4) + C(12, 17.5, 2, 's'),
     'keyboard': R(2.5, 6, 19, 12.5, 2.2) + P('M6 10h.5M9.5 10h.5M13.5 10h.5M17.5 10h.5M6 14h.5M17.5 14h.5', w=2.4)
                 + P('M9 14.2h6', 'a', w=2.4),
-    'folder': P('M3 19V6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11z') + P('M3 10h18v9H3z', 'f'),
+    'folder': P('M3 10h18v9H3z', 'f') + P('M3 19V6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11z'),
     'up': P('M12 20V5.5') + P('M6 11l6-6 6 6', 'a', w=2.4),
     'down': P('M12 4v14.5') + P('M6 13l6 6 6-6', 'a', w=2.4),
     'lock': R(5, 10.5, 14, 10, 2.2, 'fo') + P('M8 10.5V8a4 4 0 0 1 8 0v2.5') + C(12, 15.5, 1.5, 's'),
@@ -360,10 +404,10 @@ ICONS.update({
     'brush-square': S('brush-square'), 'flip-h': S('img-flip-h'), 'flip-v': S('img-flip-v'),
     'rot-ccw': S('img-rot-ccw'), 'sym-x': S('sym-x'), 'sym-y': S('sym-y'),
     'quick-select': S('tool-quick-select'), 'object-select': S('tool-object-select'),
-    'grad-linear': R(3, 5, 18, 14, 2) + R(4.5, 6.5, 5, 11, 0, 'f') + R(9.5, 6.5, 5, 11, 0, 'f', .5) + R(14.5, 6.5, 5, 11, 0, 'f', .2),
+    'grad-linear': framed('grad-linear', 3, 5, 18, 14, 2, R(3, 5, 6, 14, 0, 'f') + R(9, 5, 6, 14, 0, 'f', .5) + R(15, 5, 6, 14, 0, 'f', .2)),
     'grad-diamond': P('M12 3l9 9-9 9-9-9z') + P('M12 7.5l4.5 4.5-4.5 4.5-4.5-4.5z', 'f'),
     'download': P('M4 15.5V20h16v-4.5') + P('M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5', 'a', w=2.4),
-    'image': R(3, 5, 18, 14, 2) + P('M3.5 17.5l5-5.2 4 4 3-3 5 5.2z', 'f') + C(16, 9.2, 1.9, 's'),
+    'image': framed('image', 3, 5, 18, 14, 2, P('M3 17.5 8.5 12 12.5 16 16 12.5 21 17.5V19H3z', 'f') + C(16, 8.7, 1.9, 's')),
     'signature': P('M3 17c2.5-5 4.5-9 6-9s-1.5 9 1 9 3-4 4.5-4 1 3 2.5 3 2-1 3-2') + P('M3 21h18', 'a'),
     'info': C(12, 12, 9) + C(12, 7.8, 1.5, 's') + P('M12 11v6', 'a', w=2.6),
     'warning': P('M12 3.5l9.5 16.5h-19z', 'fo') + P('M12 9.5v5', w=2.4) + C(12, 17.3, 1.3, 's'),
@@ -374,7 +418,7 @@ ICONS.update({
     'star': P('M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z', 'fo'),
     'sun': C(12, 12, 4, 'fo') + rays(12, 12, 6.8, 9.5),
     'moon': P('M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z', 'fo'),
-    'layout': R(3, 4, 18, 16, 2) + P('M3 8.5h18M8.5 8.5V20') + R(8.5, 8.5, 12.5, 11.5, 0, 'f', .5),
+    'layout': framed('layout', 3, 4, 18, 16, 2, R(8.5, 8.5, 12.5, 11.5, 0, 'f', .5) + P('M3 8.5h18M8.5 8.5V20')),
     'ribbon': R(3, 4, 18, 16, 2) + P('M3 10h18') + R(5.5, 6, 3, 2, 0.5, 's') + R(10.5, 6, 3, 2, 0.5, 's') + R(15.5, 6, 3, 2, 0.5, 'f'),
     'phone': R(6.5, 2.5, 11, 19, 2.5) + P('M10.5 18.5h3', w=2.2) + R(8.5, 5, 7, 10.5, 1, 'f', .5),
     # alignement du texte (outil Texte) : lignes au trait, ligne d'accent
@@ -382,8 +426,8 @@ ICONS.update({
     'text-center': P('M4 5.5h16M4 14.5h16') + P('M7 10h10M7 19h10', 'a', w=2.4),
     'text-right': P('M4 5.5h16M4 14.5h16') + P('M10 10h10M10 19h10', 'a', w=2.4),
     # effets / préréglages : baguette et éclats (distincte de l'outil Baguette magique)
-    'fx': P('M4 20l10.5-10.5', w=2.6) + P('M13 8.5l2.5 2.5') + star(17.5, 6.5, 4.2) + star(7, 6, 2.6) + star(18.5, 16.5, 2.4),
-    'grad-conic': C(12, 12, 8.5) + P('M12 12V3.5a8.5 8.5 0 0 1 8.5 8.5z', 'f') + P('M12 12l-6 6', 'a', w=2.4),
+    'fx': P('M4 20l8-8', w=2.6) + P('M12 12l2.8-2.8', 'a', w=2.6) + star(17.5, 6.5, 4.2) + star(7, 6, 2.6) + star(18.5, 16.5, 2.4),
+    'grad-conic': P('M12 12V3.5a8.5 8.5 0 0 1 8.5 8.5z', 'f') + P('M12 12l-6 6', 'a', w=2.4) + C(12, 12, 8.5),
 })
 # reprises du sprite pour des icônes ajoutées ci-dessus (même rang)
 for _k, _v in {'unlock': 'svg-obj-unlocked', 'trash-can': 'svg-obj-delete'}.items():
@@ -445,7 +489,7 @@ MENU = {
     'Détourage': 'cut', 'Supprimer le fond (IA)…': 'remove-bg', 'Détourage par sélection…': 'cutout-sel',
     'Remplissage contenu pris en compte…': 'content-fill',
     'Aperçu toile 1:1 (fenêtre)…': 'external', 'Grille de pixels': 'grid', 'Règles': 'rulers',
-    'Aimantation des bords': 'magnet', 'Paramètres aimantation…': 'sliders', 'Toutes les options du ruban': 'eye',
+    'Aimantation des bords': 'magnet', 'Résolution de rendu de la toile': 'render-low', 'Rendre maintenant': 'render-now', 'Paramètres aimantation…': 'sliders', 'Toutes les options du ruban': 'eye',
     'Hors toile': 'outside-canvas', 'Réinitialiser le bureau...': 'restore', 'Outils': 'toolbox', 'Couleurs': 'palette',
     'Calques': 'layers', 'Historique': 'history', 'Objets SVG': 'vector', 'Animation (frise)': 'film',
     'Importer une séquence d’images (frames)…': 'sequence',
@@ -453,7 +497,7 @@ MENU = {
 MENU.update({
     'Nouveau dossier': 'folder', 'Grouper dans un dossier': 'folder', 'Dégrouper': 'open',
     'Verrouiller / déverrouiller le calque': 'lock', 'Verrouiller le calque': 'lock',
-    'Déverrouiller le calque': 'unlock', 'Pixelliser le calque': 'pixelate', 'Répéter Sépia': 'repeat',
+    'Déverrouiller le calque': 'unlock', 'Pixelliser le calque': 'pixelate', 'Répéter le dernier effet': 'repeat',
     'Signaler un bug': 'bug', 'Effacer': 'trash', 'Grille': 'grid', 'Aimantation': 'magnet',
     'Palettes volantes (Paint.NET)': 'layout', 'Palettes : ancrage fixe (style Adobe)': 'layout',
     'Interface : mode téléphone (menu ☰, palettes en colonnes)': 'phone', 'Préréglages créatifs': 'gallery',
@@ -501,6 +545,10 @@ MARK_B = '<!-- ===== fin des icônes MasterPaint Rust générées ===== -->'
 
 def symbol(name, body):
     """symbole du sprite : grille 16 comme les autres, dessin d'origine en 24 réduit"""
+    # Each symbol owns its references, even when two icons share a drawing.
+    prefix = 'illu-mp-' + name + '-'
+    body = re.sub(r'id="([^"]+)"', lambda m: f'id="{prefix}{m[1]}"', body)
+    body = re.sub(r'url\(#([^)]+)\)', lambda m: f'url(#{prefix}{m[1]})', body)
     return (f'<symbol id="illu-icon-mp-{name}" viewBox="0 0 16 16">\n'
             f'  <g transform="scale(0.6666667)" fill="none" stroke="{ST}" stroke-width="{BASE_W}" '
             f'stroke-linecap="round" stroke-linejoin="round">{body}</g>\n</symbol>')
@@ -547,14 +595,18 @@ def main():
     # 2. modèles pour l'application : symboles du sprite (repris ou générés)
     syms = {sid: (attrs, inner) for sid, attrs, inner in
             re.findall(r'<symbol\s+id="illu-icon-([a-z0-9-]+)"([^>]*)>(.*?)</symbol>', src, re.S)}
-    rs = ['// Fichier généré par tools/gen_mpicons.py — ne pas modifier à la main.',
+    source_dir = os.path.join(CRATE, 'icon-packs', 'masterpaint', 'source', 'masterpaint')
+    os.makedirs(source_dir, exist_ok=True)
+    rs = ['// Fichier généré par tools/gen_mpicons.py — sources SVG visibles dans icon-packs/masterpaint/source/masterpaint/.',
           '/// Icônes maison (nom, modèle SVG au style du sprite) ; index = position dans `MpIcons.images`.',
           'pub const MP_ICONS: &[(&str, &str)] = &[']
     for n, b in ICONS.items():
         sid = b.sid if isinstance(b, S) else 'mp-' + n
         attrs, inner = syms[sid]
         vb = re.search(r'viewBox="([^"]+)"', attrs)
-        rs.append('    ("{}", r##"{}"##),'.format(n, template(vb.group(1) if vb else '0 0 16 16', inner)))
+        svg = template(vb.group(1) if vb else '0 0 16 16', inner)
+        with open(os.path.join(source_dir, n + '.svg'), 'w', encoding='utf-8') as f: f.write('<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->\n' + svg + '\n')
+        rs.append('    ("{}", include_str!("../icon-packs/masterpaint/source/masterpaint/{}.svg")),'.format(n, n))
     rs.append('];\n')
     open(os.path.join(CRATE, 'src', 'mpicons_gen.rs'), 'w', encoding='utf-8').write('\n'.join(rs))
 

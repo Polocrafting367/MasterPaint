@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Fenêtres de réglage des effets : description des champs (relevée sur la version web,
 //! `effects_gen.rs`) et traduction des valeurs en paramètres du moteur Rust —
 //! transposition de js/rust/rust-effect-params.js (échelle d'aperçu = 1).
@@ -261,6 +262,14 @@ pub fn apply_preset(effect: &str, changed: &str, v: &mut Vals) -> bool {
 /// Bouton d'une fenêtre (champ kind 7) : « Auto » de l'incrustation détecte la couleur du
 /// fond sur le pourtour du calque. Vrai si des valeurs ont changé.
 pub fn run_button(effect: &str, id: &str, v: &mut Vals, px: &[u8], w: usize, h: usize) -> bool {
+    // Camera Raw : réglage automatique du Mode Photo Pro (analyse de la scène, boucle fermée)
+    if effect == "cameraraw" && id == "cr-auto" {
+        let (p, _) = crate::scene::auto_camera_raw(px, w, h);
+        for (i, id) in CR_IDS {
+            v.0.insert(id.to_string(), fmt_num(p[i].round()));
+        }
+        return true;
+    }
     if effect != "chroma" || id != "ef-ck-auto" {
         return false;
     }
@@ -344,22 +353,61 @@ const CA_FIELDS: &[Field] = &[
 const ABERR_PAIRS: &[(&str, &str)] =
     &[("0", "Rouge / bleu (objectif)"), ("1", "Rouge / vert"), ("2", "Vert / bleu"), ("3", "Vert / magenta"), ("4", "Bleu / jaune")];
 
-/// Fenêtre relevée sur la version web, complétée des réglages d'aberration (tableau construit
-/// une fois par effet).
+/// Same six-digit RGB format accepted by the shared Grid / Checker color popup.
+pub fn normalize_color(text: &str) -> Option<String> {
+    let hex = text.trim().trim_start_matches('#');
+    if hex.len() != 6 || !hex.bytes().all(|c| c.is_ascii_hexdigit()) { return None; }
+    u32::from_str_radix(hex, 16).ok().map(|v| format!("#{v:06x}"))
+}
+
+/// Native color fields missing from the HTML dialog dump. Use exactly the same
+/// kind-3 ColorPop selector as Grid / Checker; IDs stay stable in dynamic effects.
+const fn color_field(id: &'static str, label: &'static str, default: &'static str) -> Field {
+    Field { id, label, kind: 3, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: default, options: &[] }
+}
+const COLORS_CONTOUR: &[Field] = &[color_field("ef-contour-color", "Couleur du contour", "#ff0000")];
+const COLORS_DROPSHADOW: &[Field] = &[color_field("ef-ds-color", "Couleur de l'ombre", "#000000")];
+const COLORS_VIGNETTE: &[Field] = &[color_field("ef-vig-color", "Couleur du vignettage", "#000000")];
+const COLORS_DUOTONE: &[Field] = &[color_field("ef-duo-c1", "Couleur des ombres", "#1a0533"), color_field("ef-duo-c2", "Couleur des lumières", "#fff5e0")];
+const COLORS_CLOUDS: &[Field] = &[color_field("ef-clouds-from", "Première couleur", "#000000"), color_field("ef-clouds-to", "Seconde couleur", "#ffffff")];
+const COLORS_TURBULENCE: &[Field] = &[color_field("ef-tb-from", "Première couleur", "#000000"), color_field("ef-tb-to", "Seconde couleur", "#ffffff")];
+const COLORS_OUTLINE: &[Field] = &[color_field("ef-ol-color", "Couleur du contour", "#000000")];
+const COLORS_EDGES: &[Field] = &[color_field("ef-edge-color", "Couleur des lignes", "#ffffff")];
+const COLORS_SOFTGLOW: &[Field] = &[color_field("ef-glow-color", "Couleur de l'éclat", "#ffffff")];
+fn effect_colors(effect: &str) -> &'static [Field] {
+    match effect {
+        "contour" => COLORS_CONTOUR,
+        "dropshadow" => COLORS_DROPSHADOW,
+        "vignette" => COLORS_VIGNETTE,
+        "duotone" => COLORS_DUOTONE,
+        "clouds" => COLORS_CLOUDS,
+        "turbulence" => COLORS_TURBULENCE,
+        "outline" => COLORS_OUTLINE,
+        "edges" => COLORS_EDGES,
+        "softglow" => COLORS_SOFTGLOW,
+        _ => &[],
+    }
+}
+
+/// Complete generated dialogs without editing the generated file. Cached once per effect.
 fn with_aberration(effect: &str, title: &'static str, base: &'static [Field]) -> (&'static str, &'static [Field]) {
     use std::sync::{Mutex, OnceLock};
     static CACHE: OnceLock<Mutex<HashMap<String, &'static [Field]>>> = OnceLock::new();
     let has = base.iter().any(|f| f.id == "ef-ca");
-    if !has && !CA_ADD.contains(&effect) {
-        return (title, base);
-    }
+    let aberration = has || CA_ADD.contains(&effect);
+    let colors = effect_colors(effect);
+    if !aberration && colors.is_empty() { return (title, base); }
     let mut cache = CACHE.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
     let fields = *cache.entry(effect.to_string()).or_insert_with(|| {
         let mut v: Vec<Field> = base.to_vec();
-        if !has {
-            v.extend_from_slice(&CA_FIELDS[..2]);
+        // Color controls belong to the effect, before optional chromatic-aberration controls.
+        let at = v.iter().position(|f| f.id == "ef-ca").unwrap_or(v.len());
+        let missing: Vec<Field> = colors.iter().filter(|f| !v.iter().any(|old| old.id == f.id)).copied().collect();
+        v.splice(at..at, missing);
+        if aberration {
+            if !has { v.extend_from_slice(&CA_FIELDS[..2]); }
+            v.extend_from_slice(&CA_FIELDS[2..]);
         }
-        v.extend_from_slice(&CA_FIELDS[2..]);
         Box::leak(v.into_boxed_slice())
     });
     (title, fields)
@@ -629,6 +677,7 @@ const LEVELS: &[Field] = &[
 
 /// Camera Raw (fx_camraw.rs) : réglages principaux du panneau web.
 const CAMERA_RAW: &[Field] = &[
+    Field { id: "cr-auto", label: "Réglage", kind: 7, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "Auto : selon la scène", options: &[] },
     slider("cr-exposure", "Exposition", -100.0, 100.0, 1.0, 0.0),
     slider("cr-temp", "Température", -100.0, 100.0, 1.0, 0.0),
     slider("cr-tint", "Teinte", -100.0, 100.0, 1.0, 0.0),
@@ -644,6 +693,13 @@ const CAMERA_RAW: &[Field] = &[
     slider("cr-sharpen", "Netteté", 0.0, 100.0, 1.0, 0.0),
     slider("cr-vignette", "Vignettage", -100.0, 100.0, 1.0, 0.0),
     slider("cr-grain", "Grain", 0.0, 100.0, 1.0, 0.0),
+];
+
+/// Champs de la fenêtre Camera Raw et leur indice dans les réglages du moteur.
+const CR_IDS: [(usize, &str); 15] = [
+    (0, "cr-exposure"), (1, "cr-temp"), (2, "cr-tint"), (3, "cr-shadows"), (4, "cr-blacks"), (5, "cr-highlights"), (6, "cr-whites"),
+    (16, "cr-clarity"), (17, "cr-dehaze"), (18, "cr-contrast"), (19, "cr-saturation"), (20, "cr-vibrance"), (21, "cr-sharpen"),
+    (22, "cr-vignette"), (23, "cr-grain"),
 ];
 
 /// Valeurs saisies, comme les `<input id="ef-…">` de la version web (chaînes).
@@ -921,7 +977,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "edges" => {
             name = "edges";
-            vec![g("ef-edge", 40.0)]
+            vec![g("ef-edge", 40.0), v.hex("ef-edge-color", 0xffffff)]
         }
         "emboss" => {
             name = "emboss";
@@ -933,7 +989,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "outline" => {
             name = "outline";
-            vec![px_rad(g("ef-ol-thick", 3.0)).max(1.0), g("ef-ol-int", 50.0)]
+            vec![px_rad(g("ef-ol-thick", 3.0)).max(1.0), g("ef-ol-int", 50.0), v.hex("ef-ol-color", 0)]
         }
         "morphology" => {
             name = "morphology";
@@ -961,7 +1017,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "softglow" => {
             name = "softglow";
-            vec![px_rad(g("ef-glow-r", 6.0)).max(1.0), g("ef-glow-a", 40.0)]
+            vec![px_rad(g("ef-glow-r", 6.0)).max(1.0), g("ef-glow-a", 40.0), v.hex("ef-glow-color", 0xffffff)]
         }
         "softenportrait" => {
             name = "softenportrait";
@@ -1195,11 +1251,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
             // ordre de fx_camraw.rs (58 valeurs, courbes et TSL vides)
             name = "cameraraw";
             let mut p = vec![0.0f32; 58];
-            for (i, id) in [
-                (0, "cr-exposure"), (1, "cr-temp"), (2, "cr-tint"), (3, "cr-shadows"), (4, "cr-blacks"), (5, "cr-highlights"), (6, "cr-whites"),
-                (16, "cr-clarity"), (17, "cr-dehaze"), (18, "cr-contrast"), (19, "cr-saturation"), (20, "cr-vibrance"), (21, "cr-sharpen"),
-                (22, "cr-vignette"), (23, "cr-grain"),
-            ] {
+            for (i, id) in CR_IDS {
                 p[i] = g(id, 0.0);
             }
             p[24] = 50.0; // finesse du grain
@@ -1221,7 +1273,12 @@ pub fn scale_px(fields: &[Field], v: &Vals, k: f32) -> Vals {
     let mut out = v.clone();
     for f in fields.iter().filter(|f| f.kind == 0 && in_pixels(f.label) && !PERCENT.contains(&f.id)) {
         if let Some(x) = v.0.get(f.id).and_then(|s| s.replace(',', ".").trim().parse::<f32>().ok()) {
-            out.0.insert(f.id.to_string(), fmt_num((x * k).clamp(f.min.min(f.max), f.max.max(f.min))));
+            // aperçu réduit (k < 1) : la valeur peut passer sous le minimum de la fenêtre (rayon
+            // de 2 px vu au 1/9 = 0,2 px). Bornée au minimum, elle grossissait l'effet dans
+            // l'aperçu (flou de 2 px affiché comme un flou de 9 px). Les effets qui exigent au
+            // moins 1 le garantissent eux-mêmes dans `params`.
+            let lo = if k < 1.0 { 0.0 } else { f.min.min(f.max) };
+            out.0.insert(f.id.to_string(), fmt_num((x * k).clamp(lo, f.max.max(f.min))));
         }
     }
     // intensité de l'aberration (pixels, libellé « Intensité ») : sans borne basse pour rester
@@ -1312,4 +1369,30 @@ pub fn post_chromatic(effect: &str, v: &Vals) -> Option<Vec<f32>> {
 
 fn static_name(e: &str) -> Option<&'static str> {
     masterpaint_core::EFFECTS.iter().copied().find(|n| *n == e)
+}
+
+#[cfg(test)]
+mod color_parameter_tests {
+    #[test]
+    fn effect_color_controls_are_connected_to_parameters() {
+        for (effect,id,index,default) in [
+            ("contour","ef-contour-color",1,0xff0000),("dropshadow","ef-ds-color",4,0),("vignette","ef-vig-color",1,0),
+            ("duotone","ef-duo-c1",0,0x1a0533),("duotone","ef-duo-c2",1,0xfff5e0),
+            ("clouds","ef-clouds-from",3,0),("clouds","ef-clouds-to",4,0xffffff),
+            ("turbulence","ef-tb-from",4,0),("turbulence","ef-tb-to",5,0xffffff),
+            ("outline","ef-ol-color",2,0),("edges","ef-edge-color",1,0xffffff),("softglow","ef-glow-color",2,0xffffff)] {
+            let (_,fields)=super::dialog(effect).unwrap();
+            assert_eq!(fields.iter().filter(|f|f.id==id && f.kind==3).count(),1,"{effect}:{id}");
+            let mut values=super::Vals::defaults(fields);
+            assert_eq!(super::params(effect,&values,0,1).unwrap().1[index],default as f32,"default {effect}:{id}");
+            values.0.insert(id.into(),"#1256ab".into());
+            assert_eq!(super::params(effect,&values,0,1).unwrap().1[index],0x1256ab as f32,"chosen {effect}:{id}");
+        }
+    }
+    #[test]
+    fn color_input_is_validated_before_changing_the_effect() {
+        assert_eq!(super::normalize_color(" A1b2C3 ").as_deref(), Some("#a1b2c3"));
+        assert_eq!(super::normalize_color("#000000").as_deref(), Some("#000000"));
+        for bad in ["#zzzzzz", "#123", "#12345678", "", "#12 345"] { assert!(super::normalize_color(bad).is_none()); }
+    }
 }

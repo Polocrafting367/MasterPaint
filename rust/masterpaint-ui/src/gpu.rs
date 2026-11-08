@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Calcul sur la carte graphique (wgpu : Vulkan / Metal / DirectX 12 sur le bureau, WebGPU
 //! dans le navigateur). Sert aux filtres dynamiques (ƒ) : toute la chaîne d'effets d'un calque
 //! s'exécute en une seule soumission, avec une seule relecture à la fin ; et aux effets du menu
@@ -664,7 +665,16 @@ fn size_passes(passes: &mut [Pass], w: usize, h: usize) {
 impl Gpu {
     /// Ouvre la carte graphique (None si aucune n'est compatible).
     pub async fn new() -> Option<Gpu> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+        #[allow(unused_mut)]
+        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+        // bureau : Vulkan, Metal ou DirectX 12 seulement. Le repli OpenGL (EGL) n'accepte pas
+        // d'être appelé depuis les fils de calcul : panique dans khronos-egl, effet jamais rendu
+        // (vu dans l'AppImage Linux). Sans ces pilotes, le processeur prend le relais.
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            desc.backends = wgpu::Backends::PRIMARY;
+        }
+        let instance = wgpu::Instance::new(desc);
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions { power_preference: wgpu::PowerPreference::HighPerformance, ..Default::default() })
             .await
@@ -872,7 +882,7 @@ impl Gpu {
 /// bit 3 premier calque (accumulateur vide).
 const COMPOSE: &str = r#"
 struct C { w: u32, h: u32, ds: u32, ns: u32, x0: u32, y0: u32, bw: u32, bh: u32,
-           blend: u32, flags: u32, opacity: f32, off0: u32, off1: u32, checker: u32, pad0: u32, pad1: u32 };
+           blend: u32, flags: u32, opacity: f32, off0: u32, off1: u32, checker: u32, aux_k: u32, aux_w: u32 };
 @group(0) @binding(0) var<uniform> c: C;
 @group(0) @binding(1) var<storage, read> lay: array<u32>;
 @group(0) @binding(2) var<storage, read> aux: array<u32>;
@@ -973,7 +983,7 @@ fn compose_layer(@builtin(global_invocation_id) gid: vec3<u32>) {
         var m = c.opacity;
         if (dynm == 1u) { m = (0.299 * q.x + 0.587 * q.y + 0.114 * q.z) * q.w * c.opacity; }
         if (m > 0.0) {
-            let f = px4(aux[i]);
+            let f = px4(aux[(sy / c.aux_k) * c.aux_w + sx / c.aux_k]);
             a = a + (f - a) * m;
         }
         acc[s] = a;
@@ -1067,11 +1077,9 @@ fn same_src(w: &std::sync::Weak<Vec<u8>>, a: &std::sync::Arc<Vec<u8>>) -> bool {
     std::ptr::eq(w.as_ptr(), std::sync::Arc::as_ptr(a))
 }
 
-/// Composition demandée à la carte graphique : la relecture donne `w` × `h` pixels RGBA.
+/// Composition demandée à la carte graphique : la relecture donne les pixels RGBA du rectangle.
 pub struct ViewJob {
     read: wgpu::Buffer,
-    pub w: usize,
-    pub h: usize,
 }
 
 impl Gpu {
@@ -1122,7 +1130,8 @@ impl Gpu {
         if w == 0 || h == 0 || x1 <= x0 || y1 <= y0 || doc.has_groups() || (w * h * 4) as u64 > self.max_bytes {
             return None;
         }
-        let vis: Vec<&crate::editor::Layer> = doc.layers.iter().filter(|l| l.visible && l.opacity > 0.0).collect();
+        // sous un filtre ƒ « partout » : rien à envoyer ni à composer
+        let vis = doc.shown_layers();
         if vis.is_empty() {
             return None;
         }
@@ -1133,17 +1142,20 @@ impl Gpu {
             let comp = cell.get_or_insert_with(|| Composer { layer: self.compose_pipe(COMPOSE, "compose_layer"), resolve: self.compose_pipe(RESOLVE, "compose_resolve"), bufs: HashMap::new() });
             comp.bufs.retain(|uid, _| doc.layers.iter().any(|l| l.uid == *uid));
             // sources de chaque calque : pixels (ou rendu ƒ en mode 1), puis masque α ou rendu ƒ
-            let mut plan: Vec<(u64, u32, u32, f32)> = Vec::with_capacity(vis.len());
+            let mut plan: Vec<(u64, u32, u32, f32, usize)> = Vec::with_capacity(vis.len());
             let mut total = 0u64;
             for (n, l) in vis.iter().enumerate() {
                 let mask = l.mask.as_ref().filter(|m| m.len() == w * h).map(|m| m.arc());
+                let low = l.low_cache(w, h);
+                let aux_k = low.map_or(1, |(k, _)| k);
                 let (main, aux, mut flags) = match (&l.dyn_cache, l.dynamic_mode) {
+                    _ if low.is_some() => (l.px.arc(), low.map(|(_, c)| c.clone()), if l.dynamic_mode == 0 { 2u32 } else { 4u32 }),
                     (Some(cache), 0) => (l.px.arc(), Some(cache.clone()), 2u32),
                     (Some(cache), 2) => (l.px.arc(), Some(cache.clone()), 4u32),
                     (Some(cache), 1) => (cache.clone(), mask.clone(), mask.is_some() as u32),
                     _ => (l.px.arc(), mask.clone(), mask.is_some() as u32),
                 };
-                if main.len() != w * h * 4 || aux.as_ref().is_some_and(|a| a.len() < w * h) {
+                if main.len() != w * h * 4 || (low.is_none() && aux.as_ref().is_some_and(|a| a.len() < w * h)) {
                     return None;
                 }
                 if n == 0 {
@@ -1168,7 +1180,7 @@ impl Gpu {
                 };
                 total += buf.size() + aux_buf.as_ref().map_or(0, |b| b.size());
                 comp.bufs.insert(l.uid, LayerBuf { src, buf, aux_src, aux: aux_buf });
-                plan.push((l.uid, l.blend.index() as u32, flags, l.opacity));
+                plan.push((l.uid, l.blend.index() as u32, flags, l.opacity, aux_k));
             }
             if total > COMPOSE_BUDGET {
                 comp.bufs.clear();
@@ -1182,14 +1194,14 @@ impl Gpu {
             let out = dev.create_buffer(&wgpu::BufferDescriptor { label: Some("affichage"), size: (rows * rw * 4) as u64, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
             let read = dev.create_buffer(&wgpu::BufferDescriptor { label: None, size: (rw * rh * 4) as u64, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
             let dummy = dev.create_buffer(&wgpu::BufferDescriptor { label: None, size: 16, usage: wgpu::BufferUsages::STORAGE, mapped_at_creation: false });
-            let uniform = |by: usize, bh: usize, blend: u32, flags: u32, opacity: f32| {
+            let uniform = |by: usize, bh: usize, blend: u32, flags: u32, opacity: f32, aux_k: usize| {
                 let vals = [w as u32, h as u32, ds as u32, ns, x0 as u32, by as u32, rw as u32, bh as u32, blend, flags];
                 let mut u = [0u8; 64];
                 for (k, v) in vals.iter().enumerate() {
                     u[k * 4..k * 4 + 4].copy_from_slice(&v.to_le_bytes());
                 }
                 u[40..44].copy_from_slice(&opacity.to_le_bytes());
-                for (k, v) in [off0, off1, checker as u32].iter().enumerate() {
+                for (k, v) in [off0, off1, checker as u32, aux_k as u32, w.div_ceil(aux_k) as u32].iter().enumerate() {
                     u[44 + k * 4..48 + k * 4].copy_from_slice(&v.to_le_bytes());
                 }
                 dev.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: None, contents: &u, usage: wgpu::BufferUsages::UNIFORM })
@@ -1211,16 +1223,16 @@ impl Gpu {
             while by < y1 {
                 let bh = rows.min(y1 - by);
                 let samples = (rw * bh) as u32 * ns;
-                for &(uid, blend, flags, opacity) in &plan {
+                for &(uid, blend, flags, opacity, aux_k) in &plan {
                     let lb = &comp.bufs[&uid];
-                    let ub = uniform(by, bh, blend, flags, opacity);
+                    let ub = uniform(by, bh, blend, flags, opacity, aux_k);
                     let bg = bind(&ub, &lb.buf, lb.aux.as_ref().unwrap_or(&dummy), &acc);
                     let mut cp = enc.begin_compute_pass(&Default::default());
                     cp.set_pipeline(&comp.layer);
                     cp.set_bind_group(0, &bg, &[]);
                     cp.dispatch_workgroups(samples.div_ceil(256), 1, 1);
                 }
-                let ub = uniform(by, bh, 0, 0, 1.0);
+                let ub = uniform(by, bh, 0, 0, 1.0, 1);
                 let bg = bind(&ub, &acc, &dummy, &out);
                 {
                     let mut cp = enc.begin_compute_pass(&Default::default());
@@ -1232,7 +1244,7 @@ impl Gpu {
                 by += bh;
             }
             self.queue.submit([enc.finish()]);
-            Some(ViewJob { read, w: rw, h: rh })
+            Some(ViewJob { read })
         })
     }
 
@@ -1259,10 +1271,18 @@ pub fn compose_forget() {
 #[cfg(not(target_arch = "wasm32"))]
 static GPU: std::sync::OnceLock<Option<std::sync::Arc<Gpu>>> = std::sync::OnceLock::new();
 
+/// Bureau : la carte graphique a fait paniquer un calcul ; elle n'est plus utilisée de la
+/// session (le processeur refait le calcul, voir `background::spawn`).
+#[cfg(not(target_arch = "wasm32"))]
+pub static GPU_BROKEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Bureau : carte graphique ouverte au premier appel (None si absente ou désactivée par
 /// MASTERPAINT_GPU=0).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn get() -> Option<std::sync::Arc<Gpu>> {
+    if GPU_BROKEN.load(std::sync::atomic::Ordering::Relaxed) {
+        return None;
+    }
     GPU.get_or_init(|| {
         if std::env::var("MASTERPAINT_GPU").is_ok_and(|v| v == "0") {
             return None;

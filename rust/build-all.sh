@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 # Compile toutes les versions de MasterPaint (Rust) et dépose les fichiers dans /downloads/
 # sous des noms FIXES (sans numéro de version), ceux des boutons Télécharger de l'application
 # (download_url dans masterpaint-ui/src/lib.rs) : chaque compilation remplace simplement le
@@ -68,10 +69,10 @@ build_linux() {
     rm -rf "$app"
     mkdir -p "$app/usr/bin" "$app/usr/share/icons/hicolor/128x128/apps"
     cp "$bin" "$app/usr/bin/masterpaint"
-    cp desktop/icons/128x128.png "$app/usr/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
-    cp desktop/icons/128x128.png "$app/fr.masterpaint.app.png"
+    cp packaging/icons/128x128.png "$app/usr/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
+    cp packaging/icons/128x128.png "$app/fr.masterpaint.app.png"
     sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=masterpaint/' \
-        desktop/flatpak/fr.masterpaint.app.desktop > "$app/fr.masterpaint.app.desktop"
+        packaging/flatpak/fr.masterpaint.app.desktop > "$app/fr.masterpaint.app.desktop"
     printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")/usr/bin/masterpaint" "$@"\n' > "$app/AppRun"
     chmod +x "$app/AppRun"
     # appimagetool (https://github.com/AppImage/appimagetool/releases) : chemin dans
@@ -124,9 +125,9 @@ build_flatpak() {
         install -Dm755 "$bin" "$f/bin/masterpaint"
         mkdir -p "$f/share/applications"
         sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=masterpaint/' \
-            desktop/flatpak/fr.masterpaint.app.desktop > "$f/share/applications/fr.masterpaint.app.desktop"
-        install -Dm644 desktop/flatpak/fr.masterpaint.app.metainfo.xml "$f/share/metainfo/fr.masterpaint.app.metainfo.xml"
-        install -Dm644 desktop/icons/128x128.png "$f/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
+            packaging/flatpak/fr.masterpaint.app.desktop > "$f/share/applications/fr.masterpaint.app.desktop"
+        install -Dm644 packaging/flatpak/fr.masterpaint.app.metainfo.xml "$f/share/metainfo/fr.masterpaint.app.metainfo.xml"
+        install -Dm644 packaging/icons/128x128.png "$f/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
         install -Dm644 ../icons/icon-512.png "$f/share/icons/hicolor/512x512/apps/fr.masterpaint.app.png"
         flatpak build-finish "$fp/app" --command=masterpaint \
             --socket=wayland --socket=fallback-x11 --share=ipc --device=dri --share=network \
@@ -150,8 +151,8 @@ build_windows() {
     # (Ubuntu : sudo apt install nsis ; GitHub Actions : préinstallé sur windows-latest)
     if command -v makensis >/dev/null; then
         makensis -V2 -DVERSION="$ver" -DEXE="$(readlink -f "$win_exe")" \
-            -DICON="$(readlink -f desktop/icons/icon.ico)" \
-            -DOUT="$(readlink -f "$dl")/$(basename "$win_setup").tmp" desktop/installer/masterpaint.nsi
+            -DICON="$(readlink -f packaging/icons/icon.ico)" \
+            -DOUT="$(readlink -f "$dl")/$(basename "$win_setup").tmp" packaging/installer/masterpaint.nsi
         mv -f "$win_setup.tmp" "$win_setup"
     else
         echo "Installeur Windows non produit : makensis introuvable (sudo apt install nsis)"
@@ -209,7 +210,7 @@ build_macos() {
         mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
         lipo -create -output "$app/Contents/MacOS/MasterPaint" \
             "$target/aarch64-apple-darwin/release/masterpaint-ui" "$target/x86_64-apple-darwin/release/masterpaint-ui"
-        cp desktop/icons/icon.icns "$app/Contents/Resources/MasterPaint.icns"
+        cp packaging/icons/icon.icns "$app/Contents/Resources/MasterPaint.icns"
         cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

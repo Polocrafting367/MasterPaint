@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Patch a build-only Slint copy to retain Android pen pressure before hit testing."""
 import pathlib, shutil, sys
 source, dest = map(pathlib.Path, sys.argv[1:])

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Rastérisation : tampons de pinceau, traits, formes (champs de distance anticrénelés),
 //! dégradés, polygones de lasso.
 //!
@@ -364,184 +365,6 @@ impl Cover {
     }
 }
 
-/// Forme posée directement sur `out` (objets des calques vectoriels) : couverture calculée dans
-/// son seul cadre, sans masque de la taille de l'image ni copie complète — mêmes formules et
-/// mêmes arrondis que `Cover::shape` suivi de `apply_cover`. `base` : image de départ (None :
-/// `out` lui-même). Retourne le rectangle touché (x0, y0, x1, y1 exclus).
-#[allow(clippy::too_many_arguments)]
-pub fn shape_onto<F: Fn(f32, f32) -> f32>(
-    base: Option<&[u8]>,
-    out: &mut [u8],
-    w: usize,
-    h: usize,
-    bbox: (f32, f32, f32, f32),
-    style: ShapeStyle,
-    width: f32,
-    sdf: F,
-    color: [u8; 4],
-) -> Option<(usize, usize, usize, usize)> {
-    let pad = width + 2.0;
-    let (x0, y0, x1, y1) = ((bbox.0 - pad).floor() as isize, (bbox.1 - pad).floor() as isize, (bbox.2 + pad).ceil() as isize, (bbox.3 + pad).ceil() as isize);
-    let c = |v: isize, hi: usize| v.clamp(0, hi as isize) as usize;
-    let r = (c(x0, w), c(y0, h), c(x1 + 1, w), c(y1 + 1, h));
-    if r.2 <= r.0 || r.3 <= r.1 {
-        return None;
-    }
-    let hw = width / 2.0;
-    for y in r.1..r.3 {
-        for x in r.0..r.2 {
-            let o = (y * w + x) * 4;
-            let b = match base {
-                Some(b) => [b[o], b[o + 1], b[o + 2], b[o + 3]],
-                None => [out[o], out[o + 1], out[o + 2], out[o + 3]],
-            };
-            let d = sdf(x as f32 + 0.5, y as f32 + 0.5);
-            let fill = (0.5 - d).clamp(0.0, 1.0);
-            let line = (hw + 0.5 - d.abs()).clamp(0.0, 1.0);
-            let a = match style {
-                ShapeStyle::Outline => line,
-                ShapeStyle::Fill => fill,
-                ShapeStyle::Both => fill.max(line),
-            };
-            let cv = (a * 255.0) as u8;
-            if cv == 0 {
-                out[o..o + 4].copy_from_slice(&b);
-                continue;
-            }
-            let sa = cv as f32 / 255.0 * color[3] as f32 / 255.0;
-            let da = b[3] as f32 / 255.0;
-            let ao = sa + da * (1.0 - sa);
-            if ao <= 0.0 {
-                out[o..o + 4].copy_from_slice(&[0, 0, 0, 0]);
-                continue;
-            }
-            for k in 0..3 {
-                out[o + k] = ((color[k] as f32 * sa + b[k] as f32 * da * (1.0 - sa)) / ao + 0.5) as u8;
-            }
-            out[o + 3] = (ao * 255.0 + 0.5) as u8;
-        }
-    }
-    Some(r)
-}
-
-/// Couverture (0..1) d'un ensemble de sous-chemins fermés, règle pair-impair (les trous des
-/// tracés composés restent vides), dans le rectangle `r` (x0, y0, x1, y1 exclus) : 4 lignes
-/// d'échantillonnage par pixel, couverture horizontale exacte. Coût : lignes × arêtes, et non
-/// pixels × arêtes comme une distance signée.
-#[allow(dead_code)] // import SVG (à venir)
-pub fn poly_fill(subs: &[Vec<(f32, f32)>], r: (usize, usize, usize, usize)) -> Vec<f32> {
-    let (rw, rh) = (r.2 - r.0, r.3 - r.1);
-    let mut cov = vec![0f32; rw * rh];
-    const SUB: usize = 4;
-    let mut xs: Vec<f32> = Vec::new();
-    for py in 0..rh {
-        for k in 0..SUB {
-            let y = (r.1 + py) as f32 + (k as f32 + 0.5) / SUB as f32;
-            xs.clear();
-            for sp in subs {
-                let n = sp.len();
-                if n < 3 {
-                    continue;
-                }
-                let mut j = n - 1;
-                for i in 0..n {
-                    let (a, b) = (sp[j], sp[i]);
-                    if (a.1 > y) != (b.1 > y) {
-                        xs.push(a.0 + (y - a.1) * (b.0 - a.0) / (b.1 - a.1));
-                    }
-                    j = i;
-                }
-            }
-            xs.sort_by(f32::total_cmp);
-            let row = &mut cov[py * rw..(py + 1) * rw];
-            for pair in xs.chunks_exact(2) {
-                // portée [xa, xb) en coordonnées locales, couverture partielle aux bords
-                let (xa, xb) = ((pair[0] - r.0 as f32).max(0.0), (pair[1] - r.0 as f32).min(rw as f32));
-                if xb <= xa {
-                    continue;
-                }
-                let (ia, ib) = (xa.floor() as usize, (xb.ceil() as usize).min(rw));
-                for (px, c) in row.iter_mut().enumerate().take(ib).skip(ia) {
-                    let lo = xa.max(px as f32);
-                    let hi = xb.min(px as f32 + 1.0);
-                    if hi > lo {
-                        *c += (hi - lo) / SUB as f32;
-                    }
-                }
-            }
-        }
-    }
-    cov
-}
-
-/// Couverture (0..1) d'un trait d'épaisseur `width` le long de sous-chemins (fermés ou non),
-/// dans le rectangle `r` : chaque segment ne parcourt que son propre cadre (coût proportionnel à
-/// la longueur du trait, pas à la surface de la forme).
-#[allow(dead_code)] // import SVG (à venir)
-pub fn poly_stroke(subs: &[Vec<(f32, f32)>], closed: bool, width: f32, r: (usize, usize, usize, usize)) -> Vec<f32> {
-    let (rw, rh) = (r.2 - r.0, r.3 - r.1);
-    let mut cov = vec![0f32; rw * rh];
-    let hw = width.max(1.0) / 2.0;
-    for sp in subs {
-        let n = sp.len();
-        if n == 0 {
-            continue;
-        }
-        let segs = if closed && n > 2 { n } else { n.saturating_sub(1).max(1) };
-        for i in 0..segs {
-            // un sous-chemin d'un seul point reste visible (segment de longueur nulle)
-            let (a, b) = (sp[i], if n == 1 { sp[0] } else { sp[(i + 1) % n] });
-            let x0 = ((a.0.min(b.0) - hw - 1.0).floor() as isize - r.0 as isize).max(0) as usize;
-            let y0 = ((a.1.min(b.1) - hw - 1.0).floor() as isize - r.1 as isize).max(0) as usize;
-            let x1 = (((a.0.max(b.0) + hw + 1.0).ceil() as isize - r.0 as isize).max(0) as usize).min(rw);
-            let y1 = (((a.1.max(b.1) + hw + 1.0).ceil() as isize - r.1 as isize).max(0) as usize).min(rh);
-            for y in y0..y1 {
-                for x in x0..x1 {
-                    let d = seg_dist((r.0 + x) as f32 + 0.5, (r.1 + y) as f32 + 0.5, a, b);
-                    let c = (hw + 0.5 - d).clamp(0.0, 1.0);
-                    let v = &mut cov[y * rw + x];
-                    if c > *v {
-                        *v = c;
-                    }
-                }
-            }
-        }
-    }
-    cov
-}
-
-/// Pose une couverture locale (`cov`, rectangle `r`) de couleur `color` sur `out` (départ :
-/// `base`, sinon `out`) — mêmes arrondis que `apply_cover`.
-#[allow(dead_code)] // import SVG (à venir)
-pub fn cover_onto(base: Option<&[u8]>, out: &mut [u8], w: usize, r: (usize, usize, usize, usize), cov: &[f32], color: [u8; 4]) {
-    let rw = r.2 - r.0;
-    for y in r.1..r.3 {
-        for x in r.0..r.2 {
-            let o = (y * w + x) * 4;
-            let b = match base {
-                Some(b) => [b[o], b[o + 1], b[o + 2], b[o + 3]],
-                None => [out[o], out[o + 1], out[o + 2], out[o + 3]],
-            };
-            let cv = (cov[(y - r.1) * rw + (x - r.0)].clamp(0.0, 1.0) * 255.0) as u8;
-            if cv == 0 {
-                out[o..o + 4].copy_from_slice(&b);
-                continue;
-            }
-            let sa = cv as f32 / 255.0 * color[3] as f32 / 255.0;
-            let da = b[3] as f32 / 255.0;
-            let ao = sa + da * (1.0 - sa);
-            if ao <= 0.0 {
-                out[o..o + 4].copy_from_slice(&[0, 0, 0, 0]);
-                continue;
-            }
-            for k in 0..3 {
-                out[o + k] = ((color[k] as f32 * sa + b[k] as f32 * da * (1.0 - sa)) / ao + 0.5) as u8;
-            }
-            out[o + 3] = (ao * 255.0 + 0.5) as u8;
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ShapeStyle {
     Outline,
@@ -608,6 +431,34 @@ pub fn sdf_polygon(pts: Vec<(f32, f32)>) -> impl Fn(f32, f32) -> f32 {
 }
 
 /// Segment épais (ligne) : distance au segment moins la demi-épaisseur.
+/// Distance signée d'un tracé à plusieurs contours (chemins SVG) : contours séparés par un point
+/// (NaN, NaN), intérieur pair-impair (les trous restent vides).
+pub fn sdf_rings(pts: Vec<(f32, f32)>) -> impl Fn(f32, f32) -> f32 {
+    let mut edges: Vec<((f32, f32), (f32, f32))> = Vec::new();
+    for ring in pts.split(|p| p.0.is_nan() || p.1.is_nan()) {
+        if ring.len() < 2 {
+            continue;
+        }
+        for i in 0..ring.len() {
+            edges.push((ring[i], ring[(i + 1) % ring.len()]));
+        }
+    }
+    move |px, py| {
+        if edges.is_empty() {
+            return 1e9;
+        }
+        let mut d = f32::MAX;
+        let mut inside = false;
+        for &(a, b) in &edges {
+            d = d.min(seg_dist(px, py, a, b));
+            if (a.1 > py) != (b.1 > py) && px < (b.0 - a.0) * (py - a.1) / (b.1 - a.1) + a.0 {
+                inside = !inside;
+            }
+        }
+        if inside { -d } else { d }
+    }
+}
+
 pub fn sdf_line(a: (f32, f32), b: (f32, f32), width: f32) -> impl Fn(f32, f32) -> f32 {
     move |px, py| seg_dist(px, py, a, b) - width / 2.0
 }
@@ -765,6 +616,13 @@ pub enum GradientKind {
 
 /// Dégradé de `c0` (en a) vers `c1` (en b), fondu dans la sélection.
 pub fn gradient(base: &[u8], out: &mut [u8], w: usize, h: usize, a: (f32, f32), b: (f32, f32), c0: [u8; 4], c1: [u8; 4], kind: GradientKind, sel: Option<&[u8]>) {
+    gradient_mid(base, out, w, h, a, b, c0, c1, kind, sel, 0.5);
+}
+
+/// Comme `gradient`, la couleur du milieu placée à `mid` (0..1) sur le trait.
+#[allow(clippy::too_many_arguments)]
+pub fn gradient_mid(base: &[u8], out: &mut [u8], w: usize, h: usize, a: (f32, f32), b: (f32, f32), c0: [u8; 4], c1: [u8; 4], kind: GradientKind, sel: Option<&[u8]>, mid: f32) {
+    let mid = mid.clamp(0.01, 0.99);
     let (dx, dy) = (b.0 - a.0, b.1 - a.1);
     let l2 = (dx * dx + dy * dy).max(1e-6);
     let len = l2.sqrt();
@@ -786,6 +644,7 @@ pub fn gradient(base: &[u8], out: &mut [u8], w: usize, h: usize, a: (f32, f32), 
                 }
             }
             .clamp(0.0, 1.0);
+            let t = if t < mid { t / mid * 0.5 } else { 0.5 + (t - mid) / (1.0 - mid) * 0.5 };
             let s = sel.map_or(255, |m| m[i]) as f32 / 255.0;
             for k in 0..4 {
                 let g = c0[k] as f32 + (c1[k] as f32 - c0[k] as f32) * t;

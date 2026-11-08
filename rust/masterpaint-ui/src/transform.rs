@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Transformation des pixels sélectionnés, comme les outils Déplacer de Paint.NET
 //! (MoveToolBase : poignées, rotation, mise à l'échelle) — plus Déformation et 4 coins.
 //!

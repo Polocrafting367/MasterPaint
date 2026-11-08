@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Read only dimensions for the New Image dialog; never paste or replace clipboard content.
 use std::path::{Path, PathBuf};
 #[cfg(target_os = "android")]
@@ -28,6 +29,16 @@ thread_local! {
     // X11 clipboard ownership must outlive the Copy callback.
     static OWNER: std::cell::RefCell<Option<arboard::Clipboard>> = const { std::cell::RefCell::new(None) };
 }
+/// Texte dans le presse-papiers (le presse-papiers reste possédé : sous Linux, son contenu
+/// disparaît sinon avec l'objet).
+pub fn write_text(text: &str) -> bool {
+    OWNER.with(|o| {
+        let mut owner = o.borrow_mut();
+        if owner.is_none() { *owner = arboard::Clipboard::new().ok(); }
+        owner.as_mut().is_some_and(|c| c.set_text(text.to_string()).is_ok())
+    })
+}
+
 pub fn write_image(w: usize, h: usize, pixels: &[u8]) {
     OWNER.with(|owner| {
         let mut owner = owner.borrow_mut();

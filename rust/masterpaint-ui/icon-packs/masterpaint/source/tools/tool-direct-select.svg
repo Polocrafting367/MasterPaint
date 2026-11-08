@@ -1,0 +1,13 @@
+<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}">
+  <!-- Lasso à main levée : un seul tracé continu qui suit le pointeur (pas de
+       points d'ancrage — l'outil ne pose aucun nœud). -->
+  <path d="M 7.6 13.4 C 3.6 13.1, 1.2 11, 1.6 8.2 C 2 5.2, 5 2.6, 8.6 2.5 C 12 2.4, 14.6 4.4, 14.4 6.9 C 14.25 8.7, 12.9 10.1, 11 10.7"
+        fill="none"
+        stroke="{STROKE}"
+        stroke-width="1.35"
+        stroke-linecap="round"/>
+  <path d="M9.2 9.4 14.6 13.8 12.2 14.1 13.1 15.2 12 15.7 11.1 14.4 9.3 15.2Z"
+        fill="{ACCENT}"
+        stroke="none"/>
+</svg>

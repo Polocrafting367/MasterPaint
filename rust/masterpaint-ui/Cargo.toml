@@ -1,7 +1,8 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 [package]
 name = "masterpaint-ui"
 description = "Interface native de MasterPaint (Slint) : mise en page Paint.NET, ruban / barre classique, thèmes"
-version = "3.5.1"
+version = "3.5.6"
 edition.workspace = true
 license.workspace = true
 
@@ -14,11 +15,20 @@ name = "masterpaint-ui"
 path = "src/main.rs"
 
 [dependencies]
+# fichiers Paint.NET (.pdn) : pixels en morceaux gzip (version déjà dans Cargo.lock)
+flate2 = "1"
+crc32fast = "1"
 masterpaint-core = { path = "../masterpaint-core" }
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "renderer-femtovg"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "gif"] }
 webbrowser = "1"
 ab_glyph = "0.2"
+# rendu vectoriel du mode SVG (remplissages, traits, dégradés à la résolution de l'écran) ; déjà
+# dans Cargo.lock par Slint (resvg)
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd"] }
+# lecture des icônes SVG en pixels pour leurs teintes (dans le navigateur, Slint laisse le SVG au
+# navigateur, qui ne le rend pas lisible) ; sans polices ni images : les icônes n'en ont pas
+resvg = { version = "0.48", default-features = false }
 wuff = "0.2"
 ttf-parser = "0.25"
 serde_json = "1"
@@ -43,7 +53,7 @@ slint = { version = "1.18", default-features = false, features = ["backend-andro
 jni = "0.21"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-slint = { version = "1.18", default-features = false, features = ["backend-winit", "renderer-software", "accessibility"] }
+slint = { version = "1.18", default-features = false, features = ["backend-winit", "renderer-software", "accessibility", "unstable-winit-030"] }
 # rawler → uuid : aléa du navigateur (crypto.getRandomValues)
 uuid = { version = "1", features = ["js"] }
 futures-channel = "0.3"
@@ -52,7 +62,13 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Response", "Storage", "HtmlInputElement", "FileList", "File", "Location", "Request", "RequestInit", "Headers", "Navigator", "TouchEvent", "TouchList", "Touch", "AddEventListenerOptions", "console", "DragEvent", "DataTransfer", "BeforeUnloadEvent", "Event"] }
 wasm-bindgen-futures = "0.4"
 
+# tests seulement : rendu de référence des SVG (même moteur que Slint, déjà dans Cargo.lock)
+[dev-dependencies]
+resvg = "0.48"
+
 [build-dependencies]
 slint-build = "1.18"
+# traductions compressées dans le programme (déjà une dépendance, même version)
+flate2 = "1"
 # icône de l'exe Windows (aussi en compilation croisée depuis Linux)
 winresource = "0.1"

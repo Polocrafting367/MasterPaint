@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Artistique : peinture à l'huile, croquis à l'encre, croquis au crayon.
 
 use crate::util::*;

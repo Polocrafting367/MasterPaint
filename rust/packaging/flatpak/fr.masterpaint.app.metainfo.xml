@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
+<component type="desktop-application">
+  <id>fr.masterpaint.app</id>
+  <name>MasterPaint</name>
+  <summary>Image editor inspired by Paint.NET</summary>
+  <summary xml:lang="fr">Éditeur d'images inspiré de Paint.NET</summary>
+  <developer id="fr.masterpaint">
+    <name>polocrafting</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <url type="homepage">https://masterpaint.fr</url>
+  <description>
+    <p>MasterPaint is an image editor with layers, effects, selections, RAW photo development
+      (Photo Mode Pro) and a Paint.NET-inspired interface, written in Rust.</p>
+    <p xml:lang="fr">MasterPaint est un éditeur d'images : calques, effets, sélections, développement
+      des photos RAW (Mode Photo Pro), interface inspirée de Paint.NET, écrit en Rust.</p>
+  </description>
+  <launchable type="desktop-id">fr.masterpaint.app.desktop</launchable>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="3.5.6" date="2026-11-08">
+      <description><p>Présentations Paint.NET et Photoshop fidèles, packs d'icônes complets, Paramètres réorganisés, filtres dynamiques plus fluides.</p></description>
+    </release>
+    <release version="3.5.5" date="2026-11-04">
+      <description><p>Interface bien plus fluide, grandes images réactives, fenêtres mises en ordre.</p></description>
+    </release>
+    <release version="3.5.3" date="2026-11-03">
+      <description><p>Projets SVG natifs nets à tous les zooms, Plume et Sélection directe, historique limité pour tous les projets, aperçus d'effets à la taille affichée, couleur d'accent instantanée.</p></description>
+    </release>
+    <release version="3.5.2" date="2026-11-03">
+      <description><p>Aide en onglets illustrés, Mode Photo Pro au style Windows 11 et réglage Auto en boucle fermée, Auto dans Camera Raw et Auto-niveau, réouverture des projets plus rapide, version web plus légère.</p></description>
+    </release>
+    <release version="3.5.1" date="2026-11-02">
+      <description><p>Modes de projet (Pixel, SVG, Animation, Animation SVG), Nouvelle image refaite, polygones et étoiles réglables, fenêtre Filtre dynamique en cartes.</p></description>
+    </release>
+    <release version="3.5.0" date="2026-11-01">
+      <description><p>Animation (frise), formes SVG modifiables, aide illustrée, sélecteur de couleurs surgissant, curseurs d'outils, réglages des outils retenus.</p></description>
+    </release>
+    <release version="3.4.0" date="2026-10-30">
+      <description><p>Auto de scène en mode Photo Pro, mode SVG, filtres dynamiques refaits, Camera Raw corrigé.</p></description>
+    </release>
+    <release version="3.3.0" date="2026-10-28">
+      <description>
+        <p xml:lang="fr">Dossiers et verrouillage des calques, calque texte modifiable avec effets, lasso magnétique, aberration chromatique réglable, interface retravaillée, installeur Windows.</p>
+      </description>
+    </release>
+    <release version="3.2.0" date="2026-10-27">
+      <description>
+        <p xml:lang="fr">Version Rust : fenêtres façon Paint.NET, photos RAW en flottant, calculs lourds en arrière-plan, affichage des grandes images limité à la partie visible.</p>
+      </description>
+    </release>
+    <release version="3.0.0" date="2026-10-14">
+      <description>
+        <p xml:lang="fr">Début de la migration en Rust, interface façon Windows 10/11, ruban, affichage classique Paint.NET, nouveaux effets.</p>
+      </description>
+    </release>
+  </releases>
+</component>

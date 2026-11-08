@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Fichiers RAW des appareils photo (Sony ARW, Canon CR2 / CR3, Nikon NEF, Fujifilm RAF,
 //! Olympus ORF, Panasonic RW2, Pentax PEF, DNG…) : décodage par `rawler` (dnglab), puis
 //! développement LINÉAIRE en flottant — dématriçage, balance des blancs de l'appareil, matrice
@@ -34,8 +35,94 @@ pub struct Sensor(rawler::RawImage);
 pub fn read(bytes: &[u8]) -> Result<Sensor, String> {
     let src = rawler::rawsource::RawSource::new_from_slice(bytes);
     let decoder = rawler::get_decoder(&src).map_err(|e| format!("format RAW non pris en charge : {e}"))?;
-    let raw = decoder.raw_image(&src, &rawler::decoders::RawDecodeParams::default(), false).map_err(|e| format!("lecture du RAW impossible : {e}"))?;
+    let mut raw = decoder.raw_image(&src, &rawler::decoders::RawDecodeParams::default(), false).map_err(|e| format!("lecture du RAW impossible : {e}"))?;
+    // OpcodeList2 du DNG : rangée dans l'IFD virtuel des données brutes (pas dans dng_tags)
+    let opcodes = decoder
+        .ifd(rawler::decoders::WellKnownIFD::VirtualDngRawTags)
+        .ok()
+        .flatten()
+        .and_then(|ifd| ifd.get_entry(rawler::tags::DngTag::OpcodeList2).map(|e| e.value.clone()));
+    if let Some(v) = opcodes {
+        apply_opcode_list2(&mut raw, v);
+    }
     Ok(Sensor(raw))
+}
+
+/// Courbes de l'« OpcodeList2 » d'un DNG (MapPolynomial, MapTable), que rawler n'applique pas.
+/// Les DNG « avec perte » (Lightroom, convertisseur Adobe : données 8 bits déjà dématriçées)
+/// y rangent la courbe qui ramène leurs valeurs en lumière linéaire, canal par canal : sans
+/// elle, le rouge et le bleu sortent deux fois trop forts et l'image est rose et délavée.
+fn apply_opcode_list2(raw: &mut rawler::RawImage, list: rawler::formats::tiff::Value) {
+    use rawler::formats::tiff::Value;
+    let bytes = match list {
+        Value::Undefined(b) | Value::Byte(b) => b,
+        _ => return,
+    };
+    // liste d'opérations : grand-boutiste (spécification DNG), en-tête = nombre d'opérations
+    let be32 = |b: &[u8], o: usize| b.get(o..o + 4).map(|s| u32::from_be_bytes([s[0], s[1], s[2], s[3]]));
+    let be64f = |b: &[u8], o: usize| b.get(o..o + 8).map(|s| f64::from_be_bytes([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]));
+    let Some(count) = be32(&bytes, 0) else { return };
+    let (w, h, cpp) = (raw.width, raw.height, raw.cpp.max(1));
+    let white = |c: usize| raw.whitelevel.0.get(c).or(raw.whitelevel.0.first()).copied().unwrap_or(65535) as f64;
+    let black = |c: usize| {
+        let l = &raw.blacklevel.levels;
+        l.get(c).or(l.first()).map_or(0.0, |r| if r.d == 0 { 0.0 } else { r.n as f64 / r.d as f64 })
+    };
+    let (whites, blacks): (Vec<f64>, Vec<f64>) = ((0..cpp).map(white).collect(), (0..cpp).map(black).collect());
+    let mut p = 4;
+    for _ in 0..count {
+        let (Some(id), Some(size)) = (be32(&bytes, p), be32(&bytes, p + 12)) else { return };
+        let body = &bytes[(p + 16).min(bytes.len())..(p + 16 + size as usize).min(bytes.len())];
+        p += 16 + size as usize;
+        // zone, plans, pas : communs à MapTable (6) et MapPolynomial (8)
+        let head: Vec<u32> = (0..8).filter_map(|k| be32(body, k * 4)).collect();
+        if head.len() < 8 || !(id == 6 || id == 8) {
+            continue;
+        }
+        let (top, left, bottom, right) = (head[0] as usize, head[1] as usize, (head[2] as usize).min(h), (head[3] as usize).min(w));
+        let (plane, planes, rp, cp) = (head[4] as usize, head[5] as usize, head[6].max(1) as usize, head[7].max(1) as usize);
+        // valeur d'entrée → valeur de sortie, pour un plan
+        let map: Box<dyn Fn(usize, f64) -> f64> = if id == 8 {
+            let Some(degree) = be32(body, 32) else { continue };
+            let coef: Vec<f64> = (0..=degree as usize).filter_map(|k| be64f(body, 36 + k * 8)).collect();
+            let (wh, bl) = (whites.clone(), blacks.clone());
+            Box::new(move |c, v| {
+                // polynôme sur la valeur ramenée à 0..1 (noir → blanc)
+                let range = (wh[c] - bl[c]).max(1.0);
+                let x = ((v - bl[c]) / range).clamp(0.0, 1.0);
+                let y = coef.iter().rev().fold(0.0, |acc, k| acc * x + k);
+                bl[c] + y.clamp(0.0, 1.0) * range
+            })
+        } else {
+            let Some(n) = be32(body, 32) else { continue };
+            let table: Vec<f64> = (0..n as usize).filter_map(|k| body.get(36 + k * 2..38 + k * 2).map(|s| u16::from_be_bytes([s[0], s[1]]) as f64)).collect();
+            if table.is_empty() {
+                continue;
+            }
+            Box::new(move |_, v| table[(v.max(0.0) as usize).min(table.len() - 1)])
+        };
+        let apply = |get: &mut dyn FnMut(usize) -> f64, set: &mut dyn FnMut(usize, f64)| {
+            for y in (top..bottom).step_by(rp) {
+                for x in (left..right).step_by(cp) {
+                    for c in plane..(plane + planes).min(cpp) {
+                        let i = (y * w + x) * cpp + c;
+                        let v = get(i);
+                        set(i, map(c, v));
+                    }
+                }
+            }
+        };
+        match &mut raw.data {
+            rawler::RawImageData::Integer(d) => {
+                let d = std::cell::RefCell::new(d);
+                apply(&mut |i| d.borrow()[i] as f64, &mut |i, v| d.borrow_mut()[i] = v.round().clamp(0.0, 65535.0) as u16);
+            }
+            rawler::RawImageData::Float(d) => {
+                let d = std::cell::RefCell::new(d);
+                apply(&mut |i| d.borrow()[i] as f64, &mut |i, v| d.borrow_mut()[i] = v as f32);
+            }
+        }
+    }
 }
 
 /// Étape 2 : développement linéaire (dématriçage, balance des blancs, couleurs) et mesures.
@@ -63,7 +150,7 @@ pub fn develop(sensor: &Sensor) -> Result<Raw, String> {
     Ok(Raw { w, h, lin, white, baseline_ev })
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 pub fn decode(bytes: &[u8]) -> Result<Raw, String> {
     develop(&read(bytes)?)
 }
@@ -92,11 +179,20 @@ fn measure(lin: &[f32]) -> (f32, f32) {
 /// Aperçu 8 bits (vignettes, réglage automatique) : exposition de base, courbe sRGB.
 pub fn to_rgba8(lin: &[f32], ev: f32) -> Vec<u8> {
     let k = 2f32.powf(ev);
-    let enc = |v: f32| {
-        let v = (v * k).clamp(0.0, 1.0);
-        let s = if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
-        (s * 255.0 + 0.5) as u8
-    };
+    // courbe sRGB en table : une puissance par canal coûtait des centaines de ms par photo. Un cran
+    // vaut moins d'un niveau de sortie, même dans les ombres, où la courbe est la plus raide
+    const N: usize = 16384;
+    static LUT: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+    let lut = LUT.get_or_init(|| {
+        (0..N)
+            .map(|i| {
+                let v = i as f32 / (N - 1) as f32;
+                let s = if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
+                (s * 255.0 + 0.5) as u8
+            })
+            .collect()
+    });
+    let enc = |v: f32| lut[((v * k).clamp(0.0, 1.0) * (N - 1) as f32 + 0.5) as usize];
     lin.chunks_exact(3).flat_map(|p| [enc(p[0]), enc(p[1]), enc(p[2]), 255]).collect()
 }
 

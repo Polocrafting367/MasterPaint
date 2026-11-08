@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Photo : netteté, masque flou, éclat, portrait adouci, vignette, yeux rouges.
 
 use crate::util::*;
@@ -39,17 +40,18 @@ pub fn unsharp(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     }
 }
 
-/// Éclat / lueur douce (additif, comme le worker) : p: [rayon, intensité %]
+/// Éclat / lueur douce (additif, comme le worker) : p: [rayon, intensité %, couleur RVB facultative]
 pub fn glow(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let r = p.f(0, 6.0).max(1.0) as usize;
     let am = p.f(1, 40.0) / 100.0;
+    let tint = p.rgb(2, 0xffffff);
     let (blur, ya) = box_blur_for(src, y0, y1, r, 1);
     let w = src.w;
     for y in y0..y1 {
         for x in 0..w {
             let i = src.idx(x, y);
             let o = ((y - ya) * w + x) * 4;
-            let f = |c: usize| src.d[i + c] as f32 + blur[o + c] as f32 * am;
+            let f = |c: usize| src.d[i + c] as f32 + blur[o + c] as f32 * am * (tint[c] / 255.0);
             put(dst, i, f(0), f(1), f(2), src.d[i + 3] as f32);
         }
     }

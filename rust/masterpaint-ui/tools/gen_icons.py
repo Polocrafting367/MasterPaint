@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Génère les icônes et les données d'outils de l'interface Slint à partir d'un relevé
 de l'interface web (ui_dump.json, produit dans le navigateur).
 
@@ -61,6 +62,13 @@ def icon_fields(icon, fallback_name):
 def main():
     d = json.load(open(sys.argv[1], encoding='utf-8-sig'))
     os.makedirs(ICONS, exist_ok=True)
+    # ui_dump preserves interface positions, but its embedded artwork can be stale.
+    sprite_path = os.path.join(CRATE, '..', '..', 'icons', 'illu-sprite.svg')
+    sprite = open(sprite_path, encoding='utf-8').read()
+    for sid, attrs, inner in re.findall(r'<symbol\s+id="([^"]+)"([^>]*)>(.*?)</symbol>', sprite, re.S):
+        if sid in d['symbols']:
+            vb = re.search(r'viewBox="([^"]+)"', attrs)
+            d['symbols'][sid] = {'viewBox': vb.group(1) if vb else '0 0 24 24', 'inner': inner}
     for sid, s in d['symbols'].items():
         write_svg(sid.replace('illu-icon-', ''), s['viewBox'] or '0 0 24 24', s['inner'])
 
@@ -247,7 +255,16 @@ def main():
     rs = ['// Fichier généré par tools/gen_icons.py — ne pas modifier à la main.',
           '/// Modèles SVG des icônes (index = `svg-index` de l\'interface).',
           'pub const ICONS: &[&str] = &[']
-    rs += [f'    include_str!("../icons/{n}.svg"),' for n in order]
+    source_dir = os.path.join(CRATE, 'icon-packs', 'masterpaint', 'source', 'tools')
+    os.makedirs(source_dir, exist_ok=True)
+    for n in order:
+        with open(os.path.join(ICONS, n + '.svg'), encoding='utf-8') as src:
+            with open(os.path.join(source_dir, n + '.svg'), 'w', encoding='utf-8') as dst: dst.write('<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->\n' + src.read())
+    rs += [f'    include_str!("../icon-packs/masterpaint/source/tools/{n}.svg"),' for n in order]
+    rs.append('];')
+    rs.append('/// Identifiants (noms de fichiers, sans extension) dans le même ordre que `ICONS`.')
+    rs.append('pub const ICON_NAMES: &[&str] = &[')
+    rs += [f'    {json.dumps(n)},' for n in order]
     rs.append('];')
     with open(os.path.join(CRATE, 'src', 'icons_gen.rs'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(rs) + '\n')

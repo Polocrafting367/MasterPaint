@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Frise du mode Animation (portage de js/anim/AnimationPanel.js) : barre de lecture et
 // d'édition, puis grille calques × images. Chaque case : dessin posé (image clé, rond plein),
 // dessin maintenu (trait), trou (vide). Clic : calque actif + image ; double-clic : image clé ;
@@ -31,7 +32,7 @@ component AnimBtn inherits Rectangle {
     width: root.labelled ? lbl.preferred-width + 34px : root.touch ? 34px : 26px;
     height: root.touch ? 32px : 24px;
     border-radius: Theme.ctl-radius;
-    background: root.on ? Theme.accent-20 : ta.pressed ? Theme.accent-20 : ta.has-hover && root.enabled ? Theme.accent-12 : transparent;
+    background: root.on ? Theme.accent-20 : ta.pressed ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) && root.enabled ? Theme.accent-12 : transparent;
     border-width: root.on ? 1px : 0px;
     border-color: Theme.accent-60;
     GlyphIcon {
@@ -65,7 +66,7 @@ component AnimMenuItem inherits Rectangle {
     in property <bool> enabled: true;
     callback clicked();
     height: 26px;
-    background: ita.has-hover && root.enabled ? Theme.accent-12 : transparent;
+    background: (Theme.hover-fx && ita.has-hover) && root.enabled ? Theme.accent-12 : transparent;
     border-radius: Theme.ctl-radius;
     Text {
         x: 10px;
@@ -357,7 +358,7 @@ export component AnimPanel inherits Rectangle {
             border-color: Theme.window-border;
             border-radius: Theme.ctl-radius;
             drop-shadow-blur: 8px;
-            drop-shadow-color: #00000040;
+            drop-shadow-color: Theme.shadows ? (#00000040) : transparent;
             VerticalLayout {
                 padding: 4px;
                 AnimMenuItem { text: @tr("Créer une image clé ici (copie)"); clicked => { root.cell-op("key", root.menu-layer, root.menu-frame); } }

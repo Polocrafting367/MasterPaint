@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Réglage « Courbes » (comme js/effects/CurvesPanel.js) : une courbe par canal (RVB, R, V, B),
 //! points de contrôle [entrée, sortie] en 0..255 interpolés par spline cubique monotone
 //! (Fritsch–Carlson) en table de 256 valeurs. La table RVB s'applique d'abord, puis R / V / B.

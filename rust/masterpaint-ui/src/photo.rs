@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Mode Photo Pro (version web : js/app/PhotoModeManager.js) : pellicule de photos, réglages
 //! Camera Raw propres à chaque photo (moteur `fx_camraw`, même pipeline que la version web),
 //! préréglages, réglage automatique, rotation, ouverture dans l'éditeur et export par lot.
@@ -219,7 +220,12 @@ impl Photo {
     /// Réglages du moteur : grain et clarté calés sur la pleine résolution, pour que l'aperçu
     /// réduit ressemble au fichier exporté.
     pub fn engine_params(&self) -> Vec<f32> {
-        let mut p = self.params.clone();
+        self.engine_params_for(&self.params)
+    }
+
+    /// Réglages du moteur pour un autre jeu de réglages de la photo (essais du réglage auto).
+    pub fn engine_params_for(&self, params: &[f32]) -> Vec<f32> {
+        let mut p = params.to_vec();
         p.resize(N, 0.0);
         p[26] = self.w as f32;
         p[27] = self.h as f32;

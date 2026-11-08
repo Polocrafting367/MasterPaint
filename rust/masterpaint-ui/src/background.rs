@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Calculs lourds hors du fil de l'interface, pour qu'elle ne se fige jamais : autre fil sur le
 //! bureau, worker de la page dans le navigateur (même module wasm, voir web/mp-worker.js). Le
 //! résultat revient sur le fil de l'interface, avec l'état de l'application, quand il est prêt.
@@ -83,7 +84,20 @@ pub(crate) fn spawn(app: &AppWindow, st: &mut State, job: Heavy, done: impl FnOn
         PENDING.with(|m| m.borrow_mut().insert(id, Box::new(done)));
         let weak = app.as_weak();
         std::thread::spawn(move || {
-            let out = job.run();
+            // pilote graphique qui panique dans ce fil : carte écartée pour la session et effet
+            // refait par le processeur (sinon le résultat n'arrivait jamais : effet perdu)
+            let retry = match &job {
+                Heavy::Effect { name, src, w, h, p, post } => Some(Heavy::Effect { name: name.clone(), src: src.clone(), w: *w, h: *h, p: p.clone(), post: post.clone() }),
+                _ => None,
+            };
+            let out = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| job.run())) {
+                Ok(out) => out,
+                Err(_) => {
+                    crate::gpu::GPU_BROKEN.store(true, std::sync::atomic::Ordering::Relaxed);
+                    crate::applog::log("Carte graphique : erreur du pilote pendant un calcul, passage au processeur");
+                    retry.and_then(|j| std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| j.run())).ok().flatten())
+                }
+            };
             deliver(weak, id, out);
         });
     }
@@ -188,6 +202,13 @@ pub fn mp_worker_raw(bytes: &[u8]) -> Vec<f32> {
         }
         Err(_) => Vec::new(),
     }
+}
+
+/// Navigateur, worker : image encodée en PNG pour la sauvegarde automatique (adresse data:).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn mp_worker_png(px: &[u8], w: usize, h: usize, gray: bool) -> Vec<u8> {
+    illu::png_url_of(px, w, h, gray).into_bytes()
 }
 
 /// Navigateur, worker : décodage d'une image (PNG, JPEG…). Résultat : largeur et hauteur

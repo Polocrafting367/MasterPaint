@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Camera Raw — portage du pipeline photographique de référence
 //! (js/effects/photo-pipeline.js, `process`, source 8 bits, sortie 8 bits).
 //!

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! MasterPaint — interface native en Rust (Slint), partagée par le bureau et le web.
 //!
 //! Mise en page de la version web en mode Paint.NET : barre de menus, barre rapide,
@@ -8,7 +9,14 @@
 #![recursion_limit = "256"]
 
 mod anim;
+mod icon_packs;
+mod reference_assets_gen;
+mod fa_svg_gen;
 mod shape_edit;
+mod gradlive;
+mod vecedit;
+mod vecrender;
+mod vecview;
 mod ascii;
 mod appearance;
 #[cfg(target_os = "android")]
@@ -19,6 +27,7 @@ use android_io as rfd;
 use android_io::clipboard as arboard;
 #[cfg(not(target_arch = "wasm32"))]
 mod clipboard_size;
+mod perf;
 mod background;
 mod colorspace;
 mod curves;
@@ -44,6 +53,9 @@ mod text;
 mod transform;
 mod icons_gen;
 mod mpicons_gen;
+mod mp_fa_gen;
+mod fa_used_gen;
+mod pdn;
 mod paint;
 mod pen;
 mod photo;
@@ -101,6 +113,10 @@ struct State {
     lazy: bool,
     /// tuiles de l'affichage à jour (composées et envoyées) en mode `lazy`
     tile_ok: std::collections::HashSet<(usize, usize)>,
+    /// Tuiles de l'affichage avec au moins un pixel transparent (voir sync_canvas_opaque).
+    tile_clear: std::collections::HashSet<(usize, usize)>,
+    /// état du masque α ouvert à sa dernière recopie vers son projet (voir write_back_mask)
+    mask_sig: u64,
     /// mode `lazy` : aperçu réduit de toute l'image (fond sous les tuiles, vignettes) et son pas
     backdrop: Vec<u8>,
     bs: usize,
@@ -123,6 +139,14 @@ struct State {
     shape_layer_new: Option<(u64, usize)>,
     /// forme « vivante » (poignées, rotation, ruban en direct) avant d'être posée
     shape_edit: Option<shape_edit::ShapeEdit>,
+    /// chemin en cours de tracé (Plume, Crayon) ou de modification (Sélection directe)
+    path_edit: Option<vecedit::PathEdit>,
+    /// dégradé tracé, encore modifiable (ses 3 points) avant d'être posé
+    grad_live: Option<gradlive::GradLive>,
+    /// dernier appui sur la toile (position du double-clic)
+    last_press: (f32, f32),
+    /// affichage d'un projet SVG, tracé à la résolution de l'écran
+    vv: vecview::VecView,
     /// pixels du calque relevés à l'appui d'un outil Formes (fond de la forme vivante)
     shape_base: Option<(u64, editor::Px)>,
     /// effet en cours de réglage sur un calque dynamique (aperçu par sa pile, voir `dyn_preview`)
@@ -200,11 +224,16 @@ fn autosave_path() -> Option<std::path::PathBuf> {
 /// Sauvegarde automatique si quelque chose a changé (bureau : dans un autre fil ; web :
 /// IndexedDB). `now` : écriture immédiate dans ce fil (fermeture de la fenêtre).
 fn autosave(st: &mut State, now: bool) {
-    if !AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) {
+    // restauration en cours : surtout ne pas écraser la sauvegarde qu'on est en train de lire
+    if !AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) || RESTORING.load(std::sync::atomic::Ordering::Relaxed) {
         return;
     }
     let sig = workspace_sig(st);
-    if sig == st.autosave_sig {
+    let force = AUTOSAVE_FORCE.load(std::sync::atomic::Ordering::Relaxed);
+    // fermeture de la page pendant une écriture confiée au worker : celle-ci serait perdue
+    #[cfg(target_arch = "wasm32")]
+    let force = force || (now && AUTOSAVE_RUNNING.with(|r| r.get()) != 0);
+    if sig == st.autosave_sig && !force {
         return;
     }
     // l'encodage d'une grande image prend des secondes : pas pendant un geste (reporté au
@@ -213,6 +242,12 @@ fn autosave(st: &mut State, now: bool) {
     if !now && t - LAST_ACTIVITY.with(|a| a.get()) < 1500.0 && t - st.autosave_at < 60_000.0 {
         return;
     }
+    // navigateur : la précédente est encore dans le worker ; celle-ci viendra au prochain passage
+    #[cfg(target_arch = "wasm32")]
+    if !now && AUTOSAVE_RUNNING.with(|r| r.get()) != 0 {
+        return;
+    }
+    AUTOSAVE_FORCE.store(false, std::sync::atomic::Ordering::Relaxed);
     st.autosave_at = t;
     st.autosave_sig = sig;
     let (docs, cur) = workspace_docs(st);
@@ -220,19 +255,40 @@ fn autosave(st: &mut State, now: bool) {
 }
 
 thread_local! {
-    /// dernier geste de l'utilisateur sur la toile ou le clavier (ms)
+    /// dernier geste de l'utilisateur à la souris, au doigt ou au clavier (ms)
     static LAST_ACTIVITY: std::cell::Cell<f64> = const { std::cell::Cell::new(0.0) };
 }
+
+/// Numéro de la dernière écriture demandée : une écriture plus ancienne encore en route (projet
+/// fermé entre-temps) est abandonnée au lieu de remettre ce projet dans la sauvegarde.
+static AUTOSAVE_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+/// Sauvegarde automatique rétablie : à réécrire même si rien n'a changé.
+static AUTOSAVE_FORCE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Bureau : écritures et suppression, une à la fois (écritures faites dans d'autres fils).
+#[cfg(not(target_arch = "wasm32"))]
+static AUTOSAVE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn write_autosave(docs: Vec<Doc>, cur: usize, now: bool) {
     if !AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) {
         return;
     }
+    // plus aucun projet : pas de fichier vide, plus de sauvegarde du tout
+    if docs.iter().all(|d| d.mask_of.is_some()) {
+        return clear_autosave();
+    }
+    let gen = AUTOSAVE_GEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+    let latest = move || AUTOSAVE_GEN.load(std::sync::atomic::Ordering::Relaxed) == gen;
+    #[cfg(target_arch = "wasm32")]
+    let png_jobs = illu::missing_pngs(&docs.iter().collect::<Vec<&Doc>>());
     let write = move || {
         let refs: Vec<&Doc> = docs.iter().collect();
         let bytes = illu::save_all(&refs, cur);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(p) = autosave_path() {
+            let _guard = AUTOSAVE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+            if !latest() {
+                return;
+            }
             if let Some(dir) = p.parent() {
                 let _ = std::fs::create_dir_all(dir);
             }
@@ -242,7 +298,9 @@ fn write_autosave(docs: Vec<Doc>, cur: usize, now: bool) {
             }
         }
         #[cfg(target_arch = "wasm32")]
-        web::store_save(&bytes);
+        if latest() {
+            web::store_save(&bytes);
+        }
     };
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -252,34 +310,141 @@ fn write_autosave(docs: Vec<Doc>, cur: usize, now: bool) {
             std::thread::spawn(write);
         }
     }
+    // navigateur : un seul fil d'interface ; les images passent par le worker de calcul, sinon
+    // leur encodage fige la page des secondes sur une grande photo
     #[cfg(target_arch = "wasm32")]
     {
-        let _ = now;
-        write();
+        if now {
+            return write();
+        }
+        AUTOSAVE_RUNNING.with(|r| r.set(gen));
+        wasm_bindgen_futures::spawn_local(async move {
+            for job in png_jobs {
+                if !latest() {
+                    break;
+                }
+                if let Some(url) = web::compute_png(&job.px, job.w, job.h, job.gray).await {
+                    illu::cache_png(&job.px, job.w, job.h, url);
+                }
+            }
+            if latest() {
+                write();
+            }
+            AUTOSAVE_RUNNING.with(|r| {
+                if r.get() == gen {
+                    r.set(0);
+                }
+            });
+        });
     }
 }
 
-/// Restaure les onglets de la dernière session (au démarrage, si rien n'a encore été modifié).
+/// Supprime la sauvegarde automatique ; toute écriture encore en route est abandonnée.
+fn clear_autosave() {
+    AUTOSAVE_GEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(p) = autosave_path() {
+        let _guard = AUTOSAVE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _ = std::fs::remove_file(&p);
+        let _ = std::fs::remove_file(p.with_extension("tmp"));
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        AUTOSAVE_RUNNING.with(|r| r.set(0));
+        web::store_clear();
+    }
+}
+
+/// Un projet vient d'être fermé : il quitte tout de suite la sauvegarde et les mémoires tampons
+/// (images encodées, vignettes, textures de la carte graphique).
+fn forget_closed(st: &mut State) {
+    illu::forget_closed_pngs();
+    let live: std::collections::HashSet<u64> = std::iter::once(st.doc.uid).chain(st.tabs.iter().flatten().map(|d| d.uid)).collect();
+    st.tab_thumbs.retain(|uid, _| live.contains(uid));
+    gpu::compose_forget();
+    #[cfg(target_arch = "wasm32")]
+    webgl::forget();
+    if AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) && !RESTORING.load(std::sync::atomic::Ordering::Relaxed) {
+        st.autosave_sig = workspace_sig(st);
+        st.autosave_at = now_ms();
+        let (docs, cur) = workspace_docs(st);
+        write_autosave(docs, cur, false);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    /// numéro de l'écriture confiée au worker (0 : aucune)
+    static AUTOSAVE_RUNNING: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Restauration de la session précédente en cours (lecture en arrière-plan) : la sauvegarde
+/// automatique attend.
+static RESTORING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Restaure les onglets de la dernière session (au démarrage).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn restore_workspace(app: &AppWindow, st: &mut State, bytes: &[u8]) {
-    if st.tabs.len() != 1 || st.doc.hindex != 0 || st.doc.history.len() != 1 {
-        return;
+    if let Ok(l) = illu::load(bytes) {
+        restore_loaded(app, st, l);
     }
-    let Ok(l) = illu::load(bytes) else { return };
-    let n = l.docs.len();
-    let mut docs = l.docs.into_iter();
-    let Some(mut first) = docs.next() else { return };
+}
+
+/// Ouvre les projets restaurés : à la place de l'onglet vide du démarrage s'il n'a pas été
+/// touché, sinon (dessin commencé pendant la lecture) dans des onglets en plus.
+fn restore_loaded(app: &AppWindow, st: &mut State, l: illu::Loaded) {
+    let untouched = st.tabs.len() == 1 && st.doc.hindex == 0 && st.doc.history.len() == 1;
+    let mut docs = l.docs;
+    let n = docs.len();
     // jamais exportés : la fermeture d'un onglet restauré demandera confirmation
-    first.saved = (usize::MAX, 0);
-    st.doc = first;
-    set_empty(app, st, false);
-    for mut d in docs {
+    for d in &mut docs {
         d.saved = (usize::MAX, 0);
-        set_document(app, st, d);
     }
+    let Some(last) = docs.pop() else { return };
+    finish_edits(app, st);
+    st.session = Session::default();
+    // tous rangés dans leurs onglets d'un coup, le dernier affiché : un seul rendu (avant,
+    // chaque projet était composé, avec ses vignettes et ses filtres ƒ, puis aussitôt caché)
+    if untouched || st.empty {
+        st.tabs.clear();
+        st.doc = last;
+    } else {
+        let old = std::mem::replace(&mut st.doc, last);
+        st.tabs[st.cur] = Some(old);
+    }
+    st.tabs.extend(docs.into_iter().map(Some));
+    st.tabs.push(None);
+    st.cur = st.tabs.len() - 1;
+    set_empty(app, st, false);
     st.autosave_sig = workspace_sig(st);
     refresh_all(app, st);
     app.invoke_zoom_open();
     status(app, if n > 1 { i18n::tr_format!("{n} projets restaurés (sauvegarde automatique)") } else { "Projet restauré (sauvegarde automatique)".to_string() });
+}
+
+/// Navigateur : lecture d'un .illu avec les images des calques décodées par les workers de
+/// calcul, plusieurs à la fois (le décodeur WebAssembly sur la page, une image après l'autre,
+/// pouvait figer de longues secondes). Une image refusée par les workers est décodée sur place.
+#[cfg(target_arch = "wasm32")]
+async fn illu_load_workers(bytes: &[u8]) -> Result<illu::Loaded, String> {
+    let v = illu::parse(bytes)?;
+    let items = illu::image_payloads(&v);
+    let n = items.len();
+    // tous les décodages partent d'abord (les workers travaillent en parallèle), puis on attend
+    let started: Vec<(usize, Option<js_sys::Promise>)> = items.iter().enumerate().map(|(i, (k, png))| (*k, web::decode_start(png, i))).collect();
+    let mut pre = Vec::with_capacity(n);
+    for (i, (k, p)) in started.into_iter().enumerate() {
+        if i % 4 == 0 && n > 4 {
+            web::loading_step(&i18n::tr_format!("Restauration des projets… {} / {}", i + 1, n));
+        }
+        if let Some(d) = match p {
+            Some(p) => web::decode_finish(p).await,
+            None => None,
+        } {
+            pre.push((k, d));
+        }
+    }
+    illu::load_parsed(&v, pre)
 }
 
 /// Range un aperçu de police et republie la liste.
@@ -348,6 +513,7 @@ struct Clip {
 }
 
 fn to_image(px: &[u8], w: usize, h: usize) -> Image {
+    perf::note_upload();
     Image::from_rgba8(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(px, w as u32, h as u32))
 }
 
@@ -696,6 +862,10 @@ fn opts(app: &AppWindow) -> tools::Opts {
         secondary: rgba(app.get_secondary_color()),
         magnet: t.get_magnet_strength() / 100.0,
         magnet_freq: t.get_magnet_freq(),
+        fill_gradient: t.get_shape_fill_type() == 1,
+        grad_radial: t.get_shape_grad_type() == 1,
+        grad_angle: t.get_shape_grad_angle(),
+        grad_smart: t.get_shape_grad_smart(),
     }
 }
 
@@ -710,15 +880,69 @@ const TILE_GUTTER: usize = 32;
 /// grande image vue de loin n'est composée et envoyée qu'aux pixels utiles. Les calculs (outils,
 /// effets) restent faits sur l'image entière.
 fn display_step(app: &AppWindow, doc: &Doc) -> usize {
+    // résolution de rendu du projet : quel que soit le zoom, jamais plus de pixels que ça
+    let div = doc.effective_div();
     if doc.w * doc.h <= 1_500_000 {
-        return 1;
+        return div;
     }
     let eff = app.get_zoom() * app.window().scale_factor();
     let mut ds = 1;
     while eff * (ds * 2) as f32 <= 1.0 && ds < 16 {
         ds *= 2;
     }
-    ds
+    ds.max(div)
+}
+
+/// Réduction des nouveaux projets (Paramètres › Performances).
+fn render_default(ctl: bool, index: i32) -> usize {
+    if ctl { 1 << index.clamp(0, 3) } else { 1 }
+}
+
+/// Boutons de résolution de rendu du ruban : visibles si l'option est active, ou si ce projet-ci
+/// a une réduction en cours (proposition acceptée pour lui seul).
+fn sync_render_ctl(app: &AppWindow, st: &State) {
+    let t = app.global::<ToolOpts>();
+    let set = st.doc.render_div_set();
+    t.set_render_ctl(!st.empty && (app.get_set_render_ctl() || set > 1));
+    t.set_render_div(set as i32);
+    t.set_render_max(st.doc.render_choices().last().copied().unwrap_or(2) as i32);
+    t.set_render_full(set > 1 && st.doc.effective_div() == 1);
+}
+
+/// Ruban : réduction suivante pour ce projet.
+fn render_cycle(app: &AppWindow, st: &mut State) {
+    let choices = st.doc.render_choices();
+    if choices.len() < 2 {
+        return status(app, "Image trop petite : la réduire n'apporterait rien");
+    }
+    let cur = st.doc.render_div_set();
+    let next = choices.iter().copied().find(|c| *c > cur).unwrap_or(1);
+    render_set(app, st, next);
+}
+
+/// Change la résolution de rendu de ce projet.
+fn render_set(app: &AppWindow, st: &mut State, div: usize) {
+    st.doc.render_div = div;
+    st.doc.render_full_at = None;
+    for l in st.doc.layers.iter_mut().filter(|l| l.dynamic.is_some()) {
+        l.dyn_key = None;
+    }
+    refresh_all(app, st);
+    if div > 1 {
+        status(app, i18n::tr_format!("Toile rendue ÷{div} : l'enregistrement reste en pleine résolution"));
+    } else {
+        status(app, "Toile rendue en pleine résolution");
+    }
+}
+
+/// Ruban : rendu complet tout de suite, valable jusqu'à la prochaine modification.
+fn render_now(app: &AppWindow, st: &mut State) {
+    st.doc.render_full_at = Some((st.doc.hindex, st.doc.history.len()));
+    for l in st.doc.layers.iter_mut().filter(|l| l.dyn_low.is_some()) {
+        l.dyn_key = None;
+    }
+    refresh_all(app, st);
+    status(app, "Rendu en pleine résolution, jusqu'à la prochaine modification");
 }
 
 /// Dimensions de l'affichage au pas courant.
@@ -743,6 +967,13 @@ const BACKDROP_MAX: usize = 1_000_000;
 /// Zoom changé : l'affichage n'est recomposé que si son pas change ; sinon, seules les tuiles
 /// devenues visibles sont calculées.
 fn zoom_changed(app: &AppWindow, st: &mut State) {
+    if st.vv.on {
+        return vecview::view_changed(app, st);
+    }
+    // dégradé en cours sur une grande image : aperçu à la nouvelle taille affichée
+    if st.grad_live.is_some() {
+        gradlive::render(app, st);
+    }
     if display_step(app, &st.doc) != st.ds {
         redraw_canvas(app, st);
     } else {
@@ -769,6 +1000,7 @@ fn visible_tiles(app: &AppWindow, st: &State) -> (usize, usize, usize, usize) {
 
 /// Tuile (tx, ty) de l'affichage, placée en pixels du document (l'interface la met au zoom).
 fn make_tile(st: &State, (tx, ty): (usize, usize)) -> Option<CanvasTile> {
+    perf::note_upload();
     let (w, h) = display_dims(st);
     let (ds, dw, dh) = (st.ds, st.doc.w, st.doc.h);
     let (px0, py0) = (tx * TILE, ty * TILE);
@@ -796,9 +1028,40 @@ fn make_tile(st: &State, (tx, ty): (usize, usize)) -> Option<CanvasTile> {
     Some(CanvasTile { x: docx as i32, y: docy as i32, w: (tw * ds).min(dw - docx) as i32, h: (th * ds).min(dh - docy) as i32, img: Image::from_rgba8(pb) })
 }
 
+/// Retient si la tuile (tx, ty) a un pixel transparent.
+fn note_tile_alpha(st: &mut State, (tx, ty): (usize, usize)) {
+    let (w, h) = display_dims(st);
+    let (px0, py0) = (tx * TILE, ty * TILE);
+    if px0 >= w || py0 >= h || st.display.len() != w * h * 4 {
+        return;
+    }
+    let (tw, th) = (TILE.min(w - px0), TILE.min(h - py0));
+    let clear = (py0..py0 + th).any(|y| {
+        let s = (y * w + px0) * 4;
+        st.display[s..s + tw * 4].chunks_exact(4).any(|p| p[3] != 255)
+    });
+    if clear {
+        st.tile_clear.insert((tx, ty));
+    } else {
+        st.tile_clear.remove(&(tx, ty));
+    }
+}
+
+/// Image entièrement opaque : l'interface ne dessine ni le fond ni le damier, qu'elle cache.
+/// Grande image (tuiles visibles seulement) et projet SVG : toujours dessinés.
+fn sync_canvas_opaque(app: &AppWindow, st: &State) {
+    app.set_canvas_opaque(!st.vv.on && !st.lazy && !direct_canvas(st) && st.tile_clear.is_empty());
+}
+
 /// Pose (ou remplace) une tuile dans l'interface.
 fn put_tile(st: &mut State, k: (usize, usize)) {
+    if st.vv.on || direct_canvas(st) {
+        return;
+    }
     let Some(tile) = make_tile(st, k) else { return };
+    if !st.lazy {
+        note_tile_alpha(st, k);
+    }
     match st.tile_index.get(&k) {
         Some(&i) => st.tiles.set_row_data(i, tile),
         None => {
@@ -811,6 +1074,22 @@ fn put_tile(st: &mut State, k: (usize, usize)) {
 /// Envoie l'image entière à l'interface et retire les tuiles ; grande image : l'aperçu de fond
 /// et les tuiles visibles déjà composées.
 fn upload_full(app: &AppWindow, st: &mut State) {
+    st.tile_clear.clear();
+    upload_full_tiles(app, st);
+    sync_canvas_opaque(app, st);
+}
+
+fn upload_full_tiles(app: &AppWindow, st: &mut State) {
+    // projet SVG : la toile est tracée à part (vecview), aucune image de pixels n'est affichée
+    if st.vv.on {
+        st.tile_index.clear();
+        st.tiles.set_vec(Vec::new());
+        app.set_canvas_image(Image::default());
+        return;
+    }
+    if direct_canvas(st) {
+        return;
+    }
     if st.lazy {
         let (bw, bh) = (st.doc.w.div_ceil(st.bs.max(1)), st.doc.h.div_ceil(st.bs.max(1)));
         if st.backdrop.len() == bw * bh * 4 {
@@ -828,6 +1107,9 @@ fn upload_full(app: &AppWindow, st: &mut State) {
     let (dw, dh) = display_dims(st);
     let made: Vec<_> = (0..dh.div_ceil(TILE)).flat_map(|y| (0..dw.div_ceil(TILE)).map(move |x| (x, y)))
         .filter_map(|key| make_tile(st, key).map(|tile| (key, tile))).collect();
+    for (key, _) in &made {
+        note_tile_alpha(st, *key);
+    }
     st.tile_index = made.iter().enumerate().map(|(i, (key, _))| (*key, i)).collect();
     st.tiles.set_vec(made.into_iter().map(|(_, tile)| tile).collect::<Vec<_>>());
     app.set_canvas_image(Image::default());
@@ -836,7 +1118,7 @@ fn upload_full(app: &AppWindow, st: &mut State) {
 /// Envoie seulement les tuiles qui recouvrent `r` : un coup de pinceau ne renvoie plus toute
 /// l'image vers la carte graphique. Chaque tuile remplace la précédente, sans superposer
 /// deux copies de pixels semi-transparents.
-fn upload_rect(_app: &AppWindow, st: &mut State, r: (usize, usize, usize, usize)) {
+fn upload_rect(app: &AppWindow, st: &mut State, r: (usize, usize, usize, usize)) {
     let (w, h) = display_dims(st);
     let (x0, y0, x1, y1) = (r.0.min(w), r.1.min(h), r.2.min(w), r.3.min(h));
     if x1 <= x0 || y1 <= y0 {
@@ -851,6 +1133,7 @@ fn upload_rect(_app: &AppWindow, st: &mut State, r: (usize, usize, usize, usize)
             put_tile(st, (tx, ty));
         }
     }
+    sync_canvas_opaque(app, st);
 }
 
 fn prime_backdrop(st: &mut State, r: (usize, usize, usize, usize)) {
@@ -871,7 +1154,7 @@ fn prime_backdrop(st: &mut State, r: (usize, usize, usize, usize)) {
 /// cadre commun, réparti sur les cœurs), les envoie, et oublie celles parties loin de la vue.
 fn ensure_visible(app: &AppWindow, st: &mut State) {
     let (dw, dh) = display_dims(st);
-    if !st.lazy || st.display.len() != dw * dh * 4 {
+    if st.vv.on || direct_canvas(st) || !st.lazy || st.display.len() != dw * dh * 4 {
         return;
     }
     let (tx0, ty0, tx1, ty1) = visible_tiles(app, st);
@@ -941,7 +1224,7 @@ fn schedule_backdrop(app: &AppWindow) {
         t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(350), move || {
             let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
             let Ok(mut st) = state.try_borrow_mut() else { return };
-            if st.lazy {
+            if st.lazy && !st.vv.on && !direct_canvas(&st) {
                 compose_backdrop(&app, &mut st);
                 let (bw, bh) = (st.doc.w.div_ceil(st.bs), st.doc.h.div_ceil(st.bs));
                 app.set_canvas_image(to_image(&st.backdrop, bw, bh));
@@ -953,6 +1236,20 @@ fn schedule_backdrop(app: &AppWindow) {
 /// Onglet de masque α : recopie le masque dans le calque lié (document parent, autre onglet).
 fn write_back_mask(st: &mut State) {
     let Some((du, lu)) = st.doc.mask_of else { return };
+    // rien de changé dans le masque (sélection, zoom, panneaux…) : surtout ne pas tout recomposer
+    let sig = {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        (st.doc.uid, st.doc.hindex, st.doc.history.len()).hash(&mut h);
+        for l in &st.doc.layers {
+            (l.px.weak().as_ptr() as usize, l.visible, l.opacity.to_bits()).hash(&mut h);
+        }
+        h.finish()
+    };
+    if st.mask_sig == sig {
+        return;
+    }
+    st.mask_sig = sig;
     let vals = st.doc.mask_values();
     for d in st.tabs.iter_mut().flatten() {
         if d.uid == du {
@@ -969,10 +1266,14 @@ fn write_back_mask(st: &mut State) {
 /// Rendus des filtres dynamiques (ƒ) à refaire : carte graphique si elle est disponible,
 /// sinon moteur CPU. Bureau : calcul immédiat ; navigateur (WebGPU) : résultat asynchrone,
 /// l'affichage est recomposé à son arrivée.
-fn update_dynamic(app: &AppWindow, st: &mut State) {
+fn update_dynamic(app: &AppWindow, st: &mut State) -> bool {
     if !st.doc.layers.iter().any(|l| l.dynamic.is_some() || l.dyn_cache.is_some()) {
-        return;
+        return false;
     }
+    // fin de trait : les derniers points, encore en attente, sans recalculer toute l'image
+    dyn_patch(app, st, None);
+    DYN_DEFER_SAID.with(|s| s.set(false));
+    let mut started = false;
     let (w, h) = (st.doc.w, st.doc.h);
     // Synchronous results can unlock the next dependency immediately; asynchronous
     // ones keep their slot and trigger a fresh pass after completion.
@@ -982,15 +1283,18 @@ fn update_dynamic(app: &AppWindow, st: &mut State) {
     let excluded: std::collections::HashSet<u64> = st.dyn_inflight.iter().copied().filter(|u| st.dyn_draft != Some(*u)).chain(st.dyn_draft_flight.iter().copied()).collect();
     let jobs = st.doc.dynamic_jobs_excluding(&excluded);
     if jobs.is_empty() { break; }
+    started = true;
     for j in jobs {
         if st.dyn_draft == Some(j.uid) {
-            if let Some((k, stages)) = draft_plan(st, j.uid) {
-                st.dyn_draft_flight.insert(j.uid);
-                let (sw, sh) = (w.div_ceil(k), h.div_ceil(k));
-                let small = std::sync::Arc::new(photo::crop_resize::<u8, 4>(&j.src, w, (0, 0, w, h), sw, sh));
-                dyn_chain(app, st, j.uid, j.serial, small, std::sync::Arc::new(stages), 0, (sw, sh));
+            if let Some(plan) = draft_plan(st, j.uid) {
+                dyn_low_job(app, st, &j, plan);
                 continue;
             }
+        }
+        // résolution de rendu du projet : les filtres restent en brouillon, sans recalcul complet
+        if let Some(plan) = render_plan(st, j.uid) {
+            dyn_low_job(app, st, &j, plan);
+            continue;
         }
         st.dyn_inflight.insert(j.uid);
         // pile avec un effet du menu : étage par étage, en arrière-plan
@@ -1031,6 +1335,27 @@ fn update_dynamic(app: &AppWindow, st: &mut State) {
         }
     }
     }
+    if started {
+        perf::render_started();
+    }
+    started
+}
+
+/// Calcul d'un filtre ƒ au pas réduit `k`.
+fn dyn_low_job(app: &AppWindow, st: &mut State, j: &editor::DynJob, (k, stages): (usize, Vec<editor::Stage>)) {
+    let (w, h) = (st.doc.w, st.doc.h);
+    st.dyn_draft_flight.insert(j.uid);
+    let small = std::sync::Arc::new(editor::shrink_rect(&j.src, w, h, k, (0, 0, w.div_ceil(k), h.div_ceil(k))));
+    dyn_chain(app, st, j.uid, j.serial, small, std::sync::Arc::new(stages), 0, (w.div_ceil(k), h.div_ceil(k)));
+}
+
+/// Pas de calcul d'un filtre ƒ selon la résolution de rendu du projet (`None` : pleine résolution,
+/// ou pile impossible à réduire sans changer son aspect).
+fn render_plan(st: &State, uid: u64) -> Option<(usize, Vec<editor::Stage>)> {
+    let div = st.doc.effective_div();
+    if div < 2 || (st.doc.w == 1 && st.doc.h == 1) { return None; }
+    let list = st.doc.layers.iter().find(|l| l.uid == uid)?.dynamic.as_ref()?;
+    (2..=div).rev().find_map(|k| editor::draft_stages(list, k).map(|s| (k, s)))
 }
 
 /// Étages du moteur dynamique calculés tout de suite : carte graphique quand c'est possible sans
@@ -1078,8 +1403,14 @@ fn dyn_chain(app: &AppWindow, st: &mut State, uid: u64, serial: u64, src: std::s
     let Some(editor::Stage::Fx { name, p, mix, post }) = stack.get(i).cloned() else {
         // rendu réduit : agrandi à la taille du document (au plus proche, comme l'aperçu des effets)
         let (dw, dh) = (st.doc.w, st.doc.h);
-        let px = if draft { upscale_nearest(&img, w, h, dw, dh) } else { img.to_vec() };
-        st.doc.set_dynamic(uid, serial, px);
+        // affiché à sa taille ; seul un filtre sur le calque lui-même (anciens projets) l'agrandit
+        let low = (2..=16).find(|k| draft && dw.div_ceil(*k) == w && dh.div_ceil(*k) == h).filter(|_| st.doc.layers.iter().any(|l| l.uid == uid && l.dynamic_mode != 1));
+        if let Some(k) = low {
+            st.doc.set_dynamic_low(uid, serial, k, img);
+        } else {
+            let px = if draft { upscale_nearest(&img, w, h, dw, dh) } else { std::sync::Arc::try_unwrap(img).unwrap_or_else(|a| (*a).clone()) };
+            st.doc.set_dynamic(uid, serial, px);
+        }
         done(st);
         schedule_dynamic(app, st);
         redraw_canvas(app, st);
@@ -1100,8 +1431,44 @@ fn dyn_chain(app: &AppWindow, st: &mut State, uid: u64, serial: u64, src: std::s
     });
 }
 
+/// Pile ou mode d'un calque ƒ changés : tout calcul encore en cours pour lui (lancé avec l'ancien
+/// réglage) sera ignoré à son retour (nouveau numéro), et le nouveau calcul part sans l'attendre.
+fn dyn_invalidate(st: &mut State, uid: u64) {
+    if let Some(l) = st.doc.layers.iter_mut().find(|l| l.uid == uid) {
+        l.dyn_key = None;
+        l.dyn_serial = editor::next_uid();
+    }
+    st.dyn_inflight.remove(&uid);
+    st.dyn_draft_flight.remove(&uid);
+}
+
 /// Au-delà de ce nombre de pixels, le réglage d'un calque dynamique passe par un rendu réduit.
 const DRAFT_MIN: usize = 1_000_000;
+/// Au-delà, un filtre ƒ au-dessus du tracé n'est recalculé que là où passe le pinceau
+/// (`Doc::patch_dynamic`) : le recalculer en entier à chaque image figeait l'application.
+const PATCH_MIN: usize = 500_000;
+
+thread_local! {
+    /// message « recalculé à la fin du trait » déjà affiché pour ce trait
+    static DYN_DEFER_SAID: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Filtres ƒ recalculés autour de la zone peinte ; renvoie le rectangle à recomposer.
+fn dyn_patch(app: &AppWindow, st: &mut State, rect: Option<PaintRect>) -> Option<PaintRect> {
+    if st.doc.w * st.doc.h < PATCH_MIN || st.dyn_draft.is_some() {
+        return rect;
+    }
+    let budget = if cfg!(target_arch = "wasm32") { 1_200_000 } else { 6_000_000 };
+    let done = st.doc.patch_dynamic(budget);
+    if st.session.busy() && !DYN_DEFER_SAID.with(|s| s.get()) && st.doc.layers.iter().any(|l| l.dynamic.is_some() && l.dyn_dirty.is_some()) {
+        DYN_DEFER_SAID.with(|s| s.set(true));
+        status(app, "Filtre ƒ trop étendu pour suivre le pinceau : recalculé à la fin du trait");
+    }
+    match (done, rect) {
+        (Some(o), Some(r)) => Some((o.0.min(r.0), o.1.min(r.1), o.2.max(r.2), o.3.max(r.3))),
+        _ => rect,
+    }
+}
 
 thread_local! {
     static DYN_REFINE: slint::Timer = slint::Timer::default();
@@ -1144,6 +1511,13 @@ fn arm_refine(app: &AppWindow) {
 
 /// Fin du réglage : le calque est recalculé en pleine résolution.
 fn dyn_refine(app: &AppWindow, st: &mut State) {
+    // fenêtre d'effet ouverte sur ce calque : l'aperçu reste à la taille affichée ; la pleine
+    // résolution n'est calculée qu'à la validation (dyn_preview_end). Avant, une pause de 0,3 s
+    // lançait le calcul complet : sur une photo de 20 Mpx, plusieurs secondes d'interface figée
+    // (passes WebGL et lecture synchrone de 80 Mo) et une toile vide pendant ce temps.
+    if st.dyn_fx.is_some() && st.effect.is_some() {
+        return;
+    }
     let Some(uid) = st.dyn_draft.take() else { return };
     if let Some(l) = st.doc.layers.iter_mut().find(|l| l.uid == uid) {
         l.dyn_key = None;
@@ -1154,14 +1528,20 @@ fn dyn_refine(app: &AppWindow, st: &mut State) {
 
 /// Recompose toute la toile (sans toucher aux panneaux).
 fn redraw_canvas(app: &AppWindow, st: &mut State) {
+    vecview::sync_mode(app, st);
+    if st.vv.on {
+        return vecview::touch(app, st);
+    }
     compose_display(app, st);
     upload_full(app, st);
+    perf::render_finished(app, st, 0.0);
 }
 
 /// Contenu hors toile (option « Hors toile ») affiché autour de la toile.
 fn sync_outside(app: &AppWindow, st: &State) {
-    // option coupée : rien à composer (le calcul couvre toute la toile et ses marges)
-    let shown = app.global::<ToolOpts>().get_outside_canvas();
+    // option coupée : rien à composer (le calcul couvre toute la toile et ses marges) ; projet
+    // SVG : le débord est tracé avec le reste
+    let shown = app.global::<ToolOpts>().get_outside_canvas() && !st.vv.on;
     let visible = app.get_visible_rect();
     let values: Vec<f32> = (0..4).filter_map(|i| visible.row_data(i)).collect();
     let viewport = (values.len() == 4 && values.iter().all(|v| v.is_finite()))
@@ -1233,8 +1613,16 @@ fn schedule_dynamic(app: &AppWindow, st: &State) {
         let Some(state) = APP_STATE.with(|s| s.borrow().clone()) else { return };
         let Ok(mut st) = state.try_borrow_mut() else { return };
         let st = &mut *st;
-        update_dynamic(&app, st);
-        redraw_canvas(&app, st);
+        // grande image, trait en cours : `dyn_patch` a fait ce qu'il pouvait, le reste attend la fin
+        // du trait (tout recalculer à chaque image : plus d'une seconde par mouvement)
+        if st.session.busy() && st.doc.w * st.doc.h >= PATCH_MIN {
+            return;
+        }
+        // rien à recalculer (on peint sur le calque de filtre lui-même : refresh_rect a déjà refait
+        // la zone touchée) : surtout ne pas recomposer toute la vue à chaque mouvement
+        if update_dynamic(&app, st) {
+            redraw_canvas(&app, st);
+        }
     });
 }
 
@@ -1255,6 +1643,7 @@ static GPU_READY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool:
 
 /// Recompose tout l'affichage et met à jour les panneaux.
 fn refresh_all(app: &AppWindow, st: &mut State) {
+    let render_t0 = now_ms();
     app.set_work_mode(SharedString::from(match (st.doc.vector_mode, st.doc.anim.is_some()) {
         (true, true) => i18n::tr(" · Animation SVG"),
         (true, false) => i18n::tr(" · SVG"),
@@ -1264,6 +1653,15 @@ fn refresh_all(app: &AppWindow, st: &mut State) {
     if editor::DYN_ZONE_VIEW.load(std::sync::atomic::Ordering::Relaxed)!=st.doc.layer().uid {
         editor::DYN_ZONE_VIEW.store(0,std::sync::atomic::Ordering::Relaxed);
     }
+    vecview::sync_mode(app, st);
+    trim_history(st);
+    if std::mem::take(&mut st.doc.vec_stale) {
+        let uids: Vec<u64> = st.doc.layers.iter().filter(|l| l.vector.is_some()).map(|l| l.uid).collect();
+        for uid in uids {
+            render_vector_layer(app, st, uid);
+        }
+    }
+    vecedit_sync_tool(app, st);
     if app.get_show_applied_fx() { sync_applied_fx(app,st); }
     PAINT_DIRTY.with(|dirty| *dirty.borrow_mut() = None);
     write_back_mask(st);
@@ -1282,12 +1680,51 @@ fn refresh_all(app: &AppWindow, st: &mut State) {
     update_dynamic(app, st);
     compose_display(app, st);
     upload_full(app, st);
+    vecview::render_now(app, st);
     sync_panels(app, st);
     sync_anim(app, st);
+    perf::render_finished(app, st, render_t0);
+}
+
+impl State {
+    /// Les tracés d'édition ont changé (aucun effet hors d'un projet SVG).
+    fn vv_overlay_changed(&mut self, app: &AppWindow) {
+        vecview::touch_overlay(app, self);
+    }
+}
+
+/// Limite de l'historique, tous projets ouverts confondus : les étapes les plus anciennes sont
+/// oubliées d'abord, chaque projet gardant son image d'origine et ses dernières étapes.
+fn trim_history(st: &mut State) {
+    let max = editor::HISTORY_MAX.load(std::sync::atomic::Ordering::Relaxed);
+    loop {
+        let total: usize = st.doc.history_steps() + st.tabs.iter().flatten().map(|d| d.history_steps()).sum::<usize>();
+        if total <= max {
+            return;
+        }
+        let tabs = st.tabs.iter_mut().flatten();
+        let Some(doc) = std::iter::once(&mut st.doc).chain(tabs).filter(|d| d.oldest_step().is_some()).min_by_key(|d| d.oldest_step()) else { return };
+        doc.drop_oldest_step();
+    }
+}
+
+/// Outil courant adapté au mode du projet affiché (changement d'onglet, de mode).
+fn vecedit_sync_tool(app: &AppWindow, st: &mut State) {
+    let cur = app.get_current_tool();
+    let id = vecedit::tool_for_mode(st.doc.vector_mode, cur.as_str()).to_string();
+    if id != cur.as_str() {
+        set_tool(app, st, &id);
+    }
 }
 
 /// Recompose seulement un rectangle (pendant un trait de pinceau).
 fn refresh_rect(app: &AppWindow, st: &mut State, r: Option<(usize, usize, usize, usize)>) {
+    if st.vv.on {
+        return vecview::touch(app, st);
+    }
+    if direct_canvas(st) {
+        return;
+    }
     if app.global::<ToolOpts>().get_outside_canvas() { sync_outside(app, st); }
     let (w, h) = (st.doc.w, st.doc.h);
     let (dw, dh) = display_dims(st);
@@ -1535,6 +1972,8 @@ fn scaled_tool_limit(w:usize,h:usize,floor:f32)->f32 {
 }
 
 fn sync_panels(app: &AppWindow, st: &mut State) {
+    sync_repeat_item(app, st);
+    sync_render_ctl(app, st);
     let t=app.global::<ToolOpts>();
     // maximums à l'échelle de l'image active ; une valeur plus grande y est ramenée
     let side=scaled_tool_limit(st.doc.w,st.doc.h,100.0);
@@ -1611,6 +2050,7 @@ fn sync_panels(app: &AppWindow, st: &mut State) {
         d.uid.hash(&mut hs);
         for s in &d.history {
             s.label.hash(&mut hs);
+            s.repeat.hash(&mut hs);
         }
         hs.finish()
     };
@@ -1623,7 +2063,8 @@ fn sync_panels(app: &AppWindow, st: &mut State) {
             .map(|(i, s)| {
                 // première étape : l'image telle qu'ouverte ou créée (comme « Image d'origine » de Paint.NET)
                 let label = if i == 0 && s.label != "Historique vidé" { "Image d'origine" } else { s.label.as_str() };
-                HistoryItem { label: i18n::tr(label).into(), fa: history_icon(i, &s.label).to_string().into() }
+                let text = if s.repeat > 1 { format!("{} ({})", i18n::tr(label), s.repeat) } else { i18n::tr(label) };
+                HistoryItem { label: text.into(), fa: history_icon(i, &s.label).to_string().into() }
             })
             .collect();
         sync_rows(app.get_history(), items, |m| app.set_history(m));
@@ -1740,6 +2181,8 @@ fn show_new_project(app: &AppWindow, st: &State) {
 /// Termine les éditions en cours avant de changer d'image.
 fn finish_edits(app: &AppWindow, st: &mut State) {
     shape_edit::commit(app, st);
+    vecedit::commit(app, st);
+    gradlive::commit(app, st);
     if st.crop.is_some() {
         crop_action(app, st, "cancel");
     }
@@ -1839,6 +2282,23 @@ fn close_tab(app: &AppWindow, st: &mut State, i: usize) {
         return;
     }
     finish_edits(app, st);
+    // les onglets de masque α du projet fermé partent avec lui
+    let doc_at = |st: &State, j: usize| if j == st.cur { Some(st.doc.uid) } else { st.tabs[j].as_ref().map(|d| d.uid) };
+    let mask_of = |st: &State, j: usize| if j == st.cur { st.doc.mask_of } else { st.tabs[j].as_ref().and_then(|d| d.mask_of) };
+    let uid = doc_at(st, i);
+    let list: Vec<usize> = (0..st.tabs.len()).filter(|&j| j == i || mask_of(st, j).is_some_and(|m| Some(m.0) == uid)).collect();
+    // du dernier au premier : les rangs restant à fermer ne bougent pas
+    for &j in list.iter().rev() {
+        drop_tab(app, st, j);
+    }
+    st.session = Session::default();
+    forget_closed(st);
+    refresh_all(app, st);
+    app.invoke_zoom_fit();
+}
+
+/// Retire l'onglet `i` ; le dernier laisse l'application sans projet.
+fn drop_tab(app: &AppWindow, st: &mut State, i: usize) {
     if i != st.cur {
         st.tabs.remove(i);
         if i < st.cur {
@@ -1854,9 +2314,6 @@ fn close_tab(app: &AppWindow, st: &mut State, i: usize) {
         st.doc = st.tabs[ni].take().unwrap_or_else(|| Doc::new(1280, 720, [255, 255, 255, 255], &i18n::tr("Sans titre 1")));
         st.cur = ni;
     }
-    st.session = Session::default();
-    refresh_all(app, st);
-    app.invoke_zoom_fit();
 }
 
 // ------------------------------------------------------------------ journal et erreurs
@@ -1910,6 +2367,29 @@ fn platform_info() -> String {
 /// Paramètres › Infos techniques : version, appareil, rendu, accélération, calculs en
 /// arrière-plan, mémoire des images et de l'historique.
 fn refresh_tech_info(app: &AppWindow, st: &State) {
+    app.set_tech_info(tech_info(app, st).into());
+    let docs: Vec<&Doc> = std::iter::once(&st.doc).chain(st.tabs.iter().flatten()).collect();
+    let pixel_bytes: usize = docs.iter().flat_map(|d| d.layers.iter()).map(|l| l.px.len()).sum();
+    let history_bytes: usize = docs.iter().flat_map(|d| d.history_layers()).map(|p| p.len()).sum();
+    let mut rows = vec![
+        crate::DiagnosticRow { label: "MasterPaint".into(), value: format!("Rust {}", APP_VERSION).into() },
+        crate::DiagnosticRow { label: "Plateforme".into(), value: platform_info().into() },
+        crate::DiagnosticRow { label: "Fenêtre".into(), value: format!("{} × {} px · échelle {:.2}", app.window().size().width, app.window().size().height, app.window().scale_factor()).into() },
+        crate::DiagnosticRow { label: "Rendu graphique".into(), value: app.get_gpu_text().into() },
+        crate::DiagnosticRow { label: "Projets ouverts".into(), value: format!("{} onglet(s) · image active {} × {} px · {} calque(s)", docs.len(), st.doc.w, st.doc.h, st.doc.layers.len()).into() },
+        crate::DiagnosticRow { label: "Mémoire des pixels".into(), value: format!("{:.1} Mo de calques · {:.1} Mo d’historique", pixel_bytes as f64 / 1_048_576.0, history_bytes as f64 / 1_048_576.0).into() },
+        crate::DiagnosticRow { label: "Historique".into(), value: format!("{} étapes conservées par projet · limite globale {}", app.get_set_history_keep().round(), app.get_set_history_max().round()).into() },
+        crate::DiagnosticRow { label: "Sauvegarde automatique".into(), value: if app.get_set_autosave() { format!("Activée · {} min (0 = en continu)", app.get_set_autosave_min().round()) } else { "Désactivée".into() }.into() },
+        crate::DiagnosticRow { label: "Pack d’icônes".into(), value: format!("{} · {} pack(s) importé(s)", match app.get_set_icon_pack() { 0 => "MasterPaint", 1 => "PaintJS", 2 => "PhotoCraft", _ => "Importé" }, icon_packs::all_custom().as_array().map_or(0, |a| a.len())).into() },
+    ];
+    #[cfg(not(target_arch = "wasm32"))]
+    rows.push(crate::DiagnosticRow { label: "Cœurs du processeur".into(), value: std::thread::available_parallelism().map(|n| n.get().to_string()).unwrap_or_else(|_| "inconnu".into()).into() });
+    #[cfg(target_arch = "wasm32")]
+    rows.push(crate::DiagnosticRow { label: "Cœurs du processeur".into(), value: web_sys::window().map(|w| w.navigator().hardware_concurrency().to_string()).unwrap_or_else(|| "inconnu".into()).into() });
+    app.set_diagnostic_rows(ModelRc::new(VecModel::from(rows)));
+}
+
+fn tech_info(app: &AppWindow, st: &State) -> String {
     let docs: Vec<&Doc> = std::iter::once(&st.doc).chain(st.tabs.iter().flatten()).collect();
     let mb = |b: usize| b as f64 / 1_048_576.0;
     let mut pixels = 0usize;
@@ -1939,7 +2419,7 @@ fn refresh_tech_info(app: &AppWindow, st: &State) {
             "sur place (workers indisponibles)".to_string()
         },
     );
-    let info = i18n::tr_format!("{}\nRendu de l'interface : Slint (Rust) — fenêtre {} × {} px, échelle {:.2}\nAccélération : {}\nProcesseur : {cores} cœurs ; calculs lourds : {background}\nImages ouvertes : {} onglet(s), {:.0} Mo de pixels ; historique : {:.0} Mo (au plus {} étapes)\nImage active : {} × {} px, {} calque(s), zoom {:.0} %, affichage {}",
+    i18n::tr_format!("{}\nRendu de l'interface : Slint (Rust) — fenêtre {} × {} px, échelle {:.2}\nAccélération : {}\nProcesseur : {cores} cœurs ; calculs lourds : {background}\nImages ouvertes : {} onglet(s), {:.0} Mo de pixels ; historique : {:.0} Mo (au plus {} étapes)\nImage active : {} × {} px, {} calque(s), zoom {:.0} %, affichage {}",
         platform_info(),
         app.window().size().width,
         app.window().size().height,
@@ -1954,8 +2434,7 @@ fn refresh_tech_info(app: &AppWindow, st: &State) {
         st.doc.layers.len(),
         app.get_zoom() * 100.0,
         if st.lazy { i18n::tr_format!("par tuiles visibles (pas {})", st.ds) } else if st.ds > 1 { i18n::tr_format!("réduit (pas {})", st.ds) } else { "pleine résolution".to_string() },
-    );
-    app.set_tech_info(info.into());
+    )
 }
 
 /// Fenêtre d'erreur : message, détails (appareil, contexte, journal) et « Signaler l'erreur »
@@ -1982,6 +2461,10 @@ fn show_error(app: &AppWindow, context: &str, message: &str) {
 
 /// Fenêtre de choix ouverte (boutons de commande façon Paint.NET, textes de paint.js).
 enum Task {
+    /// ralentissements observés : proposer d'envoyer un rapport
+    PerfReport,
+    /// rendu trop lent sur ce projet : proposer la réduction (projet, réduction)
+    RenderOffer(u64, usize),
     /// onglet modifié à fermer : Enregistrer / Ne pas enregistrer / Annuler
     CloseTab(usize),
     /// fermeture de l'application : onglets modifiés (vignettes cliquables)
@@ -1996,6 +2479,35 @@ enum Task {
     PasteWhere(Vec<(Clip, &'static str, Option<String>)>),
     /// peindre sur un calque texte : Pixelliser / Annuler
     Rasterize(u64),
+    /// fichier SVG ouvert : nom, contenu, feuille de symboles (grille proposée)
+    SvgOpen(String, Vec<u8>, bool),
+    /// pack d'icônes incomplet choisi : remplacer les manquantes par MasterPaint ou un équivalent
+    IconFallback,
+}
+
+/// Pack d'icônes incomplet : demander par quoi remplacer les icônes qui lui manquent.
+fn ask_icon_fallback(app: &AppWindow) {
+    let missing = icon_packs::missing_count();
+    let Some(state) = APP_STATE.with(|s| s.borrow().clone()) else { return };
+    let Ok(mut st) = state.try_borrow_mut() else { return };
+    if missing == 0 || st.task.is_some() {
+        return;
+    }
+    st.task = Some(Task::IconFallback);
+    drop(st);
+    let intro = i18n::tr_format!("Ce pack n'a pas d'équivalent pour {missing} icônes de MasterPaint. Par quoi les remplacer ?");
+    show_task(
+        app,
+        "Icônes manquantes",
+        &intro,
+        "Modifiable ensuite dans Paramètres › Icônes.",
+        "",
+        &[
+            ("Icônes MasterPaint", "Le dessin d'origine de MasterPaint, toujours disponible."),
+            ("Équivalents Font Awesome", "Icônes simples d'une seule couleur, plus proches de certains packs. MasterPaint quand il n'y en a pas."),
+        ],
+        Vec::new(),
+    );
 }
 
 fn show_task(app: &AppWindow, title: &str, intro: &str, info: &str, header: &str, commands: &[(&str, &str)], thumbs: Vec<TaskThumb>) {
@@ -2111,6 +2623,29 @@ fn task_result(app: &AppWindow, state: &Shared, r: i32) {
     app.set_show_task(false);
     let Some(task) = state.borrow_mut().task.take() else { return };
     match task {
+        Task::PerfReport => {
+            if r == 0 {
+                perf::open_report(app, &state.borrow());
+            }
+        }
+        Task::IconFallback => {
+            if r == 0 || r == 1 {
+                app.set_set_missing_icon_fallback(r);
+                app.invoke_icon_pack_action("fallback".into());
+            }
+        }
+        Task::RenderOffer(uid, div) => {
+            if r == 1 {
+                // pour de bon : le réglage rejoint les Paramètres et le ruban
+                app.set_set_render_ctl(true);
+                app.set_set_render_default(div.trailing_zeros() as i32);
+                app.invoke_settings_changed();
+            }
+            let mut st = state.borrow_mut();
+            if r <= 1 && st.doc.uid == uid {
+                render_set(app, &mut st, div);
+            }
+        }
         Task::CloseTab(i) => match r {
             0 => {
                 if save_tab(app, state, i) {
@@ -2188,6 +2723,23 @@ fn task_result(app: &AppWindow, state: &Shared, r: i32) {
                 }
                 1 => paste_clips_here(app, &mut st, clips),
                 _ => {}
+            }
+        }
+        Task::SvgOpen(name, bytes, sprite) => {
+            let mut st = state.borrow_mut();
+            // mêmes choix que la fenêtre (la grille n'est proposée qu'aux feuilles de symboles,
+            // « Dans le projet en cours » qu'avec un projet ouvert)
+            let mut choices: Vec<Option<(svg_import::SvgMode, bool)>> = Vec::new();
+            if sprite {
+                choices.push(Some((svg_import::SvgMode::Sprite, false)));
+            }
+            choices.push(Some((svg_import::SvgMode::Split, false)));
+            choices.push(Some((svg_import::SvgMode::Single, false)));
+            if !st.empty {
+                choices.push(Some((svg_import::SvgMode::Split, true)));
+            }
+            if let Some(Some((mode, here))) = usize::try_from(r).ok().and_then(|i| choices.get(i).cloned()) {
+                open_svg(app, &mut st, &name, &bytes, mode, here);
             }
         }
         Task::Rasterize(uid) => {
@@ -2283,10 +2835,18 @@ fn header_background(display: &[u8], w: usize, h: usize) -> Option<Image> {
     Some(to_image(&out, tw, th))
 }
 
+thread_local! {
+    /// l'image de l'aperçu du haut est tenue à jour
+    static HEADER_SHOWN: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 fn sync_tabs(app: &AppWindow, st: &mut State) {
     // aucun projet : pas d'onglet
     if st.empty {
+        app.set_active_tab_index(-1);
         sync_rows(app.get_tabs(), Vec::new(), |m| app.set_tabs(m));
+        // l'aperçu flouté ne doit pas survivre au dernier projet fermé
+        app.set_header_bg(Image::default());
         return;
     }
     // image vue en entier : affichage, ou aperçu de fond pour une grande image (mode lazy)
@@ -2299,7 +2859,9 @@ fn sync_tabs(app: &AppWindow, st: &mut State) {
     // fond du haut (onglets, barre translucide) seulement s'il est affiché ; vignette de l'onglet
     // actif tirée de l'affichage sans le recopier (une copie entière par rafraîchissement
     // coûtait cher sur les grandes images)
-    if app.get_set_header_preview() || app.get_set_glass() {
+    let header = app.get_set_header_preview();
+    HEADER_SHOWN.with(|h| h.set(header));
+    if header {
         if let Some(img) = header_background(ov, dw, dh) {
             app.set_header_bg(img);
         }
@@ -2321,7 +2883,14 @@ fn sync_tabs(app: &AppWindow, st: &mut State) {
                 match st.tab_thumbs.get(&doc.uid) {
                     Some((k, img)) if *k == key => img.clone(),
                     _ => {
-                        let img = px_thumb(&doc.flatten(), doc.w, doc.h, 68, 47);
+                        // composée à l'échelle de la vignette (×2), pas en pleine résolution :
+                        // des centaines de fois moins de calcul pour une grande image (restauration
+                        // de plusieurs projets au démarrage)
+                        let ds = (doc.w / 136).max(doc.h / 94).max(1);
+                        let (sw, sh) = (doc.w.div_ceil(ds), doc.h.div_ceil(ds));
+                        let mut small = vec![0u8; sw * sh * 4];
+                        doc.composite_scaled(&mut small, ds, (0, 0, sw, sh), false);
+                        let img = px_thumb(&small, sw, sh, 68, 47);
                         new_thumbs.push((doc.uid, key, img.clone()));
                         img
                     }
@@ -2359,6 +2928,7 @@ fn sync_tabs(app: &AppWindow, st: &mut State) {
         })
         .collect();
     sync_rows(app.get_tabs(), tabs, |m| app.set_tabs(m));
+    app.set_active_tab_index(st.cur as i32);
 }
 
 fn open_file(app: &AppWindow, state: &Shared) {
@@ -2367,16 +2937,18 @@ fn open_file(app: &AppWindow, state: &Shared) {
     #[cfg(target_arch = "wasm32")]
     let task = async move {
         // web : sélecteur de fichier du navigateur
-        let Some((name, bytes)) = web::pick_file(&format!("image/*,.illu,.svg,{}", raw_accept())).await else { return };
+        let Some((name, bytes)) = web::pick_file(&format!("image/*,.illu,.svg,.pdn,{}", raw_accept())).await else { return };
         let Some(app) = weak.upgrade() else { return };
         load_bytes(&app, &state, &name, bytes);
     };
     #[cfg(not(target_arch = "wasm32"))]
     let task = async move {
-        let all: Vec<&str> = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "illu", "svg"].into_iter().chain(raw::EXTENSIONS.iter().copied()).collect();
+        let all: Vec<&str> = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "illu", "svg", "pdn"].into_iter().chain(raw::EXTENSIONS.iter().copied()).collect();
         let Some(file) = rfd::AsyncFileDialog::new()
             .add_filter(i18n::tr("Images, photos RAW et projets MasterPaint"), &all)
             .add_filter(i18n::tr("Projet MasterPaint (.illu)"), &["illu"])
+            .add_filter(i18n::tr("Paint.NET (.pdn)"), &["pdn"])
+            .add_filter(i18n::tr("Dessin SVG"), &["svg"])
             .add_filter(i18n::tr("Photos RAW"), raw::EXTENSIONS)
             .pick_file()
             .await
@@ -2402,7 +2974,7 @@ fn load_bytes(app: &AppWindow, state: &Shared, name: &str, bytes: Vec<u8>) {
 
 /// Encode l'image aplatie (PNG, JPEG, WebP sans perte, BMP selon l'extension).
 fn encode(doc: &Doc, ext: &str) -> Option<Vec<u8>> {
-    let flat = doc.flatten();
+    let flat = doc.flatten_final();
     let img = image::RgbaImage::from_raw(doc.w as u32, doc.h as u32, flat)?;
     let fmt = match ext {
         "jpg" | "jpeg" => image::ImageFormat::Jpeg,
@@ -2458,7 +3030,7 @@ fn reduce_bits(px: &mut [u8], bits: &str) {
 
 /// Image aplatie encodée au format demandé (qualité JPEG 1..100, profondeur de couleur).
 fn encode_with(doc: &Doc, fmt: &str, quality: u8, bits: &str) -> Option<Vec<u8>> {
-    let mut flat = doc.flatten();
+    let mut flat = doc.flatten_final();
     reduce_bits(&mut flat, bits);
     let img = image::RgbaImage::from_raw(doc.w as u32, doc.h as u32, flat)?;
     let mut out = std::io::Cursor::new(Vec::new());
@@ -2845,7 +3417,7 @@ fn download_url(kind: &str) -> String {
     // noms fixes (sans version) : rust/build-all.sh remplace le fichier à chaque compilation
     let file = match kind {
         "windows-exe" => "MasterPaint-windows-x64.exe",
-        // installeur NSIS de la version Rust (rust/desktop/installer/masterpaint.nsi)
+        // installeur NSIS de la version Rust (rust/packaging/installer/masterpaint.nsi)
         "windows-setup" => "MasterPaint-windows-setup.exe",
         "linux-tar" => "MasterPaint-linux-x86_64.tar.gz",
         "linux-flatpak" => "MasterPaint.flatpak",
@@ -2871,6 +3443,7 @@ fn download_url(kind: &str) -> String {
 // ------------------------------------------------------------------ suppression du fond (IA)
 
 /// Plume : adoucit le canal alpha (deux passes de flou boîte, rayon ≤ 8 comme la version web).
+#[cfg(target_arch = "wasm32")]
 fn feather_alpha(px: &mut [u8], w: usize, h: usize, radius: usize) {
     let rad = radius.min(8);
     if rad == 0 || w == 0 || h == 0 {
@@ -2914,6 +3487,7 @@ fn feather_alpha(px: &mut [u8], w: usize, h: usize, radius: usize) {
 }
 
 /// Texte et avancement (0–100) d'une étape de la bibliothèque IA (clés de @imgly/background-removal).
+#[cfg(target_arch = "wasm32")]
 fn rmbg_step(key: &str, cur: f64, total: f64) -> (String, f32) {
     let k = key.to_lowercase();
     let has = |s: &str| k.contains(s);
@@ -3306,11 +3880,15 @@ fn paste_pixels(app: &AppWindow, st: &mut State, c: &Clip, label: &str, name: Op
 /// Fichier déposé sur la fenêtre : projet .illu ouvert directement ; image : choix entre un
 /// nouvel onglet et un nouveau calque du document courant (comme la version web).
 fn dropped_file(app: &AppWindow, st: &mut State, name: String, bytes: Vec<u8>) {
+    // Mode Photo Pro ouvert : la photo déposée rejoint sa pellicule
+    if app.get_pm_open() && !is_project_file(&name) {
+        return pm_add(app, st, vec![(name, bytes)]);
+    }
     if open_animated_gif(app, st, &name, &bytes) {
         return;
     }
     // aucun projet ouvert : pas de « nouveau calque » possible, l'image est ouverte
-    if st.empty || raw::is_raw(&name) || name.to_lowercase().ends_with(".illu") {
+    if st.empty || raw::is_raw(&name) || is_project_file(&name) {
         return start_load(app, st, LoadTo::Tabs, vec![(name, bytes)]);
     }
     start_load(app, st, LoadTo::Drop, vec![(name, bytes)]);
@@ -3369,10 +3947,39 @@ fn run_effect(app: &AppWindow, st: &mut State, name: &str, params: &[f32], label
     st.last_effect_vals = None;
 }
 
+thread_local! {
+    /// libellé affiché de l'entrée Répéter du menu Effets (vide : celui d'origine)
+    static REPEAT_LABEL: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// Entrée Répéter du menu Effets : elle nomme le dernier effet utilisé.
+fn sync_repeat_item(app: &AppWindow, st: &State) {
+    let label = match &st.last_effect {
+        Some((_, _, l)) => i18n::tr_format!("Répéter {}", i18n::tr(l).trim_end_matches('…').trim_end()),
+        None => i18n::tr("Répéter le dernier effet"),
+    };
+    if REPEAT_LABEL.with(|r| *r.borrow() == label) {
+        return;
+    }
+    REPEAT_LABEL.with(|r| r.borrow_mut().clone_from(&label));
+    let menus = app.get_menus();
+    for m in (0..menus.row_count()).filter_map(|i| menus.row_data(i)) {
+        for j in 0..m.items.row_count() {
+            let Some(mut it) = m.items.row_data(j) else { continue };
+            if it.action.contains("illuRepeatLastEffect") {
+                it.label = label.as_str().into();
+                m.items.set_row_data(j, it);
+            }
+        }
+    }
+}
+
 /// Répéter (Ctrl+F, menu) : dernier effet avec tous les réglages de sa fenêtre (aberration
 /// chromatique comprise) et sa portée.
 fn repeat_effect(app: &AppWindow, st: &mut State) {
-    let Some((n, p, l)) = st.last_effect.clone() else { return };
+    let Some((n, p, l)) = st.last_effect.clone() else {
+        return status(app, "Aucun effet à répéter : appliquez d'abord un effet");
+    };
     match st.last_effect_vals.clone() {
         Some((vals, scope)) => run_effect_with(app, st, &n, &p, &l, vals, scope),
         None => run_effect(app, st, &n, &p, &l),
@@ -3403,6 +4010,20 @@ fn effect_targets(st: &State, scope: i32, active: Option<editor::Px>, bases: &[(
 
 #[allow(clippy::too_many_arguments)]
 fn run_effect_with(app: &AppWindow, st: &mut State, name: &str, params: &[f32], label: &str, vals: effects::Vals, scope: i32) {
+    // Auto-niveau : réglage automatique du Mode Photo Pro (scène, exposition, contraste, blancs /
+    // noirs, dominante) appliqué par Camera Raw, au lieu d'un simple étirement d'histogramme
+    if name == "autolevel" {
+        let (w, h) = (st.doc.w, st.doc.h);
+        let px = st.doc.layer().px.clone();
+        if px.len() == w * h * 4 {
+            let (p, note) = scene::auto_camera_raw(&px, w, h);
+            // libellé fixe (pas celui, traduit, du menu) : l'historique regroupe les répétitions
+            let _ = label;
+            run_effect_with(app, st, "cameraraw", &p, "Auto-niveau", vals, scope);
+            status(app, note);
+            return;
+        }
+    }
     // calque texte : effet ajouté à sa pile (non destructif)
     if scope != 2 && vector_layer_effect(app, st, name, params, effects::post_chromatic(name, &vals), label) {
         return;
@@ -3565,6 +4186,11 @@ struct EffectSession {
     /// zone où le calque affiché diffère de l'original (aperçu de la zone visible) ; `None` :
     /// tout le calque. Un nouvel aperçu ne recompose que cette zone et la sienne.
     shown_rect: Option<(usize, usize, usize, usize)>,
+    /// l'aperçu affiché est l'image réduite elle-même (voir `apply_direct_preview`) : la toile ne
+    /// doit pas être recomposée depuis les calques tant qu'il est là
+    direct: bool,
+    /// calques réduits pour cet aperçu (pas, calques)
+    reduced_layers: Option<(usize, Vec<editor::Layer>)>,
     /// calque (et sélection) réduits pour l'aperçu réduit : (pas, pixels, sélection, l, h)
     reduced: Option<(usize, std::sync::Arc<Vec<u8>>, Option<Vec<u8>>, usize, usize)>,
     /// portée « Tous les calques » : pixels d'origine des autres calques (identifiant, pixels),
@@ -3830,6 +4456,8 @@ fn apply_preview(app: &AppWindow, st: &mut State, gen: u64, px: Option<Vec<u8>>,
     if let (Some(px), true) = (px, fresh) {
         es.shown = gen;
         es.lod = lod;
+        // retour d'un aperçu réduit (zoom avant) : toute la toile est à reposer
+        let was_direct = std::mem::take(&mut es.direct);
         // zone visible seulement : recomposer l'ancienne zone d'aperçu et la nouvelle, pas
         // toute l'image (le reste du calque est resté l'original)
         let cur = if lod > 1 { None } else { region };
@@ -3840,7 +4468,11 @@ fn apply_preview(app: &AppWindow, st: &mut State, gen: u64, px: Option<Vec<u8>>,
         };
         es.shown_rect = cur;
         st.doc.layer_mut().px = px.into();
-        refresh_rect(app, st, Some(dirty));
+        if was_direct {
+            redraw_canvas(app, st);
+        } else {
+            refresh_rect(app, st, Some(dirty));
+        }
         // aperçu réduit gardé pendant les réglages : la pleine résolution n'est calculée qu'à OK
         app.set_effect_info(SharedString::from(if lod > 1 { i18n::tr_format!("Aperçu réduit : {ms:.0} ms — pleine résolution à la validation") } else { i18n::tr_format!("Aperçu : {ms:.0} ms") }));
     }
@@ -3875,9 +4507,10 @@ fn open_effect_at(app: &AppWindow, st: &mut State, id: &str, label: &str, select
             let kind = st.doc.layer().dynamic.as_ref().unwrap()[i].0.clone();
             if effects::dialog(id).is_none() {
                 st.doc.layer_mut().dynamic.as_mut().unwrap().remove(i);
-                st.doc.layer_mut().dyn_key = None;
+                let uid = st.doc.layer().uid;
+                dyn_invalidate(st, uid);
                 st.doc.layer_mut().dyn_cache = None;
-                st.doc.layer_mut().dyn_serial = 0;
+                st.doc.layer_mut().dyn_low = None;
                 st.dyn_pending_edit = None;
                 st.doc.commit("Supprimer");
                 refresh_all(app, st);
@@ -3905,7 +4538,10 @@ fn open_effect_at(app: &AppWindow, st: &mut State, id: &str, label: &str, select
             }
         }
         Some((title, fields)) => {
-            let vals = st.effect_memory.get(id).cloned().unwrap_or_else(|| effects::Vals::defaults(fields));
+            let mut vals = effects::Vals::defaults(fields);
+            if let Some(saved) = st.effect_memory.get(id) {
+                vals.0.extend(saved.0.clone());
+            }
             let mut es = EffectSession {
                 id: id.into(),
                 title: title.into(),
@@ -3924,6 +4560,8 @@ fn open_effect_at(app: &AppWindow, st: &mut State, id: &str, label: &str, select
                 partial: false,
                 lod: 1,
                 shown_rect: Some((0, 0, 0, 0)),
+                direct: false,
+                reduced_layers: None,
                 reduced: None,
                 others: Vec::new(),
             };
@@ -3932,6 +4570,7 @@ fn open_effect_at(app: &AppWindow, st: &mut State, id: &str, label: &str, select
             app.set_effect_fields(ModelRc::new(VecModel::from(effect_rows(app, &es))));
             app.set_show_effect(true);
             st.effect = Some(es);
+            vecview::sync_mode(app, st);
             // la fenêtre s'affiche d'abord ; le premier aperçu (calcul lourd, surtout dans le
             // navigateur) suit juste après pour ne pas retarder son ouverture
             let weak = app.as_weak();
@@ -3956,10 +4595,95 @@ fn preview_effect(app: &AppWindow, st: &mut State) {
     preview_effect_at(app, st, false);
 }
 
-/// Au-delà de ce nombre de pixels, une grande image vue de loin a d'abord un aperçu réduit.
-const LOD_MIN: usize = 3_000_000;
+/// Au-delà de ce nombre de pixels, une image vue de loin a un aperçu réduit.
+const LOD_MIN: usize = 1_500_000;
+
+/// Pas de l'aperçu d'un effet : un pixel d'aperçu par pixel de l'écran, rien de plus (une photo
+/// de 5472 px vue à 19 % n'occupe que 1040 px à l'écran).
+fn preview_lod(app: &AppWindow, w: usize, h: usize) -> usize {
+    if w * h < LOD_MIN {
+        return 1;
+    }
+    let eff = app.get_zoom() * app.window().scale_factor();
+    ((1.0 / eff.max(0.01)).floor() as usize).clamp(1, 64)
+}
+
+/// La toile affiche une image réduite posée directement (aperçu d'effet, réglage d'un dégradé) : ne
+/// pas la recomposer depuis les calques tant qu'elle est là.
+fn direct_canvas(st: &State) -> bool {
+    st.effect.as_ref().is_some_and(|e| e.direct) || st.grad_live.as_ref().is_some_and(|g| g.direct)
+}
+
+/// Calques du document réduits à sw × sh, sans le contenu du calque actif (l'aperçu le remplace).
+fn reduced_layers(doc: &Doc, sw: usize, sh: usize) -> Vec<editor::Layer> {
+    let (w, h, active) = (doc.w, doc.h, doc.active);
+    doc.layers
+        .iter()
+        .enumerate()
+        .map(|(i, l)| {
+            let mut c = l.clone();
+            c.cels.clear();
+            c.vector = None;
+            c.dyn_cache = None;
+            c.dyn_low = None;
+            c.px = if i == active || l.group { vec![0u8; sw * sh * 4].into() } else { photo::crop_resize::<u8, 4>(&l.px, w, (0, 0, w, h), sw, sh).into() };
+            c.mask = l.mask.as_ref().filter(|m| m.len() == w * h).map(|m| photo::crop_resize::<u8, 1>(m, w, (0, 0, w, h), sw, sh).into());
+            c
+        })
+        .collect()
+}
+
+/// Compose l'aperçu du calque actif avec les autres calques réduits et le pose sur la toile.
+fn show_reduced(app: &AppWindow, st: &mut State, layers: &mut [editor::Layer], px: Vec<u8>, sw: usize, sh: usize) {
+    let active = st.doc.active;
+    layers[active].px = px.into();
+    let shown = if layers.len() == 1 && layers[0].opacity >= 1.0 && layers[0].mask.is_none() {
+        None
+    } else {
+        let mut d = Doc::scratch(sw, sh, layers.to_vec());
+        d.active = active;
+        Some(d.flatten())
+    };
+    let img = to_image(shown.as_deref().unwrap_or(&layers[active].px), sw, sh);
+    st.tile_index.clear();
+    st.tile_ok.clear();
+    st.tiles.set_vec(Vec::new());
+    app.set_canvas_image(img);
+}
+
+/// Aperçu réduit prêt : composé avec les autres calques à sa taille et affiché directement. Les
+/// calques ne sont pas touchés : aucun agrandissement à la taille de l'image, aucune recomposition
+/// de ses millions de pixels.
+fn apply_direct_preview(app: &AppWindow, st: &mut State, gen: u64, small: Option<Vec<u8>>, ms: f64, lod: usize, (sw, sh): (usize, usize)) {
+    let Some(es) = st.effect.as_mut() else { return };
+    if gen == es.want {
+        es.running = false;
+    }
+    let fresh = gen > es.shown && gen >= es.first;
+    let queued = std::mem::take(&mut es.queued) && !es.running;
+    if let (Some(px), true) = (small, fresh) {
+        es.shown = gen;
+        es.lod = lod;
+        es.shown_rect = None;
+        es.direct = true;
+        // autres calques réduits une fois pour toutes, le temps de la fenêtre
+        if es.reduced_layers.as_ref().is_none_or(|r| r.0 != lod) {
+            es.reduced_layers = Some((lod, reduced_layers(&st.doc, sw, sh)));
+        }
+        let Some((_, mut layers)) = es.reduced_layers.take() else { return };
+        show_reduced(app, st, &mut layers, px, sw, sh);
+        if let Some(es) = st.effect.as_mut() {
+            es.reduced_layers = Some((lod, layers));
+        }
+        app.set_effect_info(SharedString::from(i18n::tr_format!("Aperçu à la taille affichée : {ms:.0} ms — pleine résolution à la validation")));
+    }
+    if queued {
+        preview_effect(app, st);
+    }
+}
 
 fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
+    vecview::sync_mode(app, st);
     let sec = rgba(app.get_secondary_color());
     let secondary = (sec[0] as u32) << 16 | (sec[1] as u32) << 8 | sec[2] as u32;
     // portée « Calque actif » : l'effet ignore la sélection
@@ -3994,7 +4718,9 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
     let region = visible_region(app, w, h, name, &p);
     // pas réduit choisi pour garder les réglages de grille exacts (carreaux de Pixeliser…) :
     // l'aperçu a les mêmes proportions que le rendu final
-    let lod = if full || region.is_some() || w * h < LOD_MIN || ds < 2 { 1 } else { effects::preview_step(es.fields, &es.vals, ds) };
+    let _ = ds;
+    let want = preview_lod(app, w, h);
+    let lod = if full || region.is_some() || want < 2 { 1 } else { effects::preview_step(es.fields, &es.vals, want) };
     let (name, p, vals) = if lod > 1 {
         let v = effects::scale_px(es.fields, &es.vals, 1.0 / lod as f32);
         match effects::params(&es.id, &v, secondary, es.seed) {
@@ -4030,7 +4756,17 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
     let post = effects::post_chromatic(name, &vals);
     let job = preview_job(name, src.clone(), sw, sh, &p, post.clone(), &vals, secondary);
     let t0 = now_ms();
+    // aperçu réduit : affiché tel quel, à sa taille ; le calque garde ses pixels jusqu'à OK
+    let direct = lod > 1 && !all_layers && !st.doc.layers.iter().any(|l| l.dynamic.is_some() || l.off.is_some());
     background::spawn(app, st, job, move |app, st, out| {
+        if direct {
+            let small = out.map(|mut o| {
+                mode.constrain(&mut o);
+                blend_selection(&mut o, &src, ssel.as_deref());
+                o
+            });
+            return apply_direct_preview(app, st, gen, small, now_ms() - t0, lod, (sw, sh));
+        }
         let px = out.map(|o| finish_preview(o, &src, ssel.as_deref(), region, lod, &base, (w, h), (sw, sh), mode));
         apply_preview(app, st, gen, px, now_ms() - t0, lod, region);
     });
@@ -4249,7 +4985,10 @@ fn view_moved(app: &AppWindow) {
         t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(180), move || {
             let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
             let Ok(mut st) = state.try_borrow_mut() else { return };
-            if st.effect.as_ref().is_some_and(|e| e.partial) {
+            // zone visible changée, ou zoom avant : l'aperçu réduit n'a plus assez de pixels
+            let (w, h) = (st.doc.w, st.doc.h);
+            let want = preview_lod(&app, w, h);
+            if st.effect.as_ref().is_some_and(|e| e.partial || e.lod > want) {
                 preview_effect(&app, &mut st);
             }
         })
@@ -4559,6 +5298,8 @@ fn show_handles(app: &AppWindow, st: &State) {
                 shape_edit::show(app, ed);
             }
         }
+        // ses 3 points restent affichés (voir gradlive::show)
+        None if st.grad_live.is_some() => {}
         None => {
             app.set_handles(ModelRc::default());
             if !st.session.tracing() {
@@ -4787,7 +5528,7 @@ fn render_text(app: &AppWindow, st: &mut State) -> Option<usize> {
             let font_name = st.fonts.entries.get(fi).map(|e| e.name.clone()).unwrap_or_default();
             let l = &mut st.doc.layers[k];
             if let Some(o) = l.vector.as_mut().and_then(|v| v.text_at_mut(obj)) {
-                *o = vector::TextObj { text: content, font: font_name, size: t.get_font_size(), color, align: t.get_text_align(), antialias: t.get_antialias(), x: tx, y: ty };
+                *o = vector::TextObj { text: content, font: font_name, size: t.get_font_size(), color, align: t.get_text_align(), antialias: t.get_antialias(), x: tx, y: ty, m: o.m };
             }
             // fond : les autres textes du calque (rendus sans effets au début de la saisie)
             let lay = &mut l.px;
@@ -4945,6 +5686,7 @@ fn begin_text(app: &AppWindow, st: &mut State, x: f32, y: f32) {
                 antialias: t.get_antialias(),
                 x,
                 y,
+                m: None,
             };
             let l = &mut st.doc.layers[k];
             let Some(v) = l.vector.as_mut() else { return };
@@ -4977,6 +5719,7 @@ fn begin_text(app: &AppWindow, st: &mut State, x: f32, y: f32) {
             antialias: true,
             x,
             y,
+            m: None,
         })));
         l.px = vec![0u8; w * h * 4].into();
         let uid = l.uid;
@@ -5116,7 +5859,7 @@ fn dyn_preview_end(app: &AppWindow, st: &mut State, keep: Option<(String, &str)>
     let Some(k) = st.doc.layers.iter().position(|l| l.uid == d.uid) else { return true };
     // dernier rendu peut-être réduit : recalcul en pleine résolution
     st.dyn_draft = None;
-    st.doc.layers[k].dyn_key = None;
+    dyn_invalidate(st, d.uid);
     let restore = keep.is_none();
     let keep = keep.map(|(kind,label)| (kind,i18n::tr(label)));
     let mut list = d.orig;
@@ -5140,6 +5883,7 @@ fn dyn_preview_end(app: &AppWindow, st: &mut State, keep: Option<(String, &str)>
     st.doc.layers[k].dynamic = Some(list);
     if restore {
         st.doc.layers[k].dyn_cache = d.cache;
+        st.doc.layers[k].dyn_low = None;
         st.doc.layers[k].dyn_key = None;
         st.doc.layers[k].dyn_serial = 0;
     }
@@ -5158,7 +5902,7 @@ fn remove_dynamic_effect(app: &AppWindow, st: &mut State) {
     if let Some((uid,i))=edit {
         if let Some(layer)=st.doc.layers.iter_mut().find(|l|l.uid==uid) {
             if let Some(stack)=layer.dynamic.as_mut() { if i<stack.len() { stack.remove(i); } }
-            layer.dyn_key=None;layer.dyn_cache=None;layer.dyn_serial=0;
+            layer.dyn_key=None;layer.dyn_cache=None;layer.dyn_low=None;layer.dyn_serial=0;
             st.doc.commit("Supprimer");refresh_all(app,st);
         }
     }
@@ -5428,10 +6172,15 @@ fn vector_move_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f3
 /// Pot de peinture sur un calque vectoriel : l'objet sous le pointeur (le plus haut) prend la
 /// couleur `c` (opacité de la forme gardée), étape d'historique.
 fn vector_recolor(app: &AppWindow, st: &mut State, x: f32, y: f32, c: [u8; 4]) {
+    // projet SVG : l'objet visible sous le pointeur, quel que soit son calque
+    let picked = if st.doc.vector_mode { vecedit::pick(st, app.get_zoom(), x, y) } else { None };
+    if let Some((k, _)) = picked {
+        st.doc.active = k;
+    }
     let k = st.doc.active;
     let uid = st.doc.layers[k].uid;
     let Some(mut v) = st.doc.layers[k].vector.as_deref().cloned() else { return };
-    let Some(i) = v.hit_index(&mut st.fonts, x, y) else {
+    let Some(i) = picked.map(|p| p.1).or_else(|| if st.doc.vector_mode { None } else { v.hit_index(&mut st.fonts, x, y) }) else {
         status(app, "Cliquez sur une forme ou un texte du calque vectoriel pour le recolorer");
         return;
     };
@@ -5439,12 +6188,12 @@ fn vector_recolor(app: &AppWindow, st: &mut State, x: f32, y: f32, c: [u8; 4]) {
     // contour seul se remplit, son trait reste) ; texte : sa couleur
     let label = match v.objects.get_mut(i) {
         Some(vector::Obj::Shape(s)) => {
-            let d = (s.sdf())(x, y);
-            let on_edge = d.abs() <= s.width.max(1.0) / 2.0 + 2.0;
+            let (inside, on_edge) = s.hit_parts(x, y, 2.0);
             if s.is_stroke_only() || (on_edge && s.style != ShapeStyle::Fill) {
                 s.color = [c[0], c[1], c[2], s.color[3]];
                 "Couleur du trait"
-            } else if d < 0.0 {
+            } else if inside {
+                s.grad = None;
                 if s.style == ShapeStyle::Fill {
                     s.color = [c[0], c[1], c[2], s.color[3]];
                     s.fill = None;
@@ -5507,7 +6256,8 @@ fn layer_op(app: &AppWindow, st: &mut State, a: &str) {
             let l = st.doc.layer_mut();
             if l.dynamic.is_none() { return; }
             l.dynamic_mode = if a == "dynamic-everywhere" { 2 } else { 0 };
-            l.dyn_key = None;
+            let uid = l.uid;
+            dyn_invalidate(st, uid);
             Ok("Filtre dynamique")
         }
         "dynamic-mask-view" => {
@@ -6103,9 +6853,15 @@ fn applied_fx_action(app: &AppWindow,st:&mut State,i:usize,what:&str) {
         "delete"=>{stack.remove(i);},
         _=>return,
     }
-    st.doc.layer_mut().dyn_key=None;
+    // pile changée : un calcul encore en cours (lancé avec l'ancienne pile) est ignoré à son
+    // retour (nouveau numéro) et le nouveau calcul part tout de suite. Avant, ce résultat
+    // périmé était accepté : l'effet supprimé réapparaissait, même pile vide (bureau surtout,
+    // les effets du menu y étant calculés dans un autre fil).
+    let uid=st.doc.layer().uid;
+    dyn_invalidate(st,uid);
     if st.doc.layer().dynamic.as_ref().is_some_and(|s|s.is_empty()) {
-        st.doc.layer_mut().dyn_cache=None;st.doc.layer_mut().dyn_serial=0;
+        st.doc.layer_mut().dyn_cache=None;
+        st.doc.layer_mut().dyn_low=None;
     }
     st.doc.commit("Effets appliqués");refresh_all(app,st);
 }
@@ -6242,10 +6998,13 @@ fn set_tool(app: &AppWindow, st: &mut State, id: &str) {
         }
         _ => {}
     }
+    let id = vecedit::tool_for_mode(st.doc.vector_mode, id);
     st.session.cancel(&mut st.doc);
     drop_floating(app, st);
     app.set_overlay_path(SharedString::default());
     shape_edit::commit(app, st);
+    vecedit::commit(app, st);
+    gradlive::commit(app, st);
     commit_text(app, st);
     // taille du crayon gardée à part de celle du pinceau / de la gomme (crayon : 1 px au départ)
     let t = app.global::<ToolOpts>();
@@ -6262,16 +7021,14 @@ fn set_tool(app: &AppWindow, st: &mut State, id: &str) {
     app.set_current_tool(SharedString::from(id));
     prepare_handles(app, st);
     let tools = app.global::<Generated>().get_tools();
+    let svg_tools = app.global::<SvgTools>().get_tools();
     // structure anonyme vue comme un tuple, champs par ordre alphabétique : (h, icon, id, title, w, x, y)
-    let title = (0..tools.row_count()).filter_map(|i| tools.row_data(i)).find(|t| t.2 == id).map(|t| t.3).unwrap_or_default();
+    let info = if st.doc.vector_mode { svg_tools.iter().find(|t| t.2 == id) } else { None }.or_else(|| tools.iter().find(|t| t.2 == id));
+    let title = info.as_ref().map(|t| t.3.clone()).unwrap_or_default();
     app.set_tool_title(title);
-    match tools.iter().find(|t| t.2 == id).and_then(|t| tool_cursor(app, id, t.1)) {
-        Some(img) => {
-            app.set_tool_cursor(img);
-            app.set_tool_cursor_on(true);
-        }
-        None => app.set_tool_cursor_on(false),
-    }
+    let icon = info.and_then(|t| tool_cursor_icon(app, id, t.1));
+    TOOL_CURSOR_ICON.with(|c| *c.borrow_mut() = icon);
+    refresh_tool_cursor(app);
     if st.tool == Tool::Unsupported {
         status(app, "Cet outil n'est pas encore porté dans la version Rust");
     } else {
@@ -6281,30 +7038,126 @@ fn set_tool(app: &AppWindow, st: &mut State, id: &str) {
     save_settings(app);
 }
 
-/// Curseur d'un outil sur la toile, comme Paint.NET : croix fine (point exact, à 7, 7) et icône
-/// de l'outil en bas à droite, sur une pastille claire lisible sur tous les fonds ; dessiné par
-/// app.slint sous le pointeur (curseur système masqué). None : outils qui gardent un curseur
-/// système (Déplacer, Zoom, Texte) ou icône introuvable.
-fn tool_cursor(app: &AppWindow, id: &str, icon: IconSpec) -> Option<Image> {
-    if matches!(id, "tool-move" | "tool-zoom" | "tool-text" | "btn-deselect") {
+thread_local! {
+    /// Icône (SVG) du curseur de l'outil actif ; None : curseur système ordinaire.
+    static TOOL_CURSOR_ICON: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Icône du curseur d'un outil. None : outils qui gardent un curseur système (Déplacer, Zoom,
+/// Texte) ou icône introuvable.
+fn tool_cursor_icon(app: &AppWindow, id: &str, icon: IconSpec) -> Option<String> {
+    if matches!(id, "tool-move" | "tool-node" | "tool-zoom" | "tool-text" | "btn-deselect") {
         return None;
     }
     let k = app.global::<MpIcons>().invoke_for_spec(icon);
     let (_, tpl) = mpicons_gen::MP_ICONS.get(usize::try_from(k).ok()?)?;
-    let inner = tpl
-        .replace("{STROKE}", "#1a1a1a")
-        .replace("{ACCENT}", "#3b82f6")
-        .replace("{SUBTLE}", "#bfdbfe")
-        .replace("{BG}", "#ffffff")
-        .replacen("<svg ", "<svg x=\"14\" y=\"14\" width=\"16\" height=\"16\" ", 1);
+    Some(
+        tpl.replace("{STROKE}", "#1a1a1a")
+            .replace("{ACCENT}", "#3b82f6")
+            .replace("{SUBTLE}", "#bfdbfe")
+            .replace("{BG}", "#ffffff")
+            .replacen("<svg ", "<svg x=\"14\" y=\"14\" width=\"16\" height=\"16\" ", 1),
+    )
+}
+
+/// Curseur d'un outil sur la toile, comme Paint.NET : croix fine et icône de l'outil en bas à
+/// droite, sur une pastille claire lisible sur tous les fonds, et contour du pinceau. Un vrai
+/// curseur système : le pointeur bouge sans redessiner la fenêtre. En pixels (pas en SVG) : dans
+/// le navigateur, le SVG d'une `Image` n'est pas lisible par Slint, qui l'ignorerait.
+/// `s` : pixels du curseur par unité de l'interface ; `d` : diamètre du contour en pixels du
+/// curseur (0 : aucun). Renvoie aussi le point actif.
+fn render_tool_cursor(icon: &str, s: f32, d: f32, square: bool) -> Option<(Image, i32)> {
+    let (size, hot) = tool_cursor_size(s, d);
+    let (c, sw) = (hot as f32 + 0.5, s.max(1.0));
+    let ring = if d <= 0.0 {
+        String::new()
+    } else if square {
+        let (o, w) = (c - d / 2.0 + sw / 2.0, d - sw);
+        format!("<rect x=\"{o}\" y=\"{o}\" width=\"{w}\" height=\"{w}\" fill=\"none\" stroke=\"#808080\" stroke-opacity=\"0.5\" stroke-width=\"{sw}\"/>")
+    } else {
+        let r = (d - sw) / 2.0;
+        format!("<circle cx=\"{c}\" cy=\"{c}\" r=\"{r}\" fill=\"none\" stroke=\"#808080\" stroke-opacity=\"0.5\" stroke-width=\"{sw}\"/>")
+    };
     let cross = "M7 0V5M7 9V14M0 7H5M9 7H14";
+    let origin = c - 7.0 * s;
     let svg = format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\">\
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{size}\" height=\"{size}\" viewBox=\"0 0 {size} {size}\">{ring}\
+         <g transform=\"translate({origin} {origin}) scale({s})\">\
          <path d=\"{cross}\" stroke=\"#ffffff\" stroke-width=\"3\" fill=\"none\"/>\
          <path d=\"{cross}\" stroke=\"#000000\" stroke-width=\"1\" fill=\"none\"/>\
-         <rect x=\"12.5\" y=\"12.5\" width=\"19\" height=\"19\" rx=\"3\" fill=\"#ffffff\" fill-opacity=\"0.92\" stroke=\"#606060\"/>{inner}</svg>"
+         <rect x=\"12.5\" y=\"12.5\" width=\"19\" height=\"19\" rx=\"3\" fill=\"#ffffff\" fill-opacity=\"0.92\" stroke=\"#606060\"/>{icon}</g></svg>"
     );
-    Image::load_from_svg_data(svg.as_bytes()).ok()
+    let tree = resvg::usvg::Tree::from_data(svg.as_bytes(), &resvg::usvg::Options::default()).ok()?;
+    let mut pm = tiny_skia::Pixmap::new(size, size)?;
+    resvg::render(&tree, tiny_skia::Transform::identity(), &mut pm.as_mut());
+    let pb = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(pm.data(), size, size);
+    Some((Image::from_rgba8_premultiplied(pb), hot as i32))
+}
+
+/// Côté de l'image du curseur et position de son point actif, en pixels.
+fn tool_cursor_size(s: f32, d: f32) -> (u32, u32) {
+    let hot = (7.0 * s).round().max((d / 2.0).ceil() + 1.0) as u32;
+    (((hot as f32 + (25.0 * s).round()) as u32).max(2 * hot + 1), hot)
+}
+
+/// Taille maximale d'un curseur : 128 pixels dans les navigateurs (au-delà, ils l'ignorent).
+const TOOL_CURSOR_MAX: u32 = if cfg!(target_arch = "wasm32") { 128 } else { 256 };
+
+/// Refait le curseur de l'outil (outil, taille du pinceau, zoom, échelle de l'interface). Le
+/// contour d'un pinceau trop grand pour un curseur système reste dessiné par l'interface.
+fn refresh_tool_cursor(app: &AppWindow) {
+    // une image de curseur compte en pixels de l'écran sur le bureau, en pixels CSS dans le navigateur
+    #[cfg(target_arch = "wasm32")]
+    let s = app.window().scale_factor() / web_sys::window().map_or(1.0, |w| w.device_pixel_ratio() as f32);
+    #[cfg(not(target_arch = "wasm32"))]
+    let s = app.window().scale_factor();
+    let d = app.get_ring_d() * s;
+    let fits = tool_cursor_size(s, d).0 <= TOOL_CURSOR_MAX;
+    let icon = TOOL_CURSOR_ICON.with(|c| c.borrow().clone()).filter(|_| !app.get_phone());
+    let cursor = icon.and_then(|icon| render_tool_cursor(&icon, s, if fits { d } else { 0.0 }, app.get_ring_square()));
+    app.set_ring_overlay(d > 0.0 && (!fits || cursor.is_none()));
+    match cursor {
+        Some((img, hot)) => {
+            app.set_tool_cursor(img);
+            app.set_tool_cursor_hx(hot);
+            app.set_tool_cursor_hy(hot);
+            app.set_tool_cursor_on(true);
+        }
+        None => app.set_tool_cursor_on(false),
+    }
+}
+
+/// Coordonnées du pointeur dans la barre d'état. Le moindre changement de texte redessine la
+/// fenêtre : au survol, 4 fois par seconde au plus, et la dernière position dès l'arrêt ; pendant
+/// un tracé, la toile est redessinée de toute façon.
+fn show_cursor_pos(app: &AppWindow, x: i32, y: i32, busy: bool) {
+    use std::cell::Cell;
+    thread_local! {
+        static LAST: Cell<f64> = const { Cell::new(0.0) };
+        static POS: Cell<(i32, i32)> = const { Cell::new((0, 0)) };
+        static TRAIL: slint::Timer = slint::Timer::default();
+    }
+    const PERIOD_MS: u64 = 250;
+    fn apply(app: &AppWindow) {
+        let (x, y) = POS.with(|p| p.get());
+        LAST.with(|l| l.set(now_ms()));
+        app.set_cursor_text(SharedString::from(i18n::tr_format!("{}, {} px", x, y)));
+    }
+    POS.with(|p| p.set((x, y)));
+    if busy || now_ms() - LAST.with(|l| l.get()) >= PERIOD_MS as f64 {
+        TRAIL.with(|t| t.stop());
+        return apply(app);
+    }
+    TRAIL.with(|t| {
+        if !t.running() {
+            let weak = app.as_weak();
+            t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(PERIOD_MS), move || {
+                if let Some(app) = weak.upgrade() {
+                    apply(&app);
+                }
+            });
+        }
+    });
 }
 
 /// Glyphe Font Awesome d'une étape d'historique selon son libellé (outil, calque, image, effet…).
@@ -6402,7 +7255,10 @@ fn schedule_paint_frame(weak: slint::Weak<AppWindow>) {
             return;
         };
         if let Some((doc, rect)) = PAINT_DIRTY.with(|dirty| dirty.borrow_mut().take()) {
-            if st.doc.uid == doc { refresh_rect(&app, &mut st, rect); }
+            if st.doc.uid == doc {
+                let rect = dyn_patch(&app, &mut st, rect);
+                refresh_rect(&app, &mut st, rect);
+            }
         }
     });
 }
@@ -6686,6 +7542,25 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
         }
         return false;
     }
+    if st.grad_live.is_some() {
+        if k(Key::Return) {
+            gradlive::commit(app, st);
+            return true;
+        }
+        if k(Key::Escape) || (ctrl && c == 'z' && !shift) {
+            gradlive::cancel(app, st);
+            return true;
+        }
+    }
+    if (k(Key::Escape) || k(Key::Return)) && vecedit::finish_key(app, st) {
+        return true;
+    }
+    if ctrl && c == 'z' && !shift && vecedit::undo_step(app, st) {
+        return true;
+    }
+    if (k(Key::Delete) || k(Key::Backspace)) && !ctrl && !alt && st.doc.vector_mode && vecedit::delete_key(app, st) {
+        return true;
+    }
     if st.shape_edit.is_some() {
         if k(Key::Escape) || k(Key::Return) {
             shape_edit::commit(app, st);
@@ -6791,6 +7666,8 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
             _ if shift => "",
             's' => "tool-select",
             'm' | 'v' => "tool-move",
+            // projet SVG : A = Sélection directe des points (comme Illustrator)
+            'a' if st.doc.vector_mode => "tool-node",
             'a' | 'd' => "tool-direct-select",
             'b' | 'w' => "tool-wand",
             'e' => "tool-eraser",
@@ -6804,6 +7681,9 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
             'u' => "tool-round-3",
             'y' => "tool-deform",
             'q' => "tool-warp-4",
+            // projet SVG : P = Plume, N = Crayon (comme Illustrator)
+            'p' if st.doc.vector_mode => "tool-pen",
+            'n' if st.doc.vector_mode => "tool-pencil",
             'p' => "tool-pencil",
             _ => "",
         };
@@ -6916,7 +7796,7 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
         ('g', false) => rotate_image(app, st, "rot-ccw"),
         ('j', false) => rotate_image(app, st, "rot-180"),
         ('f', true) => flatten_image(app, st),
-        ('+', _) | ('=', _) => app.set_zoom((app.get_zoom() * 1.25).min(32.0)),
+        ('+', _) | ('=', _) => app.set_zoom((app.get_zoom() * 1.25).min(if st.doc.vector_mode { 640.0 } else { 32.0 })),
         ('-', _) => app.set_zoom((app.get_zoom() / 1.25).max(0.05)),
         ('0', _) => app.invoke_zoom_fit(),
         _ => return false,
@@ -6974,6 +7854,14 @@ fn menus_with_status(app: &AppWindow) -> ModelRc<MenuSpec> {
                 .map(|mut it| {
                     if it.separator {
                         return it;
+                    }
+                    // menus refaits : l'entrée Répéter garde le nom du dernier effet
+                    if it.action.contains("illuRepeatLastEffect") {
+                        REPEAT_LABEL.with(|r| {
+                            if !r.borrow().is_empty() {
+                                it.label = r.borrow().as_str().into();
+                            }
+                        });
                     }
                     if it.submenu {
                         let kids: Vec<SubItemSpec> = (0..it.children.row_count())
@@ -7146,6 +8034,9 @@ fn set_work_mode(app: &AppWindow, st: &mut State, m: &str) {
     let (svg, anim_on) = (m.starts_with("svg"), m.ends_with("anim"));
     if svg != st.doc.vector_mode {
         st.doc.vector_mode = svg;
+        if svg {
+            st.doc.deselect();
+        }
         if svg && !st.doc.layers.iter().any(|l| l.vector.is_some()) {
             layer_op(app, st, "vector-new");
         }
@@ -7187,7 +8078,7 @@ fn flatten_image(app: &AppWindow, st: &mut State) {
         return status(app, "L'image n'a qu'un calque");
     }
     finish_edits(app, st);
-    let flat = st.doc.flatten();
+    let flat = st.doc.flatten_final();
     let mut l = editor::Layer::new(&i18n::tr("Arrière-plan"), st.doc.w, st.doc.h, [0, 0, 0, 0]);
     l.px = flat.into();
     st.doc.layers = vec![l];
@@ -7385,7 +8276,7 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         show_new_project(app, st);
     } else if has("openActiveProjectInPhotoModePro") {
         // projet aplati, ajouté à la pellicule
-        let flat = st.doc.flatten();
+        let flat = st.doc.flatten_final();
         let name = st.doc.title.clone();
         st.photo.photos.push(photo::Photo::new(&name, st.doc.w, st.doc.h, flat));
         st.photo.active = st.photo.photos.len() - 1;
@@ -7416,6 +8307,12 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         // Fichier › Bienvenue / Informations : toujours, même après « Ne plus afficher »
         app.set_show_welcome(true);
     } else if action == "fn:undo()" || has("undo()") && !has("redo") {
+        if st.grad_live.is_some() {
+            return gradlive::cancel(app, st);
+        }
+        if vecedit::undo_step(app, st) {
+            return;
+        }
         if st.shape_edit.is_some() {
             return shape_edit::cancel(app, st);
         }
@@ -7515,8 +8412,7 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
     } else if has("openCanvasLivePreviewWindow") {
         live_open(app, st);
     } else if has("openIconViewerWindow") {
-        app.set_icon_entries(ModelRc::new(VecModel::from(theme::icon_entries(app))));
-        app.set_show_icons(true);
+        open_icon_viewer(app);
     } else if has("openImageLayerBoundsDialog") {
         match st.doc.layer_content_bounds(st.doc.active) {
             Some((x, y, w, h)) => {
@@ -7659,6 +8555,8 @@ enum LoadTo {
 
 enum Loaded {
     Pixels(String, usize, usize, Vec<u8>),
+    /// fichier SVG : la fenêtre de choix (découpage, destination) décide de l'import
+    Svg(String, Vec<u8>),
     Illu(Result<illu::Loaded, String>),
     Photo(Box<photo::Photo>),
     Failed(String, String),
@@ -7730,9 +8628,16 @@ impl LoadJob {
         if name.to_lowercase().ends_with(".illu") {
             return self.out.push(Loaded::Illu(illu::load(&bytes)));
         }
-        // dessin SVG (mode SVG bêta) : formes simples → calque vectoriel d'un nouvel onglet
+        // fichier Paint.NET : calques, noms, visibilité, opacité, modes de fusion
+        if name.to_lowercase().ends_with(".pdn") {
+            return self.out.push(Loaded::Illu(pdn::load(&name, &bytes).map(|(doc, notes)| illu::Loaded {
+                docs: vec![doc],
+                skipped: notes,
+            })));
+        }
+        // dessin SVG : importé après la fenêtre de choix (fil principal, load_done)
         if name.to_lowercase().ends_with(".svg") {
-            return self.out.push(Loaded::Illu(svg_import::import(&name, &bytes)));
+            return self.out.push(Loaded::Svg(name, bytes));
         }
         match decode(&bytes) {
             Some((w, h, px)) if self.to == LoadTo::Photos => self.out.push(Loaded::Photo(Box::new(photo::Photo::new(&name, w, h, px)))),
@@ -7850,7 +8755,7 @@ async fn load_web(weak: slint::Weak<AppWindow>, to: LoadTo, files: Vec<(String, 
                 out.push(Loaded::Photo(Box::new(photo::Photo::from_raw(&name, r))));
                 continue;
             }
-        } else if !name.to_lowercase().ends_with(".illu") && !bytes.starts_with(PREDECODED) {
+        } else if !is_project_file(&name) && !bytes.starts_with(PREDECODED) {
             progress(0.9, &i18n::tr_format!("Décodage de « {name} » (arrière-plan)"));
             if let Some((w, h, px)) = web::compute_decode(&bytes).await {
                 out.push(if to == LoadTo::Photos { Loaded::Photo(Box::new(photo::Photo::new(&name, w, h, px))) } else { Loaded::Pixels(name, w, h, px) });
@@ -7874,6 +8779,91 @@ async fn load_web(weak: slint::Weak<AppWindow>, to: LoadTo, files: Vec<(String, 
         }
         web::sleep(5).await;
     }
+}
+
+/// Visionneuse d'icônes : onglet MasterPaint, sans recherche, aperçu au thème courant.
+fn open_icon_viewer(app: &AppWindow) {
+    let (n_mp, n_fa) = theme::icon_counts(app);
+    app.set_icon_counts(ModelRc::new(VecModel::from(vec![n_mp as i32, n_fa as i32])));
+    app.set_icon_tab(0);
+    app.set_icon_query(SharedString::default());
+    app.set_icon_dark(app.global::<Theme>().get_dark());
+    app.set_icon_accent(app.global::<Theme>().get_accent_base());
+    app.set_icon_sel(-1);
+    app.set_icon_entries(ModelRc::new(VecModel::from(theme::icon_entries(app, 0, "", app.get_icon_dark()))));
+    app.set_show_icons(true);
+}
+
+/// Copie un texte dans le presse-papiers du système (navigateur : celui de la page).
+fn copy_text(text: &str) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::JsCast;
+        let Some(w) = web_sys::window() else { return false };
+        let Ok(cb) = js_sys::Reflect::get(&w.navigator(), &"clipboard".into()) else { return false };
+        let Ok(f) = js_sys::Reflect::get(&cb, &"writeText".into()) else { return false };
+        return f.dyn_ref::<js_sys::Function>().is_some_and(|f| f.call1(&cb, &text.into()).is_ok());
+    }
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
+    {
+        return clipboard_size::write_text(text);
+    }
+    #[cfg(target_os = "android")]
+    {
+        let _ = text;
+        false
+    }
+}
+
+/// Ouvre un SVG selon le choix : nouvel onglet, ou ses calques ajoutés au projet en cours (au-
+/// dessus du calque actif, dans leur ordre).
+fn open_svg(app: &AppWindow, st: &mut State, name: &str, bytes: &[u8], mode: svg_import::SvgMode, here: bool) {
+    let l = match svg_import::import_with(name, bytes, mode) {
+        Ok(l) => l,
+        Err(e) => return show_error(app, "Ouvrir un SVG", &e),
+    };
+    if here && !st.empty {
+        finish_edits(app, st);
+        let Some(src) = l.docs.into_iter().next() else { return };
+        let (w, h) = (st.doc.w, st.doc.h);
+        for layer in src.layers {
+            let Some(v) = layer.vector else { continue };
+            st.doc.add_layer_in();
+            let px = v.render_objects(&mut st.fonts, w, h);
+            let dst = st.doc.layer_mut();
+            dst.name = layer.name;
+            dst.px = px.into();
+            dst.vector = Some(v);
+        }
+        st.doc.commit("Importer un SVG");
+        refresh_all(app, st);
+    } else {
+        for mut d in l.docs {
+            // textes (noms de la grille d'icônes) : rendus avec les polices de l'application
+            let (w, h) = (d.w, d.h);
+            for layer in d.layers.iter_mut() {
+                if let Some(v) = layer.vector.as_ref().filter(|v| v.objects.iter().any(|o| matches!(o, vector::Obj::Text(_)))) {
+                    layer.px = v.render_objects(&mut st.fonts, w, h).into();
+                }
+            }
+            if let Some(px) = d.history.last_mut().map(|s| &mut s.layers) {
+                for (sl, l) in px.iter_mut().zip(d.layers.iter()) {
+                    sl.px = l.px.clone();
+                }
+            }
+            set_document(app, st, d);
+        }
+    }
+    if !l.skipped.is_empty() {
+        let skipped: Vec<String> = l.skipped.iter().map(|e| i18n::tr(e)).collect();
+        status(app, i18n::tr_format!("Non repris (pas encore en Rust) : {}", skipped.join(", ")));
+    }
+}
+
+/// Fichier projet ou dessin (ouvert en onglet, pas décodé comme une image) : .illu, .pdn, .svg.
+fn is_project_file(name: &str) -> bool {
+    let n = name.to_lowercase();
+    n.ends_with(".illu") || n.ends_with(".pdn") || n.ends_with(".svg")
 }
 
 /// Fin d'un chargement (fil principal) : ouvre onglets, photos ou fenêtre de dépôt.
@@ -7904,6 +8894,24 @@ fn load_done(app: &AppWindow, st: &mut State, to: LoadTo, out: Vec<Loaded>) {
                 }
             }
             Loaded::Illu(Err(e)) => show_error(app, "Ouvrir un projet", &e),
+            // une seule fenêtre de choix à la fois : les SVG suivants sont ouverts en calques séparés
+            Loaded::Svg(name, bytes) if st.task.is_some() => open_svg(app, st, &name, &bytes, svg_import::SvgMode::Split, false),
+            Loaded::Svg(name, bytes) => {
+                let sprite = svg_import::has_symbols(&bytes);
+                let intro = i18n::tr_format!("« {name} » : comment ouvrir ce dessin ? Les formes et les chemins restent des objets modifiables (calques SVG).");
+                st.task = Some(Task::SvgOpen(name, bytes, sprite));
+                let mut cmds: Vec<(&str, &str)> = Vec::new();
+                if sprite {
+                    cmds.push(("Grille d'icônes", "Feuille de symboles (type illu-sprite.svg) : chaque icône dans une case, son nom dessous."));
+                }
+                cmds.push(("Un calque par élément", "Nouveau projet : chaque élément ou groupe racine du fichier sur son propre calque SVG."));
+                cmds.push(("Tout sur un seul calque", "Nouveau projet : tous les éléments sur un même calque SVG."));
+                if !st.empty {
+                    cmds.push(("Dans le projet en cours", "Ajoute les éléments du fichier au projet ouvert, un calque SVG par élément racine."));
+                }
+                cmds.push(("Annuler", "N'ouvre pas le fichier."));
+                show_task(app, "Ouvrir un SVG", &intro, "", "", &cmds, Vec::new());
+            }
             Loaded::Photo(p) => {
                 st.photo.photos.push(*p);
                 photos += 1;
@@ -7943,6 +8951,9 @@ fn pm_open(app: &AppWindow, st: &mut State) {
 /// Thème choisi dans les Paramètres pendant que le Mode Photo Pro impose le sombre
 /// (0 : mode fermé, 1 : clair, 2 : sombre) ; c'est lui qui est enregistré.
 static PM_DARK_RESTORE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+/// Thème clair / sombre choisi hors de la présentation Photoshop (0 inconnu = clair, 1 clair,
+/// 2 sombre) : Photoshop impose le sombre, le quitter rend ce choix (Paint.NET n'impose rien).
+static USER_DARK: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
 /// Thème sombre choisi par l'utilisateur (hors Mode Photo Pro), pour l'enregistrement.
 fn saved_dark(app: &AppWindow) -> bool {
@@ -8271,11 +9282,26 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
         "open-editor" => {
             let Some(p) = st.photo.photos.get(active) else { return };
             let t0 = now_ms();
-            let px = p.render_full();
-            let doc = Doc::from_pixels(p.w, p.h, px, &p.name);
-            pm_set_open(app, false);
-            set_document(app, st, doc);
-            status(app, i18n::tr_format!("Photo ouverte dans l'éditeur ({:.0} ms)", now_ms() - t0));
+            let (w, h, name) = (p.w, p.h, p.name.clone());
+            let params = p.engine_params();
+            let job = match p.full_src() {
+                photo::Src::Lin(lin) => background::Heavy::CamRawLin { lin, w, h, p: params },
+                photo::Src::U8(src) => background::Heavy::Effect { name: "cameraraw".into(), src, w, h, p: params, post: None },
+            };
+            // pleine résolution : hors du fil de l'interface, qui se figeait plusieurs secondes
+            app.set_load_title(i18n::tr("Développement de la photo RAW").into());
+            load_progress(app, 0.5, &name);
+            app.set_loading(true);
+            background::spawn(app, st, job, move |app, st, out| {
+                app.set_loading(false);
+                // calcul impossible en arrière-plan : refait ici
+                let px = out.filter(|px| px.len() == w * h * 4).or_else(|| st.photo.photos.get(active).map(|p| p.render_full()));
+                let Some(px) = px else { return };
+                let doc = Doc::from_pixels(w, h, px, &name);
+                pm_set_open(app, false);
+                set_document(app, st, doc);
+                status(app, i18n::tr_format!("Photo ouverte dans l'éditeur ({:.0} ms)", now_ms() - t0));
+            });
             return;
         }
         "apply-all" => {
@@ -8337,10 +9363,19 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
 /// Réglage automatique d'une photo d'après l'analyse de sa scène (`scene`) : seuls les réglages
 /// concernés sont remplacés. Rend le type de scène et le compte rendu (aussi gardé dans `note`).
 fn pm_auto(p: &mut photo::Photo) -> (scene::Kind, String) {
-    let auto = match &p.lin {
+    let mut auto = match &p.lin {
         Some((_, prev)) => scene::analyze_lin(prev, p.pw, p.ph, p.raw_ev),
         None => scene::analyze_u8(&p.preview, p.pw, p.ph),
     };
+    // boucle fermée : rendus du vrai moteur sur la photo réduite, mesurés et corrigés
+    let s = scene::REFINE_MAX as f32 / p.lw.max(p.lh).max(1) as f32;
+    let (tw, th) = if s < 1.0 { (((p.lw as f32 * s).round() as usize).max(1), ((p.lh as f32 * s).round() as usize).max(1)) } else { (p.lw, p.lh) };
+    let src = match &p.lin_live {
+        Some(l) => photo::Src::Lin(std::sync::Arc::new(photo::crop_resize::<f32, 3>(l, p.lw, (0, 0, p.lw, p.lh), tw, th))),
+        None => photo::Src::U8(std::sync::Arc::new(photo::crop_resize::<u8, 4>(&p.live, p.lw, (0, 0, p.lw, p.lh), tw, th))),
+    };
+    let base = p.params.clone();
+    scene::refine(&mut auto, &base, |q| photo::render_src(&src, tw, th, &p.engine_params_for(q)));
     for &i in &auto.keys {
         p.params[i] = auto.params[i];
     }
@@ -8348,6 +9383,49 @@ fn pm_auto(p: &mut photo::Photo) -> (scene::Kind, String) {
     p.modified = true;
     p.note = auto.note;
     (auto.kind, p.note.clone())
+}
+
+#[cfg(test)]
+mod auto_look {
+    /// Planche avant / après du réglage automatique sur de vraies photos :
+    /// `MP_AUTO="a.jpg;b.dng" MP_OUT=planche.png cargo test --lib auto_look -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn auto_look() {
+        let files = std::env::var("MP_AUTO").unwrap_or_default();
+        let (cell_w, cell_h) = (360usize, 240usize);
+        let list: Vec<&str> = files.split(';').filter(|f| !f.is_empty()).collect();
+        let (sw, sh) = (cell_w * 2, cell_h * list.len().max(1));
+        let mut sheet = vec![0u8; sw * sh * 4];
+        for (row, f) in list.iter().enumerate() {
+            let bytes = std::fs::read(f).expect(f);
+            let name = std::path::Path::new(f).file_name().unwrap().to_string_lossy().to_string();
+            let mut p = if crate::raw::is_raw(&name) {
+                crate::photo::Photo::from_raw(&name, crate::raw::decode(&bytes).unwrap())
+            } else {
+                let i = image::load_from_memory(&bytes).unwrap().to_rgba8();
+                crate::photo::Photo::new(&name, i.width() as usize, i.height() as usize, i.into_raw())
+            };
+            let before = crate::photo::render_src(&p.live_src(), p.lw, p.lh, &p.engine_params());
+            let t = std::time::Instant::now();
+            let (_, note) = super::pm_auto(&mut p);
+            let ms = t.elapsed().as_millis();
+            let after = crate::photo::render_src(&p.live_src(), p.lw, p.lh, &p.engine_params());
+            let keys = [0usize, 1, 2, 3, 4, 5, 6, 16, 17, 18, 19, 20];
+            println!("{name} ({ms} ms) : {note}\n    {:?}", keys.iter().map(|&k| (k, p.params[k])).filter(|(_, v)| *v != 0.0).collect::<Vec<_>>());
+            for (col, img) in [before, after].iter().enumerate() {
+                let s = (cell_w as f32 / p.lw as f32).min(cell_h as f32 / p.lh as f32);
+                let (tw, th) = ((p.lw as f32 * s) as usize, (p.lh as f32 * s) as usize);
+                let small = crate::photo::crop_resize::<u8, 4>(img, p.lw, (0, 0, p.lw, p.lh), tw, th);
+                for y in 0..th {
+                    let o = ((row * cell_h + y) * sw + col * cell_w) * 4;
+                    sheet[o..o + tw * 4].copy_from_slice(&small[y * tw * 4..(y + 1) * tw * 4]);
+                }
+            }
+        }
+        let out = std::env::var("MP_OUT").unwrap_or("auto.png".into());
+        image::save_buffer(&out, &sheet, sw as u32, sh as u32, image::ExtendedColorType::Rgba8).unwrap();
+    }
 }
 
 /// Exporte toutes les photos en JPEG (pleine résolution). Bureau : dans un dossier choisi ;
@@ -8543,6 +9621,10 @@ fn tool_state(app: &AppWindow) -> serde_json::Value {
         "contiguous": t.get_contiguous(),
         "selMode": t.get_sel_mode(),
         "shapeStyle": t.get_shape_style(),
+        "shapeFillType": t.get_shape_fill_type(),
+        "shapeGradType": t.get_shape_grad_type(),
+        "shapeGradAngle": t.get_shape_grad_angle(),
+        "shapeGradSmart": t.get_shape_grad_smart(),
         "lineWidth": t.get_line_width(),
         "gradientKind": t.get_gradient_kind(),
         "shapeKind": t.get_shape_kind().as_str(),
@@ -8580,6 +9662,10 @@ fn restore_tool_state(app: &AppWindow, v: &serde_json::Value) -> Option<String> 
     if let Some(x) = b("contiguous") { t.set_contiguous(x); }
     if let Some(x) = i("selMode") { t.set_sel_mode(x.clamp(0, 3)); }
     if let Some(x) = i("shapeStyle") { t.set_shape_style(x.clamp(0, 2)); }
+    if let Some(x) = i("shapeFillType") { t.set_shape_fill_type(x.clamp(0, 1)); }
+    if let Some(x) = i("shapeGradType") { t.set_shape_grad_type(x.clamp(0, 1)); }
+    if let Some(x) = f("shapeGradAngle") { t.set_shape_grad_angle(x.clamp(0.0, 360.0)); }
+    if let Some(x) = v.get("shapeGradSmart").and_then(|x| x.as_bool()) { t.set_shape_grad_smart(x); }
     if let Some(x) = f("lineWidth") { t.set_line_width(x.max(1.0)); }
     if let Some(x) = i("gradientKind") { t.set_gradient_kind(x.clamp(0, 3)); }
     if let Some(x) = v.get("shapeKind").and_then(|x| x.as_str()) { t.set_shape_kind(x.into()); }
@@ -8616,10 +9702,13 @@ fn restore_tool_state(app: &AppWindow, v: &serde_json::Value) -> Option<String> 
 }
 
 fn save_settings(app: &AppWindow) {
+    if DATA_PURGED.load(std::sync::atomic::Ordering::Relaxed) { return; }
     let t = app.global::<Theme>();
     let a = t.get_accent_base();
-    let hm = app.get_set_history_max().round().clamp(5.0, 500.0) as usize;
+    let hm = app.get_set_history_max().round().clamp(3.0, 200.0) as usize;
+    let hk = app.get_set_history_keep().round().clamp(1.0, 20.0) as usize;
     editor::HISTORY_MAX.store(hm, std::sync::atomic::Ordering::Relaxed);
+    editor::HISTORY_KEEP.store(hk, std::sync::atomic::Ordering::Relaxed);
     settings::Settings {
         accent: (a.red() as u32) << 16 | (a.green() as u32) << 8 | a.blue() as u32,
         dark: saved_dark(app),
@@ -8632,11 +9721,19 @@ fn save_settings(app: &AppWindow) {
         toolbar_mode: app.get_toolbar_mode(),
         wheel_scroll: app.get_set_wheel_mode() == 1,
         history_max: hm,
+        history_keep: hk,
         autosave_min: app.get_set_autosave_min().round() as u32,
         language: app.get_set_language(),
         layout: app.get_set_layout(),
         layout_auto: app.get_set_layout_auto(),
         theme_style: app.get_set_theme_style(),
+        interface_theme: app.get_set_interface_theme(),
+        follow_interface_style: app.get_set_follow_interface_style(),
+        icon_pack: app.get_set_icon_pack(),
+        missing_icon_fallback: app.get_set_missing_icon_fallback(),
+        custom_icon_pack: icon_packs::custom(),
+        imported_icon_packs: icon_packs::all_custom(),
+        active_custom_icon: icon_packs::active_custom_index(),
         ui_zoom: app.get_set_ui_zoom(),
         default_zoom: app.get_set_default_zoom(),
         default_tool: tool_id_at(app, app.get_set_default_tool()),
@@ -8645,10 +9742,19 @@ fn save_settings(app: &AppWindow) {
         paste_mode: app.get_set_paste_mode(),
         paste_ask: app.get_set_paste_ask(),
         rounded: app.get_set_rounded(),
+        pronounced_borders: app.get_set_pronounced_borders(),
         glass: app.get_set_glass(),
         title_transparent: app.get_set_title_transparent(),
-        title_blurred: app.get_set_title_blurred(),
         header_preview: app.get_set_header_preview(),
+        shadows: app.get_set_shadows(),
+        perf_mode: app.get_set_perf_mode(),
+        hover_fx: app.get_set_hover_fx(),
+        render_scale: app.get_set_render_scale(),
+        render_ctl: app.get_set_render_ctl(),
+        render_default: app.get_set_render_default(),
+        perf_done: app.get_set_perf_done(),
+        perf_cut: app.get_set_perf_cut(),
+        perf_reported: app.get_set_perf_reported(),
         zoom_smooth: app.get_set_zoom_smooth(),
         snap_div: app.get_set_snap_div().round().clamp(4.0, 128.0) as u32,
         snap_thresh: app.get_set_snap_thresh().round().clamp(1.0, 100.0) as u32,
@@ -8689,7 +9795,15 @@ fn save_settings(app: &AppWindow) {
         tool_state: tool_state(app),
     }
     .save();
-    AUTOSAVE_ON.store(app.get_set_autosave(), std::sync::atomic::Ordering::Relaxed);
+    // sauvegarde coupée : la copie existante disparaît (rien ne doit revenir au prochain démarrage) ;
+    // rétablie : une nouvelle copie dès le prochain passage
+    let on = app.get_set_autosave();
+    let was = AUTOSAVE_ON.swap(on, std::sync::atomic::Ordering::Relaxed);
+    if was && !on {
+        clear_autosave();
+    } else if on && !was {
+        AUTOSAVE_FORCE.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
     GPU_ALLOWED.store(app.get_set_use_gpu(), std::sync::atomic::Ordering::Relaxed);
 }
 
@@ -8708,6 +9822,8 @@ fn welcome_at_start(app: &AppWindow) {
 /// Sauvegarde automatique et carte graphique autorisées (Paramètres).
 static AUTOSAVE_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 static GPU_ALLOWED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+/// Après effacement complet, aucune fermeture ou tâche d'arrière-plan ne doit recréer les données.
+static DATA_PURGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Identifiant de l'outil n° `i` de la fenêtre Outils (Paramètres › outil au démarrage).
 fn tool_id_at(app: &AppWindow, i: i32) -> String {
@@ -8720,7 +9836,6 @@ thread_local! {
     static BASE_SCALE: std::cell::Cell<f32> = const { std::cell::Cell::new(0.0) };
 }
 
-/// Zoom de l'interface : facteur d'échelle de la fenêtre = échelle de l'écran × zoom.
 thread_local! {
     /// zoom de l'interface (Paramètres) : 1 = 100 %
     static UI_ZOOM: std::cell::Cell<f32> = const { std::cell::Cell::new(1.0) };
@@ -8750,6 +9865,7 @@ fn fit_ui_zoom_size(app: &AppWindow) {
     let _ = app;
 }
 
+/// Zoom de l'interface : facteur d'échelle de la fenêtre = échelle de l'écran × zoom.
 fn apply_ui_zoom(app: &AppWindow, pct: f32) {
     let base = BASE_SCALE.with(|b| {
         if b.get() <= 0.0 {
@@ -8855,6 +9971,8 @@ fn handle_ribbon(app: &AppWindow, state: &Shared, id: &str) {
     };
     let t = app.global::<ToolOpts>();
     match id {
+        "render-cycle" => render_cycle(app, st),
+        "render-now" => render_now(app, st),
         "opt-invert-selection" => {
             st.doc.invert_selection();
             sel_changed(app, st);
@@ -8987,6 +10105,23 @@ fn run() -> Result<(), slint::PlatformError> {
         Color::from_rgb_u8((cfg.accent >> 16) as u8, (cfg.accent >> 8) as u8, cfg.accent as u8)
     };
     app.set_set_theme_style(if flag("--win98") { 1 } else { cfg.theme_style });
+    app.set_set_interface_theme(cfg.interface_theme);
+    app.set_show_tools(cfg.interface_theme != 3);
+    app.set_set_follow_interface_style(cfg.follow_interface_style);
+    icon_packs::restore_all(cfg.imported_icon_packs.clone(), cfg.custom_icon_pack.clone(), cfg.active_custom_icon);
+    app.set_set_icon_pack(cfg.icon_pack);
+    app.set_set_missing_icon_fallback(cfg.missing_icon_fallback);
+    icon_packs::set_missing_fallback(cfg.missing_icon_fallback);
+    icon_packs::select(cfg.icon_pack);
+    app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(cfg.icon_pack))));
+    if let Some(preset)=args.iter().find_map(|a| a.strip_prefix("--interface=")) {
+        let i=match preset {"paintdotnet"=>1,"photoshop"=>2,"phone"=>3,_=>0};
+        app.set_set_interface_theme(i);
+        app.set_toolbar_mode(if i == 0 { 0 } else { 1 });
+        app.set_set_layout(match i {1=>0,2=>1,3=>2,_=>0});
+        app.set_show_tools(i != 1 && i != 3);
+        app.set_set_icon_pack(match i {1=>1,2=>2,_=>0}); icon_packs::select(app.get_set_icon_pack());
+    }
     app.set_set_ui_zoom(cfg.ui_zoom);
     app.set_set_default_zoom(cfg.default_zoom);
     app.set_set_autosave(cfg.autosave);
@@ -8994,10 +10129,21 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_paste_mode(cfg.paste_mode);
     app.set_set_paste_ask(cfg.paste_ask);
     app.set_set_rounded(cfg.rounded);
+    app.set_set_pronounced_borders(cfg.pronounced_borders);
     app.set_set_glass(cfg.glass);
     app.set_set_title_transparent(cfg.title_transparent);
-    app.set_set_title_blurred(cfg.title_blurred);
     app.set_set_header_preview(cfg.header_preview);
+    app.set_set_shadows(cfg.shadows);
+    app.set_set_perf_mode(cfg.perf_mode);
+    app.set_set_hover_fx(cfg.hover_fx);
+    app.set_set_render_scale(cfg.render_scale);
+    app.set_render_scale_start(cfg.render_scale);
+    app.set_set_render_ctl(cfg.render_ctl);
+    app.set_set_render_default(cfg.render_default);
+    editor::RENDER_DEFAULT.store(render_default(cfg.render_ctl, cfg.render_default), std::sync::atomic::Ordering::Relaxed);
+    app.set_set_perf_done(cfg.perf_done);
+    app.set_set_perf_cut(cfg.perf_cut);
+    app.set_set_perf_reported(cfg.perf_reported);
     app.set_set_zoom_smooth(cfg.zoom_smooth);
     AUTOSAVE_ON.store(cfg.autosave, std::sync::atomic::Ordering::Relaxed);
     GPU_ALLOWED.store(cfg.use_gpu, std::sync::atomic::Ordering::Relaxed);
@@ -9011,6 +10157,9 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_layout(cfg.layout);
     app.set_set_layout_auto(cfg.layout_auto);
     theme::apply(&app, flag("--dark") || cfg.dark, accent);
+    if cfg.interface_theme != 2 {
+        USER_DARK.store(if flag("--dark") || cfg.dark { 2 } else { 1 }, std::sync::atomic::Ordering::Relaxed);
+    }
     appearance::initialize(&app, &cfg);
     app.set_primary_color(appearance::color(&app, 3));
     app.set_secondary_color(appearance::color(&app, 4));
@@ -9036,6 +10185,7 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_toolbar_mode(if flag("--classic") { 1 } else { cfg.toolbar_mode });
     app.set_set_wheel_mode(cfg.wheel_scroll as i32);
     app.set_set_history_max(cfg.history_max as f32);
+    app.set_set_history_keep(cfg.history_keep as f32);
     app.set_set_snap_div(cfg.snap_div as f32);
     app.set_set_snap_thresh(cfg.snap_thresh as f32);
     app.set_set_snap_always(cfg.snap_always);
@@ -9069,12 +10219,46 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_autosave_min(cfg.autosave_min as f32);
     app.set_set_language(cfg.language);
     editor::HISTORY_MAX.store(cfg.history_max, std::sync::atomic::Ordering::Relaxed);
+    editor::HISTORY_KEEP.store(cfg.history_keep, std::sync::atomic::Ordering::Relaxed);
     let rows: Vec<(SharedString, SharedString)> = settings::SHORTCUTS.iter().map(|(k, w)| (SharedString::from(i18n::tr(k)), SharedString::from(i18n::tr(w)))).collect();
     app.set_shortcut_list(ModelRc::new(VecModel::from(rows)));
     {
         // enregistrement à la fermeture des Paramètres et à chaque changement de thème
         let weak = app.as_weak();
-        app.on_settings_changed(move || save_settings(&weak.unwrap()));
+        app.on_settings_changed(move || {
+            let app = weak.unwrap();
+            save_settings(&app);
+            // résolution de rendu : boutons du ruban, et toile recomposée si la réduction change
+            let div = render_default(app.get_set_render_ctl(), app.get_set_render_default());
+            let changed = editor::RENDER_DEFAULT.swap(div, std::sync::atomic::Ordering::Relaxed) != div;
+            if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
+                if let Ok(mut st) = state.try_borrow_mut() {
+                    if changed {
+                        for l in st.doc.layers.iter_mut().filter(|l| l.dynamic.is_some()) {
+                            l.dyn_key = None;
+                        }
+                        refresh_all(&app, &mut st);
+                    } else {
+                        sync_render_ctl(&app, &st);
+                    }
+                }
+            }
+            // aperçu du haut rétabli : son image n'était plus tenue à jour
+            if app.get_set_header_preview() && !HEADER_SHOWN.with(|h| h.get()) {
+                if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
+                    if let Ok(mut st) = state.try_borrow_mut() {
+                        sync_tabs(&app, &mut st);
+                    }
+                }
+            }
+        });
+    }
+    {
+        let weak = app.as_weak();
+        app.on_perf_auto_changed(move || perf::auto_changed(&weak.unwrap()));
+    }
+    if !SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
+        perf::start(&app);
     }
     app.set_menus(menus_with_status(&app));
     app.set_wheel_image(color_wheel(260, ColorMode::Rgb));
@@ -9249,8 +10433,14 @@ fn run() -> Result<(), slint::PlatformError> {
         tile_index: Default::default(),
         lazy: false,
         tile_ok: Default::default(),
+        tile_clear: Default::default(),
+        mask_sig: 0,
         backdrop: Vec::new(),
         bs: 0,
+        path_edit: None,
+        grad_live: None,
+        last_press: (0.0, 0.0),
+        vv: Default::default(),
         thumbs: Vec::new(),
         sel_bounds: None,
         dyn_inflight: std::collections::HashSet::new(),
@@ -9368,6 +10558,15 @@ fn run() -> Result<(), slint::PlatformError> {
         });
         let weak = app.as_weak();
         let state2 = state.clone();
+        {
+            let weak = app.as_weak();
+            let state2 = state.clone();
+            app.on_vec_view_moved(move || {
+                if let (Some(app), Ok(mut st)) = (weak.upgrade(), state2.try_borrow_mut()) {
+                    vecview::view_changed(&app, &mut st);
+                }
+            });
+        }
         app.on_zoom_changed(move || {
             if let (Some(app), Ok(mut st)) = (weak.upgrade(), state2.try_borrow_mut()) {
                 zoom_changed(&app, &mut st);
@@ -9469,18 +10668,50 @@ fn run() -> Result<(), slint::PlatformError> {
         let weak = app.as_weak();
         let state2 = state.clone();
         app.on_task_thumb(move |k| task_thumb(&weak.unwrap(), &mut state2.borrow_mut(), k.max(0) as usize));
-        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+        #[cfg(not(target_os = "android"))]
         {
             use slint::winit_030::{winit, EventResult, WinitWindowAccessor};
+            use winit::event::{ElementState, TouchPhase, WindowEvent};
             let weak = app.as_weak();
+            #[cfg(not(target_arch = "wasm32"))]
             let state2 = state.clone();
-            app.window().on_winit_window_event(move |_w, ev| {
+            let mut pointer = winit::dpi::LogicalPosition::new(0f32, 0f32);
+            app.window().on_winit_window_event(move |w, ev| {
+                #[cfg(not(target_arch = "wasm32"))]
                 match ev {
-                    winit::event::WindowEvent::Touch(touch) => pen::native(touch.force.map(|force| force.normalized())),
-                    winit::event::WindowEvent::CursorMoved { .. } => pen::native(None),
+                    WindowEvent::Touch(touch) => pen::native(touch.force.map(|force| force.normalized())),
+                    WindowEvent::CursorMoved { .. } => pen::native(None),
                     _ => {},
                 }
-                if let winit::event::WindowEvent::DroppedFile(path) = ev {
+                if matches!(ev, WindowEvent::CursorMoved { .. } | WindowEvent::MouseInput { .. } | WindowEvent::Touch(_)) {
+                    LAST_ACTIVITY.with(|a| a.set(now_ms()));
+                }
+                // fenêtre flottante sous l'appui : devant, avant même que Slint ne traite l'appui
+                let scale = w.scale_factor() as f64;
+                let pressed = match ev {
+                    WindowEvent::CursorMoved { position, .. } => {
+                        pointer = position.to_logical(scale);
+                        false
+                    }
+                    WindowEvent::Touch(t) => {
+                        pointer = t.location.to_logical(scale);
+                        t.phase == TouchPhase::Started
+                    }
+                    WindowEvent::MouseInput { state: ElementState::Pressed, .. } => true,
+                    _ => false,
+                };
+                if let (true, Some(app)) = (pressed, weak.upgrade()) {
+                    app.invoke_window_press(pointer.x, pointer.y);
+                    let weak = weak.clone();
+                    // les fenêtres répondent par leurs « changed » : on tranche juste après
+                    slint::Timer::single_shot(std::time::Duration::from_millis(30), move || {
+                        if let Some(app) = weak.upgrade() {
+                            app.invoke_window_press_commit();
+                        }
+                    });
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                if let WindowEvent::DroppedFile(path) = ev {
                     if let (Some(app), Ok(bytes)) = (weak.upgrade(), std::fs::read(path)) {
                         let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                         if let Ok(mut st) = state2.try_borrow_mut() {
@@ -9523,7 +10754,7 @@ fn run() -> Result<(), slint::PlatformError> {
                         return status(&app, "Le navigateur ne peut pas lire un fichier copié : glissez-le sur la page ou utilisez Fichier › Ouvrir".to_string());
                     }
                     applog::log(i18n::tr_format!("Coller (évènement du navigateur) : {name}, {} octets", bytes.len()));
-                    if raw::is_raw(&name) || name.to_lowercase().ends_with(".illu") {
+                    if raw::is_raw(&name) || is_project_file(&name) {
                         return dropped_file(&app, &mut st, name, bytes);
                     }
                     match decode(&bytes) {
@@ -9568,16 +10799,51 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     // sauvegarde automatique : restauration de la session précédente, puis toutes les 15 s
     {
+        // sauvegarde coupée : aucune copie laissée par une session précédente
+        if !cfg.autosave && !SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
+            clear_autosave();
+        }
         let opened_file = args.iter().any(|a| !a.starts_with("--"));
+        // (bureau : lecture et décodage des calques dans un autre fil, sur tous les cœurs ; la
+        // fenêtre s'affiche tout de suite avec la barre de progression)
         #[cfg(not(target_arch = "wasm32"))]
-        if !opened_file {
+        let restoring = !opened_file && AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) && autosave_path().is_some_and(|p| p.exists());
+        #[cfg(not(target_arch = "wasm32"))]
+        if restoring && SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
             if let Some(bytes) = autosave_path().and_then(|p| std::fs::read(p).ok()) {
                 restore_workspace(&app, &mut state.borrow_mut(), &bytes);
             }
+        } else if restoring {
+            RESTORING.store(true, std::sync::atomic::Ordering::Relaxed);
+            app.set_load_title(i18n::tr("Restauration des projets").into());
+            load_progress(&app, 0.0, "Lecture de la sauvegarde automatique…");
+            app.set_loading(true);
+            let weak = app.as_weak();
+            let path = autosave_path();
+            std::thread::spawn(move || {
+                let t0 = now_ms();
+                let l = path.and_then(|p| std::fs::read(p).ok()).and_then(|b| illu::load(&b).ok());
+                applog::log(i18n::tr_format!("Restauration lue en {:.0} ms", now_ms() - t0));
+                let _ = slint::invoke_from_event_loop(move || {
+                    RESTORING.store(false, std::sync::atomic::Ordering::Relaxed);
+                    let Some(app) = weak.upgrade() else { return };
+                    if LOADS_ACTIVE.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+                        app.set_loading(false);
+                    }
+                    if let (Some(l), Some(state)) = (l, APP_STATE.with(|s| s.borrow().clone())) {
+                        if let Ok(mut st) = state.try_borrow_mut() {
+                            restore_loaded(&app, &mut st, l);
+                        }
+                    }
+                    welcome_at_start(&app);
+                });
+            });
         }
         // fenêtre de bienvenue (deux premières ouvertures), une fois les projets restaurés
         #[cfg(not(target_arch = "wasm32"))]
-        welcome_at_start(&app);
+        if !restoring || SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
+            welcome_at_start(&app);
+        }
         #[cfg(target_arch = "wasm32")]
         if !opened_file {
             let weak = app.as_weak();
@@ -9585,9 +10851,17 @@ fn run() -> Result<(), slint::PlatformError> {
             // l'écran de chargement de la page reste affiché pendant la restauration
             web::loading_step("Restauration des projets…");
             let _ = slint::spawn_local(async move {
-                if let (Some(bytes), Some(app)) = (web::store_load().await, weak.upgrade()) {
-                    if let Ok(mut st) = state.try_borrow_mut() {
-                        restore_workspace(&app, &mut st, &bytes);
+                let stored = if AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) { web::store_load().await } else { None };
+                if let Some(bytes) = stored {
+                    RESTORING.store(true, std::sync::atomic::Ordering::Relaxed);
+                    let t0 = now_ms();
+                    let l = illu_load_workers(&bytes).await;
+                    applog::log(i18n::tr_format!("Restauration lue en {:.0} ms", now_ms() - t0));
+                    RESTORING.store(false, std::sync::atomic::Ordering::Relaxed);
+                    if let (Ok(l), Some(app)) = (l, weak.upgrade()) {
+                        if let Ok(mut st) = state.try_borrow_mut() {
+                            restore_loaded(&app, &mut st, l);
+                        }
                     }
                 }
                 // une image dessinée avant de retirer l'écran de chargement
@@ -9609,6 +10883,17 @@ fn run() -> Result<(), slint::PlatformError> {
                     welcome_at_start(&app);
                 }
             });
+        }
+        // battement pour la page : montre si le module tourne encore après une panique (« Attendre »)
+        #[cfg(target_arch = "wasm32")]
+        {
+            let beat = slint::Timer::default();
+            beat.start(slint::TimerMode::Repeated, std::time::Duration::from_secs(1), || {
+                if let Some(w) = web_sys::window() {
+                    let _ = js_sys::Reflect::set(&w, &"mpBeat".into(), &js_sys::Date::now().into());
+                }
+            });
+            std::mem::forget(beat);
         }
         let sig = workspace_sig(&state.borrow());
         state.borrow_mut().autosave_sig = sig;
@@ -9660,6 +10945,10 @@ fn run() -> Result<(), slint::PlatformError> {
     {
         let weak = app.as_weak();
         let done = move |name: Option<String>| {
+            #[cfg(target_arch = "wasm32")]
+            let renderer = name.clone().or_else(webgl::renderer);
+            #[cfg(not(target_arch = "wasm32"))]
+            let renderer = name.clone();
             let msg = match name {
                 Some(n) => i18n::tr_format!("Carte graphique : {n}"),
                 // navigateur sans WebGPU : affichage composé en WebGL2 (passerelle mpGL)
@@ -9674,6 +10963,7 @@ fn run() -> Result<(), slint::PlatformError> {
                     // annoncé quelques secondes dans la barre d'état ; le détail reste dans les Paramètres
                     status(&app, msg.clone());
                     app.set_gpu_text(SharedString::from(i18n::tr(&msg)));
+                    perf::hardware_check(&app, renderer.as_deref());
                 }
             });
         };
@@ -9733,7 +11023,7 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_app_version(APP_VERSION.into());
     // fichier passé au lancement (« Ouvrir avec ») : photo RAW → Mode Photo Pro, projet .illu
     #[cfg(not(target_arch = "wasm32"))]
-    if let Some(p) = args.iter().find(|a| !a.starts_with("--")).filter(|p| raw::is_raw(p) || p.to_lowercase().ends_with(".illu")) {
+    if let Some(p) = args.iter().find(|a| !a.starts_with("--")).filter(|p| raw::is_raw(p) || is_project_file(p)) {
         let path = std::path::Path::new(p);
         match std::fs::read(path) {
             Ok(bytes) => load_bytes(&app, &state, &path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default(), bytes),
@@ -9756,6 +11046,33 @@ fn run() -> Result<(), slint::PlatformError> {
         st.doc.saved = (usize::MAX, 0);
         match d {
             "close" => request_close_tab(&app, st, 0),
+            // projet SVG tracé à la résolution de l'écran : MP_SVG (fichier), MP_ZOOM, chemin 1 en
+            // Sélection directe
+            "svg" => {
+                let path = std::env::var("MP_SVG").unwrap_or_default();
+                let bytes = std::fs::read(&path).unwrap_or_default();
+                if let Ok(l) = svg_import::import_with("essai.svg", &bytes, svg_import::SvgMode::Single) {
+                    if let Some(doc) = l.docs.into_iter().next() {
+                        set_document(&app, st, doc);
+                    }
+                }
+                // après l'ajustement à la fenêtre (taille de la capture connue)
+                let weak = app.as_weak();
+                slint::Timer::single_shot(std::time::Duration::from_millis(120), move || {
+                    if let Some(app) = weak.upgrade() {
+                        app.set_zoom(std::env::var("MP_ZOOM").ok().and_then(|z| z.parse().ok()).unwrap_or(1.0));
+                    }
+                });
+                set_tool(&app, st, "tool-node");
+                let k = st.doc.active;
+                vecedit::begin_path_at(&app, st, k, 1);
+                vecview::render_now(&app, st);
+            }
+            // Mode Photo Pro avec une photo dans la pellicule
+            "photo" => {
+                let png = encode(&Doc::from_pixels(640, 420, demo(640, 420), "x"), "png").unwrap_or_default();
+                pm_add(&app, st, vec![("photo.png".into(), png)]);
+            }
             "drop" => {
                 let enc = |w: usize, h: usize| encode(&Doc::from_pixels(w, h, demo(w, h), "x"), "png").unwrap_or_default();
                 dropped_file(&app, st, "paysage.png".into(), enc(320, 200));
@@ -9850,10 +11167,7 @@ fn run() -> Result<(), slint::PlatformError> {
             }
             "eyedropper" => set_tool(&app, st, "tool-eyedropper"),
             "mask" => layer_alpha(&app, st, 0, false),
-            "icons" => {
-                app.set_icon_entries(ModelRc::new(VecModel::from(theme::icon_entries(&app))));
-                app.set_show_icons(true);
-            }
+            "icons" => open_icon_viewer(&app),
             "live" => {
                 st.doc = Doc::from_pixels(640, 400, demo(640, 400), "photo.png");
                 app.set_live_image(to_image(&st.doc.flatten(), st.doc.w, st.doc.h));
@@ -9969,7 +11283,7 @@ fn run() -> Result<(), slint::PlatformError> {
             if kind == 1 {
                 let (w, h) = (st.doc.w as f32, st.doc.h as f32);
                 if x >= 0.0 && y >= 0.0 && x < w && y < h {
-                    app.set_cursor_text(SharedString::from(i18n::tr_format!("{}, {} px", x as i32, y as i32)));
+                    show_cursor_pos(&app, x as i32, y as i32, st.session.busy());
                 }
                 if !st.session.poly.is_empty() {
                     app.set_overlay_path(poly_path(st, (x, y)));
@@ -10023,6 +11337,33 @@ fn run() -> Result<(), slint::PlatformError> {
             if sym_pointer(&app, st, kind, x, y) {
                 return;
             }
+            if kind == 0 {
+                st.last_press = (x, y);
+            }
+            // dégradé en cours : ses 3 points ; un appui à côté le pose et commence un nouveau geste
+            if st.grad_live.is_some() && gradlive::pointer(&app, st, kind, x, y, _shift) {
+                return;
+            }
+            // projet SVG : les outils tracent et modifient des objets, jamais des pixels
+            if st.doc.vector_mode && st.doc.mask_of.is_none() {
+                match st.tool {
+                    Tool::Move => {
+                        if vecedit::select_pointer(&app, st, kind, x, y, _shift) {
+                            return;
+                        }
+                    }
+                    Tool::Node => return vecedit::node_pointer(&app, st, kind, x, y, _shift, alt),
+                    Tool::Pen => return vecedit::pen_pointer(&app, st, kind, x, y, alt),
+                    Tool::Pencil | Tool::Brush => return vecedit::pencil_pointer(&app, st, kind, x, y),
+                    Tool::Gradient => {
+                        if kind == 0 {
+                            gradlive::begin_object(&app, st, x, y, button == 1);
+                        }
+                        return;
+                    }
+                    _ => {}
+                }
+            }
             // outil Déplacer sur un calque texte : l'objet est déplacé (rendu net)
             if vector_move_pointer(&app, st, kind, x, y) {
                 return;
@@ -10059,7 +11400,7 @@ fn run() -> Result<(), slint::PlatformError> {
                 return;
             }
             // pot de peinture sur un calque vectoriel : l'objet cliqué prend la couleur
-            if st.tool == Tool::Fill && st.doc.layer().vector.is_some() {
+            if st.tool == Tool::Fill && (st.doc.layer().vector.is_some() || st.doc.vector_mode) {
                 if kind == 0 {
                     let c = rgba(if button == 1 { app.get_secondary_color() } else { app.get_primary_color() });
                     vector_recolor(&app, st, x, y, c);
@@ -10079,6 +11420,12 @@ fn run() -> Result<(), slint::PlatformError> {
                 if matches!(st.tool, Tool::Brush | Tool::Pencil | Tool::Shape | Tool::RoundRect | Tool::Line | Tool::Gradient | Tool::Fill) && anim::ensure_blank_cel(&mut st.doc) {
                     refresh_all(&app, st);
                 }
+            }
+            if st.tool == Tool::Gradient {
+                if kind == 0 {
+                    gradlive::begin_pixels(st, x, y, button == 1);
+                }
+                return;
             }
             // pixels d'avant la forme : fond de la forme vivante (shape_edit::begin_new)
             if kind == 0 && matches!(st.tool, Tool::Shape | Tool::RoundRect | Tool::Line) {
@@ -10133,11 +11480,32 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     {
         let weak = app.as_weak();
+        app.on_tool_cursor_refresh(move || {
+            thread_local! {
+                static DEBOUNCE: slint::Timer = slint::Timer::default();
+            }
+            // zoom à la molette, curseur de taille : une seule image à la fin du geste
+            let weak = weak.clone();
+            DEBOUNCE.with(|t| {
+                t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(40), move || {
+                    if let Some(app) = weak.upgrade() {
+                        refresh_tool_cursor(&app);
+                    }
+                });
+            });
+        });
+    }
+    {
+        let weak = app.as_weak();
         let state = state.clone();
         app.on_canvas_double_click(move || {
             let app = weak.unwrap();
             let mut st = state.borrow_mut();
             let st = &mut *st;
+            if st.doc.vector_mode {
+                let (x, y) = st.last_press;
+                vecedit::double_click(&app, st, x, y);
+            }
             // double-clic de Slint : en secours (le double-clic est déjà mesuré à l'appui)
             if matches!(st.tool, Tool::PolyLasso | Tool::MagneticLasso) && st.session.tracing() {
                 let o = opts(&app);
@@ -10356,6 +11724,61 @@ fn run() -> Result<(), slint::PlatformError> {
         });
     }
     {
+        // visionneuse d'icônes : onglet, recherche, aperçu sombre ; copier le nom, ouvrir en projet
+        let weak = app.as_weak();
+        app.on_icon_refresh(move || {
+            let app = weak.unwrap();
+            let missing = icon_packs::missing_count();
+            app.set_icon_pack_missing(missing > 0);
+            app.set_icon_pack_missing_count(missing as i32);
+            let list = theme::icon_entries(&app, app.get_icon_tab(), app.get_icon_query().as_str(), app.get_icon_dark());
+            let gallery = theme::icon_entries(&app, 0, "", app.global::<Theme>().get_dark()).into_iter().take(96).collect::<Vec<_>>();
+            app.set_icon_pack_preview(ModelRc::new(VecModel::from(gallery)));
+            // couleur ou thème changés : l'icône choisie reste choisie, recalculée
+            let keep = usize::try_from(app.get_icon_sel()).ok().and_then(|k| app.get_icon_entries().row_data(k)).and_then(|e| list.iter().position(|n| n.name == e.name && n.kind == e.kind));
+            app.set_icon_entries(ModelRc::new(VecModel::from(list)));
+            app.set_icon_sel(keep.map_or(-1, |k| k as i32));
+            if let Some(k) = keep {
+                app.invoke_icon_preview(k as i32);
+            }
+        });
+        let weak = app.as_weak();
+        let state = state.clone();
+        {
+            let weak = weak.clone();
+            app.on_icon_preview(move |i| {
+                let app = weak.unwrap();
+                if let Some(e) = usize::try_from(i).ok().and_then(|k| app.get_icon_entries().row_data(k)) {
+                    app.set_icon_big(theme::icon_big(&app, e.name.as_str(), e.kind, app.get_icon_dark()));
+                }
+            });
+        }
+        app.on_icon_action(move |what, i| {
+            let app = weak.unwrap();
+            let Some(e) = app.get_icon_entries().row_data(i.max(0) as usize) else { return };
+            match what.as_str() {
+                "copy" => {
+                    // comme la version HTML : classe Font Awesome ou identifiant du symbole
+                    let id = match e.kind {
+                        2 => format!("fa-{} fa-{}", if e.brands { "brands" } else { "solid" }, e.name),
+                        0 => format!("illu-icon-mp-{}", e.name),
+                        _ => format!("illu-icon-{}", e.name),
+                    };
+                    status(&app, if copy_text(&id) { i18n::tr_format!("« {id} » copié") } else { i18n::tr_format!("Nom : {id} (copie impossible ici)") });
+                }
+                "open" => {
+                    let Some(svg) = theme::icon_svg(&app, e.name.as_str(), e.kind, app.get_icon_dark()) else {
+                        return status(&app, "Seules les icônes MasterPaint s'ouvrent en projet SVG");
+                    };
+                    let mut st = state.borrow_mut();
+                    open_svg(&app, &mut st, &format!("{}.svg", e.name), svg.as_bytes(), svg_import::SvgMode::Single, false);
+                    app.set_show_icons(false);
+                }
+                _ => {}
+            }
+        });
+    }
+    {
         // réglages du ruban / couleur principale changés : la forme vivante les prend
         let weak = app.as_weak();
         let state = state.clone();
@@ -10363,6 +11786,8 @@ fn run() -> Result<(), slint::PlatformError> {
             let app = weak.unwrap();
             let Ok(mut st) = state.try_borrow_mut() else { return };
             shape_edit::opts_changed(&app, &mut st);
+            vecedit::opts_changed(&app, &mut st);
+            gradlive::render(&app, &mut st);
         });
     }
     // saisie hexadécimale des sélecteurs de couleur surgissants (ColorPopup)
@@ -10421,8 +11846,11 @@ fn run() -> Result<(), slint::PlatformError> {
                     let f = &es.fields[fi];
                     let s = match f.kind {
                         2 => f.options.get(value as usize).map(|o| o.0.to_string()).unwrap_or_default(),
-                        3 if text.starts_with('#') && text.len() == 7 => text.to_string(),
-                        3 => format!("#{:02x}{:02x}{:02x}", primary.red(), primary.green(), primary.blue()),
+                        3 if text.is_empty() => format!("#{:02x}{:02x}{:02x}", primary.red(), primary.green(), primary.blue()),
+                        3 => {
+                            let Some(color) = effects::normalize_color(text.as_str()) else { return };
+                            color
+                        },
                         4 => text.to_string(),
                         _ => effects::fmt_num(value),
                     };
@@ -10530,12 +11958,22 @@ fn run() -> Result<(), slint::PlatformError> {
         app.on_quick_action(move |id| {
             let app = weak.unwrap();
             // aucun projet ouvert : boutons qui touchent l'image sans effet (message)
-            const NO_DOC: [&str; 14] = ["illu-tb-new", "illu-tb-open", "illu-tb-print", "classic-web", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
+            const NO_DOC: [&str; 19] = ["credits-paintdotjs", "credits-paintjs", "credits-paintnet", "credits-openpdn", "credits-photocraft", "signaler-un-bug", "illu-tb-new", "illu-tb-open", "illu-tb-print", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
             if state.borrow().empty && !NO_DOC.contains(&id.as_str()) && !id.starts_with("opt-") {
                 status(&app, "Aucun projet ouvert : créez une nouvelle image ou ouvrez un fichier");
                 return;
             }
             match id.as_str() {
+                "pdn-cut" => {
+                    let mut st = state.borrow_mut();
+                    if st.doc.sel.is_some() && copy(&app, &mut st) {
+                        st.doc.erase_selection();
+                        st.doc.commit("Couper la sélection");
+                        refresh_all(&app, &mut st);
+                    } else { status(&app, "Sélectionnez une zone avant de la couper"); }
+                }
+                "opt-sel-copy-ribbon" | "opt-sel-paste-ribbon" | "opt-sel-pixelgrid" | "opt-sel-rulers" => handle_ribbon(&app, &state, &id),
+                "pdn-deselect" => set_tool(&app, &mut state.borrow_mut(), "btn-deselect"),
                 "illu-tb-new" => {
                     let st = state.borrow();
                     show_new_project(&app, &st);
@@ -10553,24 +11991,17 @@ fn run() -> Result<(), slint::PlatformError> {
                     st.doc.redo();
                     refresh_all(&app, &mut st);
                 }
-                "illu-tb-zoom-in" => app.set_zoom((app.get_zoom() * 1.25).min(32.0)),
+                "illu-tb-zoom-in" => {
+                    let max = if state.borrow().doc.vector_mode { 640.0 } else { 32.0 };
+                    app.set_zoom((app.get_zoom() * 1.25).min(max));
+                }
                 "illu-tb-zoom-out" => app.set_zoom((app.get_zoom() / 1.25).max(0.05)),
                 "illu-tb-zoom-fit-row1" => app.invoke_zoom_fit(),
-                "classic-web" => {
-                    // version web classique (HTML) : html/ à la racine du site (la
-                    // version Rust est servie à la racine et dans /rust-app/)
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        if let Some(w) = web_sys::window() {
-                            let sub = w.location().pathname().is_ok_and(|p| p.contains("/rust-app/"));
-                            let _ = w.location().set_href(if sub { "../html/" } else { "html/" });
-                        }
-                    }
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        let _ = webbrowser::open("https://masterpaint.fr/html/");
-                    }
-                }
+                "credits-paintdotjs" => { let _ = webbrowser::open("https://github.com/LabyStudio/paintdotjs"); }
+                "credits-paintjs" => { let _ = webbrowser::open("https://paintjs.net/"); }
+                "credits-paintnet" => { let _ = webbrowser::open("https://paint.net/"); }
+                "credits-openpdn" => { let _ = webbrowser::open("https://github.com/rivy/OpenPDN"); }
+                "credits-photocraft" => { let _ = webbrowser::open("https://github.com/storytold/photocraft"); }
                 "open-author" => {
                     let _ = webbrowser::open("https://polocrafting.fr/");
                 }
@@ -10612,6 +12043,12 @@ fn run() -> Result<(), slint::PlatformError> {
                     status(&app, if id.as_str() == "clear-history-all" { "Historique de tous les onglets vidé" } else { "Historique de l'onglet vidé" });
                 }
                 "tech-info" => refresh_tech_info(&app, &state.borrow()),
+                "copy-diagnostics" => {
+                    refresh_tech_info(&app, &state.borrow());
+                    let rows = app.get_diagnostic_rows();
+                    let text = (0..rows.row_count()).filter_map(|i| rows.row_data(i)).map(|r| format!("{}: {}", r.label, r.value)).collect::<Vec<_>>().join("\n");
+                    status(&app, if copy_text(&text) { "Diagnostic copié dans le presse-papiers" } else { "Copie du diagnostic indisponible" });
+                }
                 // Paramètres › Avancé : aperçu de la fenêtre de plantage (sans arrêter l'application)
                 "crash-test" => {
                     let msg = i18n::tr_format!("Essai de la fenêtre de plantage (Paramètres › Avancé) — MasterPaint {APP_VERSION}");
@@ -10631,12 +12068,7 @@ fn run() -> Result<(), slint::PlatformError> {
                     show_error(&app, "MasterPaint s'est arrêté (essai)", &msg);
                 }
                 "clear-autosave" => {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    if let Some(p) = autosave_path() {
-                        let _ = std::fs::remove_file(p);
-                    }
-                    #[cfg(target_arch = "wasm32")]
-                    web::store_save(&[]);
+                    clear_autosave();
                     status(&app, "Sauvegarde automatique effacée");
                 }
                 "open-changelog" => {
@@ -10664,20 +12096,13 @@ fn run() -> Result<(), slint::PlatformError> {
                     #[cfg(not(target_arch = "wasm32"))]
                     load_bytes(&app, &state, "Projet d'exemple.illu", include_bytes!("../../../IMG/start.illu").to_vec());
                 }
-                "icon-viewer" => {
-                    app.set_icon_entries(ModelRc::new(VecModel::from(theme::icon_entries(&app))));
-                    app.set_show_icons(true);
-                }
+                "icon-viewer" => open_icon_viewer(&app),
                 _ => {
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        let opened = web_sys::window().and_then(|w| {
-                            let f=js_sys::Reflect::get(&w,&"mpOpenContact".into()).ok()?;
-                            wasm_bindgen::JsCast::dyn_ref::<js_sys::Function>(&f)?.call0(&w).ok()
-                        }).is_some();
-                        if opened { return; }
-                    }
+                    // même fenêtre partout (avant, une fenêtre HTML à part dans le navigateur)
                     app.set_contact_message(SharedString::default());
+                    let journal = state.try_borrow().map(|st| format!("{}\n\n{}", tech_info(&app, &st), applog::tail(30))).unwrap_or_default();
+                    app.set_contact_journal(journal.into());
+                    app.set_contact_with_journal(true);
                     app.set_show_contact(true);
                 }
             }
@@ -10903,15 +12328,15 @@ fn run() -> Result<(), slint::PlatformError> {
                 if first { layer.dynamic_mode = 2; }
             }
             layer.dyn_cache = None;
-            layer.dyn_key = None;
-            layer.dyn_serial = 0;
+            layer.dyn_low = None;
+            let uid = layer.uid;
+            dyn_invalidate(st, uid);
             st.doc.commit("Filtre dynamique");
             refresh_all(&app, st);
             // Effects and parameters are reached from their ordinary menu windows.
         });
     }
     {
-        let weak = app.as_weak();
         let state = state.clone();
         let language_state = state.clone();
         let language_app = app.as_weak();
@@ -11000,38 +12425,65 @@ fn run() -> Result<(), slint::PlatformError> {
             let app = weak.unwrap();
             let d = settings::Settings::default();
             match page {
+                // Apparence (l'essentiel)
                 0 => {
                     app.set_toolbar_mode(d.toolbar_mode);
                     app.set_set_theme_style(d.theme_style);
+                    app.set_set_interface_theme(0);
+                    app.set_set_follow_interface_style(d.follow_interface_style);
+                    app.set_set_icon_pack(0); icon_packs::select(0);
+                    app.set_set_pronounced_borders(d.pronounced_borders);
+                    app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(0))));
                     app.set_set_rounded(d.rounded);
                     app.set_set_glass(d.glass);
-                    app.set_set_title_transparent(d.title_transparent);
-                    app.set_set_title_blurred(d.title_blurred);
                     app.set_set_header_preview(d.header_preview);
-                    let a = Color::from_rgb_u8((d.accent >> 16) as u8, (d.accent >> 8) as u8, d.accent as u8);
-                    app.invoke_apply_theme(d.dark, a);
-                }
-                1 => {
-                    appearance::initialize(&app, &d);
                     app.set_set_layout(d.layout);
                     app.set_set_layout_auto(d.layout_auto);
+                    let a = Color::from_rgb_u8((d.accent >> 16) as u8, (d.accent >> 8) as u8, d.accent as u8);
+                    app.invoke_apply_theme(d.dark, a);
+                    app.invoke_zoom_fit();
+                }
+                // Toile et outils : damier, couleurs, navigation
+                1 => {
+                    appearance::initialize(&app, &d);
                     app.set_set_default_zoom(d.default_zoom);
                     let tools = app.global::<Generated>().get_tools();
                     app.set_set_default_tool(tools.iter().position(|t| t.2 == d.default_tool.as_str()).unwrap_or(0) as i32);
                     app.set_set_wheel_mode(d.wheel_scroll as i32);
                     app.set_set_zoom_smooth(d.zoom_smooth);
-                    app.set_set_ui_zoom(d.ui_zoom);
-                    apply_ui_zoom(&app, d.ui_zoom);
-                    app.invoke_zoom_fit();
                 }
                 2 => {
                     app.set_set_paste_mode(d.paste_mode);
                     app.set_set_paste_ask(d.paste_ask);
                     app.set_set_history_max(d.history_max as f32);
+                    app.set_set_history_keep(d.history_keep as f32);
                 }
                 3 => {
                     app.set_set_use_gpu(d.use_gpu);
                     GPU_ALLOWED.store(d.use_gpu, std::sync::atomic::Ordering::Relaxed);
+                    app.set_set_perf_mode(d.perf_mode);
+                    app.set_set_render_scale(d.render_scale);
+                    app.set_set_render_ctl(d.render_ctl);
+                    app.set_set_render_default(d.render_default);
+                    app.set_set_perf_done(d.perf_done);
+                    app.set_set_perf_cut(d.perf_cut);
+                    app.set_set_perf_reported(d.perf_reported);
+                    app.invoke_settings_changed();
+                }
+                // Personnalisation : style, disposition, taille, effets visuels
+                9 => {
+                    app.set_set_theme_style(d.theme_style);
+                    app.set_set_pronounced_borders(d.pronounced_borders);
+                    app.set_set_follow_interface_style(d.follow_interface_style);
+                    app.set_set_layout_auto(d.layout_auto);
+                    app.set_set_title_transparent(d.title_transparent);
+                    app.set_set_shadows(d.shadows);
+                    app.set_set_hover_fx(d.hover_fx);
+                    let t = app.global::<Theme>();
+                    app.invoke_apply_theme(t.get_dark(), t.get_accent_base());
+                    app.set_set_ui_zoom(d.ui_zoom);
+                    apply_ui_zoom(&app, d.ui_zoom);
+                    app.invoke_settings_changed();
                 }
                 4 => {
                     app.set_set_autosave(d.autosave);
@@ -11042,6 +12494,61 @@ fn run() -> Result<(), slint::PlatformError> {
             }
             save_settings(&app);
             status(&app, "Réglages de la section remis à leurs valeurs d'origine");
+        });
+    }
+    {
+        let weak = app.as_weak();
+        app.on_data_action(move |action| {
+            let Some(app) = weak.upgrade() else { return };
+            match action.as_str() {
+                "purge-request" => app.set_show_purge_confirm(true),
+                "purge-confirmed" => {
+                    DATA_PURGED.store(true, std::sync::atomic::Ordering::Relaxed);
+                    AUTOSAVE_ON.store(false, std::sync::atomic::Ordering::Relaxed);
+                    AUTOSAVE_FORCE.store(false, std::sync::atomic::Ordering::Relaxed);
+                    clear_autosave();
+                    settings::Settings::clear_storage();
+                    #[cfg(target_arch = "wasm32")]
+                    web::clear_all_data();
+                    app.set_show_settings(false);
+                    app.set_show_purge_complete(true);
+                }
+                "purge-restart" => {
+                    #[cfg(target_arch = "wasm32")]
+                    slint::Timer::single_shot(std::time::Duration::from_millis(500), || {
+                        if let Some(w) = web_sys::window() { let _ = w.location().reload(); }
+                    });
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        if let Ok(exe) = std::env::current_exe() {
+                            let args: Vec<String> = std::env::args().skip(1).collect();
+                            let _ = std::process::Command::new(exe).args(args).spawn();
+                        }
+                        std::process::exit(0);
+                    }
+                }
+                "purge-leave" => {
+                    app.set_show_purge_complete(false);
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(w) = web_sys::window() { let _ = w.location().set_href("https://polocrafting.fr/"); }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    { let _ = webbrowser::open("https://polocrafting.fr/"); std::process::exit(0); }
+                }
+                "reset-all-settings" => {
+                    for page in [0, 1, 2, 3, 4, 9] { app.invoke_settings_reset(page); }
+                    app.set_set_snap_div(48.0);
+                    app.set_set_snap_thresh(50.0);
+                    app.set_set_snap_always(false);
+                    app.set_set_snap_guides(true);
+                    app.set_set_missing_icon_fallback(0);
+                    icon_packs::set_missing_fallback(0);
+                    app.set_set_follow_interface_style(true);
+                    app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(0))));
+                    save_settings(&app);
+                    status(&app, "Tous les paramètres ont été réinitialisés sans redémarrer");
+                }
+                _ => {}
+            }
         });
     }
     {
@@ -11062,8 +12569,97 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     {
         let weak = app.as_weak();
+        app.on_select_interface_style(move |i| {
+            let app = weak.unwrap();
+            let was_phone=app.get_phone();
+            let i=i.clamp(0,3);
+            app.set_set_interface_theme(i);
+            // Les dispositions Paint.NET et Photoshop utilisent leur barre d'options compacte;
+            // le mode MasterPaint reprend son ruban. Les préférences d'icônes/couleurs restent
+            // pilotées séparément par « appliquer les réglages conseillés ».
+            app.set_toolbar_mode(if i == 0 { 0 } else { 1 });
+            app.set_set_layout(match i { 1 => 0, 2 => 1, 3 => 2, _ => 0 });
+            // PaintJS choisit les outils depuis le sélecteur de la barre d’options, pas depuis
+            // une palette séparée. Les autres thèmes gardent leur palette d’outils.
+            // paintdotjs montre aussi la palette Outils (deux colonnes) ; seul le téléphone la cache
+            app.set_show_tools(i != 3);
+            if app.get_set_follow_interface_style() {
+                let pack = match i.clamp(0, 3) { 1 => 1, 2 => 2, _ => 0 };
+                app.set_set_rounded(i == 0);
+                app.set_set_pronounced_borders(i == 1 || i == 2);
+                // couleur d'accentuation de la référence (bleu Paint.NET, bleu PhotoCraft), modifiable
+                // ensuite ; seul Photoshop (PhotoCraft) passe en sombre. En le quittant, le thème
+                // choisi avant revient : Paint.NET et MasterPaint ne restent pas sombres d'office.
+                let user_dark = USER_DARK.load(std::sync::atomic::Ordering::Relaxed) == 2;
+                let accent = match i { 1 => Color::from_rgb_u8(0x03, 0x69, 0xa1), 2 => Color::from_rgb_u8(0x1d, 0x4e, 0xd8), _ => app.global::<Theme>().get_accent_base() };
+                app.invoke_apply_theme(if i == 2 { true } else { user_dark }, accent);
+                app.set_set_icon_pack(pack);
+                icon_packs::select(pack);
+                app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(pack))));
+                app.invoke_icon_refresh();
+            }
+            if i != 3 && app.window().size().width as f32 / app.window().scale_factor() < 600.0 { app.set_set_layout_auto(false); }
+            if was_phone != app.get_phone() { set_phone_panels(&app,app.get_phone()); }
+            app.invoke_zoom_fit();
+            let t=app.global::<Theme>();
+            theme::apply(&app,t.get_dark(),t.get_accent_base());
+            save_settings(&app);
+        });
+        let weak = app.as_weak();
+        app.on_icon_pack_action(move |action| {
+            let app=weak.unwrap();
+            let action=action.to_string();
+            if action == "fallback" {
+                icon_packs::set_missing_fallback(app.get_set_missing_icon_fallback());
+                let t=app.global::<Theme>(); theme::apply(&app,t.get_dark(),t.get_accent_base());
+                app.invoke_icon_refresh(); save_settings(&app); return;
+            }
+            if action == "import" {
+                let weak=app.as_weak();
+                let task=async move {
+                    #[cfg(target_arch="wasm32")]
+                    let files = { let Some(files)=web::pick_files(".zip,.json,.png,.jpg,.jpeg,.svg,application/zip,application/json,image/*").await else { return }; files };
+                    #[cfg(all(not(target_arch="wasm32"), target_os="android"))]
+                    let files = { let Some(files)=rfd::AsyncFileDialog::new().pick_files().await else {return}; let mut v=Vec::new(); for f in files {v.push((f.file_name(), f.read().await));} v };
+                    #[cfg(all(not(target_arch="wasm32"), not(target_os="android")))]
+                    let files = { let Some(files)=rfd::AsyncFileDialog::new().add_filter("Packs et icônes", &["zip","json","png","jpg","jpeg","svg"]).pick_files().await else {return}; let mut v=Vec::new(); for f in files {v.push((f.file_name(), f.read().await));} v };
+                    let Some(app)=weak.upgrade() else {return};
+                    match icon_packs::import_files(files) {
+                        Ok((name,_)) => { app.set_set_icon_pack(3); icon_packs::select(3); app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(3)))); let t=app.global::<Theme>(); theme::apply(&app,t.get_dark(),t.get_accent_base()); app.invoke_icon_refresh(); save_settings(&app); status(&app,format!("Pack importé : {name}")); ask_icon_fallback(&app); }
+                        Err(e) => show_error(&app,"Importer un pack",&e),
+                    }
+                };
+                let _=slint::spawn_local(task); return;
+            }
+            if let Some((verb,id))=action.split_once(':') {
+                let mut parts=id.split(':'); let kind=parts.next().unwrap_or(""); let index=parts.next().and_then(|s|s.parse::<usize>().ok()).unwrap_or(0);
+                match (verb,kind) {
+                    ("select","builtin") if index<3 => { app.set_set_icon_pack(index as i32); }
+                    ("select","custom") => { icon_packs::select_custom(index); app.set_set_icon_pack(3); }
+                    ("export","builtin") if index<3 => { let name=["masterpaint","paintjs","photocraft"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.zip"),"Pack d'icônes","zip","application/zip",icon_packs::export_zip(index as i32)); }
+                    ("export","custom") => { let previous=icon_packs::active_custom_index(); icon_packs::select_custom(index); offer_file(&app,"masterpaint-pack-importe.zip","Pack d'icônes importé","zip","application/zip",icon_packs::export_zip(3)); icon_packs::select_custom(previous); }
+                    ("export-json","builtin") if index<3 => { let name=["masterpaint","paintjs","photocraft"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.json"),"Pack d'icônes","json","application/json",icon_packs::export_json(index as i32)); }
+                    ("export-json","custom") => { let previous=icon_packs::active_custom_index(); icon_packs::select_custom(index); offer_file(&app,"masterpaint-pack-importe.json","Pack d'icônes importé","json","application/json",icon_packs::export_json(3)); icon_packs::select_custom(previous); }
+                    ("delete","custom") => { icon_packs::delete_custom(index); if icon_packs::all_custom().as_array().is_none_or(|a|a.is_empty()){app.set_set_icon_pack(0);icon_packs::select(0);}else if app.get_set_icon_pack()==3 {icon_packs::select(3);} }
+                    ("source",_) => { if let Some(url)=icon_packs::github_source(id) { let _=webbrowser::open(&url); } }
+                    _ => {}
+                }
+                if verb=="select" { icon_packs::select(app.get_set_icon_pack()); let t=app.global::<Theme>();theme::apply(&app,t.get_dark(),t.get_accent_base());app.invoke_icon_refresh(); ask_icon_fallback(&app); }
+                if verb=="delete" { let t=app.global::<Theme>();theme::apply(&app,t.get_dark(),t.get_accent_base());app.invoke_icon_refresh(); }
+                app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(app.get_set_icon_pack())))); save_settings(&app); return;
+            }
+            if action=="select" { icon_packs::select(app.get_set_icon_pack()); let t=app.global::<Theme>();theme::apply(&app,t.get_dark(),t.get_accent_base());app.invoke_icon_refresh();save_settings(&app); }
+            if action=="export" { offer_file(&app,"masterpaint-icons.zip","Pack d'icônes","zip","application/zip",icon_packs::export_zip(app.get_set_icon_pack())); }
+        });
+    }
+    {
+        let weak = app.as_weak();
         app.on_apply_theme(move |dark, accent| {
             let app = weak.unwrap();
+            // choix clair / sombre de l'utilisateur, hors Photoshop (qui l'impose)
+            if app.get_set_interface_theme() != 2 && !app.get_pm_open() {
+                USER_DARK.store(if dark { 2 } else { 1 }, std::sync::atomic::Ordering::Relaxed);
+            }
             if app.get_pm_open() {
                 // Mode Photo Pro : le choix est retenu pour la sortie du mode, l'interface reste sombre
                 PM_DARK_RESTORE.store(if dark { 2 } else { 1 }, std::sync::atomic::Ordering::Relaxed);
@@ -11161,8 +12757,34 @@ fn run() -> Result<(), slint::PlatformError> {
             // type de projet : 0 pixel, 1 SVG, 2 animation pixel, 3 animation SVG
             let kind = app.get_new_kind();
             if kind == 1 || kind == 3 {
+                // projet SVG : aucun calque de pixels ; le fond est un rectangle (verrouillé), un
+                // fond transparent n'a pas de calque du tout
                 doc.vector_mode = true;
-                doc.add_layer_in();
+                if fill[3] > 0 {
+                    let bg = vector::ShapeObj {
+                        kind: "rect".into(),
+                        a: (0.0, 0.0),
+                        b: (w as f32, h as f32),
+                        style: ShapeStyle::Fill,
+                        width: 1.0,
+                        color: fill,
+                        points: Vec::new(),
+                        radius: 0.0,
+                        fill: None,
+                        rot: 0.0,
+                        cap_start: 0,
+                        cap_end: 0,
+                        dash: 0,
+                        grad: None,
+                        subs: Vec::new(),
+                    };
+                    let l = doc.layer_mut();
+                    l.vector = Some(Box::new(vector::VectorLayer { objects: vec![vector::Obj::Shape(bg)], effects: Vec::new(), serial: 0 }));
+                    l.locked = true;
+                    doc.add_layer_in();
+                } else {
+                    doc.layer_mut().px = vec![0u8; w * h * 4].into();
+                }
                 let l = doc.layer_mut();
                 l.name = i18n::tr_format!("Vecteur 1");
                 l.vector = Some(Box::new(vector::VectorLayer::default()));
@@ -11312,7 +12934,7 @@ fn run() -> Result<(), slint::PlatformError> {
         // même règle que `phone` de l'interface : largeur logique (zoom de l'interface compris)
         let narrow = |app: &AppWindow, w: f32| {
             let z = (app.get_set_ui_zoom() / 100.0).clamp(0.6, 2.0);
-            app.get_set_layout() == 2 || (app.get_set_layout_auto() && w / z < 600.0)
+            app.get_set_interface_theme() == 3 || (app.get_set_interface_theme() == 0 && app.get_set_layout() == 2) || (app.get_set_layout_auto() && w / z < 600.0)
         };
         let was_phone = std::cell::Cell::new(narrow(&app, w));
         web::on_resize(move || {
@@ -11507,6 +13129,35 @@ mod web {
         (w * h * 3 == lin.len()).then_some(crate::raw::Raw { w, h, lin, white: head[2], baseline_ev: head[3] })
     }
 
+    /// Décodage d'une image lancé tout de suite dans un worker (place `slot` de la file des
+    /// longs calculs, pour en faire tourner plusieurs à la fois) ; résultat avec `decode_finish`.
+    pub fn decode_start(bytes: &[u8], slot: usize) -> Option<js_sys::Promise> {
+        let msg = js_sys::Object::new();
+        let transfer = js_sys::Array::new();
+        let a = js_sys::Uint8Array::from(bytes);
+        transfer.push(&a.buffer());
+        let _ = js_sys::Reflect::set(&msg, &"type".into(), &"decode".into());
+        let _ = js_sys::Reflect::set(&msg, &"data".into(), &a);
+        let _ = js_sys::Reflect::set(&msg, &"lane".into(), &1.into());
+        let _ = js_sys::Reflect::set(&msg, &"slot".into(), &(slot as u32).into());
+        let win = web_sys::window()?;
+        let mc = js_sys::Reflect::get(&win, &"mpCompute".into()).ok().filter(|v| v.is_object())?;
+        let run: js_sys::Function = js_sys::Reflect::get(&mc, &"run".into()).ok()?.dyn_into().ok()?;
+        run.call2(&mc, &msg, &transfer).ok()?.dyn_into().ok()
+    }
+
+    pub async fn decode_finish(p: js_sys::Promise) -> Option<(usize, usize, Vec<u8>)> {
+        let v = wasm_bindgen_futures::JsFuture::from(p).await.ok().filter(|v| !v.is_null() && !v.is_undefined())?;
+        let mut px = js_sys::Uint8Array::new(&v).to_vec();
+        if px.len() < 8 {
+            return None;
+        }
+        let head: Vec<u8> = px.drain(..8).collect();
+        let w = u32::from_le_bytes([head[0], head[1], head[2], head[3]]) as usize;
+        let h = u32::from_le_bytes([head[4], head[5], head[6], head[7]]) as usize;
+        (w * h * 4 == px.len()).then_some((w, h, px))
+    }
+
     /// Image décodée par le worker ; `None` : pas de worker ou format inconnu (refait sur place).
     pub async fn compute_decode(bytes: &[u8]) -> Option<(usize, usize, Vec<u8>)> {
         let msg = js_sys::Object::new();
@@ -11552,6 +13203,48 @@ mod web {
     fn store() -> Option<wasm_bindgen::JsValue> {
         let w = web_sys::window()?;
         js_sys::Reflect::get(&w, &"mpStore".into()).ok().filter(|v| v.is_object())
+    }
+
+    /// Image encodée en PNG (adresse data:) par le worker de calcul ; `gray` : masque α, un octet
+    /// par pixel. `None` : pas de worker, l'encodage se fera sur place.
+    pub async fn compute_png(px: &[u8], w: usize, h: usize, gray: bool) -> Option<String> {
+        let msg = js_sys::Object::new();
+        let transfer = js_sys::Array::new();
+        let a = js_sys::Uint8Array::from(px);
+        transfer.push(&a.buffer());
+        let set = |k: &str, v: &wasm_bindgen::JsValue| {
+            let _ = js_sys::Reflect::set(&msg, &k.into(), v);
+        };
+        set("type", &"png".into());
+        set("data", &a);
+        set("w", &(w as u32).into());
+        set("h", &(h as u32).into());
+        set("gray", &gray.into());
+        set("lane", &1.into());
+        let v = run_worker(&msg, &transfer).await?;
+        String::from_utf8(js_sys::Uint8Array::new(&v).to_vec()).ok()
+    }
+
+    pub fn store_clear() {
+        let Some(st) = store() else { return };
+        let Ok(f) = js_sys::Reflect::get(&st, &"clear".into()) else { return };
+        if let Ok(f) = f.dyn_into::<js_sys::Function>() {
+            let _ = f.call0(&st);
+        }
+    }
+
+    /// Supprime la base IndexedDB utilisée par MasterPaint et son ancien nom de stockage.
+    pub fn clear_all_data() {
+        if let Some(w) = web_sys::window() {
+            if let Ok(idb) = js_sys::Reflect::get(&w, &"indexedDB".into()) {
+                if let Ok(delete) = js_sys::Reflect::get(&idb, &"deleteDatabase".into()) {
+                    if let Ok(delete) = delete.dyn_into::<js_sys::Function>() {
+                        let _ = delete.call1(&idb, &"masterpaint-rust".into());
+                        let _ = delete.call1(&idb, &"illu_workspace_blobs_v1".into());
+                    }
+                }
+            }
+        }
     }
 
     pub fn store_save(bytes: &[u8]) {
@@ -11987,7 +13680,11 @@ mod web {
                 a.click();
             }
         }
-        let _ = web_sys::Url::revoke_object_url(&url);
+        // pas tout de suite : le navigateur lit l'adresse après le clic (sinon GET blob:…
+        // net::ERR_FILE_NOT_FOUND, téléchargement perdu)
+        slint::Timer::single_shot(std::time::Duration::from_secs(60), move || {
+            let _ = web_sys::Url::revoke_object_url(&url);
+        });
     }
 }
 

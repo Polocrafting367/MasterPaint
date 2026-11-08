@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Traduction des textes de l'interface écrits côté Rust (barre d'état, erreurs, fenêtres de
 //! choix, fenêtres d'effets) : mêmes fichiers lang/<langue>/LC_MESSAGES/masterpaint-ui.po que
 //! les textes @tr des fichiers .slint (tools/gen_lang.py les relève tous). Le français est la
@@ -6,14 +7,24 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-/// Fichiers embarqués des langues autres que le français.
-const PO: [(&str, &str); 5] = [
-    ("en", include_str!("../lang/en/LC_MESSAGES/masterpaint-ui.po")),
-    ("es", include_str!("../lang/es/LC_MESSAGES/masterpaint-ui.po")),
-    ("de", include_str!("../lang/de/LC_MESSAGES/masterpaint-ui.po")),
-    ("it", include_str!("../lang/it/LC_MESSAGES/masterpaint-ui.po")),
-    ("pt", include_str!("../lang/pt/LC_MESSAGES/masterpaint-ui.po")),
+/// Fichiers .po des langues autres que le français, compressés à la compilation (build.rs :
+/// 1,4 Mo de texte, quatre fois moins une fois compressés) ; seule la langue choisie est
+/// décompressée.
+const PO_Z: [(&str, &[u8]); 5] = [
+    ("en", include_bytes!(concat!(env!("OUT_DIR"), "/po-en.z"))),
+    ("es", include_bytes!(concat!(env!("OUT_DIR"), "/po-es.z"))),
+    ("de", include_bytes!(concat!(env!("OUT_DIR"), "/po-de.z"))),
+    ("it", include_bytes!(concat!(env!("OUT_DIR"), "/po-it.z"))),
+    ("pt", include_bytes!(concat!(env!("OUT_DIR"), "/po-pt.z"))),
 ];
+
+fn po(code: &str) -> Option<String> {
+    use std::io::Read;
+    let z = PO_Z.iter().find(|(c, _)| *c == code)?.1;
+    let mut s = String::new();
+    flate2::read::DeflateDecoder::new(z).read_to_string(&mut s).ok()?;
+    Some(s)
+}
 
 thread_local! {
     /// texte français → traduction de la langue choisie (vide : français)
@@ -77,7 +88,7 @@ fn parse(po: &str) -> HashMap<String, String> {
 
 /// Langue des textes Rust (code des dossiers de lang/ ; « fr » : textes d'origine).
 pub fn set_language(code: &str) {
-    let map = PO.iter().find(|(c, _)| *c == code).map(|(_, po)| parse(po)).unwrap_or_default();
+    let map = po(code).map(|po| parse(&po)).unwrap_or_default();
     let mut templates: Vec<_> = map.iter().filter_map(|(source, target)| {
         let parsed = parts(source)?;
         let letters = parsed.iter().map(|p| match p {
@@ -246,8 +257,8 @@ mod format_tests {
 
     #[test]
     fn every_translated_template_can_render() {
-        for (language, po) in PO {
-            for (source, target) in parse(po) {
+        for (language, _) in PO_Z {
+            for (source, target) in parse(&po(language).unwrap()) {
                 let Some(src) = parts(&source) else { continue };
                 if !src.iter().any(|p| matches!(p, Part::Field(_))) { continue; }
                 let mut message = String::new();

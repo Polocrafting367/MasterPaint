@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Outils de dessin et de sélection : comportement au clic, au glisser et au relâcher.
 //! Mêmes identifiants que les boutons de la fenêtre Outils de la version web.
 
@@ -26,6 +27,10 @@ pub enum Tool {
     Line,
     Deform,
     Warp,
+    /// projet SVG : points d'ancrage et poignées d'un chemin
+    Node,
+    /// projet SVG : tracé de chemins de Bézier
+    Pen,
     Unsupported,
 }
 
@@ -51,6 +56,8 @@ impl Tool {
             "tool-line" => Tool::Line,
             "tool-deform" => Tool::Deform,
             "tool-warp-4" => Tool::Warp,
+            "tool-node" => Tool::Node,
+            "tool-pen" => Tool::Pen,
             _ => Tool::Unsupported,
         }
     }
@@ -85,6 +92,25 @@ pub struct Opts {
     pub magnet: f32,
     /// lasso magnétique : longueur (pixels du document) entre deux ancres automatiques
     pub magnet_freq: f32,
+    /// remplissage des formes en dégradé (voir `vector::shape_gradient`)
+    pub fill_gradient: bool,
+    pub grad_radial: bool,
+    pub grad_angle: f32,
+    pub grad_smart: bool,
+}
+
+/// Réglages du dégradé d'une forme (un changement régénère le dégradé).
+pub type GradSig = (bool, bool, i32, bool, [u8; 4], [u8; 4]);
+
+impl Opts {
+    pub fn grad_sig(&self) -> GradSig {
+        (self.fill_gradient && self.style != ShapeStyle::Outline, self.grad_radial, self.grad_angle.round() as i32, self.grad_smart, self.primary, self.secondary)
+    }
+
+    /// Dégradé d'une forme de cadre `b`, de `c0` à `c1` ; None : remplissage uni ou contour seul.
+    pub fn shape_grad(&self, b: (f32, f32, f32, f32), c0: [u8; 4], c1: [u8; 4]) -> Option<Box<crate::vector::Grad>> {
+        (self.fill_gradient && self.style != ShapeStyle::Outline).then(|| Box::new(crate::vector::shape_gradient(b, self.grad_radial, self.grad_angle, self.grad_smart, c0, c1)))
+    }
 }
 
 impl Default for Opts {
@@ -111,6 +137,10 @@ impl Default for Opts {
             secondary: [255, 255, 255, 255],
             magnet: 0.6,
             magnet_freq: MAG_FREQ,
+            fill_gradient: false,
+            grad_radial: false,
+            grad_angle: 0.0,
+            grad_smart: false,
         }
     }
 }
@@ -833,6 +863,8 @@ impl Session {
                 // (l'inverse au clic droit), comme Paint.NET
                 let other = if d.secondary { o.primary } else { o.secondary };
                 let fill = (tool != Tool::Line && style == ShapeStyle::Both).then(|| with_opacity(other));
+                let bbox = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
+                let grad = if tool == Tool::Line { None } else { o.shape_grad(bbox, with_opacity(color), with_opacity(other)) };
                 let shape = crate::vector::ShapeObj {
                     kind,
                     a,
@@ -847,6 +879,8 @@ impl Session {
                     cap_start: o.cap_start,
                     cap_end: o.cap_end,
                     dash: o.dash,
+                    grad,
+                    subs: Vec::new(),
                 };
                 // efface l'aperçu précédent (rectangle du trait d'avant) puis applique le nouveau
                 let old = d.cover.dirty;
@@ -859,11 +893,12 @@ impl Session {
                 }
                 let mut cov = Cover::new(w, h);
                 let ai = doc.active;
-                if tool == Tool::Line || fill.is_some() {
+                // sans sélection : tracée dans son seul cadre (une couverture à la taille de
+                // l'image, allouée à chaque pas, rendait le tracé très lent sur une grande photo)
+                if doc.sel.is_none() || tool == Tool::Line || fill.is_some() || shape.grad.is_some() {
                     // trait (bouts, tirets) ou forme à deux couleurs : dessinés comme l'objet final
                     cov.dirty = shape.paint(None, &mut doc.layers[ai].px, w, h);
                 } else {
-                    let bbox = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
                     match tool {
                         Tool::RoundRect => cov.shape(bbox, o.style, lw, paint::sdf_rect(a.0, a.1, b.0, b.1, o.corner)),
                         _ => match o.shape_kind.as_str() {

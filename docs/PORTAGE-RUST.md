@@ -1,3 +1,4 @@
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 # Portage de MasterPaint vers Rust — liste de travail
 
 État au 16/10/2026. L'interface Rust (Slint) se trouve dans `rust/masterpaint-ui`, le moteur
@@ -50,6 +51,27 @@ web ; `cargo build -p masterpaint-ui --release` pour le bureau ;
   (`anim_map_cels`). Tests : `cargo test -p masterpaint-ui --lib anim::`. Capture : `--demo=anim`.
   Reste : tween (pistes de propriétés), portée « Images » des effets, sélection multi-images,
   export MP4 / WebM, redimensionner / recadrer en mode animation (bloqué avec un message).
+- **Projet SVG natif (2026-11-03)** : plus aucun pixel de document à l'écran. `src/vecrender.rs`
+  (moteur tiny-skia : contours exacts, traits, dégradés, texte en vraies courbes de la police),
+  `src/vecview.rs` (toile retracée à la résolution de l'écran pour la zone visible, marge de 15 %,
+  rendu espacé selon sa durée ; tracés d'édition dans une 2e image), `src/vecedit.rs` (Sélection,
+  Sélection directe, Plume, Crayon ajusté par Schneider, Dégradé). `ShapeObj::subs` = chemins de
+  Bézier (`Node`, `SubPath`), `ShapeObj::to_subs` = géométrie de toutes les formes, `points` n'est
+  plus qu'un découpage (cadre, clic). Import : courbes et arcs gardés ; export : commandes C,
+  dossiers en `<g>`. Redimensionner / tourner / retourner / recadrer recalculent les objets
+  (`Doc::map_vectors`, `vec_stale`). `Layer::px` reste un cache interne (vignettes, export PNG,
+  effets). Exceptions dessinées comme images : calques de pixels, calques à effets du menu ; un
+  filtre ƒ visible ou une fenêtre d'effet repasse sur la composition en pixels (`wanted_mode`).
+  Reste : sélection multiple, groupes d'objets, presse-papiers d'objets, contours du texte,
+  poignées d'échelle du texte, pelure d'oignon vectorielle.
+- **Mémoire web (2026-11-03)** : mémoire wasm limitée à 4 Go et jamais rendue au navigateur.
+  Historique : `HISTORY_MAX` (20) tous projets confondus, `HISTORY_KEEP` (3) par projet, origine
+  toujours gardée (`trim_history`) ; `Auto-niveau` répété = une étape (`Snapshot::repeat`). Worker
+  de calcul arrêté après 8 s de repos. `PNG_CACHE` limité aux calques de la dernière sauvegarde.
+- **Aperçu d'effet à la taille affichée** : `preview_lod` (1 pixel d'aperçu par pixel d'écran),
+  `apply_direct_preview` affiche l'image réduite sans toucher aux calques ni agrandir.
+- **Icônes** : `theme.rs::IconMask`, parts de chaque couleur par pixel, teinte recalculée sans relire
+  les SVG (304 icônes : préparation 63 ms, teinte 4 ms en natif). Rendu en 32 px (64 si échelle > 2).
 - **SVG (bêta)** : panneau Objets SVG (`src/svg_panel.rs`, `ui/svg_objects.slint`), polygones /
   polylignes libres (`ShapeObj::points`), import SVG simple (`src/svg_import.rs` : rect, circle,
   ellipse, line, polygon, polyline). Reste : `<path>`, `<text>`, rotations, cadre de l'objet choisi.
@@ -347,27 +369,21 @@ affichage réduit des grandes images, Hors toile, dossier html/.
   à voisinage ; WebAssembly multi-fil (en-têtes COOP / COEP) pour le web.
 - Aperçu des effets en basse résolution sur les grandes images (comme la version web).
 
-## Transition : fonctions HTML derrière l'interface Rust
+## Performances de l'affichage (2026-11-04)
 
-Objectif : tant qu'une fonction n'est pas transférée, l'utiliser depuis la version HTML sans
-quitter l'interface Rust.
-
-- **Web** : la page Rust charge la version HTML dans une fenêtre intégrée (iframe) en « mode
-  hôte » : l'image y est transmise, la fenêtre de réglage de l'effet HTML s'affiche comme une
-  fenêtre de l'application, l'aperçu et le résultat reviennent sur la toile Rust.
-- **Bureau** : même principe avec une WebView intégrée à la fenêtre Rust (WebView2 sous
-  Windows, WKWebView sous macOS, WebKitGTK sous Linux), fichiers servis localement.
-- Le marqueur « à venir » deviendra « HTML » pour les fonctions servies par ce pont.
+femtovg redessine toute la fenêtre au moindre changement visible. Curseur d'outil en vrai curseur
+système, coordonnées limitées à 4 par seconde, zones de l'interface gardées en texture
+(`cache-rendering-hint`), rien de dessiné sous une image opaque, pile de fenêtres unique
+(`WinStack`). Reste à faire : afficher le brouillon d'un filtre ƒ sans l'agrandir à 20 Mpx,
+relecture asynchrone de la passerelle WebGL2.
 
 ## Mise en ligne (racine de masterpaint.fr)
 
-- `/` : version web classique (HTML) — bouton « Essayer la version Rust » + fenêtre à la
-  première visite (`js/app/rust-try.js`) ; `/#contact` ouvre directement le formulaire.
-- `/rust-app/` : version Rust web — construite et publiée par `rust/build-ui-web.ps1` ;
-  bouton « Version web classique » pour revenir à `/`.
+- `/` et `/rust-app/` : application (construite et publiée par `rust/build-ui-web.sh` ou
+  `.ps1`). La version HTML a été retirée le 2026-11-04.
 - `/downloads/` : exe portable Rust, installeur Windows ; Flatpak / AppImage / dmg à venir
   (GitHub Actions). `.htaccess` : type `application/wasm` et téléchargement forcé.
-- `/fonts/` : polices partagées par les deux versions (outil Texte de la version Rust).
+- `/fonts/` : polices de l'outil Texte.
 
 ## Demandes du 16/10/2026 (suivi)
 

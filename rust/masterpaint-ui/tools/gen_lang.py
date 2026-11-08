@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Fichiers de traduction de l'interface (gettext .po), à relancer quand des textes @tr changent.
 
   python3 -I tools/gen_lang.py
@@ -27,7 +28,7 @@ RUST_UI = {
     'lib.rs', 'effects.rs', 'effects_gen.rs', 'settings.rs', 'colorspace.rs',
     'scene.rs', 'tools.rs', 'vector.rs', 'text.rs', 'groups.rs', 'gallery_gen.rs',
     'illu.rs', 'photo.rs', 'curves.rs', 'ascii.rs', 'transform.rs', 'raw.rs', 'editor.rs',
-    'ral_gen.rs', 'gpu.rs', 'webgl.rs', 'snapshot.rs', 'anim.rs', 'svg_panel.rs', 'svg_import.rs',
+    'ral_gen.rs', 'gpu.rs', 'webgl.rs', 'snapshot.rs', 'anim.rs', 'svg_panel.rs', 'svg_import.rs', 'perf.rs',
 }
 
 

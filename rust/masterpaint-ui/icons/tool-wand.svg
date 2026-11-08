@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}">
-  <path d="M12.4 2.1 13.9 3.6 5.2 12.3 3.7 10.8z" fill="none" stroke="{STROKE}" stroke-width="1.3" stroke-linejoin="round"></path>
-  <path d="M10.6 3.9 12.1 5.4" fill="none" stroke="{STROKE}" stroke-width="1.2"></path>
-  <path d="M3.6 0.8 4.5 3.1 6.8 4 4.5 4.9 3.6 7.2 2.7 4.9 0.4 4 2.7 3.1z" fill="{ACCENT}" stroke="{STROKE}" stroke-width="0.45" stroke-linejoin="round"></path>
-  <path d="M12.2 8.6 12.95 10.45 14.8 11.2 12.95 11.95 12.2 13.8 11.45 11.95 9.6 11.2 11.45 10.45z" fill="{ACCENT}" stroke="{STROKE}" stroke-width="0.45" stroke-linejoin="round"></path>
+  <path d="M12.4 2.1 13.9 3.6 5.2 12.3 3.7 10.8z"
+        fill="none" stroke="{STROKE}" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M10.6 3.9 12.1 5.4" fill="none" stroke="{STROKE}" stroke-width="1.2"/>
+  <path d="M3.4 1.6 4.05 3.35 5.8 4 4.05 4.65 3.4 6.4 2.75 4.65 1 4 2.75 3.35z" fill="{ACCENT}"/>
+  <path d="M11.9 9.3 12.35 10.55 13.6 11 12.35 11.45 11.9 12.7 11.45 11.45 10.2 11 11.45 10.55z" fill="{ACCENT}"/>
 </svg>

@@ -1,3 +1,4 @@
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 # Traductions de l’interface Rust
 
 Le français est la langue source. Les catalogues `fr`, `en`, `es`, `de`, `it` et `pt`

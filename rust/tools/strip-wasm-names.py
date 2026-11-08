@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Retire la section « name » (symboles de débogage) d'un .wasm : -8 Mo sur 28 pour MasterPaint,
 sans effet sur l'exécution. Usage : strip-wasm-names.py fichier.wasm"""
 import sys

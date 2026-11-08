@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 # Fichiers de compilation hors du dépôt : dossier « MasterPaint-build » à côté de « MasterPaint »
 # (plusieurs Go : ils ne partent ni sur GitHub ni sur le serveur). Chemin relatif au dossier rust/.
 # La variable CARGO_TARGET_DIR reste prioritaire (GitHub Actions l'utilise pour garder rust/target).

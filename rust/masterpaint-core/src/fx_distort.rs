@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Déformations (Effets › Déformer) et transformations géométriques.
 
 use crate::util::*;

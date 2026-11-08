@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Composition de l'affichage sur la carte graphique (gpu.rs `compose_submit`), pour que les
 //! grandes images restent fluides, surtout dans le navigateur où le processeur n'a qu'un fil.
 //! Bureau : résultat attendu sur place (même déroulé que le calcul CPU). Navigateur (WebGPU) :
@@ -56,10 +57,12 @@ fn buffer(st: &mut State, target: Target) -> &mut Vec<u8> {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 fn contains(a: Rect, b: Rect) -> bool {
     a.0 <= b.0 && a.1 <= b.1 && a.2 >= b.2 && a.3 >= b.3
 }
 
+#[cfg(target_arch = "wasm32")]
 fn intersect(a: Rect, b: Rect) -> Option<Rect> {
     let r = (a.0.max(b.0), a.1.max(b.1), a.2.min(b.2), a.3.min(b.3));
     (r.2 > r.0 && r.3 > r.1).then_some(r)
@@ -103,8 +106,11 @@ pub(crate) fn compose(app: &AppWindow, st: &mut State, target: Target, r: Rect) 
     let webgl = gpu::get().is_none() && crate::webgl::available();
     #[cfg(not(target_arch = "wasm32"))]
     let webgl = false;
-    // pendant un geste : petits rectangles, et chaque envoi du calque actif coûterait plus
-    if !(gpu_ready() || webgl) || st.session.busy() {
+    // pendant un geste (tracé, forme ou texte en cours de modification, objet déplacé) : petits
+    // rectangles, et chaque envoi du calque actif coûterait plus ; dans le navigateur, un résultat
+    // arrivé en retard écrasait aussi l'aperçu
+    let gesture = st.session.busy() || st.shape_edit.is_some() || st.text_edit.is_some() || st.vector_drag.is_some() || st.grad_live.is_some();
+    if !(gpu_ready() || webgl) || gesture {
         return false;
     }
     let ds = step(st, target);

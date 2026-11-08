@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Passerelle WebGL2 (navigateur sans WebGPU : Firefox, Chrome / Edge sous Linux…) : la
 //! composition de l'affichage, les filtres dynamiques ƒ et les effets du menu accélérés passent
 //! par `window.mpGL` (web/index.html), écrit en JavaScript sur WebGL2 avec les formules des
@@ -87,7 +88,8 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
     if !ok || w == 0 || h == 0 || w > max || h > max || x1 <= x0 || y1 <= y0 || doc.has_groups() {
         return None;
     }
-    let vis: Vec<&crate::editor::Layer> = doc.layers.iter().filter(|l| l.visible && l.opacity > 0.0).collect();
+    // sous un filtre ƒ « partout » : rien à envoyer ni à composer
+    let vis = doc.shown_layers();
     if vis.is_empty() {
         return None;
     }
@@ -98,18 +100,22 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
         sent.retain(|uid, _| doc.layers.iter().any(|l| l.uid == *uid));
         let uids: Vec<f64> = sent.keys().map(|u| *u as f64).collect();
         call("retain", &[js_sys::Float64Array::from(&uids[..]).into()]);
-        let mut plan: Vec<f64> = Vec::with_capacity(vis.len() * 4);
+        let mut plan: Vec<f64> = Vec::with_capacity(vis.len() * 5);
         let mut total = 0usize;
         for (n, l) in vis.iter().enumerate() {
             let mask = l.mask.as_ref().filter(|m| m.len() == w * h).map(|m| m.arc());
             // mêmes sources et drapeaux que compose_submit : aux = masque (1 canal) ou rendu ƒ
+            let low = l.low_cache(w, h);
+            let aux_k = low.map_or(1, |(k, _)| k);
+            let (aw, ah) = (w.div_ceil(aux_k), h.div_ceil(aux_k));
             let (main, aux, mut flags): (Arc<Vec<u8>>, Option<(Arc<Vec<u8>>, u32)>, u32) = match (&l.dyn_cache, l.dynamic_mode) {
+                _ if low.is_some() => (l.px.arc(), low.map(|(_, c)| (c.clone(), 4)), if l.dynamic_mode == 0 { 2 } else { 4 }),
                 (Some(c), 0) => (l.px.arc(), Some((c.clone(), 4)), 2),
                 (Some(c), 2) => (l.px.arc(), Some((c.clone(), 4)), 4),
                 (Some(c), 1) => (c.clone(), mask.clone().map(|m| (m, 1)), mask.is_some() as u32),
                 _ => (l.px.arc(), mask.clone().map(|m| (m, 1)), mask.is_some() as u32),
             };
-            if main.len() != w * h * 4 || aux.as_ref().is_some_and(|(a, ch)| a.len() < w * h * *ch as usize) {
+            if main.len() != w * h * 4 || aux.as_ref().is_some_and(|(a, ch)| a.len() < aw * ah * *ch as usize) {
                 return None;
             }
             if n == 0 {
@@ -132,13 +138,13 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
             }
             if !aux_ok {
                 let (a, ch) = aux.as_ref().expect("source auxiliaire");
-                if !upload(l.uid, 1, w, h, &a[..w * h * *ch as usize], *ch) {
+                if !upload(l.uid, 1, aw, ah, &a[..aw * ah * *ch as usize], *ch) {
                     sent.remove(&l.uid);
                     return None;
                 }
             }
             sent.insert(l.uid, Sent { main: Arc::downgrade(&main), aux: aux.as_ref().map(|(a, _)| Arc::downgrade(a)) });
-            plan.extend([l.uid as f64, l.blend.index() as f64, flags as f64, l.opacity as f64]);
+            plan.extend([l.uid as f64, l.blend.index() as f64, flags as f64, l.opacity as f64, aux_k as f64]);
         }
         let (rw, rh) = (x1 - x0, y1 - y0);
         let params: Vec<f64> = [w, h, ds, ns, x0, y0, rw, rh, off0, off1, checker as usize].iter().map(|v| *v as f64).collect();

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Régions de pixels pour les outils : pot de peinture et baguette magique.
 //!
 //! Remplace les boucles JavaScript de `floodFill` (js/DrawingTools.js) et du worker de la

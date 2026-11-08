@@ -1,4 +1,176 @@
+MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
+
+3.5.6 (08/11/26) — thèmes, packs d’icônes, Paramètres et performances
+- Quatre présentations : MasterPaint, Paint.NET (paintdotjs), Photoshop (PhotoCraft), Téléphone
+- Dispositions et ordre des outils adaptés ; retour aux réglages MasterPaint conservé
+- Packs MasterPaint, paintdotjs et PhotoCraft ; import JSON et export complet avec icônes de repli
+- Les fichiers invalides sont rejetés avant de remplacer le pack importé précédent
+- Page Crédits avec polocrafting.fr, dépôts GitHub et attributions des projets de référence
+- Mentions d’auteur dans les sources propres à MasterPaint ; licences tierces conservées
+- Sauvegarde préalable dans backups/masterpaint-2026-11-08-avant-themes.tar.gz
+- Packs PaintJS et PhotoCraft : correspondance refaite à la main (effets, réglages, calques,
+  rotations, fusion, monter / descendre, plus / moins, dégradés, extrémités de ligne…) :
+  PaintJS 226 icônes d'interface sur 334 (avant ~60), PhotoCraft 218 (avant ~120)
+- Pack incomplet choisi ou importé : question « icônes manquantes : MasterPaint ou équivalents
+  Font Awesome ? » ; le choix ne s'affiche plus pour le pack MasterPaint, qui contient tout
+- Export d'un pack : ZIP avec svg/ (sources vectorielles), png/ (toutes les icônes, SVG converties)
+  et le JSON réimportable ; à l'import, les icônes identiques à MasterPaint ne sont pas recopiées
+- Vignette du pack MasterPaint : l'outil Pinceau, comme PaintJS et PhotoCraft
+- Paramètres : « Apparence » (interface, thème sombre, couleur, barre, coins, aperçu) et nouvelle
+  section « Personnalisation » (style, disposition, taille de l'interface, effets visuels) ; toutes
+  les pages rangées en cartes aérées, textes raccourcis, plus jamais de défilement horizontal
+- Toile et outils : l'aperçu du damier suit enfin la taille des cases (le damier n'est plus un SVG
+  décodé par le navigateur) ; couleurs du damier à côté de l'aperçu
+- Paint.NET : palette Outils affichée comme paintdotjs, boutons Outils / Historique / Calques /
+  Couleurs / Paramètres / Aide en haut à droite, zoom dans la barre d'état seulement
+- Photoshop : thème sombre comme PhotoCraft (si « Suivre l'interface »), outils sur deux colonnes,
+  panneaux ancrés à en-tête en onglet
+- Bienvenue : le choix « Interface » propose les quatre présentations
+- Réduction du rendu de la toile : l'infobulle indique les réductions permises par ce projet
+- Icônes dessinées pour MasterPaint là où paintdotjs / PhotoCraft n'ont rien (≈ 90 et 110, dans
+  leur style) : packs couverts à 431 et 446 icônes sur 508 ; gardées à part (custom/) dans les
+  sources et dans le ZIP exporté
+- Pack MasterPaint complet : les 170 glyphes Font Awesome de l'interface ont leur icône au style
+  MasterPaint (57 nouveaux dessins) ; Font Awesome ne sert plus qu'aux logos de marques
+- Paint.NET et Photoshop au plus près des originaux : couleurs exactes (paintdotjs theme.css,
+  PhotoCraft « Pro »), sombres par défaut, fenêtres carrées à titre de 30 px et croix rouge de 19 px
+  (Paint.NET), boutons clairs à texte noir (Paint.NET) ou en pilule (Photoshop), police 8,25 pt
+- Toile et outils : couleurs choisies directement sur une maquette en direct (fond, damier et ses
+  deux couleurs, couleurs 1 et 2 du démarrage)
+- Performances (audit dans docs/performance-audit-2026-11-08.md) : régler un filtre ƒ sur une grande
+  image ne lance plus le calcul pleine résolution avant OK (fenêtre ouverte 5 fois plus vite sur
+  20 Mpx, plus de toile vide) ; aperçus réduits fidèles (un flou de 2 px n'y paraît plus 9 px) ;
+  changement d'interface / de pack d'icônes près de 2 fois plus rapide, instantané au retour
+- Correction : croix des fenêtres invisible avec le pack PaintJS
+- Photoshop retravaillé façon PhotoCraft : une seule barre de menus (nom du document au centre,
+  thème, Paramètres, Aide, espace de travail à droite), onglets de documents en texte
+  (« nom @ zoom % (mode) »), colonne d'outils avec couleurs principale / secondaire, bande d'icônes
+  des panneaux, barre d'état zoom · mode · taille · calques ; seul ce mode passe en sombre
+- Paint.NET : reste clair ou sombre selon le choix ; barre du haut unie comme paintdotjs ; boutons
+  sombres en thème sombre (plus de texte blanc sur fond blanc) ; croix des palettes de 24 px ;
+  icônes gris foncé des packs inversées en sombre (le « T » du Texte)
+- Couleur d'accentuation de nouveau active en Paint.NET et en Photoshop (le bleu de la référence
+  n'est plus qu'une proposition au choix de l'interface)
+- Photoshop : barre d'options à sa place (elle glissait sur les onglets, traversée d'un trait),
+  sans titres de groupes, bouton d'outil avec ▾ comme PhotoCraft ; elle se déplie en ruban comme
+  dans les autres présentations (flèche à droite, choix dans Paramètres › Apparence)
+- Quitter Photoshop rend le thème clair / sombre choisi avant : Paint.NET n'est plus sombre d'office
+- Paint.NET : vignettes des projets sur toute la hauteur de la bande du haut (plus de bande vide
+  dessous) ; l'option « Coins arrondis » fonctionne (carré par défaut, comme paintdotjs)
+- Paint.NET et Photoshop : « Bordures marquées » = contours de la référence (paintdotjs, PhotoCraft),
+  « Non » = contours discrets de MasterPaint (avant : contours de la référence dans les deux cas)
+- Packs PaintJS et PhotoCraft complets pour l'interface (« Agrandir la sélection », méthodes de
+  dégradé dessinées)
+- Écran de chargement : plus de grand cadre blanc avant l'image, la couleur d'accent reste
+- Fractale de Mandelbrot plus rapide : les points qui ne s'échappent jamais (intérieur, orbites
+  périodiques) ne font plus leurs 1000 itérations, image identique ; audit de tous les effets et de
+  Photo Pro dans docs/performance-audit-2026-11-08.md
+- Fenêtre Calques : boutons avec leurs icônes dédiées (monter / descendre / ajouter / supprimer /
+  dupliquer / fusionner), donc celles du pack PaintJS ou PhotoCraft
+- Bouton « − » des curseurs : c'était l'icône « soustraire de la sélection » (mauvaise
+  correspondance), c'est maintenant le moins
+
+3.5.5 (04/11/26) — filtres ƒ fluides sur grande image, PC modestes, données des projets fermés effacées
+- Peindre sous un filtre ƒ : le filtre n'est plus recalculé que là où passe le pinceau (photo de
+  20 Mpx : plus d'une seconde par mouvement auparavant) ; résultat identique au pixel près. Les
+  effets qui lisent toute l'image sont recalculés à la fin du trait
+- Réglage d'un filtre ƒ sur grande image : brouillon affiché à sa taille, sans l'agrandir ; un filtre
+  « partout » n'envoie plus à la carte graphique les calques qu'il recouvre
+- Résolution de rendu de la toile (option dans Paramètres › Performances, désactivée par défaut) : deux
+  boutons à côté de la grille et des règles rendent la toile et ses filtres ƒ en ÷2, ÷4 ou ÷8 selon la
+  taille de l'image, avec « Rendre maintenant ». L'interface reste nette, et tout ce qui écrit l'image
+  (export, aplatir, Photo Pro) refait un rendu en pleine résolution. Rendu trop lent sur un projet :
+  proposition de l'activer pour ce projet seul ou dans les Paramètres
+- Mode léger (Automatique, Toujours ou Jamais) : coupe la surbrillance au survol, les ombres, la
+  transparence et le flou du haut, sans jamais flouter l'interface
+- Navigateur, écran à plus de 100 % : résolution de l'interface Écran ou Standard (temps par image divisé
+  par 2 à 150 %)
+- Paramètres réorganisés : Apparence regroupe barre d'options, thème, couleurs, disposition et toile ;
+  Performances regroupe mode léger, résolution, carte graphique, effets et zoom de l'interface
+- Menus : survoler les lignes ne déplace plus qu'un rectangle au lieu de tout redessiner
+- Ralentissements observés : proposition d'envoyer un rapport (processeur, mémoire, carte graphique,
+  taille des projets), à relire avant l'envoi ; ni image ni nom de projet
+- Projet fermé : retiré tout de suite de la sauvegarde automatique, ses masques α et ses données en
+  mémoire avec lui ; plus aucun projet ou sauvegarde coupée : la sauvegarde est supprimée. Avant, un
+  projet fermé pouvait revenir au rechargement. Projets de l'ancienne version HTML retirés du navigateur
+- Correction : « + Effet » ouvre le menu sous le bouton (il s'ouvrait à l'endroit du dernier menu utilisé)
+- Effets › Répéter : l'entrée porte le nom du dernier effet utilisé (avant : toujours « Répéter Sépia »,
+  et rien ne se passait sans effet précédent)
+- Signaler un bug : ton message d'un côté, journal technique en lecture seule et facultatif de l'autre ;
+  possible aussi sans projet ouvert. Fenêtre de plantage : champ de message et bouton « Attendre »
+- Pack d'icônes passé en revue : pointillés réguliers aux coins nets, plus de micro-lignes blanches ni de
+  traits qui dépassent des cadres ; gomme, pipette, lasso polygonal, hors toile, image, engrenage, nuages,
+  règles, modes, sélection rapide et famille de formes redessinés
+
+3.5.4 (04/11/26) — interface bien plus fluide, grandes images réactives, fenêtres mises en ordre
+- Curseur sur la toile : balader la souris ne redessine plus toute la fenêtre (vrai curseur système
+  pour la croix, l'icône de l'outil et le contour du pinceau) ; énorme gain sur les PC modestes
+- Interface gardée en mémoire graphique (menus, ruban, barre d'état, palettes, fenêtres) : dessiner,
+  zoomer ou déplacer une fenêtre coûte beaucoup moins cher ; damier et fond plus dessinés sous une
+  image opaque
+- Masque α ouvert : plus de recomposition de toute l'image à chaque clic (plus d'une seconde sur une
+  photo de 20 Mpx)
+- Sauvegarde automatique : images encodées hors de l'interface, plus de gel sur les grandes photos
+- Mode Photo Pro : « Ouvrir » développe la photo en arrière-plan (fenêtre qui reste réactive),
+  aperçu RAW plus rapide
+- Filtre dynamique « partout » : les calques qu'il recouvre ne sont plus recalculés
+- Fenêtres : celle qu'on ouvre ou qu'on touche passe devant les autres, partout (Paramètres,
+  Visionneuse, Notes de version, tutoriel, effets, palettes…), et ses boutons répondent du premier clic
+- Haut de la fenêtre : l'aperçu flouté du projet se voit mieux, aussi derrière les menus et la barre
+  rapide, en thème clair comme en sombre
+- Correction : A en projet SVG sélectionne bien l'outil Sélection directe ; un calque de filtre désactivé
+  ne s'affiche plus par erreur
+- Ménage : version HTML et ancienne application Tauri retirées, code mort supprimé
+
+3.5.3 (03/11/26) — projets SVG natifs, moins de mémoire, couleur d'accent instantanée
+- Projet SVG : la toile est tracée à la résolution de l'écran, nette à tous les zooms (jusqu'à
+  64 000 %), plus aucun pixel visible ; fond en rectangle vectoriel, plus de calque de pixels
+- Nouveaux outils SVG : Sélection (tous calques, cadre, rotation), Sélection directe (points et
+  poignées de Bézier), Plume, Crayon ajusté en courbes, Dégradé par glissement ; les outils de
+  pixels disparaissent en mode SVG ; raccourcis V, A, P, N
+- Les courbes et arcs des fichiers SVG restent de vraies courbes, à l'ouverture comme à l'export ;
+  redimensionner, tourner ou recadrer recalcule les objets sans perte
+- Historique : 20 étapes pour tous les projets ouverts, les 3 dernières de chaque projet et son
+  image d'origine toujours gardées (réglable dans Paramètres › Données) ; Auto-niveau répété
+  tient en une étape, « Auto-niveau (3) », un seul retour rend l'image d'avant
+- Aperçu des effets sur une grande image : calculé à la taille affichée, sans recomposer ni
+  agrandir toute l'image ; pleine résolution à la validation
+- Moins de mémoire : calculs arrêtés au repos, sauvegarde automatique allégée
+- Couleur d'accentuation : changement instantané des icônes (avant : lent, puis plantage)
+- Paramètres et Aide : la fenêtre touchée passe devant l'autre
+- Restauration : ne reste plus bloquée si la base du navigateur l'est ; téléchargements corrigés
+- Formes : remplissage uni ou dégradé (linéaire, radial, angle, méthode simple ou intelligente)
+- Outil Dégradé : reste modifiable avant d'être posé, avec 3 points (début, milieu, fin), en pixels
+  comme en SVG ; nouvelles icônes Losange et Conique
+- Visionneuse d'icônes : thème clair ou sombre et couleurs d'accent, icône choisie nette en grand
+- Barre du haut en trois zones ; palette d'outils SVG mise en ordre
+- Bouton Fermer sur l'Aide, les Notes de version, la Visionneuse, l'Aperçu 1:1 et Télécharger ;
+  Signaler un bug utilise la même fenêtre partout ; fenêtres nettes (calées sur les pixels)
+- Tracé de formes et de texte plus rapide sur les grandes images
+
+3.5.2 (03/11/26) — aide en onglets, Photo Pro plus sobre et plus juste, démarrage plus rapide
+- Aide et raccourcis en onglets, comme les Paramètres (colonne de sections, sous-onglets en
+  haut) : Raccourcis, Couleurs, Calques (calques, masque α, filtre ƒ, dossiers), Outils et ruban
+  (ruban MasterPaint, barre Paint.NET, sélections, pinceaux), Texte et SVG (texte, formes
+  vivantes, lignes et courbes, calques SVG), Effets, Animation, Fichiers — chacun illustré
+- Mode Photo Pro : curseurs, boutons et listes au style Windows 10 / 11 (sombre) ; la colonne
+  des réglages ne défile plus quand on règle un curseur (molette ou barre de défilement à la
+  souris ; au doigt, pas pendant un réglage) ; molette sur un curseur = ±1
+- Mode Photo Pro ouvert : une photo glissée sur la fenêtre rejoint directement la pellicule
+- Auto (Photo Pro) bien plus juste : la photo réduite est rendue par le vrai moteur, mesurée
+  (luminosité, contraste, blancs / noirs écrêtés, dominante, saturation) et corrigée par petits
+  pas tant qu'une mesure sort de sa plage ; une image déjà bien réglée (PNG, JPEG retouché) est
+  à peine touchée, rien n'est poussé jusqu'à brûler l'image ; dominante jaune / bleue corrigée
+  seulement si elle en est vraiment une (pas des fleurs jaunes), noir et blanc préservé
+- Ajustements › Auto-niveau utilise ce même réglage automatique ; bouton « Auto » en tête de
+  la fenêtre Camera Raw (remplit les curseurs)
+- Réouverture des projets au démarrage bien plus rapide : un seul rendu pour tous les onglets
+  (chaque projet était composé puis aussitôt caché), vignettes d'onglets calculées en petit,
+  images des calques décodées en parallèle (bureau : tous les cœurs, sans figer la fenêtre ;
+  navigateur : dans les workers de calcul)
+- Version web plus légère (~27 Mo au lieu de 31) : compilation optimisée d'un bloc,
+  traductions compressées
 
 3.5.1 (02/11/26) — modes de projet, fenêtres retravaillées
 - Mode du projet (Image › Mode du projet et fenêtre Nouvelle image) : Pixel, SVG, Animation,
@@ -56,6 +228,30 @@ MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 - Ligne : l'épaisseur passe sous « Modifiable » ; bouts et trait dans l'ordre de la ligne
   (début, trait, fin)
 - Barres de titre translucides plus couvrantes, alignées sur le corps de la fenêtre
+- Bureau Linux (AppImage) : effets et filtres dynamiques qui ne s'appliquaient jamais — la carte
+  graphique passait par OpenGL (EGL), qui plantait dans les fils de calcul ; seuls Vulkan, Metal
+  et DirectX 12 sont utilisés, et un calcul qui plante est refait par le processeur
+- Filtre dynamique : un effet supprimé (ou déplacé, désactivé, mode changé) ne réapparaît plus
+  quand un calcul lancé avant la modification se termine après (surtout sur le bureau)
+- Ouvrir un SVG : fenêtre de choix comme la version HTML (un calque par élément, tout sur un
+  seul calque, grille d'icônes pour les feuilles de symboles comme illu-sprite.svg, ou dans le
+  projet en cours) ; les chemins (<path> : droites, courbes, arcs, trous) sont maintenant repris
+  en objets modifiables, ainsi que currentColor et les couleurs var(--…)
+- Visionneuse d'icônes comme la version HTML : onglets MasterPaint / non personnalisées (glyphes
+  encore sans icône maison), recherche, aperçu sombre, clic = détail (agrandir, copier le nom,
+  ouvrir l'icône en projet SVG modifiable), double-clic = copier le nom
+- Changement de thème clair / sombre bien plus rapide : icônes gardées en cache, l'autre mode
+  préparé en arrière-plan
+- Photos RAW DNG « avec perte » (Lightroom, convertisseur Adobe — ex. photos PhotoTraces) : plus
+  roses ni délavées (courbes MapPolynomial / MapTable de l'OpcodeList2 appliquées)
+- Fichiers Paint.NET (.pdn) : ouverture avec leurs calques, noms, visibilité, opacité et modes
+  de fusion (lecture du flux .NET), ainsi que les .pdn exportés par MasterPaint HTML
+- SVG : rendu fidèle (vérifié face au moteur resvg) — dégradés linéaires et radiaux, rotations,
+  inclinaisons et matrices, coins arrondis, chemins rapides à afficher et à modifier ; petits
+  dessins ouverts en grand (1536 px) pour rester nets ; noms de la grille d'icônes affichés
+- Onglets : quand ils ne tiennent plus, ils rétrécissent, puis la bande défile (molette, flèches)
+- Version web : statistiques de visite (comme la version HTML), seulement depuis masterpaint.fr
+  et polocrafting.fr — rien en local ni en mode développement
 
 3.5.0 (01/11/26) — animation, formes SVG modifiables, aide illustrée, réglages retenus
 - Animation (frise) dans la version Rust : images, durées d'exposition, maintien, pelure

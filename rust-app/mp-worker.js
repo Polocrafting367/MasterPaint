@@ -1,7 +1,8 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // MasterPaint — worker de calcul (navigateur) : effets, Camera Raw, RAW et décodage d'images
 // hors du fil de l'interface, qui ne se fige plus. Même module wasm que la page, reçu déjà
 // compilé ; la fonction de démarrage de l'application ne fait rien hors d'une fenêtre.
-import init, { mp_worker_effect, mp_worker_camraw_lin, mp_worker_raw, mp_worker_decode, mp_worker_fill } from './pkg/masterpaint_ui.js';
+import init, { mp_worker_effect, mp_worker_camraw_lin, mp_worker_raw, mp_worker_decode, mp_worker_fill, mp_worker_png } from './pkg/masterpaint_ui.js';
 
 let ready = null;
 // dernier message de panique du module (écrit par le panic hook dans la console) : transmis à la
@@ -30,6 +31,7 @@ self.onmessage = async (e) => {
     else if (m.type === 'fill') out = mp_worker_fill(m.data, m.mask, m.w, m.h, m.params);
     else if (m.type === 'raw') out = mp_worker_raw(m.data);
     else if (m.type === 'decode') out = mp_worker_decode(m.data);
+    else if (m.type === 'png') out = mp_worker_png(m.data, m.w, m.h, !!m.gray);
     if (out && out.length === 0) out = null;
   } catch (e2) {
     // erreur dans le module (panique) : il est inutilisable, la page en recrée un

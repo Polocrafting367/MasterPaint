@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Ajustements (menu « Ajustements » de Paint.NET) et effets couleur ponctuels.
 
 use crate::util::*;

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Forme « vivante », comme Paint.NET : après le tracé (outils Formes, Rectangle arrondi, Ligne),
 //! la forme reste modifiable sur la toile — cadre à 8 poignées, poignée de rotation au-dessus,
 //! glisser dedans pour la déplacer — et le ruban la retouche en direct (couleur, épaisseur,
@@ -13,18 +14,21 @@ use super::*;
 /// Forme en cours d'édition.
 pub(crate) struct ShapeEdit {
     /// calque qui la reçoit (uid)
-    layer: u64,
+    pub(crate) layer: u64,
     /// objet repris d'un calque SVG (indice) ; None : nouvelle forme
-    obj: Option<usize>,
+    pub(crate) obj: Option<usize>,
     /// forme reprise telle qu'elle était (rien à enregistrer si elle n'a pas changé)
     orig: Option<vector::ShapeObj>,
     /// pixels du calque sans cette forme
     base: editor::Px,
-    shape: vector::ShapeObj,
+    pub(crate) shape: vector::ShapeObj,
     /// geste en cours : prise, point de départ, forme au départ
     drag: Option<(Grab, (f32, f32), vector::ShapeObj)>,
     /// rectangle touché par le dernier rendu (seul lui est remis à neuf au suivant)
     last: Option<(usize, usize, usize, usize)>,
+    /// réglages du dégradé déjà appliqués : un dégradé importé (plusieurs arrêts) n'est refait que
+    /// si l'utilisateur change l'un d'eux, pas pour une autre retouche
+    grad_sig: tools::GradSig,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -89,23 +93,22 @@ fn hit(s: &vector::ShapeObj, x: f32, y: f32, zoom: f32, curve_mode: bool) -> Opt
 }
 
 fn translate(s: &mut vector::ShapeObj, dx: f32, dy: f32) {
-    s.a = (s.a.0 + dx, s.a.1 + dy);
-    s.b = (s.b.0 + dx, s.b.1 + dy);
-    for p in &mut s.points {
-        *p = (p.0 + dx, p.1 + dy);
-    }
+    s.map_points(&move |p| (p.0 + dx, p.1 + dy));
 }
 
 /// Nouveau cadre (repère de la forme) ; les sommets libres suivent proportionnellement.
 fn set_rect(s: &mut vector::ShapeObj, r: (f32, f32, f32, f32)) {
     let (nx0, ny0, nx1, ny1) = (r.0.min(r.2), r.1.min(r.3), r.0.max(r.2), r.1.max(r.3));
     let (nx1, ny1) = (nx1.max(nx0 + 1.0), ny1.max(ny0 + 1.0));
+    let (ox0, oy0, ox1, oy1) = s.bbox();
+    let (sx, sy) = ((nx1 - nx0) / (ox1 - ox0).max(1e-3), (ny1 - ny0) / (oy1 - oy0).max(1e-3));
+    let to_new = move |p: (f32, f32)| (nx0 + (p.0 - ox0) * sx, ny0 + (p.1 - oy0) * sy);
     if !s.points.is_empty() {
-        let (ox0, oy0, ox1, oy1) = s.bbox();
-        let (sx, sy) = ((nx1 - nx0) / (ox1 - ox0).max(1e-3), (ny1 - ny0) / (oy1 - oy0).max(1e-3));
-        for p in &mut s.points {
-            *p = (nx0 + (p.0 - ox0) * sx, ny0 + (p.1 - oy0) * sy);
-        }
+        s.map_points(&to_new);
+    } else if let Some(g) = s.grad.as_mut() {
+        // le dégradé suit la forme
+        g.p0 = to_new(g.p0);
+        g.p1 = to_new(g.p1);
     }
     s.a = (nx0, ny0);
     s.b = (nx1, ny1);
@@ -239,6 +242,7 @@ fn render(app: &AppWindow, st: &mut State) {
     if let Some(ed) = st.shape_edit.as_ref() {
         show(app, ed);
     }
+    vecview::touch_overlay(app, st);
     queue_paint_frame(app, st, dirty);
 }
 
@@ -247,7 +251,7 @@ fn render(app: &AppWindow, st: &mut State) {
 pub(crate) fn begin_new(app: &AppWindow, st: &mut State, shape: vector::ShapeObj) -> bool {
     let uid = st.doc.layer().uid;
     let Some((_, base)) = st.shape_base.take().filter(|(u, _)| *u == uid) else { return false };
-    st.shape_edit = Some(ShapeEdit { layer: uid, obj: None, orig: None, base, shape, drag: None, last: None });
+    st.shape_edit = Some(ShapeEdit { layer: uid, obj: None, orig: None, base, shape, drag: None, last: None, grad_sig: opts(app).grad_sig() });
     render(app, st);
     status(app, "Forme : poignées pour la redimensionner ou la tourner, ruban pour la modifier ; Entrée ou clic à côté pour la poser");
     true
@@ -260,24 +264,75 @@ fn begin_existing(app: &AppWindow, st: &mut State, x: f32, y: f32) -> bool {
         return false;
     }
     let Some(v) = st.doc.layers[k].vector.as_deref() else { return false };
-    let Some(i) = (0..v.objects.len()).rev().find(|&i| matches!(&v.objects[i], vector::Obj::Shape(s) if (s.sdf())(x, y) <= s.width.max(1.0) / 2.0 + 3.0)) else {
+    let tol = 3.0 / app.get_zoom().max(0.01);
+    let Some(i) = (0..v.objects.len()).rev().find(|&i| matches!(&v.objects[i], vector::Obj::Shape(s) if s.hit(x, y, tol))) else {
         return false;
     };
-    let vector::Obj::Shape(shape) = v.objects[i].clone() else { return false };
+    begin_obj(app, st, i, x, y);
+    true
+}
+
+/// Reprend la forme `i` du calque actif, saisie en (x, y).
+pub(crate) fn begin_obj(app: &AppWindow, st: &mut State, i: usize, x: f32, y: f32) {
+    let k = st.doc.active;
+    let Some(v) = st.doc.layers[k].vector.as_deref() else { return };
+    let Some(vector::Obj::Shape(shape)) = v.objects.get(i).cloned() else { return };
     let (w, h) = (st.doc.w, st.doc.h);
     let base = v.render_others(&mut st.fonts, w, h, i);
     let uid = st.doc.layers[k].uid;
     load_opts(app, &shape);
-    st.shape_edit = Some(ShapeEdit { layer: uid, obj: Some(i), orig: Some(shape.clone()), base: base.into(), shape: shape.clone(), drag: Some((Grab::Move, (x, y), shape)), last: None });
+    st.shape_edit = Some(ShapeEdit { layer: uid, obj: Some(i), orig: Some(shape.clone()), base: base.into(), shape: shape.clone(), drag: Some((Grab::Move, (x, y), shape)), last: None, grad_sig: opts(app).grad_sig() });
     render(app, st);
     status(app, "Forme reprise : glisser pour la déplacer, poignées pour la redimensionner ou la tourner, ruban pour la modifier");
-    true
+}
+
+/// Un appui en (x, y) prend-il une poignée ou le cadre de la forme en cours ?
+pub(crate) fn grabs(app: &AppWindow, st: &State, x: f32, y: f32) -> bool {
+    let curve = app.global::<ToolOpts>().get_line_mode() == 1;
+    st.shape_edit.as_ref().is_some_and(|ed| hit(&ed.shape, x, y, app.get_zoom(), curve).is_some())
+}
+
+/// Retire la forme en cours de l'édition pour la supprimer : (calque, objet).
+pub(crate) fn take_for_delete(app: &AppWindow, st: &mut State) -> Option<(u64, Option<usize>)> {
+    let ed = st.shape_edit.take()?;
+    clear_overlay(app);
+    st.shape_layer_new = None;
+    Some((ed.layer, ed.obj))
+}
+
+/// Cadre et trait de la forme en cours, tracés avec la toile d'un projet SVG.
+pub(crate) fn draw_overlay(app: &AppWindow, ed: &ShapeEdit, ov: &mut vecview::Overlay) {
+    let s = &ed.shape;
+    let rot = (s.rot != 0.0).then(|| (s.rot, s.center()));
+    ov.outline(&s.to_subs(), rot);
+    if is_line(s) {
+        let pts = line_points(s, app.global::<ToolOpts>().get_line_mode() == 1);
+        for w in pts.windows(2) {
+            ov.line(w[0], w[1]);
+        }
+        return;
+    }
+    let q = s.corners_world();
+    for i in 0..4 {
+        ov.line(q[i], q[(i + 1) % 4]);
+    }
+    let hs = local_handles(s, app.get_zoom());
+    ov.line(s.to_world(hs[1]), s.to_world(hs[8]));
 }
 
 /// Le ruban reprend les réglages de la forme reprise.
-fn load_opts(app: &AppWindow, s: &vector::ShapeObj) {
+pub(crate) fn load_opts(app: &AppWindow, s: &vector::ShapeObj) {
     let t = app.global::<ToolOpts>();
     t.set_line_width(s.width);
+    if !is_line(s) {
+        t.set_shape_fill_type(s.grad.is_some() as i32);
+        if let Some(g) = s.grad.as_deref() {
+            t.set_shape_grad_type(g.radial as i32);
+            if !g.radial {
+                t.set_shape_grad_angle((g.p1.1 - g.p0.1).atan2(g.p1.0 - g.p0.0).to_degrees().rem_euclid(360.0).round());
+            }
+        }
+    }
     if !is_line(s) {
         t.set_shape_style(match s.style {
             ShapeStyle::Outline => 0,
@@ -314,6 +369,15 @@ fn load_opts(app: &AppWindow, s: &vector::ShapeObj) {
         }
     }
     app.set_primary_color(Color::from_argb_u8(s.color[3], s.color[0], s.color[1], s.color[2]));
+    // dégradé : ses deux couleurs dans les couleurs principale et secondaire
+    if let Some(g) = s.grad.as_deref() {
+        if let (Some(a), Some(b)) = (g.stops.first(), g.stops.last()) {
+            if s.style == ShapeStyle::Fill {
+                app.set_primary_color(Color::from_argb_u8(a.1[3], a.1[0], a.1[1], a.1[2]));
+            }
+            app.set_secondary_color(Color::from_argb_u8(b.1[3], b.1[0], b.1[1], b.1[2]));
+        }
+    }
 }
 
 /// Réglages du ruban (ou couleur principale) changés : la forme en cours les prend.
@@ -321,8 +385,14 @@ pub(crate) fn opts_changed(app: &AppWindow, st: &mut State) {
     let tool = st.tool;
     let o = opts(app);
     let Some(ed) = st.shape_edit.as_mut() else { return };
+    let sig = o.grad_sig();
+    let grad_changed = sig != ed.grad_sig;
+    ed.grad_sig = sig;
     let s = &mut ed.shape;
     let before = s.clone();
+    if grad_changed && !is_line(s) {
+        s.grad = o.shape_grad(s.bbox(), o.primary, o.secondary);
+    }
     let c = o.primary;
     s.color = [c[0], c[1], c[2], c[3]];
     s.width = o.line_width.max(1.0);
@@ -403,6 +473,7 @@ pub(crate) fn commit(app: &AppWindow, st: &mut State) {
     let Some(ed) = st.shape_edit.take() else { return };
     clear_overlay(app);
     st.shape_layer_new = None;
+    vecview::touch_overlay(app, st);
     let Some(k) = st.doc.layers.iter().position(|l| l.uid == ed.layer) else { return };
     let label = if is_line(&ed.shape) { "Ligne" } else { "Forme" };
     let unchanged = ed.orig.as_ref() == Some(&ed.shape);
@@ -428,6 +499,7 @@ pub(crate) fn commit(app: &AppWindow, st: &mut State) {
 pub(crate) fn cancel(app: &AppWindow, st: &mut State) {
     let Some(ed) = st.shape_edit.take() else { return };
     clear_overlay(app);
+    vecview::touch_overlay(app, st);
     if let Some(k) = st.doc.layers.iter().position(|l| l.uid == ed.layer) {
         if ed.obj.is_some() {
             render_vector_layer(app, st, ed.layer);

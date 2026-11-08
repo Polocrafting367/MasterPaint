@@ -1,8 +1,10 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Panneau « Objets SVG (bêta) » (Fenêtre › Objets SVG) : objets du calque vectoriel actif.
 // L'état vit dans le global `SvgPanel`, rempli et écouté par src/svg_panel.rs ; app.slint
 // pose seulement le contenu `SvgObjectsContent` dans une FloatWindow.
 import { ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { IconSpec } from "types.slint";
 import { W10Button, W10Slider, GlyphIcon, Tip } from "widgets.slint";
 
 /// Ligne de la liste des objets (le plus haut en premier).
@@ -11,6 +13,26 @@ export struct SvgObjRow {
     name: string,    // « Rectangle », « Ellipse », « Texte : … »
     glyph: string,   // icône Font Awesome
     swatch: color,   // couleur de l'objet
+}
+
+/// Outils d'un projet SVG (fenêtre Outils, ruban, téléphone), à la place des outils de pixels :
+/// mêmes champs que `Generated.tools`.
+export global SvgTools {
+    out property <[{id: string, title: string, icon: IconSpec, x: length, y: length, w: length, h: length}]> tools: [
+        { id: "tool-move", title: @tr("Sélection (V) : objets, cadre, rotation"), icon: { svg-index: -1, fa: "\u{f047}", fa-weight: 900 }, x: 0px, y: 0px, w: 26px, h: 26px },
+        { id: "tool-node", title: @tr("Sélection directe (A) : points et poignées d'un chemin"), icon: { svg-index: -1, fa: "\u{f55b}", fa-weight: 900 }, x: 26px, y: 0px, w: 26px, h: 26px },
+        { id: "tool-pen", title: @tr("Plume (P) : chemins de Bézier"), icon: { svg-index: -1, fa: "\u{f5ad}", fa-weight: 900 }, x: 0px, y: 27px, w: 26px, h: 26px },
+        { id: "tool-pencil", title: @tr("Crayon (N) : trait à main levée, ajusté en courbes"), icon: { svg-index: -1, fa: "\u{f303}", fa-weight: 900 }, x: 26px, y: 27px, w: 26px, h: 26px },
+        { id: "tool-shapes-family", title: @tr("Formes multiples"), icon: { svg-index: 14, fa: "", fa-weight: 900 }, x: 0px, y: 55px, w: 57px, h: 26px },
+        { id: "tool-round-3", title: @tr("Rectangle à coins arrondis"), icon: { svg-index: 15, fa: "", fa-weight: 900 }, x: 0px, y: 82px, w: 26px, h: 26px },
+        { id: "tool-line", title: @tr("Ligne"), icon: { svg-index: -1, fa: "\u{f068}", fa-weight: 900 }, x: 26px, y: 82px, w: 26px, h: 26px },
+        { id: "tool-text", title: @tr("Texte"), icon: { svg-index: 13, fa: "", fa-weight: 900 }, x: 0px, y: 109px, w: 26px, h: 26px },
+        { id: "tool-fill", title: @tr("Remplissage : couleur de l'objet cliqué"), icon: { svg-index: 11, fa: "", fa-weight: 900 }, x: 26px, y: 109px, w: 26px, h: 26px },
+        { id: "tool-gradient", title: @tr("Dégradé : glisser sur un objet"), icon: { svg-index: 10, fa: "", fa-weight: 900 }, x: 0px, y: 137px, w: 26px, h: 26px },
+        { id: "tool-eyedropper", title: @tr("Pipette"), icon: { svg-index: 7, fa: "", fa-weight: 900 }, x: 26px, y: 137px, w: 26px, h: 26px },
+        { id: "tool-zoom", title: @tr("Zoom"), icon: { svg-index: -1, fa: "\u{f002}", fa-weight: 900 }, x: 0px, y: 164px, w: 26px, h: 26px },
+        { id: "illu-tb-zoom-fit-2", title: @tr("Ajuster à la fenêtre"), icon: { svg-index: -1, fa: "\u{f065}", fa-weight: 900 }, x: 26px, y: 164px, w: 26px, h: 26px }
+    ];
 }
 
 /// État du panneau (src/svg_panel.rs).
@@ -46,8 +68,8 @@ component SvgMiniButton inherits Rectangle {
     width: 26px;
     height: 24px;
     border-radius: Theme.ctl-radius;
-    background: ta.has-hover && root.enabled ? Theme.accent-14 : transparent;
-    border-width: ta.has-hover && root.enabled ? 1px : 0px;
+    background: (Theme.hover-fx && ta.has-hover) && root.enabled ? Theme.accent-14 : transparent;
+    border-width: (Theme.hover-fx && ta.has-hover) && root.enabled ? 1px : 0px;
     border-color: Theme.accent;
     opacity: root.enabled ? 1 : 0.4;
     GlyphIcon {
@@ -123,7 +145,7 @@ export component SvgObjectsContent inherits Rectangle {
             for r in SvgPanel.rows: Rectangle {
                 height: 26px;
                 border-radius: Theme.ctl-radius;
-                background: r.index == SvgPanel.selected ? Theme.accent-27 : rta.has-hover ? Theme.accent-12 : transparent;
+                background: r.index == SvgPanel.selected ? Theme.accent-27 : (Theme.hover-fx && rta.has-hover) ? Theme.accent-12 : transparent;
                 rta := TouchArea {
                     clicked => { SvgPanel.select(r.index); }
                 }

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Fichier généré depuis js/effects/image-adjust-core.js (METADATA.PRESETS). Ne pas modifier à la main.
 
 /// Préréglages de la Galerie de filtres : (identifiant, libellé, paramètres Camera Raw du moteur)

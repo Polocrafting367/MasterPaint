@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Dossiers de calques (imbriqués, comme paintdotjs / Photoshop) et verrouillage.
 //!
 //! Un dossier est un calque `group` aux pixels transparents (jamais dessinés) ; ses enfants sont

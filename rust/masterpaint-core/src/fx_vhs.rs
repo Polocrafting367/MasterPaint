@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Effet VHS — portage de `illuProcessVhsCore` (js/effects/vhs-core.js).
 //!
 //! Traitement ligne par ligne (le saignement de chrominance dépend du pixel précédent et les

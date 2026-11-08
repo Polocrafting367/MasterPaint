@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Réglage automatique du mode Photo Pro : analyse de la scène puis correction adaptée.
 //!
 //! L'image est réduite à une grille (`GRID` px de côté au plus, moyennes en linéaire) sur
@@ -9,6 +10,12 @@
 //! balance des blancs et mélangeur TSL sont réglés selon le type de scène.
 //! Pour un RAW, l'analyse se fait sur les données flottantes : les hautes lumières au-delà du
 //! blanc (que l'aperçu 8 bits écrête) sont vues et récupérées.
+//!
+//! Ce premier jet est ensuite affiné en boucle fermée (`refine`) : la photo réduite est rendue
+//! par le vrai moteur, le résultat est mesuré (médiane, étendue 5–95 %, écrêtage des blancs et
+//! des noirs, dominante de couleur, saturation) et chaque réglage n'est corrigé que si sa mesure
+//! sort d'une plage correcte pour le type de scène — une image déjà bien réglée (PNG, JPEG
+//! retouché) est à peine touchée, rien n'est poussé jusqu'à brûler l'image.
 
 use crate::photo::neutral;
 
@@ -45,6 +52,15 @@ pub struct Auto {
     pub keys: Vec<usize>,
     pub kind: Kind,
     pub note: String,
+    /// analyse faite sur un RAW (données flottantes)
+    pub raw: bool,
+    /// ciel chaud (coucher de soleil) : dominante voulue, corrigée à moitié
+    pub warm_sky: bool,
+    /// part de végétation (la teinte verte n'est alors presque pas corrigée)
+    pub green: f32,
+    /// raisons propres à la scène (visage détecté, ciel…), reprises dans le compte rendu
+    reasons: Vec<&'static str>,
+    sky_pct: f32,
 }
 
 fn srgb_to_linear(c: f32) -> f32 {
@@ -168,7 +184,7 @@ fn analyze(grid: &Grid, raw: bool) -> Auto {
     let cells: Vec<Cell> = grid.lin.iter().map(|&c| cell(c)).collect();
     let mut p = neutral();
     if n == 0 {
-        return Auto { params: p, keys: vec![], kind: Kind::General, note: String::new() };
+        return Auto { params: p, keys: vec![], kind: Kind::General, note: String::new(), raw, warm_sky: false, green: 0.0, reasons: vec![], sky_pct: 0.0 };
     }
     // poids du centre (gaussienne, σ = 0,3 de la largeur / hauteur)
     let center = |x: usize, y: usize| {
@@ -352,22 +368,17 @@ fn analyze(grid: &Grid, raw: bool) -> Auto {
             wn += 1;
         }
     }
-    let mut wb_note = "";
+    // ciel chaud (coucher de soleil) : dominante voulue, corrigée à moitié seulement
+    let warm_sky = sky_frac > 0.05 && cells.iter().zip(&sky).filter(|(c, &s)| s && c.r > c.b).count() > sky_n / 2;
     if kind != Kind::Night && wn as f32 > n as f32 * 0.05 && wr > 0.0 && wb > 0.0 && wg > 0.0 {
-        // ciel chaud (coucher de soleil) : dominante voulue, corrigée à moitié seulement
-        let warm_sky = sky_frac > 0.05 && cells.iter().zip(&sky).filter(|(c, &s)| s && c.r > c.b).count() > sky_n / 2;
         let k = if warm_sky { 0.5 } else { 1.0 };
         let temp = ((wb / wr).ln() * 70.0 * k).clamp(-25.0, 25.0).round();
         let tint = ((wg / (wr * wb).sqrt()).ln() * 90.0 * k).clamp(-20.0, 20.0).round();
         if temp.abs() >= 3.0 {
             p[1] = temp;
-            wb_note = if temp > 0.0 { "dominante froide corrigée" } else { "dominante chaude corrigée" };
         }
         if tint.abs() >= 3.0 {
             p[2] = tint;
-            if wb_note.is_empty() {
-                wb_note = if tint > 0.0 { "dominante verte corrigée" } else { "dominante magenta corrigée" };
-            }
         }
     }
 
@@ -421,32 +432,343 @@ fn analyze(grid: &Grid, raw: bool) -> Auto {
         Kind::General => {}
     }
 
-    // ---- compte rendu
-    let mut why: Vec<String> = Vec::new();
+    let mut reasons = Vec::new();
     match kind {
-        Kind::Portrait => why.push("visage détecté".into()),
-        Kind::Landscape if sky_frac > 0.08 => why.push(format!("ciel {} %", (sky_frac * 100.0).round())),
-        Kind::Landscape => why.push("végétation".into()),
-        Kind::Backlit => why.push("sujet plus sombre que le fond".into()),
+        Kind::Portrait => reasons.push("visage détecté"),
+        Kind::Landscape if sky_frac > 0.08 => reasons.push("ciel"),
+        Kind::Landscape => reasons.push("végétation"),
+        Kind::Backlit => reasons.push("sujet plus sombre que le fond"),
         _ => {}
     }
-    if stops.abs() >= 0.1 {
-        let v = format!("{:+.1}", stops).replace('.', ",");
-        why.push(if stops > 0.0 { format!("éclaircie {v} IL") } else { format!("assombrie {v} IL") });
-    }
-    if p[18] >= 5.0 {
-        why.push("contraste renforcé".into());
-    } else if p[18] <= -5.0 {
-        why.push("contraste adouci".into());
-    }
     if hazy {
-        why.push("voile retiré".into());
+        reasons.push("voile retiré");
     }
-    if !wb_note.is_empty() {
-        why.push(wb_note.into());
+    let mut a = Auto { params: p, keys, kind, note: String::new(), raw, warm_sky, green: green_frac, reasons, sky_pct: (sky_frac * 100.0).round() };
+    a.note = a.describe();
+    a
+}
+
+impl Auto {
+    /// Compte rendu affiché sous l'image (d'après les réglages finaux).
+    fn describe(&self) -> String {
+        let p = &self.params;
+        let mut why: Vec<String> = self.reasons.iter().map(|r| if *r == "ciel" { format!("{} {} %", crate::i18n::tr("ciel"), self.sky_pct) } else { crate::i18n::tr(r) }).collect();
+        let stops = p[0] / 50.0;
+        if stops.abs() >= 0.1 {
+            let v = format!("{:+.1}", stops).replace('.', ",");
+            why.push(if stops > 0.0 { crate::i18n::tr_format!("éclaircie {v} IL") } else { crate::i18n::tr_format!("assombrie {v} IL") });
+        }
+        if p[18] >= 5.0 {
+            why.push(crate::i18n::tr("contraste renforcé"));
+        } else if p[18] <= -5.0 {
+            why.push(crate::i18n::tr("contraste adouci"));
+        }
+        if p[5] <= -10.0 || p[6] <= -10.0 {
+            why.push(crate::i18n::tr("hautes lumières protégées"));
+        }
+        if p[1].abs() >= 3.0 {
+            why.push(crate::i18n::tr(if p[1] > 0.0 { "dominante froide corrigée" } else { "dominante chaude corrigée" }));
+        } else if p[2].abs() >= 3.0 {
+            why.push(crate::i18n::tr(if p[2] > 0.0 { "dominante verte corrigée" } else { "dominante magenta corrigée" }));
+        }
+        crate::i18n::tr_format!("Auto : {} — {}", crate::i18n::tr(self.kind.label()), if why.is_empty() { crate::i18n::tr("peu de corrections") } else { why.join(", ") })
     }
-    let note = crate::i18n::tr_format!("Auto : {} — {}", crate::i18n::tr(kind.label()), if why.is_empty() { crate::i18n::tr("peu de corrections") } else { why.iter().map(|s| crate::i18n::tr(s)).collect::<Vec<_>>().join(", ") });
-    Auto { params: p, keys, kind, note }
+}
+
+// ------------------------------------------------------------------ boucle fermée
+
+/// Plus grand côté de l'image réduite rendue à chaque passe de `refine`.
+pub const REFINE_MAX: usize = 256;
+
+/// Mesures d'un rendu 8 bits (RVBA) : luminance perçue (0..1), écrêtage, saturation moyenne,
+/// dominante (log du rapport bleu / rouge et vert / magenta, en linéaire, sur les tons moyens
+/// peu saturés).
+#[derive(Clone, Copy, Debug)]
+struct Stats {
+    p1: f32,
+    p5: f32,
+    med: f32,
+    p95: f32,
+    p99: f32,
+    clip_hi: f32,
+    clip_lo: f32,
+    sat: f32,
+    ct: f32,
+    cg: f32,
+}
+
+fn stats(px: &[u8]) -> Stats {
+    let lut: Vec<f32> = (0..256).map(|i| srgb_to_linear(i as f32 / 255.0)).collect();
+    let mut hist = [0u32; 256];
+    let (mut hi, mut lo, mut sat, mut n) = (0u32, 0u32, 0f32, 0u32);
+    let (mut ct, mut cg, mut cw) = (0f64, 0f64, 0f64);
+    for q in px.chunks_exact(4) {
+        if q[3] < 128 {
+            continue;
+        }
+        let (r, g, b) = (q[0], q[1], q[2]);
+        let (lr, lg, lb) = (lut[r as usize], lut[g as usize], lut[b as usize]);
+        let l = linear_to_srgb(0.2126 * lr + 0.7152 * lg + 0.0722 * lb).min(1.0);
+        hist[(l * 255.0 + 0.5) as usize] += 1;
+        let (mx, mn) = (r.max(g).max(b), r.min(g).min(b));
+        hi += (mx >= 252) as u32;
+        lo += (mx <= 4) as u32;
+        let s = if mx > 0 { (mx - mn) as f32 / mx as f32 } else { 0.0 };
+        sat += s;
+        n += 1;
+        if l > 0.1 && l < 0.92 && mx < 250 {
+            // peau probable : compte moins (elle est chaude par nature)
+            let skin = r > 95 && g > 40 && b > 20 && r > g && r > b && r - mn > 15 && r.abs_diff(g) > 15;
+            let w = ((1.0 - s) * (1.0 - s) * if skin { 0.3 } else { 1.0 }) as f64;
+            let e = 0.002f32;
+            ct += w * ((lb + e) / (lr + e)).ln() as f64;
+            cg += w * ((lg + e) / ((lr + e) * (lb + e)).sqrt()).ln() as f64;
+            cw += w;
+        }
+    }
+    let n = n.max(1);
+    let at = |q: f32| {
+        let goal = (q * n as f32) as u32;
+        let mut acc = 0;
+        for (i, &c) in hist.iter().enumerate() {
+            acc += c;
+            if acc > goal {
+                return i as f32 / 255.0;
+            }
+        }
+        1.0
+    };
+    let cw = cw.max(1e-6);
+    Stats {
+        p1: at(0.01),
+        p5: at(0.05),
+        med: at(0.5),
+        p95: at(0.95),
+        p99: at(0.99),
+        clip_hi: hi as f32 / n as f32,
+        clip_lo: lo as f32 / n as f32,
+        sat: sat / n as f32,
+        ct: (ct / cw) as f32,
+        cg: (cg / cw) as f32,
+    }
+}
+
+/// Confiance (0..1) dans une dominante mesurée (`ct`, `cg`) : la neutraliser doit rendre une
+/// part nettement plus grande de l'image grise. Une vraie dominante (photo toute jaune, tout
+/// bleue) passe ; un sujet coloré (fleurs jaunes, mur orange) non : le neutraliser ne crée pas
+/// de gris, il en retire.
+fn cast_confidence(px: &[u8], ct: f32, cg: f32) -> f32 {
+    let lut: Vec<f32> = (0..256).map(|i| srgb_to_linear(i as f32 / 255.0)).collect();
+    let (kr, kb, kg) = ((ct / 2.0).exp(), (-ct / 2.0).exp(), (-cg).exp());
+    let neutral = |r: f32, g: f32, b: f32| {
+        let (mx, mn) = (r.max(g).max(b), r.min(g).min(b));
+        mx > 0.0 && mn / mx > 0.72
+    };
+    let (mut before, mut after, mut n) = (0u32, 0u32, 0u32);
+    for q in px.chunks_exact(4) {
+        let (r, g, b) = (lut[q[0] as usize], lut[q[1] as usize], lut[q[2] as usize]);
+        let l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        if !(0.01..0.85).contains(&l) {
+            continue;
+        }
+        n += 1;
+        before += neutral(r, g, b) as u32;
+        after += neutral(r * kr, g * kg, b * kb) as u32;
+    }
+    let gain = (after as f32 - before as f32) / n.max(1) as f32;
+    (gain / 0.1).clamp(0.0, 1.0)
+}
+
+/// Plages « correctes » par type de scène : médiane de la luminance, étendue 5–95 %.
+fn bands(kind: Kind) -> ((f32, f32), (f32, f32)) {
+    match kind {
+        Kind::Portrait => ((0.36, 0.64), (0.5, 0.84)),
+        Kind::Backlit => ((0.3, 0.6), (0.5, 0.9)),
+        Kind::Night => ((0.13, 0.32), (0.4, 0.95)),
+        Kind::HighKey => ((0.58, 0.8), (0.35, 0.75)),
+        _ => ((0.37, 0.57), (0.58, 0.86)),
+    }
+}
+
+/// Affine le réglage automatique en boucle fermée : `render` rend la photo réduite avec un jeu
+/// complet de réglages (ceux de la photo, `base`, dont les indices `keys` sont remplacés).
+/// Chaque mesure hors de sa plage est ramenée juste dedans, par petits pas vérifiés à la passe
+/// suivante ; une mesure déjà correcte n'est pas touchée.
+pub fn refine(a: &mut Auto, base: &[f32], mut render: impl FnMut(&[f32]) -> Vec<u8>) {
+    let tone = [0usize, 1, 2, 3, 4, 5, 6, 16, 17, 18, 19, 20];
+    for &i in &tone {
+        if !a.keys.contains(&i) {
+            a.keys.push(i);
+        }
+    }
+    let neutral = neutral();
+    let mut q = base.to_vec();
+    q.resize(neutral.len(), 0.0);
+    for &i in &a.keys {
+        q[i] = neutral[i];
+    }
+    // l'image telle quelle (sans les réglages automatiques)
+    let q0 = q.clone();
+    let s0 = stats(&render(&q0));
+    let ((m_lo, m_hi), (sp_lo, sp_hi)) = bands(a.kind);
+    for &i in &a.keys {
+        q[i] = a.params[i];
+    }
+    if !a.raw {
+        // image déjà développée (PNG, JPEG…) : style de scène à moitié, tonalité et couleur
+        // décidées seulement par la mesure
+        for &i in &a.keys {
+            if i >= 30 || i == 16 || i == 17 || i == 20 {
+                q[i] = (q[i] * 0.5).round();
+            }
+        }
+        for i in [1, 2, 3, 4, 5, 6, 18, 19] {
+            q[i] = 0.0;
+        }
+        if (m_lo..=m_hi).contains(&s0.med) {
+            q[0] = 0.0;
+        }
+    }
+    // assombrir une image 8 bits ne récupère rien (un blanc écrêté devient gris : document,
+    // fond blanc, ciel brûlé) : à peine, et pas du tout si elle a de vrais blancs
+    let exp_min = if a.raw { -110.0 } else if s0.clip_hi > 0.02 { 0.0 } else { -15.0 };
+    let (exp_max, temp_max, tint_max) = if a.raw { (110.0, 55.0, 30.0) } else { (60.0, 25.0, 15.0) };
+    q[0] = q[0].clamp(exp_min, exp_max);
+    // image développée : blancs / noirs plus retenus, couleurs vives souvent voulues
+    // (une image déjà vive l'est volontairement : on ne calme que ce que l'auto a ajouté)
+    let (whites_max, blacks_min, wash, vivid) = if a.raw { (30.0, -40.0, 0.07, 0.55) } else { (22.0, -25.0, 0.09, 0.66f32.max(s0.sat + 0.04)) };
+    // couleur : on garde un peu de l'ambiance (davantage pour un coucher de soleil) ; rien en
+    // dessous d'un seuil (dominante imperceptible), rien sur une image noir et blanc
+    // (peau chaude d'un portrait, coucher de soleil, végétation : on en garde davantage)
+    let keep_t = if a.warm_sky { 0.5 } else if a.kind == Kind::Portrait { 0.4 } else { 0.2 };
+    let keep_g = if a.green > 0.15 { 0.6 } else if a.kind == Kind::Portrait { 0.5 } else { 0.25 };
+    let (dead_t, dead_g) = (0.06, if a.green > 0.15 { 0.14 } else { 0.07 });
+    let mono = s0.sat < 0.04;
+    let conf = if mono { 0.0 } else { cast_confidence(&render(&q0), s0.ct, s0.cg) };
+    let (fix_t, fix_g) = (conf > 0.15 && a.kind != Kind::Night && s0.ct.abs() > dead_t, conf > 0.15 && a.kind != Kind::Night && s0.cg.abs() > dead_g);
+    let (goal_t, goal_g) = (s0.ct * (1.0 - (1.0 - keep_t) * conf), s0.cg * (1.0 - (1.0 - keep_g) * conf));
+    // dominante certaine (photo toute jaune, toute bleue) : correction plus ample permise
+    let temp_max = if a.raw { temp_max } else { temp_max + 20.0 * ((conf - 0.5) * 2.0).clamp(0.0, 1.0) };
+    if !fix_t {
+        q[1] = if a.raw { q[1] * 0.5 } else { 0.0 };
+    }
+    if !fix_g {
+        q[2] = if a.raw { q[2] * 0.5 } else { 0.0 };
+    }
+    // pentes mesurées (sécante) : variation de la dominante par unité de réglage
+    let (mut prev_t, mut prev_g): (Option<(f32, f32)>, Option<(f32, f32)>) = (None, None);
+    let (mut slope_t, mut slope_g) = (-1.0 / 55.0, -1.0 / 70.0);
+    // écrêtage déjà présent dans l'image (ciel brûlé d'un JPEG…) : irrécupérable, toléré
+    let hi_ok = s0.clip_hi + 0.003;
+    let lo_ok = s0.clip_lo.max(0.002) + 0.004;
+    for _ in 0..7 {
+        let s = stats(&render(&q));
+        let before = q.clone();
+        // ---- exposition : médiane ramenée juste dans sa plage
+        let target = if s.med < m_lo { m_lo + (m_hi - m_lo) * 0.15 } else if s.med > m_hi { m_hi - (m_hi - m_lo) * 0.15 } else { s.med };
+        if target != s.med {
+            let stops = (srgb_to_linear(target) / srgb_to_linear(s.med.max(0.01))).log2() * 0.8;
+            q[0] = (q[0] + stops * 50.0).clamp(exp_min, exp_max).round();
+        }
+        // ---- blancs : pas d'écrêtage nouveau ; image terne : on étend un peu vers le blanc
+        if s.clip_hi > hi_ok {
+            if q[5] > -70.0 {
+                q[5] = (q[5] - 15.0).max(-70.0);
+            } else if q[6] > -40.0 {
+                q[6] = (q[6] - 10.0).max(-40.0);
+            } else if q[0] > 0.0 {
+                q[0] = (q[0] - 8.0).max(0.0);
+            }
+        } else if s.p99 < 0.86 && a.kind != Kind::Night && q[6] < whites_max {
+            q[6] = (q[6] + ((0.93 - s.p99) * 90.0).max(3.0)).min(whites_max).round();
+        }
+        // ---- noirs : pas d'écrasement nouveau ; noirs délavés (voile) : creusés
+        if s.clip_lo > lo_ok && a.kind != Kind::Night {
+            if q[4] < 25.0 {
+                q[4] = (q[4] + 8.0).min(25.0);
+            } else {
+                q[3] = (q[3] + 10.0).min(50.0);
+            }
+        } else if s.p1 > wash && a.kind != Kind::HighKey && q[4] > blacks_min {
+            q[4] = (q[4] - ((s.p1 - wash + 0.03) * 140.0).max(3.0)).max(blacks_min).round();
+        }
+        // ---- contraste : étendue 5–95 % ramenée dans sa plage
+        let spread = s.p95 - s.p5;
+        if spread < sp_lo {
+            q[18] = (q[18] + ((sp_lo + 0.03 - spread) * 70.0).max(2.0)).min(30.0).round();
+        } else if spread > sp_hi {
+            q[18] = (q[18] - ((spread - sp_hi + 0.02) * 70.0).max(2.0)).max(-25.0).round();
+        }
+        // ---- balance des blancs (sécante sur la dominante mesurée)
+        if fix_t {
+            if let Some((pv, pc)) = prev_t {
+                let d = q[1] - pv;
+                if d.abs() >= 1.0 {
+                    let m = (s.ct - pc) / d;
+                    if m < -1e-4 {
+                        slope_t = m;
+                    }
+                }
+            }
+            prev_t = Some((q[1], s.ct));
+            let err = s.ct - goal_t;
+            if err.abs() > 0.015 {
+                q[1] = (q[1] - (err / slope_t).clamp(-20.0, 20.0)).clamp(-temp_max, temp_max).round();
+            }
+        }
+        if fix_g {
+            if let Some((pv, pc)) = prev_g {
+                let d = q[2] - pv;
+                if d.abs() >= 1.0 {
+                    let m = (s.cg - pc) / d;
+                    if m < -1e-4 {
+                        slope_g = m;
+                    }
+                }
+            }
+            prev_g = Some((q[2], s.cg));
+            let err = s.cg - goal_g;
+            if err.abs() > 0.015 {
+                q[2] = (q[2] - (err / slope_g).clamp(-15.0, 15.0)).clamp(-tint_max, tint_max).round();
+            }
+        }
+        // ---- saturation : image terne ravivée, image criarde calmée (jamais le noir et blanc)
+        if !mono {
+            if s.sat < 0.15 && q[20] < 35.0 {
+                q[20] = (q[20] + ((0.19 - s.sat) * 90.0).max(3.0)).min(35.0).round();
+            } else if s.sat > vivid {
+                if q[20] > -20.0 {
+                    q[20] = (q[20] - 8.0).max(-20.0);
+                } else {
+                    q[19] = (q[19] - 6.0).max(-25.0);
+                }
+            }
+        }
+        if q == before {
+            break;
+        }
+    }
+    for &i in &a.keys {
+        a.params[i] = q[i];
+    }
+    a.note = a.describe();
+}
+
+/// Réglage automatique d'une image 8 bits (calque) : réglages Camera Raw complets (analyse de
+/// la scène puis boucle fermée sur une copie réduite) et compte rendu. Sert à Auto-niveau et au
+/// bouton « Auto » de la fenêtre Camera Raw.
+pub fn auto_camera_raw(px: &[u8], w: usize, h: usize) -> (Vec<f32>, String) {
+    let mut a = analyze_u8(px, w, h);
+    let (sw, sh, small) = crate::photo::downscale(px, w, h, REFINE_MAX);
+    let mut base = neutral();
+    base[26] = w as f32;
+    base[27] = h as f32;
+    refine(&mut a, &base, |q| crate::photo::render(&small, sw, sh, q));
+    let mut p = base;
+    for &i in &a.keys {
+        p[i] = a.params[i];
+    }
+    (p, a.note)
 }
 
 #[cfg(test)]
@@ -507,5 +829,52 @@ mod tests {
         });
         let a = analyze_u8(&px, 200, 150);
         assert!(a.params[1] > 3.0, "température {}", a.params[1]);
+    }
+
+    /// Moteur fictif : exposition (gain), température (gain bleu / rouge).
+    fn fake_render(px: &[u8], p: &[f32]) -> Vec<u8> {
+        let k = 2f32.powf(p[0] / 50.0);
+        let t = 2f32.powf(p[1] / 60.0);
+        px.chunks_exact(4).flat_map(|q| {
+            let f = |v: u8, g: f32| (linear_to_srgb(srgb_to_linear(v as f32 / 255.0) * k * g).min(1.0) * 255.0 + 0.5) as u8;
+            [f(q[0], t), f(q[1], 1.0), f(q[2], 1.0 / t), q[3]]
+        }).collect()
+    }
+
+    #[test]
+    fn well_exposed_png_barely_touched() {
+        let px = img(240, 160, |x, y| {
+            let v = (20 + (x * 235 / 240 + y) % 220) as u8;
+            [v, v.saturating_sub(10), v.saturating_add(8)]
+        });
+        let mut a = analyze_u8(&px, 240, 160);
+        refine(&mut a, &neutral(), |p| fake_render(&px, p));
+        assert!(a.params[0].abs() <= 10.0, "exposition {} ({})", a.params[0], a.note);
+    }
+
+    #[test]
+    fn yellow_cast_is_corrected() {
+        let px = img(240, 160, |x, y| {
+            let v = (70 + (x + y) % 120) as u8;
+            [v.saturating_add(40), v.saturating_add(25), v.saturating_sub(40)]
+        });
+        let mut a = analyze_u8(&px, 240, 160);
+        refine(&mut a, &neutral(), |p| fake_render(&px, p));
+        assert!(a.params[1] < -5.0, "température {} ({})", a.params[1], a.note);
+        let out = stats(&fake_render(&px, &a.params));
+        assert!(out.ct.abs() < stats(&px).ct.abs() * 0.5, "dominante restante {}", out.ct);
+    }
+
+    #[test]
+    fn dark_png_brightened_without_clipping() {
+        let px = img(240, 160, |x, y| {
+            let v = (5 + (x + 2 * y) % 70) as u8;
+            [v, v, v]
+        });
+        let mut a = analyze_u8(&px, 240, 160);
+        refine(&mut a, &neutral(), |p| fake_render(&px, p));
+        let out = stats(&fake_render(&px, &a.params));
+        assert!(a.params[0] > 20.0, "exposition {}", a.params[0]);
+        assert!(out.clip_hi < 0.01, "écrêtage {}", out.clip_hi);
     }
 }

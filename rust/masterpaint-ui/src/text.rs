@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Outil Texte : catalogue de polices et rendu du texte en couverture (comme un trait).
 //!
 //! Polices : Selawik (intégrée, équivalent libre de Segoe UI), les polices de MasterPaint
@@ -13,10 +14,10 @@ pub enum Source {
     /// TTF/OTF ou WOFF2 intégré au programme
     Static(&'static [u8]),
     /// fichier de police du système (bureau)
-    #[allow(dead_code)]
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     File(std::path::PathBuf),
     /// police MasterPaint à télécharger (web) : chemin relatif à la page
-    #[allow(dead_code)]
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     Web(String),
 }
 
@@ -372,6 +373,87 @@ pub fn raster(font: &FontVec, text: &str, size: f32, x: f32, y: f32, align: Alig
     Raster { x0, y0, w, h, cov, frame }
 }
 
+/// Contours du texte (mêmes placement et crénage que `raster`), en vraies courbes de la police :
+/// nets à tout zoom. Coordonnées du document.
+pub fn outline(font: &FontVec, text: &str, size: f32, x: f32, y: f32, align: Align) -> Option<tiny_skia::Path> {
+    let scale = PxScale::from(size.max(0.01));
+    let scaled = font.as_scaled(scale);
+    let line_h = scaled.height() + scaled.line_gap();
+    let (sx, sy) = (scaled.h_scale_factor(), scaled.v_scale_factor());
+    let lines: Vec<&str> = text.split('\n').collect();
+    let width_of = |l: &str| {
+        let (mut w, mut prev) = (0.0, None);
+        for c in l.chars() {
+            let id = scaled.glyph_id(c);
+            if let Some(p) = prev {
+                w += scaled.kern(p, id);
+            }
+            w += scaled.h_advance(id);
+            prev = Some(id);
+        }
+        w
+    };
+    let widths: Vec<f32> = lines.iter().map(|l| width_of(l)).collect();
+    let max_w = widths.iter().cloned().fold(0.0, f32::max);
+    let mut b = tiny_skia::PathBuilder::new();
+    for (li, line) in lines.iter().enumerate() {
+        let mut caret = x + match align {
+            Align::Left => 0.0,
+            Align::Center => (max_w - widths[li]) / 2.0,
+            Align::Right => max_w - widths[li],
+        };
+        let base = y + scaled.ascent() + li as f32 * line_h;
+        let mut prev = None;
+        for c in line.chars() {
+            let id = scaled.glyph_id(c);
+            if let Some(p) = prev {
+                caret += scaled.kern(p, id);
+            }
+            if let Some(o) = font.outline(id) {
+                // police : y vers le haut
+                let at = |p: ab_glyph::Point| (caret + p.x * sx, base - p.y * sy);
+                let mut last: Option<ab_glyph::Point> = None;
+                for curve in &o.curves {
+                    use ab_glyph::OutlineCurve::*;
+                    let start = match curve {
+                        Line(a, _) | Quad(a, _, _) | Cubic(a, _, _, _) => *a,
+                    };
+                    if last != Some(start) {
+                        if last.is_some() {
+                            b.close();
+                        }
+                        let q = at(start);
+                        b.move_to(q.0, q.1);
+                    }
+                    match curve {
+                        Line(_, e) => {
+                            let q = at(*e);
+                            b.line_to(q.0, q.1);
+                            last = Some(*e);
+                        }
+                        Quad(_, c1, e) => {
+                            let (q1, q) = (at(*c1), at(*e));
+                            b.quad_to(q1.0, q1.1, q.0, q.1);
+                            last = Some(*e);
+                        }
+                        Cubic(_, c1, c2, e) => {
+                            let (q1, q2, q) = (at(*c1), at(*c2), at(*e));
+                            b.cubic_to(q1.0, q1.1, q2.0, q2.1, q.0, q.1);
+                            last = Some(*e);
+                        }
+                    }
+                }
+                if last.is_some() {
+                    b.close();
+                }
+            }
+            caret += scaled.h_advance(id);
+            prev = Some(id);
+        }
+    }
+    b.finish()
+}
+
 /// Remet le rectangle `r` (x0, y0, x1, y1) du calque `out` (largeur `w`) à l'état `base`
 /// (None : transparent).
 pub fn restore_rect(out: &mut [u8], base: Option<&[u8]>, w: usize, r: (usize, usize, usize, usize)) {
@@ -467,6 +549,7 @@ pub fn preview(font: &FontVec, name: &str) -> Option<(usize, usize, Vec<u8>)> {
 }
 
 /// Source d'une police lisible depuis un autre fil (aperçus calculés en arrière-plan).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub enum PreviewSource {
     Bytes(&'static [u8]),
     File(std::path::PathBuf),

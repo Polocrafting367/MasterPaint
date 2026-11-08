@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Effets de calque dynamiques (filtres « live ») — portage des étages de
 //! js/effects/dynamic-render-worker.js, mêmes formules en f64.
 //!
@@ -10,19 +11,6 @@
 
 use crate::util::*;
 
-/// Écriture dans un Uint8ClampedArray : arrondi au plus proche, demi vers le pair.
-#[inline]
-fn u8c(v: f64) -> u8 {
-    if !(v > 0.0) {
-        0
-    } else if v >= 255.0 {
-        255
-    } else {
-        let f = v.floor();
-        let d = v - f;
-        (if d > 0.5 || (d == 0.5 && (f as i64) % 2 == 1) { f + 1.0 } else { f }) as u8
-    }
-}
 
 /// Math.round (demi vers +∞)
 #[inline]

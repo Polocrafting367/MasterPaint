@@ -1,8 +1,9 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Calcul des jetons du thème : teintes de l'accent (≈ color-mix CSS) et palette sombre.
 //! Un thème personnalisé se résume à un autre appel de [`apply`] (ou à d'autres valeurs).
 
 use crate::{icons_gen::ICONS, AppWindow, Icons, Theme};
-use slint::{Color, ComponentHandle, Image, ModelRc, VecModel};
+use slint::{Color, ComponentHandle, Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
 
 fn rgb(hex: u32) -> Color {
     Color::from_rgb_u8((hex >> 16) as u8, (hex >> 8) as u8, hex as u8)
@@ -64,66 +65,255 @@ fn icon_colors(dark: bool, accent: Color) -> (String, String, String, String) {
     (stroke, acc, subtle, hex(bg))
 }
 
-/// Icônes maison (style du sprite : mêmes marqueurs, mêmes couleurs que le sprite).
-fn mp_images(stroke: &str, acc: &str, subtle: &str, bg: &str) -> Vec<Image> {
-    crate::mpicons_gen::MP_ICONS
-        .iter()
-        .map(|(_, tpl)| {
-            let svg = tpl.replace("{STROKE}", stroke).replace("{ACCENT}", acc).replace("{SUBTLE}", subtle).replace("{BG}", bg);
-            Image::load_from_svg_data(svg.as_bytes()).unwrap_or_default()
-        })
-        .collect()
+/// Icône préparée pour changer de couleurs sans relire son SVG, comme les variables CSS de la
+/// version HTML : pour chaque pixel, la part de chaque couleur du thème. Une composition SVG est
+/// linéaire en alpha prémultiplié : pixel = fixe + Σ part × couleur, y compris dans les
+/// anticrénelages, opacités et dégradés. Changer de teinte ne demande qu'une multiplication.
+struct IconMask {
+    size: u32,
+    /// 8 octets par pixel : parts (trait, accent, atténué, fond), couleur fixe (r, v, b), alpha
+    px: Vec<u8>,
+}
+
+/// Taille de rendu des icônes (pixels) : les icônes de l'interface font 15 à 24 unités.
+fn icon_px(scale: f32) -> u32 {
+    if scale > 2.0 { 64 } else { 32 }
+}
+
+pub(crate) fn render_tpl(tpl: &str, size: u32, c: [&str; 4]) -> Option<Vec<u8>> {
+    let svg = tpl.replace("{STROKE}", c[0]).replace("{ACCENT}", c[1]).replace("{SUBTLE}", c[2]).replace("{BG}", c[3]);
+    let tree = resvg::usvg::Tree::from_data(svg.as_bytes(), &resvg::usvg::Options::default()).ok()?;
+    let mut pm = tiny_skia::Pixmap::new(size, size)?;
+    // proportions gardées, centrée, comme `image-fit: contain`
+    let (tw, th) = (tree.size().width(), tree.size().height());
+    let k = size as f32 / tw.max(th).max(1e-3);
+    let t = tiny_skia::Transform::from_row(k, 0.0, 0.0, k, (size as f32 - tw * k) / 2.0, (size as f32 - th * k) / 2.0);
+    resvg::render(&tree, t, &mut pm.as_mut());
+    Some(pm.take())
+}
+
+fn icon_mask(tpl: &str, size: u32) -> Option<IconMask> {
+    let n = (size * size) as usize;
+    let mut px = vec![0u8; n * 8];
+    if has_literal_color(tpl) {
+        // couleurs écrites en dur dans l'icône : un rendu tout noir donne leur part fixe, un rendu
+        // par couleur du thème donne la part de celle-ci
+        const K: &str = "#000000";
+        const W: &str = "#ffffff";
+        let base = render_tpl(tpl, size, [K, K, K, K])?;
+        for (i, c) in [[W, K, K, K], [K, W, K, K], [K, K, W, K], [K, K, K, W]].into_iter().enumerate() {
+            let r = render_tpl(tpl, size, c)?;
+            for k in 0..n {
+                px[k * 8 + i] = r[k * 4].saturating_sub(base[k * 4]);
+            }
+        }
+        for k in 0..n {
+            px[k * 8 + 4..k * 8 + 7].copy_from_slice(&base[k * 4..k * 4 + 3]);
+            px[k * 8 + 7] = base[k * 4 + 3];
+        }
+    } else {
+        // cas général, un seul rendu : trait en rouge, accent en vert, atténué en bleu ; le fond
+        // est ce qui reste de l'alpha
+        let r = render_tpl(tpl, size, ["#ff0000", "#00ff00", "#0000ff", "#000000"])?;
+        for k in 0..n {
+            let (s, a, u, al) = (r[k * 4], r[k * 4 + 1], r[k * 4 + 2], r[k * 4 + 3]);
+            px[k * 8] = s;
+            px[k * 8 + 1] = a;
+            px[k * 8 + 2] = u;
+            px[k * 8 + 3] = al.saturating_sub(s).saturating_sub(a).saturating_sub(u);
+            px[k * 8 + 7] = al;
+        }
+    }
+    Some(IconMask { size, px })
+}
+
+/// L'icône contient une couleur écrite en dur (hors de ses marqueurs et de ses masques).
+fn has_literal_color(tpl: &str) -> bool {
+    let b = tpl.as_bytes();
+    (0..b.len()).any(|i| {
+        b[i] == b'#' && i > 0 && b[i - 1] == b'"' && b[i + 1..].iter().take_while(|c| c.is_ascii_hexdigit()).count() >= 3
+    })
+}
+
+/// Couleurs d'une teinte, en valeurs : trait, accent, atténué, fond.
+fn palette(dark: bool, accent: Color) -> [[u32; 3]; 4] {
+    let (stroke, acc, subtle, bg) = icon_colors(dark, accent);
+    [stroke, acc, subtle, bg].map(|h| {
+        let v = u32::from_str_radix(h.trim_start_matches('#'), 16).unwrap_or(0);
+        [v >> 16 & 255, v >> 8 & 255, v & 255]
+    })
+}
+
+/// Pixels de l'icône aux couleurs données.
+fn tint(m: &IconMask, pal: &[[u32; 3]; 4]) -> Image {
+    let mut buf = SharedPixelBuffer::<Rgba8Pixel>::new(m.size, m.size);
+    for (o, p) in buf.make_mut_bytes().chunks_exact_mut(4).zip(m.px.chunks_exact(8)) {
+        if p[7] == 0 {
+            continue;
+        }
+        for c in 0..3 {
+            let v = p[0] as u32 * pal[0][c] + p[1] as u32 * pal[1][c] + p[2] as u32 * pal[2][c] + p[3] as u32 * pal[3][c];
+            o[c] = ((v + 127) / 255 + p[4 + c] as u32).min(p[7] as u32) as u8;
+        }
+        o[3] = p[7];
+    }
+    Image::from_rgba8_premultiplied(buf)
 }
 
 thread_local! {
-    /// couleurs des icônes déjà rendues (sombre, accent) : rien à refaire si elles n'ont pas
+    /// couleurs des icônes déjà appliquées (sombre, accent) : rien à refaire si elles n'ont pas
     /// changé (arrondis, translucidité, style… appellent aussi `apply`)
-    static ICON_KEY: std::cell::Cell<Option<(bool, u32)>> = const { std::cell::Cell::new(None) };
+    static ICON_KEY: std::cell::Cell<Option<(bool, u32, u32)>> = const { std::cell::Cell::new(None) };
+    /// icônes préparées (outils, sprite, maison), une seule fois par échelle d'affichage
+    static ICON_MASKS: std::cell::RefCell<Option<(u32, Vec<Option<IconMask>>, Vec<Option<IconMask>>, Vec<Option<IconMask>>)>> = const { std::cell::RefCell::new(None) };
+    /// glyphes Font Awesome redessinés au style MasterPaint, dans l'ordre de FA_SVG (masques
+    /// préparés une fois par taille, puis seulement teintés : pas de rendu SVG à chaque thème)
+    static MP_FA_MASKS: std::cell::RefCell<Option<(u32, Vec<Option<IconMask>>)>> = const { std::cell::RefCell::new(None) };
 }
 
-/// Rend les icônes du sprite aux couleurs du thème (seulement si ces couleurs ont changé).
+/// Donne aux icônes les couleurs du thème : instantané, y compris pendant qu'on fait glisser le
+/// sélecteur de couleur (les SVG ne sont lus qu'une fois, au premier affichage).
+pub fn invalidate_icons() { ICON_KEY.with(|k| k.set(None)); }
+
 fn render_icons(app: &AppWindow, dark: bool, accent: Color) {
-    let key = (dark, (accent.red() as u32) << 16 | (accent.green() as u32) << 8 | accent.blue() as u32);
+    let rgbkey = |c: Color| (c.red() as u32) << 16 | (c.green() as u32) << 8 | c.blue() as u32;
+    let size = icon_px(app.window().scale_factor());
+    let key = (dark, rgbkey(accent), size);
     if ICON_KEY.with(|k| k.replace(Some(key))) == Some(key) {
         return;
     }
-    let (stroke, acc, subtle, bgs) = icon_colors(dark, accent);
-    let images: Vec<Image> = ICONS
-        .iter()
-        .map(|tpl| {
-            let svg = tpl.replace("{STROKE}", &stroke).replace("{ACCENT}", &acc).replace("{SUBTLE}", &subtle).replace("{BG}", &bgs);
-            Image::load_from_svg_data(svg.as_bytes()).unwrap_or_default()
+    let pal = palette(dark, accent);
+    let (mut tools, mut sprite, mut mp) = ICON_MASKS.with(|m| {
+        let mut m = m.borrow_mut();
+        if m.as_ref().is_none_or(|e| e.0 != size) {
+            let prep = |tpl: &str| icon_mask(tpl, size);
+            *m = Some((
+                size,
+                ICONS.iter().map(|t| prep(t)).collect(),
+                crate::sprite_gen::SPRITE.iter().map(|(_, t)| prep(t)).collect(),
+                crate::mpicons_gen::MP_ICONS.iter().map(|(_, t)| prep(t)).collect(),
+            ));
+        }
+        let e = m.as_ref().expect("icônes préparées");
+        let set = |v: &Vec<Option<IconMask>>| -> Vec<Image> { v.iter().map(|o| o.as_ref().map_or_else(Image::default, |k| tint(k, &pal))).collect() };
+        (set(&e.1), set(&e.2), set(&e.3))
+    });
+    let (s,a,u,b) = icon_colors(dark, accent);
+    let colors = [s.as_str(),a.as_str(),u.as_str(),b.as_str()];
+    let override_image = |key: &str| crate::icon_packs::render_override(key,size,colors);
+    // pack MasterPaint : glyphes des menus au style maison, teintés depuis leurs masques
+    let fa_images: Vec<Image> = if crate::icon_packs::selected() == 0 {
+        MP_FA_MASKS.with(|m| {
+            let mut m = m.borrow_mut();
+            if m.as_ref().is_none_or(|e| e.0 != size) {
+                let masks = crate::fa_svg_gen::FA_SVG.iter().map(|(n, _)| crate::mp_fa_gen::MP_FA.iter().find(|(k, _)| k == n).and_then(|(_, t)| icon_mask(t, size))).collect();
+                *m = Some((size, masks));
+            }
+            m.as_ref().expect("masques préparés").1.iter().map(|o| o.as_ref().map_or_else(Image::default, |k| tint(k, &pal))).collect()
         })
-        .collect();
-    app.global::<Icons>().set_images(ModelRc::new(VecModel::from(images)));
+    } else {
+        crate::fa_svg_gen::FA_SVG.iter().map(|(n,_)| override_image(&format!("fa/{n}")).unwrap_or_default()).collect()
+    };
+    // remplacements du pack pour les outils : calculés une fois (avant : deux rendus par outil)
+    let tool_pack: Vec<Image> = (0..tools.len()).map(|i| override_image(&format!("tool/{i}")).unwrap_or_default()).collect();
+    for (img, v) in tools.iter_mut().zip(&tool_pack) { if v.size().width > 0 { *img = v.clone(); } }
+    for ((n,_),img) in crate::sprite_gen::SPRITE.iter().zip(&mut sprite) { if let Some(v)=override_image(&format!("sprite/{n}")) { *img=v; } }
+    for ((n,_),img) in crate::mpicons_gen::MP_ICONS.iter().zip(&mut mp) { if let Some(v)=override_image(&format!("mp/{n}")) { *img=v; } }
+    app.global::<crate::PackIcons>().set_images(ModelRc::new(VecModel::from(fa_images)));
+    app.global::<crate::ToolPackIcons>().set_images(ModelRc::new(VecModel::from(tool_pack)));
+    app.global::<Icons>().set_images(ModelRc::new(VecModel::from(tools)));
     // sprite complet de MasterPaint (ruban, menus, calques…)
-    let sprite: Vec<Image> = crate::sprite_gen::SPRITE
-        .iter()
-        .map(|(_, tpl)| {
-            let svg = tpl.replace("{STROKE}", &stroke).replace("{ACCENT}", &acc).replace("{SUBTLE}", &subtle).replace("{BG}", &bgs);
-            Image::load_from_svg_data(svg.as_bytes()).unwrap_or_default()
-        })
-        .collect();
     crate::sprite_gen::apply(&app.global::<crate::Sprite>(), sprite);
-    // icônes maison (outils, barre rapide, ruban, menus) : rendues à la taille d'affichage
-    app.global::<crate::MpIcons>().set_images(ModelRc::new(VecModel::from(mp_images(&stroke, &acc, &subtle, &bgs))));
+    // icônes maison (outils, barre rapide, ruban, menus)
+    app.global::<crate::MpIcons>().set_images(ModelRc::new(VecModel::from(mp)));
 }
 
-/// Icônes du sprite aux couleurs courantes du thème, avec leur nom (Visionneuse d'icônes).
-pub fn icon_entries(app: &AppWindow) -> Vec<crate::IconEntry> {
-    let t = app.global::<Theme>();
-    let (dark, accent) = (t.get_dark(), t.get_accent());
-    let (stroke, acc, subtle, bgs) = icon_colors(dark, accent);
-    // icônes maison d'abord (outils, menus), puis le sprite
-    let mp = crate::mpicons_gen::MP_ICONS
-        .iter()
-        .zip(mp_images(&stroke, &acc, &subtle, &bgs))
-        .map(|((name, _), image)| crate::IconEntry { name: (*name).into(), image });
-    mp.chain(crate::sprite_gen::SPRITE.iter().map(|(name, tpl)| {
-        let svg = tpl.replace("{STROKE}", &stroke).replace("{ACCENT}", &acc).replace("{SUBTLE}", &subtle).replace("{BG}", &bgs);
-        crate::IconEntry { name: (*name).into(), image: Image::load_from_svg_data(svg.as_bytes()).unwrap_or_default() }
-    }))
-    .collect()
+/// Accent de l'aperçu de la visionneuse, nuancé pour le thème voulu.
+fn viewer_accent(app: &AppWindow, dark: bool) -> Color {
+    accent_shade(palette_accent(app.get_icon_accent()), dark)
+}
+
+/// Visionneuse d'icônes : `tab` 0 = icônes MasterPaint (maison puis sprite), 1 = glyphes Font
+/// Awesome encore employés sans icône maison ; filtrées par `query` (nom), rendues en sombre
+/// (`dark`) ou en clair.
+pub fn icon_entries(app: &AppWindow, tab: i32, query: &str, dark: bool) -> Vec<crate::IconEntry> {
+    let q = query.trim().to_lowercase();
+    let keep = |n: &str| q.is_empty() || n.to_lowercase().contains(&q);
+    if tab == 1 {
+        let mp = app.global::<crate::MpIcons>();
+        return crate::fa_used_gen::FA_USED
+            .iter()
+            .filter(|(g, n, _)| keep(n) && mp.invoke_for_glyph((*g).into()) < 0)
+            .map(|(g, n, st)| crate::IconEntry { name: (*n).into(), image: { let (s,a,u,b)=icon_colors(dark,viewer_accent(app,dark)); crate::icon_packs::render_override(&format!("fa/{n}"),32,[&s,&a,&u,&b]).unwrap_or_default() }, glyph: (*g).into(), brands: *st == "brands", kind: 2 })
+            .collect();
+    }
+    // les icônes telles que compilées, à la teinte choisie
+    let pal = palette(dark, viewer_accent(app, dark));
+    ICON_MASKS.with(|m| {
+        let m = m.borrow();
+        let Some((_, _, sprite, mpi)) = m.as_ref() else { return Vec::new() };
+        let entry = |name: &str, mask: &Option<IconMask>, kind: i32| crate::IconEntry {
+            name: name.into(),
+            image: { let (a,b,c,d)=icon_colors(dark,viewer_accent(app,dark)); crate::icon_packs::render_override(&format!("{}/{name}",if kind == 0 {"mp"} else {"sprite"}),32,[&a,&b,&c,&d]).unwrap_or_else(|| mask.as_ref().map_or_else(Image::default, |k| tint(k, &pal))) },
+            glyph: "".into(),
+            brands: false,
+            kind,
+        };
+        let home = crate::mpicons_gen::MP_ICONS.iter().zip(mpi).filter(|((n, _), _)| keep(n)).map(|((n, _), k)| entry(n, k, 0));
+        let list = crate::sprite_gen::SPRITE.iter().zip(sprite).filter(|((n, _), _)| keep(n)).map(|((n, _), k)| entry(n, k, 1));
+        home.chain(list).collect()
+    })
+}
+
+/// Icône choisie dans la visionneuse, nette en grand (aperçu jusqu'à 108 unités).
+pub fn icon_big(app: &AppWindow, name: &str, kind: i32, dark: bool) -> Image {
+    let (s,a,u,b)=icon_colors(dark,viewer_accent(app,dark));
+    if let Some(img)=crate::icon_packs::render_override(&format!("{}/{name}",if kind==0 {"mp"} else if kind==1 {"sprite"} else {"fa"}),216,[&s,&a,&u,&b]) { return img; }
+    let tpl = if kind == 0 {
+        crate::mpicons_gen::MP_ICONS.iter().find(|(n, _)| *n == name)
+    } else {
+        crate::sprite_gen::SPRITE.iter().find(|(n, _)| *n == name)
+    };
+    let Some((_, tpl)) = tpl else { return Image::default() };
+    let (s, a, u, b) = icon_colors(dark, viewer_accent(app, dark));
+    let size = 216;
+    let Some(px) = render_tpl(tpl, size, [&s, &a, &u, &b]) else { return Image::default() };
+    let mut buf = SharedPixelBuffer::<Rgba8Pixel>::new(size, size);
+    buf.make_mut_bytes().copy_from_slice(&px);
+    Image::from_rgba8_premultiplied(buf)
+}
+
+/// Nombre d'icônes de chaque onglet de la visionneuse (MasterPaint, non personnalisées).
+pub fn icon_counts(app: &AppWindow) -> (usize, usize) {
+    let mp = app.global::<crate::MpIcons>();
+    let fa = crate::fa_used_gen::FA_USED.iter().filter(|(g, _, _)| mp.invoke_for_glyph((*g).into()) < 0).count();
+    (crate::mpicons_gen::MP_ICONS.len() + crate::sprite_gen::SPRITE.len(), fa)
+}
+
+/// SVG d'une icône MasterPaint (kind 0 maison, 1 sprite) aux couleurs du thème, agrandi à
+/// 512 px (ouverture en projet SVG).
+pub fn icon_svg(app: &AppWindow, name: &str, kind: i32, dark: bool) -> Option<String> {
+    let key=format!("{}/{name}",if kind==0 {"mp"} else if kind==1 {"sprite"} else {"fa"});
+    if let Some(src)=crate::icon_packs::source(&key) {
+        if src.starts_with("data:image/png;base64,") { return Some(format!(r#"<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><image width="512" height="512" href="{src}"/></svg>"#)); }
+        let (s,a,u,b)=icon_colors(dark,viewer_accent(app,dark));
+        return Some(src.replace("{STROKE}",&s).replace("{ACCENT}",&a).replace("{SUBTLE}",&u).replace("{BG}",&b));
+    }
+    if kind == 2 { return None; }
+
+    let tpl = if kind == 0 {
+        crate::mpicons_gen::MP_ICONS.iter().find(|(n, _)| *n == name)?.1
+    } else {
+        crate::sprite_gen::SPRITE.iter().find(|(n, _)| *n == name)?.1
+    };
+    let (stroke, acc, subtle, bgs) = icon_colors(dark, viewer_accent(app, dark));
+    Some(
+        tpl.replace("{STROKE}", &stroke)
+            .replace("{ACCENT}", &acc)
+            .replace("{SUBTLE}", &subtle)
+            .replace("{BG}", &bgs)
+            .replacen("<svg ", "<svg width=\"512\" height=\"512\" ", 1),
+    )
 }
 
 /// Keep browser chrome and Android system bars in sync with the actual header.
@@ -148,20 +338,23 @@ fn sync_system_theme(dark: bool, base: Color, bar: Color) {
 }
 
 /// Applique le thème : sombre ou clair, accent, et style (Paramètres › Thème d'interface :
-/// 0 Flat Design, 1 Windows 98).
+/// 0 Flat Design, 1 Windows 98.
 pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
     let base_accent = palette_accent(accent);
     let accent = accent_shade(base_accent, dark);
     sync_system_theme(dark, base_accent, mix(accent, rgb(0x000000), 0.62));
     render_icons(app, dark, accent);
     let t = app.global::<Theme>();
-    let win98 = app.get_set_theme_style() == 1;
+    let style = match app.get_set_interface_theme() {1 => 2, 2 => 3, 3 => 0, _ => app.get_set_theme_style()};
+    t.set_reference_style(style);
+    let win98 = style == 1;
     // Paramètres › Apparence : coins arrondis et barre de titre translucide (Windows 11)
     let round = !win98 && app.get_set_rounded();
     t.set_win98(win98);
     t.set_glass(!win98 && app.get_set_glass());
     t.set_title_transparent(!win98 && app.get_set_title_transparent());
-    t.set_title_blurred(!win98 && app.get_set_title_blurred());
+    t.set_shadows(app.get_set_shadows());
+    t.set_hover_fx(app.get_set_hover_fx());
     t.set_window_radius(if round { 8.0 } else { 0.0 });
     t.set_ctl_radius(if round { 5.0 } else { 0.0 });
     t.set_round(if round { 1.0 } else { 0.0 });
@@ -236,6 +429,105 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_track_bg(rgb(0xe1e1e1));
         t.set_track_border(rgb(0xd6d6d6));
     }
+    // Reference palettes from paintdotjs/css/theme.css and PhotoCraft Tokens::ProMedium.
+    // Layout is derived in Slint; the saved MasterPaint layout remains untouched.
+    // géométrie et boutons de MasterPaint (les présentations de référence les remplacent)
+    t.set_button_fg(t.get_text());
+    t.set_button_radius(t.get_ctl_radius());
+    t.set_close_size(17.0);
+    t.set_button_relief(true);
+    t.set_close_bg(rgb(0xc75050));
+    t.set_close_hover(rgb(0xe04343));
+    t.set_font_size(12.0);
+    t.set_menu_font_size(12.0);
+    t.set_small_font_size(11.0);
+    if style == 2 {
+        // Paint.NET = paintdotjs, css/theme.css (thème sombre par défaut, clair : data-color-scheme
+        // « light ») et css/window.css : tout est carré, barre de titre de 30 px, croix rouge de
+        // 19 px, boutons clairs à texte noir, police 8,25 pt
+        let c = |v: u32| rgb(v);
+        let (bg, title, menu, window, field, _border, text, muted, popup, sep) = if dark {
+            (0x2f2f2f, 0x0d0d0d, 0x202020, 0x282828, 0x1e1e1e, 0x646464, 0xffffff, 0xc8c8c8, 0x1c1c1c, 0x46464a)
+        } else {
+            (0xd7d7d7, 0xe9e9e9, 0xf1f1f1, 0xf0f0f0, 0xffffff, 0xa0a0a0, 0x111111, 0x555555, 0xffffff, 0xc2c2c2)
+        };
+        for set in [Theme::set_menubar_bg, Theme::set_ribbon_bg, Theme::set_statusbar_bg, Theme::set_menu_gutter] { set(&t, c(menu)); }
+        for set in [Theme::set_window_bg, Theme::set_list_bg, Theme::set_footer_bg] { set(&t, c(window)); }
+        t.set_window_title_bg(c(title));
+        t.set_window_border(if dark { Color::from_argb_u8(54, 195, 195, 195) } else { Color::from_argb_u8(71, 0, 0, 0) });
+        t.set_window_shadow(Color::from_argb_u8(51, 0, 0, 0));
+        for set in [Theme::set_field_bg, Theme::set_track_bg] { set(&t, c(field)); }
+        for set in [Theme::set_field_border, Theme::set_track_border, Theme::set_statusbar_border] { set(&t, c(if dark { 0x8d8d8d } else { 0x767676 })); }
+        t.set_ribbon_sep(c(sep));
+        t.set_menu_bg(c(popup));
+        t.set_workspace_bg(c(bg));
+        t.set_text(c(text)); t.set_ribbon_fg(c(text));
+        t.set_text_inactive(c(muted)); t.set_ribbon_label(c(muted));
+        // boutons : clairs en thème clair (Paint.NET), sombres en thème sombre comme Paint.NET 5
+        // (paintdotjs garde un bouton blanc en sombre : texte blanc sur blanc dans MasterPaint,
+        // où beaucoup de boutons écrivent la couleur du texte sur ce fond)
+        t.set_button_bg(c(if dark { 0x333333 } else { 0xfdfdfd }));
+        t.set_button_border(c(if dark { 0x6e6e6e } else { 0xd0d0d0 }));
+        t.set_button_fg(c(text));
+        t.set_close_bg(c(0xc75050)); t.set_close_hover(c(0xe04343));
+        // couleur d'accentuation choisie (bleu Paint.NET proposé au choix de l'interface) ; survol
+        // et sélection en dérivent comme #18324B / #074F97 dérivent du bleu #0078D7
+        let surface = c(window);
+        t.set_accent(accent);
+        t.set_on_accent(if contrast(accent, rgb(0x000000)) > contrast(accent, rgb(0xffffff)) { rgb(0x000000) } else { rgb(0xffffff) });
+        t.set_accent_12(mix(accent, surface, if dark { 0.22 } else { 0.18 }));
+        t.set_accent_14(mix(accent, surface, if dark { 0.26 } else { 0.22 }));
+        t.set_accent_20(mix(accent, surface, if dark { 0.38 } else { 0.34 }));
+        t.set_accent_27(mix(accent, surface, if dark { 0.34 } else { 0.28 }));
+        t.set_accent_32(t.get_accent_27());
+        t.set_accent_60(mix(accent, surface, 0.70));
+        // carré comme paintdotjs ; l'option « Coins arrondis » reste respectée
+        let r = if app.get_set_rounded() { 1.0 } else { 0.0 };
+        t.set_window_radius(6.0 * r); t.set_ctl_radius(4.0 * r); t.set_round(r); t.set_button_radius(4.0 * r);
+        t.set_title_height(30.0);
+        t.set_close_size(24.0);
+        t.set_button_relief(false);
+        t.set_font_size(11.0); t.set_menu_font_size(11.0); t.set_small_font_size(10.0);
+        sync_system_theme(dark, base_accent, c(title));
+    }
+    if style == 3 {
+        // Photoshop = PhotoCraft, crates/ui-egui/src/theme.rs : Tokens « Pro » (sombre, par défaut)
+        // et « ProLight » ; arrondis 3 / 4 / 6 px, boutons en pilule, bandes d'onglets
+        let c = |v: u32| rgb(v);
+        let (chrome, canvas, dock, card, field, field_border, hover, text, dim, tab, row, soft) = if dark {
+            (0x323232, 0x282828, 0x1e1e1e, 0x323232, 0x242424, 0x4a4a4a, 0x424242, 0xdedede, 0xb2b2b2, 0x262626, 0x525252, 0x4e4e4e)
+        } else {
+            (0xf0f0f0, 0xd6d6d6, 0xe2e2e2, 0xf0f0f0, 0xffffff, 0xbababa, 0xe2e2e2, 0x141414, 0x404040, 0xe2e2e2, 0xcccccc, 0xd6d6d6)
+        };
+        for set in [Theme::set_menubar_bg, Theme::set_ribbon_bg, Theme::set_statusbar_bg, Theme::set_menu_gutter] { set(&t, c(chrome)); }
+        for set in [Theme::set_window_bg, Theme::set_list_bg, Theme::set_footer_bg, Theme::set_menu_bg] { set(&t, c(card)); }
+        t.set_window_title_bg(c(tab));
+        for set in [Theme::set_window_border, Theme::set_statusbar_border, Theme::set_ribbon_sep] { set(&t, c(dock)); }
+        t.set_window_shadow(if dark { Color::from_argb_u8(150, 0, 0, 0) } else { Color::from_argb_u8(50, 0, 0, 0) });
+        for set in [Theme::set_field_bg, Theme::set_track_bg] { set(&t, c(field)); }
+        for set in [Theme::set_field_border, Theme::set_track_border] { set(&t, c(field_border)); }
+        t.set_workspace_bg(c(canvas));
+        t.set_text(c(text)); t.set_ribbon_fg(c(text)); t.set_button_fg(c(text));
+        t.set_text_inactive(c(dim)); t.set_ribbon_label(c(dim));
+        // boutons en pilule, sans fond propre, liseré clair (« Reset to defaults »)
+        t.set_button_bg(c(card));
+        t.set_button_border(c(if dark { 0x8c8c8c } else { 0x9a9a9a }));
+        // accent = couleur choisie (bleu PhotoCraft proposé au choix de l'interface)
+        let blue = accent;
+        t.set_accent(blue);
+        t.set_on_accent(if contrast(blue, rgb(0x000000)) > contrast(blue, rgb(0xffffff)) { rgb(0x000000) } else { rgb(0xffffff) });
+        t.set_accent_12(c(hover));
+        t.set_accent_14(c(soft));
+        t.set_accent_20(c(if dark { 0x5a5a5a } else { 0xcecece }));
+        t.set_accent_27(c(row)); t.set_accent_32(c(row));
+        t.set_accent_60(blue);
+        t.set_close_bg(c(0xc42b1c)); t.set_close_hover(c(0xd94b3c));
+        let r = if app.get_set_rounded() { 1.0 } else { 0.0 };
+        t.set_window_radius(6.0 * r); t.set_ctl_radius(3.0 * r); t.set_round(r); t.set_button_radius(12.0 * r);
+        t.set_title_height(28.0);
+        t.set_button_relief(false);
+        sync_system_theme(dark, base_accent, c(chrome));
+    }
     // mode téléphone (theme-mobile-modern.css) : surfaces, cartes, accent foncé de la barre du haut
     let alpha = |c: Color, a: f32| Color::from_argb_u8((a * 255.0).round() as u8, c.red(), c.green(), c.blue());
     if dark {
@@ -292,6 +584,27 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_accent_12(mix(accent, face, 0.18));
         t.set_accent_14(mix(accent, face, 0.22));
     }
+    // Paint.NET / Photoshop : « Bordures marquées » = contours de la référence (paintdotjs,
+    // PhotoCraft) ; « Non » = contours discrets de MasterPaint, avec son relief de boutons
+    if style >= 2 && !app.get_set_pronounced_borders() {
+        let v = |d: u32, l: u32| rgb(if dark { d } else { l });
+        t.set_window_border(v(0x4a4a4a, 0xc6c6c6));
+        t.set_field_border(v(0x6a6a6a, 0xadadad));
+        t.set_button_border(v(0x555555, 0xd0d0d0));
+        t.set_track_border(v(0x5a5a5a, 0xd6d6d6));
+        t.set_statusbar_border(v(0x383838, 0xd4d4d4));
+        t.set_ribbon_sep(v(0x4f4f4f, 0xc8c6c4));
+        t.set_button_relief(true);
+    }
+    if app.get_set_pronounced_borders() && style < 2 {
+        let border = rgb(if dark { 0x858585 } else { 0x737373 });
+        t.set_window_border(border);
+        t.set_field_border(border);
+        t.set_button_border(border);
+        t.set_track_border(border);
+        t.set_statusbar_border(border);
+        t.set_ribbon_sep(border);
+    }
 }
 
 #[cfg(test)]
@@ -307,5 +620,40 @@ mod contrast_tests {
                 assert_eq!(palette_accent(rgb(hex)), rgb(hex));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod icon_tests {
+    use super::*;
+
+    /// Teinte calculée = rendu du SVG aux mêmes couleurs, pour toutes les icônes.
+    #[test]
+    fn icon_tint_matches_svg() {
+        let t0 = std::time::Instant::now();
+        let masks: Vec<(&str, IconMask)> = crate::mpicons_gen::MP_ICONS.iter().chain(crate::sprite_gen::SPRITE.iter()).map(|(n, t)| (*n, icon_mask(t, 32).unwrap_or_else(|| panic!("{n}")))).collect();
+        let prep = t0.elapsed();
+        let accent = Color::from_rgb_u8(0xc2, 0x18, 0x5b);
+        let pal = palette(true, accent);
+        let t1 = std::time::Instant::now();
+        for (_, m) in &masks {
+            let _ = tint(m, &pal);
+        }
+        let retint = t1.elapsed();
+        println!("{} icônes : préparation {prep:?}, nouvelle teinte {retint:?}", masks.len());
+        let (s, a, u, b) = icon_colors(true, accent);
+        let mut worst = 0i32;
+        for ((n, tpl), (_, m)) in crate::mpicons_gen::MP_ICONS.iter().chain(crate::sprite_gen::SPRITE.iter()).zip(&masks) {
+            let want = render_tpl(tpl, 32, [&s, &a, &u, &b]).unwrap();
+            let got = tint(m, &pal).to_rgba8_premultiplied().unwrap();
+            for (x, y) in want.iter().zip(got.as_bytes()) {
+                let d = (*x as i32 - *y as i32).abs();
+                if d > worst {
+                    worst = d;
+                }
+                assert!(d <= 4, "{n} : écart {d}");
+            }
+        }
+        println!("écart maximal {worst}");
     }
 }

@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -48,7 +49,8 @@
   }
   #loading.done { opacity: 0; pointer-events: none; }
   .frame { position: relative; max-width: min(720px, 92vw); margin: 0 auto; }
-  .frame img { display: block; max-width: 100%; max-height: 82vh; height: auto; background: #fff;
+  /* fond teinté (pas blanc) tant que l'image n'est pas arrivée : l'écran garde la couleur d'accent */
+  .frame img { display: block; max-width: 100%; max-height: 82vh; height: auto; background: rgba(0,0,0,.18);
     min-height: 120px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
   .brand { position: absolute; left: 0; right: 0; top: 10px; text-align: center; pointer-events: none; }
   .brand h1, .brand p { color: #fff; text-shadow: 0 4px 8px #000, 0 8px 24px #000, 0 12px 50px #000; }
@@ -81,8 +83,13 @@
   #mp-error, #mp-contact { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
     background: rgba(0,0,0,.55); font: 13px "Segoe UI", system-ui, sans-serif; color: var(--mp-dialog-fg); }
   .mp-err-card { box-sizing: border-box; width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column;
-    gap: 10px; background: var(--mp-dialog-bg); border: 1px solid var(--mp-dialog-border); border-radius: 8px; padding: 16px 16px 0;
+    gap: 10px; background: var(--mp-dialog-bg); border: 1px solid var(--mp-dialog-border); border-radius: 8px; padding: 0 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,.4); overflow-y: auto; }
+  /* barre de titre comme les fenêtres de l'application (Slint est arrêté quand celle-ci s'affiche) */
+  .mp-err-bar { display: flex; align-items: center; justify-content: space-between; height: 26px; margin: 0 -16px; padding: 0 3px 0 10px;
+    flex-shrink: 0; font-size: 12px; background: var(--mp-dialog-footer); border-bottom: 1px solid var(--mp-dialog-border); }
+  .mp-err-x { width: 20px; height: 20px; border: 0; border-radius: 3px; background: #c9484a; color: #fff; font: 700 11px/1 sans-serif; cursor: pointer; }
+  .mp-err-x:hover { background: #d9383a; }
   #mp-contact { z-index: 101; }
   #mp-contact label { display: flex; flex-direction: column; gap: 4px; }
   #mp-contact select, .mp-err-mail, .mp-err-det {
@@ -90,11 +97,11 @@
     border-radius: 5px; padding: 6px 8px; background: var(--mp-dialog-field); color: var(--mp-dialog-fg); font: inherit;
   }
   #mp-contact option { background: var(--mp-dialog-field); color: var(--mp-dialog-fg); }
-  .mp-err-head { display: flex; align-items: center; gap: 10px; font-size: 15px; }
-  .mp-err-ico { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #c42b1c; color: #fff;
-    display: grid; place-items: center; font-weight: 700; }
   .mp-err-txt { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
   .mp-err-det { min-height: 120px; flex: 1; resize: vertical; font: 11px ui-monospace, Consolas, monospace; }
+  .mp-err-msg { resize: vertical; font: inherit; }
+  .mp-err-jnl { display: flex; align-items: center; gap: 6px; }
+  #mp-wait { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 100; padding: 8px 16px; border-radius: 16px; background: #000c; color: #fff; font: 13px sans-serif; pointer-events: none; }
   .mp-err-mail::placeholder { color: var(--mp-dialog-muted); opacity: 1; }
   .mp-err-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px;
     margin: 0 -16px; padding: 10px 16px; background: var(--mp-dialog-footer); border-top: 1px solid var(--mp-dialog-border); }
@@ -125,8 +132,24 @@
   </div>
 </div>
 <script>
+  // Résolution de rendu (Paramètres › Apparence, mode léger) : le moteur d'affichage lit l'échelle de
+  // l'écran une fois, au démarrage. Le canevas garde sa taille à l'écran ; il a moins de pixels à
+  // dessiner (temps par image divisé par 2 sur un écran à 150 %). Sans la taille en pixels réels
+  // du canevas, le moteur calcule la sienne à partir de cette échelle.
+  (() => {
+    window.mpRealDpr = window.devicePixelRatio || 1;
+    try {
+      // jamais en dessous de 1 : l'interface entière deviendrait floue
+      if (JSON.parse(localStorage.getItem('illu_rust_settings') || '{}').renderScale >= 1 && window.mpRealDpr > 1) {
+        Object.defineProperty(window, 'devicePixelRatio', { get: () => 1, configurable: true });
+        if (window.ResizeObserverEntry) delete ResizeObserverEntry.prototype.devicePixelContentBoxSize;
+      }
+    } catch (_) {}
+  })();
+</script>
+<script>
 // BEGIN GENERATED I18N — tools/gen_lang.py
-const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API unavailable (page insecure? HTTPS required)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API unavailable (page insecure? HTTPS required)","Annuler":"Cancel","Aperçu 1:1 — MasterPaint":"1:1 Preview — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tip: Ctrl+F repeats the last effect.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tip: Ctrl+Shift+M opens Curves.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tip: Space + drag to move around the canvas.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tip: double-click a slider to enter a value with the keyboard.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tip: the ƒ button on a layer applies a dynamic filter in real time.","Autre":"Other","Bug / Erreur":"Bug / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"This calculation has been abandoned, the application continues. Submit the report to help fix the issue.","Collage":"Paste","Contact (facultatif)":"Contact (optional)","Continuer":"Continue","Copier":"Copy","Copié":"Copied","Démarrage de l’interface…":"Starting the interface…","Envoi…":"Sending…","Envoyer":"Send","Envoyer le signalement":"Send the report","Envoyé, merci !":"Sent, thank you!","Fermer l’essai":"Close test","Idée / Amélioration":"Idea / Improvement","MasterPaint s'est arrêté":"MasterPaint has stopped","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online photo editor, a Paint.NET alternative","Message":"Message","Par polocrafting 367":"By polocrafting 367","Redémarrer la page":"Restart page","Remarque":"Comment","Signaler un bug":"Report a bug","Type":"Type","Téléchargement…":"Download…","Un calcul a échoué":"A calculation failed","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"An error stopped the application. Your projects were automatically saved before the error and will be restored upon restart. Submit the report to help fix the issue.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Your email or nickname (optional, for a response)","lecture refusée : ":"reading refused: ","Échec de l'envoi (réseau ?)":"Failed to send (network?)","Échec du chargement":"Failed to load","Écrivez un message":"Write a message","écriture refusée : ":"writing refused: ","— journal —":"— newspaper —"},"es":{" (essai)":" (prueba)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.read no está disponible (¿página no segura? Se requiere HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.write no está disponible (¿página no segura? Se requiere HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Vista previa 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Consejo: Ctrl+F repite el último efecto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Consejo: Ctrl+Mayús+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Consejo: Espacio + arrastrar para moverse por el lienzo.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Consejo: haz doble clic en un control deslizante para introducir el valor con el teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Consejo: el botón ƒ en una capa aplica un filtro dinámico en tiempo real.","Autre":"Otro","Bug / Erreur":"Fallo / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo ha sido abandonado, continúa la solicitud. Envíe el informe para ayudar a solucionar el problema.","Collage":"Collage","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"copiado","Démarrage de l’interface…":"Iniciando la interfaz…","Envoi…":"Enviando…","Envoyer":"enviar","Envoyer le signalement":"enviar el informe","Envoyé, merci !":"Enviado, gracias!","Fermer l’essai":"Cerrar prueba","Idée / Amélioration":"Idea / Mejora","MasterPaint s'est arrêté":"MasterPaint se ha detenido","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos en línea, alternativa a Paint.NET","Message":"Mensaje","Par polocrafting 367":"Por polocrafting 367","Redémarrer la page":"Reiniciar página","Remarque":"Comentario","Signaler un bug":"Informar un error","Type":"Tipo","Téléchargement…":"Descargar…","Un calcul a échoué":"Un cálculo falló","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un error detuvo la aplicación. Sus proyectos se guardaron automáticamente antes del error y se restaurarán al reiniciar. Envíe el informe para ayudar a solucionar el problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Tu correo electrónico o apodo (opcional, para una respuesta)","lecture refusée : ":"lectura rechazada: ","Échec de l'envoi (réseau ?)":"No se pudo enviar (¿red?)","Échec du chargement":"No se pudo cargar","Écrivez un message":"Escribe un mensaje","écriture refusée : ":"escrito rechazado: ","— journal —":"— periódico —"},"de":{" (essai)":" (Test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","Annuler":"Abbrechen","Aperçu 1:1 — MasterPaint":"1:1-Vorschau – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tipp: Strg+F wiederholt den letzten Effekt.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tipp: Strg+Umschalt+M öffnet die Gradationskurven.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tipp: Leertaste + Ziehen, um sich auf der Leinwand zu bewegen.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tipp: Doppelklicken Sie auf einen Schieberegler, um den Wert über die Tastatur einzugeben.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tipp: Die ƒ-Taste auf einer Ebene wendet einen dynamischen Filter in Echtzeit an.","Autre":"Sonstiges","Bug / Erreur":"Fehler / Problem","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Diese Berechnung wurde aufgegeben, die Anwendung läuft weiter. Senden Sie den Bericht, um das Problem zu beheben.","Collage":"Collage","Contact (facultatif)":"Kontakt (optional)","Continuer":"Fortfahren","Copier":"Kopieren","Copié":"Kopiert","Démarrage de l’interface…":"Starten der Schnittstelle…","Envoi…":"Senden…","Envoyer":"Senden","Envoyer le signalement":"Senden Sie den Bericht","Envoyé, merci !":"Gesendet, danke!","Fermer l’essai":"Test schließen","Idée / Amélioration":"Idee / Verbesserung","MasterPaint s'est arrêté":"MasterPaint wurde gestoppt","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online-Fotoeditor, eine Alternative zu Paint.NET","Message":"Nachricht","Par polocrafting 367":"Von Polocrafting 367","Redémarrer la page":"Seite neu starten","Remarque":"Anmerkung","Signaler un bug":"Melden Sie einen Fehler","Type":"Typ","Téléchargement…":"Herunterladen…","Un calcul a échoué":"Eine Berechnung ist fehlgeschlagen","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Ein Fehler hat die Anwendung gestoppt. Ihre Projekte wurden vor dem Fehler automatisch gespeichert und werden beim Neustart wiederhergestellt. Senden Sie den Bericht, um das Problem zu beheben.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Ihre E-Mail-Adresse oder Ihr Spitzname (optional, für eine Antwort)","lecture refusée : ":"Lesung verweigert: ","Échec de l'envoi (réseau ?)":"Senden fehlgeschlagen (Netzwerk?)","Échec du chargement":"Laden fehlgeschlagen","Écrivez un message":"Nachricht schreiben","écriture refusée : ":"Schreiben abgelehnt: ","— journal —":"— Zeitung —"},"it":{" (essai)":" (prova)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read non disponibile (pagina non sicura? HTTPS richiesto)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write non disponibile (pagina non sicura? HTTPS richiesto)","Annuler":"Annulla","Aperçu 1:1 — MasterPaint":"Anteprima 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Suggerimento: Ctrl+F ripete l'ultimo effetto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Suggerimento: Ctrl+Maiusc+M apre Curve.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Suggerimento: Spazio + trascina per spostarti nell'area di disegno.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Suggerimento: fai doppio clic su un cursore per inserire il valore con la tastiera.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Suggerimento: il pulsante ƒ su un livello applica un filtro dinamico in tempo reale.","Autre":"Altro","Bug / Erreur":"Bug / Errore","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Questo calcolo è stato abbandonato, continua la domanda. Invia la segnalazione per contribuire a risolvere il problema.","Collage":"Collage","Contact (facultatif)":"Contatto (facoltativo)","Continuer":"Continua","Copier":"Copia","Copié":"Copiato","Démarrage de l’interface…":"Avvio dell'interfaccia…","Envoi…":"Invio…","Envoyer":"Invia","Envoyer le signalement":"Invia la segnalazione","Envoyé, merci !":"Inviato, grazie!","Fermer l’essai":"Chiudi prova","Idée / Amélioration":"Idea / Miglioramento","MasterPaint s'est arrêté":"MasterPaint si è interrotto","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor fotografico online, alternativa a Paint.NET","Message":"Messaggio","Par polocrafting 367":"Da polocrafting 367","Redémarrer la page":"Riavvia la pagina","Remarque":"Osservazione","Signaler un bug":"Segnala un bug","Type":"Tipo","Téléchargement…":"Scarica…","Un calcul a échoué":"Un calcolo è fallito","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un errore ha interrotto l'applicazione. I tuoi progetti sono stati salvati automaticamente prima dell'errore e verranno ripristinati al riavvio. Invia la segnalazione per contribuire a risolvere il problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"La tua email o nickname (facoltativo, per una risposta)","lecture refusée : ":"lettura rifiutata: ","Échec de l'envoi (réseau ?)":"Impossibile inviare (rete?)","Échec du chargement":"Impossibile caricare","Écrivez un message":"Scrivi un messaggio","écriture refusée : ":"scrittura rifiutata: ","— journal —":"— giornale —"},"pt":{" (essai)":" (teste)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read indisponível (página insegura? É necessário HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write indisponível (página insegura? É necessário HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Visualização 1:1 – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Dica: Ctrl+F repete o último efeito.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Dica: Ctrl+Shift+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Dica: espaço + arraste para mover-se pela tela.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Dica: clique duas vezes em um controle deslizante para inserir o valor pelo teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Dica: o botão ƒ em uma camada aplica um filtro dinâmico em tempo real.","Autre":"Outro","Bug / Erreur":"Falha / Erro","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo foi abandonado, continua o pedido. Envie o relatório para ajudar a corrigir o problema.","Collage":"Colagem","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"Copiado","Démarrage de l’interface…":"Iniciando a interface…","Envoi…":"Enviando…","Envoyer":"Enviar","Envoyer le signalement":"Envie o relatório","Envoyé, merci !":"Enviado, obrigado!","Fermer l’essai":"Fechar teste","Idée / Amélioration":"Ideia / Melhoria","MasterPaint s'est arrêté":"MasterPaint parou","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos online, alternativa ao Paint.NET","Message":"Mensagem","Par polocrafting 367":"Por polocrafting 367","Redémarrer la page":"Página de reinicialização","Remarque":"Observação","Signaler un bug":"Reportar um bug","Type":"Tipo","Téléchargement…":"Baixar…","Un calcul a échoué":"Um cálculo falhou","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Um erro interrompeu o aplicativo. Seus projetos foram salvos automaticamente antes do erro e serão restaurados após a reinicialização. Envie o relatório para ajudar a corrigir o problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Seu e-mail ou apelido (opcional, para resposta)","lecture refusée : ":"leitura recusada: ","Échec de l'envoi (réseau ?)":"Falha ao enviar (rede?)","Échec du chargement":"Falha ao carregar","Écrivez un message":"Escreva uma mensagem","écriture refusée : ":"escrita recusada: ","— journal —":"- jornal -"}};
+const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API unavailable (page insecure? HTTPS required)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API unavailable (page insecure? HTTPS required)","Annuler":"Cancel","Aperçu 1:1 — MasterPaint":"1:1 Preview — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tip: Ctrl+F repeats the last effect.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tip: Ctrl+Shift+M opens Curves.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tip: Space + drag to move around the canvas.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tip: double-click a slider to enter a value with the keyboard.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tip: the ƒ button on a layer applies a dynamic filter in real time.","Attendre":"Wait","Autre":"Other","Bug / Erreur":"Bug / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"This calculation has been abandoned, the application continues. Submit the report to help fix the issue.","Collage":"Paste","Contact (facultatif)":"Contact (optional)","Continuer":"Continue","Copier":"Copy","Copié":"Copied","Démarrage de l’interface…":"Starting the interface…","Envoi…":"Sending…","Envoyer":"Send","Envoyer le signalement":"Send the report","Envoyé, merci !":"Sent, thank you!","Fermer l’essai":"Close test","Idée / Amélioration":"Idea / Improvement","Joindre le journal technique":"Attach the technical log","MasterPaint ne répond plus, attente…":"MasterPaint is not responding, waiting…","MasterPaint s'est arrêté":"MasterPaint has stopped","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online photo editor, a Paint.NET alternative","Message":"Message","Par polocrafting 367":"By polocrafting 367","Que faisiez-vous ? (facultatif)":"What were you doing? (optional)","Redémarrer la page":"Restart page","Remarque":"Comment","Signaler un bug":"Report a bug","Type":"Type","Téléchargement…":"Download…","Un calcul a échoué":"A calculation failed","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"An error stopped the application. Your projects were automatically saved before the error and will be restored upon restart. Submit the report to help fix the issue.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Your email or nickname (optional, for a response)","lecture refusée : ":"reading refused: ","Échec de l'envoi (réseau ?)":"Failed to send (network?)","Échec du chargement":"Failed to load","Écrivez un message":"Write a message","écriture refusée : ":"writing refused: ","— journal —":"— newspaper —"},"es":{" (essai)":" (prueba)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.read no está disponible (¿página no segura? Se requiere HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"La API navigator.clipboard.write no está disponible (¿página no segura? Se requiere HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Vista previa 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Consejo: Ctrl+F repite el último efecto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Consejo: Ctrl+Mayús+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Consejo: Espacio + arrastrar para moverse por el lienzo.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Consejo: haz doble clic en un control deslizante para introducir el valor con el teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Consejo: el botón ƒ en una capa aplica un filtro dinámico en tiempo real.","Attendre":"Esperar","Autre":"Otro","Bug / Erreur":"Fallo / Error","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo ha sido abandonado, continúa la solicitud. Envíe el informe para ayudar a solucionar el problema.","Collage":"Collage","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"copiado","Démarrage de l’interface…":"Iniciando la interfaz…","Envoi…":"Enviando…","Envoyer":"enviar","Envoyer le signalement":"enviar el informe","Envoyé, merci !":"Enviado, gracias!","Fermer l’essai":"Cerrar prueba","Idée / Amélioration":"Idea / Mejora","Joindre le journal technique":"Adjuntar el registro técnico","MasterPaint ne répond plus, attente…":"MasterPaint no responde, esperando…","MasterPaint s'est arrêté":"MasterPaint se ha detenido","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos en línea, alternativa a Paint.NET","Message":"Mensaje","Par polocrafting 367":"Por polocrafting 367","Que faisiez-vous ? (facultatif)":"¿Qué estaba haciendo? (opcional)","Redémarrer la page":"Reiniciar página","Remarque":"Comentario","Signaler un bug":"Informar un error","Type":"Tipo","Téléchargement…":"Descargar…","Un calcul a échoué":"Un cálculo falló","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un error detuvo la aplicación. Sus proyectos se guardaron automáticamente antes del error y se restaurarán al reiniciar. Envíe el informe para ayudar a solucionar el problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Tu correo electrónico o apodo (opcional, para una respuesta)","lecture refusée : ":"lectura rechazada: ","Échec de l'envoi (réseau ?)":"No se pudo enviar (¿red?)","Échec du chargement":"No se pudo cargar","Écrivez un message":"Escribe un mensaje","écriture refusée : ":"escrito rechazado: ","— journal —":"— periódico —"},"de":{" (essai)":" (Test)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.read API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"navigator.clipboard.write API nicht verfügbar (Seite unsicher? HTTPS erforderlich)","Annuler":"Abbrechen","Aperçu 1:1 — MasterPaint":"1:1-Vorschau – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Tipp: Strg+F wiederholt den letzten Effekt.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Tipp: Strg+Umschalt+M öffnet die Gradationskurven.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Tipp: Leertaste + Ziehen, um sich auf der Leinwand zu bewegen.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Tipp: Doppelklicken Sie auf einen Schieberegler, um den Wert über die Tastatur einzugeben.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Tipp: Die ƒ-Taste auf einer Ebene wendet einen dynamischen Filter in Echtzeit an.","Attendre":"Warten","Autre":"Sonstiges","Bug / Erreur":"Fehler / Problem","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Diese Berechnung wurde aufgegeben, die Anwendung läuft weiter. Senden Sie den Bericht, um das Problem zu beheben.","Collage":"Collage","Contact (facultatif)":"Kontakt (optional)","Continuer":"Fortfahren","Copier":"Kopieren","Copié":"Kopiert","Démarrage de l’interface…":"Starten der Schnittstelle…","Envoi…":"Senden…","Envoyer":"Senden","Envoyer le signalement":"Senden Sie den Bericht","Envoyé, merci !":"Gesendet, danke!","Fermer l’essai":"Test schließen","Idée / Amélioration":"Idee / Verbesserung","Joindre le journal technique":"Technisches Protokoll anhängen","MasterPaint ne répond plus, attente…":"MasterPaint reagiert nicht, warte…","MasterPaint s'est arrêté":"MasterPaint wurde gestoppt","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Online-Fotoeditor, eine Alternative zu Paint.NET","Message":"Nachricht","Par polocrafting 367":"Von Polocrafting 367","Que faisiez-vous ? (facultatif)":"Was haben Sie gerade getan? (optional)","Redémarrer la page":"Seite neu starten","Remarque":"Anmerkung","Signaler un bug":"Melden Sie einen Fehler","Type":"Typ","Téléchargement…":"Herunterladen…","Un calcul a échoué":"Eine Berechnung ist fehlgeschlagen","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Ein Fehler hat die Anwendung gestoppt. Ihre Projekte wurden vor dem Fehler automatisch gespeichert und werden beim Neustart wiederhergestellt. Senden Sie den Bericht, um das Problem zu beheben.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Ihre E-Mail-Adresse oder Ihr Spitzname (optional, für eine Antwort)","lecture refusée : ":"Lesung verweigert: ","Échec de l'envoi (réseau ?)":"Senden fehlgeschlagen (Netzwerk?)","Échec du chargement":"Laden fehlgeschlagen","Écrivez un message":"Nachricht schreiben","écriture refusée : ":"Schreiben abgelehnt: ","— journal —":"— Zeitung —"},"it":{" (essai)":" (prova)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read non disponibile (pagina non sicura? HTTPS richiesto)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write non disponibile (pagina non sicura? HTTPS richiesto)","Annuler":"Annulla","Aperçu 1:1 — MasterPaint":"Anteprima 1:1 — MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Suggerimento: Ctrl+F ripete l'ultimo effetto.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Suggerimento: Ctrl+Maiusc+M apre Curve.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Suggerimento: Spazio + trascina per spostarti nell'area di disegno.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Suggerimento: fai doppio clic su un cursore per inserire il valore con la tastiera.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Suggerimento: il pulsante ƒ su un livello applica un filtro dinamico in tempo reale.","Attendre":"Attendi","Autre":"Altro","Bug / Erreur":"Bug / Errore","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Questo calcolo è stato abbandonato, continua la domanda. Invia la segnalazione per contribuire a risolvere il problema.","Collage":"Collage","Contact (facultatif)":"Contatto (facoltativo)","Continuer":"Continua","Copier":"Copia","Copié":"Copiato","Démarrage de l’interface…":"Avvio dell'interfaccia…","Envoi…":"Invio…","Envoyer":"Invia","Envoyer le signalement":"Invia la segnalazione","Envoyé, merci !":"Inviato, grazie!","Fermer l’essai":"Chiudi prova","Idée / Amélioration":"Idea / Miglioramento","Joindre le journal technique":"Allega il registro tecnico","MasterPaint ne répond plus, attente…":"MasterPaint non risponde, attesa…","MasterPaint s'est arrêté":"MasterPaint si è interrotto","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor fotografico online, alternativa a Paint.NET","Message":"Messaggio","Par polocrafting 367":"Da polocrafting 367","Que faisiez-vous ? (facultatif)":"Cosa stavi facendo? (facoltativo)","Redémarrer la page":"Riavvia la pagina","Remarque":"Osservazione","Signaler un bug":"Segnala un bug","Type":"Tipo","Téléchargement…":"Scarica…","Un calcul a échoué":"Un calcolo è fallito","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Un errore ha interrotto l'applicazione. I tuoi progetti sono stati salvati automaticamente prima dell'errore e verranno ripristinati al riavvio. Invia la segnalazione per contribuire a risolvere il problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"La tua email o nickname (facoltativo, per una risposta)","lecture refusée : ":"lettura rifiutata: ","Échec de l'envoi (réseau ?)":"Impossibile inviare (rete?)","Échec du chargement":"Impossibile caricare","Écrivez un message":"Scrivi un messaggio","écriture refusée : ":"scrittura rifiutata: ","— journal —":"— giornale —"},"pt":{" (essai)":" (teste)"," Mo":" MB","API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.read indisponível (página insegura? É necessário HTTPS)","API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)":"API navigator.clipboard.write indisponível (página insegura? É necessário HTTPS)","Annuler":"Cancelar","Aperçu 1:1 — MasterPaint":"Visualização 1:1 – MasterPaint","Astuce : Ctrl+F répète le dernier effet.":"Dica: Ctrl+F repete o último efeito.","Astuce : Ctrl+Maj+M ouvre les Courbes.":"Dica: Ctrl+Shift+M abre Curvas.","Astuce : Espace + glisser pour se déplacer sur la toile.":"Dica: espaço + arraste para mover-se pela tela.","Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier.":"Dica: clique duas vezes em um controle deslizante para inserir o valor pelo teclado.","Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel.":"Dica: o botão ƒ em uma camada aplica um filtro dinâmico em tempo real.","Attendre":"Aguardar","Autre":"Outro","Bug / Erreur":"Falha / Erro","Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème.":"Este cálculo foi abandonado, continua o pedido. Envie o relatório para ajudar a corrigir o problema.","Collage":"Colagem","Contact (facultatif)":"Contacto (opcional)","Continuer":"Continuar","Copier":"Copiar","Copié":"Copiado","Démarrage de l’interface…":"Iniciando a interface…","Envoi…":"Enviando…","Envoyer":"Enviar","Envoyer le signalement":"Envie o relatório","Envoyé, merci !":"Enviado, obrigado!","Fermer l’essai":"Fechar teste","Idée / Amélioration":"Ideia / Melhoria","Joindre le journal technique":"Anexar o registo técnico","MasterPaint ne répond plus, attente…":"O MasterPaint não responde, a aguardar…","MasterPaint s'est arrêté":"MasterPaint parou","MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET":"MasterPaint — Editor de fotos online, alternativa ao Paint.NET","Message":"Mensagem","Par polocrafting 367":"Por polocrafting 367","Que faisiez-vous ? (facultatif)":"O que estava a fazer? (opcional)","Redémarrer la page":"Página de reinicialização","Remarque":"Observação","Signaler un bug":"Reportar um bug","Type":"Tipo","Téléchargement…":"Baixar…","Un calcul a échoué":"Um cálculo falhou","Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème.":"Um erro interrompeu o aplicativo. Seus projetos foram salvos automaticamente antes do erro e serão restaurados após a reinicialização. Envie o relatório para ajudar a corrigir o problema.","Votre e-mail ou pseudo (facultatif, pour une réponse)":"Seu e-mail ou apelido (opcional, para resposta)","lecture refusée : ":"leitura recusada: ","Échec de l'envoi (réseau ?)":"Falha ao enviar (rede?)","Échec du chargement":"Falha ao carregar","Écrivez un message":"Escreva uma mensagem","écriture refusée : ":"escrita recusada: ","— journal —":"- jornal -"}};
 // END GENERATED I18N
 (() => {
   const codes = ['fr', 'en', 'es', 'de', 'it', 'pt'];
@@ -182,7 +205,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
 </script>
 <canvas id="canvas" tabindex="0"></canvas>
 <script>
-  // Same contact endpoint/payload as html/js/contact.js, available before WASM
+  // Contact endpoint/payload, available before WASM
   // starts and after a panic. Nothing is sent until the user clicks Envoyer.
   window.mpSendContact = async ({type = 'bug', message, contact = ''}) => {
     let deviceId = 'rust-web';
@@ -204,7 +227,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
     modal.id = 'mp-contact';
     modal.innerHTML = `
       <form class="mp-err-card" role="dialog" aria-modal="true" aria-labelledby="mp-contact-title">
-        <b id="mp-contact-title" data-mp-i18n>Signaler un bug</b>
+        <div class="mp-err-bar"><span id="mp-contact-title" data-mp-i18n>Signaler un bug</span><button type="button" class="mp-err-x" data-close aria-label="Fermer">✕</button></div>
         <label><span data-mp-i18n>Type</span>
           <select name="type"><option value="bug" data-mp-i18n>Bug / Erreur</option>
             <option value="idee" data-mp-i18n>Idée / Amélioration</option>
@@ -216,7 +239,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
         <input id="mp-contact-info" class="mp-err-mail" name="contact" autocomplete="email">
         <div class="mp-err-foot">
           <span class="mp-err-st" role="status" aria-live="polite"></span>
-          <button type="button" data-close data-mp-i18n>Annuler</button>
+          <button type="button" data-close-foot data-mp-i18n>Annuler</button>
           <button type="submit" class="pri" data-mp-i18n>Envoyer</button>
         </div>
       </form>`;
@@ -227,6 +250,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       if (before && before.isConnected) before.focus();
     };
     modal.querySelector('[data-close]').onclick = close;
+    modal.querySelector('[data-close-foot]').onclick = close;
     modal.addEventListener('keydown', e => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
       if (e.key === 'Tab') {
@@ -271,6 +295,29 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       console[k] = (...a) => { keep(k, a); f(...a); };
     }
     let box = null, fatalShown = false;
+    // « Attendre » : la fenêtre s'efface ; si le module n'a pas donné signe de vie (window.mpBeat,
+    // écrit chaque seconde par l'application) au bout de ce délai, elle revient
+    const WAIT_SECONDS = 20;
+    const waitForRecovery = (card) => {
+      card.style.display = 'none';
+      const since = Date.now();
+      const pill = document.createElement('div');
+      pill.id = 'mp-wait';
+      document.body.appendChild(pill);
+      const tick = () => {
+        const left = WAIT_SECONDS - Math.floor((Date.now() - since) / 1000);
+        if (left > 0) {
+          pill.textContent = mpTr("MasterPaint ne répond plus, attente…") + ' ' + left + ' s';
+          setTimeout(tick, 1000);
+          return;
+        }
+        pill.remove();
+        // le module a repris : la fenêtre part, et un prochain plantage se signalera de nouveau
+        if ((window.mpBeat || 0) > since) { if (box === card) box = null; card.remove(); fatalShown = false; }
+        else card.style.display = '';
+      };
+      tick();
+    };
     // test (Paramètres › Avancé) : présentation d'un plantage, mais l'application continue
     window.mpReportError = (msg, fatal, test) => {
       if (fatalShown) return;
@@ -283,8 +330,10 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       box.id = 'mp-error';
       box.innerHTML = `
         <div class="mp-err-card" role="alertdialog" aria-labelledby="mp-err-t">
-          <div class="mp-err-head"><span class="mp-err-ico">!</span><b id="mp-err-t"></b></div>
+          <div class="mp-err-bar"><span id="mp-err-t"></span>${fatal && !test ? '' : '<button class="mp-err-x" data-a="close" aria-label="Fermer">✕</button>'}</div>
           <p class="mp-err-txt"></p>
+          <textarea class="mp-err-msg mp-err-mail" rows="3" data-mp-placeholder="Que faisiez-vous ? (facultatif)" placeholder="Que faisiez-vous ? (facultatif)"></textarea>
+          <label class="mp-err-jnl"><input type="checkbox" checked> <span data-mp-i18n>Joindre le journal technique</span></label>
           <textarea class="mp-err-det" readonly></textarea>
           <input class="mp-err-mail" type="text" data-mp-placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)" placeholder="Votre e-mail ou pseudo (facultatif, pour une réponse)">
           <div class="mp-err-foot">
@@ -292,6 +341,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
             <button data-a="send" class="pri" data-mp-i18n>Envoyer le signalement</button>
             <button data-a="copy" data-mp-i18n>Copier</button>
             <button data-a="reload" data-mp-i18n>Redémarrer la page</button>
+            ${fatal ? '<button data-a="wait" data-mp-i18n>Attendre</button>' : ''}
             ${fatal && !test ? '' : '<button data-a="close">' + (test ? mpTr("Fermer l’essai") : mpTr("Continuer")) + '</button>'}
           </div>
         </div>`;
@@ -305,6 +355,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       box.addEventListener('click', async (e) => {
         const a = e.target && e.target.dataset && e.target.dataset.a;
         if (a === 'reload') location.reload();
+        else if (a === 'wait') waitForRecovery(box);
         else if (a === 'close') { box.remove(); box = null; }
         else if (a === 'copy') { try { await navigator.clipboard.writeText(details); st.textContent = mpTr("Copié"); } catch (_) { box.querySelector('.mp-err-det').select(); } }
         else if (a === 'send') {
@@ -313,8 +364,12 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
           send.disabled = true;
           st.textContent = mpTr("Envoi…");
           try {
-            await window.mpSendContact({type: 'bug', message: details,
-              contact: box.querySelector('.mp-err-mail').value});
+            // une seule fois pour le serveur : le message, puis le journal s'il est coché
+            const said = box.querySelector('.mp-err-msg').value.trim();
+            const message = box.querySelector('.mp-err-jnl input').checked ? (said ? said + '\n\n--- Journal ---\n' : '') + details : said;
+            if (!message) { st.textContent = mpTr("Écrivez un message"); send.disabled = false; return; }
+            await window.mpSendContact({type: 'bug', message,
+              contact: box.querySelector('input.mp-err-mail').value});
             st.textContent = mpTr("Envoyé, merci !");
           } catch (_) { st.textContent = mpTr("Échec de l'envoi (réseau ?)"); }
           finally { send.disabled = false; }
@@ -359,6 +414,16 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
     }, {capture:true, passive:false});
   }
   window.addEventListener('blur', () => { Object.assign(window.mpPen, {active:false, penDown:false, points:[]}); });
+  // Contexte WebGL de l'interface (créé par Slint) : opaque, le navigateur n'a plus à mélanger la
+  // page entière avec ce qu'il y a dessous ; pas de tampon de profondeur, jamais utilisé ; et la
+  // carte graphique la plus rapide sur les portables qui en ont deux.
+  (() => {
+    const get = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (type === 'webgl2' && this.id === 'canvas') attrs = { ...attrs, alpha: false, depth: false, powerPreference: 'high-performance' };
+      return get.call(this, type, attrs);
+    };
+  })();
   window.mpMods = { ctrl: false, shift: false, alt: false };
   // clic droit : l'application a ses propres menus contextuels, pas celui du navigateur
   window.addEventListener('contextmenu', (e) => { if (e.target && e.target.id === 'canvas') e.preventDefault(); }, true);
@@ -536,7 +601,7 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
     isOpen() { return !!(this.win && !this.win.closed); },
     open(w, h) {
       if (this.isOpen()) { this.win.focus(); return true; }
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = window.mpRealDpr || window.devicePixelRatio || 1;
       const ww = Math.min(Math.round(w / dpr) + 24, screen.availWidth - 40);
       const wh = Math.min(Math.round(h / dpr) + 24, screen.availHeight - 80);
       const win = window.open('', 'masterpaint-apercu', `popup=yes,width=${Math.max(ww, 240)},height=${Math.max(wh, 180)}`);
@@ -607,34 +672,63 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       return new Uint8Array(id.data.buffer);
     },
   };
+  // projets de l'ancienne version HTML (supprimée) : illisibles par l'application, retirés du disque
+  try { indexedDB.deleteDatabase('illu_workspace_blobs_v1'); } catch (_) {}
   // sauvegarde automatique de la version Rust : IndexedDB (le stockage local est trop petit)
   window.mpStore = {
     db() {
       return new Promise((res, rej) => {
+        // base bloquée (suppression en attente, autre onglet) : ne jamais rester sur l'écran de
+        // restauration ; et plus d'écriture, pour ne pas écraser ce qu'on n'a pas pu lire
+        const late = setTimeout(() => { this.broken = true; rej(new Error('IndexedDB bloquée')); }, 10000);
         const r = indexedDB.open('masterpaint-rust', 1);
         r.onupgradeneeded = () => r.result.createObjectStore('kv');
-        r.onsuccess = () => res(r.result);
-        r.onerror = () => rej(r.error);
+        r.onsuccess = () => {
+          clearTimeout(late);
+          const d = r.result;
+          // une connexion ouverte empêchait « Effacer les données du site » d'aboutir
+          d.onversionchange = () => d.close();
+          res(d);
+        };
+        r.onerror = () => { clearTimeout(late); rej(r.error); };
       });
     },
     async save(bytes) {
+      if (this.broken) return false;
       try {
         const db = await this.db();
         return await new Promise((res) => {
           const tx = db.transaction('kv', 'readwrite');
-          tx.objectStore('kv').put(bytes, 'autosave');
-          tx.oncomplete = () => res(true);
-          tx.onerror = () => res(false);
+          // Blob : l'enregistrer ne recopie rien sur le fil de la page (un tableau d'octets, si :
+          // des centaines de ms pour une grande photo)
+          tx.objectStore('kv').put(new Blob([bytes]), 'autosave');
+          tx.oncomplete = () => { db.close(); res(true); };
+          tx.onerror = () => { db.close(); res(false); };
         });
       } catch (e) { return false; }
+    },
+    // plus aucun projet ouvert, ou sauvegarde coupée : rien ne doit rester sur le disque
+    async clear() {
+      try {
+        const db = await this.db();
+        await new Promise((res) => {
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').delete('autosave');
+          tx.oncomplete = tx.onerror = () => { db.close(); res(); };
+        });
+      } catch (e) { /* base inaccessible : rien à effacer */ }
     },
     async load() {
       try {
         const db = await this.db();
         return await new Promise((res) => {
           const rq = db.transaction('kv').objectStore('kv').get('autosave');
-          rq.onsuccess = () => res(rq.result || null);
-          rq.onerror = () => res(null);
+          rq.onsuccess = async () => {
+            db.close();
+            const v = rq.result || null;
+            res(v instanceof Blob ? new Uint8Array(await v.arrayBuffer()) : v);
+          };
+          rq.onerror = () => { db.close(); res(null); };
         });
       } catch (e) { return null; }
     },
@@ -698,7 +792,7 @@ vec3 blendrgb(int m, vec3 s, vec3 d) {
     const LAYER = `#version 300 es
 precision highp float; precision highp int;
 uniform highp sampler2D acc; uniform highp sampler2D lay; uniform highp sampler2D aux;
-uniform ivec4 u; uniform ivec4 v; uniform int blend; uniform int flags; uniform float opacity;
+uniform ivec4 u; uniform ivec4 v; uniform int blend; uniform int flags; uniform float opacity; uniform int auxk;
 out vec4 o;
 ${BLEND}
 void main() {
@@ -713,7 +807,7 @@ void main() {
   if (dynm != 0) {
     float m = opacity;
     if (dynm == 1) m = (0.299 * q.x + 0.587 * q.y + 0.114 * q.z) * q.w * opacity;
-    if (m > 0.0) a = a + (texelFetch(aux, ivec2(sx, sy), 0) - a) * m;
+    if (m > 0.0) a = a + (texelFetch(aux, ivec2(sx, sy) / auxk, 0) - a) * m;
     o = a; return;
   }
   float sa = q.w * opacity;
@@ -752,7 +846,7 @@ void main() {
       gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
       gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p);
       if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
-      const loc = {}; for (const n of ['acc', 'lay', 'aux', 'u', 'v', 'blend', 'flags', 'opacity', 'checker']) loc[n] = gl.getUniformLocation(p, n);
+      const loc = {}; for (const n of ['acc', 'lay', 'aux', 'u', 'v', 'blend', 'flags', 'opacity', 'checker', 'auxk']) loc[n] = gl.getUniformLocation(p, n);
       return { p, loc };
     }
     function init() {
@@ -961,7 +1055,7 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
         gl.uniform1i(L.loc.acc, 0); gl.uniform1i(L.loc.lay, 1); gl.uniform1i(L.loc.aux, 2);
         gl.viewport(0, 0, aw, ah);
         let cur = 0;
-        for (let i = 0; i + 3 < plan.length; i += 4) {
+        for (let i = 0; i + 4 < plan.length; i += 5) {
           const e = tex.get(plan[i]);
           if (!e || !e.main) return null;
           const flags = plan[i + 2] | 0;
@@ -970,7 +1064,7 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
           gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc[cur].t);
           gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, e.main);
           gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, e.aux || e.main);
-          gl.uniform1i(L.loc.blend, plan[i + 1] | 0); gl.uniform1i(L.loc.flags, flags); gl.uniform1f(L.loc.opacity, plan[i + 3]);
+          gl.uniform1i(L.loc.blend, plan[i + 1] | 0); gl.uniform1i(L.loc.flags, flags); gl.uniform1f(L.loc.opacity, plan[i + 3]); gl.uniform1i(L.loc.auxk, plan[i + 4] | 0);
           gl.drawArrays(gl.TRIANGLES, 0, 3);
           cur = 1 - cur;
         }
@@ -996,6 +1090,7 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
   window.mpCompute = {
     // files : 0 calculs courts, 1 longs, 2 haute résolution du Mode Photo Pro (annulable)
     lanes: [null, null, null],
+    idle: [],
     seq: 0,
     jobs: new Map(),
     fails: 0,
@@ -1018,6 +1113,15 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
         const d = e.data;
         const j = this.jobs.get(d.job);
         this.jobs.delete(d.job);
+        // la mémoire d'un module wasm ne rétrécit jamais : un worker au repos est arrêté (il
+        // gardait les centaines de Mo de son plus gros calcul) ; recréé au prochain calcul
+        clearTimeout(this.idle[lane]);
+        this.idle[lane] = setTimeout(() => {
+          if (![...this.jobs.values()].some((p) => p.lane === lane) && this.lanes[lane]) {
+            this.lanes[lane].terminate();
+            this.lanes[lane] = null;
+          }
+        }, 8000);
         // panique dans le calcul : résultat vide (l'application abandonne ce calcul au lieu de le
         // refaire sur la page, où il planterait aussi) et fenêtre d'erreur avec le message
         if (j) j.res(d.dead ? new Uint8Array(0) : (d.out || null));
@@ -1045,6 +1149,8 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
       // so cancelling a slider preview cannot abort an export in the background.
       const count = lane === 0 ? ((navigator.hardwareConcurrency || 2) >= 6 && (navigator.deviceMemory || 8) > 4 ? Math.min(2, budget) : 1) : budget;
       const base = lane === 0 ? 7 : 3;
+      // décodages en série (restauration des projets) : répartis sur les workers de la file 1
+      if (msg.type === 'decode' && msg.slot != null && lane === 1) return this.dispatch(msg, transfer, base + (msg.slot % count));
       if (lane <= 1 && msg.type === 'effect' && independent.has(msg.name) && !msg.post?.length && msg.w * msg.h >= 1000000 && count > 1) {
         const rows = Math.ceil(msg.h / count), stride = msg.w * 4;
         const parts = [];
@@ -1160,6 +1266,32 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
       document.getElementById('tip').textContent = String(e);
     }
   }
+</script>
+<script>
+// Statistiques de visite (comme la version HTML : track.php sur polocrafting.fr). Envoyées
+// seulement depuis le site en ligne (masterpaint.fr, polocrafting.fr) : rien depuis la machine
+// locale (localhost, 127.0.0.1, adresse du réseau), ni en mode développement (clé
+// « illu_dev_mode » partagée avec la version HTML). Identifiant d'appareil commun aux deux
+// versions (« app_device_id »), page « MasterPaint Rust ».
+(() => {
+  const TRACK_ALLOWED_HOSTS = ['masterpaint.fr', 'www.masterpaint.fr', 'polocrafting.fr', 'www.polocrafting.fr'];
+  if (TRACK_ALLOWED_HOSTS.indexOf(String(location.hostname).toLowerCase()) < 0) return;
+  try { if (localStorage.getItem('illu_dev_mode') === '1') return; } catch (_) { return; }
+  let deviceId = null;
+  try {
+    deviceId = localStorage.getItem('app_device_id');
+    if (!deviceId) {
+      deviceId = 'dev-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+      localStorage.setItem('app_device_id', deviceId);
+    }
+  } catch (_) { deviceId = 'dev-nostore'; }
+  // « text/plain » : requête CORS simple (pas de préflight) ; corps JSON lu par php://input
+  fetch('https://polocrafting.fr/track.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ deviceId: deviceId, page: 'MasterPaint Rust' })
+  }).catch(e => console.log('Tracking error', e));
+})();
 </script>
 </body>
 </html>

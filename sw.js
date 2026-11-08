@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 /* MasterPaint — Service Worker (PWA + réception partage d’images) */
 const SHARE_CACHE = 'illu-share-inbox-v1';
 const SHARE_CACHE_KEY = 'pending-share-file';

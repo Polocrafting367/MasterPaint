@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Espace de couleur d'un projet (Fichier › Espace de couleur, comme la version web) :
 //! Bitmap (RVB libre), CMJN (simulation des encres d'imprimerie, EditorManager.applyCmjnFilter),
 //! RAL (nuancier RAL Classic, couleurs limitées) et Tramé N&B (masqué dans les menus, lu dans

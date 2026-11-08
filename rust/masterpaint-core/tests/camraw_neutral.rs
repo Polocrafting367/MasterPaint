@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Camera Raw à réglages neutres : l'image doit rester (presque) identique, couleurs saturées
 //! comprises.
 #[test]

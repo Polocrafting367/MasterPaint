@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Fenêtre de bienvenue (comme la version HTML) : affichée aux deux premières ouvertures et par
 // Fichier › Bienvenue / Informations. L'essentiel pour démarrer, quelques réglages rapides
 // (thème, accent, barre d'options, disposition — les mêmes que les Paramètres), un rappel des
@@ -46,9 +47,9 @@ component StartCard inherits Rectangle {
     // téléphone : place pour un titre et deux lignes d'explication
     height: root.touch ? 68px : 46px;
     border-radius: Theme.ctl-radius + 2px * Theme.round;
-    background: ta.pressed ? Theme.accent-20 : ta.has-hover ? Theme.accent-12 : Theme.button-bg;
+    background: ta.pressed ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : Theme.button-bg;
     border-width: 1px;
-    border-color: ta.has-hover ? Theme.accent-60 : Theme.button-border;
+    border-color: (Theme.hover-fx && ta.has-hover) ? Theme.accent-60 : Theme.button-border;
     HorizontalLayout {
         padding-left: 10px;
         padding-right: 10px;
@@ -151,6 +152,14 @@ component StartSection inherits VerticalLayout {
         clicked => {
             root.act("example");
         }
+    }
+    StartCard {
+        touch: root.touch;
+        touch-w: root.w;
+        glyph: "\u{f02d}";
+        title: @tr("Tutoriel");
+        hint: @tr("Découvrir les outils et les fonctions avec des explications illustrées");
+        clicked => { root.act("tutorial"); }
     }
 }
 
@@ -260,19 +269,19 @@ component QuickSettings inherits VerticalLayout {
         color: Theme.text;
     }
     Segmented {
-        options: [@tr("Ruban MasterPaint"), @tr("Style Paint.NET")];
+        options: [@tr("Ruban MasterPaint"), @tr("Barre compacte")];
         index <=> root.toolbar-mode;
         selected(i) => {
             root.settings-changed();
         }
     }
     Text {
-        text: @tr("Disposition de l'interface");
+        text: @tr("Interface");
         font-weight: 600;
         color: Theme.text;
     }
     Segmented {
-        options: [@tr("Paint.NET"), @tr("Photoshop"), @tr("Téléphone")];
+        options: ["MasterPaint", "Paint.NET", "Photoshop", @tr("Téléphone")];
         index <=> root.layout;
         selected(i) => {
             root.layout-changed(i);
@@ -280,7 +289,7 @@ component QuickSettings inherits VerticalLayout {
     }
     Text {
         width: root.w;
-        text: @tr("Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.");
+        text: @tr("Paint.NET : comme paintdotjs. Photoshop : comme PhotoCraft. Téléphone : tactile.");
         wrap: word-wrap;
         font-size: Theme.small-font-size;
         color: Theme.text-inactive;
@@ -401,12 +410,12 @@ component PhoneSettings inherits VerticalLayout {
     }
     PhoneRow {
         w: root.w;
-        title: @tr("Disposition de l'interface");
-        hint: @tr("Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas.");
+        title: @tr("Interface");
+        hint: @tr("Paint.NET : comme paintdotjs. Photoshop : comme PhotoCraft. Téléphone : tactile.");
         Segmented {
             width: root.w;
             height: 36px;
-            options: [@tr("Paint.NET"), @tr("Photoshop"), @tr("Téléphone")];
+            options: ["MasterPaint", "Paint.NET", "Photoshop", @tr("Téléphone")];
             index <=> root.layout;
             selected(i) => {
                 root.layout-changed(i);
@@ -486,7 +495,7 @@ export component WelcomeContent inherits Rectangle {
                 Image {
                     width: 52px;
                     height: 52px;
-                    source: @image-url("../../desktop/icons/128x128.png");
+                    source: @image-url("../../packaging/icons/128x128.png");
                 }
                 VerticalLayout {
                     alignment: center;
@@ -646,7 +655,7 @@ export component WelcomeContent inherits Rectangle {
                     Image {
                         width: 44px;
                         height: 44px;
-                        source: @image-url("../../desktop/icons/128x128.png");
+                        source: @image-url("../../packaging/icons/128x128.png");
                     }
                     VerticalLayout {
                         alignment: center;

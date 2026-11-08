@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Fenêtre Couleurs façon Paint.NET / paintdotjs (ColorsForm : couleurs principale et secondaire
 // superposées, roue ou carré de toutes les couleurs, « Plus » : curseurs en dégradé, nuancier,
 // favoris « + » comme ColorAddItem, couleurs récentes), dans le style MasterPaint. Les blocs sont
@@ -45,7 +46,7 @@ export component ColorIconButton inherits Rectangle {
     width: 24px;
     height: 22px;
     border-radius: Theme.ctl-radius;
-    background: root.checked ? Theme.accent-20 : ta.has-hover ? Theme.accent-14 : transparent;
+    background: root.checked ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-14 : transparent;
     border-width: root.checked ? 1px : 0px;
     border-color: Theme.accent-60;
     GlyphIcon {
@@ -110,7 +111,7 @@ export component CurrentColors inherits Rectangle {
         width: 15px;
         height: 15px;
         border-radius: 3px * Theme.round;
-        background: swta.has-hover ? Theme.accent-14 : transparent;
+        background: (Theme.hover-fx && swta.has-hover) ? Theme.accent-14 : transparent;
         GlyphIcon {
             glyph: "\u{f362}";
             size: 9px;
@@ -433,7 +434,7 @@ export component SwatchStrip inherits Rectangle {
         width: root.cell;
         height: root.cell;
         border-radius: root.radius;
-        background: pta.has-hover ? Theme.accent-14 : transparent;
+        background: (Theme.hover-fx && pta.has-hover) ? Theme.accent-14 : transparent;
         Icon {
             spec: { svg-index: 7, fa: "", fa-weight: 900 };
             size: max(10px, root.cell - 1px);
@@ -457,7 +458,7 @@ export component SwatchStrip inherits Rectangle {
         border-radius: root.radius;
         background: root.current;
         border-width: 1px;
-        border-color: ata.has-hover ? Theme.accent : Theme.window-border;
+        border-color: (Theme.hover-fx && ata.has-hover) ? Theme.accent : Theme.window-border;
         Rectangle {
             x: parent.width - self.width;
             y: parent.height - self.height;
@@ -498,7 +499,7 @@ export component SwatchStrip inherits Rectangle {
         property <float> luminance: round(0.299 * c.red + 0.587 * c.green + 0.114 * c.blue);
         background: root.gray ? Colors.rgb(self.luminance, self.luminance, self.luminance) : c;
         border-width: 1px;
-        border-color: cta.has-hover ? Theme.accent : #c0c0c0;
+        border-color: (Theme.hover-fx && cta.has-hover) ? Theme.accent : #c0c0c0;
         cta := TouchArea {
             pointer-event(e) => {
                 if (e.kind == PointerEventKind.down) {
@@ -532,7 +533,7 @@ export component PaletteGrid inherits Rectangle {
         border-radius: root.radius;
         background: c;
         border-width: root.radius > 0px ? 0px : 1px;
-        border-color: pta.has-hover ? Theme.accent : #c0c0c0;
+        border-color: (Theme.hover-fx && pta.has-hover) ? Theme.accent : #c0c0c0;
         HoverTip { y: parent.height; hovered: pta.has-hover; text: @tr("RVB") + ": " + c.red + ", " + c.green + ", " + c.blue; }
         pta := TouchArea {
             pointer-event(e) => {
@@ -610,7 +611,7 @@ export component ColorsPanel inherits Rectangle {
             width: 24px;
             height: 22px;
             border-radius: Theme.ctl-radius;
-            background: mta.has-hover ? Theme.accent-14 : transparent;
+            background: (Theme.hover-fx && mta.has-hover) ? Theme.accent-14 : transparent;
             PickerModeIcon {
                 to-square: !root.square;
                 wheel: root.wheel;

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Android's system document chooser and clipboard. No browser or WebView.
 use super::*;
 use jni::{JNIEnv, objects::{JObject, JObjectArray, JByteArray, JString, JValue}, sys::{jlong, jboolean}};
@@ -115,6 +116,8 @@ pub mod clipboard {
             Ok(ImageData { width: image.width() as usize, height: image.height() as usize, bytes: image.into_raw().into() })
         }
         pub fn get_text(&mut self) -> Result<String, ()> { Err(()) }
+        /// texte (visionneuse d'icônes : copier le nom) : pas encore relié au presse-papiers Android
+        pub fn set_text(&mut self, _text: String) -> Result<(), ()> { Err(()) }
         pub fn set_image(&mut self, image: ImageData<'_>) -> Result<(), ()> {
             let pixels = image::RgbaImage::from_raw(image.width as u32, image.height as u32, image.bytes.into_owned()).ok_or(())?;
             let mut out = std::io::Cursor::new(Vec::new());

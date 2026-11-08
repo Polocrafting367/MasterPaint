@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Effets repris de plugins Paint.NET installés (BoltBait, Vandermotten) : algorithmes
 //! relus dans les DLL décompilées puis réécrits pour le modèle « bande de lignes » du cœur.
 //!

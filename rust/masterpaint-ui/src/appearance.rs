@@ -1,5 +1,6 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Display-only checkerboard and startup color preferences. The image keeps its alpha;
-//! the screen-sized SVG is clipped behind it, so zoom cannot enlarge the checker cells.
+//! the screen-sized checker image is clipped behind it, so zoom cannot enlarge the checker cells.
 use crate::{settings::Settings, AppWindow, Theme};
 use slint::{Color, ComponentHandle, Image, Model, ModelRc, SharedString, VecModel};
 use std::cell::RefCell;
@@ -48,10 +49,21 @@ pub fn render(app: &AppWindow) {
     let (light, dark) = (color_value(app, 0), color_value(app, 1));
     let key = (w, h, cell, light, dark);
     if KEY.with(|old| *old.borrow() == Some(key)) { return; }
-    let double = cell * 2;
-    let svg = format!(r##"<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}"><defs><pattern id="c" width="{double}" height="{double}" patternUnits="userSpaceOnUse"><rect width="{double}" height="{double}" fill="#{light:06x}"/><path d="M0 0H{cell}V{cell}H0ZM{cell} {cell}H{double}V{double}H{cell}Z" fill="#{dark:06x}"/></pattern></defs><rect width="100%" height="100%" fill="url(#c)"/></svg>"##);
-    if let Ok(image) = Image::load_from_svg_data(svg.as_bytes()) {
-        app.set_checker_image(image);
-        KEY.with(|old| *old.borrow_mut() = Some(key));
+    // pixels écrits directement : un SVG passe par le décodeur du navigateur sur le web, qui ne
+    // suivait pas toujours le changement de taille des cases (aperçu des Paramètres figé)
+    let px = |v: u32| [(v >> 16) as u8, (v >> 8) as u8, v as u8, 255u8];
+    let (a, b) = (px(light), px(dark));
+    let mut buf = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(w, h);
+    let bytes = buf.make_mut_bytes();
+    let row_bytes = w as usize * 4;
+    for y in 0..h as usize {
+        let row = &mut bytes[y * row_bytes..(y + 1) * row_bytes];
+        let odd_row = (y as u32 / cell) % 2 == 1;
+        for (x, p) in row.chunks_exact_mut(4).enumerate() {
+            let dark_cell = ((x as u32 / cell) % 2 == 1) != odd_row;
+            p.copy_from_slice(if dark_cell { &b } else { &a });
+        }
     }
+    app.set_checker_image(Image::from_rgba8(buf));
+    KEY.with(|old| *old.borrow_mut() = Some(key));
 }

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Rendu : nuages, fractales de Julia / Mandelbrot, turbulence.
 
 use crate::util::*;
@@ -95,6 +96,16 @@ pub fn turbulence(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
 }
 
 /// Fractales (OpenPDN) : p: [facteur, angle°, qualité, zoom, inverser(0/1)]
+/// Cardioïde principale ou disque de période 2 de l'ensemble de Mandelbrot (avec une petite
+/// marge vers l'intérieur : un point du bord, à la limite de l'arrondi, suit le calcul normal).
+fn mandelbrot_interior(x: f64, y: f64) -> bool {
+    let xq = x - 0.25;
+    let q = xq * xq + y * y;
+    let in_cardioid = q * (q + xq) < 0.25 * y * y * (1.0 - 1e-6) - 1e-12;
+    let in_bulb = (x + 1.0) * (x + 1.0) + y * y < 0.0625 * (1.0 - 1e-6);
+    in_cardioid || in_bulb
+}
+
 pub fn fractal(julia: bool, src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let factor = p.f(0, if julia { 4.0 } else { 1.0 }).max(1.0) as f64;
     let angle = p.f(1, 0.0) as f64;
@@ -137,12 +148,46 @@ pub fn fractal(julia: bool, src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &
                     a += cb(c);
                 } else {
                     let (mr, mi) = (up * inv_zoom + xo, vp * inv_zoom + yo);
+                    // point de la cardioïde principale ou du disque de période 2 : il ne s'échappe
+                    // jamais, la boucle irait jusqu'à sa limite et les quatre canaux sortiraient à
+                    // 255 (orbite bornée par |z| ≤ 2, voir `mandelbrot_interior_is_white`).
+                    // Résultat identique, sans les ~1000 itérations par échantillon.
+                    if factor <= 500.0 && mandelbrot_interior(mr, mi) {
+                        r += 255.0;
+                        g += 255.0;
+                        b += 255.0;
+                        a += 255.0;
+                        continue;
+                    }
                     let (mut c, mut mx, mut my) = (0.0f64, 0.0f64, 0.0f64);
+                    // orbite qui repasse EXACTEMENT par une valeur déjà vue (méthode de Brent,
+                    // égalité stricte, aucune tolérance) : elle est périodique, ne s'échappera
+                    // jamais et la boucle irait jusqu'à sa limite ; |z|² < 1e5 et facteur ≤ 60
+                    // donnent alors quatre canaux à 255 (`mandelbrot_cycle_is_white`)
+                    let (mut sx, mut sy, mut check) = (f64::NAN, f64::NAN, 8.0f64);
+                    let mut periodic = false;
                     while c * factor < 1024.0 && mx * mx + my * my < max_m {
                         let t = mx;
                         mx = mx * mx - my * my + mr;
                         my = 2.0 * t * my + mi;
                         c += 1.0;
+                        if factor <= 60.0 {
+                            if mx == sx && my == sy {
+                                periodic = true;
+                                break;
+                            }
+                            if c >= check {
+                                (sx, sy) = (mx, my);
+                                check *= 2.0;
+                            }
+                        }
+                    }
+                    if periodic {
+                        r += 255.0;
+                        g += 255.0;
+                        b += 255.0;
+                        a += 255.0;
+                        continue;
                     }
                     let m = c - (my * my + mx * mx).fln() * inv_log_max;
                     let c = 64.0 + factor * m;
@@ -161,5 +206,83 @@ pub fn fractal(julia: bool, src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &
             }
             put(dst, src.idx(x, y), rr as f32, gg as f32, bb as f32, cb(a / n) as f32);
         }
+    }
+}
+
+#[cfg(test)]
+mod mandelbrot_tests {
+    use super::*;
+    /// Le raccourci de l'intérieur donne exactement ce que donnerait la boucle complète.
+    #[test]
+    fn mandelbrot_interior_is_white() {
+        let max_m = 100_000.0f64;
+        let inv_log_max = 1.0 / max_m.ln();
+        let cb = |v: f64| v.clamp(0.0, 255.0).trunc();
+        let mut checked = 0;
+        for factor in [1.0f64, 3.0, 10.0] {
+            for i in 0..400 {
+                for j in 0..300 {
+                    let (mr, mi) = (-2.0 + i as f64 * 0.007, -1.2 + j as f64 * 0.008);
+                    if !mandelbrot_interior(mr, mi) {
+                        continue;
+                    }
+                    let (mut c, mut mx, mut my) = (0.0f64, 0.0f64, 0.0f64);
+                    while c * factor < 1024.0 && mx * mx + my * my < max_m {
+                        let t = mx;
+                        mx = mx * mx - my * my + mr;
+                        my = 2.0 * t * my + mi;
+                        c += 1.0;
+                    }
+                    let m = c - (my * my + mx * mx).ln() * inv_log_max;
+                    let c = 64.0 + factor * m;
+                    assert_eq!([cb(c - 768.0), cb(c - 512.0), cb(c - 256.0), cb(c)], [255.0; 4], "point ({mr}, {mi}), facteur {factor}");
+                    checked += 1;
+                }
+            }
+        }
+        assert!(checked > 10_000);
+    }
+
+    /// Orbite détectée périodique (égalité stricte) : la boucle complète donne bien du blanc.
+    #[test]
+    fn mandelbrot_cycle_is_white() {
+        let max_m = 100_000.0f64;
+        let inv_log_max = 1.0 / max_m.ln();
+        let cb = |v: f64| v.clamp(0.0, 255.0).trunc();
+        let mut found = 0;
+        // région du rendu par défaut (zoom 10 : 1 + 20 × 10, centre -0,7 ; -0,29) et vue large
+        for (zoom, xo, yo) in [(201.0f64, -0.7, -0.29), (1.0, -0.5, 0.0)] {
+            for i in 0..200 {
+                for j in 0..200 {
+                    let (mr, mi) = (xo + (i as f64 - 100.0) / 100.0 / zoom * 2.0, yo + (j as f64 - 100.0) / 100.0 / zoom * 2.0);
+                    for factor in [1.0f64, 10.0] {
+                        let (mut c, mut mx, mut my) = (0.0f64, 0.0f64, 0.0f64);
+                        let (mut sx, mut sy, mut check) = (f64::NAN, f64::NAN, 8.0f64);
+                        let mut periodic = false;
+                        while c * factor < 1024.0 && mx * mx + my * my < max_m {
+                            let t = mx;
+                            mx = mx * mx - my * my + mr;
+                            my = 2.0 * t * my + mi;
+                            c += 1.0;
+                            if mx == sx && my == sy && !periodic {
+                                periodic = true;
+                            }
+                            if c >= check {
+                                (sx, sy) = (mx, my);
+                                check *= 2.0;
+                            }
+                        }
+                        if periodic {
+                            // la boucle a continué jusqu'au bout : résultat de référence
+                            let m = c - (my * my + mx * mx).ln() * inv_log_max;
+                            let c = 64.0 + factor * m;
+                            assert_eq!([cb(c - 768.0), cb(c - 512.0), cb(c - 256.0), cb(c)], [255.0; 4], "point ({mr}, {mi})");
+                            found += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert!(found > 1_000, "{found} orbites périodiques seulement");
     }
 }

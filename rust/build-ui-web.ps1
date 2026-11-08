@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 ﻿# Construit l'interface Rust (Slint) pour le web et la publie dans /rust-app/ (index.html + pkg/).
 # Les fichiers intermédiaires restent dans le dossier de compilation (MasterPaint-build, voir
 # .cargo/config.toml), hors du dépôt.
@@ -39,10 +40,10 @@ if (-not (Test-Path (Join-Path $fvDst '.patched'))) {
     New-Item (Join-Path $fvDst '.patched') -ItemType File | Out-Null
 }
 $fvPath = $fvDst -replace '\\', '/'
-cargo build -p masterpaint-ui --lib --target wasm32-unknown-unknown --release --config "patch.crates-io.rawler.path='$rawPath'" --config "patch.crates-io.i-slint-renderer-femtovg.path='$fvPath'"
+cargo build -p masterpaint-ui --lib --target wasm32-unknown-unknown --profile web --config "patch.crates-io.rawler.path='$rawPath'" --config "patch.crates-io.i-slint-renderer-femtovg.path='$fvPath'"
 if ($LASTEXITCODE) { throw 'compilation wasm' }
 $pkg = Join-Path $target 'web-pkg'
-wasm-bindgen (Join-Path $target 'wasm32-unknown-unknown\release\masterpaint_ui.wasm') --target web --no-typescript --out-dir $pkg
+wasm-bindgen (Join-Path $target 'wasm32-unknown-unknown\web\masterpaint_ui.wasm') --target web --no-typescript --out-dir $pkg
 if ($LASTEXITCODE) { throw 'wasm-bindgen' }
 # publication à la racine du site : /rust-app/ (à côté de index.html, /fonts/, /downloads/)
 $dest = Join-Path $PSScriptRoot '..\rust-app'
@@ -50,7 +51,7 @@ New-Item -ItemType Directory -Force (Join-Path $dest 'pkg') | Out-Null
 Copy-Item masterpaint-ui\web\index.html $dest -Force
 # worker de calcul (effets, Camera Raw, RAW, décodage hors du fil de l'interface)
 Copy-Item masterpaint-ui\web\mp-worker.js $dest -Force
-# la version Rust est aussi la page d'accueil du site (la version HTML : html/)
+# page d'accueil du site
 Copy-Item masterpaint-ui\web\index.html (Join-Path $PSScriptRoot '..\index.html') -Force
 Copy-Item (Join-Path $pkg '*') (Join-Path $dest 'pkg') -Force
 $w = Get-Item (Join-Path $pkg 'masterpaint_ui_bg.wasm')

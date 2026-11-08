@@ -1,0 +1,6 @@
+<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}">
+  <path d="M5.8 14 L2.19 10.39 A1.4 1.4 0 0 1 2.19 8.41 L4.2 6.4 L9.8 12 L7.8 14 Z" fill="{ACCENT}"/>
+  <path d="M4.2 6.4 L9.8 12" fill="none" stroke="{STROKE}" stroke-width="1.2"/>
+  <path d="M14.4 14 H5.8 L2.19 10.39 A1.4 1.4 0 0 1 2.19 8.41 L7.21 3.39 A1.4 1.4 0 0 1 9.19 3.39 L12.81 7.01 A1.4 1.4 0 0 1 12.81 8.99 L7.8 14" fill="none" stroke="{STROKE}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

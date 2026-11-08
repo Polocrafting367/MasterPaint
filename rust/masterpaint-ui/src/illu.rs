@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Projets MasterPaint (.illu) : lecture et écriture, compatibles avec la version web
 //! (EditorManager.serializeWorkspacePayload : JSON, calques en PNG base64).
 
@@ -11,12 +12,84 @@ pub struct Loaded {
     pub skipped: Vec<String>,
 }
 
-fn decode_data_url(s: &str) -> Option<(usize, usize, Vec<u8>)> {
+/// Image décodée : largeur, hauteur, RGBA.
+pub type Decoded = (usize, usize, Vec<u8>);
+
+thread_local! {
+    /// images déjà décodées (en parallèle, avant l'assemblage des projets), par adresse de leur
+    /// texte base64 dans le JSON analysé
+    static PRE: std::cell::RefCell<std::collections::HashMap<usize, Decoded>> = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+fn decode_data_url(s: &str) -> Option<Decoded> {
+    if let Some(d) = PRE.with(|m| m.borrow_mut().remove(&(s.as_ptr() as usize))) {
+        return Some(d);
+    }
+    decode_png(&payload(s)?)
+}
+
+fn payload(s: &str) -> Option<Vec<u8>> {
     let b64 = s.split_once(',').map(|(_, b)| b).unwrap_or(s);
-    let bytes = base64::engine::general_purpose::STANDARD.decode(b64.trim()).ok()?;
-    let img = image::load_from_memory(&bytes).ok()?.to_rgba8();
+    base64::engine::general_purpose::STANDARD.decode(b64.trim()).ok()
+}
+
+/// PNG (ou autre format d'image) → RGBA.
+pub fn decode_png(bytes: &[u8]) -> Option<Decoded> {
+    let img = image::load_from_memory(bytes).ok()?.to_rgba8();
     let (w, h) = img.dimensions();
     Some((w as usize, h as usize, img.into_raw()))
+}
+
+/// Analyse le JSON d'un fichier .illu.
+pub fn parse(bytes: &[u8]) -> Result<Value, String> {
+    serde_json::from_slice(bytes).map_err(|e| format!("fichier .illu illisible : {e}"))
+}
+
+/// Images (calques, dessins de la frise, masques) d'un .illu analysé : (clé, octets du PNG).
+/// Décodées à part (en parallèle) puis passées à `load_parsed`.
+pub fn image_payloads(v: &Value) -> Vec<(usize, Vec<u8>)> {
+    fn walk(v: &Value, out: &mut Vec<(usize, Vec<u8>)>) {
+        match v {
+            Value::Object(m) => {
+                for (k, x) in m {
+                    match x {
+                        Value::String(s) if k == "dataUrl" && !s.is_empty() => {
+                            if let Some(b) = payload(s) {
+                                out.push((s.as_ptr() as usize, b));
+                            }
+                        }
+                        _ => walk(x, out),
+                    }
+                }
+            }
+            Value::Array(a) => a.iter().for_each(|x| walk(x, out)),
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    walk(v, &mut out);
+    out
+}
+
+/// Décode les images sur tous les cœurs (bureau).
+#[cfg(not(target_arch = "wasm32"))]
+fn decode_parallel(items: Vec<(usize, Vec<u8>)>) -> Vec<(usize, Decoded)> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).min(items.len().max(1));
+    let next = AtomicUsize::new(0);
+    let out = std::sync::Mutex::new(Vec::with_capacity(items.len()));
+    std::thread::scope(|sc| {
+        for _ in 0..threads {
+            sc.spawn(|| loop {
+                let i = next.fetch_add(1, Ordering::Relaxed);
+                let Some((k, b)) = items.get(i) else { break };
+                if let Some(d) = decode_png(b) {
+                    out.lock().unwrap_or_else(|e| e.into_inner()).push((*k, d));
+                }
+            });
+        }
+    });
+    out.into_inner().unwrap_or_else(|e| e.into_inner())
 }
 
 pub(crate) fn png_data_url(w: usize, h: usize, px: &[u8]) -> String {
@@ -31,10 +104,74 @@ pub(crate) fn png_data_url(w: usize, h: usize, px: &[u8]) -> String {
 /// PNG déjà encodés des calques inchangés (clé : le tampon de pixels, partagé tant qu'il n'est pas
 /// modifié). La sauvegarde automatique ré-encodait sinon tous les calques à chaque passage : des
 /// secondes de gel sur une grande image.
+///
+/// Seuls les calques de la dernière sauvegarde sont gardés : une entrée restée pour chaque étape
+/// d'historique (tampon encore vivant, mais plus affiché) pesait des dizaines de Mo par étape sur
+/// une photo, et les projets fermés ne partaient pas avant la sauvegarde suivante.
+/// Adresse data: d'une image, ou d'un masque α (un octet par pixel, écrit en gris) si `gray`.
+pub(crate) fn png_url_of(px: &[u8], w: usize, h: usize, gray: bool) -> String {
+    if gray {
+        let rgba: Vec<u8> = px.iter().flat_map(|v| [*v, *v, *v, 255]).collect();
+        png_data_url(w, h, &rgba)
+    } else {
+        png_data_url(w, h, px)
+    }
+}
+
+/// Image pas encore encodée pour la prochaine sauvegarde.
+#[cfg(target_arch = "wasm32")]
+pub(crate) struct PngJob {
+    pub px: crate::editor::Px,
+    pub w: usize,
+    pub h: usize,
+    pub gray: bool,
+}
+
+/// Images de ces documents absentes du cache (à confier au worker de calcul).
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn missing_pngs(docs: &[&Doc]) -> Vec<PngJob> {
+    let cache = PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut out: Vec<PngJob> = Vec::new();
+    let mut add = |px: &crate::editor::Px, w: usize, h: usize, gray: bool| {
+        let key = px.weak();
+        if !cache.iter().any(|(k, cw, ch, _)| k.ptr_eq(&key) && *cw == w && *ch == h) && !out.iter().any(|j| j.px.weak().ptr_eq(&key)) {
+            out.push(PngJob { px: px.clone(), w, h, gray });
+        }
+    };
+    for d in docs.iter().filter(|d| d.mask_of.is_none()) {
+        for l in &d.layers {
+            if l.off.is_none() {
+                add(&l.px, d.w, d.h, false);
+            }
+            if d.anim.is_some() {
+                for c in &l.cels {
+                    add(&c.px, d.w, d.h, false);
+                }
+            }
+            if let Some(m) = l.mask.as_ref().filter(|m| m.len() == d.w * d.h) {
+                add(m, d.w, d.h, true);
+            }
+        }
+    }
+    out
+}
+
+/// Résultat du worker, repris tel quel par `save_all`.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn cache_png(px: &crate::editor::Px, w: usize, h: usize, url: String) {
+    PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner()).push((px.weak(), w, h, std::sync::Arc::new(url)));
+}
+
 static PNG_CACHE: std::sync::Mutex<Vec<(std::sync::Weak<Vec<u8>>, usize, usize, std::sync::Arc<String>)>> = std::sync::Mutex::new(Vec::new());
+static PNG_USED: std::sync::Mutex<Vec<std::sync::Weak<Vec<u8>>>> = std::sync::Mutex::new(Vec::new());
 
 fn png_data_url_cached(w: usize, h: usize, px: &crate::editor::Px) -> std::sync::Arc<String> {
+    png_url_cached(w, h, px, false)
+}
+
+fn png_url_cached(w: usize, h: usize, px: &crate::editor::Px, gray: bool) -> std::sync::Arc<String> {
     let key = px.weak();
+    PNG_USED.lock().unwrap_or_else(|e| e.into_inner()).push(key.clone());
     {
         let mut cache = PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner());
         cache.retain(|(k, ..)| k.strong_count() > 0);
@@ -42,7 +179,7 @@ fn png_data_url_cached(w: usize, h: usize, px: &crate::editor::Px) -> std::sync:
             return url.clone();
         }
     }
-    let url = std::sync::Arc::new(png_data_url(w, h, px));
+    let url = std::sync::Arc::new(png_url_of(px, w, h, gray));
     PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner()).push((key, w, h, url.clone()));
     url
 }
@@ -134,13 +271,34 @@ fn pixel_project(p: &Value) -> Doc {
 
 /// Lit un fichier .illu : un document par projet pixel (calques, positions, opacité, fusion).
 pub fn load(bytes: &[u8]) -> Result<Loaded, String> {
-    let v: Value = serde_json::from_slice(bytes).map_err(|e| format!("fichier .illu illisible : {e}"))?;
-    let projects = v.get("projects").and_then(|p| p.as_array()).cloned().unwrap_or_else(|| vec![v.clone()]);
+    let v = parse(bytes)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    let pre = decode_parallel(image_payloads(&v));
+    #[cfg(target_arch = "wasm32")]
+    let pre = Vec::new();
+    load_parsed(&v, pre)
+}
+
+/// Assemble les projets d'un .illu analysé ; `pre` : images déjà décodées (`image_payloads`),
+/// les autres sont décodées au passage.
+pub fn load_parsed(v: &Value, pre: Vec<(usize, Decoded)>) -> Result<Loaded, String> {
+    PRE.with(|m| m.borrow_mut().extend(pre));
+    let out = load_value(v);
+    PRE.with(|m| m.borrow_mut().clear());
+    out
+}
+
+fn load_value(v: &Value) -> Result<Loaded, String> {
+    // (pas de copie du JSON : ses textes base64 font souvent des dizaines de Mo)
+    let projects: &[Value] = match v.get("projects").and_then(|p| p.as_array()) {
+        Some(a) => a,
+        None => std::slice::from_ref(v),
+    };
     let mut docs = vec![];
     let mut skipped = vec![];
     // masques α liés (projets « layerAlphaMask ») : repris dans le calque parent
     let find_mask = |id: &Value| projects.iter().find(|q| q.get("id") == Some(id) && q.get("role").and_then(|r| r.as_str()) == Some("layerAlphaMask"));
-    for p in &projects {
+    for p in projects {
         let name = p.get("name").and_then(|n| n.as_str()).unwrap_or("Projet").to_string();
         let mode = p.get("mode").and_then(|m| m.as_str()).unwrap_or("pixel");
         let role = p.get("role").and_then(|r| r.as_str()).unwrap_or("main");
@@ -198,6 +356,57 @@ pub fn save(doc: &Doc) -> Vec<u8> {
 /// Plusieurs documents dans un seul fichier .illu (sauvegarde automatique de tous les onglets).
 /// Les onglets de masque α ne sont pas écrits à part : leur contenu est dans le calque parent.
 pub fn save_all(docs: &[&Doc], active: usize) -> Vec<u8> {
+    PNG_USED.lock().unwrap_or_else(|e| e.into_inner()).clear();
+    let bytes = save_all_inner(docs, active);
+    let used = std::mem::take(&mut *PNG_USED.lock().unwrap_or_else(|e| e.into_inner()));
+    PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner()).retain(|(k, ..)| used.iter().any(|u| u.ptr_eq(k)));
+    bytes
+}
+
+/// Oublie les images encodées des projets fermés (leurs pixels n'existent plus).
+pub(crate) fn forget_closed_pngs() {
+    PNG_CACHE.lock().unwrap_or_else(|e| e.into_inner()).retain(|(k, ..)| k.strong_count() > 0);
+}
+
+thread_local! {
+    /// images du fichier en cours d'écriture : dans le JSON, seulement un jeton (voir `splice_images`)
+    static IMAGES: std::cell::RefCell<Vec<std::sync::Arc<String>>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+const IMAGE_MARK: &str = "@@mp-image-";
+
+/// Jeton à la place d'une image dans le JSON.
+fn image_token(url: std::sync::Arc<String>) -> String {
+    IMAGES.with(|v| {
+        let mut v = v.borrow_mut();
+        v.push(url);
+        format!("{IMAGE_MARK}{}@@", v.len() - 1)
+    })
+}
+
+/// Remet les images à la place de leurs jetons. Les adresses data: ne contiennent rien à échapper :
+/// une simple recopie, au lieu d'examiner chaque octet (une demi-seconde sur une grande photo).
+fn splice_images(json: Vec<u8>) -> Vec<u8> {
+    let images = IMAGES.with(|v| std::mem::take(&mut *v.borrow_mut()));
+    let mark = IMAGE_MARK.as_bytes();
+    let mut out = Vec::with_capacity(json.len() + images.iter().map(|u| u.len()).sum::<usize>());
+    let mut rest = &json[..];
+    while let Some(i) = rest.windows(mark.len()).position(|w| w == mark) {
+        let after = &rest[i + mark.len()..];
+        let end = after.iter().position(|c| *c == b'@').unwrap_or(0);
+        let k: usize = std::str::from_utf8(&after[..end]).ok().and_then(|n| n.parse().ok()).unwrap_or(usize::MAX);
+        out.extend_from_slice(&rest[..i]);
+        if let Some(url) = images.get(k) {
+            out.extend_from_slice(url.as_bytes());
+        }
+        rest = &after[(end + 2).min(after.len())..];
+    }
+    out.extend_from_slice(rest);
+    out
+}
+
+fn save_all_inner(docs: &[&Doc], active: usize) -> Vec<u8> {
+    IMAGES.with(|v| v.borrow_mut().clear());
     let mut projects = Vec::new();
     let mut active_project = 0;
     for (k, d) in docs.iter().enumerate().filter(|(_, d)| d.mask_of.is_none()) {
@@ -206,7 +415,7 @@ pub fn save_all(docs: &[&Doc], active: usize) -> Vec<u8> {
         }
         projects.extend(project_json(d, &format!("rust-project-{k}")));
     }
-    serde_json::to_vec(&json!({ "format": "illu-workspace", "version": 3, "activeProjectIndex": active_project, "projects": projects })).unwrap_or_default()
+    splice_images(serde_json::to_vec(&json!({ "format": "illu-workspace", "version": 3, "activeProjectIndex": active_project, "projects": projects })).unwrap_or_default())
 }
 
 /// Projet pixel (et ses masques α liés) au format de la version web.
@@ -236,7 +445,7 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
                 "dynamicFilterEnabled": l.dynamic.is_some(),
                 "dynamicFilterStack": l.dynamic.as_ref().unwrap_or(&l.dyn_saved).iter().map(|(t, r)| json!({ "type": t, "radius": r })).collect::<Vec<_>>(),
                 "dynamicFilterMode": l.dynamic_mode,
-                "dataUrl": data_url.as_str(),
+                "dataUrl": image_token(data_url),
             });
             if let Some(st) = &l.dynamic {
                 o["dynamicFilterType"] = json!(st.first().map(|s| s.0.clone()));
@@ -266,7 +475,7 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
                     .iter()
                     .map(|c| {
                         let hold = if c.hold >= crate::anim::HOLD_INF { Value::Null } else { json!(c.hold) };
-                        let mut o = json!({ "frame": c.frame, "hold": hold, "dataUrl": png_data_url_cached(doc.w, doc.h, &c.px).as_str() });
+                        let mut o = json!({ "frame": c.frame, "hold": hold, "dataUrl": image_token(png_data_url_cached(doc.w, doc.h, &c.px)) });
                         // mode Animation SVG : objets du dessin (MasterPaint Rust seulement)
                         if let Some(v) = &c.vector {
                             o["vector"] = crate::vector::to_json(v);
@@ -279,7 +488,6 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
             if let Some(m) = l.mask.as_ref().filter(|m| m.len() == doc.w * doc.h) {
                 let mid = format!("{pid}-mask-{i}");
                 o["alphaMaskProjectId"] = json!(mid);
-                let gray: Vec<u8> = m.iter().flat_map(|v| [*v, *v, *v, 255]).collect();
                 masks.push(json!({
                     "id": mid,
                     "name": format!("α {}", l.name),
@@ -287,7 +495,7 @@ fn project_json(doc: &Doc, pid: &str) -> Vec<Value> {
                     "width": doc.w,
                     "height": doc.h,
                     "activeLayerIndex": 0,
-                    "pixelLayers": [{ "id": format!("{mid}-0"), "name": "Masque", "visible": true, "x": 0, "y": 0, "opacity": 1, "blendMode": "source-over", "alphaMaskProjectId": null, "dataUrl": png_data_url(doc.w, doc.h, &gray) }],
+                    "pixelLayers": [{ "id": format!("{mid}-0"), "name": "Masque", "visible": true, "x": 0, "y": 0, "opacity": 1, "blendMode": "source-over", "alphaMaskProjectId": null, "dataUrl": image_token(png_url_cached(doc.w, doc.h, m, true)) }],
                     "vectorLayers": [],
                     "role": "layerAlphaMask",
                     "parentProjectId": pid,
@@ -357,5 +565,28 @@ mod tests {
         let l = load(&save(&d)).unwrap();
         assert_eq!(l.docs[0].mode, ColorMode::Ral);
         assert_eq!(&l.docs[0].layers[0].px[..4], &d.layers[0].px[..4]);
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    /// Lecture d'un .illu : décodage en série (ancien chemin) puis en parallèle :
+    /// `MP_ILLU=fichier.illu cargo test --release --lib illu_speed -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn illu_speed() {
+        let bytes = std::fs::read(std::env::var("MP_ILLU").unwrap()).unwrap();
+        let t = std::time::Instant::now();
+        let v = super::parse(&bytes).unwrap();
+        let serial = super::load_parsed(&v, Vec::new()).unwrap();
+        let t1 = t.elapsed();
+        let t = std::time::Instant::now();
+        let par = super::load(&bytes).unwrap();
+        let t2 = t.elapsed();
+        assert_eq!(serial.docs.len(), par.docs.len());
+        for (a, b) in serial.docs.iter().zip(&par.docs) {
+            assert!(a.layers.iter().zip(&b.layers).all(|(x, y)| *x.px == *y.px), "pixels différents");
+        }
+        println!("{} projet(s) : en série {t1:?}, en parallèle {t2:?}", par.docs.len());
     }
 }

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Bruit : ajout de bruit Paint.NET, grain argentique, tramage numérique.
 
 use crate::util::*;

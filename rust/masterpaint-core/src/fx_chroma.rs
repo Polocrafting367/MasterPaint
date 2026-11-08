@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Incrustation (chroma key CIELAB) — départ : js/effects/ChromaKeyer.js (`computeMatte`,
 //! `applyUnmix`, `applyDespill`), complété comme un keyer de compositing : seconde couleur
 //! avec sa propre tolérance, opérations sur le masque (nettoyer le fond, remplir les trous,

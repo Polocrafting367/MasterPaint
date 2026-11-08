@@ -1,11 +1,13 @@
-// Fenêtre Aide et raccourcis (bouton Info de la barre d'onglets, Bienvenue › Raccourcis, Aide) :
-// raccourcis clavier et souris, puis le fonctionnement des calques particuliers de MasterPaint
-// expliqué avec des schémas dessinés ici (filtres dynamiques ƒ, masques α, texte, objets SVG).
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
+// Fenêtre Aide et raccourcis (bouton Info de la barre d'onglets, Bienvenue › Raccourcis, Aide),
+// présentée comme les Paramètres : colonne des sections à gauche (raccourcis, couleurs, calques,
+// outils et ruban, texte et SVG, effets, animation, fichiers) et, pour les sections qui en ont,
+// un sélecteur de sujet en haut. Chaque sujet : explication courte, schéma dessiné ici, étapes.
 // Contenu seul : app.slint le pose dans une FloatWindow (panneau plein écran en mode téléphone).
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Sprite } from "sprite.slint";
-import { FaIcon, Segmented } from "widgets.slint";
+import { FaIcon, GlyphIcon, Segmented, W10ComboBox } from "widgets.slint";
 
 /// Petit « paysage » qui sert d'image d'exemple dans les schémas (ciel, soleil, collines) ;
 /// `invert` : mêmes couleurs inversées (effet Inverser des schémas ƒ).
@@ -347,23 +349,522 @@ component OptChip inherits Rectangle {
     }
 }
 
+/// Cadre gris clair des schémas d'interface.
+component Mock inherits Rectangle {
+    border-radius: Theme.ctl-radius;
+    border-width: 1px;
+    border-color: Theme.window-border;
+    background: Theme.window-bg;
+}
+
+/// Petite légende posée sur un schéma.
+component Tag inherits Text {
+    font-size: 10px;
+    color: Theme.accent;
+    font-weight: 700;
+}
+
+/// Palette Couleurs : principale / secondaire, roue, nuancier.
+component ColorsMock inherits Mock {
+    width: 250px;
+    height: 132px;
+    Rectangle {
+        x: 36px;
+        y: 36px;
+        width: 34px;
+        height: 34px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: #808080;
+    }
+    Rectangle {
+        x: 14px;
+        y: 14px;
+        width: 34px;
+        height: 34px;
+        background: #2563eb;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+    Tag { x: 10px; y: 76px; text: @tr("principale"); }
+    Tag { x: 10px; y: 90px; text: @tr("secondaire"); color: Theme.text-inactive; }
+    Rectangle {
+        x: 104px;
+        y: 8px;
+        width: 92px;
+        height: 92px;
+        border-radius: 46px;
+        clip: true;
+        background: @conic-gradient(#ff0000 0deg, #ffff00 60deg, #00ff00 120deg, #00ffff 180deg, #0000ff 240deg, #ff00ff 300deg, #ff0000 360deg);
+        Rectangle { background: @radial-gradient(circle, #ffffff 0%, #ffffff00 100%); }
+    }
+    Rectangle {
+        x: 206px;
+        y: 10px;
+        width: 34px;
+        height: 20px;
+        border-radius: Theme.ctl-radius;
+        border-width: 1px;
+        border-color: Theme.window-border;
+        background: Theme.field-bg;
+        Text { text: @tr("Plus"); font-size: 9px; color: Theme.text; }
+    }
+    for c[i] in [#000000, #ffffff, #ef4444, #f59e0b, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #64748b]: Rectangle {
+        x: 12px + i * 22px;
+        y: 108px;
+        width: 18px;
+        height: 16px;
+        border-radius: 2px;
+        background: c;
+        border-width: 1px;
+        border-color: Theme.window-border;
+    }
+}
+
+/// Ligne du panneau Calques avec ses boutons (visible, cadenas, α, ƒ) ; retrait de dossier.
+component LayerRowMock inherits Rectangle {
+    in property <string> name;
+    in property <bool> active;
+    in property <bool> mask;
+    in property <bool> dyn;
+    in property <bool> folder;
+    in property <int> depth;
+    in property <color> thumb: #ffffff;
+    width: 250px;
+    height: 28px;
+    background: root.active ? Theme.accent-14 : transparent;
+    border-width: root.active ? 1px : 0px;
+    border-color: Theme.accent;
+    Rectangle {
+        x: 6px + root.depth * 12px;
+        y: 7px;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: Theme.accent;
+        Text { text: "✓"; font-size: 9px; color: Theme.on-accent; }
+    }
+    if root.folder: GlyphIcon {
+        x: 26px + root.depth * 12px;
+        y: 5px;
+        glyph: "\u{f07c}";
+        size: 13px;
+        tint: Theme.accent;
+    }
+    if !root.folder: Rectangle {
+        x: 26px + root.depth * 12px;
+        y: 5px;
+        width: 30px;
+        height: 18px;
+        background: root.thumb;
+        border-width: 1px;
+        border-color: #c0c0c0;
+    }
+    Text {
+        x: 62px + root.depth * 12px;
+        height: parent.height;
+        text: root.name;
+        color: Theme.text;
+        vertical-alignment: center;
+        font-weight: root.folder ? 600 : 400;
+    }
+    for b[i] in ["\u{f023}", "α", "ƒ"]: Rectangle {
+        x: parent.width - 70px + i * 22px;
+        y: 4px;
+        width: 20px;
+        height: 20px;
+        border-radius: Theme.ctl-radius;
+        background: (i == 1 && root.mask) || (i == 2 && root.dyn) ? Theme.accent : transparent;
+        Text {
+            text: b;
+            font-family: i == 0 ? Theme.icon-font : "";
+            font-weight: i == 0 ? 900 : 700;
+            font-size: i == 0 ? 9px : 11px;
+            color: (i == 1 && root.mask) || (i == 2 && root.dyn) ? Theme.on-accent : Theme.text-inactive;
+        }
+    }
+}
+
+/// Ruban MasterPaint (alvéoles libellées) ou barre Paint.NET (une ligne).
+component RibbonMock inherits Mock {
+    in property <bool> classic;
+    width: 320px;
+    height: root.classic ? 34px : 70px;
+    if !root.classic: HorizontalLayout {
+        padding: 6px;
+        spacing: 6px;
+        for g in [{ t: @tr("Outil"), n: 1 }, { t: @tr("Forme"), n: 6 }, { t: @tr("Trait"), n: 3 }, { t: @tr("Calque SVG"), n: 1 }]: VerticalLayout {
+            spacing: 4px;
+            HorizontalLayout {
+                spacing: 3px;
+                alignment: center;
+                for k in g.n: Rectangle {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 3px;
+                    border-width: 1px;
+                    border-color: Theme.text-inactive;
+                }
+            }
+            Rectangle {
+                height: 14px;
+                border-radius: 3px;
+                background: Theme.accent-12;
+            }
+            Text { text: g.t; font-size: 9px; color: Theme.text-inactive; horizontal-alignment: center; }
+        }
+    }
+    if root.classic: HorizontalLayout {
+        padding: 6px;
+        spacing: 4px;
+        alignment: start;
+        Text { text: @tr("Forme :"); font-size: 10px; color: Theme.text; vertical-alignment: center; }
+        for k in 7: Rectangle {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border-width: 1px;
+            border-color: Theme.text-inactive;
+        }
+        Text { text: @tr(" Épaisseur :"); font-size: 10px; color: Theme.text; vertical-alignment: center; }
+        Rectangle {
+            width: 60px;
+            height: 18px;
+            border-radius: 3px;
+            background: Theme.accent-12;
+        }
+    }
+}
+
+/// Image d'exemple avec une sélection (pointillés) et ses poignées.
+component SelectionMock inherits Rectangle {
+    width: 180px;
+    height: 110px;
+    clip: true;
+    SampleImage {
+        width: parent.width;
+        height: parent.height;
+    }
+    Handles {
+        x: 40px;
+        y: 22px;
+        width: 90px;
+        height: 60px;
+        Rectangle {
+            border-width: 1px;
+            border-color: #ffffff;
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+        }
+    }
+}
+
+/// Coup de pinceau, contour du pinceau sous la souris et curseur de l'outil.
+component BrushMock inherits Mock {
+    width: 180px;
+    height: 110px;
+    background: #ffffff;
+    Path {
+        width: 180px;
+        height: 110px;
+        viewbox-width: 180;
+        viewbox-height: 110;
+        stroke: #2563eb;
+        stroke-width: 9px;
+        commands: "M 18 86 C 50 20 80 100 112 50 S 150 26 158 40";
+    }
+    Rectangle {
+        x: 146px;
+        y: 28px;
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        border-width: 1px;
+        border-color: #80808080;
+    }
+}
+
+/// Forme vivante : cadre à 8 poignées et poignée de rotation.
+component ShapeMock inherits Mock {
+    width: 180px;
+    height: 120px;
+    background: #ffffff;
+    Path {
+        x: 50px;
+        y: 38px;
+        width: 80px;
+        height: 70px;
+        viewbox-width: 80;
+        viewbox-height: 70;
+        fill: #f59e0b;
+        stroke: #b45309;
+        stroke-width: 2px;
+        commands: "M 40 2 L 50 26 L 78 26 L 56 42 L 64 68 L 40 52 L 16 68 L 24 42 L 2 26 L 30 26 Z";
+    }
+    Handles {
+        x: 50px;
+        y: 38px;
+        width: 80px;
+        height: 70px;
+        for k in 4: Rectangle {
+            x: (k == 0 || k == 2 ? parent.width / 2 : k == 1 ? parent.width : 0px) - 3px;
+            y: (k == 0 ? 0px : k == 2 ? parent.height : parent.height / 2) - 3px;
+            width: 6px;
+            height: 6px;
+            background: #ffffff;
+            border-width: 1px;
+            border-color: Theme.accent;
+        }
+    }
+    Rectangle {
+        x: 90px;
+        y: 18px;
+        width: 1px;
+        height: 20px;
+        background: Theme.accent;
+    }
+    Rectangle {
+        x: 86px;
+        y: 12px;
+        width: 9px;
+        height: 9px;
+        border-radius: 4.5px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: Theme.accent;
+    }
+    Tag { x: 100px; y: 8px; text: @tr("rotation"); }
+}
+
+/// Ligne en mode Courbe : quatre points, flèche au bout.
+component LineMock inherits Mock {
+    width: 180px;
+    height: 110px;
+    background: #ffffff;
+    Path {
+        width: 180px;
+        height: 110px;
+        viewbox-width: 180;
+        viewbox-height: 110;
+        stroke: #111827;
+        stroke-width: 3px;
+        commands: "M 16 88 C 40 20 90 20 110 60 S 150 90 160 34";
+    }
+    Path {
+        width: 180px;
+        height: 110px;
+        viewbox-width: 180;
+        viewbox-height: 110;
+        fill: #111827;
+        commands: "M 160 22 L 168 40 L 152 38 Z";
+    }
+    for pt in [{ x: 16px, y: 88px }, { x: 62px, y: 34px }, { x: 112px, y: 62px }, { x: 160px, y: 34px }]: Rectangle {
+        x: pt.x - 4px;
+        y: pt.y - 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: Theme.accent;
+    }
+}
+
+/// Frise d'animation : calques × images, dessins posés et maintenus.
+component TimelineMock inherits Mock {
+    width: 300px;
+    height: 84px;
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: 22px;
+        border-top-left-radius: Theme.ctl-radius;
+        border-top-right-radius: Theme.ctl-radius;
+        background: Theme.accent-12;
+        HorizontalLayout {
+            padding-left: 6px;
+            spacing: 8px;
+            alignment: start;
+            for g in ["\u{f048}", "\u{f04b}", "\u{f051}", "\u{f067}", "\u{f0c5}"]: Text {
+                text: g;
+                font-family: Theme.icon-font;
+                font-weight: 900;
+                font-size: 9px;
+                color: Theme.text;
+                vertical-alignment: center;
+            }
+        }
+    }
+    for r[ri] in [{ n: @tr("Balle"), c: [1, 2, 2, 1, 1, 2, 1, 0, 0, 1] }, { n: @tr("Fond"), c: [1, 2, 2, 2, 2, 2, 2, 2, 2, 2] }]: Rectangle {
+        y: 28px + ri * 26px;
+        height: 22px;
+        Text { x: 6px; text: r.n; font-size: 10px; color: Theme.text; vertical-alignment: center; height: parent.height; }
+        for c[ci] in r.c: Rectangle {
+            x: 60px + ci * 22px;
+            y: 3px;
+            width: 20px;
+            height: 16px;
+            background: ci == 2 ? Theme.accent.with-alpha(0.12) : transparent;
+            border-width: 1px;
+            border-color: Theme.window-border;
+            if c == 1: Rectangle { width: 8px; height: 8px; border-radius: 4px; background: Theme.accent; }
+            if c == 2: Rectangle { width: 14px; height: 2px; background: Theme.accent; }
+        }
+    }
+}
+
+/// Fenêtre d'effet : curseurs, cadran d'angle, bouton ↺.
+component EffectMock inherits Mock {
+    width: 280px;
+    height: 104px;
+    for r[ri] in [{ t: @tr("Rayon"), v: 0.35 }, { t: @tr("Intensité"), v: 0.7 }]: HorizontalLayout {
+        x: 10px;
+        y: 10px + ri * 30px;
+        width: parent.width - 20px;
+        height: 22px;
+        spacing: 6px;
+        Text { width: 60px; text: r.t; font-size: 10px; color: Theme.text; vertical-alignment: center; }
+        Rectangle {
+            y: 9px;
+            height: 4px;
+            border-radius: 2px;
+            background: Theme.track-bg;
+            Rectangle {
+                x: 0;
+                width: parent.width * r.v;
+                height: parent.height;
+                border-radius: 2px;
+                background: Theme.accent;
+            }
+        }
+        Rectangle {
+            width: 22px;
+            border-radius: Theme.ctl-radius;
+            background: ri == 0 ? Theme.accent-14 : transparent;
+            border-width: 1px;
+            border-color: ri == 0 ? Theme.accent : Theme.window-border;
+            Text { text: "↺"; font-size: 11px; color: Theme.text; }
+        }
+    }
+    Text { x: 10px; y: 74px; text: @tr("Angle"); font-size: 10px; color: Theme.text; }
+    Rectangle {
+        x: 76px;
+        y: 66px;
+        width: 30px;
+        height: 30px;
+        border-radius: 15px;
+        border-width: 1px;
+        border-color: Theme.window-border;
+        Rectangle { x: 15px; y: 7px; width: 2px; height: 9px; background: Theme.accent; }
+    }
+}
+
 export component InfoContent inherits Rectangle {
     in property <bool> phone;
     in property <[{keys: string, what: string}]> shortcuts;
+    /// section (colonne de gauche) et sujet (sélecteur du haut)
     in-out property <int> tab: 0;
+    in-out property <int> sub: 0;
+    property <length> side-w: root.phone ? 0px : 176px;
     property <length> col-w: sv.visible-width - (root.phone ? 24px : 40px);
+    property <[{g: string, t: string}]> sections: [
+        { g: "\u{f11c}", t: @tr("Raccourcis") },
+        { g: "\u{f53f}", t: @tr("Couleurs") },
+        { g: "\u{f5fd}", t: @tr("Calques") },
+        { g: "\u{f0ad}", t: @tr("Outils et ruban") },
+        { g: "\u{f031}", t: @tr("Texte et SVG") },
+        { g: "\u{f0d0}", t: @tr("Effets") },
+        { g: "\u{f008}", t: @tr("Animation") },
+        { g: "\u{f07c}", t: @tr("Fichiers") },
+    ];
+    property <[string]> subs: root.tab == 2 ? [@tr("Calques"), @tr("Masque α"), @tr("Filtre ƒ"), @tr("Dossiers")]
+        : root.tab == 3 ? [@tr("Ruban MasterPaint"), @tr("Barre Paint.NET"), @tr("Sélections"), @tr("Pinceaux")]
+        : root.tab == 4 ? [@tr("Texte"), @tr("Formes"), @tr("Lignes"), @tr("Calques SVG")]
+        : [];
 
-    tabs := Segmented {
+    // ---- colonne des sections (comme les Paramètres) ----
+    if !root.phone: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.side-w;
+        height: root.height;
+        background: Theme.dark ? Theme.list-bg : Theme.window-bg.darker(3%);
+        VerticalLayout {
+            padding: 8px;
+            spacing: 2px;
+            alignment: start;
+            for sec[si] in root.sections: Rectangle {
+                height: 32px;
+                border-radius: Theme.ctl-radius;
+                background: root.tab == si ? Theme.accent-14 : (Theme.hover-fx && sca.has-hover) ? Theme.accent-12 : transparent;
+                Rectangle {
+                    x: 0;
+                    y: 7px;
+                    width: 3px;
+                    height: parent.height - 14px;
+                    border-radius: 2px * Theme.round;
+                    background: root.tab == si ? Theme.accent : transparent;
+                }
+                GlyphIcon {
+                    x: 12px;
+                    y: round((parent.height - self.height) / 2 / 1px) * 1px;
+                    width: 18px;
+                    glyph: sec.g;
+                    size: 13px;
+                    tint: root.tab == si ? Theme.accent : Theme.text;
+                }
+                Text {
+                    x: 38px;
+                    height: parent.height;
+                    text: sec.t;
+                    font-weight: root.tab == si ? 600 : 400;
+                    color: Theme.text;
+                    vertical-alignment: center;
+                }
+                sca := TouchArea {
+                    clicked => {
+                        root.tab = si;
+                        root.sub = 0;
+                    }
+                }
+            }
+        }
+    }
+    if !root.phone: Rectangle {
+        x: root.side-w;
+        width: 1px;
+        height: root.height;
+        background: Theme.window-border;
+    }
+    // téléphone : liste des sections en haut
+    if root.phone: W10ComboBox {
         x: 10px;
         y: 8px;
-        width: parent.width - 20px;
-        options: root.phone ? [@tr("Touches"), "ƒ", "α", @tr("Texte"), "SVG"]
-            : [@tr("Raccourcis"), @tr("Filtres dynamiques ƒ"), @tr("Masques α"), @tr("Texte"), @tr("Formes SVG")];
-        index <=> root.tab;
+        width: root.width - 20px;
+        model: [@tr("Raccourcis"), @tr("Couleurs"), @tr("Calques"), @tr("Outils et ruban"), @tr("Texte et SVG"), @tr("Effets"), @tr("Animation"), @tr("Fichiers")];
+        current-index: root.tab;
+        selected(i) => {
+            root.tab = i;
+            root.sub = 0;
+        }
+    }
+    // sujet de la section (sélecteur du haut), quand elle en a plusieurs
+    property <length> top-y: root.phone ? 44px : 8px;
+    if root.subs.length > 0: Segmented {
+        x: root.side-w + 12px;
+        y: root.top-y;
+        width: root.width - root.side-w - 24px;
+        options: root.subs;
+        index <=> root.sub;
     }
     sv := ScrollView {
-        y: tabs.y + tabs.height + 8px;
-        height: parent.height - self.y;
+        x: root.side-w + 1px;
+        y: root.top-y + (root.subs.length > 0 ? 38px : 0px);
+        width: root.width - root.side-w - 1px;
+        height: root.height - self.y;
         // marge sous la dernière ligne (sinon les derniers raccourcis passent sous le bord)
         content-height: body.preferred-height + 48px;
         body := VerticalLayout {
@@ -404,7 +905,7 @@ export component InfoContent inherits Rectangle {
             }
 
             // ---- filtres dynamiques ----
-            if root.tab == 1: VerticalLayout {
+            if root.tab == 2 && root.sub == 2: VerticalLayout {  // calques › filtre ƒ
                 spacing: 10px;
                 Head { title: @tr("Calque de filtres dynamiques (ƒ)"); }
                 Para {
@@ -423,7 +924,7 @@ export component InfoContent inherits Rectangle {
             }
 
             // ---- masques alpha ----
-            if root.tab == 2: VerticalLayout {
+            if root.tab == 2 && root.sub == 1: VerticalLayout {  // calques › masque α
                 spacing: 10px;
                 Head { title: @tr("Masque alpha (α)"); }
                 Para {
@@ -446,7 +947,7 @@ export component InfoContent inherits Rectangle {
             }
 
             // ---- texte ----
-            if root.tab == 3: VerticalLayout {
+            if root.tab == 4 && root.sub == 0: VerticalLayout {  // texte et SVG › texte
                 spacing: 10px;
                 Head { title: @tr("Texte modifiable"); }
                 Para {
@@ -494,7 +995,7 @@ export component InfoContent inherits Rectangle {
             }
 
             // ---- formes SVG ----
-            if root.tab == 4: VerticalLayout {
+            if root.tab == 4 && root.sub == 3: VerticalLayout {  // texte et SVG › calques SVG
                 spacing: 10px;
                 Head { title: @tr("Formes et calques SVG (bêta)"); }
                 Para {
@@ -561,9 +1062,165 @@ export component InfoContent inherits Rectangle {
                 Step { n: "3"; text: @tr("Fichier › Exporter › SVG : les calques SVG restent des objets vectoriels, le reste devient une image intégrée. Ouvrir un fichier .svg le reprend en objets."); }
                 Step { n: "4"; text: @tr("Bouton « Modifiable » relâché : la forme est tracée en pixels dans le calque actif. Pour peindre au pinceau sur un calque SVG, il faut le pixelliser (ses objets ne sont alors plus modifiables)."); }
                 Para {
-                    text: @tr("Le mode SVG est en bêta : courbes de Bézier et rotation des objets arrivent plus tard.");
+                    text: @tr("Le mode SVG est en bêta : les courbes de Bézier libres arrivent plus tard.");
                     color: Theme.text-inactive;
                 }
+            }
+
+            // ---- couleurs ----
+            if root.tab == 1: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("La palette Couleurs"); }
+                Para { text: @tr("Deux couleurs servent à tout : la principale (clic gauche) et la secondaire (clic droit). Les formes « Les deux » ont le contour de la principale et l'intérieur de la secondaire."); }
+                HorizontalLayout { alignment: center; ColorsMock { } }
+                Step { n: "1"; text: @tr("Cliquez dans la roue (ou le carré) : la couleur modifiée prend la teinte et la saturation du point ; clic droit dans la roue = l'autre couleur."); }
+                Step { n: "2"; text: @tr("Les petites flèches entre les deux carrés les échangent (touche X). Cliquez le carré de la secondaire pour la modifier à son tour."); }
+                Step { n: "3"; text: @tr("« Plus » : curseurs RVB et TSV, code hexadécimal, transparence (alpha)."); }
+                Step { n: "4"; text: @tr("Nuancier, favoris (« + » ajoute la couleur, Maj + clic en retire une) et couleurs récentes en bas. La pipette (outil I) prélève une couleur dans l'image."); }
+                Para { text: @tr("Les couleurs des Paramètres et des effets (ombre, contour…) s'ouvrent dans la même fenêtre Couleurs, posée contre la case cliquée."); color: Theme.text-inactive; }
+            }
+
+            // ---- calques ----
+            if root.tab == 2 && root.sub == 0: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Le panneau Calques"); }
+                Para { text: @tr("Les calques s'empilent : celui du haut de la liste est dessiné par-dessus les autres. On peint toujours dans le calque actif (en surbrillance)."); }
+                HorizontalLayout {
+                    alignment: center;
+                    Mock {
+                        width: 262px;
+                        height: 98px;
+                        VerticalLayout {
+                            padding: 6px;
+                            spacing: 2px;
+                            LayerRowMock { name: @tr("Ombre"); thumb: #94a3b8; dyn: true; }
+                            LayerRowMock { name: @tr("Personnage"); active: true; thumb: #fde68a; mask: true; }
+                            LayerRowMock { name: @tr("Arrière-plan"); thumb: #5ca3e0; }
+                        }
+                    }
+                }
+                Step { n: "1"; text: @tr("Case à gauche : afficher / masquer. Clic sur la ligne : calque actif. Double-clic sur le nom : le renommer. Glisser une ligne : changer l'ordre."); }
+                Step { n: "2"; text: @tr("Boutons à droite : cadenas (plus de dessin ni d'effet), α (masque de transparence), ƒ (filtre dynamique)."); }
+                Step { n: "3"; text: @tr("En bas : opacité et mode de fusion du calque actif, puis ajouter, supprimer, dossier, dupliquer, fusionner, monter, descendre."); }
+                Step { n: "4"; text: @tr("Clic droit sur un calque : son menu (pixelliser un calque SVG, effets du calque texte…)."); }
+            }
+            if root.tab == 2 && root.sub == 3: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Dossiers de calques"); }
+                Para { text: @tr("Un dossier regroupe des calques : on le replie, on le déplace, on règle d'un coup leur opacité et leur mode de fusion."); }
+                HorizontalLayout {
+                    alignment: center;
+                    Mock {
+                        width: 262px;
+                        height: 98px;
+                        VerticalLayout {
+                            padding: 6px;
+                            spacing: 2px;
+                            LayerRowMock { name: @tr("Décor"); folder: true; }
+                            LayerRowMock { name: @tr("Arbres"); depth: 1; thumb: #22c55e; active: true; }
+                            LayerRowMock { name: @tr("Ciel"); depth: 1; thumb: #5ca3e0; }
+                        }
+                    }
+                }
+                Step { n: "1"; text: @tr("Calques › Nouveau dossier, ou Grouper dans un dossier (le calque actif y entre)."); }
+                Step { n: "2"; text: @tr("Glissez un calque sur un dossier pour l'y ranger ; le chevron replie / déplie le dossier."); }
+                Step { n: "3"; text: @tr("Mode « Transfert » du dossier : ses calques se mélangent directement à ceux du dessous (sinon le dossier est composé à part)."); }
+            }
+
+            // ---- outils et ruban ----
+            if root.tab == 3 && root.sub == 0: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Le ruban MasterPaint"); }
+                Para { text: @tr("Sous les menus, le ruban montre les réglages de l'outil choisi, rangés en alvéoles libellées. Il change à chaque outil."); }
+                HorizontalLayout { alignment: center; RibbonMock { } }
+                Step { n: "1"; text: @tr("Alvéole « Outil » : le bouton ouvre la grille de tous les outils (comme la palette Outils)."); }
+                Step { n: "2"; text: @tr("Jauges : glissez dedans, utilisez − / +, ou double-cliquez pour taper la valeur."); }
+                Step { n: "3"; text: @tr("Au bout : grille, règles, aimantation, dessin hors de la toile (aussi dans le menu Affichage)."); }
+                Para { text: @tr("Les réglages sont retenus d'un lancement à l'autre. Paramètres › Apparence › Barre d'options : ruban ou barre Paint.NET."); color: Theme.text-inactive; }
+            }
+            if root.tab == 3 && root.sub == 1: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("La barre Paint.NET"); }
+                Para { text: @tr("Les mêmes réglages sur une seule ligne compacte, comme la barre d'outils de Paint.NET : plus de place pour l'image."); }
+                HorizontalLayout { alignment: center; RibbonMock { classic: true; } }
+                Step { n: "1"; text: @tr("Paramètres › Apparence › Barre d'options : « Style Paint.NET »."); }
+                Step { n: "2"; text: @tr("Sur un écran étroit, la barre passe sur deux lignes ; survolez une icône pour son nom."); }
+                Step { n: "3"; text: @tr("Raccourcis d'outils de Paint.NET : S sélection, M déplacer, B pinceau, F remplissage, T texte, O ellipse… (section Raccourcis)."); }
+            }
+            if root.tab == 3 && root.sub == 2: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Sélections"); }
+                Para { text: @tr("Une sélection limite les outils et les effets à une zone. Les pointillés en montrent le contour."); }
+                HorizontalLayout { alignment: center; SelectionMock { } }
+                Step { n: "1"; text: @tr("Rectangle (S), lasso, lasso polygonal, lasso magnétique (suit les bords), baguette magique (zone de couleur proche)."); }
+                Step { n: "2"; text: @tr("Ctrl : ajouter à la sélection ; Alt : en retirer (ou les boutons Nouv., Ajout, Retrait du ruban)."); }
+                Step { n: "3"; text: @tr("Outil Déplacer : glisser déplace les pixels sélectionnés, les poignées les redimensionnent, clic droit les fait tourner."); }
+                Step { n: "4"; text: @tr("Ctrl+A tout, Ctrl+D désélectionner, Ctrl+I inverser, Ctrl+Maj+X recadrer à la sélection."); }
+            }
+            if root.tab == 3 && root.sub == 3: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Pinceaux"); }
+                Para { text: @tr("Pinceau, crayon et gomme peignent dans le calque actif ; le cercle gris montre la taille sous la souris."); }
+                HorizontalLayout { alignment: center; BrushMock { } }
+                Step { n: "1"; text: @tr("Ruban : taille ([ et ] au clavier), dureté, forme (rond, doux, spray, carré)."); }
+                Step { n: "2"; text: @tr("Clic gauche : couleur principale ; clic droit : secondaire. Avec un stylet, la pression fait varier la taille."); }
+                Step { n: "3"; text: @tr("Symétrie : le trait est reproduit en miroir (axes X, Y, ou les deux)."); }
+            }
+
+            // ---- texte et SVG : formes, lignes ----
+            if root.tab == 4 && root.sub == 1: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Formes vivantes"); }
+                Para { text: @tr("Une forme tracée reste « vivante » jusqu'à ce qu'on la pose : on la déplace, la redimensionne, la tourne, et le ruban la modifie en direct (couleurs, épaisseur, style, rayon des coins, nombre de côtés ou de branches)."); }
+                HorizontalLayout { alignment: center; ShapeMock { } }
+                Step { n: "1"; text: @tr("Outil Formes : choisissez la forme dans le ruban, tracez-la sur la toile."); }
+                Step { n: "2"; text: @tr("Glisser dedans : la déplacer ; poignées : la redimensionner (Maj sur un coin : proportions gardées) ; poignée du haut : la tourner (Maj : par pas de 15°)."); }
+                Step { n: "3"; text: @tr("Entrée, Échap ou un clic à côté la posent ; Ctrl+Z l'annule. « Modifiable » activé : elle reste un objet SVG, qu'un clic reprend plus tard."); }
+            }
+            if root.tab == 4 && root.sub == 2: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Lignes et courbes"); }
+                Para { text: @tr("L'outil Ligne trace une droite ; en mode « Courbe », deux points apparaissent au tiers et aux deux tiers : déplacez-les pour courber la ligne."); }
+                HorizontalLayout { alignment: center; LineMock { } }
+                Step { n: "1"; text: @tr("Ruban : Droite ou Courbe, puis le début, le trait (continu, tirets, pointillés) et la fin (droit, rond, flèche pleine, flèche vide, losange)."); }
+                Step { n: "2"; text: @tr("Tant que la ligne n'est pas posée, ses points se déplacent et le ruban la modifie (épaisseur, couleur, bouts, trait)."); }
+                Step { n: "3"; text: @tr("Entrée ou un clic à côté la posent ; elle s'exporte telle quelle en SVG (flèches comprises)."); }
+            }
+
+            // ---- effets ----
+            if root.tab == 5: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Fenêtres d'effet"); }
+                Para { text: @tr("Menus Effets et Ajustements : chaque effet ouvre sa fenêtre, avec un aperçu en direct sur l'image (calculé vite en basse résolution sur les grandes images)."); }
+                HorizontalLayout { alignment: center; EffectMock { } }
+                Step { n: "1"; text: @tr("Le bouton ↺ d'un réglage s'allume quand il a changé : un clic remet sa valeur par défaut (double-clic sur l'intitulé aussi)."); }
+                Step { n: "2"; text: @tr("Les angles se règlent au cadran ; les couleurs s'ouvrent dans la fenêtre Couleurs ; « Pipette » prend une couleur dans l'image."); }
+                Step { n: "3"; text: @tr("OK applique l'effet au calque actif (ou à la sélection). Sur un calque ƒ, il rejoint sa pile : réglable ensuite."); }
+                Step { n: "4"; text: @tr("Ctrl+F répète le dernier effet avec les mêmes réglages."); }
+            }
+
+            // ---- animation ----
+            if root.tab == 6: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Animation (frise)"); }
+                Para { text: @tr("Image › Mode du projet › Animation (ou Nouvelle image › Anim.) : la frise apparaît sous la toile. Chaque calque a ses dessins, posés image par image."); }
+                HorizontalLayout { alignment: center; TimelineMock { } }
+                Step { n: "1"; text: @tr("Une case pleine = un dessin posé à cette image ; un trait = le dessin précédent maintenu. Clic sur une case : aller à cette image."); }
+                Step { n: "2"; text: @tr("Ajouter, Dupliquer, Insérer : nouvelles images. Double-clic sur une case : image clé ; glisser : déplacer le dessin ; clic droit : son menu (maintenir, copier, répéter)."); }
+                Step { n: "3"; text: @tr("Pelure d'oignon : images voisines en transparence (bleu avant, rouge après). « Pas à pas » avance d'une image après chaque tracé."); }
+                Step { n: "4"; text: @tr("Lire / Pause, images par seconde (IPS), boucle ; export en GIF animé ou en planche de sprites."); }
+                Para { text: @tr("Animation SVG : chaque image garde ses objets modifiables (formes, textes)."); color: Theme.text-inactive; }
+            }
+
+            // ---- fichiers ----
+            if root.tab == 7: VerticalLayout {
+                spacing: 10px;
+                Head { title: @tr("Ouvrir, enregistrer, exporter"); }
+                Para { text: @tr("Ouvrir (Ctrl+O) ou glisser un fichier sur la fenêtre : images (PNG, JPEG, WebP, GIF animés, BMP, TIFF…), photos RAW (ouvertes dans le Mode Photo Pro), projets MasterPaint (.illu), Paint.NET (.pdn) et dessins SVG."); }
+                Step { n: "1"; text: @tr("SVG : une fenêtre propose un calque par élément, tout sur un seul calque, la grille d'icônes (feuilles de symboles) ou l'ajout au projet ouvert."); }
+                Step { n: "2"; text: @tr("Paint.NET : les calques reviennent avec leur nom, leur visibilité, leur opacité et leur mode de fusion."); }
+                Step { n: "3"; text: @tr("Exporter (Ctrl+S) : PNG, JPEG, WebP, BMP, SVG (calques SVG en objets), ou .illu pour tout garder (calques, masques, filtres ƒ, animation)."); }
+                Step { n: "4"; text: @tr("Les projets ouverts sont sauvegardés automatiquement et rouverts au lancement suivant (Paramètres › Données)."); }
             }
         }
     }

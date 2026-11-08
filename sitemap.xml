@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://masterpaint.fr/</loc>
         <lastmod>2026-06-28</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
-    </url>
-    <url>
-        <loc>https://masterpaint.fr/html/</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
     </url>
 </urlset>

@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Outils partagés : accès pixels, échantillonnage, couleurs, bruit, flous de base.
 
 // ---------------------------------------------------------------- maths rapides
@@ -930,4 +931,18 @@ pub fn with_token<R>(tok: Option<CancelToken>, run: impl FnOnce() -> R) -> R {
 /// Le calcul en cours dans ce fil a-t-il été annulé ?
 pub fn cancelled() -> bool {
     CANCEL.with(|c| c.borrow().as_ref().is_some_and(|f| f()))
+}
+
+/// Octet arrondi au pair le plus proche (comme `Uint8ClampedArray`), borné à 0..255.
+#[inline]
+pub(crate) fn u8c(v: f64) -> u8 {
+    if !(v > 0.0) {
+        0
+    } else if v >= 255.0 {
+        255
+    } else {
+        let f = v.floor();
+        let d = v - f;
+        (if d > 0.5 || (d == 0.5 && (f as i64) % 2 == 1) { f + 1.0 } else { f }) as u8
+    }
 }

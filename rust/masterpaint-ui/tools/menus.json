@@ -590,7 +590,7 @@
    "title": "Effets",
    "items": [
     {
-     "label": "Répéter Sépia",
+     "label": "Répéter le dernier effet",
      "shortcut": "Ctrl+F",
      "fa": "f363",
      "faw": "900",

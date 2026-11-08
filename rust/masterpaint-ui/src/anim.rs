@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Mode Animation (frise) — portage de js/anim/AnimationTimeline.js.
 //!
 //! Modèle (par document) : `Doc::anim` = { ips, durée, tête de lecture, boucle, aller-retour,

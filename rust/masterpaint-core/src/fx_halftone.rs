@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Trame (demi-teinte AM) — portage de js/effects/halftone-core.js (`illuApplyHalftone`).
 //!
 //! Paramètres : 0 mode (0 noir, 1 couleur, 2 CMJN)  1 pas de cellule  2 angle (°)
@@ -10,18 +11,6 @@ use crate::util::*;
 const INK_ANGLES: [f64; 4] = [15.0, 75.0, 0.0, 45.0];
 const INK_COLORS: [[f64; 3]; 4] = [[0.0, 158.0, 224.0], [233.0, 0.0, 124.0], [255.0, 237.0, 0.0], [26.0, 23.0, 27.0]];
 
-#[inline]
-fn u8c(v: f64) -> u8 {
-    if !(v > 0.0) {
-        0
-    } else if v >= 255.0 {
-        255
-    } else {
-        let f = v.floor();
-        let d = v - f;
-        (if d > 0.5 || (d == 0.5 && (f as i64) % 2 == 1) { f + 1.0 } else { f }) as u8
-    }
-}
 
 #[inline]
 fn coverage(cov: f64, density: f64, gain: f64) -> f64 {

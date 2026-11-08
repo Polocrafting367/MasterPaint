@@ -1,0 +1,2 @@
+<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}"><!-- Axe horizontal (Y) --> <path d="M2 8H4.3M6.85 8H9.15M11.7 8H14" fill="none" stroke="{ACCENT}" stroke-width="1.5" stroke-linecap="round"/> <!-- Moitié haute : triangle pointant vers le bas --> <path d="M 5 2.5 L 8 6.5 L 11 2.5 Z" fill="{STROKE}" stroke="none"/> <!-- Moitié basse : triangle (miroir) pointant vers le haut --> <path d="M 5 13.5 L 8 9.5 L 11 13.5 Z" fill="{STROKE}" stroke="none" opacity="0.4"/></svg>

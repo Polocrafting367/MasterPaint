@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Fichier généré depuis js/effects/ral_colors.js (palette RAL Classic). Ne pas modifier à la main.
 
 /// (code, r, v, b, nom français)

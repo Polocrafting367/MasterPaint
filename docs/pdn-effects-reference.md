@@ -1,3 +1,4 @@
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
 # Réglages des effets de Paint.NET 5.1 (référence)
 
 Extrait automatiquement de l'installation locale de Paint.NET (IL désassemblé par `ildasm`,

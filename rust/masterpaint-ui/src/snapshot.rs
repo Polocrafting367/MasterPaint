@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Captures de l'interface sans fenêtre : `--snapshot=fichier.png [--size=LxH] [--wait=ms]
 //! [--clicks=x,y;x,y…]`. L'application est rendue par le moteur logiciel de Slint dans une
 //! image PNG, sans écran : sert à vérifier la mise en page (bureau, téléphone, fenêtres).

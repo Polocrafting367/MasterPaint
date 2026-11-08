@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Paramètres de l'interface, conservés entre les sessions : fichier JSON sur le bureau
 //! (dossier de configuration de l'utilisateur), localStorage sur le web — où la molette
 //! partage la clé `illu_wheel_mode` de la version HTML.
@@ -16,13 +17,24 @@ pub struct Settings {
     pub default_secondary: u32,
     pub toolbar_mode: i32,
     pub wheel_scroll: bool,
+    /// étapes d'historique, tous projets confondus
     pub history_max: usize,
+    /// dernières étapes toujours gardées par projet
+    pub history_keep: usize,
     pub autosave_min: u32,
     pub language: i32,
     pub layout: i32,
     /// interface tactile automatique sous 600 px de large (sinon : la disposition choisie)
     pub layout_auto: bool,
     pub theme_style: i32,
+    pub interface_theme: i32,
+    /// Réappliquer les couleurs et le pack d'icônes conseillés au changement d'interface.
+    pub follow_interface_style: bool,
+    pub icon_pack: i32,
+    pub missing_icon_fallback: i32,
+    pub custom_icon_pack: Value,
+    pub imported_icon_packs: Value,
+    pub active_custom_icon: usize,
     /// zoom de l'interface (%)
     pub ui_zoom: f32,
     /// zoom à l'ouverture d'une image : 0 ajuster à la fenêtre, 1 taille réelle (100 %)
@@ -40,10 +52,26 @@ pub struct Settings {
     /// Apparence : coins arrondis, barre de titre translucide, aperçu du projet derrière les
     /// onglets ; image zoomée lissée
     pub rounded: bool,
+    pub pronounced_borders: bool,
     pub glass: bool,
     pub title_transparent: bool,
-    pub title_blurred: bool,
     pub header_preview: bool,
+    /// ombres ; mode léger, déjà appliqué, et ce qu'il a coupé (1 ombres, 2 transparence, 4 aperçu
+    /// du haut, 8 surbrillance, 16 résolution de l'interface), pour le rétablir
+    pub shadows: bool,
+    /// mode léger : 0 automatique, 1 toujours, 2 jamais
+    pub perf_mode: i32,
+    /// surbrillance au survol ; navigateur : résolution de l'interface (0 écran, 1 comme à 100 %)
+    pub hover_fx: bool,
+    pub render_scale: i32,
+    /// résolution de rendu de la toile : boutons dans le ruban ; pour les nouveaux projets (0 pleine,
+    /// 1 ÷2, 2 ÷4, 3 ÷8)
+    pub render_ctl: bool,
+    pub render_default: i32,
+    pub perf_done: bool,
+    pub perf_cut: i32,
+    /// rapport de ralentissement déjà proposé (une seule fois)
+    pub perf_reported: bool,
     pub zoom_smooth: bool,
     /// aimantation : taille des cases (1/N de la largeur), force d'attraction (%), grille
     /// toujours visible, repères magenta d'accroche
@@ -93,12 +121,20 @@ impl Default for Settings {
             default_secondary: 0xffffff,
             toolbar_mode: 0,
             wheel_scroll: false,
-            history_max: 40,
+            history_max: 20,
+            history_keep: 3,
             autosave_min: 0,
             language: 0,
             layout: 0,
             layout_auto: true,
             theme_style: 0,
+            interface_theme: 0,
+            follow_interface_style: true,
+            icon_pack: 0,
+            missing_icon_fallback: 0,
+            custom_icon_pack: Value::Null,
+            imported_icon_packs: Value::Array(Vec::new()),
+            active_custom_icon: 0,
             ui_zoom: 100.0,
             default_zoom: 0,
             default_tool: "tool-select".into(),
@@ -107,10 +143,19 @@ impl Default for Settings {
             paste_mode: 0,
             paste_ask: true,
             rounded: true,
+            pronounced_borders: false,
             glass: true,
             title_transparent: true,
-            title_blurred: false,
             header_preview: true,
+            shadows: true,
+            perf_mode: 0,
+            hover_fx: true,
+            render_scale: 0,
+            render_ctl: false,
+            render_default: 0,
+            perf_done: false,
+            perf_cut: 0,
+            perf_reported: false,
             zoom_smooth: false,
             snap_div: 48,
             snap_thresh: 50,
@@ -145,12 +190,20 @@ impl Settings {
             "defaultSecondary": self.default_secondary,
             "toolbarMode": self.toolbar_mode,
             "wheelMode": if self.wheel_scroll { "scroll" } else { "zoom" },
-            "historyMax": self.history_max,
+            "historyTotal": self.history_max,
+            "historyKeep": self.history_keep,
             "autosaveMin": self.autosave_min,
             "language": self.language,
             "layout": self.layout,
             "layoutAuto": self.layout_auto,
             "themeStyle": self.theme_style,
+            "interfaceTheme": self.interface_theme,
+            "followInterfaceStyle": self.follow_interface_style,
+            "iconPack": self.icon_pack,
+            "missingIconFallback": self.missing_icon_fallback,
+            "customIconPack": self.custom_icon_pack,
+            "importedIconPacks": self.imported_icon_packs,
+            "activeCustomIcon": self.active_custom_icon,
             "uiZoom": self.ui_zoom,
             "defaultZoom": self.default_zoom,
             "defaultTool": self.default_tool,
@@ -159,10 +212,19 @@ impl Settings {
             "pasteMode": self.paste_mode,
             "pasteAsk": self.paste_ask,
             "rounded": self.rounded,
+            "pronouncedBorders": self.pronounced_borders,
             "glass": self.glass,
             "titleTransparent": self.title_transparent,
-            "titleBlurred": self.title_blurred,
             "headerPreview": self.header_preview,
+            "shadows": self.shadows,
+            "perfMode": self.perf_mode,
+            "hoverFx": self.hover_fx,
+            "renderScale": self.render_scale,
+            "renderCtl": self.render_ctl,
+            "renderDefault": self.render_default,
+            "perfDone": self.perf_done,
+            "perfCut": self.perf_cut,
+            "perfReported": self.perf_reported,
             "zoomSmooth": self.zoom_smooth,
             "snapDiv": self.snap_div,
             "snapThresh": self.snap_thresh,
@@ -192,6 +254,8 @@ impl Settings {
     fn from_json(v: &Value) -> Settings {
         let d = Settings::default();
         let i = |k: &str, def: i64| v.get(k).and_then(|x| x.as_i64()).unwrap_or(def);
+        // ancienne version : le mode léger ne coupait que trois effets ; ils reviennent et la détection repart
+        let old_cut = if v.get("perfMode").is_none() && v.get("perfDone").and_then(|b| b.as_bool()) == Some(true) { v.get("perfCut").and_then(|c| c.as_i64()).unwrap_or(0) } else { 0 };
         Settings {
             accent: v
                 .get("accent")
@@ -207,12 +271,21 @@ impl Settings {
             default_secondary: i("defaultSecondary", 0xffffff).clamp(0, 0xffffff) as u32,
             toolbar_mode: i("toolbarMode", 0) as i32,
             wheel_scroll: v.get("wheelMode").and_then(|w| w.as_str()) == Some("scroll"),
-            history_max: i("historyMax", d.history_max as i64).clamp(5, 500) as usize,
+            // ancienne limite par projet (« historyMax ») ignorée : la limite est maintenant globale
+            history_max: i("historyTotal", d.history_max as i64).clamp(3, 200) as usize,
+            history_keep: i("historyKeep", d.history_keep as i64).clamp(1, 20) as usize,
             autosave_min: i("autosaveMin", 0).clamp(0, 120) as u32,
             language: i("language", 0) as i32,
             layout: i("layout", 0) as i32,
             layout_auto: v.get("layoutAuto").and_then(|b| b.as_bool()).unwrap_or(true),
-            theme_style: i("themeStyle", 0) as i32,
+            theme_style: i("themeStyle", 0).clamp(0, 1) as i32,
+            interface_theme: i("interfaceTheme", 0).clamp(0,3) as i32,
+            follow_interface_style: v.get("followInterfaceStyle").and_then(|b| b.as_bool()).unwrap_or(true),
+            icon_pack: i("iconPack", 0).clamp(0, 3) as i32,
+            missing_icon_fallback: i("missingIconFallback", 0).clamp(0, 1) as i32,
+            custom_icon_pack: v.get("customIconPack").cloned().unwrap_or(Value::Null),
+            imported_icon_packs: v.get("importedIconPacks").cloned().unwrap_or(Value::Array(Vec::new())),
+            active_custom_icon: i("activeCustomIcon", 0).max(0) as usize,
             ui_zoom: v.get("uiZoom").and_then(|z| z.as_f64()).unwrap_or(100.0).clamp(60.0, 200.0) as f32,
             default_zoom: i("defaultZoom", 0) as i32,
             default_tool: v.get("defaultTool").and_then(|t| t.as_str()).unwrap_or("tool-select").to_string(),
@@ -221,10 +294,23 @@ impl Settings {
             paste_mode: i("pasteMode", 0).clamp(0, 1) as i32,
             paste_ask: v.get("pasteAsk").and_then(|b| b.as_bool()).unwrap_or(true),
             rounded: v.get("rounded").and_then(|b| b.as_bool()).unwrap_or(true),
+            pronounced_borders: v.get("pronouncedBorders").and_then(|b| b.as_bool()).unwrap_or(false),
             glass: v.get("glass").and_then(|b| b.as_bool()).unwrap_or(true),
-            title_transparent: v.get("titleTransparent").and_then(|v| v.as_bool()).unwrap_or(true),
-            title_blurred: v.get("titleBlurred").and_then(|v| v.as_bool()).unwrap_or(false),
-            header_preview: v.get("headerPreview").and_then(|b| b.as_bool()).unwrap_or(true),
+            title_transparent: v.get("titleTransparent").and_then(|v| v.as_bool()).unwrap_or(true) || old_cut & 2 != 0,
+            header_preview: v.get("headerPreview").and_then(|b| b.as_bool()).unwrap_or(true) || old_cut & 4 != 0,
+            shadows: v.get("shadows").and_then(|b| b.as_bool()).unwrap_or(true) || old_cut & 1 != 0,
+            perf_mode: match v.get("perfMode").and_then(|m| m.as_i64()) {
+                Some(m) => m.clamp(0, 2) as i32,
+                None => if v.get("perfAuto").and_then(|b| b.as_bool()) == Some(false) { 2 } else { 0 },
+            },
+            hover_fx: v.get("hoverFx").and_then(|b| b.as_bool()).unwrap_or(true),
+            // l'ancienne valeur 2 floutait toute l'interface : plus jamais sous 1
+            render_scale: i("renderScale", 0).clamp(0, 1) as i32,
+            render_ctl: v.get("renderCtl").and_then(|b| b.as_bool()).unwrap_or(false),
+            render_default: i("renderDefault", 0).clamp(0, 3) as i32,
+            perf_done: v.get("perfMode").is_some() && v.get("perfDone").and_then(|b| b.as_bool()).unwrap_or(false),
+            perf_cut: if v.get("perfMode").is_some() { i("perfCut", 0).clamp(0, 63) as i32 } else { 0 },
+            perf_reported: v.get("perfReported").and_then(|b| b.as_bool()).unwrap_or(false),
             zoom_smooth: v.get("zoomSmooth").and_then(|b| b.as_bool()).unwrap_or(false),
             snap_div: i("snapDiv", 48).clamp(4, 128) as u32,
             snap_thresh: i("snapThresh", 50).clamp(1, 100) as u32,
@@ -296,6 +382,15 @@ impl Settings {
         Settings::path().and_then(|p| p.parent().map(|d| d.to_path_buf()))
     }
 
+    /// Efface toutes les données locales de MasterPaint pour l'utilisateur courant.
+    pub fn clear_storage() {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(dir) = Settings::data_dir() { let _ = std::fs::remove_dir_all(dir); }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) { let _ = storage.clear(); }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn path() -> Option<std::path::PathBuf> {
         let base = std::env::var_os("APPDATA")
             .map(std::path::PathBuf::from)
@@ -431,18 +526,40 @@ pub const SHORTCUTS: &[(&str, &str)] = &[
 mod display_preferences_tests {
     use super::*;
     #[test]
-    fn independent_title_switch_defaults_and_round_trip() {
-        for old in [json!({}), json!({"glass": true, "titleTranslucency": 35, "titleBlur": 12})] {
-            let cfg = Settings::from_json(&old);
-            assert_eq!((cfg.title_transparent, cfg.title_blurred), (true, false));
-        }
-        for (transparent, blurred) in [(false, true), (true, false), (true, true), (false, false)] {
+    fn title_transparency_round_trip_and_obsolete_blur_ignored() {
+        for transparent in [false, true] {
             let mut cfg = Settings::default();
             cfg.title_transparent = transparent;
-            cfg.title_blurred = blurred;
-            let read = Settings::from_json(&cfg.to_json());
-            assert_eq!((read.title_transparent, read.title_blurred), (transparent, blurred));
+            let mut saved = cfg.to_json();
+            saved["titleBlurred"] = json!(true);
+            let read = Settings::from_json(&saved);
+            assert_eq!(read.title_transparent, transparent);
+            assert!(read.to_json().get("titleBlurred").is_none());
         }
+    }
+    #[test]
+    fn old_light_mode_is_undone_and_new_settings_round_trip() {
+        let mut old = Settings::default().to_json();
+        for (k, b) in [("shadows", false), ("titleTransparent", false), ("headerPreview", false), ("perfDone", true)] {
+            old[k] = json!(b);
+        }
+        old["perfCut"] = json!(7);
+        old.as_object_mut().unwrap().remove("perfMode");
+        let read = Settings::from_json(&old);
+        assert!(read.shadows && read.title_transparent && read.header_preview && !read.perf_done);
+        let mut cfg = Settings::default();
+        (cfg.perf_mode, cfg.render_scale, cfg.render_ctl, cfg.render_default, cfg.hover_fx, cfg.perf_done, cfg.perf_cut) = (1, 1, true, 2, false, true, 24);
+        let read = Settings::from_json(&cfg.to_json());
+        assert_eq!((read.perf_mode, read.render_scale, read.render_ctl, read.render_default, read.hover_fx, read.perf_done, read.perf_cut), (1, 1, true, 2, false, true, 24));
+        // désactivé par défaut ; l'ancienne résolution « Réduite » ne floute plus l'interface
+        assert!(!Settings::default().render_ctl);
+        let mut blurry = Settings::default().to_json();
+        blurry["renderScale"] = json!(2);
+        assert_eq!(Settings::from_json(&blurry).render_scale, 1);
+        let mut off = Settings::default().to_json();
+        off.as_object_mut().unwrap().remove("perfMode");
+        off["perfAuto"] = json!(false);
+        assert_eq!(Settings::from_json(&off).perf_mode, 2);
     }
     #[test]
     fn colors_round_trip_and_legacy_defaults() {

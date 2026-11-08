@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 # MasterPaint — traduction de l'interface : Português (pt).
 # Fichier tenu à jour par tools/gen_lang.py : les traductions écrites ici sont gardées.
 # Traductions initialisées automatiquement et corrigées pour les commandes principales ; voir lang/README.md.
@@ -179,1943 +180,2123 @@ msgstr "Cadência: 1 desenho a cada 2 fotogramas"
 msgid "Cadence : animer sur 3"
 msgstr "Cadência: 1 desenho a cada 3 fotogramas"
 
-#: ui/app.slint:328
+#: ui/app.slint:340
 msgid "Interface : mode téléphone (menu ☰, palettes en colonnes)"
 msgstr "Interface: modo telefone (menu ☰, paletas em colunas)"
 
-#: ui/app.slint:329
+#: ui/app.slint:341
 msgid "Palettes : ancrage fixe (style Adobe)"
 msgstr "Paletas: âncora fixa (estilo Adobe)"
 
-#: ui/app.slint:329
+#: ui/app.slint:341
 msgid "Palettes volantes (Paint.NET)"
 msgstr "Paletas voadoras (Paint.NET)"
 
-#: ui/app.slint:365
+#: ui/app.slint:377
 msgid " — Pixelliser le calque pour l'utiliser"
 msgstr " — Rasterize a camada para usá-la"
 
-#: ui/app.slint:365
+#: ui/app.slint:377
 msgid " — indisponible sur ce calque"
 msgstr " — não disponível nesta camada"
 
-#: ui/app.slint:391
+#: ui/app.slint:406
 msgid "calque texte"
 msgstr "camada de texto"
 
-#: ui/app.slint:391
+#: ui/app.slint:406
 msgid "verrouillé"
 msgstr "bloqueado"
 
-#: ui/app.slint:391
+#: ui/app.slint:406
 msgid "dossier"
 msgstr "pasta"
 
-#: ui/app.slint:392
+#: ui/app.slint:407
 msgid "Pixelliser le calque pour utiliser cet effet"
 msgstr "Rasterize a camada para usar este efeito"
 
-#: ui/app.slint:393
+#: ui/app.slint:408
 msgid "Déverrouiller le calque pour utiliser cet effet"
 msgstr "Desbloqueie a camada para usar este efeito"
 
-#: ui/app.slint:394
+#: ui/app.slint:409
 msgid "Choisir un calque (pas un dossier) pour utiliser cet effet"
 msgstr "Escolha uma camada (não uma pasta) para usar este efeito"
 
-#: ui/app.slint:595
+#: ui/app.slint:613
 msgid "Sélection"
 msgstr "Seleção"
 
-#: ui/app.slint:656
+#: ui/app.slint:674
 msgid "Édition"
 msgstr "Editar"
 
-#: ui/app.slint:681
+#: ui/app.slint:699
 msgid "Ajustements"
 msgstr "Ajustes"
 
-#: ui/app.slint:706
+#: ui/app.slint:732
+msgid "Résolution de rendu de la toile"
+msgstr "Resolução de renderização da tela"
+
+#: ui/app.slint:735
+msgid "Toile rendue ÷{} : plus fluide, l'enregistrement reste en pleine résolution. Clic : réduction suivante."
+msgstr "Tela renderizada ÷{}: mais fluida, a gravação mantém a resolução total. Clique: redução seguinte."
+
+#: ui/app.slint:736
+msgid "Résolution de rendu de la toile : pleine. Clic : ÷2, ÷4 ou ÷8 selon la taille de l'image. L'enregistrement reste en pleine résolution."
+msgstr "Resolução de renderização da tela: total. Clique: ÷2, ÷4 ou ÷8 conforme o tamanho da imagem. A gravação mantém a resolução total."
+
+#: ui/app.slint:763
+msgid "Rendre maintenant"
+msgstr "Renderizar agora"
+
+#: ui/app.slint:766
+msgid "Rendu complet affiché, jusqu'à la prochaine modification."
+msgstr "Renderização completa visível até à próxima alteração."
+
+#: ui/app.slint:766
+msgid "Rendre maintenant : affiche l'image en pleine résolution, jusqu'à la prochaine modification."
+msgstr "Renderizar agora: mostra a imagem em resolução total até à próxima alteração."
+
+#: ui/app.slint:771
 msgid "Affichage"
 msgstr "Ver"
 
-#: ui/app.slint:752
+#: ui/app.slint:821
 msgid "Calque"
 msgstr "Camada"
 
-#: ui/app.slint:762
+#: ui/app.slint:831
 msgid "Contigu"
 msgstr "Contíguo"
 
-#: ui/app.slint:779
+#: ui/app.slint:848
 msgid "Tol."
 msgstr "Tol."
 
-#: ui/app.slint:816
+#: ui/app.slint:885
 msgid "Force"
 msgstr "Força"
 
-#: ui/app.slint:817
+#: ui/app.slint:886
 msgid "Force du lasso magnétique : 0 % = lasso libre, 100 % = colle fort aux bords"
 msgstr "Força do laço magnético: 0% = laço livre, 100% = gruda forte nas bordas"
 
-#: ui/app.slint:828
+#: ui/app.slint:897
 msgid "Ancres"
 msgstr "Âncoras"
 
-#: ui/app.slint:829
+#: ui/app.slint:898
 msgid "Écart entre deux ancres automatiques (pixels) : plus petit = tracé plus fidèle"
 msgstr "Distância entre duas âncoras automáticas (pixels): menor = desenho mais fiel"
 
-#: ui/app.slint:859
+#: ui/app.slint:928
 msgid "Taille / trait"
 msgstr "Tamanho/linha"
 
-#: ui/app.slint:864
+#: ui/app.slint:933
 msgid "Taille"
 msgstr "Tamanho"
 
-#: ui/app.slint:871
+#: ui/app.slint:940
 msgid "Dureté"
 msgstr "Dureza"
 
-#: ui/app.slint:900
+#: ui/app.slint:969
 msgid "Symétrie"
 msgstr "Simetria"
 
-#: ui/app.slint:906
+#: ui/app.slint:975
 msgid "Sym. X"
 msgstr "Sim. X"
 
-#: ui/app.slint:916
+#: ui/app.slint:985
 msgid "Sym. Y"
 msgstr "Sim. Y"
 
-#: ui/app.slint:953
+#: ui/app.slint:1022
 msgid "Crayon"
 msgstr "Lápis"
 
-#: ui/app.slint:953
+#: ui/app.slint:1022
 msgid "Pinceau"
 msgstr "Pincel"
 
-#: ui/app.slint:957
+#: ui/app.slint:1026
 msgid "Rond"
 msgstr "Rodada"
 
-#: ui/app.slint:957
+#: ui/app.slint:1026
 msgid "Doux"
 msgstr "Suave"
 
-#: ui/app.slint:969
+#: ui/app.slint:1038
 msgid "Spray"
 msgstr "Pulverizar"
 
-#: ui/app.slint:969
+#: ui/app.slint:1038
 msgid "Carré"
 msgstr "Quadrado"
 
-#: ui/app.slint:984
+#: ui/app.slint:1053
 msgid "Forme"
 msgstr "Forma"
 
-#: ui/app.slint:991
+#: ui/app.slint:1060
 msgid "Rectangle"
 msgstr "Retângulo"
 
-#: ui/app.slint:992
+#: ui/app.slint:1061
 msgid "Rectangle à coins arrondis (rayon réglable)"
 msgstr "Retângulo arredondado (raio ajustável)"
 
-#: ui/app.slint:993
+#: ui/app.slint:1062
 msgid "Ellipse / cercle"
 msgstr "Elipse / círculo"
 
-#: ui/app.slint:994
+#: ui/app.slint:1063
 msgid "Polygone (nombre de côtés réglable : 3 = triangle)"
 msgstr "Polígono (número de lados ajustável: 3 = triângulo)"
 
-#: ui/app.slint:995
+#: ui/app.slint:1064
 msgid "Étoile (nombre de branches réglable)"
 msgstr "Estrela (número de pontas ajustável)"
 
-#: ui/app.slint:996
+#: ui/app.slint:1065
 msgid "Triangle rectangle"
 msgstr "Triângulo retângulo"
 
-#: ui/app.slint:997
+#: ui/app.slint:1066
 msgid "Losange"
 msgstr "Diamante"
 
-#: ui/app.slint:998
+#: ui/app.slint:1067
 msgid "Trapèze"
 msgstr "Trapézio"
 
-#: ui/app.slint:999
+#: ui/app.slint:1068
 msgid "Parallélogramme"
 msgstr "Paralelogramo"
 
-#: ui/app.slint:1000
+#: ui/app.slint:1069
 msgid "Flèche"
 msgstr "Seta"
 
-#: ui/app.slint:1001
+#: ui/app.slint:1070
 msgid "Croix"
 msgstr "Cruz"
 
-#: ui/app.slint:1002
+#: ui/app.slint:1071
 msgid "Cœur"
 msgstr "Coração"
 
-#: ui/app.slint:1003
+#: ui/app.slint:1072
 msgid "Bulle rectangulaire"
 msgstr "Balão de fala retangular"
 
-#: ui/app.slint:1004
+#: ui/app.slint:1073
 msgid "Bulle ovale"
 msgstr "Balão de fala oval"
 
-#: ui/app.slint:1029
+#: ui/app.slint:1098
 msgid "Calque SVG · coins"
 msgstr ""
 
-#: ui/app.slint:1029
+#: ui/app.slint:1098
 msgid "Calque SVG · polygone"
 msgstr ""
 
-#: ui/app.slint:1030
+#: ui/app.slint:1099
 msgid "Calque SVG · étoile"
 msgstr ""
 
-#: ui/app.slint:1030
+#: ui/app.slint:1099
+msgid "Calque SVG · trait"
+msgstr ""
+
+#: ui/app.slint:1099
 msgid "Calque SVG"
 msgstr "Camada SVG"
 
-#: ui/app.slint:1041
+#: ui/app.slint:1110
 msgid "Modifiable"
 msgstr "Editável"
 
-#: ui/app.slint:1043
+#: ui/app.slint:1112
 msgid "Activé : chaque texte reste modifiable sur un calque SVG (recliquez-le avec l'outil Texte, déplacez-le, effets non destructifs). Cliquer pour peindre le texte en pixels dans le calque actif."
 msgstr "Ativado: cada texto continua editável numa camada SVG (clique novamente com Texto, mova-o e aplique efeitos não destrutivos). Clique para pintar o texto em píxeis na camada ativa."
 
-#: ui/app.slint:1044
+#: ui/app.slint:1113
 msgid "Désactivé : le texte est peint en pixels dans le calque actif. Cliquer pour garder les textes modifiables (calque SVG)."
 msgstr "Desativado: o texto é pintado em píxeis na camada ativa. Clique para manter o texto editável (camada SVG)."
 
-#: ui/app.slint:1045
+#: ui/app.slint:1114
 msgid "Activé : chaque forme reste un objet modifiable sur un calque SVG (déplacer, recolorer, exporter en SVG). Cliquer pour tracer en pixels dans le calque actif."
 msgstr "Ativado: cada forma continua a ser um objeto editável numa camada SVG (mover, recolorir, exportar em SVG). Clique para desenhar em píxeis na camada ativa."
 
-#: ui/app.slint:1046
+#: ui/app.slint:1115
 msgid "Désactivé : la forme est tracée en pixels dans le calque actif. Cliquer pour garder les formes modifiables (calque SVG)."
 msgstr "Desativado: as formas são desenhadas em píxeis na camada ativa. Clique para manter as formas editáveis (camada SVG)."
 
-#: ui/app.slint:1060
+#: ui/app.slint:1129
 msgid "Rayon"
 msgstr "Raio"
 
-#: ui/app.slint:1069
+#: ui/app.slint:1138
 msgid "Côtés"
 msgstr "Lados"
 
-#: ui/app.slint:1077
-msgid "Branches"
-msgstr "Pontas"
-
-#: ui/app.slint:1090
-msgid "Coins"
-msgstr "Cantos"
-
-#: ui/app.slint:1090
-msgid "Polygone"
-msgstr "Polígono"
-
-#: ui/app.slint:1090
-msgid "Étoile"
-msgstr "Estrela"
-
-#: ui/app.slint:1143
-msgid "Droit"
-msgstr ""
-
-#: ui/app.slint:1145
-msgid "Flèche pleine"
-msgstr ""
-
 #: ui/app.slint:1146
-msgid "Flèche vide"
-msgstr ""
-
-#: ui/app.slint:1149
-msgid "Continu"
-msgstr ""
-
-#: ui/app.slint:1149
-msgid "Tirets"
-msgstr ""
-
-#: ui/app.slint:1149
-msgid "Pointillés"
-msgstr ""
-
-#: ui/app.slint:1234
-msgid "Ligne"
-msgstr "Linha"
-
-#: ui/app.slint:1241
-msgid "Droite"
-msgstr "Certo"
-
-#: ui/app.slint:1241
-msgid "Courbe"
-msgstr ""
-
-#: ui/app.slint:1244
-msgid "Ligne droite entre deux points"
-msgstr ""
-
-#: ui/app.slint:1244
-msgid "Courbe : après le tracé, deux points intermédiaires permettent de la courber"
-msgstr ""
-
-#: ui/app.slint:1252
-msgid "Début de ligne"
-msgstr ""
-
-#: ui/app.slint:1253
-msgid "Fin de ligne"
-msgstr ""
-
-#: ui/app.slint:1254
-msgid "Style du trait"
-msgstr ""
-
-#: ui/app.slint:1274
-msgid "Trait"
-msgstr "Linha"
-
-#: ui/app.slint:1283
-msgid "Contour"
-msgstr "Esboço"
-
-#: ui/app.slint:1292
-msgid "Plein"
-msgstr "Completo"
-
-#: ui/app.slint:1301
-msgid "Les deux"
-msgstr "Ambos"
-
-#: ui/app.slint:1309
 msgid "Épaisseur"
 msgstr "Espessura"
 
-#: ui/app.slint:1363
+#: ui/app.slint:1154
+msgid "Branches"
+msgstr "Pontas"
+
+#: ui/app.slint:1167
+msgid "Coins"
+msgstr "Cantos"
+
+#: ui/app.slint:1167
+msgid "Polygone"
+msgstr "Polígono"
+
+#: ui/app.slint:1167
+msgid "Étoile"
+msgstr "Estrela"
+
+#: ui/app.slint:1220
+msgid "Droit"
+msgstr ""
+
+#: ui/app.slint:1222
+msgid "Flèche pleine"
+msgstr ""
+
+#: ui/app.slint:1223
+msgid "Flèche vide"
+msgstr ""
+
+#: ui/app.slint:1226
+msgid "Continu"
+msgstr ""
+
+#: ui/app.slint:1226
+msgid "Tirets"
+msgstr ""
+
+#: ui/app.slint:1226
+msgid "Pointillés"
+msgstr ""
+
+#: ui/app.slint:1311
+msgid "Ligne"
+msgstr "Linha"
+
+#: ui/app.slint:1318
+msgid "Droite"
+msgstr "Certo"
+
+#: ui/app.slint:1318
+msgid "Courbe"
+msgstr ""
+
+#: ui/app.slint:1321
+msgid "Ligne droite entre deux points"
+msgstr ""
+
+#: ui/app.slint:1321
+msgid "Courbe : après le tracé, deux points intermédiaires permettent de la courber"
+msgstr ""
+
+#: ui/app.slint:1330
+msgid "Début de ligne"
+msgstr ""
+
+#: ui/app.slint:1331
+msgid "Style du trait"
+msgstr ""
+
+#: ui/app.slint:1332
+msgid "Fin de ligne"
+msgstr ""
+
+#: ui/app.slint:1352
+msgid "Trait"
+msgstr "Linha"
+
+#: ui/app.slint:1361
+msgid "Contour"
+msgstr "Esboço"
+
+#: ui/app.slint:1370
+msgid "Plein"
+msgstr "Completo"
+
+#: ui/app.slint:1379
+msgid "Les deux"
+msgstr "Ambos"
+
+#: ui/app.slint:1441
 msgid "Texte"
 msgstr "Texto"
 
-#: ui/app.slint:1418
+#: ui/app.slint:1496
 msgid "Paragraphe"
 msgstr "Parágrafo"
 
-#: ui/app.slint:1425
+#: ui/app.slint:1503
 msgid "Aligner le texte à gauche"
 msgstr "Alinhar o texto à esquerda"
 
-#: ui/app.slint:1425
+#: ui/app.slint:1503
 msgid "Centrer le texte"
 msgstr "Centralize o texto"
 
-#: ui/app.slint:1425
+#: ui/app.slint:1503
 msgid "Aligner le texte à droite"
 msgstr "Alinhar o texto à direita"
 
-#: ui/app.slint:1439
+#: ui/app.slint:1517
 msgid "Lissé"
 msgstr "Suavizado"
 
-#: ui/app.slint:1451
+#: ui/app.slint:1531
 msgid "Dégradé"
 msgstr "Gradiente"
 
-#: ui/app.slint:1455
+#: ui/app.slint:1535
 msgid "Linéaire"
 msgstr "linear"
 
-#: ui/app.slint:1455
+#: ui/app.slint:1535
 msgid "Radial"
 msgstr "radial"
 
-#: ui/app.slint:1467
+#: ui/app.slint:1547
 msgid "Conique"
 msgstr "Cônico"
 
-#: ui/app.slint:1499
-msgid "Proportions conservées (cliquer pour délier)"
-msgstr "Proporções bloqueadas (clique para desbloquear)"
-
-#: ui/app.slint:1499
-msgid "Conserver les proportions"
-msgstr "Mantenha proporções"
-
-#: ui/app.slint:1526
-msgid "Choisir une couleur"
-msgstr "Escolha uma cor"
-
-#: ui/app.slint:1529
-msgid "Code couleur hexadécimal (RVB)."
-msgstr "Código de cores hexadecimal (RGB)."
-
-#: ui/app.slint:1612
-msgid "Non"
-msgstr "Não"
-
-#: ui/app.slint:1612
-msgid "Oui"
-msgstr "Sim"
-
-#: ui/app.slint:1637
-msgid "MasterPaint"
-msgstr "MasterPaint"
-
-#: ui/app.slint:1737
-msgid "Sans titre 1"
-msgstr "Sem título 1"
-
-#: ui/app.slint:1749
-msgid "Sélection rectangulaire"
-msgstr "Seleção retangular"
-
-#: ui/app.slint:1755
-msgid "0, 0 px"
-msgstr "0,0 pixels"
-
-#: ui/app.slint:1918
-msgid " — indisponible sur un calque SVG (Calques › Pixelliser le calque)"
-msgstr ""
-
-#: ui/app.slint:1919
-msgid " — calque verrouillé (cliquer le cadenas pour le déverrouiller)"
-msgstr " — camada bloqueada (clique no cadeado para desbloqueá-lo)"
-
-#: ui/app.slint:1920
-msgid " — choisir un calque (pas un dossier)"
-msgstr " — escolha uma camada (não uma pasta)"
-
-#: ui/app.slint:1933
-msgid "Pixel"
-msgstr "Pixel"
-
-#: ui/app.slint:2447
-msgid "Nouveau…"
-msgstr "Novo…"
-
-#: ui/app.slint:2449
-msgid "Ouvrir"
-msgstr "Abrir"
-
-#: ui/app.slint:2451
-msgid "Exporter…"
-msgstr "Exportar…"
-
-#: ui/app.slint:2453
-msgid "Galerie de Filtres…"
-msgstr "Galeria de filtros…"
-
-#: ui/app.slint:2455
-msgid "Recadrage"
-msgstr "Recortar"
-
-#: ui/app.slint:2457
-msgid "Fermer le projet actif…"
-msgstr "Fechar projeto ativo…"
-
-#: ui/app.slint:2459
-msgid "Luminosité / Contraste…"
-msgstr "Brilho / Contraste…"
-
-#: ui/app.slint:2461
-msgid "Teinte / Saturation…"
-msgstr "Matiz / Saturação…"
-
-#: ui/app.slint:2463
-msgid "Inverser les couleurs"
-msgstr "Inverter cores"
-
-#: ui/app.slint:2465
-msgid "Noir et blanc"
-msgstr "Preto e branco"
-
-#: ui/app.slint:2601
-msgid "Signaler un bug"
-msgstr "Reportar um bug"
-
-#: ui/app.slint:2808
-msgid "Info"
-msgstr "Informações"
-
-#: ui/app.slint:2839
-msgid "Télécharger l'application"
-msgstr "Baixe o aplicativo"
-
-#: ui/app.slint:2913
-msgid "Outil"
-msgstr "Ferramenta"
-
-#: ui/app.slint:2993
-msgid "Baguette"
-msgstr "Varinha"
-
-#: ui/app.slint:2997
-msgid "Lasso magnétique"
-msgstr "Laço magnético"
-
-#: ui/app.slint:3001
+#: ui/app.slint:1564
 msgid "Remplissage"
 msgstr "Preenchimento"
 
-#: ui/app.slint:3003
+#: ui/app.slint:1575
+msgid "Uni"
+msgstr ""
+
+#: ui/app.slint:1616
+msgid "Angle"
+msgstr "Ângulo"
+
+#: ui/app.slint:1630
+msgid "Intelligent"
+msgstr ""
+
+#: ui/app.slint:1640
+msgid "Simple"
+msgstr ""
+
+#: ui/app.slint:1666
+msgid "Proportions conservées (cliquer pour délier)"
+msgstr "Proporções bloqueadas (clique para desbloquear)"
+
+#: ui/app.slint:1666
+msgid "Conserver les proportions"
+msgstr "Mantenha proporções"
+
+#: ui/app.slint:1693
+msgid "Choisir une couleur"
+msgstr "Escolha uma cor"
+
+#: ui/app.slint:1696
+msgid "Code couleur hexadécimal (RVB)."
+msgstr "Código de cores hexadecimal (RGB)."
+
+#: ui/app.slint:1779
+msgid "Non"
+msgstr "Não"
+
+#: ui/app.slint:1779
+msgid "Oui"
+msgstr "Sim"
+
+#: ui/app.slint:1811
+msgid "MasterPaint"
+msgstr "MasterPaint"
+
+#: ui/app.slint:1954
+msgid "Sans titre 1"
+msgstr "Sem título 1"
+
+#: ui/app.slint:1966
+msgid "Sélection rectangulaire"
+msgstr "Seleção retangular"
+
+#: ui/app.slint:1972
+msgid "0, 0 px"
+msgstr "0,0 pixels"
+
+#: ui/app.slint:2176
+msgid " — indisponible sur un calque SVG (Calques › Pixelliser le calque)"
+msgstr ""
+
+#: ui/app.slint:2177
+msgid " — calque verrouillé (cliquer le cadenas pour le déverrouiller)"
+msgstr " — camada bloqueada (clique no cadeado para desbloqueá-lo)"
+
+#: ui/app.slint:2178
+msgid " — choisir un calque (pas un dossier)"
+msgstr " — escolha uma camada (não uma pasta)"
+
+#: ui/app.slint:2191
+msgid "Pixel"
+msgstr "Pixel"
+
+#: ui/app.slint:2742
+msgid "Nouveau…"
+msgstr "Novo…"
+
+#: ui/app.slint:2744
+msgid "Ouvrir"
+msgstr "Abrir"
+
+#: ui/app.slint:2746
+msgid "Exporter…"
+msgstr "Exportar…"
+
+#: ui/app.slint:2748
+msgid "Galerie de Filtres…"
+msgstr "Galeria de filtros…"
+
+#: ui/app.slint:2750
+msgid "Recadrage"
+msgstr "Recortar"
+
+#: ui/app.slint:2752
+msgid "Fermer le projet actif…"
+msgstr "Fechar projeto ativo…"
+
+#: ui/app.slint:2754
+msgid "Luminosité / Contraste…"
+msgstr "Brilho / Contraste…"
+
+#: ui/app.slint:2756
+msgid "Teinte / Saturation…"
+msgstr "Matiz / Saturação…"
+
+#: ui/app.slint:2758
+msgid "Inverser les couleurs"
+msgstr "Inverter cores"
+
+#: ui/app.slint:2760
+msgid "Noir et blanc"
+msgstr "Preto e branco"
+
+#: ui/app.slint:2923
+msgid "Signaler un bug"
+msgstr "Reportar um bug"
+
+#: ui/app.slint:3136
+msgid "Projets précédents"
+msgstr "Projetos anteriores"
+
+#: ui/app.slint:3136
+msgid "Projets suivants"
+msgstr "Projetos seguintes"
+
+#: ui/app.slint:3156
+msgid "Projets ouverts"
+msgstr "Projetos abertos"
+
+#: ui/app.slint:3208
+msgid "Info"
+msgstr "Informações"
+
+#: ui/app.slint:3239
+msgid "Télécharger l'application"
+msgstr "Baixe o aplicativo"
+
+#: ui/app.slint:3314
+msgid "Outil"
+msgstr "Ferramenta"
+
+#: ui/app.slint:3394
+msgid "Baguette"
+msgstr "Varinha"
+
+#: ui/app.slint:3398
+msgid "Lasso magnétique"
+msgstr "Laço magnético"
+
+#: ui/app.slint:3404
 msgid "Global"
 msgstr "Geral"
 
-#: ui/app.slint:3017
+#: ui/app.slint:3418
 msgid "Couleur prélevée"
 msgstr "Cor amostrada"
 
-#: ui/app.slint:3034
+#: ui/app.slint:3435
 msgid "HEX"
 msgstr "HEX"
 
-#: ui/app.slint:3036
+#: ui/app.slint:3437
 msgid "  RVB "
 msgstr "  RGB "
 
-#: ui/app.slint:3040
+#: ui/app.slint:3441
 msgid "RVB"
 msgstr "RGB"
 
-#: ui/app.slint:3045
+#: ui/app.slint:3446
 msgid "RAL"
 msgstr "RAL"
 
-#: ui/app.slint:3091
+#: ui/app.slint:3498
 msgid "Image"
 msgstr "Imagem"
 
-#: ui/app.slint:3097
+#: ui/app.slint:3504
 msgid "Recadrer…"
 msgstr "Reestruturar…"
 
-#: ui/app.slint:3098
+#: ui/app.slint:3505
 msgid "Recadrer l'image (poignées sur la toile)"
 msgstr "Cortar imagem (alças na tela)"
 
-#: ui/app.slint:3100
+#: ui/app.slint:3507
 msgid "Recadrer"
 msgstr "Cortar"
 
-#: ui/app.slint:3106
+#: ui/app.slint:3513
 msgid "Pivoter l'image de 90° vers la gauche"
 msgstr "Girar a imagem 90° para a esquerda"
 
-#: ui/app.slint:3107
+#: ui/app.slint:3514
 msgid "Pivoter l'image de 90° vers la droite"
 msgstr "Girar a imagem 90° para a direita"
 
-#: ui/app.slint:3108
+#: ui/app.slint:3515
 msgid "Retourner l'image horizontalement (miroir)"
 msgstr "Virar a imagem horizontalmente (espelho)"
 
-#: ui/app.slint:3109
+#: ui/app.slint:3516
 msgid "Retourner l'image verticalement (miroir)"
 msgstr "Virar a imagem verticalmente (espelho)"
 
-#: ui/app.slint:3240
+#: ui/app.slint:3648
 msgid "Document : "
 msgstr "Documento: "
 
-#: ui/app.slint:3240
+#: ui/app.slint:3648
 msgid " × "
 msgstr " × "
 
-#: ui/app.slint:3240
+#: ui/app.slint:3648
 msgid " px"
 msgstr " pixels"
 
-#: ui/app.slint:3245
+#: ui/app.slint:3653
 msgid "Zoom : "
 msgstr "Zoom: "
 
-#: ui/app.slint:3250
+#: ui/app.slint:3658
 msgid "Mode : "
 msgstr "Modo: "
 
-#: ui/app.slint:3257
+#: ui/app.slint:3665
 msgid "MasterPaint par"
 msgstr "MasterPaint por"
 
-#: ui/app.slint:3262
+#: ui/app.slint:3670
 msgid "Polocrafting 367"
 msgstr "Polocrafting 367"
 
-#: ui/app.slint:3300
+#: ui/app.slint:3707
 msgid "Masque α — blanc = visible, noir = masqué (niveaux de gris)"
 msgstr "máscara α — branco = visível, preto = oculto (tons de cinza)"
 
-#: ui/app.slint:3762
+#: ui/app.slint:4198
 msgid "Aucun projet ouvert"
 msgstr "Nenhum projeto aberto"
 
-#: ui/app.slint:3769
+#: ui/app.slint:4205
 msgid "Créez une image, ouvrez un fichier ou collez une image (Ctrl+V)."
 msgstr "Crie uma imagem, abra um ficheiro ou cole uma imagem (Ctrl+V)."
 
-#: ui/app.slint:3778
+#: ui/app.slint:4214
 msgid "Nouvelle image…"
 msgstr "Nova imagem…"
 
-#: ui/app.slint:3783
+#: ui/app.slint:4219
 msgid "Ouvrir…"
 msgstr "Abrir…"
 
-#: ui/app.slint:3828
+#: ui/app.slint:4264
 msgid "Frise"
 msgstr "Linha de tempo"
 
-#: ui/app.slint:3853
+#: ui/app.slint:4289
 msgid "Outils"
 msgstr "Ferramentas"
 
-#: ui/app.slint:3930
+#: ui/app.slint:4364
 msgid "Historique"
 msgstr "História"
 
-#: ui/app.slint:4016
+#: ui/app.slint:4446
 msgid "Couleurs"
 msgstr "Cores"
 
-#: ui/app.slint:4183
+#: ui/app.slint:4610
 msgid "Calques"
 msgstr "Camadas"
 
-#: ui/app.slint:4267
+#: ui/app.slint:4690
 msgid "Afficher / masquer le calque"
 msgstr "Mostrar/ocultar camada"
 
-#: ui/app.slint:4360
+#: ui/app.slint:4783
 msgid "Calque verrouillé — cliquer pour le déverrouiller"
 msgstr "Camada bloqueada – clique para desbloqueá-la"
 
-#: ui/app.slint:4360
+#: ui/app.slint:4783
 msgid "Verrouiller le calque (ni dessin, ni effet, ni déplacement)"
 msgstr "Bloqueie a camada (sem desenho, sem efeitos, sem movimento)"
 
-#: ui/app.slint:4368
+#: ui/app.slint:4791
 msgid "Effets du calque texte (non destructifs) : activer, ordre, supprimer"
 msgstr "Efeitos de camada de texto (não destrutivos): ativar, ordenar, excluir"
 
-#: ui/app.slint:4376
+#: ui/app.slint:4799
 msgid "Masque alpha (actif) — éditer"
 msgstr "Máscara alfa (ativa) — editar"
 
-#: ui/app.slint:4376
+#: ui/app.slint:4799
 msgid "Créer / ouvrir le masque alpha"
 msgstr "Criar/abrir máscara alfa"
 
-#: ui/app.slint:4383
+#: ui/app.slint:4806
 msgid "Supprimer le masque α"
 msgstr "Remover máscara α"
 
-#: ui/app.slint:4390
+#: ui/app.slint:4813
 msgid "Effets appliqués : ordre, puissance et réglages"
 msgstr "Efeitos aplicados: ordem, intensidade e definições"
 
-#: ui/app.slint:4398
+#: ui/app.slint:4821
 msgid "Masque α actif : retirez-le pour utiliser le filtre dynamique (ƒ)."
 msgstr "Máscara α ativa: remova-a para usar o filtro dinâmico (ƒ)."
 
-#: ui/app.slint:4398
+#: ui/app.slint:4821
 msgid "Activer ou désactiver le calque de filtres dynamiques. Ajoutez et réglez ses effets depuis le menu Effets."
 msgstr "Ativa ou desativa esta camada de filtros dinâmicos. Adiciona e ajusta os efeitos no menu Efeitos."
 
-#: ui/app.slint:4415
+#: ui/app.slint:4838
 msgid "Fusion"
 msgstr "Mesclagem"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Normal"
 msgstr "Normais"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Multiplier"
 msgstr "Multiplicar"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Écran"
 msgstr "Tela"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Superposition"
 msgstr "Sobreposição"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Lumière douce"
 msgstr "Luz suave"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Lumière dure"
 msgstr "Luz forte"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Assombrir"
 msgstr "Escurecer"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Éclaircir"
 msgstr "Clarear"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Lumière crue"
 msgstr "Subexposição de cores"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Densité couleur +"
 msgstr "Superexposição de cores"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Différence"
 msgstr "Diferença"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Exclusion"
 msgstr "Exclusão"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Teinte"
 msgstr "Matiz"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Saturation"
 msgstr "Saturação"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Couleur"
 msgstr "Cor"
 
-#: ui/app.slint:4425
+#: ui/app.slint:4848
 msgid "Luminosité"
 msgstr "Brilho"
 
-#: ui/app.slint:4426
+#: ui/app.slint:4849
 msgid "Définit comment les couleurs du calque se mélangent avec les calques situés dessous."
 msgstr "Define como as cores da camada se misturam com as camadas abaixo."
 
-#: ui/app.slint:4436
+#: ui/app.slint:4859
 msgid "Opacité"
 msgstr "Opacidade"
 
-#: ui/app.slint:4445
+#: ui/app.slint:4868
 msgid "Règle la transparence du calque entier, sans modifier ses pixels."
 msgstr "Ajusta a transparência de toda a camada, sem alterar seus pixels."
 
-#: ui/app.slint:4474
+#: ui/app.slint:4897
 msgid "Ajouter un calque"
 msgstr "Adicionar uma camada"
 
-#: ui/app.slint:4475
+#: ui/app.slint:4898
 msgid "Supprimer le calque"
 msgstr "Excluir camada"
 
-#: ui/app.slint:4476
+#: ui/app.slint:4899
 msgid "Nouveau dossier"
 msgstr "Nova pasta"
 
-#: ui/app.slint:4477
+#: ui/app.slint:4900
 msgid "Dupliquer le calque"
 msgstr "Camada duplicada"
 
-#: ui/app.slint:4478
+#: ui/app.slint:4901
 msgid "Fusionner le calque"
 msgstr "Mesclar camada"
 
-#: ui/app.slint:4479
+#: ui/app.slint:4902
 msgid "Monter le calque"
 msgstr "Mover camada para cima"
 
-#: ui/app.slint:4480
+#: ui/app.slint:4903
 msgid "Descendre le calque"
 msgstr "Mover camada para baixo"
 
-#: ui/app.slint:4564
+#: ui/app.slint:4987
 msgid "Effets du calque texte"
 msgstr "Efeitos de camada de texto"
 
-#: ui/app.slint:4577
+#: ui/app.slint:5000
 msgid "Appliqués dans l'ordre, de haut en bas. Un effet du menu choisi sur ce calque s'ajoute ici."
 msgstr "Aplicado em ordem, de cima para baixo. Um efeito do menu escolhido nesta camada é adicionado aqui."
 
-#: ui/app.slint:4595
+#: ui/app.slint:5018
 msgid "Activer / désactiver l'effet"
 msgstr "Ativar/desativar efeito"
 
-#: ui/app.slint:4617
+#: ui/app.slint:5040
 msgid "Plus tôt dans la pile"
 msgstr "Anteriormente na pilha"
 
-#: ui/app.slint:4625
+#: ui/app.slint:5048
 msgid "Plus tard dans la pile"
 msgstr "Mais tarde na pilha"
 
-#: ui/app.slint:4632
+#: ui/app.slint:5055
 msgid "Retirer l'effet"
 msgstr "Remover efeito"
 
-#: ui/app.slint:4643
+#: ui/app.slint:5066
 msgid "Aucun effet sur ce calque."
 msgstr "Nenhum efeito nesta camada."
 
-#: ui/app.slint:4651
+#: ui/app.slint:5074
 msgid "Fermer"
 msgstr "Fechar"
 
-#: ui/app.slint:4667
+#: ui/app.slint:5090
 msgid "Filtre dynamique"
 msgstr "Filtro dinâmico"
 
-#: ui/app.slint:4682
+#: ui/app.slint:5105
 msgid "Les effets s'appliquent à tout ce qui est sous ce calque, dans la zone peinte en blanc. Plusieurs effets se cumulent, de haut en bas."
 msgstr "Os efeitos aplicam-se a tudo o que está sob esta camada, dentro da área pintada de branco. Os efeitos combinam-se de cima para baixo."
 
-#: ui/app.slint:4690
+#: ui/app.slint:5113
 msgid "Afficher la zone en noir et blanc (blanc = effet actif) pour la régler au pinceau"
 msgstr "Mostrar a área a preto e branco (branco = efeito ativo) para a editar com o pincel"
 
-#: ui/app.slint:4693
+#: ui/app.slint:5116
 msgid "Voir la zone"
 msgstr "Ver área"
 
-#: ui/app.slint:4698
+#: ui/app.slint:5121
 msgid "Zone dessinée"
 msgstr "Área desenhada"
 
-#: ui/app.slint:4698
+#: ui/app.slint:5121
 msgid "Partout"
 msgstr "Em todos os lugares"
 
-#: ui/app.slint:4701
+#: ui/app.slint:5124
 msgid "Appliquer les effets seulement dans la zone dessinée ou partout"
 msgstr "Aplicar os efeitos apenas na área pintada ou em toda a imagem"
 
-#: ui/app.slint:4708
+#: ui/app.slint:5131
 msgid "Chaîne d'effets (12 au maximum)"
 msgstr "Cadeia de efeitos (máximo 12)"
 
-#: ui/app.slint:4712
+#: ui/app.slint:5135
 msgid "+ Effet"
 msgstr "+ Efeito"
 
-#: ui/app.slint:4713
+#: ui/app.slint:5136
 msgid "Ouvre le menu Effets : l'effet choisi s'ajoute à la chaîne"
 msgstr "Abre o menu Efeitos: o efeito escolhido é adicionado à cadeia"
 
-#: ui/app.slint:4739
+#: ui/app.slint:5167
 msgid "Effet "
 msgstr "Efeito "
 
-#: ui/app.slint:4743
+#: ui/app.slint:5171
 msgid "Plus tôt dans la chaîne"
 msgstr "Mais cedo na cadeia"
 
-#: ui/app.slint:4746
+#: ui/app.slint:5174
 msgid "Plus tard dans la chaîne"
 msgstr "Mais tarde na cadeia"
 
-#: ui/app.slint:4749
+#: ui/app.slint:5177
 msgid "Supprimer"
 msgstr "Excluir"
 
-#: ui/app.slint:4749
+#: ui/app.slint:5177
 msgid "Retirer l'effet de la chaîne"
 msgstr "Remover o efeito da cadeia"
 
-#: ui/app.slint:4756
+#: ui/app.slint:5184
 msgid "Effet"
 msgstr "Efeito"
 
-#: ui/app.slint:4772
+#: ui/app.slint:5200
 msgid "Modifier les réglages de l'effet"
 msgstr "Editar as definições do efeito"
 
-#: ui/app.slint:4781
+#: ui/app.slint:5209
 msgid "Intensité"
 msgstr "Intensidade"
 
-#: ui/app.slint:4783
+#: ui/app.slint:5211
 msgid "Intensité de l'effet (0 à 100 %)"
 msgstr "Intensidade do efeito (0 a 100 %)"
 
-#: ui/app.slint:4803
+#: ui/app.slint:5231
 msgid "Aucun effet pour l'instant : « + Effet » ou le menu Effets en ajoute un."
 msgstr "Ainda não há efeitos: use «+ Efeito» ou o menu Efeitos para adicionar um."
 
-#: ui/app.slint:4819
+#: ui/app.slint:5247
 msgid "Objets SVG (bêta)"
 msgstr "Objetos SVG (beta)"
 
-#: ui/app.slint:4845
+#: ui/app.slint:5273
 msgid "Courbes"
 msgstr "Curvas"
 
-#: ui/app.slint:4858
+#: ui/app.slint:5286
 msgid "Rouge"
 msgstr "Vermelho"
 
-#: ui/app.slint:4858
+#: ui/app.slint:5286
 msgid "Vert"
 msgstr "Verde"
 
-#: ui/app.slint:4858
+#: ui/app.slint:5286
 msgid "Bleu"
 msgstr "Azul"
 
-#: ui/app.slint:4928
+#: ui/app.slint:5356
 msgid "Clic : ajouter / déplacer un point · clic droit : supprimer"
 msgstr "Clique: adicionar/mover um ponto clique com o botão direito: excluir"
 
-#: ui/app.slint:4941
+#: ui/app.slint:5369
 msgid "Réinitialiser"
 msgstr "Redefinir"
 
-#: ui/app.slint:4947
+#: ui/app.slint:5375
 msgid "OK"
 msgstr "Ok"
 
-#: ui/app.slint:4955
+#: ui/app.slint:5383
 msgid "Annuler"
 msgstr "Cancelar"
 
-#: ui/app.slint:4979
+#: ui/app.slint:5407
 msgid "Paramètres"
 msgstr "Configurações"
 
-#: ui/app.slint:5002
+#: ui/app.slint:5430
 msgid "Apparence"
 msgstr "Aparência"
 
-#: ui/app.slint:5003
+#: ui/app.slint:5431
 msgid "Toile et outils"
 msgstr "Tela e ferramentas"
 
-#: ui/app.slint:5005
+#: ui/app.slint:5433
 msgid "Performances"
 msgstr "Desempenho"
 
-#: ui/app.slint:5006
+#: ui/app.slint:5434
 msgid "Données"
 msgstr "Dados"
 
-#: ui/app.slint:5007
+#: ui/app.slint:5435
 msgid "Raccourcis"
 msgstr "Atalhos"
 
-#: ui/app.slint:5008
+#: ui/app.slint:5436
 msgid "Avancé et infos"
 msgstr "Avançado e informações"
 
-#: ui/app.slint:5055
+#: ui/app.slint:5483
 msgid "Langue"
 msgstr "Idioma"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "Français"
 msgstr "Français"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "English"
 msgstr "English"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "Español"
 msgstr "Español"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "Deutsch"
 msgstr "Deutsch"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "Italiano"
 msgstr "Italiano"
 
-#: ui/app.slint:5057
+#: ui/app.slint:5485
 msgid "Português"
 msgstr "Português"
 
-#: ui/app.slint:5067
+#: ui/app.slint:5495
 msgid "↺ Réinitialiser la section"
 msgstr "↺ Repor secção"
 
-#: ui/app.slint:5068
+#: ui/app.slint:5496
 msgid "Remet les réglages de cette page à leurs valeurs d'origine"
 msgstr "Repor as definições originais desta página"
 
-#: ui/app.slint:5125
+#: ui/app.slint:5553
 msgid "version "
 msgstr "versão "
 
-#: ui/app.slint:5129
+#: ui/app.slint:5557
 msgid "Inspiré de Paint.NET, Photoshop et Illustrator : images bitmap et vectorielles au même endroit, sans publicité ni traceurs. Écrit en Rust, dans le navigateur comme en application."
 msgstr "Inspirado no Paint.NET, Photoshop e Illustrator: imagens bitmap e vetoriais no mesmo lugar, sem publicidade nem rastreadores. Escrito em Rust, no navegador e como aplicação."
 
-#: ui/app.slint:5136
+#: ui/app.slint:5564
 msgid "Développé par"
 msgstr "Desenvolvido por"
 
-#: ui/app.slint:5138
+#: ui/app.slint:5566
 msgid "polocrafting 367"
 msgstr ""
 
-#: ui/app.slint:5150
+#: ui/app.slint:5578
 msgid "Barre d'options"
 msgstr "Barra de opções"
 
-#: ui/app.slint:5155
+#: ui/app.slint:5583
 msgid "Ruban MasterPaint"
 msgstr "Fita MasterPaint"
 
-#: ui/app.slint:5155
+#: ui/app.slint:5583
 msgid "Style Paint.NET"
 msgstr "Estilo Paint.NET"
 
-#: ui/app.slint:5164
+#: ui/app.slint:5592
 msgid "Thème sombre"
 msgstr "Tema escuro"
 
-#: ui/app.slint:5165
+#: ui/app.slint:5593
 msgid "Le Mode Photo Pro est toujours sombre."
 msgstr "O modo Pro Photo está sempre escuro."
 
-#: ui/app.slint:5174
+#: ui/app.slint:5602
 msgid "Couleur d'accentuation"
 msgstr "Cor de destaque"
 
-#: ui/app.slint:5204
+#: ui/app.slint:5632
 msgid "Style de l'interface"
 msgstr "Estilo de interface"
 
-#: ui/app.slint:5209
+#: ui/app.slint:5637
 msgid "Flat Design"
 msgstr "Design plano"
 
-#: ui/app.slint:5209
+#: ui/app.slint:5637
 msgid "Windows 98"
 msgstr "Windows 98"
 
-#: ui/app.slint:5218
+#: ui/app.slint:5646
 msgid "Coins arrondis"
 msgstr "Cantos arredondados"
 
-#: ui/app.slint:5219
+#: ui/app.slint:5647
 msgid "Fenêtres, boutons et menus, comme Windows 11."
 msgstr "Janelas, botões e menus, como o Windows 11."
 
-#: ui/app.slint:5228
-msgid "Aperçu du projet derrière les onglets"
-msgstr "Visão geral do projeto por trás das guias"
-
-#: ui/app.slint:5229
-msgid "Le haut de l'image active, flouté, en fond de la barre des onglets."
-msgstr "A parte superior da imagem ativa, desfocada, no fundo da barra de guias."
-
-#: ui/app.slint:5238
-msgid "Transparence active"
-msgstr "Transparência ativada"
-
-#: ui/app.slint:5239
-msgid "Fenêtres flottantes uniquement."
-msgstr "Apenas janelas flutuantes."
-
-#: ui/app.slint:5246
-msgid "Flou actif"
-msgstr "Desfoque ativado"
-
-#: ui/app.slint:5247
-msgid "Floute le contenu derrière les barres de titre des fenêtres flottantes."
-msgstr "Desfoca o conteúdo atrás das barras de título das janelas flutuantes."
-
-#: ui/app.slint:5258
-msgid "Disposition de l'interface, puis comportement de la toile et des outils."
-msgstr "Layout da interface, depois comportamento da tela e das ferramentas."
-
-#: ui/app.slint:5262
+#: ui/app.slint:5655
 msgid "Disposition de l'interface"
 msgstr "Layout da interface"
 
-#: ui/app.slint:5263
+#: ui/app.slint:5656
 msgid "Palettes flottantes (Paint.NET), colonnes ancrées (Photoshop) ou interface tactile."
 msgstr "Paletas flutuantes (Paint.NET), colunas ancoradas (Photoshop) ou interface touch."
 
-#: ui/app.slint:5268
+#: ui/app.slint:5661
 msgid "Paint.NET"
 msgstr "Paint.NET"
 
-#: ui/app.slint:5268
+#: ui/app.slint:5661
 msgid "Photoshop (bêta)"
 msgstr "Photoshop (beta)"
 
-#: ui/app.slint:5268
+#: ui/app.slint:5661
 msgid "Téléphone (bêta)"
 msgstr "Telefone (beta)"
 
-#: ui/app.slint:5282
+#: ui/app.slint:5675
 msgid "Interface tactile automatique sur écran étroit"
 msgstr "Interface touchscreen automática em tela estreita"
 
-#: ui/app.slint:5283
+#: ui/app.slint:5676
 msgid "Sous 600 px de large, passer à l'interface Téléphone. « Non » : la disposition choisie est gardée partout."
 msgstr "Com menos de 600 px de largura, mude para a interface do telefone. “Não”: o layout escolhido é mantido em todos os lugares."
 
-#: ui/app.slint:5291
-msgid "Souris : molette"
-msgstr ""
-
-#: ui/app.slint:5292
-msgid "Zoom (Maj = défilement horizontal) ou défilement de la toile (Maj = horizontal, Ctrl = zoom). Réglage partagé avec la version HTML."
-msgstr "Zoom (Shift = rolagem horizontal) ou rolagem na tela (Shift = horizontal, Ctrl = zoom). Configuração compartilhada com a versão HTML."
-
-#: ui/app.slint:5297
-msgid "Molette = zoom"
-msgstr "Roda = zoom"
-
-#: ui/app.slint:5297
-msgid "Molette = défilement"
-msgstr "Roda = rolar"
-
-#: ui/app.slint:5305
+#: ui/app.slint:5689
 msgid "Toile et couleurs"
 msgstr "Tela e cores"
 
-#: ui/app.slint:5306
+#: ui/app.slint:5690
 msgid "Le damier garde la même taille à l’écran, quel que soit le zoom. Ces couleurs d’affichage ne modifient pas l’image exportée."
 msgstr "O tabuleiro de xadrez permanece do mesmo tamanho na tela, independentemente do zoom. Estas cores de exibição não modificam a imagem exportada."
 
-#: ui/app.slint:5308
+#: ui/app.slint:5692
 msgid "Damier : couleur claire"
 msgstr "Tabuleiro de damas: cor clara"
 
-#: ui/app.slint:5308
+#: ui/app.slint:5692
 msgid "Damier : couleur foncée"
 msgstr "Tabuleiro de damas: cor escura"
 
-#: ui/app.slint:5308
+#: ui/app.slint:5692
 msgid "Fond autour de la toile"
 msgstr "Fundo ao redor da tela"
 
-#: ui/app.slint:5308
+#: ui/app.slint:5692
 msgid "Couleur principale au démarrage"
 msgstr "Cor principal na inicialização"
 
-#: ui/app.slint:5308
+#: ui/app.slint:5692
 msgid "Couleur secondaire au démarrage"
 msgstr "Cor secundária na inicialização"
 
-#: ui/app.slint:5317
+#: ui/app.slint:5701
 msgid "Taille des cases du damier (pixels écran)"
 msgstr "Tamanho dos quadrados xadrez (pixels da tela)"
 
-#: ui/app.slint:5324
+#: ui/app.slint:5708
 msgid "Réinitialiser les couleurs"
 msgstr "Redefinir cores"
 
-#: ui/app.slint:5333
-msgid "Zoom de l'interface : "
-msgstr "Zoom da interface: "
+#: ui/app.slint:5718
+msgid "Comportement de la toile et des outils."
+msgstr "Comportamento da tela e das ferramentas."
 
-#: ui/app.slint:5334
-msgid "Taille des textes et des boutons."
-msgstr "Tamanho dos textos e botões."
+#: ui/app.slint:5722
+msgid "Souris : molette"
+msgstr ""
 
-#: ui/app.slint:5348
-msgid "Appliquer"
-msgstr "Aplicar"
+#: ui/app.slint:5723
+msgid "Zoom (Maj = défilement horizontal) ou défilement de la toile (Maj = horizontal, Ctrl = zoom). Réglage partagé avec la version HTML."
+msgstr "Zoom (Shift = rolagem horizontal) ou rolagem na tela (Shift = horizontal, Ctrl = zoom). Configuração compartilhada com a versão HTML."
 
-#: ui/app.slint:5356
+#: ui/app.slint:5728
+msgid "Molette = zoom"
+msgstr "Roda = zoom"
+
+#: ui/app.slint:5728
+msgid "Molette = défilement"
+msgstr "Roda = rolar"
+
+#: ui/app.slint:5736
 msgid "Zoom à l'ouverture d'une image"
 msgstr "Zoom ao abrir uma imagem"
 
-#: ui/app.slint:5361
+#: ui/app.slint:5741
 msgid "Ajuster à la fenêtre"
 msgstr "Ajustar à janela"
 
-#: ui/app.slint:5361
+#: ui/app.slint:5741
 msgid "Taille réelle (100 %)"
 msgstr "Tamanho real (100%)"
 
-#: ui/app.slint:5366
+#: ui/app.slint:5746
 msgid "Outil sélectionné au démarrage"
 msgstr "Ferramenta selecionada na inicialização"
 
-#: ui/app.slint:5374
+#: ui/app.slint:5754
 msgid "Lisser l'image zoomée"
 msgstr "Imagem com zoom suave"
 
-#: ui/app.slint:5375
+#: ui/app.slint:5755
 msgid "Au-delà de 200 %, les pixels sont affichés nets, comme dans Paint.NET ; « Oui » les lisse."
 msgstr "Acima de 200%, os pixels são exibidos nítidos, como no Paint.NET; “Sim” os suaviza."
 
-#: ui/app.slint:5388
+#: ui/app.slint:5768
 msgid "Presse-papiers et historique des modifications."
 msgstr "Área de transferência e histórico de edição."
 
-#: ui/app.slint:5392
+#: ui/app.slint:5772
 msgid "Coller (Ctrl+V)"
 msgstr "Colar (Ctrl+V)"
 
-#: ui/app.slint:5393
+#: ui/app.slint:5773
 msgid "Dans la même image : à l'endroit de la copie. Dans une autre image : au centre."
 msgstr "Na mesma imagem: no local da cópia. Em outra imagem: no centro."
 
-#: ui/app.slint:5398
+#: ui/app.slint:5778
 msgid "Dans un nouveau calque"
 msgstr "Em uma nova camada"
 
-#: ui/app.slint:5398
+#: ui/app.slint:5778
 msgid "Dans le calque actif"
 msgstr "Na camada ativa"
 
-#: ui/app.slint:5403
+#: ui/app.slint:5783
 msgid "Demander où coller une image venue d'ailleurs"
 msgstr "Pergunte onde colar uma imagem de outro lugar"
 
-#: ui/app.slint:5404
+#: ui/app.slint:5784
 msgid "Capture, autre application ou fichier : ouvrir dans un nouvel onglet ou coller dans l'image actuelle."
 msgstr "Capturar, outro aplicativo ou arquivo: abra em uma nova aba ou cole na imagem atual."
 
-#: ui/app.slint:5415
-msgid "Étapes d'historique : "
-msgstr "Etapas do histórico: "
+#: ui/app.slint:5795
+msgid "Étapes d'historique, tous projets confondus : "
+msgstr ""
 
-#: ui/app.slint:5416
+#: ui/app.slint:5796
 msgid "Au-delà, les plus anciennes sont oubliées (moins de mémoire utilisée)."
 msgstr "Além disso, os mais antigos são esquecidos (menos memória utilizada)."
 
-#: ui/app.slint:5428
+#: ui/app.slint:5808
+msgid "Toujours gardées par projet : "
+msgstr ""
+
+#: ui/app.slint:5809
+msgid "Ses dernières étapes restent annulables même au-delà de la limite. L'image d'origine de chaque projet est toujours conservée."
+msgstr ""
+
+#: ui/app.slint:5821
 msgid "Vider l'historique"
 msgstr "Limpar histórico"
 
-#: ui/app.slint:5429
+#: ui/app.slint:5822
 msgid "Libère la mémoire des étapes passées ; l'image reste telle quelle."
 msgstr "Libera a memória de etapas passadas; a imagem permanece como está."
 
-#: ui/app.slint:5435
+#: ui/app.slint:5828
 msgid "Onglet actif"
 msgstr "Guia ativa"
 
-#: ui/app.slint:5441
+#: ui/app.slint:5834
 msgid "Tous les onglets"
 msgstr "Todas as guias"
 
-#: ui/app.slint:5454
+#: ui/app.slint:5847
 msgid "Les calculs lourds (effets, Photo Mode Pro, photos RAW, décodage des images) tournent en arrière-plan : l'interface ne se fige pas. Sur les grandes images, seule la partie visible à l'écran est affichée, et les aperçus d'effet commencent à la résolution de l'écran."
 msgstr "Cálculos pesados ​​(efeitos, Photo Mode Pro, fotos RAW, decodificação de imagens) são executados em segundo plano: a interface não congela. Em imagens grandes, apenas a parte visível na tela é exibida e as visualizações dos efeitos começam na resolução da tela."
 
-#: ui/app.slint:5458
+#: ui/app.slint:5851
+msgid "Mode léger"
+msgstr "Modo leve"
+
+#: ui/app.slint:5852
+msgid "Coupe la surbrillance, les ombres, la transparence et le flou du haut. Automatique : seulement si ce PC manque de fluidité."
+msgstr "Desliga o realce, as sombras, a transparência e o desfoque superior. Automático: só se este PC não estiver fluido."
+
+#: ui/app.slint:5857
+msgid "Automatique"
+msgstr "Automático"
+
+#: ui/app.slint:5857
+msgid "Toujours"
+msgstr "Sempre"
+
+#: ui/app.slint:5857
+msgid "Jamais"
+msgstr "Nunca"
+
+#: ui/app.slint:5863
+msgid "Résolution de l'interface"
+msgstr "Resolução da interface"
+
+#: ui/app.slint:5864
+msgid "Standard : autant de pixels qu'à 100 %, interface un peu moins fine mais bien plus fluide. S'applique au chargement de la page."
+msgstr "Padrão: tantos píxeis como a 100 %, interface um pouco menos fina mas muito mais fluida. Aplica-se ao carregar a página."
+
+#: ui/app.slint:5869
+msgid "Standard"
+msgstr "Padrão"
+
+#: ui/app.slint:5876
+msgid "Recharger maintenant"
+msgstr "Recarregar agora"
+
+#: ui/app.slint:5877
+msgid "Applique la résolution choisie. Vos projets sont restaurés."
+msgstr "Aplica a resolução escolhida. Os seus projetos são restaurados."
+
+#: ui/app.slint:5884
+msgid "Ajoute au ruban, à côté de la grille et des règles, un bouton qui rend la toile et ses filtres ƒ en ÷2, ÷4 ou ÷8 selon la taille de l'image, et un bouton Rendre maintenant. L'interface reste nette, l'enregistrement est toujours en pleine résolution."
+msgstr "Adiciona ao friso, junto à grelha e às réguas, um botão que renderiza a tela e os filtros ƒ a ÷2, ÷4 ou ÷8 conforme o tamanho da imagem, e um botão Renderizar agora. A interface mantém-se nítida; a gravação é sempre em resolução total."
+
+#: ui/app.slint:5890
+msgid "Pour les nouveaux projets"
+msgstr "Para os novos projetos"
+
+#: ui/app.slint:5891
+msgid "Chaque projet garde ensuite son propre réglage, depuis le ruban."
+msgstr "Cada projeto mantém depois a sua própria definição, a partir do friso."
+
+#: ui/app.slint:5896
+msgid "Pleine"
+msgstr "Total"
+
+#: ui/app.slint:5902
 msgid "Accélération graphique"
 msgstr "Aceleração gráfica"
 
-#: ui/app.slint:5463
+#: ui/app.slint:5907
 msgid "Utiliser la carte graphique"
 msgstr "Use a placa gráfica"
 
-#: ui/app.slint:5464
+#: ui/app.slint:5908
 msgid "Composition des calques à l'écran (grandes images), filtres dynamiques (ƒ) et effets simples (flous, netteté, pixeliser, réglages de couleur, teinte / saturation, vignette) : WebGPU dans le navigateur, Vulkan / Metal / DirectX sur le bureau. Non : tout est calculé par le processeur."
 msgstr "Composição de camadas na tela (imagens grandes), filtros dinâmicos (ƒ) e efeitos simples (desfoque, nitidez, pixelização, ajustes de cores, matiz/saturação, vinheta): WebGPU no navegador, Vulkan/Metal/DirectX no desktop. Não: tudo é calculado pelo processador."
 
-#: ui/app.slint:5476
+#: ui/app.slint:5916
+msgid "Effets de l'interface"
+msgstr "Efeitos da interface"
+
+#: ui/app.slint:5917
+msgid "La surbrillance pèse vraiment sur un PC lent ; les trois autres très peu."
+msgstr "O realce pesa mesmo num PC lento; os outros três muito pouco."
+
+#: ui/app.slint:5922
+msgid "Surbrillance au survol"
+msgstr "Realce ao passar"
+
+#: ui/app.slint:5923
+msgid "Coupée, passer la souris sur l'interface ne redessine plus rien."
+msgstr "Desligado, passar o rato pela interface já não redesenha nada."
+
+#: ui/app.slint:5933
+msgid "Aperçu du projet dans la barre du haut"
+msgstr "Pré-visualização do projeto na barra superior"
+
+#: ui/app.slint:5934
+msgid "Une seule image floutée derrière les menus et les onglets."
+msgstr "Uma única imagem desfocada atrás dos menus e dos separadores."
+
+#: ui/app.slint:5943
+msgid "Transparence active"
+msgstr "Transparência ativada"
+
+#: ui/app.slint:5944
+msgid "Fenêtres flottantes uniquement."
+msgstr "Apenas janelas flutuantes."
+
+#: ui/app.slint:5951
+msgid "Ombres"
+msgstr "Sombras"
+
+#: ui/app.slint:5952
+msgid "Ombres des fenêtres, des menus et de la toile."
+msgstr "Sombras das janelas, dos menus e da tela."
+
+#: ui/app.slint:5964
+msgid "Zoom de l'interface : "
+msgstr "Zoom da interface: "
+
+#: ui/app.slint:5965
+msgid "Taille des textes et des boutons."
+msgstr "Tamanho dos textos e botões."
+
+#: ui/app.slint:5979
+msgid "Appliquer"
+msgstr "Aplicar"
+
+#: ui/app.slint:5992
 msgid "Les projets ouverts sont retrouvés à la réouverture (application : dossier de configuration de MasterPaint ; navigateur : stockage du site)."
 msgstr "Projetos abertos são encontrados quando reabertos (aplicativo: pasta de configuração do MasterPaint; navegador: armazenamento do site)."
 
-#: ui/app.slint:5480
+#: ui/app.slint:5996
 msgid "Sauvegarde automatique"
 msgstr "Salvamento automático"
 
-#: ui/app.slint:5481
+#: ui/app.slint:5997
 msgid "Enregistre les onglets ouverts quand ils changent."
 msgstr "Salva guias abertas quando elas mudam."
 
-#: ui/app.slint:5489
+#: ui/app.slint:6005
 msgid "Fréquence : "
 msgstr "Frequência: "
 
-#: ui/app.slint:5489
+#: ui/app.slint:6005
 msgid "en continu"
 msgstr "continuamente"
 
-#: ui/app.slint:5489
+#: ui/app.slint:6005
 msgid "toutes les "
 msgstr "a cada "
 
-#: ui/app.slint:5489
+#: ui/app.slint:6005
 msgid " min"
 msgstr " min"
 
-#: ui/app.slint:5490
+#: ui/app.slint:6006
 msgid "En continu : dès qu'un projet change (au plus toutes les 15 secondes)."
 msgstr "Continuamente: assim que um projeto muda (no máximo a cada 15 segundos)."
 
-#: ui/app.slint:5504
+#: ui/app.slint:6020
 msgid "Effacer la sauvegarde automatique"
 msgstr "Limpar salvamento automático"
 
-#: ui/app.slint:5515
+#: ui/app.slint:6031
 msgid "Raccourcis clavier et souris"
 msgstr "Atalhos de teclado e mouse"
 
-#: ui/app.slint:5543
+#: ui/app.slint:6059
 msgid "Avancé et infos techniques"
 msgstr "Informações avançadas e técnicas"
 
-#: ui/app.slint:5547
+#: ui/app.slint:6063
 msgid "Visionneuse d'icônes"
 msgstr "Visualizador de ícones"
 
-#: ui/app.slint:5548
+#: ui/app.slint:6064
 msgid "Les icônes de MasterPaint (outils, menus, sprite) aux couleurs du thème, avec leur nom."
 msgstr "Ícones MasterPaint (ferramentas, menus, sprite) nas cores do tema, com seus nomes."
 
-#: ui/app.slint:5553
+#: ui/app.slint:6069
 msgid "Ouvrir la visionneuse d'icônes"
 msgstr "Abrir visualizador de ícones"
 
-#: ui/app.slint:5561
-msgid "Version web classique"
-msgstr "Versão web clássica"
-
-#: ui/app.slint:5562
-msgid "L'ancienne interface de MasterPaint (HTML). Elle n'est plus mise à jour : certaines fonctions récentes n'y sont pas."
-msgstr "A antiga interface MasterPaint (HTML). Não está mais atualizado: algumas funções recentes não estão mais lá."
-
-#: ui/app.slint:5567
-msgid "Ouvrir la version web classique"
-msgstr "Abra a versão clássica da web"
-
-#: ui/app.slint:5578
+#: ui/app.slint:6080
 msgid "Infos techniques"
 msgstr "Informações técnicas"
 
-#: ui/app.slint:5579
+#: ui/app.slint:6081
 msgid "Version, appareil, accélération et mémoire utilisée. Ces informations sont jointes aux rapports d'erreur."
 msgstr "Versão, dispositivo, aceleração e memória utilizada. Esta informação está anexada aos relatórios de erros."
 
-#: ui/app.slint:5602
+#: ui/app.slint:6104
 msgid "Actualiser"
 msgstr "Atualizar"
 
-#: ui/app.slint:5608
+#: ui/app.slint:6110
 msgid "Signaler un problème avec ces informations"
 msgstr "Relate um problema com essas informações"
 
-#: ui/app.slint:5622
+#: ui/app.slint:6126
 msgid "Fenêtre de plantage"
 msgstr "Janela de falha"
 
-#: ui/app.slint:5623
+#: ui/app.slint:6127
 msgid "Affiche la fenêtre qui prend le relais si MasterPaint s'arrête (navigateur : page HTML de secours, avec envoi du signalement). Simple essai : l'application continue."
 msgstr "Exibe a janela que assume caso o MasterPaint pare (navegador: página HTML de emergência, com envio do relatório). Teste simples: a aplicação continua."
 
-#: ui/app.slint:5628
+#: ui/app.slint:6132
 msgid "Essayer la fenêtre de plantage"
 msgstr "Experimente a janela de travamento"
 
-#: ui/app.slint:5642
+#: ui/app.slint:6146
 msgid "Projet sur GitHub"
 msgstr "Projeto no GitHub"
 
-#: ui/app.slint:5648
+#: ui/app.slint:6152
 msgid "Notes de version"
 msgstr "Notas de versão"
 
-#: ui/app.slint:5654
+#: ui/app.slint:6158
 msgid "Ouvrir le projet d'exemple"
 msgstr "Abrir projeto de amostra"
 
-#: ui/app.slint:5655
+#: ui/app.slint:6159
 msgid "Ouvrir / Importer image…"
 msgstr "Abrir/Importar imagem…"
 
-#: ui/app.slint:5656
+#: ui/app.slint:6160
 msgid "Ouvre le projet d'exemple de MasterPaint (calques, effets) dans un nouvel onglet"
 msgstr "Abre o projeto de amostra do MasterPaint (camadas, efeitos) em uma nova aba"
 
-#: ui/app.slint:5707
+#: ui/app.slint:6211
 msgid "Objet :"
 msgstr "Assunto:"
 
-#: ui/app.slint:5711
+#: ui/app.slint:6215
 msgid "🐛 Bug / Erreur"
 msgstr "🐛 Bug/Erro"
 
-#: ui/app.slint:5711
+#: ui/app.slint:6215
 msgid "💡 Idée / Amélioration"
 msgstr "💡 Ideia/Melhoria"
 
-#: ui/app.slint:5711
+#: ui/app.slint:6215
 msgid "📝 Remarque"
 msgstr "📝 Nota"
 
-#: ui/app.slint:5711
+#: ui/app.slint:6215
 msgid "📂 Autre"
 msgstr "📂 Outros"
 
-#: ui/app.slint:5715
+#: ui/app.slint:6219
 msgid "Message :"
 msgstr "Mensagem:"
 
-#: ui/app.slint:5736
+#: ui/app.slint:6232
+msgid "Décrivez ce qui s'est passé, ce que vous faisiez…"
+msgstr "Descreva o que aconteceu e o que estava a fazer…"
+
+#: ui/app.slint:6249
 msgid "Contact (optionnel) :"
 msgstr "Contato (opcional):"
 
-#: ui/app.slint:5752
+#: ui/app.slint:6261
+msgid "Le journal aide à comprendre le problème : vous pouvez le relire ici, il n'est pas modifiable"
+msgstr "O registo ajuda a perceber o problema: pode lê-lo aqui, não é editável"
+
+#: ui/app.slint:6265
+msgid "Joindre le journal technique"
+msgstr "Anexar o registo técnico"
+
+#: ui/app.slint:6302
 msgid "Envoyer"
 msgstr "Enviar"
 
-#: ui/app.slint:5759
+#: ui/app.slint:6312
 msgid "Redémarrer"
 msgstr "Reiniciar"
 
-#: ui/app.slint:5760
+#: ui/app.slint:6313
 msgid "Recharger la page (les projets ouverts sont restaurés)"
 msgstr "Recarregue a página (os projetos abertos são restaurados)"
 
-#: ui/app.slint:5760
+#: ui/app.slint:6313
 msgid "Relancer MasterPaint"
 msgstr "Reinicie o MasterPaint"
 
-#: ui/app.slint:5814
+#: ui/app.slint:6382
 msgid "Aide et raccourcis"
 msgstr "Ajuda e atalhos"
 
-#: ui/app.slint:5846
+#: ui/app.slint:6425
 msgid "Bienvenue dans MasterPaint"
 msgstr "Bem vindo ao Master Paint"
 
-#: ui/app.slint:5924
+#: ui/app.slint:6503
 msgid "Nouvelle image"
 msgstr "Nova imagem"
 
-#: ui/app.slint:5950
+#: ui/app.slint:6529
 msgid "Type de projet"
 msgstr "Tipo de projeto"
 
-#: ui/app.slint:5963
+#: ui/app.slint:6542
 msgid "SVG"
 msgstr "SVG"
 
-#: ui/app.slint:5964
+#: ui/app.slint:6543
 msgid "Anim."
 msgstr ""
 
-#: ui/app.slint:5965
+#: ui/app.slint:6544
 msgid "Anim. SVG"
 msgstr ""
 
-#: ui/app.slint:6004
+#: ui/app.slint:6583
 msgid "Espace de couleur"
 msgstr "Espaço de cores"
 
-#: ui/app.slint:6007
+#: ui/app.slint:6586
 msgid "CMJN"
 msgstr "CMYK"
 
-#: ui/app.slint:6011
+#: ui/app.slint:6590
 msgid "Couleurs simulées avec de vraies encres d'imprimerie."
 msgstr "Cores simuladas com tintas de impressão reais."
 
-#: ui/app.slint:6012
+#: ui/app.slint:6591
 msgid "Couleurs limitées au nuancier RAL Classic (216 teintes)."
 msgstr "Cores limitadas à cartela de cores RAL Classic (216 tonalidades)."
 
-#: ui/app.slint:6013
+#: ui/app.slint:6592
 msgid "Toutes les couleurs (RVB 8 bits)."
 msgstr "Todas as cores (RGB de 8 bits)."
 
-#: ui/app.slint:6019
+#: ui/app.slint:6598
 msgid "Fond"
 msgstr "Plano de fundo"
 
-#: ui/app.slint:6022
+#: ui/app.slint:6601
 msgid "Blanc"
 msgstr "Branco"
 
-#: ui/app.slint:6022
+#: ui/app.slint:6601
 msgid "Transparent"
 msgstr "Transparente"
 
-#: ui/app.slint:6022
+#: ui/app.slint:6601
 msgid "Secondaire"
 msgstr "Secundário"
 
-#: ui/app.slint:6076
+#: ui/app.slint:6655
 msgid " Mo par calque"
 msgstr " MB por camada"
 
-#: ui/app.slint:6093
+#: ui/app.slint:6672
 msgid "Letter"
 msgstr "Carta"
 
-#: ui/app.slint:6134
+#: ui/app.slint:6713
 msgid "Largeur"
 msgstr "Largura"
 
-#: ui/app.slint:6149
+#: ui/app.slint:6728
 msgid "Hauteur"
 msgstr "Altura"
 
-#: ui/app.slint:6178
+#: ui/app.slint:6757
 msgid "Créer"
 msgstr "Criar"
 
-#: ui/app.slint:6207
+#: ui/app.slint:6786
 msgid "Taille de la zone de travail"
 msgstr "Tamanho da área de trabalho"
 
-#: ui/app.slint:6207
+#: ui/app.slint:6786
 msgid "Redimensionner l'image"
 msgstr "Redimensionar imagem"
 
-#: ui/app.slint:6221
+#: ui/app.slint:6800
 msgid "Taille actuelle : "
 msgstr "Tamanho atual: "
 
-#: ui/app.slint:6221
+#: ui/app.slint:6800
 msgid " px   →   nouvelle taille : "
 msgstr " px → novo tamanho: "
 
-#: ui/app.slint:6222
+#: ui/app.slint:6801
 msgid " Mo"
 msgstr " MB"
 
-#: ui/app.slint:6228
+#: ui/app.slint:6807
 msgid "Par taille absolue"
 msgstr "Por tamanho absoluto"
 
-#: ui/app.slint:6228
+#: ui/app.slint:6807
 msgid "Par pourcentage"
 msgstr "Por porcentagem"
 
-#: ui/app.slint:6239
+#: ui/app.slint:6818
 msgid "Pourcentage"
 msgstr "Porcentagem"
 
-#: ui/app.slint:6264
+#: ui/app.slint:6843
 msgid "Préréglages"
 msgstr "Predefinições"
 
-#: ui/app.slint:6326
+#: ui/app.slint:6905
 msgid "Ancrage"
 msgstr "Ancoragem"
 
-#: ui/app.slint:6550
+#: ui/app.slint:7129
 msgid "Libre"
 msgstr "Grátis"
 
-#: ui/app.slint:6582
+#: ui/app.slint:7161
 msgid "Glissez les poignées ou le cadre sur l'image. Entrée : recadrer, Échap : annuler."
 msgstr "Arraste as alças ou moldura para a imagem. Enter: cortar, Escape: cancelar."
 
-#: ui/app.slint:6622
+#: ui/app.slint:7201
 msgid "Bordure d'image"
 msgstr "Borda da imagem"
 
-#: ui/app.slint:6636
+#: ui/app.slint:7215
 msgid "Ajoute un cadre de couleur autour de l'image."
 msgstr "Adiciona uma moldura colorida ao redor da imagem."
 
-#: ui/app.slint:6642
+#: ui/app.slint:7221
 msgid "Autour (agrandit la toile)"
 msgstr "Ao redor (amplia a tela)"
 
-#: ui/app.slint:6642
+#: ui/app.slint:7221
 msgid "À l'intérieur"
 msgstr "Dentro"
 
-#: ui/app.slint:6656
+#: ui/app.slint:7235
 msgid "Uniforme sur les 4 côtés"
 msgstr "Uniforme nos 4 lados"
 
-#: ui/app.slint:6667
+#: ui/app.slint:7246
 msgid "Taille (px)"
 msgstr "Tamanho (px)"
 
-#: ui/app.slint:6671
+#: ui/app.slint:7250
 msgid "Haut (px)"
 msgstr "Superior (px)"
 
-#: ui/app.slint:6675
+#: ui/app.slint:7254
 msgid "Gauche (px)"
 msgstr "Esquerda (px)"
 
-#: ui/app.slint:6679
+#: ui/app.slint:7258
 msgid "Droite (px)"
 msgstr "Direita (px)"
 
-#: ui/app.slint:6683
+#: ui/app.slint:7262
 msgid "Bas (px)"
 msgstr "Parte inferior (px)"
 
-#: ui/app.slint:6704
+#: ui/app.slint:7283
 msgid "Principale"
 msgstr "Principal"
 
-#: ui/app.slint:6715
+#: ui/app.slint:7294
 msgid "Destination"
 msgstr "Destino"
 
-#: ui/app.slint:6721
+#: ui/app.slint:7300
 msgid "Nouveau calque"
 msgstr "Nova camada"
 
-#: ui/app.slint:6721
+#: ui/app.slint:7300
 msgid "Calque actif"
 msgstr "Camada ativa"
 
-#: ui/app.slint:6729
+#: ui/app.slint:7308
 msgid "Nouvelle taille : "
 msgstr "Novo tamanho: "
 
-#: ui/app.slint:6764
+#: ui/app.slint:7343
 msgid "Exporter"
 msgstr "Exportar"
 
-#: ui/app.slint:6778
+#: ui/app.slint:7357
 msgid "Un clic pour l'essentiel — ou plus de formats ci-dessous."
 msgstr "Um clique para o essencial — ou mais formatos abaixo."
 
-#: ui/app.slint:6782
+#: ui/app.slint:7361
 msgid "Nom du fichier"
 msgstr "Nome do arquivo"
 
-#: ui/app.slint:6801
+#: ui/app.slint:7380
 msgid "Image PNG"
 msgstr "Imagem PNG"
 
-#: ui/app.slint:6801
+#: ui/app.slint:7380
 msgid "Photo, réseaux, impression"
 msgstr "Foto, redes, impressão"
 
-#: ui/app.slint:6802
+#: ui/app.slint:7381
 msgid "Projet .illu"
 msgstr "Projeto .illu"
 
-#: ui/app.slint:6802
+#: ui/app.slint:7381
 msgid "Reprendre dans MasterPaint"
 msgstr "Currículo no MasterPaint"
 
-#: ui/app.slint:6849
+#: ui/app.slint:7428
 msgid "Autres formats et options…"
 msgstr "Outros formatos e opções…"
 
-#: ui/app.slint:6866
+#: ui/app.slint:7445
 msgid "Format"
 msgstr "Formato"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "PNG (.png)"
 msgstr "PNG (.png)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "JPEG (.jpg)"
 msgstr "JPEG (.jpg)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "WebP (.webp)"
 msgstr "WebP (.webp)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "BMP (.bmp)"
 msgstr "BMP (.bmp)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "GIF (.gif)"
 msgstr "GIF (.gif)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "Projet Illu (.illu)"
 msgstr "Projeto Illu (.illu)"
 
-#: ui/app.slint:6868
+#: ui/app.slint:7447
 msgid "SVG (.svg) — calques vectoriels gardés"
 msgstr "SVG (.svg) — camadas vetoriais mantidas"
 
-#: ui/app.slint:6875
+#: ui/app.slint:7454
 msgid "Périmètre"
 msgstr "Perímetro"
 
-#: ui/app.slint:6877
+#: ui/app.slint:7456
 msgid "Onglet actuel"
 msgstr "Guia atual"
 
-#: ui/app.slint:6887
+#: ui/app.slint:7466
 msgid "Qualité JPEG"
 msgstr "Qualidade JPEG"
 
-#: ui/app.slint:6897
+#: ui/app.slint:7476
 msgid "Image sans perte."
 msgstr "Imagem sem perdas."
 
-#: ui/app.slint:6904
+#: ui/app.slint:7483
 msgid "Profondeur couleurs"
 msgstr "Profundidade de cor"
 
-#: ui/app.slint:6906
+#: ui/app.slint:7485
 msgid "Noir & blanc (contraste auto)"
 msgstr "Preto e branco (contraste automático)"
 
-#: ui/app.slint:6906
+#: ui/app.slint:7485
 msgid "1 bit"
 msgstr "1 bit"
 
-#: ui/app.slint:6906
+#: ui/app.slint:7485
 msgid "2 bits"
 msgstr "2 bits"
 
-#: ui/app.slint:6906
+#: ui/app.slint:7485
 msgid "4 bits"
 msgstr "4 bits"
 
-#: ui/app.slint:6906
+#: ui/app.slint:7485
 msgid "8 bits (standard)"
 msgstr "8 bits (padrão)"
 
-#: ui/app.slint:6913
+#: ui/app.slint:7492
 msgid "Télécharger"
 msgstr "Baixar"
 
-#: ui/app.slint:6937
+#: ui/app.slint:7516
 msgid "Sauvegarde automatique des onglets"
 msgstr "Salvar guias automaticamente"
 
-#: ui/app.slint:6964
+#: ui/app.slint:7543
 msgid "Erreur — "
 msgstr "Erro — "
 
-#: ui/app.slint:7004
+#: ui/app.slint:7583
 msgid "Détails"
 msgstr "Detalhes"
 
-#: ui/app.slint:7043
+#: ui/app.slint:7622
 msgid "Signaler l'erreur"
 msgstr "Relate o erro"
 
-#: ui/app.slint:7053
+#: ui/app.slint:7634
 msgid "Redémarrer la page"
 msgstr "Página de reinicialização"
 
-#: ui/app.slint:7053
+#: ui/app.slint:7634
 msgid "Redémarrer MasterPaint"
 msgstr "Reinicie o MasterPaint"
 
-#: ui/app.slint:7078
+#: ui/app.slint:7659
 msgid "Aperçu 1:1"
 msgstr "Visualização 1:1"
 
-#: ui/app.slint:7107
-msgid "Visionneuse d'icônes — "
-msgstr "Visualizador de ícones — "
+#: ui/app.slint:7725
+msgid "MasterPaint ("
+msgstr ""
 
-#: ui/app.slint:7107
-msgid " icônes MasterPaint"
-msgstr " Ícones do MasterPaint"
+#: ui/app.slint:7725
+msgid "Non personnalisées ("
+msgstr ""
 
-#: ui/app.slint:7155
+#: ui/app.slint:7731
+msgid "Rechercher une icône par son nom"
+msgstr ""
+
+#: ui/app.slint:7745
+msgid "Clair"
+msgstr ""
+
+#: ui/app.slint:7745
+msgid "Sombre"
+msgstr ""
+
+#: ui/app.slint:7828
+msgid "Aucune icône ne correspond."
+msgstr ""
+
+#: ui/app.slint:7850
+msgid "Cliquez une icône pour la voir en grand, copier son nom (double-clic : copie directe) ou l'ouvrir en projet SVG."
+msgstr ""
+
+#: ui/app.slint:7891
+msgid "Glyphe Font Awesome encore employé (pas d'icône MasterPaint pour lui)"
+msgstr ""
+
+#: ui/app.slint:7892
+msgid "Icône maison (outils, menus, boutons)"
+msgstr ""
+
+#: ui/app.slint:7892
+msgid "Icône du sprite (icons/illu-sprite.svg)"
+msgstr ""
+
+#: ui/app.slint:7909
+msgid "Copier le nom"
+msgstr ""
+
+#: ui/app.slint:7913
+msgid "Ouvrir en projet SVG"
+msgstr ""
+
+#: ui/app.slint:7914
+msgid "Ouvre l'icône dans un nouvel onglet, agrandie, avec ses formes modifiables"
+msgstr ""
+
+#: ui/app.slint:7930
 msgid "Calque actif : position et taille"
 msgstr "Camada ativa: posição e tamanho"
 
-#: ui/app.slint:7169
+#: ui/app.slint:7944
 msgid "Emprise du contenu du calque, en pixels du document."
 msgstr "Tamanho do conteúdo da camada, em pixels do documento."
 
-#: ui/app.slint:7174
+#: ui/app.slint:7949
 msgid "X"
 msgstr "X"
 
-#: ui/app.slint:7178
+#: ui/app.slint:7953
 msgid "Y"
 msgstr "Y"
 
-#: ui/app.slint:7311
+#: ui/app.slint:8086
 msgid "Suppression du fond"
 msgstr "Remoção de fundo"
 
-#: ui/app.slint:7326
+#: ui/app.slint:8101
 msgid "Réglages puis lancement du traitement (premier usage : téléchargement du modèle)."
 msgstr "Ajustes e depois início do processamento (primeiro uso: download do modelo)."
 
-#: ui/app.slint:7334
+#: ui/app.slint:8109
 msgid "Modèle"
 msgstr "Modelo"
 
-#: ui/app.slint:7340
+#: ui/app.slint:8115
 msgid "Petit"
 msgstr "Pequeno"
 
-#: ui/app.slint:7340
+#: ui/app.slint:8115
 msgid "Moyen"
 msgstr "Médio"
 
-#: ui/app.slint:7340
+#: ui/app.slint:8115
 msgid "Grand"
 msgstr "Grande"
 
-#: ui/app.slint:7351
+#: ui/app.slint:8126
 msgid "Plume du détourage"
 msgstr "Suavização da borda"
 
-#: ui/app.slint:7371
+#: ui/app.slint:8146
 msgid "Plume : adoucit le bord du canal alpha après détourage. Modèle « petit » : plus léger, un peu moins précis."
 msgstr "Feather: Suaviza a borda do canal alfa após o recorte. Modelo “pequeno”: mais leve, um pouco menos preciso."
 
-#: ui/app.slint:7402
+#: ui/app.slint:8177
 msgid "Lancer"
 msgstr "Iniciar"
 
-#: ui/app.slint:7409
+#: ui/app.slint:8184
 msgid "Annuler l'opération"
 msgstr "Cancelar operação"
 
-#: ui/app.slint:7425
+#: ui/app.slint:8200
 msgid "Paramètres aimantation"
 msgstr "Configurações de ajuste"
 
-#: ui/app.slint:7437
+#: ui/app.slint:8212
 msgid "Taille des cases (1/N)"
 msgstr "Tamanho da caixa (1/N)"
 
-#: ui/app.slint:7459
+#: ui/app.slint:8234
 msgid "Force d'attraction (%)"
 msgstr "Força de atração (%)"
 
-#: ui/app.slint:7490
+#: ui/app.slint:8265
 msgid "Toujours afficher la grille en arrière-plan"
 msgstr "Sempre mostrar a grade em segundo plano"
 
-#: ui/app.slint:7507
+#: ui/app.slint:8282
 msgid "Afficher les lignes magenta d'accroche (croix)"
 msgstr "Mostrar linhas principais magenta (cruzes)"
 
-#: ui/app.slint:7518
+#: ui/app.slint:8293
 msgid "La grille de prévisualisation s'affiche sur la toile. Validez avec OK pour conserver les paramètres de l'aimantation."
 msgstr "A grade de visualização aparece na tela. Valide com OK para manter os parâmetros de magnetização."
 
-#: ui/app.slint:7551
+#: ui/app.slint:8326
 msgid "Rotation et retournement"
 msgstr "Rotação e inversão"
 
-#: ui/app.slint:7566
+#: ui/app.slint:8341
 msgid "Portée"
 msgstr "Escopo"
 
-#: ui/app.slint:7572
+#: ui/app.slint:8347
 msgid "Image entière"
 msgstr "Imagem inteira"
 
-#: ui/app.slint:7583
+#: ui/app.slint:8358
 msgid "90° vers la gauche"
 msgstr "90° para a esquerda"
 
-#: ui/app.slint:7584
+#: ui/app.slint:8359
 msgid "90° vers la droite"
 msgstr "90° para a direita"
 
-#: ui/app.slint:7585
+#: ui/app.slint:8360
 msgid "Demi-tour (180°)"
 msgstr "Retorno (180°)"
 
-#: ui/app.slint:7586
+#: ui/app.slint:8361
 msgid "Miroir horizontal"
 msgstr "Espelho horizontal"
 
-#: ui/app.slint:7587
+#: ui/app.slint:8362
 msgid "Miroir vertical"
 msgstr "Espelho vertical"
 
-#: ui/app.slint:7628
+#: ui/app.slint:8403
 msgid "Calque actif : retournements et demi-tour (la rotation à 90° change la taille de la toile)."
 msgstr "Camada ativa: inversões e inversões de marcha (girar 90° altera o tamanho da tela)."
 
-#: ui/app.slint:7628
+#: ui/app.slint:8403
 msgid "Toute l'image : tous les calques et la sélection."
 msgstr "Imagem inteira: todas as camadas e seleção."
 
-#: ui/app.slint:7691
+#: ui/app.slint:8466
 msgid "Tous les calques"
 msgstr "Todas as camadas"
 
-#: ui/app.slint:7699
+#: ui/app.slint:8474
 msgid "Aucun réglage pour cet effet."
 msgstr "Nenhuma configuração para este efeito."
 
-#: ui/app.slint:7814
+#: ui/app.slint:8589
 msgid "Revenir à la valeur par défaut"
 msgstr "Repor o valor predefinido"
 
-#: ui/app.slint:7814
+#: ui/app.slint:8589
 msgid "Valeur par défaut"
 msgstr "Valor padrão"
 
-#: ui/app.slint:7876
+#: ui/app.slint:8657
 msgid "Choisir la couleur"
 msgstr "Escolher cor"
 
-#: ui/app.slint:7892
+#: ui/app.slint:8673
 msgid "Pipette"
 msgstr "Pipeta"
 
-#: ui/app.slint:7988
+#: ui/app.slint:8770
 msgid "Télécharger MasterPaint"
 msgstr "Baixar MasterPaint"
 
-#: ui/app.slint:8004
+#: ui/app.slint:8786
 msgid "Version installable, plus rapide (tous les cœurs du processeur) :"
 msgstr "Versão instalável e mais rápida (todos os núcleos da CPU):"
 
-#: ui/app.slint:8009
+#: ui/app.slint:8791
 msgid "Windows — application portable (.exe)"
 msgstr "Windows – aplicativo portátil (.exe)"
 
-#: ui/app.slint:8010
+#: ui/app.slint:8792
 msgid "Windows — installeur (setup)"
 msgstr "Windows – instalador (configuração)"
 
-#: ui/app.slint:8011
+#: ui/app.slint:8793
 msgid "Linux — AppImage"
 msgstr "Linux — AppImage"
 
-#: ui/app.slint:8012
+#: ui/app.slint:8794
 msgid "Linux — archive .tar.gz"
 msgstr "Linux - arquivo .tar.gz"
 
-#: ui/app.slint:8013
+#: ui/app.slint:8795
 msgid "Linux — Flatpak"
 msgstr "Linux — Flatpak"
 
-#: ui/app.slint:8014
+#: ui/app.slint:8796
 msgid "macOS — .dmg"
 msgstr "macOS — .dmg"
 
-#: ui/app.slint:8015
+#: ui/app.slint:8797
 msgid "Android — .apk"
 msgstr "Android — .apk"
 
-#: ui/app.slint:8016
+#: ui/app.slint:8798
 msgid "iOS / iPadOS"
 msgstr "iOS / iPadOS"
 
-#: ui/app.slint:8028
+#: ui/app.slint:8810
 msgid "indisponible"
 msgstr "indisponível"
 
-#: ui/app.slint:8270
+#: ui/app.slint:9112
 msgid "×"
 msgstr "×"
 
@@ -2616,8 +2797,8 @@ msgid "Effets"
 msgstr "Efeitos"
 
 #: ui/generated.slint:185
-msgid "Répéter Sépia"
-msgstr "Repetir sépia"
+msgid "Répéter le dernier effet"
+msgstr "Repita o último efeito"
 
 #: ui/generated.slint:187
 msgid "Artistique"
@@ -2947,427 +3128,771 @@ msgstr "Animação (friso)"
 msgid "Importer une séquence d’images (frames)…"
 msgstr "Importe uma sequência de imagens (quadros)…"
 
-#: ui/info.slint:360
-msgid "Touches"
-msgstr "Teclas"
+#: ui/info.slint:388
+msgid "principale"
+msgstr ""
 
-#: ui/info.slint:361
-msgid "Filtres dynamiques ƒ"
-msgstr "Filtros dinâmicos ƒ"
+#: ui/info.slint:389
+msgid "secondaire"
+msgstr ""
 
-#: ui/info.slint:361
-msgid "Masques α"
-msgstr "Máscaras α"
+#: ui/info.slint:409
+msgid "Plus"
+msgstr ""
 
-#: ui/info.slint:361
-msgid "Formes SVG"
-msgstr "Formas SVG"
+#: ui/info.slint:520
+msgid "Forme :"
+msgstr ""
 
-#: ui/info.slint:379
+#: ui/info.slint:528
+msgid " Épaisseur :"
+msgstr ""
+
+#: ui/info.slint:637
+msgid "rotation"
+msgstr ""
+
+#: ui/info.slint:700
+msgid "Balle"
+msgstr ""
+
+#: ui/info.slint:776
+msgid "Outils et ruban"
+msgstr ""
+
+#: ui/info.slint:777
+msgid "Texte et SVG"
+msgstr ""
+
+#: ui/info.slint:779
+msgid "Animation"
+msgstr "Animação"
+
+#: ui/info.slint:780
+msgid "Fichiers"
+msgstr "Arquivos"
+
+#: ui/info.slint:782
+msgid "Masque α"
+msgstr "máscara alfa"
+
+#: ui/info.slint:782
+msgid "Filtre ƒ"
+msgstr ""
+
+#: ui/info.slint:782
+msgid "Dossiers"
+msgstr ""
+
+#: ui/info.slint:783
+msgid "Barre Paint.NET"
+msgstr ""
+
+#: ui/info.slint:783
+msgid "Sélections"
+msgstr ""
+
+#: ui/info.slint:783
+msgid "Pinceaux"
+msgstr ""
+
+#: ui/info.slint:784
+msgid "Formes"
+msgstr ""
+
+#: ui/info.slint:784
+msgid "Lignes"
+msgstr ""
+
+#: ui/info.slint:784
+msgid "Calques SVG"
+msgstr ""
+
+#: ui/info.slint:879
 msgid "Les raccourcis suivent Paint.NET. Ils se retrouvent aussi dans les infobulles des menus et des boutons."
 msgstr "Os atalhos seguem o Paint.NET e também aparecem nas dicas dos menus e botões."
 
-#: ui/info.slint:409
+#: ui/info.slint:909
 msgid "Calque de filtres dynamiques (ƒ)"
 msgstr "Camada de filtros dinâmicos (ƒ)"
 
-#: ui/info.slint:411
+#: ui/info.slint:911
 msgid "Un calque ƒ applique des effets à tout ce qui est en dessous, sans rien modifier : ses pixels ne sont qu'une zone en gris. Blanc = effet appliqué, noir = pas d'effet, gris = effet partiel. Si vous retouchez le dessous, l'effet suit."
 msgstr "Uma camada ƒ aplica efeitos a tudo o que está por baixo sem alterar os píxeis originais: os seus píxeis apenas definem uma máscara cinzenta. Branco = efeito completo, preto = sem efeito, cinzento = efeito parcial. As alterações por baixo atualizam o efeito."
 
-#: ui/info.slint:415
+#: ui/info.slint:915
 msgid "Calques du dessous"
 msgstr "Camadas inferiores"
 
-#: ui/info.slint:416
+#: ui/info.slint:916
 msgid "Calque ƒ : zone peinte en blanc"
 msgstr "Camada ƒ: área pintada de branco"
 
-#: ui/info.slint:417
+#: ui/info.slint:917
 msgid "Résultat : l'effet seulement dans la zone"
 msgstr "Resultado: efeito apenas dentro da área"
 
-#: ui/info.slint:419
+#: ui/info.slint:919
 msgid "Panneau Calques : bouton ƒ du calque (ou ajoutez un calque vide puis ƒ)."
 msgstr "Painel Camadas: botão ƒ da camada (ou adicione uma camada vazia e clique em ƒ)."
 
-#: ui/info.slint:420
+#: ui/info.slint:920
 msgid "Menu Effets ou Ajustements : l'effet choisi rejoint la pile du calque au lieu d'être appliqué une fois pour toutes."
 msgstr "Menu Efeitos ou Ajustes: o efeito escolhido é adicionado à pilha da camada em vez de ser aplicado de forma permanente."
 
-#: ui/info.slint:421
+#: ui/info.slint:921
 msgid "Peignez en blanc ou en noir sur le calque ƒ (pinceau, dégradé, sélection + remplissage) pour choisir où l'effet agit."
 msgstr "Pinte a branco ou preto na camada ƒ (pincel, gradiente, seleção + preenchimento) para escolher onde o efeito atua."
 
-#: ui/info.slint:422
+#: ui/info.slint:922
 msgid "Bouton à curseurs du calque (Effets appliqués) : ordre, puissance, réglages, activer / désactiver chaque effet. L'aperçu se calcule vite en basse résolution pendant le réglage, puis en pleine résolution."
 msgstr "Botão de cursores da camada (Efeitos aplicados): ordem, intensidade, definições e ativação individual. Durante o ajuste, a pré-visualização é calculada rapidamente em baixa resolução e depois em resolução completa."
 
-#: ui/info.slint:428
+#: ui/info.slint:928
 msgid "Masque alpha (α)"
 msgstr "Máscara alfa (α)"
 
-#: ui/info.slint:430
+#: ui/info.slint:930
 msgid "Le masque α choisit ce qui reste visible d'un calque, sans effacer ses pixels : blanc = visible, noir = caché, gris = semi-transparent. Il se retouche ou se supprime à tout moment, le calque d'origine est intact."
 msgstr "Uma máscara α controla as partes visíveis de uma camada sem apagar os seus píxeis: branco = visível, preto = oculto, cinzento = semitransparente. Pode editá-la ou removê-la a qualquer momento; a camada original mantém-se intacta."
 
-#: ui/info.slint:436
+#: ui/info.slint:936
 msgid "Masque α : blanc → noir"
 msgstr "Máscara α: branco → preto"
 
-#: ui/info.slint:437
+#: ui/info.slint:937
 msgid "Résultat : le calque s'efface en douceur"
 msgstr "Resultado: a camada desvanece suavemente"
 
-#: ui/info.slint:439
+#: ui/info.slint:939
 msgid "Panneau Calques : bouton α du calque. Le masque s'ouvre dans son propre onglet (en gris)."
 msgstr "Painel Camadas: botão α da camada. A máscara abre no seu próprio separador (em tons de cinzento)."
 
-#: ui/info.slint:440
+#: ui/info.slint:940
 msgid "Peignez-le comme une image : pinceau, gomme, dégradé noir → blanc pour un fondu, effets (flou pour adoucir le bord)."
 msgstr "Pinte-a como uma imagem: pincel, borracha, gradiente preto → branco para uma transição ou efeitos (desfoque para suavizar o contorno)."
 
-#: ui/info.slint:441
+#: ui/info.slint:941
 msgid "Revenez à l'onglet de l'image : le calque s'affiche à travers son masque. La corbeille à côté de α retire le masque."
 msgstr "Volte ao separador da imagem: a camada é apresentada através da máscara. O caixote junto de α remove a máscara."
 
-#: ui/info.slint:443
+#: ui/info.slint:943
 msgid "Un calque a soit un masque α, soit un filtre ƒ, pas les deux."
 msgstr "Uma camada pode ter uma máscara α ou um filtro ƒ, mas não ambos."
 
-#: ui/info.slint:451
+#: ui/info.slint:951
 msgid "Texte modifiable"
 msgstr "Texto editável"
 
-#: ui/info.slint:453
+#: ui/info.slint:953
 msgid "Avec l'option « Calque SVG » activée (par défaut), chaque texte reste modifiable : police, taille, couleur, contenu et position se changent à tout moment, et les effets qu'on lui applique ne le figent pas."
 msgstr "Com «Camada SVG» ativado (predefinição), cada texto continua editável: tipo de letra, tamanho, cor, conteúdo e posição podem ser alterados a qualquer momento e os efeitos não o rasterizam."
 
-#: ui/info.slint:485
+#: ui/info.slint:985
 msgid "Texte 1"
 msgstr "Texto 1"
 
-#: ui/info.slint:490
+#: ui/info.slint:990
 msgid "Outil Texte (T) : cliquez sur l'image et tapez. Entrée = nouvelle ligne, Échap ou clic ailleurs = valider."
 msgstr "Ferramenta Texto (T): clique na imagem e escreva. Enter = nova linha; Esc ou clique fora = confirmar."
 
-#: ui/info.slint:491
+#: ui/info.slint:991
 msgid "Pour le modifier, recliquez le texte avec l'outil Texte : il reprend sa police, sa taille et sa couleur. L'outil Déplacer le bouge."
 msgstr "Para editar, clique novamente com Texto: o tipo de letra, tamanho e cor são recuperados. Use Mover para alterar a posição."
 
-#: ui/info.slint:492
+#: ui/info.slint:992
 msgid "Les effets du menu posés sur un calque texte restent réglables : badge fx du calque (activer, ordre, supprimer)."
 msgstr "Os efeitos do menu aplicados a uma camada de texto continuam ajustáveis: use o símbolo fx da camada (ativar, ordenar, eliminar)."
 
-#: ui/info.slint:493
+#: ui/info.slint:993
 msgid "Bouton « Modifiable » relâché : le texte est peint directement dans le calque actif. Calques › Pixelliser le calque fige un calque texte."
 msgstr "Com «Editável» desativado, o texto é pintado diretamente na camada ativa. Camadas › Rasterizar camada converte uma camada de texto em píxeis."
 
-#: ui/info.slint:499
+#: ui/info.slint:999
 msgid "Formes et calques SVG (bêta)"
 msgstr "Formas e camadas SVG (beta)"
 
-#: ui/info.slint:501
+#: ui/info.slint:1001
 msgid "Un calque SVG garde la description de ses objets (formes, textes) au lieu de pixels : on peut les déplacer, les recolorer ou les supprimer après coup, et ils s'exportent en vrai SVG."
 msgstr "Uma camada SVG guarda descrições de objetos (formas, textos) em vez de píxeis: pode movê-los, recolori-los ou eliminá-los mais tarde e exportá-los como SVG real."
 
-#: ui/info.slint:554
+#: ui/info.slint:1054
 msgid "Formes 1"
 msgstr "Formas 1"
 
-#: ui/info.slint:559
+#: ui/info.slint:1059
 msgid "Outils Formes, Rectangle arrondi ou Ligne : tracez. Avec « Calque SVG » activé (par défaut), la forme va sur un calque SVG (créé au besoin) et reste un objet."
 msgstr "Ferramentas Formas, Retângulo arredondado ou Linha: desenhe. Com «Camada SVG» ativado (predefinição), a forma é colocada numa camada SVG, criada se necessário, e continua a ser um objeto."
 
-#: ui/info.slint:560
+#: ui/info.slint:1060
 msgid "Déplacer bouge l'objet sous le pointeur, le Pot de peinture le recolore, Fenêtre › Objets SVG les liste (afficher, verrouiller, ordre, supprimer)."
 msgstr "Mover desloca o objeto sob o ponteiro; o Balde de tinta altera a sua cor. Janela › Objetos SVG lista os objetos (visibilidade, bloqueio, ordem, eliminação)."
 
-#: ui/info.slint:561
+#: ui/info.slint:1061
 msgid "Fichier › Exporter › SVG : les calques SVG restent des objets vectoriels, le reste devient une image intégrée. Ouvrir un fichier .svg le reprend en objets."
 msgstr "Ficheiro › Exportar › SVG mantém as camadas SVG como objetos vetoriais e incorpora o restante como imagem. Abrir um ficheiro .svg recupera os seus objetos."
 
-#: ui/info.slint:562
+#: ui/info.slint:1062
 msgid "Bouton « Modifiable » relâché : la forme est tracée en pixels dans le calque actif. Pour peindre au pinceau sur un calque SVG, il faut le pixelliser (ses objets ne sont alors plus modifiables)."
 msgstr "Com «Editável» desativado, as formas são desenhadas em píxeis na camada ativa. Para pintar com um pincel numa camada SVG, rasterize-a primeiro (os objetos deixam de ser editáveis)."
 
-#: ui/info.slint:564
-msgid "Le mode SVG est en bêta : courbes de Bézier et rotation des objets arrivent plus tard."
-msgstr "O modo SVG está em beta: as curvas de Bézier e a rotação de objetos chegarão mais tarde."
+#: ui/info.slint:1064
+msgid "Le mode SVG est en bêta : les courbes de Bézier libres arrivent plus tard."
+msgstr ""
 
-#: ui/mpicons.slint:430
+#: ui/info.slint:1072
+msgid "La palette Couleurs"
+msgstr ""
+
+#: ui/info.slint:1073
+msgid "Deux couleurs servent à tout : la principale (clic gauche) et la secondaire (clic droit). Les formes « Les deux » ont le contour de la principale et l'intérieur de la secondaire."
+msgstr ""
+
+#: ui/info.slint:1075
+msgid "Cliquez dans la roue (ou le carré) : la couleur modifiée prend la teinte et la saturation du point ; clic droit dans la roue = l'autre couleur."
+msgstr ""
+
+#: ui/info.slint:1076
+msgid "Les petites flèches entre les deux carrés les échangent (touche X). Cliquez le carré de la secondaire pour la modifier à son tour."
+msgstr ""
+
+#: ui/info.slint:1077
+msgid "« Plus » : curseurs RVB et TSV, code hexadécimal, transparence (alpha)."
+msgstr ""
+
+#: ui/info.slint:1078
+msgid "Nuancier, favoris (« + » ajoute la couleur, Maj + clic en retire une) et couleurs récentes en bas. La pipette (outil I) prélève une couleur dans l'image."
+msgstr ""
+
+#: ui/info.slint:1079
+msgid "Les couleurs des Paramètres et des effets (ombre, contour…) s'ouvrent dans la même fenêtre Couleurs, posée contre la case cliquée."
+msgstr ""
+
+#: ui/info.slint:1085
+msgid "Le panneau Calques"
+msgstr ""
+
+#: ui/info.slint:1086
+msgid "Les calques s'empilent : celui du haut de la liste est dessiné par-dessus les autres. On peint toujours dans le calque actif (en surbrillance)."
+msgstr ""
+
+#: ui/info.slint:1095
+msgid "Ombre"
+msgstr ""
+
+#: ui/info.slint:1096
+msgid "Personnage"
+msgstr ""
+
+#: ui/info.slint:1097
+msgid "Arrière-plan"
+msgstr "Plano de fundo"
+
+#: ui/info.slint:1101
+msgid "Case à gauche : afficher / masquer. Clic sur la ligne : calque actif. Double-clic sur le nom : le renommer. Glisser une ligne : changer l'ordre."
+msgstr ""
+
+#: ui/info.slint:1102
+msgid "Boutons à droite : cadenas (plus de dessin ni d'effet), α (masque de transparence), ƒ (filtre dynamique)."
+msgstr ""
+
+#: ui/info.slint:1103
+msgid "En bas : opacité et mode de fusion du calque actif, puis ajouter, supprimer, dossier, dupliquer, fusionner, monter, descendre."
+msgstr ""
+
+#: ui/info.slint:1104
+msgid "Clic droit sur un calque : son menu (pixelliser un calque SVG, effets du calque texte…)."
+msgstr ""
+
+#: ui/info.slint:1108
+msgid "Dossiers de calques"
+msgstr ""
+
+#: ui/info.slint:1109
+msgid "Un dossier regroupe des calques : on le replie, on le déplace, on règle d'un coup leur opacité et leur mode de fusion."
+msgstr ""
+
+#: ui/info.slint:1118
+msgid "Décor"
+msgstr ""
+
+#: ui/info.slint:1119
+msgid "Arbres"
+msgstr ""
+
+#: ui/info.slint:1120
+msgid "Ciel"
+msgstr ""
+
+#: ui/info.slint:1124
+msgid "Calques › Nouveau dossier, ou Grouper dans un dossier (le calque actif y entre)."
+msgstr ""
+
+#: ui/info.slint:1125
+msgid "Glissez un calque sur un dossier pour l'y ranger ; le chevron replie / déplie le dossier."
+msgstr ""
+
+#: ui/info.slint:1126
+msgid "Mode « Transfert » du dossier : ses calques se mélangent directement à ceux du dessous (sinon le dossier est composé à part)."
+msgstr ""
+
+#: ui/info.slint:1132
+msgid "Le ruban MasterPaint"
+msgstr ""
+
+#: ui/info.slint:1133
+msgid "Sous les menus, le ruban montre les réglages de l'outil choisi, rangés en alvéoles libellées. Il change à chaque outil."
+msgstr ""
+
+#: ui/info.slint:1135
+msgid "Alvéole « Outil » : le bouton ouvre la grille de tous les outils (comme la palette Outils)."
+msgstr ""
+
+#: ui/info.slint:1136
+msgid "Jauges : glissez dedans, utilisez − / +, ou double-cliquez pour taper la valeur."
+msgstr ""
+
+#: ui/info.slint:1137
+msgid "Au bout : grille, règles, aimantation, dessin hors de la toile (aussi dans le menu Affichage)."
+msgstr ""
+
+#: ui/info.slint:1138
+msgid "Les réglages sont retenus d'un lancement à l'autre. Paramètres › Apparence › Barre d'options : ruban ou barre Paint.NET."
+msgstr ""
+
+#: ui/info.slint:1142
+msgid "La barre Paint.NET"
+msgstr ""
+
+#: ui/info.slint:1143
+msgid "Les mêmes réglages sur une seule ligne compacte, comme la barre d'outils de Paint.NET : plus de place pour l'image."
+msgstr ""
+
+#: ui/info.slint:1145
+msgid "Paramètres › Apparence › Barre d'options : « Style Paint.NET »."
+msgstr ""
+
+#: ui/info.slint:1146
+msgid "Sur un écran étroit, la barre passe sur deux lignes ; survolez une icône pour son nom."
+msgstr ""
+
+#: ui/info.slint:1147
+msgid "Raccourcis d'outils de Paint.NET : S sélection, M déplacer, B pinceau, F remplissage, T texte, O ellipse… (section Raccourcis)."
+msgstr ""
+
+#: ui/info.slint:1152
+msgid "Une sélection limite les outils et les effets à une zone. Les pointillés en montrent le contour."
+msgstr ""
+
+#: ui/info.slint:1154
+msgid "Rectangle (S), lasso, lasso polygonal, lasso magnétique (suit les bords), baguette magique (zone de couleur proche)."
+msgstr ""
+
+#: ui/info.slint:1155
+msgid "Ctrl : ajouter à la sélection ; Alt : en retirer (ou les boutons Nouv., Ajout, Retrait du ruban)."
+msgstr ""
+
+#: ui/info.slint:1156
+msgid "Outil Déplacer : glisser déplace les pixels sélectionnés, les poignées les redimensionnent, clic droit les fait tourner."
+msgstr ""
+
+#: ui/info.slint:1157
+msgid "Ctrl+A tout, Ctrl+D désélectionner, Ctrl+I inverser, Ctrl+Maj+X recadrer à la sélection."
+msgstr ""
+
+#: ui/info.slint:1162
+msgid "Pinceau, crayon et gomme peignent dans le calque actif ; le cercle gris montre la taille sous la souris."
+msgstr ""
+
+#: ui/info.slint:1164
+msgid "Ruban : taille ([ et ] au clavier), dureté, forme (rond, doux, spray, carré)."
+msgstr ""
+
+#: ui/info.slint:1165
+msgid "Clic gauche : couleur principale ; clic droit : secondaire. Avec un stylet, la pression fait varier la taille."
+msgstr ""
+
+#: ui/info.slint:1166
+msgid "Symétrie : le trait est reproduit en miroir (axes X, Y, ou les deux)."
+msgstr ""
+
+#: ui/info.slint:1172
+msgid "Formes vivantes"
+msgstr ""
+
+#: ui/info.slint:1173
+msgid "Une forme tracée reste « vivante » jusqu'à ce qu'on la pose : on la déplace, la redimensionne, la tourne, et le ruban la modifie en direct (couleurs, épaisseur, style, rayon des coins, nombre de côtés ou de branches)."
+msgstr ""
+
+#: ui/info.slint:1175
+msgid "Outil Formes : choisissez la forme dans le ruban, tracez-la sur la toile."
+msgstr ""
+
+#: ui/info.slint:1176
+msgid "Glisser dedans : la déplacer ; poignées : la redimensionner (Maj sur un coin : proportions gardées) ; poignée du haut : la tourner (Maj : par pas de 15°)."
+msgstr ""
+
+#: ui/info.slint:1177
+msgid "Entrée, Échap ou un clic à côté la posent ; Ctrl+Z l'annule. « Modifiable » activé : elle reste un objet SVG, qu'un clic reprend plus tard."
+msgstr ""
+
+#: ui/info.slint:1181
+msgid "Lignes et courbes"
+msgstr ""
+
+#: ui/info.slint:1182
+msgid "L'outil Ligne trace une droite ; en mode « Courbe », deux points apparaissent au tiers et aux deux tiers : déplacez-les pour courber la ligne."
+msgstr ""
+
+#: ui/info.slint:1184
+msgid "Ruban : Droite ou Courbe, puis le début, le trait (continu, tirets, pointillés) et la fin (droit, rond, flèche pleine, flèche vide, losange)."
+msgstr ""
+
+#: ui/info.slint:1185
+msgid "Tant que la ligne n'est pas posée, ses points se déplacent et le ruban la modifie (épaisseur, couleur, bouts, trait)."
+msgstr ""
+
+#: ui/info.slint:1186
+msgid "Entrée ou un clic à côté la posent ; elle s'exporte telle quelle en SVG (flèches comprises)."
+msgstr ""
+
+#: ui/info.slint:1192
+msgid "Fenêtres d'effet"
+msgstr ""
+
+#: ui/info.slint:1193
+msgid "Menus Effets et Ajustements : chaque effet ouvre sa fenêtre, avec un aperçu en direct sur l'image (calculé vite en basse résolution sur les grandes images)."
+msgstr ""
+
+#: ui/info.slint:1195
+msgid "Le bouton ↺ d'un réglage s'allume quand il a changé : un clic remet sa valeur par défaut (double-clic sur l'intitulé aussi)."
+msgstr ""
+
+#: ui/info.slint:1196
+msgid "Les angles se règlent au cadran ; les couleurs s'ouvrent dans la fenêtre Couleurs ; « Pipette » prend une couleur dans l'image."
+msgstr ""
+
+#: ui/info.slint:1197
+msgid "OK applique l'effet au calque actif (ou à la sélection). Sur un calque ƒ, il rejoint sa pile : réglable ensuite."
+msgstr ""
+
+#: ui/info.slint:1198
+msgid "Ctrl+F répète le dernier effet avec les mêmes réglages."
+msgstr ""
+
+#: ui/info.slint:1205
+msgid "Image › Mode du projet › Animation (ou Nouvelle image › Anim.) : la frise apparaît sous la toile. Chaque calque a ses dessins, posés image par image."
+msgstr ""
+
+#: ui/info.slint:1207
+msgid "Une case pleine = un dessin posé à cette image ; un trait = le dessin précédent maintenu. Clic sur une case : aller à cette image."
+msgstr ""
+
+#: ui/info.slint:1208
+msgid "Ajouter, Dupliquer, Insérer : nouvelles images. Double-clic sur une case : image clé ; glisser : déplacer le dessin ; clic droit : son menu (maintenir, copier, répéter)."
+msgstr ""
+
+#: ui/info.slint:1209
+msgid "Pelure d'oignon : images voisines en transparence (bleu avant, rouge après). « Pas à pas » avance d'une image après chaque tracé."
+msgstr ""
+
+#: ui/info.slint:1210
+msgid "Lire / Pause, images par seconde (IPS), boucle ; export en GIF animé ou en planche de sprites."
+msgstr ""
+
+#: ui/info.slint:1211
+msgid "Animation SVG : chaque image garde ses objets modifiables (formes, textes)."
+msgstr ""
+
+#: ui/info.slint:1217
+msgid "Ouvrir, enregistrer, exporter"
+msgstr ""
+
+#: ui/info.slint:1218
+msgid "Ouvrir (Ctrl+O) ou glisser un fichier sur la fenêtre : images (PNG, JPEG, WebP, GIF animés, BMP, TIFF…), photos RAW (ouvertes dans le Mode Photo Pro), projets MasterPaint (.illu), Paint.NET (.pdn) et dessins SVG."
+msgstr ""
+
+#: ui/info.slint:1219
+msgid "SVG : une fenêtre propose un calque par élément, tout sur un seul calque, la grille d'icônes (feuilles de symboles) ou l'ajout au projet ouvert."
+msgstr ""
+
+#: ui/info.slint:1220
+msgid "Paint.NET : les calques reviennent avec leur nom, leur visibilité, leur opacité et leur mode de fusion."
+msgstr ""
+
+#: ui/info.slint:1221
+msgid "Exporter (Ctrl+S) : PNG, JPEG, WebP, BMP, SVG (calques SVG en objets), ou .illu pour tout garder (calques, masques, filtres ƒ, animation)."
+msgstr ""
+
+#: ui/info.slint:1222
+msgid "Les projets ouverts sont sauvegardés automatiquement et rouverts au lancement suivant (Paramètres › Données)."
+msgstr ""
+
+#: ui/mpicons.slint:432
 msgid "Grouper dans un dossier"
 msgstr "Agrupar em uma pasta"
 
-#: ui/mpicons.slint:431
+#: ui/mpicons.slint:433
 msgid "Dégrouper"
 msgstr "Desagrupar"
 
-#: ui/mpicons.slint:432
+#: ui/mpicons.slint:434
 msgid "Verrouiller / déverrouiller le calque"
 msgstr "Bloquear/desbloquear camada"
 
-#: ui/mpicons.slint:433
+#: ui/mpicons.slint:435
 msgid "Verrouiller le calque"
 msgstr "Camada de bloqueio"
 
-#: ui/mpicons.slint:434
+#: ui/mpicons.slint:436
 msgid "Déverrouiller le calque"
 msgstr "Camada de desbloqueio"
 
-#: ui/mpicons.slint:435
+#: ui/mpicons.slint:437
 msgid "Pixelliser le calque"
 msgstr "Rasterizar a camada"
 
-#: ui/mpicons.slint:444
+#: ui/mpicons.slint:446
 msgid "Préréglages créatifs"
 msgstr "Predefinições criativas"
 
-#: ui/phone.slint:39
+#: ui/phone.slint:40
 msgid "Menu"
 msgstr "Cardápio"
 
-#: ui/phone.slint:85
+#: ui/phone.slint:86
 msgid "MASTERPAINT"
 msgstr "MASTERPAINT"
 
-#: ui/phone.slint:93
+#: ui/phone.slint:94
 msgid "by Polocrafting"
 msgstr "da Polocrafting"
 
-#: ui/phone.slint:377
+#: ui/phone.slint:382
 msgid "Filtre"
 msgstr "Filtro"
 
-#: ui/phone.slint:378
+#: ui/phone.slint:383
 msgid "Ajuster"
 msgstr "Ajustar"
 
-#: ui/phone.slint:379
+#: ui/phone.slint:384
 msgid "Déform"
 msgstr "Deformar"
 
-#: ui/phone.slint:381
+#: ui/phone.slint:386
 msgid "Rotation"
 msgstr "Rotação"
 
-#: ui/phone.slint:752
+#: ui/phone.slint:757
 msgid "DOCUMENTS"
 msgstr "DOCUMENTOS"
 
-#: ui/phone.slint:829
+#: ui/phone.slint:834
 msgid "Historique des actions"
 msgstr "Histórico de ações"
 
-#: ui/phone.slint:844
+#: ui/phone.slint:849
 msgid "FICHIER"
 msgstr "ARQUIVO"
 
-#: ui/phone.slint:883
+#: ui/phone.slint:895
 msgid "MENUS"
 msgstr "MENU"
 
-#: ui/phone.slint:1038
+#: ui/phone.slint:1050
 msgid "Galerie"
 msgstr "Galeria"
 
-#: ui/phone.slint:1039
+#: ui/phone.slint:1051
 msgid "Lum./Cont."
 msgstr "Luz/Cont."
 
-#: ui/phone.slint:1040
+#: ui/phone.slint:1052
 msgid "Teinte/Sat."
 msgstr "Matiz/Sábado."
 
-#: ui/phone.slint:1041
+#: ui/phone.slint:1053
 msgid "Inverser"
 msgstr "Reverso"
 
-#: ui/phone.slint:1042
+#: ui/phone.slint:1054
 msgid "N&B"
 msgstr "P&B"
 
-#: ui/photo.slint:169
-msgid "RAZ"
-msgstr "Redefinir"
-
-#: ui/photo.slint:283
+#: ui/photo.slint:332
 msgid "Mode Photo Pro"
 msgstr "Modo Foto Profissional"
 
-#: ui/photo.slint:296
+#: ui/photo.slint:345
 msgid "Importer"
 msgstr "Importar"
 
-#: ui/photo.slint:296
+#: ui/photo.slint:345
 msgid "Importer photos"
 msgstr "Importar fotos"
 
-#: ui/photo.slint:318
+#: ui/photo.slint:367
 msgid "Appliquer à toutes"
 msgstr "Aplicar a todos"
 
-#: ui/photo.slint:327
+#: ui/photo.slint:376
 msgid "Auto sur toutes"
 msgstr "Automático em tudo"
 
-#: ui/photo.slint:405
+#: ui/photo.slint:459
 msgid "Aucune photo chargée. Importez vos fichiers JPG, PNG, WebP…"
 msgstr "Nenhuma foto carregada. Importe seus arquivos JPG, PNG, WebP…"
 
-#: ui/photo.slint:437
+#: ui/photo.slint:491
 msgid "Rendu…"
 msgstr "Renderizado…"
 
-#: ui/photo.slint:497
+#: ui/photo.slint:551
 msgid "OFF"
 msgstr "OFF"
 
-#: ui/photo.slint:497
+#: ui/photo.slint:551
 msgid "ON"
 msgstr "ON"
 
-#: ui/photo.slint:611
+#: ui/photo.slint:668
 msgid "FILTRES & RESET"
 msgstr "FILTROS E REINICIALIZAÇÃO"
 
-#: ui/photo.slint:707
+#: ui/photo.slint:777
 msgid "LUMIÈRE"
 msgstr "LUZ"
 
-#: ui/photo.slint:708
+#: ui/photo.slint:778
 msgid "Exposition"
 msgstr "Exposição"
 
-#: ui/photo.slint:708
+#: ui/photo.slint:778
 msgid "Contraste"
 msgstr "Contraste"
 
-#: ui/photo.slint:709
+#: ui/photo.slint:779
 msgid "Hautes lumières"
 msgstr "Destaques"
 
-#: ui/photo.slint:709
-msgid "Ombres"
-msgstr "Sombras"
-
-#: ui/photo.slint:710
+#: ui/photo.slint:780
 msgid "Blancs"
 msgstr "Brancos"
 
-#: ui/photo.slint:710
+#: ui/photo.slint:780
 msgid "Noirs"
 msgstr "Negros"
 
-#: ui/photo.slint:711
+#: ui/photo.slint:781
 msgid "COULEUR ET SATURATION"
 msgstr "COR E SATURAÇÃO"
 
-#: ui/photo.slint:712
+#: ui/photo.slint:782
 msgid "Température"
 msgstr "Temperatura"
 
-#: ui/photo.slint:713
+#: ui/photo.slint:783
 msgid "Vibrance"
 msgstr "Vibração"
 
-#: ui/photo.slint:714
+#: ui/photo.slint:784
 msgid "PRÉSENCE ET DÉTAIL"
 msgstr "PRESENÇA E DETALHE"
 
-#: ui/photo.slint:715
+#: ui/photo.slint:785
 msgid "Clarté (micro-contraste)"
 msgstr "Clareza (microcontraste)"
 
-#: ui/photo.slint:715
+#: ui/photo.slint:785
 msgid "Correction du voile"
 msgstr "Remover névoa"
 
-#: ui/photo.slint:716
+#: ui/photo.slint:786
 msgid "Vignettage"
 msgstr "Vinheta"
 
-#: ui/photo.slint:716
+#: ui/photo.slint:786
 msgid "Netteté (piqué)"
 msgstr "Nitidez (nítido)"
 
-#: ui/photo.slint:717
+#: ui/photo.slint:787
 msgid "Grain film"
 msgstr "Grão de filme"
 
-#: ui/photo.slint:717
+#: ui/photo.slint:787
 msgid "Piqué du grain"
 msgstr "Mergulho de grãos"
 
-#: ui/photo.slint:718
+#: ui/photo.slint:788
 msgid "COLOR GRADING (RVB)"
 msgstr "GRADUAÇÃO DE CORES (RGB)"
 
-#: ui/photo.slint:719
+#: ui/photo.slint:789
 msgid "Rouge — hautes lumières"
 msgstr "Vermelho – destaques"
 
-#: ui/photo.slint:719
+#: ui/photo.slint:789
 msgid "Rouge — ombres"
 msgstr "Vermelho – sombras"
 
-#: ui/photo.slint:720
+#: ui/photo.slint:790
 msgid "Vert — hautes lumières"
 msgstr "Verde – destaques"
 
-#: ui/photo.slint:720
+#: ui/photo.slint:790
 msgid "Vert — ombres"
 msgstr "Verde – sombras"
 
-#: ui/photo.slint:721
+#: ui/photo.slint:791
 msgid "Bleu — hautes lumières"
 msgstr "Azul - destaques"
 
-#: ui/photo.slint:721
+#: ui/photo.slint:791
 msgid "Bleu — ombres"
 msgstr "Azul – sombras"
 
-#: ui/photo.slint:741
+#: ui/photo.slint:811
 msgid "Auto"
 msgstr "Automático"
 
-#: ui/photo.slint:762
+#: ui/photo.slint:835
 msgid "MÉLANGEUR DE COULEURS (TSL)"
 msgstr "MISTURADOR DE CORES (TSL)"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Rouges"
 msgstr "Vermelhos"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Oranges"
 msgstr "Laranjas"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Jaunes"
 msgstr "Amarelos"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Verts"
 msgstr "Verdes"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Aquas"
 msgstr "Águas"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Bleus"
 msgstr "Azuis"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Violets"
 msgstr "Violetas"
 
-#: ui/photo.slint:792
+#: ui/photo.slint:866
 msgid "Magentas"
 msgstr "Magentas"
 
-#: ui/photo.slint:812
+#: ui/photo.slint:891
 msgid "Luminance"
 msgstr "Luminância"
 
@@ -3375,79 +3900,103 @@ msgstr "Luminância"
 msgid "Aperçu 1:1 — MasterPaint"
 msgstr "Visualização 1:1 – MasterPaint"
 
-#: ui/svg_objects.slint:94
+#: ui/svg_objects.slint:21
+msgid "Sélection (V) : objets, cadre, rotation"
+msgstr ""
+
+#: ui/svg_objects.slint:22
+msgid "Sélection directe (A) : points et poignées d'un chemin"
+msgstr ""
+
+#: ui/svg_objects.slint:23
+msgid "Plume (P) : chemins de Bézier"
+msgstr ""
+
+#: ui/svg_objects.slint:24
+msgid "Crayon (N) : trait à main levée, ajusté en courbes"
+msgstr ""
+
+#: ui/svg_objects.slint:29
+msgid "Remplissage : couleur de l'objet cliqué"
+msgstr ""
+
+#: ui/svg_objects.slint:30
+msgid "Dégradé : glisser sur un objet"
+msgstr ""
+
+#: ui/svg_objects.slint:115
 msgid "Le calque actif n'est pas un calque vectoriel. Les objets SVG (formes, textes) vivent sur un calque vectoriel, où ils restent modifiables : position, ordre, couleur, trait."
 msgstr "A camada ativa não é vetorial. Os objetos SVG (formas, textos) ficam numa camada vetorial, onde a posição, ordem, cor e traço continuam editáveis."
 
-#: ui/svg_objects.slint:102
+#: ui/svg_objects.slint:123
 msgid "Nouveau calque vectoriel"
 msgstr "Nova camada vetorial"
 
-#: ui/svg_objects.slint:104
+#: ui/svg_objects.slint:125
 msgid "Ajoute un calque vectoriel vide au-dessus du calque actif"
 msgstr "Adicionar uma camada vetorial vazia acima da camada ativa"
 
-#: ui/svg_objects.slint:116
+#: ui/svg_objects.slint:137
 msgid "Calque : "
 msgstr "Camada: "
 
-#: ui/svg_objects.slint:157
+#: ui/svg_objects.slint:178
 msgid "Aucun objet : tracez une forme (Formes, Rectangle arrondi, Ligne) ou un texte sur ce calque."
 msgstr "Sem objetos: desenhe uma forma (Formas, Retângulo arredondado, Linha) ou um texto nesta camada."
 
-#: ui/svg_objects.slint:166
+#: ui/svg_objects.slint:187
 msgid "Monter l'objet (dessiné par-dessus)"
 msgstr "Subir o objeto (desenhado por cima)"
 
-#: ui/svg_objects.slint:171
+#: ui/svg_objects.slint:192
 msgid "Descendre l'objet"
 msgstr "Descer o objeto"
 
-#: ui/svg_objects.slint:176
+#: ui/svg_objects.slint:197
 msgid "Dupliquer l'objet"
 msgstr "Duplicar o objeto"
 
-#: ui/svg_objects.slint:181
+#: ui/svg_objects.slint:202
 msgid "Supprimer l'objet"
 msgstr "Eliminar o objeto"
 
-#: ui/svg_objects.slint:208
+#: ui/svg_objects.slint:229
 msgid "Couleur principale"
 msgstr "Cor principal"
 
-#: ui/svg_objects.slint:209
+#: ui/svg_objects.slint:230
 msgid "Donne la couleur principale à l'objet (son opacité est gardée)"
 msgstr "Aplicar a cor principal ao objeto (mantém a opacidade)"
 
-#: ui/svg_objects.slint:220
+#: ui/svg_objects.slint:241
 msgid "Épaisseur du trait (pixels)"
 msgstr "Espessura do traço (píxeis)"
 
-#: ui/svg_objects.slint:229
+#: ui/svg_objects.slint:250
 msgid "Style"
 msgstr "Estilo"
 
-#: ui/svg_objects.slint:232
+#: ui/svg_objects.slint:253
 msgid "Trait seul"
 msgstr "Apenas traço"
 
-#: ui/svg_objects.slint:237
+#: ui/svg_objects.slint:258
 msgid "Remplissage seul"
 msgstr "Apenas preenchimento"
 
-#: ui/svg_objects.slint:242
+#: ui/svg_objects.slint:263
 msgid "Remplissage et trait"
 msgstr "Preenchimento e traço"
 
-#: ui/svg_objects.slint:249
+#: ui/svg_objects.slint:270
 msgid "Texte : modifiez-le à l'outil Texte (clic sur le texte)."
 msgstr "Texto: edite com a ferramenta Texto (clique no texto)."
 
-#: ui/theme.slint:57
+#: ui/theme.slint:63
 msgid "Segoe UI"
 msgstr "Segoe UI"
 
-#: ui/theme.slint:61
+#: ui/theme.slint:67
 msgid "Font Awesome 6 Free"
 msgstr "Font Awesome 6 Free"
 
@@ -3923,117 +4472,121 @@ msgstr "Projeto PNG, JPEG, WebP, RAW, .illu… ou arrastar e soltar (Ctrl+O)"
 msgid "Calques, masques et filtres dynamiques déjà en place"
 msgstr "Camadas, máscaras e filtros dinâmicos já implementados"
 
-#: ui/welcome.slint:163
+#: ui/welcome.slint:159
+msgid "Tutoriel"
+msgstr "Tutorial"
+
+#: ui/welcome.slint:160
+msgid "Découvrir les outils et les fonctions avec des explications illustrées"
+msgstr "Descubra ferramentas e funções com explicações ilustradas"
+
+#: ui/welcome.slint:171
 msgid "Raccourcis essentiels"
 msgstr "Atalhos essenciais"
 
-#: ui/welcome.slint:166
+#: ui/welcome.slint:174
 msgid "Ctrl+N · Ctrl+O · Ctrl+S"
 msgstr "Ctrl+N · Ctrl+O · Ctrl+S"
 
-#: ui/welcome.slint:166
+#: ui/welcome.slint:174
 msgid "Nouvelle image, ouvrir, exporter"
 msgstr "Nova imagem, abrir, exportar"
 
-#: ui/welcome.slint:167
+#: ui/welcome.slint:175
 msgid "Ctrl+Z · Ctrl+Y"
 msgstr "Ctrl+Z · Ctrl+Y"
 
-#: ui/welcome.slint:167
+#: ui/welcome.slint:175
 msgid "Annuler, rétablir"
 msgstr "Desfazer, refazer"
 
-#: ui/welcome.slint:168
+#: ui/welcome.slint:176
 msgid "Ctrl+C · Ctrl+X · Ctrl+V"
 msgstr "Ctrl+C · Ctrl+X · Ctrl+V"
 
-#: ui/welcome.slint:168
+#: ui/welcome.slint:176
 msgid "Copier, couper, coller"
 msgstr "Copiar, recortar, colar"
 
-#: ui/welcome.slint:169
+#: ui/welcome.slint:177
 msgid "Ctrl + molette"
 msgstr "Ctrl + roda"
 
-#: ui/welcome.slint:169
+#: ui/welcome.slint:177
 msgid "Zoomer (molette seule : déplacer la toile)"
 msgstr "Zoom (somente roda: mova a tela)"
 
-#: ui/welcome.slint:205
+#: ui/welcome.slint:213
 msgid "Tous les raccourcis…"
 msgstr "Todos os atalhos…"
 
-#: ui/welcome.slint:225
+#: ui/welcome.slint:233
 msgid "Réglages rapides"
 msgstr "Configurações rápidas"
 
-#: ui/welcome.slint:275
+#: ui/welcome.slint:283
 msgid "Photoshop"
 msgstr "Photoshop"
 
-#: ui/welcome.slint:275
+#: ui/welcome.slint:283
 msgid "Téléphone"
 msgstr "Telefone"
 
-#: ui/welcome.slint:283
+#: ui/welcome.slint:291
 msgid "Paint.NET : fenêtres volantes. Photoshop : colonnes ancrées. Téléphone : menu ☰ et panneaux du bas."
 msgstr "Paint.NET: janelas voadoras. Photoshop: colunas ancoradas. Telefone: ☰ menu e painéis inferiores."
 
-#: ui/welcome.slint:301
+#: ui/welcome.slint:309
 msgid "Interface tactile automatique sur petit écran"
 msgstr "Interface de toque automática em tela pequena"
 
-#: ui/welcome.slint:315
+#: ui/welcome.slint:323
 msgid "Tous les paramètres…"
 msgstr "Todas as configurações…"
 
-#: ui/welcome.slint:511
+#: ui/welcome.slint:519
 msgid "Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application."
 msgstr "Editor de imagens inspirado em Paint.NET, Photoshop e Illustrator: camadas, efeitos, seleções, fotos RAW. Gratuito, sem publicidade ou rastreadores, no navegador e no aplicativo."
 
-#: ui/welcome.slint:619
+#: ui/welcome.slint:627
 msgid "Réglages"
 msgstr "Definições"
 
-#: ui/welcome.slint:684
+#: ui/welcome.slint:692
 msgid "Réglages rapides…"
 msgstr "Definições rápidas…"
 
-#: ui/welcome.slint:732
+#: ui/welcome.slint:740
 msgid "Ne plus afficher"
 msgstr "Não voltar a mostrar"
 
-#: ui/welcome.slint:732
+#: ui/welcome.slint:740
 msgid "Ne plus afficher au démarrage"
 msgstr "Não aparece mais na inicialização"
 
-#: ui/welcome.slint:747
+#: ui/welcome.slint:755
 msgid "Code source, suivi des problèmes et nouveautés de MasterPaint"
 msgstr "Código-fonte, rastreamento de problemas e novos recursos do MasterPaint"
 
-#: ui/welcome.slint:753
+#: ui/welcome.slint:761
 msgid "Commencer"
 msgstr "Comece"
 
-#: ui/widgets.slint:249
+#: ui/widgets.slint:244
 msgid "Ferme cette fenêtre sans appliquer les changements."
 msgstr "Feche esta janela sem aplicar as alterações."
 
-#: ui/widgets.slint:374
+#: ui/widgets.slint:369
 msgid "Valeur : "
 msgstr "Valor: "
 
-#: ui/widgets.slint:1078
+#: ui/widgets.slint:1114
 msgid "Réduire la valeur"
 msgstr "Reduzir valor"
 
-#: ui/widgets.slint:1147
+#: ui/widgets.slint:1183
 msgid "Augmenter la valeur"
 msgstr "Aumentar valor"
-
-#: src/anim.rs:630
-msgid "Animation"
-msgstr "Animação"
 
 #: src/anim.rs:635
 msgid "Ouvrir l'animation"
@@ -4083,57 +4636,17 @@ msgstr "Conversão para meio-tom preto e branco"
 msgid "C {cc} %  M {m} %  J {y} %  N {k} %"
 msgstr "C {cc} %  M {m} %  Y {y} %  K {k} %"
 
-#: src/editor.rs:590
-msgid "Arrière-plan"
-msgstr "Plano de fundo"
-
-#: src/editor.rs:605
+#: src/editor.rs:735
 msgid "Nouveau Document"
 msgstr "Novo Documento"
 
-#: src/editor.rs:640
+#: src/editor.rs:776
 msgid "Ouvrir l'image"
 msgstr "Abrir imagem"
 
-#: src/editor.rs:684
+#: src/editor.rs:856
 msgid "Historique vidé"
 msgstr "História vazia"
-
-#: src/editor.rs:1561
-msgid "Bordure"
-msgstr "Fronteira"
-
-#: src/editor.rs:1633
-msgid "Collage"
-msgstr "Colagem"
-
-#: src/editor.rs:1720
-msgid "Calque {n}"
-msgstr "Camada {n}"
-
-#: src/editor.rs:1733
-msgid "{} copie"
-msgstr "{} cópia"
-
-#: src/editor.rs:1799
-msgid "Canal R"
-msgstr "Canal R"
-
-#: src/editor.rs:1799
-msgid "Canal V"
-msgstr "Canal V"
-
-#: src/editor.rs:1799
-msgid "Canal B"
-msgstr "Canal B"
-
-#: src/editor.rs:1833
-msgid "Détourage : tracez d'abord une sélection autour de l'objet à garder"
-msgstr "Recorte: primeiro desenhe uma seleção ao redor do objeto para manter"
-
-#: src/editor.rs:1835
-msgid "Filtre dynamique actif : désactivez-le pour détourer en masque α"
-msgstr "Filtro dinâmico ativo: desative-o para recortar na máscara α"
 
 #: src/effects.rs:23
 msgid "Niveaux"
@@ -4383,451 +4896,491 @@ msgstr "Segunda cor"
 msgid "Fond d'affichage"
 msgstr "Exibir plano de fundo"
 
-#: src/effects.rs:340
+#: src/effects.rs:348
 msgid "Canaux décalés"
 msgstr "Canais de deslocamento"
 
-#: src/effects.rs:341
+#: src/effects.rs:349
 msgid "Inverser les franges"
 msgstr "Inverter as franjas de cor"
 
-#: src/effects.rs:345
+#: src/effects.rs:353
 msgid "Rouge / bleu (objectif)"
 msgstr "Vermelho/azul (lente)"
 
-#: src/effects.rs:345
+#: src/effects.rs:353
 msgid "Rouge / vert"
 msgstr "Vermelho / verde"
 
-#: src/effects.rs:345
+#: src/effects.rs:353
 msgid "Vert / bleu"
 msgstr "Verde/azul"
 
-#: src/effects.rs:345
+#: src/effects.rs:353
 msgid "Vert / magenta"
 msgstr "Verde / magenta"
 
-#: src/effects.rs:345
+#: src/effects.rs:353
 msgid "Bleu / jaune"
 msgstr "Azul/amarelo"
 
+#: src/effects.rs:367
+msgid "Couleur du contour"
+msgstr "Cor do contorno"
+
+#: src/effects.rs:368
+msgid "Couleur de l'ombre"
+msgstr "Cor da sombra"
+
+#: src/effects.rs:369
+msgid "Couleur du vignettage"
+msgstr "Cor da vinheta"
+
+#: src/effects.rs:370
+msgid "Couleur des ombres"
+msgstr "Cor dos tons escuros"
+
+#: src/effects.rs:370
+msgid "Couleur des lumières"
+msgstr "Cor dos tons claros"
+
 #: src/effects.rs:371
+msgid "Première couleur"
+msgstr "Primeira cor"
+
+#: src/effects.rs:374
+msgid "Couleur des lignes"
+msgstr "Cor das linhas"
+
+#: src/effects.rs:375
+msgid "Couleur de l'éclat"
+msgstr "Cor do brilho"
+
+#: src/effects.rs:418
 msgid "Décalage (px)"
 msgstr "Deslocamento (px)"
 
-#: src/effects.rs:381
+#: src/effects.rs:428
 msgid "Horizontale"
 msgstr "Horizontais"
 
-#: src/effects.rs:381
+#: src/effects.rs:428
 msgid "Verticale"
 msgstr "Verticais"
 
-#: src/effects.rs:381
+#: src/effects.rs:428
 msgid "Selon l'angle"
 msgstr "Dependendo do ângulo"
 
-#: src/effects.rs:381
+#: src/effects.rs:428
 msgid "Radiale (objectif)"
 msgstr "Radial (objetivo)"
 
-#: src/effects.rs:383
+#: src/effects.rs:430
 msgid "Angle °"
 msgstr "Ângulo °"
 
-#: src/effects.rs:384
+#: src/effects.rs:431
 msgid "Centre X %"
 msgstr "Centro X %"
 
-#: src/effects.rs:385
+#: src/effects.rs:432
 msgid "Centre Y %"
 msgstr "Centro Y%"
 
-#: src/effects.rs:386
+#: src/effects.rs:433
 msgid "Zone nette (rayon %)"
 msgstr "Área líquida (raio%)"
 
-#: src/effects.rs:389
+#: src/effects.rs:436
 msgid "Progression"
 msgstr "Progresso"
 
-#: src/effects.rs:396
+#: src/effects.rs:443
 msgid "Uniforme"
 msgstr "Uniforme"
 
-#: src/effects.rs:396
+#: src/effects.rs:443
 msgid "Linéaire (bords plus marqués)"
 msgstr "Linear (bordas mais pronunciadas)"
 
-#: src/effects.rs:396
+#: src/effects.rs:443
 msgid "Quadratique"
 msgstr "Quadrático"
 
-#: src/effects.rs:400
+#: src/effects.rs:447
 msgid "Chevauchement %"
 msgstr "% de sobreposição"
 
-#: src/effects.rs:415
+#: src/effects.rs:462
 msgid "Couleur (fusion Écran, recomposition exacte)"
 msgstr "Cor (mesclagem de tela, recomposição exata)"
 
-#: src/effects.rs:415
+#: src/effects.rs:462
 msgid "Niveaux de gris (mode Normal)"
 msgstr "Tons de cinza (modo normal)"
 
-#: src/effects.rs:417
+#: src/effects.rs:464
 msgid "Décalage rouge X (px)"
 msgstr "Deslocamento vermelho X (px)"
 
-#: src/effects.rs:418
+#: src/effects.rs:465
 msgid "Décalage rouge Y (px)"
 msgstr "Deslocamento vermelho Y (px)"
 
-#: src/effects.rs:419
+#: src/effects.rs:466
 msgid "Décalage vert X (px)"
 msgstr "Deslocamento verde X (px)"
 
-#: src/effects.rs:420
+#: src/effects.rs:467
 msgid "Décalage vert Y (px)"
 msgstr "Deslocamento verde Y (px)"
 
-#: src/effects.rs:421
+#: src/effects.rs:468
 msgid "Décalage bleu X (px)"
 msgstr "Deslocamento azul X (px)"
 
-#: src/effects.rs:422
+#: src/effects.rs:469
 msgid "Décalage bleu Y (px)"
 msgstr "Deslocamento azul Y (px)"
 
-#: src/effects.rs:423
+#: src/effects.rs:470
 msgid "Masquer le calque d'origine"
 msgstr "Ocultar camada original"
 
-#: src/effects.rs:429
+#: src/effects.rs:476
 msgid "Étendre / contracter (px)"
 msgstr "Expandir/contrair (px)"
 
-#: src/effects.rs:430
+#: src/effects.rs:477
 msgid "Inverser (garder l'extérieur)"
 msgstr "Reverso (manter do lado de fora)"
 
-#: src/effects.rs:431
+#: src/effects.rs:478
 msgid "En masque α lié (non destructif)"
 msgstr "Em máscara ligada α (não destrutiva)"
 
-#: src/effects.rs:436
+#: src/effects.rs:483
 msgid "Extension de la sélection (px)"
 msgstr "Extensão de seleção (px)"
 
-#: src/effects.rs:437
+#: src/effects.rs:484
 msgid "Fondu de bord (px)"
 msgstr "Esmaecimento da borda (px)"
 
-#: src/effects.rs:438
+#: src/effects.rs:485
 msgid "Intensité du détail %"
 msgstr "% de intensidade de detalhe"
 
-#: src/effects.rs:441
+#: src/effects.rs:488
 msgid "Mode"
 msgstr "Moda"
 
-#: src/effects.rs:448
+#: src/effects.rs:495
 msgid "Texture (morceaux semblables)"
 msgstr "Textura (peças semelhantes)"
 
-#: src/effects.rs:448
+#: src/effects.rs:495
 msgid "Dégradé lisse"
 msgstr "Gradiente suave"
 
-#: src/effects.rs:450
+#: src/effects.rs:497
 msgid "Conserver la transparence"
 msgstr "Mantenha a transparência"
 
-#: src/effects.rs:454
+#: src/effects.rs:501
 msgid "Qualité"
 msgstr "Qualidade"
 
-#: src/effects.rs:461
+#: src/effects.rs:508
 msgid "Rapide (une échelle)"
 msgstr "Rápido (uma escada)"
 
-#: src/effects.rs:461
+#: src/effects.rs:508
 msgid "Normale (3 échelles)"
 msgstr "Normal (3 escalas)"
 
-#: src/effects.rs:461
+#: src/effects.rs:508
 msgid "Haute (5 échelles, grandes structures)"
 msgstr "Alto (5 escadas, grandes estruturas)"
 
-#: src/effects.rs:463
+#: src/effects.rs:510
 msgid "Taille des morceaux (px, 0 = auto)"
 msgstr "Tamanho da peça (px, 0 = automático)"
 
-#: src/effects.rs:464
+#: src/effects.rs:511
 msgid "Zone d'échantillonnage autour (px, 0 = auto)"
 msgstr "Área de amostragem ao redor (px, 0 = automático)"
 
-#: src/effects.rs:465
+#: src/effects.rs:512
 msgid "Morceaux en miroir (symétries)"
 msgstr "Peças espelhadas (simetrias)"
 
-#: src/effects.rs:466
+#: src/effects.rs:513
 msgid "Adaptation des couleurs %"
 msgstr "% de adaptação de cores"
 
-#: src/effects.rs:510
+#: src/effects.rs:557
 msgid "Nuancier RAL"
 msgstr "Cartela de cores RAL"
 
-#: src/effects.rs:518
+#: src/effects.rs:565
 msgid "Tous (216 couleurs)"
 msgstr "Todos (216 cores)"
 
-#: src/effects.rs:519
+#: src/effects.rs:566
 msgid "Jaunes (RAL 1000 - 1037)"
 msgstr "Amarelos (RAL 1000 - 1037)"
 
-#: src/effects.rs:520
+#: src/effects.rs:567
 msgid "Oranges (RAL 2000 - 2017)"
 msgstr "Laranjas (RAL 2000 - 2017)"
 
-#: src/effects.rs:521
+#: src/effects.rs:568
 msgid "Rouges (RAL 3000 - 3033)"
 msgstr "Vermelho (RAL 3000 - 3033)"
 
-#: src/effects.rs:522
+#: src/effects.rs:569
 msgid "Violets (RAL 4001 - 4012)"
 msgstr "Violetas (RAL 4001 - 4012)"
 
-#: src/effects.rs:523
+#: src/effects.rs:570
 msgid "Bleus (RAL 5000 - 5026)"
 msgstr "Azul (RAL 5000 - 5026)"
 
-#: src/effects.rs:524
+#: src/effects.rs:571
 msgid "Verts (RAL 6000 - 6038)"
 msgstr "Verdes (RAL 6000 - 6038)"
 
-#: src/effects.rs:525
+#: src/effects.rs:572
 msgid "Gris (RAL 7000 - 7048)"
 msgstr "Cinza (RAL 7000 - 7048)"
 
-#: src/effects.rs:526
+#: src/effects.rs:573
 msgid "Bruns (RAL 8000 - 8029)"
 msgstr "Castanhos (RAL 8000 - 8029)"
 
-#: src/effects.rs:527
+#: src/effects.rs:574
 msgid "Blancs et Noirs (RAL 9001 - 9023)"
 msgstr "Brancos e Negros (RAL 9001 - 9023)"
 
-#: src/effects.rs:530
+#: src/effects.rs:577
 msgid "Tramage %"
 msgstr "% de pontilhamento"
 
-#: src/effects.rs:536
+#: src/effects.rs:583
 msgid "Choix du look"
 msgstr "Escolha do visual"
 
-#: src/effects.rs:544
+#: src/effects.rs:591
 msgid "Aucun (manuel)"
 msgstr "Nenhum (manual)"
 
-#: src/effects.rs:545
+#: src/effects.rs:592
 msgid "Niveaux automatiques"
 msgstr "Níveis automáticos"
 
-#: src/effects.rs:546
+#: src/effects.rs:593
 msgid "Noir et blanc simple"
 msgstr "Preto e branco simples"
 
-#: src/effects.rs:547
+#: src/effects.rs:594
 msgid "Sépia simple"
 msgstr "Sépia Simples"
 
-#: src/effects.rs:548
+#: src/effects.rs:595
 msgid "Négatif"
 msgstr "Negativo"
 
-#: src/effects.rs:549
+#: src/effects.rs:596
 msgid "Noir & Blanc Doux"
 msgstr "Preto e branco suave"
 
-#: src/effects.rs:550
+#: src/effects.rs:597
 msgid "Noir & Blanc Intense"
 msgstr "Preto e branco intenso"
 
-#: src/effects.rs:551
+#: src/effects.rs:598
 msgid "Sépia Historique"
 msgstr "História Sépia"
 
-#: src/effects.rs:552
+#: src/effects.rs:599
 msgid "Cinéma (Teal & Orange)"
 msgstr "Cinema (azul-petróleo e laranja)"
 
-#: src/effects.rs:553
+#: src/effects.rs:600
 msgid "Néon Urbain"
 msgstr "Néon Urbano"
 
-#: src/effects.rs:554
+#: src/effects.rs:601
 msgid "Code Vert (Cyber)"
 msgstr "Código Verde (Cyber)"
 
-#: src/effects.rs:555
+#: src/effects.rs:602
 msgid "Nuit Bleutée"
 msgstr "Noite Azul"
 
-#: src/effects.rs:556
+#: src/effects.rs:603
 msgid "Pellicule Pro"
 msgstr "Filme Profissional"
 
-#: src/effects.rs:557
+#: src/effects.rs:604
 msgid "Soleil Doré"
 msgstr "Sol Dourado"
 
-#: src/effects.rs:558
+#: src/effects.rs:605
 msgid "High Key (Lumineux)"
 msgstr "Tom alto (brilhante)"
 
-#: src/effects.rs:559
+#: src/effects.rs:606
 msgid "Ambiance Cinéma Subtile"
 msgstr "Atmosfera sutil de cinema"
 
-#: src/effects.rs:565
+#: src/effects.rs:612
 msgid "Taille car. (px)"
 msgstr "Tamanho do carro. (px)"
 
-#: src/effects.rs:568
+#: src/effects.rs:615
 msgid "Jeu de caractères"
 msgstr "Conjunto de caracteres"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Classique (10 niveaux)"
 msgstr "Clássico (10 níveis)"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Détaillé (70 niveaux)"
 msgstr "Detalhado (70 níveis)"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Blocs (░▒▓█)"
 msgstr "Blocos (░▒▓█)"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Points"
 msgstr "Pontos"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Binaire (1/0)"
 msgstr "Binário (1/0)"
 
-#: src/effects.rs:575
+#: src/effects.rs:622
 msgid "Personnalisé (champ ci-dessous)"
 msgstr "Personalizado (campo abaixo)"
 
-#: src/effects.rs:577
+#: src/effects.rs:624
 msgid "Caractères personnalisés (du plus clair au plus dense)"
 msgstr "Caracteres personalizados (do mais leve ao mais denso)"
 
-#: src/effects.rs:578
+#: src/effects.rs:625
 msgid "Gamma"
 msgstr "Gama"
 
-#: src/effects.rs:579
+#: src/effects.rs:626
 msgid "Inverser la rampe"
 msgstr "Inverta a rampa"
 
-#: src/effects.rs:580
+#: src/effects.rs:627
 msgid "Gras"
 msgstr "Negrito"
 
-#: src/effects.rs:581
+#: src/effects.rs:628
 msgid "Couleur des pixels"
 msgstr "Cor dos pixels"
 
-#: src/effects.rs:581
+#: src/effects.rs:628
 msgid "Couleur unique (ci-dessous)"
 msgstr "Cor única (abaixo)"
 
-#: src/effects.rs:582
+#: src/effects.rs:629
 msgid "Couleur unique (clic : couleur principale)"
 msgstr "Cor única (clique: cor principal)"
 
-#: src/effects.rs:593
+#: src/effects.rs:640
 msgid "Noir"
 msgstr "Preto"
 
-#: src/effects.rs:593
+#: src/effects.rs:640
 msgid "Couleur secondaire"
 msgstr "Cor secundária"
 
-#: src/effects.rs:623
+#: src/effects.rs:670
 msgid "Entrée : noir"
 msgstr "Entrada: preto"
 
-#: src/effects.rs:624
+#: src/effects.rs:671
 msgid "Entrée : blanc"
 msgstr "Entrada: branco"
 
-#: src/effects.rs:626
+#: src/effects.rs:673
 msgid "Sortie : noir"
 msgstr "Saída: preto"
 
-#: src/effects.rs:627
+#: src/effects.rs:674
 msgid "Sortie : blanc"
 msgstr "Saída: branco"
 
-#: src/effects.rs:640
+#: src/effects.rs:679
+msgid "Réglage"
+msgstr ""
+
+#: src/effects.rs:679
+msgid "Auto : selon la scène"
+msgstr ""
+
+#: src/effects.rs:688
 msgid "Clarté"
 msgstr "Clareza"
 
-#: src/effects.rs:644
+#: src/effects.rs:692
 msgid "Netteté"
 msgstr "Nitidez"
 
-#: src/effects.rs:646
+#: src/effects.rs:694
 msgid "Grain"
 msgstr "Grão"
 
-#: src/effects.rs:767
+#: src/effects.rs:822
 msgid "RAL 1"
 msgstr "RAL 1"
 
-#: src/effects.rs:768
+#: src/effects.rs:823
 msgid "RAL 2"
 msgstr "RAL 2"
 
-#: src/effects.rs:769
+#: src/effects.rs:824
 msgid "RAL 3"
 msgstr "RAL 3"
 
-#: src/effects.rs:770
+#: src/effects.rs:825
 msgid "RAL 4"
 msgstr "RAL 4"
 
-#: src/effects.rs:771
+#: src/effects.rs:826
 msgid "RAL 5"
 msgstr "RAL 5"
 
-#: src/effects.rs:772
+#: src/effects.rs:827
 msgid "RAL 6"
 msgstr "RAL 6"
 
-#: src/effects.rs:773
+#: src/effects.rs:828
 msgid "RAL 7"
 msgstr "RAL 7"
 
-#: src/effects.rs:774
+#: src/effects.rs:829
 msgid "RAL 8"
 msgstr "RAL 8"
 
-#: src/effects.rs:775
+#: src/effects.rs:830
 msgid "RAL 9"
 msgstr "RAL 9"
 
-#: src/effects.rs:1287
+#: src/effects.rs:1338
 msgid "épaisseur"
 msgstr "espessura"
 
-#: src/effects.rs:1287
+#: src/effects.rs:1338
 msgid "décalage"
 msgstr "mudança"
 
@@ -4966,10 +5519,6 @@ msgstr "Leve em consideração as bordas"
 #: src/effects_gen.rs:82
 msgid "Flou de déplacement"
 msgstr "Desfoque de movimento"
-
-#: src/effects_gen.rs:83
-msgid "Angle"
-msgstr "Ângulo"
 
 #: src/effects_gen.rs:85
 msgid "Centré"
@@ -5715,43 +6264,43 @@ msgstr "Faixas coloridas (rastreamento)"
 msgid "Glitch & rayures"
 msgstr "Falha e arranhões"
 
-#: src/gpu.rs:715
+#: src/gpu.rs:724
 msgid "WebGPU"
 msgstr "WebGPU"
 
-#: src/gpu.rs:716
+#: src/gpu.rs:725
 msgid "DirectX 12"
 msgstr "DirectX12"
 
-#: src/gpu.rs:719
+#: src/gpu.rs:728
 msgid "carte graphique"
 msgstr "placa gráfica"
 
-#: src/gpu.rs:1267
+#: src/gpu.rs:1286
 msgid "MASTERPAINT_GPU"
 msgstr "MASTERPAINT_GPU"
 
-#: src/gpu.rs:1304
+#: src/gpu.rs:1323
 msgid "pas de carte graphique : test ignoré"
 msgstr "sem placa gráfica: teste ignorado"
 
-#: src/gpu.rs:1313
+#: src/gpu.rs:1332
 msgid "calcul GPU"
 msgstr "Computação GPU"
 
-#: src/gpu.rs:1317
+#: src/gpu.rs:1336
 msgid "trame rayon {rad} : {diff} pixels différents"
 msgstr "quadro de raio {rad}: {diff} pixels diferentes"
 
-#: src/gpu.rs:1321
+#: src/gpu.rs:1340
 msgid "type {typ} rayon {rad} : écart {worst} ({})"
 msgstr "tipo {typ} raio {rad}: desvio {worst} ({})"
 
-#: src/gpu.rs:1324
+#: src/gpu.rs:1343
 msgid "GPU = CPU sur {} : 13 types × 3 rayons"
 msgstr "GPU = CPU em {}: 13 tipos × 3 raios"
 
-#: src/gpu.rs:1342
+#: src/gpu.rs:1361
 msgid "4000×3000, 3 effets : CPU {cpu:.0} ms, GPU {gpu:.0} ms ({})"
 msgstr "4000×3000, 3 efeitos: CPU {cpu:.0} ms, GPU {gpu:.0} ms ({})"
 
@@ -5762,6 +6311,10 @@ msgstr "Pasta selecionada: escolha uma camada para desenhar ou aplicar um efeito
 #: src/groups.rs:195
 msgid "Calque verrouillé : cliquez sur son cadenas (panneau Calques) pour le déverrouiller"
 msgstr "Camada bloqueada: clique no cadeado (painel Camadas) para desbloqueá-la"
+
+#: src/groups.rs:259
+msgid "Calque {n}"
+msgstr "Camada {n}"
 
 #: src/groups.rs:275
 msgid "Dossier {n}"
@@ -5775,6 +6328,10 @@ msgstr "Desagrupar: selecione uma pasta"
 msgid "Le document doit garder au moins un calque"
 msgstr "O documento deve manter pelo menos uma camada"
 
+#: src/groups.rs:341
+msgid "{} copie"
+msgstr "{} cópia"
+
 #: src/groups.rs:374
 msgid "Fusionner : pas de calque en dessous"
 msgstr "Mesclar: nenhuma camada abaixo"
@@ -5787,1701 +6344,1565 @@ msgstr "Mesclar: a camada abaixo é uma pasta ou não está na mesma pasta"
 msgid "Fusionner : le calque du dessous est verrouillé"
 msgstr "Mesclar: a camada abaixo está bloqueada"
 
-#: src/illu.rs:52
-msgid "Projet"
-msgstr "Projeto"
-
-#: src/illu.rs:137
+#: src/illu.rs:44
 msgid "fichier .illu illisible : {e}"
 msgstr "arquivo .illu ilegível: {e}"
 
-#: src/illu.rs:151
+#: src/illu.rs:188
+msgid "Projet"
+msgstr "Projeto"
+
+#: src/illu.rs:308
 msgid "{name} (projet vectoriel)"
 msgstr "{name} (projeto vetorial)"
 
-#: src/illu.rs:184
+#: src/illu.rs:341
 msgid "Ouvrir le projet"
 msgstr "Abrir projeto"
 
-#: src/illu.rs:188
+#: src/illu.rs:345
 msgid "aucun projet dans ce fichier .illu"
 msgstr "nenhum projeto neste arquivo .illu"
 
-#: src/lib.rs:67
+#: src/lib.rs:74
 msgid "CARGO_PKG_VERSION"
 msgstr "CARGO_PKG_VERSION"
 
-#: src/lib.rs:282
+#: src/lib.rs:417
 msgid "{n} projets restaurés (sauvegarde automatique)"
 msgstr "{n} projetos restaurados (backup automático)"
 
-#: src/lib.rs:282
+#: src/lib.rs:417
 msgid "Projet restauré (sauvegarde automatique)"
 msgstr "Projeto restaurado (salvamento automático)"
 
-#: src/lib.rs:392
+#: src/lib.rs:433
+msgid "Restauration des projets… {} / {}"
+msgstr ""
+
+#: src/lib.rs:553
 msgid "MPRGBA01"
 msgstr "MPRGBA01"
 
-#: src/lib.rs:1259
+#: src/lib.rs:910
+msgid "Image trop petite : la réduire n'apporterait rien"
+msgstr "Imagem demasiado pequena: reduzi-la não traria nada"
+
+#: src/lib.rs:926
+msgid "Toile rendue ÷{div} : l'enregistrement reste en pleine résolution"
+msgstr "Tela renderizada ÷{div}: a gravação mantém a resolução total"
+
+#: src/lib.rs:928
+msgid "Toile rendue en pleine résolution"
+msgstr "Tela renderizada em resolução total"
+
+#: src/lib.rs:939
+msgid "Rendu en pleine résolution, jusqu'à la prochaine modification"
+msgstr "Renderizado em resolução total até à próxima alteração"
+
+#: src/lib.rs:1458
+msgid "Filtre ƒ trop étendu pour suivre le pinceau : recalculé à la fin du trait"
+msgstr "Filtro ƒ demasiado extenso para seguir o pincel: recalculado no fim do traço"
+
+#: src/lib.rs:1634
 msgid " · Animation SVG"
 msgstr " · Animação SVG"
 
-#: src/lib.rs:1260
+#: src/lib.rs:1635
 msgid " · SVG"
 msgstr " · SVG"
 
-#: src/lib.rs:1261
+#: src/lib.rs:1636
 msgid " · Animation"
 msgstr " · Animação"
 
-#: src/lib.rs:1432
+#: src/lib.rs:1855
 msgid "Fenêtre d'aperçu bloquée par le navigateur : aperçu affiché dans l'application"
 msgstr "Janela de visualização bloqueada pelo navegador: visualização exibida no aplicativo"
 
-#: src/lib.rs:1446
+#: src/lib.rs:1869
 msgid "{w} × {h} px — 1 pixel de l'image = 1 pixel de l'écran"
 msgstr "{w} × {h} px — 1 pixel de imagem = 1 pixel de tela"
 
-#: src/lib.rs:1625
+#: src/lib.rs:2051
 msgid "Image d'origine"
 msgstr "Imagem original"
 
-#: src/lib.rs:1636
+#: src/lib.rs:2063
 msgid "Sélection : {} × {} px"
 msgstr "Seleção: {} × {} px"
 
-#: src/lib.rs:1673
+#: src/lib.rs:2100
 msgid "Masque α supprimé"
 msgstr "Máscara α removida"
 
-#: src/lib.rs:1683
+#: src/lib.rs:2110
 msgid "Filtre dynamique actif : désactivez-le pour utiliser un masque α"
 msgstr "Filtro dinâmico ativo: desligue-o para usar uma máscara α"
 
-#: src/lib.rs:1688
-msgid "Masque α"
-msgstr "máscara alfa"
-
-#: src/lib.rs:1703
+#: src/lib.rs:2130
 msgid "Masque α : blanc = visible, noir = masqué"
 msgstr "máscara α: branco = visível, preto = oculto"
 
-#: src/lib.rs:1817
+#: src/lib.rs:2246
 msgid "« {} » contient des modifications non enregistrées. Que voulez-vous faire ?"
 msgstr "“{}” contém alterações não salvas. O que você quer fazer?"
 
-#: src/lib.rs:1821
+#: src/lib.rs:2250
 msgid "Modifications non enregistrées"
 msgstr "Alterações não salvas"
 
-#: src/lib.rs:1826
+#: src/lib.rs:2255
 msgid "Enregistrer"
 msgstr "Salvar"
 
-#: src/lib.rs:1826
+#: src/lib.rs:2255
 msgid "Enregistre l'image, puis la ferme."
 msgstr "Salve a imagem e feche-a."
 
-#: src/lib.rs:1827
+#: src/lib.rs:2256
 msgid "Ne pas enregistrer"
 msgstr "Não salve"
 
-#: src/lib.rs:1827
+#: src/lib.rs:2256
 msgid "Abandonne les modifications non enregistrées."
 msgstr "Descarte as alterações não salvas."
 
-#: src/lib.rs:1828
+#: src/lib.rs:2257
 msgid "Revient à MasterPaint."
 msgstr "Retorna ao MasterPaint."
 
-#: src/lib.rs:1849
+#: src/lib.rs:2295
 msgid "Aucun projet"
 msgstr "Nenhum projeto"
 
-#: src/lib.rs:1902
+#: src/lib.rs:2345
 msgid "MasterPaint Rust {APP_VERSION} — web — {ua}"
 msgstr "MasterPaint Ferrugem {APP_VERSION} — web — {ua}"
 
-#: src/lib.rs:1906
+#: src/lib.rs:2349
 msgid "MasterPaint Rust {APP_VERSION} — application {} {}"
 msgstr "MasterPaint Rust {APP_VERSION} — aplicação {} {}"
 
-#: src/lib.rs:1932
+#: src/lib.rs:2379
 msgid "fils séparés (tous les cœurs)"
 msgstr "tópicos separados (todos os corações)"
 
-#: src/lib.rs:1937
+#: src/lib.rs:2384
 msgid "workers du navigateur (même module wasm)"
 msgstr "trabalhadores do navegador (mesmo módulo wasm)"
 
-#: src/lib.rs:1939
+#: src/lib.rs:2386
 msgid "sur place (workers indisponibles)"
 msgstr "no local (trabalhadores indisponíveis)"
 
-#: src/lib.rs:1942
+#: src/lib.rs:2389
 msgid "{}\nRendu de l'interface : Slint (Rust) — fenêtre {} × {} px, échelle {:.2}\nAccélération : {}\nProcesseur : {cores} cœurs ; calculs lourds : {background}\nImages ouvertes : {} onglet(s), {:.0} Mo de pixels ; historique : {:.0} Mo (au plus {} étapes)\nImage active : {} × {} px, {} calque(s), zoom {:.0} %, affichage {}"
 msgstr "{}\nRenderização de interface: Slint (Rust) — janela {} × {} px, escala {:.2}\nAceleração: {}\nProcessador: núcleos {cores}; cálculos pesados: {background}\nImagens abertas: {} aba(s), {:.0} MB pixels; histórico: {:.0} MB (no máximo {} passos)\nImagem ativa: {} × {} px, camada(s) {}, zoom {:.0}%, exibição {}"
 
-#: src/lib.rs:1956
+#: src/lib.rs:2403
 msgid "par tuiles visibles (pas {})"
 msgstr "por blocos visíveis (não {})"
 
-#: src/lib.rs:1956
+#: src/lib.rs:2403
 msgid "réduit (pas {})"
 msgstr "reduzido (não {})"
 
-#: src/lib.rs:1956
+#: src/lib.rs:2403
 msgid "pleine résolution"
 msgstr "resolução total"
 
-#: src/lib.rs:1964
+#: src/lib.rs:2410
 msgid "ERREUR [{context}] {message}"
 msgstr "ERRO [{context}] {message}"
 
-#: src/lib.rs:1967
+#: src/lib.rs:2413
 msgid "{}\nContexte : {context}\nImage : {doc} ({} × {} px), zoom {:.0} %, outil {}\nErreur : {message}\n\nJournal :\n{}"
 msgstr "{}\nContexto: {context}\nImagem: {doc} ({} × {} px), zoom {:.0}%, ferramenta {}\nErro: {message}\n\nDiário:\n{}"
 
-#: src/lib.rs:2071
+#: src/lib.rs:2523
 msgid "Des images ouvertes contiennent des modifications non enregistrées."
 msgstr "As imagens abertas contêm edições não salvas."
 
-#: src/lib.rs:2071
+#: src/lib.rs:2523
 msgid "Une image ouverte contient des modifications non enregistrées."
 msgstr "Uma imagem aberta contém alterações não salvas."
 
-#: src/lib.rs:2072
+#: src/lib.rs:2524
 msgid "Cliquez sur une vignette pour afficher l'image dans la fenêtre principale."
 msgstr "Clique em uma miniatura para exibir a imagem na janela principal."
 
-#: src/lib.rs:2077
+#: src/lib.rs:2529
 msgid "Enregistre les images de la liste ci-dessus, puis quitte."
 msgstr "Salva as imagens da lista acima e sai."
 
-#: src/lib.rs:2077
+#: src/lib.rs:2529
 msgid "Enregistre l'image de la liste ci-dessus, puis quitte."
 msgstr "Salve a imagem da lista acima e saia."
 
-#: src/lib.rs:2079
+#: src/lib.rs:2531
 msgid "Abandonne toutes les modifications non enregistrées, puis quitte."
 msgstr "Descarte todas as alterações não salvas e saia."
 
-#: src/lib.rs:2129
+#: src/lib.rs:2598
 msgid "Fermeture annulée : image non enregistrée"
 msgstr "Fechamento cancelado: imagem não salva"
 
-#: src/lib.rs:2151
+#: src/lib.rs:2620
 msgid "Importer en calque"
 msgstr "Importar como camada"
 
-#: src/lib.rs:2164
+#: src/lib.rs:2633
 msgid "Hors toile : contenu supprimé"
 msgstr "Off-line: conteúdo removido"
 
-#: src/lib.rs:2172
+#: src/lib.rs:2641
 msgid "Hors toile : toile agrandie"
 msgstr "Fora da tela: tela ampliada"
 
-#: src/lib.rs:2198
+#: src/lib.rs:2684
 msgid "Calque pixellisé : vous pouvez peindre"
 msgstr "Camada raster: você pode pintar"
 
-#: src/lib.rs:2331
+#: src/lib.rs:2834
 msgid "ANIM SVG"
 msgstr ""
 
-#: src/lib.rs:2333
+#: src/lib.rs:2836
 msgid "ANIM"
 msgstr ""
 
-#: src/lib.rs:2378
+#: src/lib.rs:2882
 msgid "Images, photos RAW et projets MasterPaint"
 msgstr "Imagens, fotos RAW e projetos MasterPaint"
 
-#: src/lib.rs:2379
+#: src/lib.rs:2883
 msgid "Projet MasterPaint (.illu)"
 msgstr "Projeto MasterPaint (.illu)"
 
-#: src/lib.rs:2380
+#: src/lib.rs:2884
+msgid "Paint.NET (.pdn)"
+msgstr ""
+
+#: src/lib.rs:2885
+msgid "Dessin SVG"
+msgstr ""
+
+#: src/lib.rs:2886
 msgid "Photos RAW"
 msgstr "Fotos RAW"
 
-#: src/lib.rs:2482
+#: src/lib.rs:2988
 msgid "JPEG"
 msgstr "JPEG"
 
-#: src/lib.rs:2483
+#: src/lib.rs:2989
 msgid "WebP"
 msgstr "WebP"
 
-#: src/lib.rs:2484
+#: src/lib.rs:2990
 msgid "BMP"
 msgstr "BMP"
 
-#: src/lib.rs:2488
+#: src/lib.rs:2994
 msgid "PNG"
 msgstr "PNG"
 
-#: src/lib.rs:2508
+#: src/lib.rs:3014
 msgid "L'image n'a pas pu être encodée au format {fmt}."
 msgstr "A imagem não pôde ser codificada no formato {fmt}."
 
-#: src/lib.rs:2523
+#: src/lib.rs:3029
 msgid "Exporté : {}"
 msgstr "Exportado: {}"
 
-#: src/lib.rs:2525
+#: src/lib.rs:3031
 msgid "Écriture impossible : {}"
 msgstr "Impossível escrever: {}"
 
-#: src/lib.rs:2546
+#: src/lib.rs:3052
 msgid "Exporté : {name}"
 msgstr "Exportado: {name}"
 
-#: src/lib.rs:2577
+#: src/lib.rs:3083
 msgid "Échec de l'export"
 msgstr "Falha na exportação"
 
-#: src/lib.rs:2587
+#: src/lib.rs:3093
 msgid "Image exportée (PNG)"
 msgstr "Imagem exportada (PNG)"
 
-#: src/lib.rs:2610
+#: src/lib.rs:3116
 msgid "Ouvrez le document principal pour le recadrer"
 msgstr "Abra o documento principal para recortá-lo"
 
-#: src/lib.rs:2647
+#: src/lib.rs:3153
 msgid "Recadrage : {} × {} px"
 msgstr "Cortar: {} × {} px"
 
-#: src/lib.rs:2796
+#: src/lib.rs:3302
 msgid "Choisir une taille…"
 msgstr "Escolha um tamanho…"
 
-#: src/lib.rs:2798
+#: src/lib.rs:3304
 msgid "Extend"
 msgstr "Estender"
 
-#: src/lib.rs:2811
+#: src/lib.rs:3317
 msgid "24 Mpx"
 msgstr "24 deputados"
 
-#: src/lib.rs:2812
+#: src/lib.rs:3318
 msgid "Instagram"
 msgstr "Instagram"
 
-#: src/lib.rs:2812
+#: src/lib.rs:3318
 msgid "icône"
 msgstr "ícone"
 
-#: src/lib.rs:2847
+#: src/lib.rs:3353
 msgid "MasterPaint-windows-x64.exe"
 msgstr "MasterPaint-windows-x64.exe"
 
-#: src/lib.rs:2849
+#: src/lib.rs:3355
 msgid "MasterPaint-windows-setup.exe"
 msgstr "MasterPaint-windows-setup.exe"
 
-#: src/lib.rs:2850
+#: src/lib.rs:3356
 msgid "MasterPaint-linux-x86_64.tar.gz"
 msgstr "MasterPaint-linux-x86_64.tar.gz"
 
-#: src/lib.rs:2851
+#: src/lib.rs:3357
 msgid "MasterPaint.flatpak"
 msgstr "MasterPaint.flatpak"
 
-#: src/lib.rs:2853
+#: src/lib.rs:3359
 msgid "MasterPaint-linux-x86_64.AppImage"
 msgstr "MasterPaint-linux-x86_64.AppImage"
 
-#: src/lib.rs:2855
+#: src/lib.rs:3361
 msgid "MasterPaint-android.apk"
 msgstr "MasterPaint-android.apk"
 
-#: src/lib.rs:2856
+#: src/lib.rs:3362
 msgid "MasterPaint-ios.ipa"
 msgstr "MasterPaint-ios.ipa"
 
-#: src/lib.rs:2857
+#: src/lib.rs:3363
 msgid "MasterPaint-macos.dmg"
 msgstr "MasterPaint-macos.dmg"
 
-#: src/lib.rs:2937
+#: src/lib.rs:3445
 msgid "Chargement du module IA…"
 msgstr "Carregando o módulo AI…"
 
-#: src/lib.rs:2939
+#: src/lib.rs:3447
 msgid "Préparation de l'image…"
 msgstr "Preparando a imagem…"
 
-#: src/lib.rs:2941
+#: src/lib.rs:3449
 msgid "Application sur le calque…"
 msgstr "Aplicação na camada…"
 
-#: src/lib.rs:2943
+#: src/lib.rs:3451
 msgid "Téléchargement des ressources…"
 msgstr "Baixando recursos…"
 
-#: src/lib.rs:2945
+#: src/lib.rs:3453
 msgid "Analyse de l'image…"
 msgstr "Análise de imagem…"
 
-#: src/lib.rs:2947
+#: src/lib.rs:3455
 msgid "Application du masque…"
 msgstr "Aplicando a máscara…"
 
-#: src/lib.rs:2949
+#: src/lib.rs:3457
 msgid "Encodage…"
 msgstr "Codificação…"
 
-#: src/lib.rs:2951
+#: src/lib.rs:3459
 msgid "Traitement…"
 msgstr "Tratamento…"
 
-#: src/lib.rs:2965
+#: src/lib.rs:3473
 msgid "Suppression du fond : ouvrez le document principal."
 msgstr "Remover plano de fundo: abra o documento principal."
 
-#: src/lib.rs:2968
+#: src/lib.rs:3476
 msgid "Suppression du fond : image trop petite."
 msgstr "Removendo o fundo: imagem muito pequena."
 
-#: src/lib.rs:2973
+#: src/lib.rs:3481
 msgid "Image très grande : le traitement peut être lent ou saturer la mémoire."
 msgstr "Imagem muito grande: o processamento pode ser lento ou saturar a memória."
 
-#: src/lib.rs:2995
+#: src/lib.rs:3503
 msgid "Supprimer le fond (IA) : {w} × {h} px, modèle {model}, plume {feather}"
 msgstr "Remover fundo (IA): {w} × {h} px, modelo {model}, pena {feather}"
 
-#: src/lib.rs:3015
+#: src/lib.rs:3523
 msgid "Suppression du fond : le document a changé pendant le traitement, résultat ignoré."
 msgstr "Remoção de plano de fundo: o documento foi alterado durante o processamento, resultado ignorado."
 
-#: src/lib.rs:3019
+#: src/lib.rs:3527
 msgid "Supprimer le fond (IA)"
 msgstr "Remover plano de fundo (IA)"
 
-#: src/lib.rs:3021
+#: src/lib.rs:3529
 msgid "Supprimer le fond (IA) : {:.1} s"
 msgstr "Remover fundo (IA): {:.1} s"
 
-#: src/lib.rs:3023
+#: src/lib.rs:3531
 msgid "ILLU_ABORT"
 msgstr "ILLU_ABORT"
 
-#: src/lib.rs:3025
+#: src/lib.rs:3533
 msgid "Suppression du fond annulée"
 msgstr "Remoção de plano de fundo cancelada"
 
-#: src/lib.rs:3029
+#: src/lib.rs:3537
 msgid "résultat inattendu"
 msgstr "resultado inesperado"
 
-#: src/lib.rs:3033
+#: src/lib.rs:3541
 msgid "Impossible de supprimer le fond ({why}). Vérifiez la connexion (premier usage : téléchargement du modèle), un bloqueur de script, ou essayez un navigateur récent."
 msgstr "Não foi possível excluir o plano de fundo ({why}). Verifique a conexão (primeiro uso: baixe o modelo), um bloqueador de script ou tente um navegador recente."
 
-#: src/lib.rs:3046
+#: src/lib.rs:3554
 msgid "Cette fonction utilise un modèle d'IA exécuté dans le navigateur : elle est disponible dans la version web de MasterPaint (masterpaint.fr). La version de bureau suivra."
 msgstr "Esta função utiliza um modelo de IA executado no navegador: está disponível na versão web do MasterPaint (masterpaint.fr). A versão desktop virá em seguida."
 
-#: src/lib.rs:3059
+#: src/lib.rs:3567
 msgid "Copier : {w} × {h} px"
 msgstr "Cópia: {w} × {h} px"
 
-#: src/lib.rs:3063
+#: src/lib.rs:3571
 msgid "Copié"
 msgstr "Copiado"
 
-#: src/lib.rs:3093
+#: src/lib.rs:3601
 msgid "Coller : lecture du presse-papiers du système…"
 msgstr "Colar: lendo a área de transferência do sistema…"
 
-#: src/lib.rs:3098
+#: src/lib.rs:3606
 msgid "Coller : image reçue ({w} × {h} px)"
 msgstr "Colar: imagem recebida ({w} × {h} px)"
 
-#: src/lib.rs:3099
+#: src/lib.rs:3607
 msgid "Coller : rien reçu du système ({})"
 msgstr "Colar: nada recebido do sistema ({})"
 
-#: src/lib.rs:3107
+#: src/lib.rs:3615
 msgid "Coller : déjà traité par l'évènement du navigateur"
 msgstr "Colar: já processado pelo evento do navegador"
 
-#: src/lib.rs:3112
+#: src/lib.rs:3620
 msgid "Coller : application indisponible"
 msgstr "Colar: aplicativo indisponível"
 
-#: src/lib.rs:3116
+#: src/lib.rs:3624
 msgid "Coller : état occupé, collage abandonné"
 msgstr "Colar: estado ocupado, colar abortado"
 
-#: src/lib.rs:3124
+#: src/lib.rs:3632
 msgid "Coller : presse-papiers interne"
 msgstr "Colar: área de transferência interna"
 
-#: src/lib.rs:3133
+#: src/lib.rs:3641
 msgid "Aucune image à coller. Le navigateur n'a pas donné le contenu du presse-papiers{}."
 msgstr "Não há imagens para colar. O navegador não forneceu o conteúdo da área de transferência{}."
 
-#: src/lib.rs:3169
+#: src/lib.rs:3677
 msgid "Presse-papiers vide"
 msgstr "Área de transferência vazia"
 
-#: src/lib.rs:3187
+#: src/lib.rs:3695
 msgid "Le presse-papiers ne contient pas d'image utilisable."
 msgstr "A área de transferência não contém nenhuma imagem utilizável."
 
-#: src/lib.rs:3196
+#: src/lib.rs:3704
 msgid "Sans titre {n}"
 msgstr "Sem título {n}"
 
-#: src/lib.rs:3219
+#: src/lib.rs:3727
 msgid "Où voulez-vous coller cette image ?"
 msgstr "Onde você deseja colar esta imagem?"
 
-#: src/lib.rs:3219
+#: src/lib.rs:3727
 msgid "Où voulez-vous coller ces images ?"
 msgstr "Onde você deseja colar essas imagens?"
 
-#: src/lib.rs:3223
+#: src/lib.rs:3731
 msgid "Dans un nouvel onglet"
 msgstr "Em uma nova aba"
 
-#: src/lib.rs:3223
+#: src/lib.rs:3731
 msgid "Ouvre l'image collée comme une nouvelle image."
 msgstr "Abre a imagem colada como uma nova imagem."
 
-#: src/lib.rs:3224
+#: src/lib.rs:3732
 msgid "Dans l'image actuelle"
 msgstr "Na imagem atual"
 
-#: src/lib.rs:3224
+#: src/lib.rs:3732
 msgid "Ajoute l'image collée comme nouveau calque de l'image ouverte."
 msgstr "Adiciona a imagem colada como uma nova camada da imagem aberta."
 
-#: src/lib.rs:3225
+#: src/lib.rs:3733
 msgid "Annule le collage."
 msgstr "Cancela a colagem."
 
-#: src/lib.rs:3239
+#: src/lib.rs:3747
 msgid "Des images à coller sont plus grandes que la toile. Que voulez-vous faire ?"
 msgstr "As imagens coláveis ​​são maiores que a tela. O que você quer fazer?"
 
-#: src/lib.rs:3241
+#: src/lib.rs:3749
 msgid "L'image collée est plus grande que la toile. Que voulez-vous faire ?"
 msgstr "A imagem colada é maior que a tela. O que você quer fazer?"
 
-#: src/lib.rs:3252
+#: src/lib.rs:3760
 msgid "Agrandir la toile"
 msgstr "Ampliar a tela"
 
-#: src/lib.rs:3252
+#: src/lib.rs:3760
 msgid "Agrandit automatiquement la toile pour contenir l'image collée."
 msgstr "Amplia automaticamente a tela para caber na imagem colada."
 
-#: src/lib.rs:3254
+#: src/lib.rs:3762
 msgid "Conserver la taille de la toile"
 msgstr "Manter o tamanho da tela"
 
-#: src/lib.rs:3255
+#: src/lib.rs:3763
 msgid "N'agrandit pas la toile. Il faudra déplacer l'image collée pour que la partie voulue soit dans les limites de la toile."
 msgstr "Não amplia a tela. Você precisará mover a imagem colada para que a parte desejada fique dentro dos limites da tela."
 
-#: src/lib.rs:3337
+#: src/lib.rs:3849
 msgid "Glisser-déposer"
 msgstr "Arraste e solte"
 
-#: src/lib.rs:3338
+#: src/lib.rs:3850
 msgid "Que voulez-vous faire avec le fichier ?"
 msgstr "O que você quer fazer com o arquivo?"
 
-#: src/lib.rs:3338
+#: src/lib.rs:3850
 msgid "Que voulez-vous faire avec les fichiers ?"
 msgstr "O que você quer fazer com os arquivos?"
 
-#: src/lib.rs:3340
-msgid "Fichiers"
-msgstr "Arquivos"
-
-#: src/lib.rs:3342
+#: src/lib.rs:3854
 msgid "Ouvre l'image dans un nouvel onglet."
 msgstr "Abre a imagem em uma nova guia."
 
-#: src/lib.rs:3342
+#: src/lib.rs:3854
 msgid "Ouvre chaque image dans un nouvel onglet."
 msgstr "Abra cada imagem em uma nova guia."
 
-#: src/lib.rs:3344
+#: src/lib.rs:3856
 msgid "Ajouter comme calque"
 msgstr "Adicionar como camada"
 
-#: src/lib.rs:3344
+#: src/lib.rs:3856
 msgid "Ajouter comme calques"
 msgstr "Adicionar como camadas"
 
-#: src/lib.rs:3346
+#: src/lib.rs:3858
 msgid "Charge l'image et l'ajoute comme nouveau calque de l'image actuelle."
 msgstr "Carrega a imagem e a adiciona como uma nova camada da imagem atual."
 
-#: src/lib.rs:3348
+#: src/lib.rs:3860
 msgid "Charge les images et les ajoute comme nouveaux calques de l'image actuelle."
 msgstr "Carrega imagens e as adiciona como novas camadas da imagem atual."
 
-#: src/lib.rs:3433
+#: src/lib.rs:3892
+msgid "Répéter {}"
+msgstr "Repetir {}"
+
+#: src/lib.rs:3915
+msgid "Aucun effet à répéter : appliquez d'abord un effet"
+msgstr "Nenhum efeito para repetir: aplique primeiro um efeito"
+
+#: src/lib.rs:3988
 msgid "Calcul de l'effet…"
 msgstr "Cálculo do efeito…"
 
-#: src/lib.rs:3459
+#: src/lib.rs:4014
 msgid "{} : effet indisponible dans le moteur Rust"
 msgstr "{}: efeito indisponível no motor Rust"
 
-#: src/lib.rs:3464
+#: src/lib.rs:4019
 msgid "{} : {:.0} ms"
 msgstr "{}: {:.0} ms"
 
-#: src/lib.rs:3468
+#: src/lib.rs:4023
 msgid "Calque {} sur {}"
 msgstr "Camada {} em {}"
 
-#: src/lib.rs:3477
+#: src/lib.rs:4032
 msgid "{} : abandonné (l'image a changé)"
 msgstr "{}: abandonado (imagem alterada)"
 
-#: src/lib.rs:3489
+#: src/lib.rs:4044
 msgid "{} (incrusté)"
 msgstr "{} (incorporado)"
 
-#: src/lib.rs:3638
+#: src/lib.rs:4198
 msgid "teinte r"
 msgstr "matiz r"
 
-#: src/lib.rs:3638
+#: src/lib.rs:4198
 msgid "teinte v"
 msgstr "sombra v"
 
-#: src/lib.rs:3638
+#: src/lib.rs:4198
 msgid "teinte b"
 msgstr "sombra b"
 
-#: src/lib.rs:3648
+#: src/lib.rs:4208
 msgid "lumière"
 msgstr "luz"
 
-#: src/lib.rs:3845
+#: src/lib.rs:4411
 msgid "Aperçu réduit : {ms:.0} ms — pleine résolution à la validation"
 msgstr "Visualização reduzida: {ms:.0} ms — resolução total após validação"
 
-#: src/lib.rs:3845
+#: src/lib.rs:4411
 msgid "Aperçu : {ms:.0} ms"
 msgstr "Visualização: {ms:.0} ms"
 
-#: src/lib.rs:3904
+#: src/lib.rs:4471
 msgid "« {label} » : pas encore porté dans la version Rust"
 msgstr "“{label}”: ainda não portado na versão Rust"
 
-#: src/lib.rs:3983
+#: src/lib.rs:4612
+msgid "Aperçu à la taille affichée : {ms:.0} ms — pleine résolution à la validation"
+msgstr ""
+
+#: src/lib.rs:4641
 msgid "Appliqué à la validation (OK)"
 msgstr "Aplicado à validação (OK)"
 
-#: src/lib.rs:3985
+#: src/lib.rs:4643
 msgid "Aperçu indisponible : effet pas encore porté en Rust"
 msgstr "Visualização indisponível: efeito ainda não portado para Rust"
 
-#: src/lib.rs:4021
+#: src/lib.rs:4681
 msgid "aperçu réduit"
 msgstr "visualização reduzida"
 
-#: src/lib.rs:4174
+#: src/lib.rs:4863
 msgid "Opacité du calque"
 msgstr "Opacidade da camada"
 
-#: src/lib.rs:4300
+#: src/lib.rs:4992
 msgid "Remplissage : sélectionnez la zone à reconstituer"
 msgstr "Preencher: selecione a área a ser preenchida"
 
-#: src/lib.rs:4306
+#: src/lib.rs:4998
 msgid "Reconstitution de la zone…"
 msgstr "Reconstrução da área…"
 
-#: src/lib.rs:4311
+#: src/lib.rs:5003
 msgid "{title} : abandonné (l'image a changé)"
 msgstr "{title}: abandonado (imagem alterada)"
 
-#: src/lib.rs:4385
+#: src/lib.rs:5077
 msgid "Application à l'image entière…"
 msgstr "Aplicação a toda a imagem…"
 
-#: src/lib.rs:4696
+#: src/lib.rs:5390
 msgid "Redimensionner la sélection"
 msgstr "Redimensionar seleção"
 
-#: src/lib.rs:4699
+#: src/lib.rs:5393
 msgid "Redimensionner"
 msgstr "Redimensionar"
 
-#: src/lib.rs:4701
+#: src/lib.rs:5395
 msgid "Déplacer les pixels"
 msgstr "Mover pixels"
 
-#: src/lib.rs:4833
+#: src/lib.rs:5527
 msgid "Supprimer le texte"
 msgstr "Excluir texto"
 
-#: src/lib.rs:4845
+#: src/lib.rs:5539
 msgid "Calque 1"
 msgstr "Camada 1"
 
-#: src/lib.rs:4857
+#: src/lib.rs:5551
 msgid "Calque texte"
 msgstr "Camada de texto"
 
-#: src/lib.rs:4861
+#: src/lib.rs:5555
 msgid "Modifier le texte"
 msgstr "Editar texto"
 
-#: src/lib.rs:4970
+#: src/lib.rs:5665
 msgid "Texte {n}"
 msgstr "Texto {n}"
 
-#: src/lib.rs:5053
+#: src/lib.rs:5749
 msgid "{label} : indisponible sur un calque texte (Calques › Pixelliser le calque)"
 msgstr "{label}: não disponível em uma camada de texto (Camadas › Rasterizar camada)"
 
-#: src/lib.rs:5065
+#: src/lib.rs:5761
 msgid "{label} : ajouté aux effets du calque texte (modifiables, non destructifs)"
 msgstr "{label}: adicionado aos efeitos da camada de texto (editável, não destrutivo)"
 
-#: src/lib.rs:5128
+#: src/lib.rs:5824
 msgid "Modifier : {label}"
 msgstr "Editar: {label}"
 
-#: src/lib.rs:5128
+#: src/lib.rs:5824
 msgid "{label} : effet du calque dynamique modifié"
 msgstr "{label}: efeito da camada dinâmica modificada"
 
-#: src/lib.rs:5132
+#: src/lib.rs:5828
 msgid "{label} : ajouté aux effets du calque dynamique"
 msgstr "{label}: adicionado aos efeitos da camada de filtros dinâmicos"
 
-#: src/lib.rs:5135
+#: src/lib.rs:5831
 msgid "Filtre dynamique : {DYN_MAX} effets au maximum"
 msgstr "Filtro dinâmico: efeitos {DYN_MAX} no máximo"
 
-#: src/lib.rs:5180
+#: src/lib.rs:5877
 msgid "{label} : indisponible sur un calque dynamique (il ne garde que des effets non destructifs)"
 msgstr "{label}: indisponível em camada dinâmica (mantém apenas efeitos não destrutivos)"
 
-#: src/lib.rs:5298
+#: src/lib.rs:5995
 msgid "Ce calque est un calque SVG (textes et formes modifiables). Pour y peindre, il doit d'abord redevenir un calque de pixels : ses objets ne seront plus modifiables."
 msgstr "Esta é uma camada SVG (textos e formas editáveis). Para pintar nela, converta-a primeiro numa camada de píxeis: os objetos deixam de ser editáveis."
 
-#: src/lib.rs:5302
+#: src/lib.rs:5999
 msgid "Transforme ses textes, formes et effets en pixels ordinaires, puis vous pouvez peindre."
 msgstr "Converter textos, formas e efeitos em píxeis normais para poder pintar."
 
-#: src/lib.rs:5303
+#: src/lib.rs:6000
 msgid "Garde le calque SVG modifiable (outils Texte, Formes, Déplacer, Pot de peinture)."
 msgstr "Manter a camada SVG editável (Texto, Formas, Mover e Balde de tinta)."
 
-#: src/lib.rs:5338
+#: src/lib.rs:6035
 msgid "Formes {n}"
 msgstr "Formas {n}"
 
-#: src/lib.rs:5372
+#: src/lib.rs:6069
 msgid "Cliquez sur un texte ou une forme du calque pour le déplacer"
 msgstr "Clique em um texto ou forma na camada para movê-lo"
 
-#: src/lib.rs:5421
+#: src/lib.rs:6118
 msgid "Déplacer l'objet"
 msgstr "Mover objeto"
 
-#: src/lib.rs:5435
+#: src/lib.rs:6137
 msgid "Cliquez sur une forme ou un texte du calque vectoriel pour le recolorer"
 msgstr "Clique em uma forma ou texto na camada vetorial para recolori-la"
 
-#: src/lib.rs:5446
+#: src/lib.rs:6147
 msgid "Couleur du trait"
 msgstr ""
 
-#: src/lib.rs:5454
+#: src/lib.rs:6156
 msgid "Remplir la forme"
 msgstr ""
 
-#: src/lib.rs:5456
+#: src/lib.rs:6158
 msgid "Cliquez dans la forme (remplissage) ou sur son contour (trait)"
 msgstr ""
 
-#: src/lib.rs:5462
+#: src/lib.rs:6164
 msgid "Recolorer le texte"
 msgstr ""
 
-#: src/lib.rs:5487
+#: src/lib.rs:6189
 msgid "Vecteur {n}"
 msgstr "Vetor {n}"
 
-#: src/lib.rs:5489
+#: src/lib.rs:6191
 msgid "Calque vectoriel : tracez des formes (Formes, Rectangle arrondi, Ligne) ou du texte ; Déplacer les déplace, Pot de peinture les recolore"
 msgstr "Camada vetorial: desenhe formas (Formas, Retângulo Arredondado, Linha) ou texto; Mover-se os move, o balde de tinta os recolore"
 
-#: src/lib.rs:5528
+#: src/lib.rs:6231
 msgid "Grouper les calques"
 msgstr "Camadas de grupo"
 
-#: src/lib.rs:5534
+#: src/lib.rs:6237
 msgid "Mode Transfert : sélectionnez un dossier"
 msgstr "Modo de transferência: selecione uma pasta"
 
-#: src/lib.rs:5537
+#: src/lib.rs:6240
 msgid "Dossier : mode Transfert"
 msgstr "Pasta: Modo de transferência"
 
-#: src/lib.rs:5537
+#: src/lib.rs:6240
 msgid "Dossier : composé à part"
 msgstr "Arquivo: composto separadamente"
 
-#: src/lib.rs:5547
+#: src/lib.rs:6250
 msgid "Pixelliser : le calque actif n'est pas un calque texte"
 msgstr "Rasterizar: a camada ativa não é uma camada de texto"
 
-#: src/lib.rs:5553
+#: src/lib.rs:6256
 msgid "Effets du texte : le calque actif n'est pas un calque texte"
 msgstr "Efeitos de texto: a camada ativa não é uma camada de texto"
 
-#: src/lib.rs:5603
+#: src/lib.rs:6306
 msgid "resizeCanvas()"
 msgstr "redimensionarCanvas()"
 
-#: src/lib.rs:5723
+#: src/lib.rs:6426
 msgid "Quitter le mode animation"
 msgstr "Sair do modo de animação"
 
-#: src/lib.rs:5724
+#: src/lib.rs:6427
 msgid "Mode animation quitté : chaque calque garde l'image courante"
 msgstr "Modo de animação fechado: cada camada mantém o fotograma atual"
 
-#: src/lib.rs:5727
+#: src/lib.rs:6430
 msgid "Mode animation"
 msgstr "Modo de animação"
 
-#: src/lib.rs:5729
+#: src/lib.rs:6432
 msgid "Mode animation : dessinez, puis + pour une nouvelle image (pelure d'oignon pour voir la précédente)"
 msgstr "Modo de animação: desenhe e use + para um novo fotograma (o papel vegetal mostra o anterior)"
 
-#: src/lib.rs:5765
+#: src/lib.rs:6468
 msgid "Ajouter une image"
 msgstr "Adicionar fotograma"
 
-#: src/lib.rs:5769
+#: src/lib.rs:6472
 msgid "Dupliquer le dessin"
 msgstr "Duplicar desenho"
 
-#: src/lib.rs:5773
+#: src/lib.rs:6476
 msgid "Insérer une image"
 msgstr "Inserir fotograma"
 
-#: src/lib.rs:5777
+#: src/lib.rs:6480
 msgid "Supprimer l'image"
 msgstr "Eliminar fotograma"
 
-#: src/lib.rs:5815
+#: src/lib.rs:6518
 msgid "Image clé"
 msgstr "Fotograma-chave"
 
-#: src/lib.rs:5823
+#: src/lib.rs:6526
 msgid "Dessin vierge"
 msgstr "Desenho vazio"
 
-#: src/lib.rs:5826
+#: src/lib.rs:6529
 msgid "Effacer le dessin"
 msgstr "Limpar desenho"
 
-#: src/lib.rs:5829
+#: src/lib.rs:6532
 msgid "Figer le dessin"
 msgstr "Fixar desenho"
 
-#: src/lib.rs:5832
+#: src/lib.rs:6535
 msgid "Maintenir le dessin"
 msgstr "Manter desenho"
 
-#: src/lib.rs:5836
+#: src/lib.rs:6539
 msgid "Dessin copié : clic droit sur une autre image › Coller le dessin ici"
 msgstr "Desenho copiado: clique direito noutro fotograma › Colar o desenho aqui"
 
-#: src/lib.rs:5842
+#: src/lib.rs:6545
 msgid "Coller le dessin"
 msgstr "Colar desenho"
 
-#: src/lib.rs:5845
+#: src/lib.rs:6548
 msgid "Répéter le dessin"
 msgstr "Repetir desenho"
 
-#: src/lib.rs:5849
+#: src/lib.rs:6552
 msgid "Cadence de l'animation"
 msgstr "Cadência da animação"
 
-#: src/lib.rs:5853
+#: src/lib.rs:6556
 msgid "Déplacer un dessin"
 msgstr "Mover desenho"
 
-#: src/lib.rs:5879
+#: src/lib.rs:6582
 msgid "Durée de l'animation"
 msgstr "Duração da animação"
 
-#: src/lib.rs:5919
+#: src/lib.rs:6622
 msgid "GIF animé"
 msgstr "GIF animado"
 
-#: src/lib.rs:5919
+#: src/lib.rs:6622
 msgid "Planche de sprites"
 msgstr "Folha de sprites"
 
-#: src/lib.rs:5920
+#: src/lib.rs:6623
 msgid "Encodage des images…"
 msgstr "A codificar fotogramas…"
 
-#: src/lib.rs:5925
+#: src/lib.rs:6628
 msgid "L'animation n'a pas pu être encodée."
 msgstr "Não foi possível codificar a animação."
 
-#: src/lib.rs:5971
+#: src/lib.rs:6674
 msgid "GIF animé ouvert : {n} images à {fps} images par seconde"
 msgstr "GIF animado aberto: {n} fotogramas a {fps} fotogramas por segundo"
 
-#: src/lib.rs:6009
+#: src/lib.rs:6712
 msgid "Aucune image lisible dans la séquence"
 msgstr "Sem imagens legíveis na sequência"
 
-#: src/lib.rs:6031
+#: src/lib.rs:6734
 msgid "Séquence importée : {n} images"
 msgstr "Sequência importada: {n} fotogramas"
 
-#: src/lib.rs:6061
+#: src/lib.rs:6764
 msgid "Pixeliser"
 msgstr "Pixelizar"
 
-#: src/lib.rs:6062
+#: src/lib.rs:6765
 msgid "Trame"
 msgstr "Meio-tom"
 
-#: src/lib.rs:6071
+#: src/lib.rs:6774
 msgid "Impression écran"
 msgstr "Serigrafia"
 
-#: src/lib.rs:6072
+#: src/lib.rs:6775
 msgid "Tramage Bayer"
 msgstr "Tramagem Bayer"
 
-#: src/lib.rs:6084
+#: src/lib.rs:6787
 msgid "Choisissez un effet ou un ajustement : il rejoint la chaîne du calque ƒ"
 msgstr "Escolha um efeito ou ajuste: será adicionado à cadeia da camada ƒ"
 
-#: src/lib.rs:6110
+#: src/lib.rs:6819
 msgid "Effets appliqués"
 msgstr "Efeitos aplicados"
 
-#: src/lib.rs:6170
+#: src/lib.rs:6879
 msgid "Effets du texte : activer / désactiver"
 msgstr "Efeitos de texto: ativar/desativar"
 
-#: src/lib.rs:6175
+#: src/lib.rs:6884
 msgid "Effets du texte : ordre"
 msgstr "Efeitos de texto: ordem"
 
-#: src/lib.rs:6183
+#: src/lib.rs:6892
 msgid "Effets du texte : supprimer"
 msgstr "Efeitos de texto: remover"
 
-#: src/lib.rs:6211
+#: src/lib.rs:6920
 msgid "Téléchargement de la police…"
 msgstr "Baixando a fonte…"
 
-#: src/lib.rs:6224
+#: src/lib.rs:6933
 msgid "Police indisponible"
 msgstr "Fonte indisponível"
 
-#: src/lib.rs:6276
+#: src/lib.rs:6986
 msgid "Cet outil n'est pas encore porté dans la version Rust"
 msgstr "Esta ferramenta ainda não foi portada para a versão Rust"
 
-#: src/lib.rs:6323
+#: src/lib.rs:7097
+msgid "{}, {} px"
+msgstr ""
+
+#: src/lib.rs:7129
 msgid "remplissage contenu"
 msgstr "preenchendo conteúdo"
 
-#: src/lib.rs:6327
+#: src/lib.rs:7133
 msgid "dégradé"
 msgstr "degradado"
 
-#: src/lib.rs:6339
+#: src/lib.rs:7145
 msgid "filtre dynamique"
 msgstr "filtro dinâmico"
 
-#: src/lib.rs:6343
+#: src/lib.rs:7149
 msgid "déplacer"
 msgstr "mover"
 
-#: src/lib.rs:6345
+#: src/lib.rs:7151
 msgid "ajuster au contenu"
 msgstr "adequado ao conteúdo"
 
-#: src/lib.rs:6349
+#: src/lib.rs:7155
 msgid "hors toile"
 msgstr "fora da tela"
 
-#: src/lib.rs:6351
+#: src/lib.rs:7157
 msgid "luminosité"
 msgstr "brilho"
 
-#: src/lib.rs:6353
+#: src/lib.rs:7159
 msgid "détourage"
 msgstr "recorte"
 
-#: src/lib.rs:6507
+#: src/lib.rs:7316
 msgid "Axes de symétrie recentrés"
 msgstr "Eixos centrados de simetria"
 
-#: src/lib.rs:6541
+#: src/lib.rs:7350
 msgid "Axe de symétrie : {} px"
 msgstr "Eixo de simetria: {} px"
 
-#: src/lib.rs:6602
+#: src/lib.rs:7411
 msgid "+Maj"
 msgstr "+Mudança"
 
-#: src/lib.rs:6602
+#: src/lib.rs:7411
 msgid "+Alt"
 msgstr "+ Alt"
 
-#: src/lib.rs:6749
+#: src/lib.rs:7577
 msgid "Effacer la sélection"
 msgstr "Limpar seleção"
 
-#: src/lib.rs:6779
+#: src/lib.rs:7607
 msgid "Déplacer la sélection"
 msgstr "Mover seleção"
 
-#: src/lib.rs:6847
+#: src/lib.rs:7680
 msgid "Centrer la sélection"
 msgstr "Centralize a seleção"
 
-#: src/lib.rs:6889
+#: src/lib.rs:7722
 msgid "Teinte / Saturation"
 msgstr "Matiz/Saturação"
 
-#: src/lib.rs:6936
+#: src/lib.rs:7769
 msgid "moveLayer(1)"
 msgstr "moverCamada(1)"
 
-#: src/lib.rs:6936
+#: src/lib.rs:7769
 msgid "moveLayer(-1)"
 msgstr "moverCamada(-1)"
 
-#: src/lib.rs:6940
+#: src/lib.rs:7773
 msgid "PhotoModeManager"
 msgstr "PhotoModeManager"
 
-#: src/lib.rs:6951
+#: src/lib.rs:7784
 msgid "à venir"
 msgstr "para vir"
 
-#: src/lib.rs:6959
+#: src/lib.rs:7792
 msgid "bêta"
 msgstr "beta"
 
-#: src/lib.rs:7064
+#: src/lib.rs:7905
 msgid "Ctrl++"
 msgstr "Ctrl++"
 
-#: src/lib.rs:7065
+#: src/lib.rs:7906
 msgid "Ctrl+-"
 msgstr "Ctrl+-"
 
-#: src/lib.rs:7066
+#: src/lib.rs:7907
 msgid "Ctrl+0"
 msgstr "Ctrl+0"
 
-#: src/lib.rs:7076
+#: src/lib.rs:7917
 msgid "Fenêtre"
 msgstr "Janela"
 
-#: src/lib.rs:7091
+#: src/lib.rs:7932
 msgid "Coller dans une nouvelle image"
 msgstr "Colar numa nova imagem"
 
-#: src/lib.rs:7091
+#: src/lib.rs:7932
 msgid "Ctrl+Alt+V"
 msgstr "Ctrl+Alt+V"
 
-#: src/lib.rs:7099
+#: src/lib.rs:7940
 msgid "Rotation de 90° dans le sens horaire"
 msgstr "Rodar 90° no sentido horário"
 
-#: src/lib.rs:7099
+#: src/lib.rs:7940
 msgid "Ctrl+H"
 msgstr "Ctrl+H"
 
-#: src/lib.rs:7100
+#: src/lib.rs:7941
 msgid "Rotation de 90° dans le sens antihoraire"
 msgstr "Rodar 90° no sentido anti-horário"
 
-#: src/lib.rs:7100
+#: src/lib.rs:7941
 msgid "Ctrl+G"
 msgstr "Ctrl+G"
 
-#: src/lib.rs:7101
+#: src/lib.rs:7942
 msgid "Rotation de 180°"
 msgstr "Rodar 180°"
 
-#: src/lib.rs:7101
+#: src/lib.rs:7942
 msgid "Ctrl+J"
 msgstr "Ctrl+J"
 
-#: src/lib.rs:7102
+#: src/lib.rs:7943
 msgid "Retourner horizontalement"
 msgstr "Inverter horizontalmente"
 
-#: src/lib.rs:7103
+#: src/lib.rs:7944
 msgid "Retourner verticalement"
 msgstr "Inverter verticalmente"
 
-#: src/lib.rs:7105
+#: src/lib.rs:7946
 msgid "Aplatir"
 msgstr "Achatar"
 
-#: src/lib.rs:7105
+#: src/lib.rs:7946
 msgid "Ctrl+Maj+F"
 msgstr "Ctrl+Shift+F"
 
-#: src/lib.rs:7108
+#: src/lib.rs:7949
 msgid "Mode du projet"
 msgstr "Modo do projeto"
 
-#: src/lib.rs:7115
+#: src/lib.rs:7956
 msgid "SVG (objets modifiables)"
 msgstr "SVG (objetos editáveis)"
 
-#: src/lib.rs:7116
+#: src/lib.rs:7957
 msgid "Animation pixel"
 msgstr "Animação de píxeis"
 
-#: src/lib.rs:7117
+#: src/lib.rs:7958
 msgid "Animation SVG"
 msgstr "Animação SVG"
 
-#: src/lib.rs:7157
+#: src/lib.rs:8001
 msgid "Mode SVG : formes et textes restent des objets modifiables, les nouveaux calques sont des calques SVG"
 msgstr "Modo SVG: formas e textos continuam a ser objetos editáveis; as novas camadas são SVG"
 
-#: src/lib.rs:7158
+#: src/lib.rs:8002
 msgid "Mode Animation SVG : chaque image de la frise garde ses propres objets"
 msgstr "Modo Animação SVG: cada fotograma da linha de tempo mantém os seus próprios objetos"
 
-#: src/lib.rs:7159
+#: src/lib.rs:8003
 msgid "Mode Animation pixel : dessin image par image sur la frise"
 msgstr "Modo Animação de píxeis: desenho fotograma a fotograma na linha de tempo"
 
-#: src/lib.rs:7160
+#: src/lib.rs:8004
 msgid "Mode Pixel"
 msgstr "Modo píxel"
 
-#: src/lib.rs:7176
+#: src/lib.rs:8020
 msgid "Rotation / retournement"
 msgstr "Rotação/inversão"
 
-#: src/lib.rs:7184
+#: src/lib.rs:8028
 msgid "Mode animation : aplatir n'est pas encore possible (quittez le mode animation)"
 msgstr "Modo de animação: ainda não é possível achatar (saia primeiro do modo de animação)"
 
-#: src/lib.rs:7187
+#: src/lib.rs:8031
 msgid "L'image n'a qu'un calque"
 msgstr "A imagem tem apenas uma camada"
 
-#: src/lib.rs:7243
+#: src/lib.rs:8087
 msgid "Mode Transfert (fusion du contenu avec le dessous)"
 msgstr "Modo de transferência (mesclar o conteúdo abaixo)"
 
-#: src/lib.rs:7249
+#: src/lib.rs:8093
 msgid "Zone N&B"
 msgstr "Máscara a preto e branco"
 
-#: src/lib.rs:7254
+#: src/lib.rs:8098
 msgid "Effets du calque texte…"
 msgstr "Efeitos de camada de texto…"
 
-#: src/lib.rs:7277
+#: src/lib.rs:8121
 msgid "EditorManager.selectAll"
 msgstr "EditorManager.selectAll"
 
-#: src/lib.rs:7277
+#: src/lib.rs:8121
 msgid "EditorManager.addLayer()"
 msgstr "EditorManager.addLayer()"
 
-#: src/lib.rs:7280
+#: src/lib.rs:8124
 msgid "deleteLayer()"
 msgstr "deletarCamada()"
 
-#: src/lib.rs:7281
+#: src/lib.rs:8125
 msgid "PhotoModeManager.open()"
 msgstr "PhotoModeManager.open()"
 
-#: src/lib.rs:7292
+#: src/lib.rs:8136
 msgid "Ajuster la toile à la taille du calque (contenu hors toile)"
 msgstr "Ajustar a tela ao tamanho da camada (conteúdo fora da tela)"
 
-#: src/lib.rs:7293
+#: src/lib.rs:8137
 msgid "rust:fitCanvasToOutside"
 msgstr "ferrugem:fitCanvasToOutside"
 
-#: src/lib.rs:7326
+#: src/lib.rs:8170
 msgid "Aucun projet ouvert : rien à exporter"
 msgstr "Nenhum projeto aberto: nada para exportar"
 
-#: src/lib.rs:7338
+#: src/lib.rs:8182
 msgid "Aucun projet ouvert : créez une nouvelle image ou ouvrez un fichier"
 msgstr "Nenhum projeto aberto: crie uma nova imagem ou abra um ficheiro"
 
-#: src/lib.rs:7354
+#: src/lib.rs:8198
 msgid "Mode animation : changer la taille de l'image n'est pas encore possible (Rotation / retournement fonctionne sur toutes les images)"
 msgstr "Modo de animação: ainda não é possível redimensionar a imagem (rotação e inversão funcionam em todos os fotogramas)"
 
-#: src/lib.rs:7396
+#: src/lib.rs:8240
 msgid "ToRal"
 msgstr "ToRal"
 
-#: src/lib.rs:7398
+#: src/lib.rs:8242
 msgid "ToCmjn"
 msgstr "ParaCmyk"
 
-#: src/lib.rs:7400
+#: src/lib.rs:8244
 msgid "ToDither"
 msgstr "ParaDither"
 
-#: src/lib.rs:7472
+#: src/lib.rs:8322
 msgid "Ajuster la toile au calque"
 msgstr "Ajustar tela à camada"
 
-#: src/lib.rs:7478
+#: src/lib.rs:8328
 msgid "Ajuster au contenu"
 msgstr "Ajustar ao conteúdo"
 
-#: src/lib.rs:7480
+#: src/lib.rs:8330
 msgid "rust:newVectorLayer"
 msgstr "ferrugem: novaVectorLayer"
 
-#: src/lib.rs:7508
+#: src/lib.rs:8358
 msgid "Étendre / réduire la sélection"
 msgstr "Expandir/recolher seleção"
 
-#: src/lib.rs:7508
+#: src/lib.rs:8358
 msgid "Pixels (− = réduire)"
 msgstr "Pixels (- = reduzir)"
 
-#: src/lib.rs:7514
+#: src/lib.rs:8364
 msgid "Les calques ont déjà les dimensions de la toile dans la version Rust"
 msgstr "As camadas já possuem dimensões de tela na versão Rust"
 
-#: src/lib.rs:7531
+#: src/lib.rs:8380
 msgid "Le calque actif est vide"
 msgstr "A camada ativa está vazia"
 
-#: src/lib.rs:7583
+#: src/lib.rs:8386
+msgid "Détourage : tracez d'abord une sélection autour de l'objet à garder"
+msgstr "Recorte: primeiro desenhe uma seleção ao redor do objeto para manter"
+
+#: src/lib.rs:8432
 msgid "Fenêtre pas encore portée dans la version Rust"
 msgstr "Janela ainda não adaptada à versão Rust"
 
-#: src/lib.rs:7630
+#: src/lib.rs:8482
 msgid "Bureau réinitialisé : palettes à leur place d'origine"
 msgstr ""
 
-#: src/lib.rs:7633
+#: src/lib.rs:8485
 msgid "« {l} » : pas encore porté dans la version Rust"
 msgstr "“{l}”: ainda não portado na versão Rust"
 
-#: src/lib.rs:7686
+#: src/lib.rs:8540
 msgid "Aperçu et vignette de « {n} »"
 msgstr "Visualização e miniatura de “{n}”"
 
-#: src/lib.rs:7689
+#: src/lib.rs:8543
 msgid "Dématriçage et couleurs de « {n} » (flottant)"
 msgstr "Demosaicing e cores de “{n}” (flutuante)"
 
-#: src/lib.rs:7692
+#: src/lib.rs:8546
 msgid "Lecture des données du capteur de « {n} »"
 msgstr "Lendo dados do sensor de “{n}”"
 
-#: src/lib.rs:7692
+#: src/lib.rs:8546
 msgid "Décodage de « {n} »"
 msgstr "Decodificação de “{n}”"
 
-#: src/lib.rs:7715
+#: src/lib.rs:8569
 msgid "Chargement : {name} ({} octets)"
 msgstr "Carregando: {name} ({} bytes)"
 
-#: src/lib.rs:7737
+#: src/lib.rs:8598
 msgid "« {name} » : format d'image non reconnu (formats lus : PNG, JPEG, WebP, BMP, GIF, ICO, TIFF, RAW, .illu)."
 msgstr "“{name}”: formato de imagem não reconhecido (formatos de leitura: PNG, JPEG, WebP, BMP, GIF, ICO, TIFF, RAW, .illu)."
 
-#: src/lib.rs:7769
+#: src/lib.rs:8630
 msgid "Développement de la photo RAW"
 msgstr "Revelação de fotos RAW"
 
-#: src/lib.rs:7769
+#: src/lib.rs:8630
 msgid "Ouverture de l'image"
 msgstr "Abrindo a imagem"
 
-#: src/lib.rs:7769
+#: src/lib.rs:8630
 msgid "Ouverture des fichiers"
 msgstr "Abrindo arquivos"
 
-#: src/lib.rs:7770
+#: src/lib.rs:8631
 msgid "Préparation…"
 msgstr "Preparação…"
 
-#: src/lib.rs:7786
+#: src/lib.rs:8647
 msgid "Chargement terminé en {:.0} ms"
 msgstr "Carregamento concluído em {:.0} ms"
 
-#: src/lib.rs:7842
+#: src/lib.rs:8703
 msgid "Développement de « {name} » en flottant (arrière-plan)"
 msgstr "Expandindo “{name}” para flutuar (fundo)"
 
-#: src/lib.rs:7845
+#: src/lib.rs:8706
 msgid "Aperçu et vignette de « {name} »"
 msgstr "Visualização e miniatura de “{name}”"
 
-#: src/lib.rs:7851
+#: src/lib.rs:8712
 msgid "Décodage de « {name} » (arrière-plan)"
 msgstr "Decodificação “{name}” (fundo)"
 
-#: src/lib.rs:7900
+#: src/lib.rs:8776
+msgid "Ouvrir un SVG"
+msgstr ""
+
+#: src/lib.rs:8791
+msgid "Importer un SVG"
+msgstr ""
+
+#: src/lib.rs:8812
 msgid "Non repris (pas encore en Rust) : {}"
 msgstr "Não incluído (ainda não em Rust): {}"
 
-#: src/lib.rs:7903
+#: src/lib.rs:8849
 msgid "Ouvrir un projet"
 msgstr "Abra um projeto"
 
-#: src/lib.rs:7919
+#: src/lib.rs:8854
+msgid "« {name} » : comment ouvrir ce dessin ? Les formes et les chemins restent des objets modifiables (calques SVG)."
+msgstr ""
+
+#: src/lib.rs:8858
+msgid "Grille d'icônes"
+msgstr ""
+
+#: src/lib.rs:8858
+msgid "Feuille de symboles (type illu-sprite.svg) : chaque icône dans une case, son nom dessous."
+msgstr ""
+
+#: src/lib.rs:8860
+msgid "Un calque par élément"
+msgstr ""
+
+#: src/lib.rs:8860
+msgid "Nouveau projet : chaque élément ou groupe racine du fichier sur son propre calque SVG."
+msgstr ""
+
+#: src/lib.rs:8861
+msgid "Tout sur un seul calque"
+msgstr ""
+
+#: src/lib.rs:8861
+msgid "Nouveau projet : tous les éléments sur un même calque SVG."
+msgstr ""
+
+#: src/lib.rs:8863
+msgid "Dans le projet en cours"
+msgstr ""
+
+#: src/lib.rs:8863
+msgid "Ajoute les éléments du fichier au projet ouvert, un calque SVG par élément racine."
+msgstr ""
+
+#: src/lib.rs:8865
+msgid "N'ouvre pas le fichier."
+msgstr ""
+
+#: src/lib.rs:8883
 msgid "Photo ouverte dans le Mode Photo Pro"
 msgstr "Foto aberta no modo Pro Photo"
 
-#: src/lib.rs:7919
+#: src/lib.rs:8883
 msgid "{photos} photos ajoutées à la pellicule"
 msgstr "{photos} fotos adicionadas ao rolo da câmera"
 
-#: src/lib.rs:8002
+#: src/lib.rs:8966
 msgid "Importer des photos…"
 msgstr "Importar fotos…"
 
-#: src/lib.rs:8002
+#: src/lib.rs:8966
 msgid "Ctrl+O"
 msgstr "Ctrl+O"
 
-#: src/lib.rs:8003
+#: src/lib.rs:8967
 msgid "Ouvrir dans l'éditeur"
 msgstr "Abrir no editor"
 
-#: src/lib.rs:8004
+#: src/lib.rs:8968
 msgid "Ctrl+S"
 msgstr "Ctrl+S"
 
-#: src/lib.rs:8006
+#: src/lib.rs:8970
 msgid "Fermer le Mode Photo Pro"
 msgstr "Fechar modo Foto Profissional"
 
-#: src/lib.rs:8012
+#: src/lib.rs:8976
 msgid "Réinitialiser les réglages"
 msgstr "Redefinir configurações"
 
-#: src/lib.rs:8013
+#: src/lib.rs:8977
 msgid "Appliquer à toutes les photos"
 msgstr "Aplicar a todas as fotos"
 
-#: src/lib.rs:8015
+#: src/lib.rs:8979
 msgid "Rotation de 90°"
 msgstr "Rotação de 90°"
 
-#: src/lib.rs:8016
+#: src/lib.rs:8980
 msgid "Comparer avec l'original"
 msgstr "Compare com o original"
 
-#: src/lib.rs:8022
+#: src/lib.rs:8986
 msgid "Réglage automatique"
 msgstr "Ajuste automático"
 
-#: src/lib.rs:8060
+#: src/lib.rs:9024
 msgid "{} — {} × {} px{note}"
 msgstr "{} — {} × {} px{note}"
 
-#: src/lib.rs:8128
+#: src/lib.rs:9092
 msgid "{} — {} × {} px — aperçu {ms:.0} ms"
 msgstr "{} — {} × {} px — visualização {ms:.0} ms"
 
-#: src/lib.rs:8239
+#: src/lib.rs:9203
 msgid "Photos (dont RAW)"
 msgstr "Fotos (incluindo RAW)"
 
-#: src/lib.rs:8275
+#: src/lib.rs:9253
 msgid "Photo ouverte dans l'éditeur ({:.0} ms)"
 msgstr "Foto aberta no editor ({:.0} ms)"
 
-#: src/lib.rs:8286
+#: src/lib.rs:9265
 msgid "Réglages appliqués aux {n} photos"
 msgstr "Configurações aplicadas a fotos {n}"
 
-#: src/lib.rs:8297
+#: src/lib.rs:9276
 msgid "Auto sur {n} photos ({})"
 msgstr "Automático em fotos {n} ({})"
 
-#: src/lib.rs:8356
-msgid "Aucune photo à exporter"
-msgstr "Não há fotos para exportar"
-
-#: src/lib.rs:8365
-msgid "Dossier d'exportation des photos"
-msgstr "Pasta de exportação de fotos"
-
-#: src/lib.rs:8367
-msgid "Export de {} photo(s)…"
-msgstr "Exportação de fotos {}…"
-
-#: src/lib.rs:8379
-msgid "{done} photo(s) exportée(s) dans {}"
-msgstr "{done} fotos exportadas para {}"
-
-#: src/lib.rs:8397
-msgid "{} photo(s) exportée(s)"
-msgstr "{} fotos exportadas"
-
-#: src/lib.rs:8449
-msgid "Le projet est déjà en mode {}"
-msgstr "O projeto já está no modo {}"
-
-#: src/lib.rs:8470
-msgid "MasterPaint (Rust)"
-msgstr "MasterPaint (ferrugem)"
-
-#: src/lib.rs:8476
-msgid "MasterPaint-Rust/{APP_VERSION} ({})"
-msgstr "MasterPaint-Rust/{APP_VERSION} ({})"
-
-#: src/lib.rs:8480
-msgid "Envoi…"
-msgstr "Enviando…"
-
-#: src/lib.rs:8487
-msgid "Content-Type"
-msgstr "Tipo de conteúdo"
-
-#: src/lib.rs:8487
-msgid "text/plain;charset=UTF-8"
-msgstr "texto/simples;charset=UTF-8"
-
-#: src/lib.rs:8511
-msgid "Message envoyé, merci !"
-msgstr "Mensagem enviada, obrigado!"
-
-#: src/lib.rs:8513
-msgid "Échec de l'envoi (réseau ?)"
-msgstr "Falha ao enviar (rede?)"
-
-#: src/lib.rs:8758
-msgid "Langue « {code} » indisponible : {e}"
-msgstr "Idioma “{code}” indisponível: {e}"
-
-#: src/lib.rs:8775
-msgid "Désactiver « Hors toile » supprime le contenu dessiné en dehors de la toile. Que voulez-vous faire ?"
-msgstr "Desativar “Fora da tela” remove o conteúdo desenhado fora da tela. O que você quer fazer?"
-
-#: src/lib.rs:8779
-msgid "Supprimer le contenu hors toile"
-msgstr "Remover conteúdo fora da tela"
-
-#: src/lib.rs:8779
-msgid "Rogne tout ce qui dépasse de l'image, puis désactive l'option."
-msgstr "Corte qualquer coisa além da imagem e desative a opção."
-
-#: src/lib.rs:8780
-msgid "Agrandit l'image pour tout garder, puis désactive l'option."
-msgstr "Amplie a imagem para caber tudo e desative a opção."
-
-#: src/lib.rs:8781
-msgid "Garde « Hors toile » activé."
-msgstr "Proteção “fora da tela” habilitada."
-
-#: src/lib.rs:8796
-msgid "Calque texte : chaque texte aura son calque, modifiable ensuite"
-msgstr "Camada de texto: cada texto terá sua camada, que poderá então ser modificada"
-
-#: src/lib.rs:8796
-msgid "Texte peint directement dans le calque actif"
-msgstr "Texto pintado diretamente na camada ativa"
-
-#: src/lib.rs:8802
-msgid "Calque SVG : les formes restent des objets modifiables"
-msgstr "Camada SVG: as formas continuam a ser objetos editáveis"
-
-#: src/lib.rs:8802
-msgid "Formes tracées en pixels dans le calque actif"
-msgstr "Formas desenhadas em píxeis na camada ativa"
-
-#: src/lib.rs:8848
-msgid "Aligner la sélection"
-msgstr "Alinhar seleção"
-
-#: src/lib.rs:8860
-msgid "Rotation à 90° : image entière seulement (les calques ont la taille de la toile)"
-msgstr "Rotação de 90°: apenas imagem inteira (as camadas têm o tamanho da tela)"
-
-#: src/lib.rs:8864
-msgid "Rotation / retournement du calque"
-msgstr "Girar/Inverter Camada"
-
-#: src/lib.rs:8882
-msgid "Option pas encore portée dans la version Rust"
-msgstr "Opção ainda não portada na versão Rust"
-
-#: src/lib.rs:8896
-msgid "MasterPaint : {info}"
-msgstr "MasterPaint: {info}"
-
-#: src/lib.rs:8916
-msgid "MasterPaint : {e}"
-msgstr "MasterPaint: {e}"
-
-#: src/lib.rs:9131
-msgid "Couleur retirée des favoris"
-msgstr "Cor removida dos favoritos"
-
-#: src/lib.rs:9133
-msgid "Favoris pleins (24 couleurs) : Maj + clic sur une case pour la retirer"
-msgstr "Favoritos completos (24 cores): Shift + clique em uma caixa para removê-la"
-
-#: src/lib.rs:9137
-msgid "Couleur ajoutée aux favoris"
-msgstr "Cor adicionada aos favoritos"
-
-#: src/lib.rs:9381
-msgid "Annulation…"
-msgstr "Cancelamento…"
-
-#: src/lib.rs:9471
-msgid "Coller : évènement du navigateur ignoré (déjà lu par l'application)"
-msgstr "Colar: evento do navegador ignorado (já lido pela aplicação)"
-
-#: src/lib.rs:9485
-msgid "Coller : le presse-papiers ne contient qu'un chemin de fichier"
-msgstr "Colar: a área de transferência contém apenas o caminho do arquivo"
-
-#: src/lib.rs:9486
-msgid "Le navigateur ne peut pas lire un fichier copié : glissez-le sur la page ou utilisez Fichier › Ouvrir"
-msgstr "O navegador não consegue ler um arquivo copiado: arraste-o para a página ou use Arquivo › Abrir"
-
-#: src/lib.rs:9488
-msgid "Coller (évènement du navigateur) : {name}, {} octets"
-msgstr "Colar (evento do navegador): {name}, {} bytes"
-
-#: src/lib.rs:9497
-msgid "Coller : « {name} » n'est pas une image reconnue"
-msgstr "Colar: “{name}” não é uma imagem reconhecida"
-
-#: src/lib.rs:9505
-msgid "Coller (évènement du navigateur) : {name}, {w} × {h} px"
-msgstr "Colar (evento do navegador): {name}, {w} × {h} px"
-
-#: src/lib.rs:9515
-msgid "Couper (évènement du navigateur)"
-msgstr "Cortar (evento do navegador)"
-
-#: src/lib.rs:9515
-msgid "Copier (évènement du navigateur)"
-msgstr "Copiar (evento do navegador)"
-
-#: src/lib.rs:9549
-msgid "Restauration des projets…"
-msgstr "Restauração de projetos…"
-
-#: src/lib.rs:9627
-msgid "Carte graphique : {n}"
-msgstr "Placa gráfica: {n}"
-
-#: src/lib.rs:9630
-msgid "Carte graphique : WebGL2 ({}) — WebGPU absent : affichage, filtres ƒ et effets courants accélérés en WebGL2"
-msgstr "Placa gráfica: WebGL2 ({}) — WebGPU ausente: exibição, filtros ƒ e efeitos comuns acelerados em WebGL2"
-
-#: src/lib.rs:9631
-msgid "carte inconnue"
-msgstr "mapa desconhecido"
-
-#: src/lib.rs:9633
-msgid "Carte graphique : non disponible (tout est calculé par le processeur)"
-msgstr "Placa gráfica: não disponível (tudo é calculado pelo processador)"
-
-#: src/lib.rs:9735
-msgid "fn:showImageBorderDialog()"
-msgstr "fn:showImageBorderDialog()"
-
-#: src/lib.rs:9736
-msgid "fn:resizeCanvas()"
-msgstr "fn:resizeCanvas()"
-
-#: src/lib.rs:9737
-msgid "fn:showExtendCanvasDialog()"
-msgstr "fn:showExtendCanvasDialog()"
-
-#: src/lib.rs:9837
-msgid "même image composée en entier (comme avant) : {:.0} ms"
-msgstr "mesma imagem composta por extenso (como antes): {:.0} ms"
-
-#: src/lib.rs:9935
-msgid "{}, {} px"
-msgstr "{}, {} pixels"
-
-#: src/lib.rs:9954
-msgid "Couleur choisie : #{:02X}{:02X}{:02X}"
-msgstr "Cor escolhida: #{:02X}{:02X}{:02X}"
-
-#: src/lib.rs:10361
-msgid "Pipette : cliquez sur la toile pour choisir la couleur (Échap pour annuler)"
-msgstr "Conta-gotas: clique na tela para escolher a cor (Escape para cancelar)"
-
-#: src/lib.rs:10396
-msgid "Aucune couleur détectée (pourtour transparent)"
-msgstr "Nenhuma cor detectada (borda transparente)"
-
-#: src/lib.rs:10451
-msgid "Application de « {title} »"
-msgstr "Aplicando “{title}”"
-
-#: src/lib.rs:10451
-msgid "Calcul sur l'image entière…"
-msgstr "Cálculo na imagem inteira…"
-
-#: src/lib.rs:10508
-msgid "Impression : exportez l'image puis imprimez-la depuis votre visionneuse"
-msgstr "Imprimir: exporte a imagem e imprima-a no seu visualizador"
-
-#: src/lib.rs:10575
-msgid "Historique de tous les onglets vidé"
-msgstr "Histórico de todas as guias apagadas"
-
-#: src/lib.rs:10575
-msgid "Historique de l'onglet vidé"
-msgstr "Histórico de guias apagado"
-
-#: src/lib.rs:10580
-msgid "Essai de la fenêtre de plantage (Paramètres › Avancé) — MasterPaint {APP_VERSION}"
-msgstr "Testando a janela Crash (Configurações › Avançado) — MasterPaint {APP_VERSION}"
-
-#: src/lib.rs:10590
-msgid "La page ne fournit pas de fenêtre de plantage (mpReportError)."
-msgstr "A página não fornece uma janela de travamento (mpReportError)."
-
-#: src/lib.rs:10594
-msgid "MasterPaint s'est arrêté (essai)"
-msgstr "MasterPaint parou (teste)"
-
-#: src/lib.rs:10603
-msgid "Sauvegarde automatique effacée"
-msgstr "Salvamento automático desmarcado"
-
-#: src/lib.rs:10617
-msgid "Chargement du projet d'exemple…"
-msgstr "Carregando o projeto de exemplo…"
-
-#: src/lib.rs:10619
-msgid "/IMG/start.illu"
-msgstr "/IMG/start.illu"
-
-#: src/lib.rs:10622
-msgid "Projet d'exemple.illu"
-msgstr "Exemplo de projeto.illu"
-
-#: src/lib.rs:10623
-msgid "Projet d'exemple introuvable sur le site"
-msgstr "Exemplo de projeto não encontrado no site"
-
-#: src/lib.rs:10628
-msgid "../../../IMG/start.illu"
-msgstr "../../../IMG/start.illu"
-
-#: src/lib.rs:10746
-msgid "Déplacer le calque"
-msgstr "Mover camada"
-
-#: src/lib.rs:10759
-msgid "Afficher le calque"
-msgstr "Mostrar camada"
-
-#: src/lib.rs:10759
-msgid "Masquer le calque"
-msgstr "Ocultar camada"
-
-#: src/lib.rs:10780
-msgid "Mode de fusion du calque"
-msgstr "Modo de mesclagem de camadas"
-
-#: src/lib.rs:10842
-msgid "Renommer le calque"
-msgstr "Renomear camada"
-
-#: src/lib.rs:10842
-msgid "Nom du calque"
-msgstr "Nome da camada"
-
-#: src/lib.rs:11007
-msgid "Réglages de la section remis à leurs valeurs d'origine"
-msgstr "Definições da secção repostas nos valores originais"
-
-#: src/lib.rs:11115
-msgid "Sans titre {n}{}"
-msgstr "Sem título {n}{}"
-
-#: src/lib.rs:11122
-msgid "Vecteur 1"
-msgstr "Vetor 1"
-
-#: src/lib.rs:11132
-msgid "Nouvelle animation"
-msgstr "Nova animação"
-
-#: src/lib.rs:11181
-msgid "Aucune sélection à étendre"
-msgstr "Nenhuma seleção para expandir"
-
-#: src/lib.rs:11197
-msgid "Écrivez un message"
-msgstr "Escreva uma mensagem"
-
-#: src/lib.rs:11488
-msgid "POST"
-msgstr "POSTAR"
-
-#: src/lib.rs:11542
-msgid "module IA indisponible"
-msgstr "Módulo AI indisponível"
-
-#: src/lib.rs:11549
-msgid "échec"
-msgstr "fracasso"
-
-#: src/lib.rs:11643
-msgid "INPUT"
-msgstr "ENTRADA"
-
-#: src/lib.rs:11643
-msgid "TEXTAREA"
-msgstr "TEXTAREA"
-
-#: src/lib.rs:11753
-msgid "Des images contiennent des modifications non enregistrées."
-msgstr "As imagens contêm edições não salvas."
-
-#: src/lib.rs:11911
-msgid "MP_ROOT"
-msgstr "MP_ROOT"
+#: src/perf.rs:75
+msgid "demandé dans les Paramètres"
+msgstr ""
+
+#: src/perf.rs:200
+msgid "Ce projet met environ {:.1} s à se rendre. La toile peut être rendue ÷{div} : bien plus fluide, et l'enregistrement reste en pleine résolution."
+msgstr "Este projeto demora cerca de {:.1} s a renderizar. A tela pode ser renderizada ÷{div}: muito mais fluida, e a gravação mantém a resolução total."
+
+#: src/perf.rs:203
+msgid "Rendu lent sur ce projet"
+msgstr "Renderização lenta neste projeto"
+
+#: src/perf.rs:208
+msgid "Pour ce projet seulement"
+msgstr "Só para este projeto"
+
+#: src/perf.rs:208
+msgid "Le réglage apparaît dans le ruban tant que ce projet l'utilise."
+msgstr "A definição aparece no friso enquanto este projeto a usar."
+
+#: src/perf.rs:209
+msgid "Activer dans les Paramètres"
+msgstr "Ativar nas Definições"
+
+#: src/perf.rs:209
+msgid "Le réglage reste dans le ruban et s'applique aux nouveaux projets."
+msgstr "A definição fica no friso e aplica-se aos novos projetos."
+
+#: src/perf.rs:210
+msgid "Non merci"
+msgstr "Não, obrigado"
+
+#: src/perf.rs:210
+msgid "Ne plus le proposer pour ce projet."
+msgstr "Não voltar a propor para este projeto."
+
+#: src/perf.rs:220
+msgid "images de l'interface trop lentes"
+msgstr ""
+
+#: src/perf.rs:241
+msgid "L'interface manque de fluidité"
+msgstr "A interface não está fluida"
+
+#: src/perf.rs:242
+msgid "MasterPaint a ralenti sur ce PC : le mode léger est maintenant actif (Paramètres › Performances). Vous pouvez aussi envoyer un rapport pour aider à comprendre pourquoi."
+msgstr "O MasterPaint ficou lento neste PC: o modo leve está agora ativo (Definições › Desempenho). Também pode enviar um relatório para ajudar a perceber porquê."
+
+#: src/perf.rs:246
+msgid "Préparer le rapport"
+msgstr "Preparar o relatório"
+
+#: src/perf.rs:246
+msgid "Ouvre le message à relire avant l'envoi : processeur, mémoire, carte graphique, taille des projets. Aucune image ni nom de projet."
+msgstr "Abre a mensagem para rever antes do envio: processador, memória, placa gráfica, tamanho dos projetos. Sem imagens nem nomes de projeto."
+
+#: src/perf.rs:247
+msgid "Plus tard"
+msgstr "Mais tarde"
+
+#: src/perf.rs:247
+msgid "Le mode léger reste actif. Ce message ne reviendra pas."
+msgstr "O modo leve continua ativo. Esta mensagem não voltará."
+
+#: src/perf.rs:265
+msgid "Processeur : {cores} cœurs (modèle inconnu dans un navigateur)\nMémoire de l'appareil : environ {ram} Go ; utilisée par l'application : {:.0} Mo"
+msgstr "Processador: {cores} núcleos (modelo desconhecido num navegador)\nMemória do dispositivo: cerca de {ram} GB; usada pela aplicação: {:.0} MB"
+
+#: src/perf.rs:272
+msgid "model name"
+msgstr ""
+
+#: src/perf.rs:272
+msgid "Hardware"
+msgstr ""
+
+#: src/perf.rs:273
+msgid "PROCESSOR_IDENTIFIER"
+msgstr ""
+
+#: src/perf.rs:276
+msgid "Processeur : {cpu}, {cores} cœurs\nMémoire de l'appareil : {:.0} Mo, dont {:.0} Mo disponibles"
+msgstr "Processador: {cpu}, {cores} núcleos\nMemória do dispositivo: {:.0} MB, {:.0} MB disponíveis"
+
+#: src/perf.rs:285
+msgid "MemTotal:"
+msgstr ""
+
+#: src/perf.rs:285
+msgid "MemAvailable:"
+msgstr ""
+
+#: src/perf.rs:314
+msgid "L'interface a manqué de fluidité (rapport automatique).\nDurée d'une image : {medians} ms (médianes, 25 images/s = 40 ms)\nOutil : {}\nÉchelle de l'écran : {:.2} ; résolution de rendu : {} ; réduction de la toile : {} ; mode léger : {}\n"
+msgstr "A interface não estava fluida (relatório automático).\nDuração de uma imagem: {medians} ms (medianas, 25 imagens/s = 40 ms)\nFerramenta: {}\nEscala do ecrã: {:.2}; resolução de renderização: {}; redução da tela: {}; modo leve: {}\n"
+
+#: src/perf.rs:323
+msgid "\nProjet {} : {} × {} px, {} calque(s), {} filtre(s) ƒ, {} masque(s) α, {:.0} Mo, {} étape(s) d'historique"
+msgstr "\nProjeto {}: {} × {} px, {} camada(s), {} filtro(s) ƒ, {} máscara(s) α, {:.0} MB, {} passo(s) de histórico"
+
+#: src/perf.rs:341
+msgid "basic render"
+msgstr ""
+
+#: src/perf.rs:354
+msgid "pas de carte graphique accélérée"
+msgstr ""
+
+#: src/perf.rs:356
+msgid "deux cœurs de calcul ou moins"
+msgstr ""
+
+#: src/perf.rs:369
+msgid "Mode léger : {why}"
+msgstr ""
+
+#: src/perf.rs:371
+msgid "Mode léger actif (Paramètres › Performances)"
+msgstr "Modo leve ativo (Definições › Desempenho)"
 
 #: src/ral_gen.rs:5
 msgid "RAL 1000"
@@ -9219,429 +9640,413 @@ msgstr "Formato RAW não suportado: {e}"
 msgid "lecture du RAW impossible : {e}"
 msgstr "Leitura RAW impossível: {e}"
 
-#: src/raw.rs:54
+#: src/raw.rs:140
 msgid "développement du RAW impossible : {e}"
 msgstr "Desenvolvimento RAW impossível: {e}"
 
-#: src/raw.rs:57
+#: src/raw.rs:143
 msgid "capteur à 4 couleurs non pris en charge"
 msgstr "Sensor de 4 cores não suportado"
 
-#: src/raw.rs:60
+#: src/raw.rs:146
 msgid "image RAW vide"
 msgstr "imagem RAW em branco"
 
-#: src/scene.rs:31
+#: src/scene.rs:37
 msgid "scène générale"
 msgstr "cena geral"
 
-#: src/scene.rs:32
+#: src/scene.rs:38
 msgid "portrait"
 msgstr "retrato"
 
-#: src/scene.rs:33
+#: src/scene.rs:39
 msgid "paysage"
 msgstr "paisagem"
 
-#: src/scene.rs:34
+#: src/scene.rs:40
 msgid "contre-jour"
 msgstr "luz de fundo"
 
-#: src/scene.rs:35
+#: src/scene.rs:41
 msgid "nuit / basse lumière"
 msgstr "noite / pouca luz"
 
-#: src/scene.rs:36
+#: src/scene.rs:42
 msgid "high-key (image claire)"
 msgstr "high-key (imagem clara)"
 
-#: src/scene.rs:364
-msgid "dominante froide corrigée"
-msgstr "dominante frio corrigido"
-
-#: src/scene.rs:364
-msgid "dominante chaude corrigée"
-msgstr "quente dominante corrigido"
-
-#: src/scene.rs:369
-msgid "dominante verte corrigée"
-msgstr "dominante verde corrigido"
-
-#: src/scene.rs:369
-msgid "dominante magenta corrigée"
-msgstr "elenco magenta corrigido"
-
-#: src/scene.rs:427
+#: src/scene.rs:436
 msgid "visage détecté"
 msgstr "rosto detectado"
 
-#: src/scene.rs:428
-msgid "ciel {} %"
-msgstr "céu {}%"
-
-#: src/scene.rs:429
+#: src/scene.rs:438
 msgid "végétation"
 msgstr "vegetação"
 
-#: src/scene.rs:430
+#: src/scene.rs:439
 msgid "sujet plus sombre que le fond"
 msgstr "assunto mais escuro que o fundo"
-
-#: src/scene.rs:435
-msgid "éclaircie {v} IL"
-msgstr "desbaste {v} IL"
-
-#: src/scene.rs:435
-msgid "assombrie {v} IL"
-msgstr "escurecido {v} IL"
-
-#: src/scene.rs:438
-msgid "contraste renforcé"
-msgstr "contraste aprimorado"
-
-#: src/scene.rs:440
-msgid "contraste adouci"
-msgstr "contraste suavizado"
 
 #: src/scene.rs:443
 msgid "voile retiré"
 msgstr "véu removido"
 
-#: src/scene.rs:448
+#: src/scene.rs:458
+msgid "éclaircie {v} IL"
+msgstr "desbaste {v} IL"
+
+#: src/scene.rs:458
+msgid "assombrie {v} IL"
+msgstr "escurecido {v} IL"
+
+#: src/scene.rs:461
+msgid "contraste renforcé"
+msgstr "contraste aprimorado"
+
+#: src/scene.rs:463
+msgid "contraste adouci"
+msgstr "contraste suavizado"
+
+#: src/scene.rs:466
+msgid "hautes lumières protégées"
+msgstr ""
+
+#: src/scene.rs:469
+msgid "dominante froide corrigée"
+msgstr "dominante frio corrigido"
+
+#: src/scene.rs:469
+msgid "dominante chaude corrigée"
+msgstr "quente dominante corrigido"
+
+#: src/scene.rs:471
+msgid "dominante verte corrigée"
+msgstr "dominante verde corrigido"
+
+#: src/scene.rs:471
+msgid "dominante magenta corrigée"
+msgstr "elenco magenta corrigido"
+
+#: src/scene.rs:473
 msgid "Auto : {} — {}"
 msgstr "Automático: {} — {}"
 
-#: src/scene.rs:448
+#: src/scene.rs:473
 msgid "peu de corrections"
 msgstr "poucas correções"
 
-#: src/settings.rs:300
+#: src/settings.rs:353
 msgid "APPDATA"
 msgstr "APLICATIVO"
 
-#: src/settings.rs:302
+#: src/settings.rs:355
 msgid "XDG_CONFIG_HOME"
 msgstr "XDG_CONFIG_HOME"
 
-#: src/settings.rs:303
+#: src/settings.rs:356
 msgid "HOME"
 msgstr "CASA"
 
-#: src/settings.rs:356
+#: src/settings.rs:409
 msgid "Ctrl+N"
 msgstr "Ctrl+N"
 
-#: src/settings.rs:357
+#: src/settings.rs:410
 msgid "Ouvrir une image ou un projet .illu"
 msgstr "Abra uma imagem ou projeto .illu"
 
-#: src/settings.rs:358
+#: src/settings.rs:411
 msgid "Ctrl+S / Ctrl+Maj+S"
 msgstr "Ctrl+S / Ctrl+Shift+S"
 
-#: src/settings.rs:358
+#: src/settings.rs:411
 msgid "Exporter (PNG, JPEG, WebP, BMP, .illu)"
 msgstr "Exportar (PNG, JPEG, WebP, BMP, .illu)"
 
-#: src/settings.rs:360
+#: src/settings.rs:413
 msgid "Ctrl+Z"
 msgstr "Ctrl+Z"
 
-#: src/settings.rs:361
+#: src/settings.rs:414
 msgid "Ctrl+Y / Ctrl+Maj+Z"
 msgstr "Ctrl+Y / Ctrl+Shift+Z"
 
-#: src/settings.rs:362
+#: src/settings.rs:415
 msgid "Ctrl+X / Ctrl+C / Ctrl+V"
 msgstr "Ctrl+X / Ctrl+C / Ctrl+V"
 
-#: src/settings.rs:362
+#: src/settings.rs:415
 msgid "Couper / copier / coller"
 msgstr "Recortar/copiar/colar"
 
-#: src/settings.rs:363
+#: src/settings.rs:416
 msgid "Ctrl+A"
 msgstr "Ctrl+A"
 
-#: src/settings.rs:364
+#: src/settings.rs:417
 msgid "Ctrl+D / Échap"
 msgstr "Ctrl+D/Esc"
 
-#: src/settings.rs:365
+#: src/settings.rs:418
 msgid "Ctrl+I"
 msgstr "Ctrl+I"
 
-#: src/settings.rs:366
+#: src/settings.rs:419
 msgid "Suppr / Retour arrière"
 msgstr "Excluir / Retroceder"
 
-#: src/settings.rs:367
+#: src/settings.rs:420
 msgid "Ctrl+Maj+X"
 msgstr "Ctrl+Shift+X"
 
-#: src/settings.rs:367
+#: src/settings.rs:420
 msgid "Recadrer à la sélection"
 msgstr "Cortar para seleção"
 
-#: src/settings.rs:368
+#: src/settings.rs:421
 msgid "Ctrl+Maj+H / V / C"
 msgstr "Ctrl+Shift+H/V/C"
 
-#: src/settings.rs:368
+#: src/settings.rs:421
 msgid "Centrer la sélection (horizontal / vertical / les deux)"
 msgstr "Seleção central (horizontal/vertical/ambos)"
 
-#: src/settings.rs:369
+#: src/settings.rs:422
 msgid "Flèches (Maj : ×10)"
 msgstr "Setas (Shift: ×10)"
 
-#: src/settings.rs:369
+#: src/settings.rs:422
 msgid "Déplacer la sélection ou les pixels soulevés"
 msgstr "Mover seleção ou pixels elevados"
 
-#: src/settings.rs:370
+#: src/settings.rs:423
 msgid "Calques et effets"
 msgstr "Camadas e efeitos"
 
-#: src/settings.rs:372
+#: src/settings.rs:425
 msgid "Ctrl+F"
 msgstr "Ctrl+F"
 
-#: src/settings.rs:372
-msgid "Répéter le dernier effet"
-msgstr "Repita o último efeito"
-
-#: src/settings.rs:379
+#: src/settings.rs:432
 msgid "Ctrl+L"
 msgstr "Ctrl+L"
 
-#: src/settings.rs:383
+#: src/settings.rs:436
 msgid "Lasso"
 msgstr "Laço"
 
-#: src/settings.rs:384
+#: src/settings.rs:437
 msgid "Baguette magique"
 msgstr "Varinha mágica"
 
-#: src/settings.rs:385
+#: src/settings.rs:438
 msgid "Déplacer"
 msgstr "Mover"
 
-#: src/settings.rs:388
+#: src/settings.rs:441
 msgid "Maj+B"
 msgstr "Shift+B"
 
-#: src/settings.rs:395
+#: src/settings.rs:448
 msgid "Texte (Échap : valider)"
 msgstr "Texto (Escape: validar)"
 
-#: src/settings.rs:396
+#: src/settings.rs:449
 msgid "Rectangle / ellipse"
 msgstr "Retângulo / elipse"
 
-#: src/settings.rs:397
+#: src/settings.rs:450
 msgid "Rectangle arrondi"
 msgstr "Retângulo arredondado"
 
-#: src/settings.rs:400
+#: src/settings.rs:453
 msgid "Échanger couleurs principale et secondaire"
 msgstr "Troque cores primárias e secundárias"
 
-#: src/settings.rs:402
+#: src/settings.rs:455
 msgid "Ctrl + / Ctrl −"
 msgstr "Ctrl + / Ctrl -"
 
-#: src/settings.rs:402
+#: src/settings.rs:455
 msgid "Zoom avant / arrière"
 msgstr "Aumentar/diminuir zoom"
 
-#: src/settings.rs:404
+#: src/settings.rs:457
 msgid "Ctrl+H / Ctrl+G"
 msgstr ""
 
-#: src/settings.rs:404
+#: src/settings.rs:457
 msgid "Rotation de 90° (horaire / antihoraire)"
 msgstr ""
 
-#: src/settings.rs:406
+#: src/settings.rs:459
 msgid "Aplatir l'image"
 msgstr ""
 
-#: src/settings.rs:407
+#: src/settings.rs:460
 msgid "Entrée"
 msgstr "Entrada"
 
-#: src/settings.rs:407
+#: src/settings.rs:460
 msgid "Valider la transformation ou le lasso polygonal"
 msgstr "Valide a transformação ou laço poligonal"
 
-#: src/settings.rs:408
+#: src/settings.rs:461
 msgid "Souris"
 msgstr ""
 
-#: src/settings.rs:409
+#: src/settings.rs:462
 msgid "Molette"
 msgstr "Roda"
 
-#: src/settings.rs:409
+#: src/settings.rs:462
 msgid "Zoom ou défilement, au choix (Paramètres › Toile et outils › Souris)"
 msgstr ""
 
-#: src/settings.rs:410
+#: src/settings.rs:463
 msgid "Zoom autour du pointeur"
 msgstr ""
 
-#: src/settings.rs:411
+#: src/settings.rs:464
 msgid "Maj + molette"
 msgstr "Shift+roda"
 
-#: src/settings.rs:411
+#: src/settings.rs:464
 msgid "Défilement horizontal"
 msgstr "Rolagem horizontal"
 
-#: src/settings.rs:412
+#: src/settings.rs:465
 msgid "Clic du milieu / Espace + glisser"
 msgstr "Clique com o meio / Espaço + arrastar"
 
-#: src/settings.rs:412
+#: src/settings.rs:465
 msgid "Déplacer la vue"
 msgstr "Mover visualização"
 
-#: src/settings.rs:413
+#: src/settings.rs:466
 msgid "Clic droit (pinceau, formes…)"
 msgstr ""
 
-#: src/settings.rs:413
+#: src/settings.rs:466
 msgid "Peindre avec la couleur secondaire"
 msgstr "Pintura com cor secundária"
 
-#: src/settings.rs:414
+#: src/settings.rs:467
 msgid "Clic droit (sélections)"
 msgstr ""
 
-#: src/settings.rs:414
+#: src/settings.rs:467
 msgid "Menu contextuel de la toile"
 msgstr ""
 
-#: src/settings.rs:415
+#: src/settings.rs:468
 msgid "Clic droit (Déplacer)"
 msgstr "Clique com o botão direito (Mover)"
 
-#: src/settings.rs:415
+#: src/settings.rs:468
 msgid "Rotation des pixels soulevés"
 msgstr "Rotação de pixels elevados"
 
-#: src/settings.rs:416
+#: src/settings.rs:469
 msgid "Maj (poignées)"
 msgstr "Mudança (alças)"
 
-#: src/settings.rs:416
+#: src/settings.rs:469
 msgid "Conserver les proportions / rotation par 15°"
 msgstr "Manter proporções/rotação em 15°"
 
-#: src/settings.rs:417
+#: src/settings.rs:470
 msgid "Alt (poignées)"
 msgstr "Alt (alças)"
 
-#: src/settings.rs:417
+#: src/settings.rs:470
 msgid "Redimensionner depuis le centre"
 msgstr "Redimensionar do centro"
 
-#: src/settings.rs:418
+#: src/settings.rs:471
 msgid "Ctrl / Alt (sélection)"
 msgstr "Ctrl/Alt (seleção)"
 
-#: src/settings.rs:418
+#: src/settings.rs:471
 msgid "Ajouter / retirer de la sélection"
 msgstr "Adicionar/remover da seleção"
 
-#: src/settings.rs:419
+#: src/settings.rs:472
 msgid "Double-clic (nom d'un calque)"
 msgstr ""
 
-#: src/settings.rs:420
+#: src/settings.rs:472
+msgid "Renommer le calque"
+msgstr "Renomear camada"
+
+#: src/settings.rs:473
 msgid "Clic droit (calque, onglet)"
 msgstr ""
 
-#: src/settings.rs:420
+#: src/settings.rs:473
 msgid "Menu du calque / de l'onglet"
 msgstr ""
 
-#: src/settings.rs:421
+#: src/settings.rs:474
 msgid "Glisser un calque"
 msgstr ""
 
-#: src/settings.rs:421
+#: src/settings.rs:474
 msgid "Changer l'ordre des calques"
 msgstr ""
 
-#: src/settings.rs:422
+#: src/settings.rs:475
 msgid "Clic droit (roue de couleurs)"
 msgstr ""
 
-#: src/settings.rs:422
+#: src/settings.rs:475
 msgid "Choisir la couleur secondaire"
 msgstr ""
 
-#: src/settings.rs:423
+#: src/settings.rs:476
 msgid "Double-clic (intitulé d'un réglage)"
 msgstr ""
 
-#: src/settings.rs:423
+#: src/settings.rs:476
 msgid "Remettre la valeur par défaut (fenêtres d'effet)"
 msgstr ""
 
-#: src/settings.rs:424
+#: src/settings.rs:477
 msgid "Double-clic (case de la frise)"
 msgstr ""
 
-#: src/settings.rs:424
+#: src/settings.rs:477
 msgid "Image clé à cette image"
 msgstr ""
 
-#: src/settings.rs:425
+#: src/settings.rs:478
 msgid "Glisser une case de la frise"
 msgstr ""
 
-#: src/settings.rs:425
+#: src/settings.rs:478
 msgid "Déplacer le dessin"
 msgstr ""
 
-#: src/settings.rs:426
+#: src/settings.rs:479
 msgid "Clic droit (case de la frise)"
 msgstr ""
 
-#: src/settings.rs:426
+#: src/settings.rs:479
 msgid "Menu du dessin (maintenir, copier, répéter…)"
 msgstr ""
 
-#: src/settings.rs:427
+#: src/settings.rs:480
 msgid "Glisser un fichier sur la fenêtre"
 msgstr ""
 
-#: src/settings.rs:427
+#: src/settings.rs:480
 msgid "Ouvrir l'image ou le projet"
 msgstr ""
 
 #: src/snapshot.rs:82
 msgid "capture : {} ({}×{})"
 msgstr "capturar: {} ({}×{})"
-
-#: src/svg_import.rs:430
-msgid "« {name} » n'est pas un fichier SVG lisible"
-msgstr "«{name}» não é um ficheiro SVG legível"
-
-#: src/svg_import.rs:478
-msgid "rotation / inclinaison (forme posée sans elle)"
-msgstr "rotação / inclinação (forma colocada sem ela)"
-
-#: src/svg_import.rs:517
-msgid "Ouvrir le SVG"
-msgstr "Abrir SVG"
-
-#: src/svg_import.rs:520
-msgid "aucune forme simple (rect, circle, ellipse, line, polygon, polyline)"
-msgstr "nenhuma forma simples (rect, circle, ellipse, line, polygon, polyline)"
 
 #: src/svg_panel.rs:26
 msgid "Ellipse"
@@ -9652,58 +10057,62 @@ msgid "Polyligne"
 msgstr "Polilinha"
 
 #: src/svg_panel.rs:30
+msgid "Tracé"
+msgstr ""
+
+#: src/svg_panel.rs:31
 msgid "Triangle"
 msgstr "Triângulo"
 
-#: src/svg_panel.rs:35
+#: src/svg_panel.rs:36
 msgid "Pentagone"
 msgstr "Pentágono"
 
-#: src/svg_panel.rs:36
+#: src/svg_panel.rs:37
 msgid "Hexagone"
 msgstr "Hexágono"
 
-#: src/svg_panel.rs:37
+#: src/svg_panel.rs:38
 msgid "Heptagone"
 msgstr "Heptágono"
 
-#: src/svg_panel.rs:38
+#: src/svg_panel.rs:39
 msgid "Octogone"
 msgstr "Octógono"
 
-#: src/svg_panel.rs:44
+#: src/svg_panel.rs:45
 msgid "Bulle"
 msgstr "Balão de fala"
 
-#: src/svg_panel.rs:195
+#: src/svg_panel.rs:196
 msgid "Objets SVG : choisissez d'abord un objet dans la liste"
 msgstr "Objetos SVG: selecione primeiro um objeto na lista"
 
-#: src/svg_panel.rs:207
+#: src/svg_panel.rs:208
 msgid "Objet SVG : monter"
 msgstr "Objeto SVG: subir"
 
-#: src/svg_panel.rs:211
+#: src/svg_panel.rs:212
 msgid "Objet SVG : descendre"
 msgstr "Objeto SVG: descer"
 
-#: src/svg_panel.rs:218
+#: src/svg_panel.rs:219
 msgid "Objet SVG : dupliquer"
 msgstr "Objeto SVG: duplicar"
 
-#: src/svg_panel.rs:222
+#: src/svg_panel.rs:223
 msgid "Objet SVG : supprimer"
 msgstr "Objeto SVG: eliminar"
 
-#: src/svg_panel.rs:230
+#: src/svg_panel.rs:231
 msgid "Objet SVG : couleur"
 msgstr "Objeto SVG: cor"
 
-#: src/svg_panel.rs:254
+#: src/svg_panel.rs:255
 msgid "Objet SVG : épaisseur du trait"
 msgstr "Objeto SVG: espessura do traço"
 
-#: src/svg_panel.rs:271
+#: src/svg_panel.rs:272
 msgid "Objet SVG : style"
 msgstr "Objeto SVG: estilo"
 
@@ -9747,190 +10156,230 @@ msgstr "/Biblioteca/Fontes"
 msgid "/System/Library/Fonts"
 msgstr "/Sistema/Biblioteca/Fontes"
 
-#: src/tools.rs:642
+#: src/tools.rs:671
 msgid "Texte : l'outil arrive dans une prochaine étape du portage Rust."
 msgstr "Texto: a ferramenta chega em uma próxima etapa do port Rust."
 
-#: src/tools.rs:643
+#: src/tools.rs:672
 msgid "Cet outil n'est pas encore porté dans la version Rust."
 msgstr "Esta ferramenta ainda não foi portada para a versão Rust."
 
-#: src/vector.rs:538
+#: src/vector.rs:1020
 msgid " opacity=\"{:.3}\""
 msgstr " opacidade = \"{:.3}\""
 
-#: src/vector.rs:540
+#: src/vector.rs:1022
 msgid " stroke=\"{col}\" stroke-width=\"{}\" stroke-linecap=\"round\""
 msgstr " acidente vascular cerebral = \"{col}\" largura de curso = \"{}\" acidente vascular cerebral-linecap = \"redondo\""
 
-#: src/vector.rs:544
+#: src/vector.rs:1026
 msgid "\" fill-opacity=\"{:.3}"
 msgstr ""
 
-#: src/vector.rs:545
+#: src/vector.rs:1027
 msgid " stroke=\"{col}\" stroke-width=\"{}\""
 msgstr " acidente vascular cerebral = \"{col}\" largura do curso = \"{}\""
 
-#: src/vector.rs:554
+#: src/vector.rs:1036
 msgid " transform=\"rotate({:.3} {cx} {cy})\""
 msgstr ""
 
-#: src/vector.rs:558
-msgid " fill=\"{fill}\"{stroke}{op}{rot}"
+#: src/vector.rs:1062
+msgid " stroke-linecap=\"round\" stroke-linejoin=\"round\""
 msgstr ""
 
-#: src/vector.rs:566
+#: src/vector.rs:1063
+msgid " fill=\"{fill}\"{stroke}{round}{op}{rot}"
+msgstr ""
+
+#: src/vector.rs:1070
 msgid " stroke-dasharray=\"{} {}\""
 msgstr ""
 
-#: src/vector.rs:567
+#: src/vector.rs:1071
 msgid " stroke-dasharray=\"0 {}\""
 msgstr ""
 
-#: src/vector.rs:573
+#: src/vector.rs:1077
 msgid "none\" stroke=\"{col}\" stroke-width=\"{lw}"
 msgstr ""
 
-#: src/vector.rs:579
+#: src/vector.rs:1083
 msgid " rx=\"{}\""
 msgstr " rx=\"{}\""
 
-#: src/vector.rs:614
+#: src/vector.rs:1100
+msgid " fill-rule=\"evenodd\""
+msgstr ""
+
+#: src/vector.rs:1135
 msgid " fill-opacity=\"{:.3}\""
 msgstr " fill-opacity=\"{:.3}\""
 
-#: src/vector.rs:648
+#: src/vector.rs:1136
+msgid " transform=\"matrix({} {} {} {} {} {})\""
+msgstr ""
+
+#: src/vector.rs:1158
 msgid " style=\"mix-blend-mode:{}\""
 msgstr " estilo = \"modo de mistura: {}\""
 
-#: src/webgl.rs:134
+#: src/webgl.rs:139
 msgid "source auxiliaire"
 msgstr "fonte auxiliar"
 
-#: web/index.html:146
+#: web/index.html:167
 msgid "MasterPaint — Éditeur photo pro en ligne, alternative à Paint.NET"
 msgstr "MasterPaint — Editor de fotos online, alternativa ao Paint.NET"
 
-#: web/index.html:248
+#: web/index.html:266
+msgid "Écrivez un message"
+msgstr "Escreva uma mensagem"
+
+#: web/index.html:267
+msgid "Envoi…"
+msgstr "Enviando…"
+
+#: web/index.html:270
 msgid "Envoyé, merci !"
 msgstr "Enviado, obrigado!"
 
-#: web/index.html:280
+#: web/index.html:271
+msgid "Échec de l'envoi (réseau ?)"
+msgstr "Falha ao enviar (rede?)"
+
+#: web/index.html:308
+msgid "MasterPaint ne répond plus, attente…"
+msgstr "O MasterPaint não responde, a aguardar…"
+
+#: web/index.html:325
 msgid "— journal —"
 msgstr "- jornal -"
 
-#: web/index.html:295
+#: web/index.html:343
 msgid "Fermer l’essai"
 msgstr "Fechar teste"
 
-#: web/index.html:295
+#: web/index.html:343
 msgid "Continuer"
 msgstr "Continuar"
 
-#: web/index.html:298
+#: web/index.html:346
 msgid "MasterPaint s'est arrêté"
 msgstr "MasterPaint parou"
 
-#: web/index.html:298
+#: web/index.html:346
 msgid "Un calcul a échoué"
 msgstr "Um cálculo falhou"
 
-#: web/index.html:298
+#: web/index.html:346
 msgid " (essai)"
 msgstr " (teste)"
 
-#: web/index.html:300
+#: web/index.html:348
 msgid "Une erreur a arrêté l'application. Vos projets ont été sauvegardés automatiquement avant l'erreur et seront restaurés au redémarrage. Envoyez le signalement pour aider à corriger le problème."
 msgstr "Um erro interrompeu o aplicativo. Seus projetos foram salvos automaticamente antes do erro e serão restaurados após a reinicialização. Envie o relatório para ajudar a corrigir o problema."
 
-#: web/index.html:301
+#: web/index.html:349
 msgid "Ce calcul a été abandonné, l'application continue. Envoyez le signalement pour aider à corriger le problème."
 msgstr "Este cálculo foi abandonado, continua o pedido. Envie o relatório para ajudar a corrigir o problema."
 
-#: web/index.html:409
+#: web/index.html:472
 msgid "API navigator.clipboard.write indisponible (page non sécurisée ? HTTPS requis)"
 msgstr "API navigator.clipboard.write indisponível (página insegura? É necessário HTTPS)"
 
-#: web/index.html:418
+#: web/index.html:481
 msgid "écriture refusée : "
 msgstr "escrita recusada: "
 
-#: web/index.html:446
+#: web/index.html:509
 msgid "API navigator.clipboard.read indisponible (page non sécurisée ? HTTPS requis)"
 msgstr "API navigator.clipboard.read indisponível (página insegura? É necessário HTTPS)"
 
-#: web/index.html:456
+#: web/index.html:519
 msgid "lecture refusée : "
 msgstr "leitura recusada: "
 
-#: web/index.html:1095
+#: web/index.html:562
+msgid "Collage"
+msgstr "Colagem"
+
+#: web/index.html:1199
 msgid "Astuce : Ctrl+F répète le dernier effet."
 msgstr "Dica: Ctrl+F repete o último efeito."
 
-#: web/index.html:1096
+#: web/index.html:1200
 msgid "Astuce : le bouton ƒ d’un calque applique un filtre dynamique en temps réel."
 msgstr "Dica: o botão ƒ em uma camada aplica um filtro dinâmico em tempo real."
 
-#: web/index.html:1097
+#: web/index.html:1201
 msgid "Astuce : Ctrl+Maj+M ouvre les Courbes."
 msgstr "Dica: Ctrl+Shift+M abre Curvas."
 
-#: web/index.html:1098
+#: web/index.html:1202
 msgid "Astuce : double-cliquez sur une jauge pour saisir la valeur au clavier."
 msgstr "Dica: clique duas vezes em um controle deslizante para inserir o valor pelo teclado."
 
-#: web/index.html:1099
+#: web/index.html:1203
 msgid "Astuce : Espace + glisser pour se déplacer sur la toile."
 msgstr "Dica: espaço + arraste para mover-se pela tela."
 
-#: web/index.html:1149
+#: web/index.html:1253
 msgid "Démarrage de l’interface…"
 msgstr "Iniciando a interface…"
 
-#: web/index.html:1158
+#: web/index.html:1262
 msgid "Échec du chargement"
 msgstr "Falha ao carregar"
 
-#: web/index.html:118
+#: web/index.html:123
 msgid "Par polocrafting 367"
 msgstr "Por polocrafting 367"
 
-#: web/index.html:122
+#: web/index.html:127
 msgid "Téléchargement…"
 msgstr "Baixar…"
 
-#: web/index.html:208
+#: web/index.html:229
 msgid "Type"
 msgstr "Tipo"
 
-#: web/index.html:209
+#: web/index.html:230
 msgid "Bug / Erreur"
 msgstr "Falha / Erro"
 
-#: web/index.html:210
+#: web/index.html:231
 msgid "Idée / Amélioration"
 msgstr "Ideia / Melhoria"
 
-#: web/index.html:211
+#: web/index.html:232
 msgid "Remarque"
 msgstr "Observação"
 
-#: web/index.html:212
+#: web/index.html:233
 msgid "Autre"
 msgstr "Outro"
 
-#: web/index.html:213
+#: web/index.html:234
 msgid "Message"
 msgstr "Mensagem"
 
-#: web/index.html:215
+#: web/index.html:236
 msgid "Contact (facultatif)"
 msgstr "Contacto (opcional)"
 
-#: web/index.html:292
+#: web/index.html:339
 msgid "Envoyer le signalement"
 msgstr "Envie o relatório"
 
-#: web/index.html:289
+#: web/index.html:342
+msgid "Attendre"
+msgstr "Aguardar"
+
+#: web/index.html:333
+msgid "Que faisiez-vous ? (facultatif)"
+msgstr "O que estava a fazer? (opcional)"
+
+#: web/index.html:336
 msgid "Votre e-mail ou pseudo (facultatif, pour une réponse)"
 msgstr "Seu e-mail ou apelido (opcional, para resposta)"

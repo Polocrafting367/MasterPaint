@@ -1,9 +1,11 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Mode téléphone : même disposition que la version web (js/app/illu-mobile-shell.js,
 // css/illu-mobile-shell.css, css/theme-mobile-modern.css) — barre du haut « ☰ Menu », capsule
 // annuler / rétablir, bande d'outils, pilules flottantes, barre du bas, panneaux et tiroir ☰.
 import { Theme } from "theme.slint";
 import { IconSpec, MenuSpec, DocTab, SheetRow } from "types.slint";
 import { Generated } from "generated.slint";
+import { SvgTools } from "svg_objects.slint";
 import { Icon, FaIcon, GlyphIcon } from "widgets.slint";
 import { MpIcons } from "mpicons.slint";
 import { CurrentColors, ColorPicker, ColorSliders, SwatchStrip, PaletteGrid, PickerModeIcon } from "colors.slint";
@@ -21,7 +23,7 @@ export component MobTopBar inherits Rectangle {
     background: Theme.mob-accent-dark;
     drop-shadow-blur: 8px;
     drop-shadow-offset-y: 1px;
-    drop-shadow-color: #00000033;
+    drop-shadow-color: Theme.shadows ? (#00000033) : transparent;
     HorizontalLayout {
         padding-right: 10px;
         burger := Rectangle {
@@ -108,7 +110,7 @@ export component MobUndoCapsule inherits Rectangle {
     background: Theme.mob-capsule;
     drop-shadow-blur: 10px;
     drop-shadow-offset-y: 2px;
-    drop-shadow-color: #0000001f;
+    drop-shadow-color: Theme.shadows ? (#0000001f) : transparent;
     VerticalLayout {
         padding: 3px;
         Rectangle {
@@ -153,9 +155,13 @@ export component MobToolRow inherits Rectangle {
     /// calque actif qui refuse les pixels ("" / "calque texte" / "verrouillé" / "dossier") :
     /// outils qui peignent ou déforment grisés (même règle que la fenêtre Outils)
     in property <string> layer-block;
+    /// projet SVG : outils vectoriels à la place des outils de pixels
+    in property <bool> vec-mode;
     pure function blocked(id: string) -> bool {
-        // calque SVG : Formes, Ligne et Pot de peinture restent disponibles (objets)
-        let shapes = id == "tool-fill" || id == "tool-shapes-family" || id == "tool-round-3" || id == "tool-line";
+        // calque SVG : Formes, Ligne et Pot de peinture restent disponibles (objets) ; projet SVG :
+        // Crayon et Dégradé aussi
+        let shapes = id == "tool-fill" || id == "tool-shapes-family" || id == "tool-round-3" || id == "tool-line"
+            || (root.vec-mode && (id == "tool-pencil" || id == "tool-gradient"));
         return root.layer-block != "" && !(shapes && root.layer-block == "calque texte")
             && (id == "tool-brush" || id == "tool-pencil" || id == "tool-eraser" || id == "tool-gradient"
             || shapes || id == "tool-deform" || id == "tool-warp-4"
@@ -171,7 +177,7 @@ export component MobToolRow inherits Rectangle {
         background: pta.pressed ? Theme.mob-accent-pill : Theme.mob-capsule;
         drop-shadow-blur: 8px;
         drop-shadow-offset-y: 1px;
-        drop-shadow-color: #0000001a;
+        drop-shadow-color: Theme.shadows ? (#0000001a) : transparent;
         Rectangle {
             x: 4px;
             y: 4px;
@@ -179,7 +185,7 @@ export component MobToolRow inherits Rectangle {
             height: parent.height - 8px;
             border-radius: 7px * Theme.round;
             background: Theme.mob-accent-tint;
-            for t in Generated.tools: Icon {
+            for t in (root.vec-mode ? SvgTools.tools : Generated.tools): Icon {
                 visible: t.id == root.current-tool;
                 spec: t.icon;
                 size: 16px;
@@ -206,11 +212,11 @@ export component MobToolRow inherits Rectangle {
         background: Theme.mob-card;
         drop-shadow-blur: 8px;
         drop-shadow-offset-y: 1px;
-        drop-shadow-color: #0000001a;
+        drop-shadow-color: Theme.shadows ? (#0000001a) : transparent;
         clip: true;
         Flickable {
-            viewport-width: strip.width;
-            viewport-height: self.height;
+            content-width: strip.width;
+            content-height: self.height;
             strip := HorizontalLayout {
                 x: 0;
                 y: 0;
@@ -219,7 +225,7 @@ export component MobToolRow inherits Rectangle {
                 padding: 3px;
                 spacing: 2px;
                 // les actions de la fenêtre Outils (désélectionner, ajuster) ont leur place ailleurs
-                for t in Generated.tools: HorizontalLayout {
+                for t in (root.vec-mode ? SvgTools.tools : Generated.tools): HorizontalLayout {
                     if t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2": Rectangle {
                         width: 34px;
                         opacity: root.blocked(t.id) ? 0.35 : 1;
@@ -286,7 +292,7 @@ export component MobPills inherits Rectangle {
         background: Theme.mob-card;
         drop-shadow-blur: 10px;
         drop-shadow-offset-y: 2px;
-        drop-shadow-color: #00000038;
+        drop-shadow-color: Theme.shadows ? (#00000038) : transparent;
         lp := HorizontalLayout {
             padding: 4px;
             padding-left: 8px;
@@ -319,7 +325,7 @@ export component MobPills inherits Rectangle {
         background: Theme.mob-card;
         drop-shadow-blur: 10px;
         drop-shadow-offset-y: 2px;
-        drop-shadow-color: #00000038;
+        drop-shadow-color: Theme.shadows ? (#00000038) : transparent;
         rp := HorizontalLayout {
             padding: 4px;
             padding-left: 8px;
@@ -360,11 +366,11 @@ export component MobDock inherits Rectangle {
     background: Theme.mob-card;
     drop-shadow-blur: 14px;
     drop-shadow-offset-y: -2px;
-    drop-shadow-color: #00000026;
+    drop-shadow-color: Theme.shadows ? (#00000026) : transparent;
     clip: true;
     Flickable {
-        viewport-width: dl.width;
-        viewport-height: self.height;
+        content-width: dl.width;
+        content-height: self.height;
         dl := HorizontalLayout {
             x: 0;
             y: 0;
@@ -428,7 +434,7 @@ export component MobSheet inherits Rectangle {
     background: Theme.mob-surface;
     drop-shadow-blur: 14px;
     drop-shadow-offset-y: -2px;
-    drop-shadow-color: #0000002e;
+    drop-shadow-color: Theme.shadows ? (#0000002e) : transparent;
     // un appui sur le panneau ne traverse pas jusqu'à la toile
     TouchArea { }
     Rectangle {
@@ -478,7 +484,7 @@ export component MobMenuList inherits Rectangle {
     out property <length> wanted-height: col.preferred-height;
     callback activate(string, string);
     Flickable {
-        viewport-height: col.preferred-height;
+        content-height: col.preferred-height;
         col := VerticalLayout {
             x: 0;
             width: root.width;
@@ -507,7 +513,7 @@ export component MobMenuList inherits Rectangle {
                     background: eta.pressed && !self.blocked ? Theme.mob-accent-tint : Theme.mob-card;
                     drop-shadow-blur: 2px;
                     drop-shadow-offset-y: 1px;
-                    drop-shadow-color: #00000014;
+                    drop-shadow-color: Theme.shadows ? (#00000014) : transparent;
                     // icône maison de l'entrée, sinon glyphe à l'accent
                     property <int> mp: MpIcons.for-menu(r.label, r.fa);
                     if row-card.mp >= 0: Image {
@@ -705,7 +711,7 @@ export component MobDrawer inherits Rectangle {
         height: root.height;
         background: Theme.mob-surface;
         drop-shadow-blur: 16px;
-        drop-shadow-color: #00000059;
+        drop-shadow-color: Theme.shadows ? (#00000059) : transparent;
         TouchArea { }
         // en-tête
         Text {
@@ -739,7 +745,7 @@ export component MobDrawer inherits Rectangle {
         Flickable {
             y: 56px;
             height: parent.height - 56px - 52px;
-            viewport-height: body.preferred-height;
+            content-height: body.preferred-height;
             body := VerticalLayout {
                 x: 0;
                 width: panel.width;
@@ -878,6 +884,13 @@ export component MobDrawer inherits Rectangle {
                 }
                 Rectangle {
                     height: 4px;
+                }
+                MobDrawerItem {
+                    text: @tr("Télécharger l'application");
+                    fa: "\u{f019}";
+                    clicked => {
+                        root.quick("download");
+                    }
                 }
                 MobSectionLabel {
                     text: @tr("MENUS");
@@ -1046,7 +1059,7 @@ export component MobColors inherits Rectangle {
             background: qta.pressed ? Theme.mob-accent-tint : Theme.mob-card;
             drop-shadow-blur: 2px;
             drop-shadow-offset-y: 1px;
-            drop-shadow-color: #00000014;
+            drop-shadow-color: Theme.shadows ? (#00000014) : transparent;
             VerticalLayout {
                 alignment: center;
                 spacing: 4px;

@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
 const text=fs.readFileSync(path.join(__dirname,'../../web/index.html'),'utf8');
-const code=text.slice(text.indexOf('  window.mpPen ='),text.indexOf('  window.mpMods ='));
+const code=text.slice(text.indexOf('  window.mpPen ='),text.indexOf("  // Contexte WebGL de l'interface"));
 const listeners={},canvas={};
 const window={addEventListener:(name,handler)=>{(listeners[name]??=[]).push(handler)}};
 const ctx={window,document:{getElementById:()=>canvas},Number,Object}; vm.createContext(ctx);vm.runInContext(code,ctx);

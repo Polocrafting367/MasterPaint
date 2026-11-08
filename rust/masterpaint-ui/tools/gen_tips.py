@@ -1,3 +1,4 @@
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 """Génère ui/tips.slint depuis tools/tips.json (descriptions des info-bulles, clé = titre)."""
 import json, os
 here = os.path.dirname(os.path.abspath(__file__))

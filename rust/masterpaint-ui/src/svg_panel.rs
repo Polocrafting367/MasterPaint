@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Panneau « Objets SVG (bêta) » (Fenêtre › Objets SVG) : objets du calque vectoriel actif,
 //! le plus haut en premier. Un clic choisit l'objet ; monter, descendre, dupliquer,
 //! supprimer, et pour l'objet choisi couleur, épaisseur du trait et style (contour / plein /
@@ -27,6 +28,7 @@ fn shape_name(kind: &str) -> &'static str {
         "line" => "Ligne",
         "polygon" => "Polygone",
         "polyline" => "Polyligne",
+        "path" => "Tracé",
         "triangle" => "Triangle",
         "triangle-right" => "Triangle rectangle",
         "diamond" => "Losange",

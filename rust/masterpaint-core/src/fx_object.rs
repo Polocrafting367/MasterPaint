@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Objet : contour d'objet (transparence) et ombre portée.
 
 use crate::util::*;

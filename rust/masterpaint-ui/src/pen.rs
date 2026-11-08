@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Pen data stays separate from mouse/touch coordinates: unsupported devices keep
 //! the ordinary brush size, while hardware pressure is normalized to 0..1.
 use std::cell::Cell;
@@ -5,6 +6,7 @@ use std::cell::Cell;
 pub struct Sample { pub pressure: f32, pub eraser: bool }
 impl Default for Sample { fn default() -> Self { Self { pressure: 1.0, eraser: false } } }
 thread_local! { static NATIVE: Cell<Sample> = Cell::new(Sample::default()); }
+#[cfg(not(target_arch = "wasm32"))]
 pub fn native(pressure: Option<f64>) {
     NATIVE.with(|s| s.set(Sample { pressure: pressure.filter(|v| v.is_finite()).map(|v| v.clamp(0.0, 1.0) as f32).unwrap_or(1.0), eraser: false }));
 }

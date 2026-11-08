@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 # APK ARM64: Rust + Slint/GLES, no WebView. Android SDK/NDK and a signing config are required.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -30,7 +31,7 @@ a,b,c=map(int,v.split('.')); text=pathlib.Path('android/AndroidManifest.xml').re
 text=text.replace('android:versionCode="30400"',f'android:versionCode="{a*10000+b*100+c}"').replace('android:versionName="3.4.0"',f'android:versionName="{v}"')
 pathlib.Path(sys.argv[1]).write_text(text)
 PY
-"$bt/aapt2" compile --dir desktop/icons/android -o "$stage/icons.zip"
+"$bt/aapt2" compile --dir packaging/icons/android -o "$stage/icons.zip"
 "$bt/aapt2" link -I "$jar" --manifest "$stage/AndroidManifest.xml" -o "$stage/unsigned.apk" "$stage/icons.zip"
 javac --release 8 -classpath "$jar" -d "$stage/classes" android/java/fr/masterpaint/nativeapp/*.java
 mapfile -t classes < <(find "$stage/classes" -name '*.class')

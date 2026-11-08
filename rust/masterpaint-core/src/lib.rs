@@ -1,12 +1,11 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! # masterpaint-core
 //!
 //! Moteur d'effets pixel de MasterPaint, écrit en Rust.
 //!
-//! * **Web** : compilé en WebAssembly (`wasm32-unknown-unknown`), chargé par
-//!   `js/rust/RustCore.js`, utilisé dans le thread principal et dans chaque worker de
-//!   filtres (chaque worker calcule une bande de lignes → parallélisme).
-//! * **Bureau** : lié en natif dans l'application Tauri (`rust/desktop`), où
-//!   [`apply_parallel`] répartit les lignes sur tous les cœurs du processeur.
+//! * **Web** : compilé en WebAssembly avec l'interface, dans le fil de la page et dans les
+//!   workers de calcul.
+//! * **Bureau** : lié en natif, [`apply_parallel`] répartit les lignes sur tous les cœurs.
 //!
 //! Convention : image RGBA 8 bits non prémultipliée ; un effet lit l'image source
 //! complète et écrit les lignes `[y0, y1)` de la sortie.
@@ -33,8 +32,6 @@ mod fx_render;
 mod fx_stylize;
 
 // Exports C du module WASM autonome (version web JS) ; absent quand le cœur est une dépendance.
-#[cfg(all(target_arch = "wasm32", feature = "c-abi"))]
-mod wasm;
 
 pub use util::{Img, Out, P};
 pub use util::{cancel_token, cancelled, with_cancel, with_token, CancelToken};

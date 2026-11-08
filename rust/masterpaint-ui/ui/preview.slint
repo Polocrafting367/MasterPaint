@@ -1,3 +1,4 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Aperçu 1:1 de la toile dans une seconde fenêtre (bureau) : un pixel de l'image = un pixel
 // physique de l'écran (unité phx), quel que soit le facteur d'échelle du système.
 
@@ -7,7 +8,7 @@ export component PreviewWindow inherits Window {
     in property <image> source;
     in property <string> info;
     title: @tr("Aperçu 1:1 — MasterPaint");
-    icon: @image-url("../../desktop/icons/128x128.png");
+    icon: @image-url("../../packaging/icons/128x128.png");
     background: #1e1e1e;
     preferred-width: min(root.source.width * 1phx + 24px, 1200px);
     preferred-height: min(root.source.height * 1phx + 48px, 860px);

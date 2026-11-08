@@ -101,15 +101,6 @@ pub struct GLItemRenderer<'a, R: femtovg::Renderer + TextureImporter> {
     metrics: RenderingMetrics,
 }
 
-// Private bridge until Slint's declarative backdrop-blur is released. A nearly
-// transparent reserved brush is a harmless fallback on the software renderer.
-fn backdrop_blur_radius(brush: &Brush) -> Option<f32> {
-    match brush {
-        Brush::SolidColor(c) if c.as_argb_encoded() & 0x00ffffff == 0x004d5042 && (1..=24).contains(&c.alpha()) => Some(c.alpha() as f32),
-        _ => None,
-    }
-}
-
 fn rect_with_radius_to_path(
     rect: PhysicalRect,
     border_radius: PhysicalBorderRadius,
@@ -171,12 +162,6 @@ impl<'a, R: femtovg::Renderer + TextureImporter> ItemRenderer for GLItemRenderer
         }
         // TODO: cache path in item to avoid re-tesselation
         let path = rect_to_path(geometry);
-        // Reserved by widgets.slint::BackdropBlur. Apply the filter before the title tint
-        // or foreground is drawn, using the current framebuffer (including lower windows).
-        if let Some(sigma) = backdrop_blur_radius(&rect.background()) {
-            let _ = self.canvas.borrow_mut().blur_path(&path, femtovg::FillRule::NonZero, sigma * self.scale_factor.get());
-            return;
-        }
         let paint = match self.brush_to_paint(rect.background(), geometry.size) {
             Some(paint) => paint,
             None => return,
@@ -198,11 +183,6 @@ impl<'a, R: femtovg::Renderer + TextureImporter> ItemRenderer for GLItemRenderer
             return;
         };
 
-        if let Some(sigma) = backdrop_blur_radius(&rect.background()) {
-            let path = rect_with_radius_to_path(layout.background_rect, layout.background_radius);
-            let _ = self.canvas.borrow_mut().blur_path(&path, femtovg::FillRule::NonZero, sigma * self.scale_factor.get());
-            return;
-        }
         let fill_paint = self.brush_to_paint(rect.background(), layout.brush_size);
 
         let border_paint = if layout.border_width.get() > 0.0 {

@@ -1,10 +1,12 @@
+// MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 //! Styliser (Effets › Styliser) : bords, embosser, relief, contour, morphologie.
 
 use crate::util::*;
 
-/// Détection de contours Sobel (MasterPaint) : p: [sensibilité %]
+/// Détection de contours Sobel (MasterPaint) : p: [sensibilité %, couleur RVB facultative]
 pub fn edges(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let sens = p.f(0, 50.0) / 100.0;
+    let tint = p.rgb(1, 0xffffff);
     let (w, h) = (src.w as isize, src.h as isize);
     let g = |x: isize, y: isize| -> f32 {
         if x < 0 || y < 0 || x >= w || y >= h {
@@ -19,7 +21,8 @@ pub fn edges(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
             let vt = g(x - 1, y - 1) + 2.0 * g(x, y - 1) + g(x + 1, y - 1) - (g(x - 1, y + 1) + 2.0 * g(x, y + 1) + g(x + 1, y + 1));
             let e = (hz * hz + vt * vt).sqrt() * sens * 4.0;
             let i = src.idx(x as usize, y as usize);
-            put(dst, i, e, e, e, src.d[i + 3] as f32);
+            let e = e.clamp(0.0, 255.0);
+            put(dst, i, e * (tint[0]/255.0), e * (tint[1]/255.0), e * (tint[2]/255.0), src.d[i + 3] as f32);
         }
     }
 }
@@ -75,9 +78,10 @@ pub fn relief(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     }
 }
 
-/// Paint.NET « Contour » (Styliser, OutlineEffect) : p: [épaisseur, intensité]
+/// Paint.NET « Contour » (Styliser, OutlineEffect) : p: [épaisseur, intensité, couleur RVB facultative]
 pub fn outline(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let thickness = p.f(0, 3.0).clamp(1.0, 200.0);
+    let tint = p.rgb(2, 0);
     let intensity = p.f(1, 50.0).clamp(0.0, 100.0) as u32;
     local_histogram(src, y0, y1, thickness, |x, y, hr, hg, hb, ha, area| {
         let min1 = area * (100 - intensity) / 200;
@@ -104,9 +108,11 @@ pub fn outline(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
         let (b1, b2) = span(hb);
         let (_a1, a2) = span(ha);
         let i = src.idx(x, y);
-        dst[i] = (255 - (r2 - r1).min(255)) as u8;
-        dst[i + 1] = (255 - (g2 - g1).min(255)) as u8;
-        dst[i + 2] = (255 - (b2 - b1).min(255)) as u8;
+        for (c, span) in [(r2-r1), (g2-g1), (b2-b1)].into_iter().enumerate() {
+            // Default black reproduces the previous integer result exactly.
+            let ink = tint[c] as u32;
+            dst[i+c] = (255 - (255-ink)*span.min(255)/255) as u8;
+        }
         dst[i + 3] = a2.min(255) as u8;
     });
 }
