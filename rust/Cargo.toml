@@ -31,3 +31,5 @@ opt-level = 1
 # Backdrop blur for floating palette/dialog titles; shared by web and native builds.
 [patch.crates-io]
 i-slint-renderer-femtovg = { path = "vendor/slint-renderer-femtovg" }
+# curseur image en chargement remplacé par un curseur standard demandé entre-temps (navigateur)
+winit = { path = "vendor/winit" }

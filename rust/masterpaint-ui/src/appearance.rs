@@ -23,6 +23,41 @@ pub fn initialize(app: &AppWindow, cfg: &Settings) {
     app.set_checker_size(cfg.checker_size as f32);
     KEY.with(|key| *key.borrow_mut() = None);
     render(app);
+    follow_theme(app, app.global::<Theme>().get_dark());
+}
+
+/// Damier par défaut du thème clair (Paint.NET, Photoshop) et du thème sombre.
+const CHECKER_LIGHT: (u32, u32) = (0xffffff, 0xcccccc);
+const CHECKER_DARK: (u32, u32) = (0x5c5c5c, 0x484848);
+
+/// Changement clair / sombre : le fond de la zone de travail (s'il n'a pas été choisi) et le
+/// damier (s'il a ses couleurs par défaut) suivent le thème, y compris dans la maquette des
+/// Paramètres — avant, ils gardaient les couleurs claires en mode sombre.
+pub fn follow_theme(app: &AppWindow, dark: bool) {
+    let mut colors: Vec<Color> = app.get_appearance_colors().iter().collect();
+    if colors.len() < 5 {
+        return;
+    }
+    let val = |c: Color| (c.red() as u32) << 16 | (c.green() as u32) << 8 | c.blue() as u32;
+    let mut changed = false;
+    let ws = app.global::<Theme>().get_workspace_bg();
+    if !app.get_workspace_custom() && val(colors[2]) != val(ws) {
+        colors[2] = ws;
+        changed = true;
+    }
+    let pair = (val(colors[0]), val(colors[1]));
+    if pair == CHECKER_LIGHT || pair == CHECKER_DARK {
+        let want = if dark { CHECKER_DARK } else { CHECKER_LIGHT };
+        if pair != want {
+            colors[0] = rgb(want.0);
+            colors[1] = rgb(want.1);
+            changed = true;
+        }
+    }
+    if changed {
+        set_colors(app, colors);
+        render(app);
+    }
 }
 pub fn edit(app: &AppWindow, index: i32, text: &str) -> bool {
     let text = text.trim().trim_start_matches('#');

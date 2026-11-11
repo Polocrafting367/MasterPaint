@@ -182,6 +182,12 @@ impl Px {
     pub fn arc(&self) -> std::sync::Arc<Vec<u8>> {
         self.0.clone()
     }
+
+    /// Tampon tenu ailleurs aussi (historique, trait en cours) : la prochaine écriture le
+    /// recopierait en entier.
+    pub fn shared(&self) -> bool {
+        std::sync::Arc::strong_count(&self.0) > 1
+    }
 }
 
 impl std::ops::Deref for Px {
@@ -300,6 +306,9 @@ pub struct DynJob {
     pub serial: u64,
     pub src: std::sync::Arc<Vec<u8>>,
     pub stack: Vec<Stage>,
+    /// pas de `src` : 1 = taille du document ; k > 1 = entrée composée directement au pas k
+    /// (`ceil(w / k)` × `ceil(h / k)`), brouillon d'un geste
+    pub step: usize,
 }
 
 impl DynJob {
@@ -408,13 +417,24 @@ pub fn stage_of(kind: &str, r: f32) -> Option<Stage> {
 /// final. `None` si un étage ne peut pas garder exactement son aspect à ce pas (trame de
 /// Pixeliser qui ne tombe pas juste, tramage Bayer…) : essayer un pas plus petit.
 pub fn draft_stages(list: &[(String, f32)], k: usize) -> Option<Vec<Stage>> {
+    draft_stages_with(list, k, true)
+}
+
+/// Pile au pas `k` pendant un geste (déplacer un calque, régler une opacité sous des filtres ƒ) :
+/// au plus près de l'aspect final, sans exiger qu'il soit exact (trame, pixellisation…) ; le
+/// rendu exact suit le relâchement.
+pub fn draft_stages_loose(list: &[(String, f32)], k: usize) -> Vec<Stage> {
+    draft_stages_with(list, k, false).unwrap_or_default()
+}
+
+fn draft_stages_with(list: &[(String, f32)], k: usize, exact: bool) -> Option<Vec<Stage>> {
     if k <= 1 {
         return Some(list.iter().filter_map(|(t, r)| stage_of(t, *r)).collect());
     }
     let kf = k as f32;
     // étage du moteur dynamique (fx_dynamic.rs) : rayon ramené au pas, grilles exactes
     let code = |c: i32, r: f32| -> Option<f32> {
-        match c {
+        let exact_r = match c {
             0 | 1 | 5 => Some(r / kf),
             3 => {
                 let bs = (r * 2.0).round().clamp(2.0, 48.0) as usize;
@@ -424,7 +444,9 @@ pub fn draft_stages(list: &[(String, f32)], k: usize) -> Option<Vec<Stage>> {
             13 => ((r * 1.5).max(3.0) / kf >= 3.0).then_some(r / kf),
             14 => None,
             _ => Some(r),
-        }
+        };
+        // geste : réglage ramené au pas même s'il ne tombe pas juste
+        if exact { exact_r } else { exact_r.or(Some(if c == 14 { r } else { (r / kf).max(1.0) })) }
     };
     let mut out = Vec::new();
     for (t, r) in list {
@@ -438,21 +460,28 @@ pub fn draft_stages(list: &[(String, f32)], k: usize) -> Option<Vec<Stage>> {
             Stage::Fx { name, p, mix, post } => match fx_dialog(t) {
                 // effet sans fenêtre : pas de réglage en pixels
                 None => Stage::Fx { name, p, mix, post },
-                Some((id, values)) => {
-                    let (_, fields) = crate::effects::dialog(&id)?;
-                    let vals = crate::effects::Vals(values);
-                    if crate::effects::preview_step(fields, &vals, k) != k {
-                        return None;
+                Some((id, values)) => match crate::effects::dialog(&id) {
+                    None if exact => return None,
+                    None => Stage::Fx { name, p, mix, post },
+                    Some((_, fields)) => {
+                        let vals = crate::effects::Vals(values);
+                        if exact && crate::effects::preview_step(fields, &vals, k) != k {
+                            return None;
+                        }
+                        let scaled = crate::effects::scale_px(fields, &vals, 1.0 / kf);
+                        // réglages du moteur qui changent avec l'échelle : repris de la version
+                        // réduite ; les autres (graine, couleurs…) restent ceux de l'étage
+                        match (crate::effects::params(&id, &vals, 0, 0), crate::effects::params(&id, &scaled, 0, 0)) {
+                            (Some((_, base)), Some((_, small))) => {
+                                let p: Vec<f32> = p.iter().enumerate().map(|(i, v)| if base.get(i) != small.get(i) { small.get(i).copied().unwrap_or(*v) } else { *v }).collect();
+                                let post = post.is_some().then(|| crate::effects::post_chromatic(&name, &scaled)).flatten();
+                                Stage::Fx { name, p, mix, post }
+                            }
+                            _ if exact => return None,
+                            _ => Stage::Fx { name, p, mix, post },
+                        }
                     }
-                    let scaled = crate::effects::scale_px(fields, &vals, 1.0 / kf);
-                    // réglages du moteur qui changent avec l'échelle : repris de la version
-                    // réduite ; les autres (graine, couleurs…) restent ceux de l'étage
-                    let (_, base) = crate::effects::params(&id, &vals, 0, 0)?;
-                    let (_, small) = crate::effects::params(&id, &scaled, 0, 0)?;
-                    let p: Vec<f32> = p.iter().enumerate().map(|(i, v)| if base.get(i) != small.get(i) { small.get(i).copied().unwrap_or(*v) } else { *v }).collect();
-                    let post = post.is_some().then(|| crate::effects::post_chromatic(&name, &scaled)).flatten();
-                    Stage::Fx { name, p, mix, post }
-                }
+                },
             },
         });
     }
@@ -723,7 +752,16 @@ pub struct Doc {
     /// géométrie des objets changée (redimensionner, tourner…) : le rendu en cache des calques
     /// SVG est à refaire (voir `refresh_all`)
     pub vec_stale: bool,
+    /// copie privée, préparée au repos, des pixels du calque actif (tampon désigné par la
+    /// référence faible, partagé avec l'historique) : le premier coup de pinceau la prend au lieu
+    /// de recopier tout le calque (photo de 20 Mpx : 80 Mo, près de la moitié du temps d'une touche)
+    pub spare: Option<(std::sync::Weak<Vec<u8>>, Px)>,
 }
+
+/// Retouche d'un filtre ƒ au pas de l'affichage : seulement sur une grande image, et si la zone à
+/// refaire en pleine résolution dépasse cette surface (pixels).
+const PATCH_LOW_MIN: usize = 2_000_000;
+const PATCH_LOW_AREA: usize = 200_000;
 
 /// Nombre maximal d'étapes d'historique, tous projets ouverts confondus (Paramètres › Données).
 /// La première étape de chaque projet (son image d'origine) n'est jamais oubliée ni comptée.
@@ -757,6 +795,7 @@ impl Doc {
             anim: None,
             vector_mode: false,
             vec_stale: false,
+            spare: None,
         };
         d.history.push(d.snapshot("Nouveau Document"));
         d
@@ -776,9 +815,37 @@ impl Doc {
         d
     }
 
+    /// Prépare la copie privée du calque actif (voir `spare`) s'il est grand et partagé avec
+    /// l'historique. Vrai si une copie a été faite.
+    pub fn prepare_spare(&mut self) -> bool {
+        let Some(l) = self.layers.get(self.active) else { return false };
+        let fits = |sp: &Option<(std::sync::Weak<Vec<u8>>, Px)>| sp.as_ref().is_some_and(|(wk, _)| l.px.is(wk));
+        if fits(&self.spare) {
+            return false;
+        }
+        self.spare = None;
+        if l.px.len() < 8_000_000 || !l.px.shared() || l.vector.is_some() {
+            return false;
+        }
+        self.spare = Some((l.px.weak(), Px::from(l.px.to_vec())));
+        true
+    }
+
+    /// Début d'un trait : le calque actif prend sa copie privée si elle correspond toujours à
+    /// ses pixels (même contenu ; l'original reste à l'historique et au trait).
+    pub fn adopt_spare(&mut self) {
+        if let Some((wk, sp)) = self.spare.take() {
+            if let Some(l) = self.layers.get_mut(self.active) {
+                if l.px.is(&wk) && sp.len() == l.px.len() {
+                    l.px = sp;
+                }
+            }
+        }
+    }
+
     /// Document de travail sans historique (composition d'une partie des calques).
     pub(crate) fn scratch(w: usize, h: usize, layers: Vec<Layer>) -> Doc {
-        Doc { w, h, layers, active: 0, sel: None, history: vec![], hindex: 0, title: String::new(), uid: 0, mask_of: None, render_div: 1, render_full_at: None, saved: (0, 0), mode: ColorMode::Rgb, sel_ref: None, sym: None, anim: None, vector_mode: false, vec_stale: false }
+        Doc { w, h, layers, active: 0, sel: None, history: vec![], hindex: 0, title: String::new(), uid: 0, mask_of: None, render_div: 1, render_full_at: None, saved: (0, 0), mode: ColorMode::Rgb, sel_ref: None, sym: None, anim: None, vector_mode: false, vec_stale: false, spare: None }
     }
 
     /// Masque α (un octet par pixel) calculé depuis l'image d'un onglet de masque.
@@ -805,8 +872,10 @@ impl Doc {
 
     fn snapshot(&self, label: &str) -> Snapshot {
         let mut layers = self.layers.clone();
-        // Input previews are disposable; never pin another full image in undo history.
-        for layer in &mut layers { layer.dyn_input = None; layer.dyn_dirty = None; layer.dyn_low = None; }
+        // Input previews are disposable; never pin another full image in undo history. Le
+        // brouillon ƒ (petit) reste : sans lui, une étape prise pendant un brouillon revenait sans
+        // rendu, avec une clé à jour, donc sans filtre visible.
+        for layer in &mut layers { layer.dyn_input = None; layer.dyn_dirty = None; }
         Snapshot { label: label.into(), w: self.w, h: self.h, layers, active: self.active, sel_change: None, mode: self.mode, anim: self.anim.clone(), repeat: 1, seq: HISTORY_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed) }
     }
 
@@ -995,7 +1064,15 @@ impl Doc {
 
     /// One job per layer at a time. Dependent adjustment layers wait for their
     /// lower neighbours' newest cache rather than capturing stale input.
+    #[cfg(test)]
     pub fn dynamic_jobs_excluding(&mut self, in_flight: &std::collections::HashSet<u64>) -> Vec<DynJob> {
+        self.dynamic_jobs_step(in_flight, &|_| 1)
+    }
+
+    /// Comme `dynamic_jobs_excluding`, l'entrée du calque `uid` étant composée au pas
+    /// `step(uid)` (brouillon d'un geste : composer toute l'image sous chaque filtre à chaque
+    /// mouvement coûtait plus que les filtres eux-mêmes).
+    pub fn dynamic_jobs_step(&mut self, in_flight: &std::collections::HashSet<u64>, step: &dyn Fn(u64) -> usize) -> Vec<DynJob> {
         let (w, h) = (self.w, self.h);
         let mut jobs = Vec::new();
         let mut pending = in_flight.clone();
@@ -1040,6 +1117,18 @@ impl Doc {
             // During drawing, recompose only the dirty rectangle when the dependency
             // is plain raster content. Lower dynamic filters may spread changes and
             // therefore retain full recomposition on cache changes.
+            let k = if mode == 1 { 1 } else { step(self.layers[i].uid).max(1) };
+            if k > 1 {
+                // brouillon : entrée composée au pas k, jamais gardée comme entrée exacte
+                self.layers[i].dyn_input = None;
+                let (sw, sh) = (w.div_ceil(k), h.div_ceil(k));
+                let mut small = vec![0u8; sw * sh * 4];
+                Doc::scratch(w, h, below.iter().map(|&b| self.layers[b].clone()).collect()).composite_scaled(&mut small, k, (0, 0, sw, sh), false);
+                let stack: Vec<Stage> = stack.iter().filter_map(|(t, r)| stage_of(t, *r)).collect();
+                jobs.push(DynJob { uid: self.layers[i].uid, serial, src: std::sync::Arc::new(small), stack, step: k });
+                pending.insert(self.layers[i].uid);
+                continue;
+            }
             let cached = self.layers[i].dyn_input.take();
             let dirty = self.layers[i].dyn_dirty.take();
             let compatible = cached.as_ref().is_some_and(|c| c.settings == input_settings && c.pixels.len() == w*h*4);
@@ -1061,7 +1150,7 @@ impl Doc {
             };
             self.layers[i].dyn_input = Some(DynInput { sources: srcs.iter().map(Px::weak).collect(), settings: input_settings, pixels: src.clone() });
             let stack: Vec<Stage> = stack.iter().filter_map(|(t, r)| stage_of(t, *r)).collect();
-            jobs.push(DynJob { uid: self.layers[i].uid, serial, src, stack });
+            jobs.push(DynJob { uid: self.layers[i].uid, serial, src, stack, step: 1 });
             pending.insert(self.layers[i].uid);
         }
         jobs
@@ -1133,7 +1222,10 @@ impl Doc {
     /// de la portée des effets. Rendu : la zone à recomposer. Un filtre qui ne s'y prête pas
     /// (effet qui lit toute l'image, zone trop grande par rapport à `budget` pixels, calcul en
     /// route) garde sa zone en attente, comme ceux qui en dépendent : calcul complet ensuite.
-    pub fn patch_dynamic(&mut self, budget: usize) -> Option<(usize, usize, usize, usize)> {
+    /// `view_k` : pas de l'affichage (1 = pleine résolution à l'écran). Vue de loin, un filtre
+    /// dont la retouche coûterait cher est retouché à ce pas (brouillon `dyn_low`, comme les
+    /// aperçus d'effets) ; la pleine résolution revient après le geste (`needs_refine`).
+    pub fn patch_dynamic(&mut self, budget: usize, view_k: usize) -> Option<(usize, usize, usize, usize)> {
         if self.has_groups() {
             return None;
         }
@@ -1155,7 +1247,7 @@ impl Doc {
                 (a, b) => a.or(b),
             };
             let Some(r) = dirty else { continue };
-            let zone = if blocked { None } else { self.patch_layer(i, r, budget, &patched) };
+            let zone = if blocked { None } else { self.patch_layer(i, r, budget, view_k, &patched) };
             match zone {
                 Some(o) => {
                     done = Some(done.map_or(o, |d| rect_union(d, o)));
@@ -1172,11 +1264,24 @@ impl Doc {
 
     /// Recalcule le filtre du calque `i` autour de `r`, dans son rendu complet ou dans son brouillon
     /// réduit (résolution de rendu du projet) ; rendu : la zone refaite, en pixels du document.
-    fn patch_layer(&mut self, i: usize, r: (usize, usize, usize, usize), budget: usize, patched: &[usize]) -> Option<(usize, usize, usize, usize)> {
+    fn patch_layer(&mut self, i: usize, r: (usize, usize, usize, usize), budget: usize, view_k: usize, patched: &[usize]) -> Option<(usize, usize, usize, usize)> {
         let (w, h) = (self.w, self.h);
+        let stack = self.layers[i].dynamic.clone()?;
+        let mut low_k = self.layers[i].low_cache(w, h).map(|(k, _)| k);
+        // vue réduite et retouche chère en pleine résolution : passage au brouillon à la taille
+        // affichée (le rendu complet, réduit, sert de départ ; seule la zone peinte est refaite)
+        if low_k.is_none() && view_k >= 2 && w * h >= PATCH_LOW_MIN && self.layers[i].dyn_done == self.layers[i].dyn_serial {
+            let full: Vec<Stage> = stack.iter().filter_map(|(t, v)| stage_of(t, *v)).collect();
+            let costly = stack_margin(&full).is_some_and(|m| (r.2 - r.0 + 4 * m) * (r.3 - r.1 + 4 * m) > PATCH_LOW_AREA);
+            let step = (2..=view_k.min(16)).rev().find(|k| draft_stages(&stack, *k).is_some());
+            if let (true, Some(k), Some(cache)) = (costly, step, self.layers[i].dyn_cache.as_ref().filter(|c| c.len() == w * h * 4)) {
+                let low = shrink_rect(cache, w, h, k, (0, 0, w.div_ceil(k), h.div_ceil(k)));
+                self.layers[i].dyn_low = Some((k, std::sync::Arc::new(low)));
+                low_k = Some(k);
+            }
+        }
         let l = &self.layers[i];
-        let stack = l.dynamic.as_ref()?;
-        let low_k = l.low_cache(w, h).map(|(k, _)| k);
+        let stack = &stack;
         let k = low_k.unwrap_or(1);
         let stages: Vec<Stage> = if k > 1 { draft_stages(stack, k)? } else { stack.iter().filter_map(|(t, v)| stage_of(t, *v)).collect() };
         let m = stack_margin(&stages)?;
@@ -1232,20 +1337,34 @@ impl Doc {
         input.sources = weaks.clone();
         let l = &mut self.layers[i];
         // nouveaux tampons : les textures de la carte graphique seront renvoyées à la prochaine composition
+        // seule la bande de lignes refaite repartira vers la carte graphique (gpu_damage)
         if let Some((k, low)) = l.dyn_low.take() {
+            let before = std::sync::Arc::downgrade(&low);
             let mut low = std::sync::Arc::try_unwrap(low).unwrap_or_else(|a| (*a).clone());
             paste(&mut low, sw);
-            l.dyn_low = Some((k, std::sync::Arc::new(low)));
+            let low = std::sync::Arc::new(low);
+            crate::gpu_damage::note(&before, &low, crate::gpu_damage::rows(sw, o.1, o.3));
+            l.dyn_low = Some((k, low));
         } else {
             let cache = l.dyn_cache.take()?;
+            let before = std::sync::Arc::downgrade(&cache);
             let mut cache = std::sync::Arc::try_unwrap(cache).unwrap_or_else(|a| (*a).clone());
             paste(&mut cache, w);
-            l.dyn_cache = Some(std::sync::Arc::new(cache));
+            let cache = std::sync::Arc::new(cache);
+            crate::gpu_damage::note(&before, &cache, crate::gpu_damage::rows(w, o.1, o.3));
+            l.dyn_cache = Some(cache);
         }
         l.dyn_key = Some((weaks, settings));
         l.dyn_input = Some(input);
         l.dyn_dirty = None;
         Some((o.0 * k, o.1 * k, (o.2 * k).min(w), (o.3 * k).min(h)))
+    }
+
+    /// Calques ƒ affichés en brouillon plus réduit que la résolution de rendu du projet (retouche
+    /// pendant un trait vu de loin, étape d'historique, fin de réglage) : à recalculer en entier.
+    pub fn needs_refine(&self) -> Vec<u64> {
+        let div = self.effective_div();
+        self.layers.iter().filter(|l| l.low_cache(self.w, self.h).is_some_and(|(k, _)| k > div)).map(|l| l.uid).collect()
     }
 
     /// Accumulate paint damage for dependent adjustment inputs without recomposing
@@ -1669,7 +1788,14 @@ impl Doc {
     pub fn apply_selection(&mut self, mask: Vec<u8>, mode: SelMode) {
         let old = self.sel.take();
         let combined = match (mode, old) {
-            (SelMode::Replace, _) | (SelMode::Add, None) | (SelMode::Intersect, None) => mask,
+            (SelMode::Replace, _) | (SelMode::Add, None) | (SelMode::Intersect, None) | (SelMode::Xor, None) => mask,
+            (SelMode::Xor, Some(mut o)) => {
+                // OU exclusif (Paint.NET : Ctrl + clic droit) : |a − b|
+                for (a, b) in o.iter_mut().zip(&mask) {
+                    *a = (*a as i16 - *b as i16).unsigned_abs() as u8;
+                }
+                o
+            }
             (SelMode::Subtract, None) => vec![0; self.w * self.h],
             (SelMode::Add, Some(mut o)) => {
                 for (a, b) in o.iter_mut().zip(&mask) {
@@ -1693,45 +1819,63 @@ impl Doc {
         self.sel = if combined.iter().any(|v| *v > 0) { Some(combined) } else { None };
     }
 
-    /// Étend (r > 0) ou réduit (r < 0) la sélection de |r| pixels (disque, deux passes séparables
-    /// sur la distance de Chebyshev puis lissage du coin).
+    /// Étend (r > 0) ou réduit (r < 0) la sélection de |r| pixels : distance euclidienne exacte
+    /// au contour (transformée de distance de Felzenszwalb, coût indépendant du rayon), donc
+    /// coins arrondis comme Photoshop, bord anticrénelé. Les bords de l'image ne réduisent pas.
     pub fn grow_selection(&mut self, r: i32) {
         let Some(m) = self.sel.take() else { return };
         let (w, h) = (self.w, self.h);
-        let n = r.unsigned_abs() as usize;
-        if n == 0 {
+        if r == 0 {
             self.sel = Some(m);
             return;
         }
-        let grow = r > 0;
-        let pick = |a: u8, b: u8| if grow { a.max(b) } else { a.min(b) };
-        // passe horizontale puis verticale (fenêtre glissante simple)
-        let mut tmp = vec![0u8; w * h];
-        for y in 0..h {
-            for x in 0..w {
-                let (x0, x1) = (x.saturating_sub(n), (x + n).min(w - 1));
-                let mut v = if grow { 0 } else { 255 };
-                for xx in x0..=x1 {
-                    v = pick(v, m[y * w + xx]);
-                }
-                if !grow && (x < n || x + n >= w) {
-                    v = pick(v, m[y * w + x]);
-                }
-                tmp[y * w + x] = v;
-            }
-        }
-        let mut out = vec![0u8; w * h];
-        for x in 0..w {
-            for y in 0..h {
-                let (y0, y1) = (y.saturating_sub(n), (y + n).min(h - 1));
-                let mut v = if grow { 0 } else { 255 };
-                for yy in y0..=y1 {
-                    v = pick(v, tmp[yy * w + x]);
-                }
-                out[y * w + x] = v;
-            }
-        }
+        let out = grow_mask(&m, w, h, r as f32);
         self.sel = if out.iter().any(|v| *v > 0) { Some(out) } else { None };
+    }
+
+    /// Sélection › Modifier › Contour progressif (plume) : bord adouci de `r` pixels.
+    pub fn feather_selection(&mut self, r: f32) {
+        let Some(mut m) = self.sel.take() else { return };
+        // flou boîte ×3 ≈ gaussienne d'écart-type r/2 (comme Photoshop, la plume est un rayon)
+        blur_mask(&mut m, self.w, self.h, (r * 0.58).round().max(1.0) as usize);
+        self.sel = if m.iter().any(|v| *v > 0) { Some(m) } else { None };
+    }
+
+    /// Sélection › Modifier › Bordure : bande de `width` pixels centrée sur le contour.
+    pub fn border_selection(&mut self, width: f32) {
+        let Some(m) = self.sel.take() else { return };
+        let (w, h) = (self.w, self.h);
+        let half = (width / 2.0).max(0.5);
+        let outer = grow_mask(&m, w, h, half);
+        let inner = grow_mask(&m, w, h, -half);
+        let out: Vec<u8> = outer.iter().zip(&inner).map(|(a, b)| (*a as u16 * (255 - *b) as u16 / 255) as u8).collect();
+        self.sel = if out.iter().any(|v| *v > 0) { Some(out) } else { None };
+    }
+
+    /// Sélection › Modifier › Lisser : arrondit les angles et retire les îlots de moins de `r`
+    /// pixels (flou puis seuil à 50 %, bord anticrénelé gardé).
+    pub fn smooth_selection(&mut self, r: f32) {
+        let Some(mut m) = self.sel.take() else { return };
+        let (w, h) = (self.w, self.h);
+        blur_mask(&mut m, w, h, (r * 0.58).round().max(1.0) as usize);
+        for v in m.iter_mut() {
+            // rampe étroite autour de 128 : contour net mais pas crénelé
+            *v = ((*v as i32 - 128) * 8 + 128).clamp(0, 255) as u8;
+        }
+        self.sel = if m.iter().any(|v| *v > 0) { Some(m) } else { None };
+    }
+
+    /// Sélection depuis l'alpha d'un calque (Ctrl+clic sur sa vignette dans Photoshop), combinée
+    /// selon `mode`.
+    pub fn select_layer_alpha(&mut self, i: usize, mode: SelMode) {
+        let Some(l) = self.layers.get(i) else { return };
+        let mut m: Vec<u8> = l.px.chunks_exact(4).map(|p| p[3]).collect();
+        if let Some(mask) = &l.mask {
+            for (v, k) in m.iter_mut().zip(mask.iter()) {
+                *v = (*v as u16 * *k as u16 / 255) as u8;
+            }
+        }
+        self.apply_selection(m, mode);
     }
 
     /// Bordure de `n` pixels à l'intérieur de l'image, dans un nouveau calque.
@@ -1799,88 +1943,30 @@ impl Doc {
         true
     }
 
-    /// Remplissage de contenu : la sélection est reconstituée à partir de ses abords (de la
-    /// frontière vers l'intérieur, moyenne des voisins connus, avec un grain emprunté aux
-    /// voisins pour ne pas laisser d'aplat). Calque actif.
+    /// Remplissage de contenu : la sélection est reconstituée par correspondance de morceaux
+    /// (PatchMatch multi-échelle, module `inpaint` repris de LightCraft / PhotoCraft), bord
+    /// adouci selon le masque. Calque actif.
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn content_aware_fill(&mut self) -> bool {
         let Some(m) = self.sel.clone() else { return false };
-        let (w, h) = (self.w, self.h);
-        let a = self.active;
-        let mut px = self.layers[a].px.to_vec();
-        let mut unknown: Vec<bool> = m.iter().map(|v| *v >= 128).collect();
-        if !unknown.iter().any(|u| *u) {
+        if !m.iter().any(|v| *v >= 128) {
             return false;
         }
-        let mut seed = 0x9e3779b9u32;
-        let mut rnd = move || {
-            seed ^= seed << 13;
-            seed ^= seed >> 17;
-            seed ^= seed << 5;
-            seed
+        let (w, h) = (self.w, self.h);
+        let a = self.active;
+        masterpaint_core::inpaint::fill_rgba(&mut self.layers[a].px, w, h, &m, 48).is_some()
+    }
+
+    /// Correcteur localisé : reconstitue la zone peinte `hole` (couverture du pinceau) d'après
+    /// ses abords. Retourne le rectangle modifié.
+    pub fn heal_area(&mut self, hole: &[u8]) -> Option<(usize, usize, usize, usize)> {
+        let (w, h) = (self.w, self.h);
+        let a = self.active;
+        let hole: Vec<u8> = match &self.sel {
+            Some(s) => hole.iter().zip(s).map(|(c, s)| (*c as u16 * *s as u16 / 255) as u8).collect(),
+            None => hole.to_vec(),
         };
-        let dirs: [(isize, isize); 8] = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1)];
-        // couches successives : chaque tour remplit les inconnus touchant au moins un connu
-        for _ in 0..(w + h) {
-            let mut fill: Vec<(usize, [u8; 4])> = Vec::new();
-            for y in 0..h {
-                for x in 0..w {
-                    let i = y * w + x;
-                    if !unknown[i] {
-                        continue;
-                    }
-                    let mut acc = [0u32; 4];
-                    let mut n = 0u32;
-                    let mut pick: Option<[u8; 4]> = None;
-                    for (k, (dx, dy)) in dirs.iter().enumerate() {
-                        let (nx, ny) = (x as isize + dx, y as isize + dy);
-                        if nx < 0 || ny < 0 || nx as usize >= w || ny as usize >= h {
-                            continue;
-                        }
-                        let j = ny as usize * w + nx as usize;
-                        if unknown[j] {
-                            continue;
-                        }
-                        let p = [px[j * 4], px[j * 4 + 1], px[j * 4 + 2], px[j * 4 + 3]];
-                        for c in 0..4 {
-                            acc[c] += p[c] as u32;
-                        }
-                        n += 1;
-                        if k == (rnd() % 8) as usize || pick.is_none() {
-                            pick = Some(p);
-                        }
-                    }
-                    if n > 0 {
-                        let mean = [(acc[0] / n) as u8, (acc[1] / n) as u8, (acc[2] / n) as u8, (acc[3] / n) as u8];
-                        // moitié moyenne, moitié voisin tiré au hasard : un peu de texture
-                        let q = pick.unwrap_or(mean);
-                        let mix = |c: usize| ((mean[c] as u32 + q[c] as u32) / 2) as u8;
-                        fill.push((i, [mix(0), mix(1), mix(2), mix(3)]));
-                    }
-                }
-            }
-            if fill.is_empty() {
-                break;
-            }
-            for (i, c) in fill {
-                px[i * 4..i * 4 + 4].copy_from_slice(&c);
-                unknown[i] = false;
-            }
-        }
-        // retour dans la sélection seulement (bords fondus du masque conservés)
-        let base = self.layers[a].px.clone();
-        for i in 0..w * h {
-            let s = m[i] as u32;
-            if s > 0 {
-                for c in 0..4 {
-                    px[i * 4 + c] = ((px[i * 4 + c] as u32 * s + base[i * 4 + c] as u32 * (255 - s)) / 255) as u8;
-                }
-            } else {
-                px[i * 4..i * 4 + 4].copy_from_slice(&base[i * 4..i * 4 + 4]);
-            }
-        }
-        self.layers[a].px = px.into();
-        true
+        masterpaint_core::inpaint::fill_rgba(&mut self.layers[a].px, w, h, &hole, 24)
     }
 
     /// Un calque a du contenu hors de la toile.
@@ -2504,6 +2590,87 @@ pub enum SelMode {
     Add,
     Subtract,
     Intersect,
+    Xor,
+}
+
+/// Transformée de distance euclidienne au carré (Felzenszwalb & Huttenlocher 2012), en place :
+/// `f` vaut 0 sur les pixels « source » et `EDT_INF` ailleurs. Coût linéaire en pixels.
+pub const EDT_INF: f32 = 1e20;
+pub fn edt2(f: &mut [f32], w: usize, h: usize) {
+    fn pass(f: &mut [f32], n: usize, stride: usize, off: usize, d: &mut [f64], v: &mut [usize], z: &mut [f64]) {
+        let get = |f: &[f32], q: usize| f[off + q * stride] as f64;
+        let mut k = 0usize;
+        v[0] = 0;
+        z[0] = f64::NEG_INFINITY;
+        z[1] = f64::INFINITY;
+        for q in 1..n {
+            let fq = get(f, q) + (q * q) as f64;
+            loop {
+                let p = v[k];
+                let s = (fq - (get(f, p) + (p * p) as f64)) / (2.0 * (q as f64 - p as f64));
+                if s <= z[k] && k > 0 {
+                    k -= 1;
+                    continue;
+                }
+                if s <= z[k] {
+                    // k == 0 : la nouvelle parabole domine partout
+                    v[0] = q;
+                    z[1] = f64::INFINITY;
+                    break;
+                }
+                k += 1;
+                v[k] = q;
+                z[k] = s;
+                z[k + 1] = f64::INFINITY;
+                break;
+            }
+        }
+        k = 0;
+        for q in 0..n {
+            while z[k + 1] < q as f64 {
+                k += 1;
+            }
+            let p = v[k];
+            d[q] = (q as f64 - p as f64).powi(2) + get(f, p);
+        }
+        for q in 0..n {
+            f[off + q * stride] = d[q].min(EDT_INF as f64) as f32;
+        }
+    }
+    let n = w.max(h);
+    let (mut d, mut v, mut z) = (vec![0f64; n], vec![0usize; n], vec![0f64; n + 1]);
+    for x in 0..w {
+        pass(f, h, w, x, &mut d, &mut v, &mut z);
+    }
+    for y in 0..h {
+        pass(f, w, 1, y * w, &mut d, &mut v, &mut z);
+    }
+}
+
+/// Masque étendu (r > 0) ou réduit (r < 0) de |r| pixels à la distance euclidienne, bord
+/// anticrénelé d'un pixel. Les bords de l'image ne comptent pas comme extérieur.
+pub fn grow_mask(m: &[u8], w: usize, h: usize, r: f32) -> Vec<u8> {
+    let grow = r > 0.0;
+    let r = r.abs();
+    // source : intérieur (pour étendre) ou extérieur (pour réduire)
+    let mut f: Vec<f32> = m.iter().map(|v| if (*v >= 128) == grow { 0.0 } else { EDT_INF }).collect();
+    if !f.iter().any(|v| *v == 0.0) {
+        return if grow { vec![0; w * h] } else { m.to_vec() };
+    }
+    edt2(&mut f, w, h);
+    m.iter()
+        .zip(&f)
+        .map(|(v, d2)| {
+            let d = d2.sqrt();
+            if grow {
+                if *v >= 128 { 255 } else { ((r + 0.5 - d).clamp(0.0, 1.0) * 255.0).max(*v as f32) as u8 }
+            } else if *v < 128 {
+                0
+            } else {
+                ((d - r - 0.5).clamp(0.0, 1.0) * 255.0).min(*v as f32) as u8
+            }
+        })
+        .collect()
 }
 
 /// Adoucit un masque (un octet par pixel) : trois passes de moyenne glissante de rayon `r`
@@ -2541,6 +2708,25 @@ pub fn blur_mask(m: &mut [u8], w: usize, h: usize, r: usize) {
 
 #[cfg(test)]
 mod dyn_tests {
+    #[test]
+    fn spare_copy_is_adopted_without_touching_history() {
+        let mut d = super::Doc::new(2000, 1100, [255, 255, 255, 255], "t");
+        assert!(d.prepare_spare(), "grand calque partagé avec l'historique");
+        assert!(!d.prepare_spare(), "déjà prête");
+        let kept = d.history[0].layers[0].px.arc();
+        d.adopt_spare();
+        assert!(!d.layers[0].px.shared(), "plus de copie à la première écriture");
+        d.layers[0].px[0] = 7;
+        assert_eq!(kept[0], 255);
+        assert_eq!(d.layers[0].px[1], 255);
+        // calque changé depuis : la copie périmée n'est pas prise
+        d.commit("x");
+        assert!(d.prepare_spare());
+        d.layers[0].px[4] = 9;
+        d.adopt_spare();
+        assert_eq!(d.layers[0].px[4], 9);
+    }
+
     use super::*;
 
     /// Effet du menu dans une pile dynamique : type relu à l'identique, intensité → mélange.
@@ -2751,7 +2937,7 @@ mod dynamic_patch_tests {
         settle(&mut d);
         let before = d.layers[1].dyn_cache.clone().unwrap();
         paint(&mut d, (30, 20, 34, 23));
-        let zone = d.patch_dynamic(1_000_000).expect("zone recalculée");
+        let zone = d.patch_dynamic(1_000_000, 1).expect("zone recalculée");
         assert!(zone.0 < 30 && zone.2 > 34 && zone.2 - zone.0 < 64, "{zone:?}");
         assert!(d.dynamic_jobs().is_empty(), "plus rien à recalculer sur toute l'image");
         assert!(d.layers[1].dyn_dirty.is_none());
@@ -2773,7 +2959,7 @@ mod dynamic_patch_tests {
         d.layers.push(top);
         settle(&mut d);
         paint(&mut d, (30, 20, 33, 22));
-        assert!(d.patch_dynamic(1_000_000).is_some());
+        assert!(d.patch_dynamic(1_000_000, 1).is_some());
         assert!(d.layers[1].dyn_dirty.is_none() && d.layers[2].dyn_dirty.is_none());
         assert!(d.dynamic_jobs().is_empty());
         let patched = d.layers[2].dyn_cache.clone().unwrap();
@@ -2834,7 +3020,7 @@ mod dynamic_patch_tests {
         brouillon(&mut d);
         let avant = d.layers[1].dyn_low.clone().unwrap().1;
         paint(&mut d, (30, 20, 34, 23));
-        let zone = d.patch_dynamic(1_000_000).expect("retouche du brouillon");
+        let zone = d.patch_dynamic(1_000_000, 1).expect("retouche du brouillon");
         assert!(zone.2 - zone.0 < 200, "seulement autour du trait : {zone:?}");
         assert!(d.dynamic_jobs().is_empty(), "plus rien à recalculer");
         assert!(d.layers[1].dyn_cache.is_none(), "le rendu complet n'a pas été calculé");
@@ -2882,7 +3068,7 @@ mod dynamic_patch_tests {
         let mut d = doc_with_filter(vec![(fx_kind("autolevel", &[], "Auto", "", &Default::default()), DYN_FULL)]);
         settle(&mut d);
         paint(&mut d, (30, 20, 33, 22));
-        assert_eq!(d.patch_dynamic(1_000_000), None);
+        assert_eq!(d.patch_dynamic(1_000_000, 1), None);
         assert!(d.layers[1].dyn_dirty.is_some(), "zone gardée");
         assert_eq!(d.dynamic_jobs().len(), 1);
         // zone trop grande pour le budget
@@ -2890,13 +3076,13 @@ mod dynamic_patch_tests {
         let mut d = doc_with_filter(vec![(g.clone(), DYN_FULL)]);
         settle(&mut d);
         paint(&mut d, (30, 20, 33, 22));
-        assert_eq!(d.patch_dynamic(10), None);
+        assert_eq!(d.patch_dynamic(10, 1), None);
         assert_eq!(d.dynamic_jobs().len(), 1);
         // calcul en route : son résultat n'est pas encore là
         let mut d = doc_with_filter(vec![(g, DYN_FULL)]);
         let _ = d.dynamic_jobs();
         paint(&mut d, (30, 20, 33, 22));
-        assert_eq!(d.patch_dynamic(1_000_000), None);
+        assert_eq!(d.patch_dynamic(1_000_000, 1), None);
     }
 }
 
@@ -3091,5 +3277,84 @@ mod applied_strength_tests {
         assert_eq!(d.history[0].label, "Nouveau Document");
         assert_eq!(d.history.last().map(|s| s.label.as_str()), Some("étape 5"));
         assert_eq!(d.hindex, d.history.len() - 1);
+    }
+}
+
+#[cfg(test)]
+mod selection_modify_tests {
+    use super::*;
+
+    /// disque de rayon r centré : masque 0 / 255
+    fn disc(w: usize, h: usize, cx: f32, cy: f32, r: f32) -> Vec<u8> {
+        (0..w * h).map(|i| if ((i % w) as f32 + 0.5 - cx).hypot((i / w) as f32 + 0.5 - cy) <= r { 255 } else { 0 }).collect()
+    }
+
+    #[test]
+    fn grow_is_round_and_shrink_inverts_it() {
+        let (w, h) = (64, 64);
+        // carré 10×10 au centre, étendu de 8 px : coins ARRONDIS (distance euclidienne)
+        let mut sq = vec![0u8; w * h];
+        for y in 27..37 {
+            for x in 27..37 {
+                sq[y * w + x] = 255;
+            }
+        }
+        let g = grow_mask(&sq, w, h, 8.0);
+        assert_eq!(g[32 * w + 20], 255, "bord étendu de 7 px");
+        // coin : à 8 px en x et en y du coin du carré, distance 11,3 > 8 → hors sélection
+        assert_eq!(g[(36 + 8) * w + 36 + 8], 0, "coin arrondi");
+        // réduire un disque de 20 px de 5 px ≈ disque de 15 px
+        let d = disc(w, h, 32.0, 32.0, 20.0);
+        let s = grow_mask(&d, w, h, -5.0);
+        assert_eq!(s[32 * w + 32 + 13], 255);
+        assert_eq!(s[32 * w + 32 + 17], 0);
+        // les bords de l'image ne réduisent pas une sélection pleine
+        let full = vec![255u8; w * h];
+        assert!(grow_mask(&full, w, h, -4.0).iter().all(|v| *v == 255));
+    }
+
+    #[test]
+    fn xor_border_and_alpha_selection() {
+        let mut d = Doc::new(20, 20, [255, 255, 255, 255], "t");
+        let mut a = vec![0u8; 400];
+        a[..200].fill(255);
+        d.sel = Some(a);
+        let mut b = vec![0u8; 400];
+        b[100..300].fill(255);
+        d.apply_selection(b, SelMode::Xor);
+        let s = d.sel.clone().unwrap();
+        assert_eq!((s[50], s[150], s[250], s[350]), (255, 0, 255, 0));
+        // bordure : bande autour du contour, intérieur vide
+        let mut d = Doc::new(40, 40, [255, 255, 255, 255], "t");
+        d.sel = Some(disc(40, 40, 20.0, 20.0, 12.0));
+        d.border_selection(4.0);
+        let s = d.sel.clone().unwrap();
+        assert_eq!(s[20 * 40 + 20], 0);
+        assert!(s[20 * 40 + 20 + 12] > 200);
+        // opacité du calque : un calque transparent à moitié gauche
+        let mut d = Doc::new(10, 10, [0, 0, 0, 255], "t");
+        for y in 0..10 {
+            for x in 0..5 {
+                d.layer_mut().px[(y * 10 + x) * 4 + 3] = 0;
+            }
+        }
+        d.select_layer_alpha(0, SelMode::Replace);
+        let s = d.sel.clone().unwrap();
+        assert_eq!((s[0], s[9]), (0, 255));
+    }
+
+    #[test]
+    fn heal_area_fills_from_surroundings() {
+        let mut d = Doc::new(48, 48, [40, 160, 60, 255], "t");
+        let mut hole = vec![0u8; 48 * 48];
+        for y in 20..28 {
+            for x in 20..28 {
+                d.layer_mut().px[(y * 48 + x) * 4..(y * 48 + x) * 4 + 4].copy_from_slice(&[250, 0, 250, 255]);
+                hole[y * 48 + x] = 255;
+            }
+        }
+        assert!(d.heal_area(&hole).is_some());
+        let c = &d.layer().px[(24 * 48 + 24) * 4..(24 * 48 + 24) * 4 + 4];
+        assert!(c[1] > 120 && c[0] < 100, "défaut effacé : {c:?}");
     }
 }

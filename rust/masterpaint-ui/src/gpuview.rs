@@ -83,9 +83,164 @@ pub(crate) fn cpu(st: &mut State, target: Target, r: Rect) {
 
 /// Compose `r` : carte graphique si possible, sinon processeur.
 pub(crate) fn view(app: &AppWindow, st: &mut State, target: Target, r: Rect) {
+    DEFERRED.with(|d| d.set(false));
+    if target == Target::Display && gesture_active() && coarse(app, st, r) {
+        return;
+    }
     if !compose(app, st, target, r) {
         cpu(st, target, r);
     }
+}
+
+thread_local! {
+    /// l'affichage montre une composition grossière (geste) : à refaire nette ensuite
+    static COARSE_SHOWN: Cell<bool> = const { Cell::new(false) };
+    /// navigateur (WebGL) : composition grossière en route (une seule à la fois)
+    #[cfg(target_arch = "wasm32")]
+    static ASYNC_FLIGHT: Cell<bool> = const { Cell::new(false) };
+    /// image changée pendant ce calcul : une nouvelle composition est à lancer à son arrivée
+    #[cfg(target_arch = "wasm32")]
+    static ASYNC_DIRTY: Cell<bool> = const { Cell::new(false) };
+    /// la dernière composition n'a rien écrit (résultat attendu plus tard) : rien à renvoyer à
+    /// l'interface pour l'instant
+    static DEFERRED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Vrai (remis à faux) si la dernière composition de l'affichage n'a rien écrit : son résultat
+/// arrivera plus tard et sera envoyé à l'interface à ce moment-là (`arrive`).
+pub(crate) fn deferred() -> bool {
+    DEFERRED.with(|d| d.get())
+}
+
+pub(crate) fn take_deferred() -> bool {
+    DEFERRED.with(|d| d.replace(false))
+}
+
+/// Une composition faite sur place pendant qu'une autre est en route : notée comme plus récente,
+/// pour que le résultat en retard ne l'écrase pas (fin d'un geste : image nette posée avant
+/// l'arrivée du dernier brouillon).
+fn note_sync(target: Target, r: Rect) {
+    if PENDING.with(|p| p.get()) > 0 {
+        let g = GEN.with(|g| g.get());
+        CPU_RECTS.with(|v| v.borrow_mut().push((g, target, r)));
+    }
+}
+
+/// Agrandit au plus proche le rectangle grossier `px` (rectangle `rc` au pas double, largeur
+/// `rc.2 - rc.0`) en lignes du rectangle `r` de l'affichage : le pixel x montre le pixel x / 2.
+fn upscaled(px: &[u8], r: Rect, rc: Rect) -> Vec<u8> {
+    let rcw = rc.2 - rc.0;
+    let mut out = Vec::with_capacity((r.2 - r.0) * (r.3 - r.1) * 4);
+    for y in r.1..r.3 {
+        let srow = &px[((y / 2 - rc.1) * rcw) * 4..((y / 2 - rc.1 + 1) * rcw) * 4];
+        for x in r.0..r.2 {
+            let sx = (x / 2 - rc.0) * 4;
+            out.extend_from_slice(&srow[sx..sx + 4]);
+        }
+    }
+    out
+}
+
+/// Affichage grossier montré pendant le dernier geste (remis à faux).
+pub(crate) fn take_coarse() -> bool {
+    COARSE_SHOWN.with(|c| c.replace(false))
+}
+
+/// Pendant un geste qui change l'image à chaque mouvement sous des filtres ƒ (déplacer un
+/// calque, régler une opacité) : le rectangle est composé à un pas deux fois plus grossier,
+/// puis agrandi. Quatre fois moins de pixels composés et relus de la carte graphique (dans le
+/// navigateur, cette relecture attend la fin de tout le travail en cours : 40 % du temps d'un
+/// mouvement sur le projet d'exemple). Faux : petite zone, composition ordinaire.
+fn coarse(app: &AppWindow, st: &mut State, r: Rect) -> bool {
+    let ds = st.ds.max(1);
+    let (dw, dh) = (st.doc.w.div_ceil(ds), st.doc.h.div_ceil(ds));
+    let r = (r.0, r.1, r.2.min(dw), r.3.min(dh));
+    if r.2 <= r.0 || r.3 <= r.1 || (r.2 - r.0) * (r.3 - r.1) < 250_000 || ds * 2 > 16 || st.display.len() != dw * dh * 4 {
+        return false;
+    }
+    let ds2 = ds * 2;
+    let (cw, ch) = (st.doc.w.div_ceil(ds2), st.doc.h.div_ceil(ds2));
+    let rc = (r.0 / 2, r.1 / 2, r.2.div_ceil(2).min(cw), r.3.div_ceil(2).min(ch));
+    if rc.2 <= rc.0 || rc.3 <= rc.1 {
+        return false;
+    }
+    let rcw = rc.2 - rc.0;
+    let allowed = GPU_ALLOWED.load(std::sync::atomic::Ordering::Relaxed) && crate::editor::DYN_ZONE_VIEW.load(std::sync::atomic::Ordering::Relaxed) == 0;
+    // pixels du rectangle grossier, largeur rcw
+    let mut px: Option<Vec<u8>> = None;
+    // navigateur : WebGL reste plus rapide que le processeur ici (mesuré sur le projet
+    // d'exemple : 128 ms par mouvement contre 164) ; relu sans attendre la carte graphique :
+    // le fil de l'interface prépare le mouvement suivant pendant le calcul
+    #[cfg(target_arch = "wasm32")]
+    if allowed && gpu::get().is_none() && crate::webgl::available() {
+        // grande image en tuiles : composée sur place (une tuile neuve serait envoyée vide)
+        if st.lazy {
+            px = crate::webgl::compose(&st.doc, ds2, rc, false);
+        } else if ASYNC_FLIGHT.with(|f| f.get()) {
+            // un calcul est déjà en route : celui-ci est relancé à son arrivée (la file de la
+            // carte graphique ne s'allonge pas, l'image ne prend pas de retard)
+            ASYNC_DIRTY.with(|d| d.set(true));
+            DEFERRED.with(|d| d.set(true));
+            COARSE_SHOWN.with(|c| c.set(true));
+            return true;
+        } else if let Some(fut) = crate::webgl::compose_async(&st.doc, ds2, rc, false) {
+            let gen = GEN.with(|c| {
+                c.set(c.get() + 1);
+                c.get()
+            });
+            PENDING.with(|p| p.set(p.get() + 1));
+            ASYNC_FLIGHT.with(|f| f.set(true));
+            ASYNC_DIRTY.with(|d| d.set(false));
+            DEFERRED.with(|d| d.set(true));
+            COARSE_SHOWN.with(|c| c.set(true));
+            let (weak, doc, n) = (app.as_weak(), st.doc.uid, rcw * (rc.3 - rc.1) * 4);
+            wasm_bindgen_futures::spawn_local(async move {
+                let px = fut.await.filter(|p| p.len() >= n).map(|p| upscaled(&p, r, rc));
+                PENDING.with(|p| p.set(p.get().saturating_sub(1)));
+                ASYNC_FLIGHT.with(|f| f.set(false));
+                let again = ASYNC_DIRTY.with(|d| d.replace(false)) && gesture_active();
+                let w2 = weak.clone();
+                // résultat perdu (contexte perdu…) : rien à poser, l'image nette suivra
+                if px.is_some() {
+                    arrive(weak, gen, doc, ds, Target::Display, r, px);
+                }
+                if again {
+                    if let Some(app) = w2.upgrade() {
+                        redraw_soon(&app);
+                    }
+                }
+            });
+            return true;
+        } else {
+            px = crate::webgl::compose(&st.doc, ds2, rc, false);
+        }
+    } else if allowed && gpu::get().is_some() {
+        // WebGPU : résultat asynchrone, chemin ordinaire
+        return false;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = app;
+    #[cfg(not(target_arch = "wasm32"))]
+    if allowed && gpu_ready() {
+        px = gpu::get().and_then(|g| g.compose_submit(&st.doc, ds2, rc, false)).and_then(|job| gpu::get().and_then(|g| g.compose_wait(job)));
+    }
+    let px = match px {
+        Some(p) if p.len() >= rcw * (rc.3 - rc.1) * 4 => p,
+        _ => {
+            let mut tmp = vec![0u8; cw * ch * 4];
+            st.doc.composite_scaled(&mut tmp, ds2, rc, false);
+            let mut out = Vec::with_capacity(rcw * (rc.3 - rc.1) * 4);
+            for y in rc.1..rc.3 {
+                out.extend_from_slice(&tmp[(y * cw + rc.0) * 4..(y * cw + rc.2) * 4]);
+            }
+            out
+        }
+    };
+    // agrandi au plus proche : le pixel d'affichage x montre le pixel grossier x / 2
+    write_rows(&mut st.display, dw, r, &upscaled(&px, r, rc));
+    note_sync(Target::Display, r);
+    COARSE_SHOWN.with(|c| c.set(true));
+    true
 }
 
 /// Confie `r` à la carte graphique. Vrai si c'est fait (bureau) ou en route (navigateur) ;
@@ -129,6 +284,7 @@ pub(crate) fn compose(app: &AppWindow, st: &mut State, target: Target, r: Rect) 
         let _ = app;
         let Some(px) = crate::webgl::compose(&st.doc, ds, r, false) else { return false };
         write_rows(buffer(st, target), tw, r, &px);
+        note_sync(target, r);
         return true;
     }
     let Some(g) = gpu::get() else { return false };

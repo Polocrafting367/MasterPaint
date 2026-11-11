@@ -1,6 +1,62 @@
 MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+3.5.8 (11/11/26) — Photo Pro en vrai projet, masques, ruban adaptatif, curseurs, outils
+- Photo Pro : onglet Masque (repris de LightCraft) — dégradés linéaire et radial, pinceau
+  (gomme, contour, flux), plages de luminance et de couleur, ciel, sujet, arrière-plan ; chaque
+  masque a ses réglages (exposition, contraste, tons, température, saturation, clarté, voile,
+  netteté, bruit), un voile rouge pour le voir, inverser / dupliquer / masquer
+- Photo Pro comme un projet : annuler / rétablir par photo (Ctrl+Z, Ctrl+Y), réduire puis
+  rouvrir (onglet « Photo Pro »), pellicule et réglages retrouvés au prochain lancement (le
+  fichier d'origine est rangé une fois, ensuite seulement les positions des curseurs)
+- Photo Pro : les filtres s'ajoutent à vos réglages au lieu de les écraser (leur part est
+  montrée sur chaque curseur) ; noir et blanc vraiment gris ; réduction du bruit efficace (et
+  juste dans la zone agrandie) ; bouton Auto dans chaque section ; Recadrer, Rotation, Auto et
+  Réinitialiser regroupés ; déplacement de l'image au rythme du pointeur, sans sortir de la zone ;
+  la molette ne change plus les curseurs ; infobulles partout ; Paramètres dans ses menus ;
+  allure propre en présentation MasterPaint (fond d'ambiance tiré de la photo) et Paint.NET
+- Ruban adaptatif (comme Office) : selon la largeur, les libellés disparaissent par priorité,
+  puis les groupes se replient en menus, du moins utile au plus utile ; boutons à libellé à la
+  largeur de leur texte ; Affichage en colonnes alignées, avec « Rendu ÷2 » et « Rendu net »
+- Curseurs : le curseur de l'outil ne reste plus sur les menus, le ruban ou les fenêtres ;
+  flèches de redimensionnement orientées comme la poignée (transformation, recadrage, formes),
+  ↔ / ↕ sur les axes de symétrie, main, interdit sur un calque verrouillé, copie (tampon + Alt)
+- Paint.NET : outils disposés exactement comme paint.js (outil Main ajouté), les autres dans les
+  groupes du clic droit ; icônes dessinées aux couleurs douces des icônes d'origine
+- Fenêtre Outils (MasterPaint flottante, Paint.NET) : outils voisins réunis comme dans
+  Photoshop (clic droit, appui long ou petit triangle) ; corbeille à la place du zoom
+- Déplacer un calque sous des filtres ƒ : 346 → ~120 ms par mouvement ; opacité sous un filtre :
+  253 → 71 ms ; coup de pinceau sur une grande photo : 105 → 62 ms
+- Pipette : prend la couleur active (principale ou secondaire) ; clic droit sur Aimantation :
+  ses réglages ; Photoshop : ⇄ et sélecteur de couleur sur les pastilles de la colonne
+- Barre rapide MasterPaint : séparateurs, bouton Paramètres, « Signaler un bug » à côté ;
+  choix à options égales (Paramètres) ; Intersection / OU exclusif en colonne (avec libellés)
+- Version web envoyée compressée en brotli (≈ 30 % de moins à télécharger que gzip)
+
+3.5.7 (10/11/26) — performances des filtres ƒ, parité des interfaces, téléphone
+- Peindre sous un filtre ƒ sur une grande photo : ~4× plus fluide (20 Mpx, flou de rayon 75 :
+  76 → 20 ms par mouvement) ; le filtre est retouché à la taille affichée pendant le trait, la
+  pleine résolution revient juste après, identique au pixel près
+- Après un trait, seules les lignes touchées repartent vers la carte graphique (avant : le
+  calque entier et le rendu du filtre, 2 × 80 Mo) ; touche de pinceau 222 → 89 ms
+- Annuler / rétablir sous un filtre ƒ : ~4× plus rapide (le filtre n'est plus recalculé)
+- Effets du menu (flous, médiane, huile, contour…) : répartis sur plusieurs cœurs dans le
+  navigateur, comme sur le bureau, résultat identique
+- Lissage du tracé : le trait va jusqu'au pointeur au relâchement ; réglage placé après les
+  types de pinceau, avec une explication
+- Les interfaces ne changent plus que la mise en page : histogramme et colonne Navigateur /
+  Préréglages de Photo Pro partout, résolution de rendu accessible en Photoshop, Télécharger
+  l'application dans le menu Fichier, Spray et Carré visibles en barre réduite
+- Barre réduite : plus de noms de groupes en double ; Symétrie, Affichage, Pinceau,
+  Ajustements repliés en petites icônes à liste, comme paint.js
+- Mode téléphone : les fenêtres s'ouvrent en pages mobiles (titre centré, bouton fermer
+  rond), plus de barre de titre Windows
+- Icônes Intersection / OU exclusif, Densité et éponge, Interpolation réparées
+- Langues avec drapeaux, rattachées à la liste des Paramètres ; bouton « Réinitialiser la
+  section » aligné ; listes déroulantes à l'arrondi de leur liste ; coin des onglets carré
+  quand les coins arrondis sont coupés
+- Photo Pro : panneau de réglages qui recouvrait la photo en présentation Photoshop corrigé
+
 3.5.6 (08/11/26) — thèmes, packs d’icônes, Paramètres et performances
 - Quatre présentations : MasterPaint, Paint.NET (paintdotjs), Photoshop (PhotoCraft), Téléphone
 - Dispositions et ordre des outils adaptés ; retour aux réglages MasterPaint conservé

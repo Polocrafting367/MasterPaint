@@ -31,7 +31,24 @@ pub enum Tool {
     Node,
     /// projet SVG : tracé de chemins de Bézier
     Pen,
+    /// sélection elliptique (Paint.NET, Photoshop) ; Maj = cercle
+    EllipseSelect,
+    /// tampon de duplication : Alt + clic choisit la source, puis on peint avec ses pixels
+    Clone,
+    /// correcteur localisé : la zone peinte est reconstituée d'après ses abords (PatchMatch)
+    Heal,
+    /// doigt : étire la couleur dans le sens du tracé
+    Smudge,
+    /// densité − / + et éponge (`Opts::retouch_mode`)
+    Dodge,
+    /// remplacement de couleur (Paint.NET) : la couleur secondaire devient la principale
+    Recolor,
     Unsupported,
+}
+
+/// Outils qui peignent par traits de pinceau (taille, dureté, pression, lissage du tracé).
+pub fn is_stroke(t: Tool) -> bool {
+    matches!(t, Tool::Brush | Tool::Pencil | Tool::Eraser | Tool::Clone | Tool::Heal | Tool::Smudge | Tool::Dodge | Tool::Recolor)
 }
 
 impl Tool {
@@ -58,6 +75,12 @@ impl Tool {
             "tool-warp-4" => Tool::Warp,
             "tool-node" => Tool::Node,
             "tool-pen" => Tool::Pen,
+            "tool-ellipse-select" => Tool::EllipseSelect,
+            "tool-clone" => Tool::Clone,
+            "tool-heal" => Tool::Heal,
+            "tool-smudge" => Tool::Smudge,
+            "tool-dodge" => Tool::Dodge,
+            "tool-recolor" => Tool::Recolor,
             _ => Tool::Unsupported,
         }
     }
@@ -97,6 +120,14 @@ pub struct Opts {
     pub grad_radial: bool,
     pub grad_angle: f32,
     pub grad_smart: bool,
+    /// densité / éponge : 0 densité −, 1 densité +, 2 éponge (désaturer), 3 éponge (saturer)
+    pub retouch_mode: u8,
+    /// force des outils de retouche (doigt, densité, éponge) 0..1
+    pub strength: f32,
+    /// lissage du tracé (stabilisateur, comme Photoshop) 0..1
+    pub smoothing: f32,
+    /// baguette, pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
+    pub sample_all: bool,
 }
 
 /// Réglages du dégradé d'une forme (un changement régénère le dégradé).
@@ -141,6 +172,10 @@ impl Default for Opts {
             grad_radial: false,
             grad_angle: 0.0,
             grad_smart: false,
+            retouch_mode: 0,
+            strength: 0.5,
+            smoothing: 0.0,
+            sample_all: false,
         }
     }
 }
@@ -172,6 +207,21 @@ struct Drag {
     points: Vec<(f32, f32)>,
     secondary: bool,
     mode: SelMode,
+    /// point lissé du stabilisateur (lissage du tracé)
+    smooth: (f32, f32),
+    /// dernière position réelle du pointeur, et réglages du trait quand le lissage est actif :
+    /// au relâchement, le trait est mené jusqu'au pointeur (sinon il s'arrêtait avant)
+    raw: (f32, f32),
+    catch: Option<Opts>,
+    /// zone du calque modifiée depuis l'appui (traits de pinceau et retouche)
+    damage: Option<(usize, usize, usize, usize)>,
+}
+
+fn union_rect(a: Option<(usize, usize, usize, usize)>, b: Option<(usize, usize, usize, usize)>) -> Option<(usize, usize, usize, usize)> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some((a.0.min(b.0), a.1.min(b.1), a.2.max(b.2), a.3.max(b.3))),
+        (a, b) => a.or(b),
+    }
 }
 
 /// Carte des contours du lasso magnétique : 0 = aplat (ou bruit courant), 1 = bord franc.
@@ -480,6 +530,18 @@ pub struct Session {
     /// géométrie de la dernière forme tracée (Formes, Rectangle arrondi, Ligne) : sur un calque
     /// vectoriel, elle devient un objet modifiable au lieu de pixels
     pub last_shape: Option<crate::vector::ShapeObj>,
+    /// Maj enfoncée (posée par l'interface à chaque évènement) : carré / cercle, angles par
+    /// 15°, trait droit depuis le dernier point (Maj + clic), baguette globale
+    pub shift: bool,
+    /// fin du dernier trait de pinceau (Maj + clic : trait droit jusqu'au clic)
+    pub last_end: Option<(f32, f32)>,
+    /// tampon : source choisie (Alt + clic) et décalage source − trait, gardé d'un trait à
+    /// l'autre (mode « Aligné » de Photoshop)
+    pub clone_src: Option<(f32, f32)>,
+    clone_off: Option<(f32, f32)>,
+    /// dernier trait terminé : calque d'avant (partagé avec l'historique) et zone modifiée. Sert
+    /// à n'envoyer à la carte graphique que les lignes touchées (`gpu_damage`).
+    pub last_stroke: Option<(crate::editor::Px, (usize, usize, usize, usize))>,
 }
 
 impl Session {
@@ -546,7 +608,10 @@ impl Session {
         }
         if let Some(d) = self.drag.take() {
             doc.layer_mut().px = d.base;
-            doc.sel = d.base_sel;
+            // seuls les outils de sélection et Déplacer gardent (et modifient) la sélection
+            if let Some(s) = d.base_sel {
+                doc.sel = Some(s);
+            }
         }
         if let Some(s) = self.poly_base.take() {
             doc.sel = s;
@@ -646,8 +711,15 @@ impl Session {
         Outcome::Selection
     }
 
-    fn mode(opts: &Opts, ctrl: bool, alt: bool) -> SelMode {
-        if ctrl {
+    /// Mode de combinaison d'une nouvelle sélection selon les touches : Ctrl = ajouter,
+    /// Alt = soustraire (Paint.NET) ; Maj + Alt ou Alt + clic droit = intersection
+    /// (Photoshop / Paint.NET) ; Ctrl + Alt ou Ctrl + clic droit = OU exclusif (Paint.NET).
+    fn mode(opts: &Opts, ctrl: bool, alt: bool, shift: bool, secondary: bool) -> SelMode {
+        if ctrl && (alt || secondary) {
+            SelMode::Xor
+        } else if alt && (shift || secondary) {
+            SelMode::Intersect
+        } else if ctrl {
             SelMode::Add
         } else if alt {
             SelMode::Subtract
@@ -658,9 +730,11 @@ impl Session {
 
     pub fn press(&mut self, tool: Tool, doc: &mut Doc, o: &Opts, x: f32, y: f32, secondary: bool, ctrl: bool, alt: bool) -> Outcome {
         let (w, h) = (doc.w, doc.h);
+        let shift = self.shift;
         let inside = x >= 0.0 && y >= 0.0 && (x as usize) < w && (y as usize) < h;
         let color = if secondary { o.secondary } else { o.primary };
         self.last_shape = None;
+        self.last_stroke = None;
         match tool {
             Tool::Eyedropper => {
                 if !inside {
@@ -676,15 +750,17 @@ impl Session {
                     return Outcome::Nothing;
                 }
                 let src = doc.layer().px.clone();
+                let sample = if o.sample_all { sample_image(doc) } else { src.to_vec() };
                 let mut mask = vec![0u8; w * h];
                 let clip: Option<Vec<u8>> = doc.sel.as_ref().map(|m| m.iter().map(|v| (*v > 0) as u8).collect());
                 let args = RegionArgs {
-                    src: &src,
+                    src: &sample,
                     w,
                     h,
                     sx: x as usize,
                     sy: y as usize,
-                    contiguous: o.contiguous,
+                    // Maj : remplissage global (Paint.NET)
+                    contiguous: o.contiguous && !shift,
                     rule: RULE_BUCKET,
                     tol: o.tolerance,
                     clip: clip.as_deref(),
@@ -707,7 +783,7 @@ impl Session {
                 if !inside {
                     return Outcome::Nothing;
                 }
-                let src = doc.layer().px.clone();
+                let src = if o.sample_all { sample_image(doc) } else { doc.layer().px.to_vec() };
                 let mut mask = vec![0u8; w * h];
                 let args = RegionArgs {
                     src: &src,
@@ -715,7 +791,8 @@ impl Session {
                     h,
                     sx: x as usize,
                     sy: y as usize,
-                    contiguous: o.contiguous,
+                    // Maj seule : baguette globale (Paint.NET) ; Maj + Alt : intersection
+                    contiguous: o.contiguous && !(shift && !alt),
                     rule: RULE_WAND,
                     tol: o.tolerance * 2.55,
                     clip: None,
@@ -725,7 +802,7 @@ impl Session {
                 for v in mask.iter_mut() {
                     *v = if *v > 0 { 255 } else { 0 };
                 }
-                doc.apply_selection(mask, Self::mode(o, ctrl, alt));
+                doc.apply_selection(mask, Self::mode(o, ctrl, alt, shift, secondary));
                 Outcome::Selection
             }
             Tool::PolyLasso => {
@@ -735,7 +812,7 @@ impl Session {
                         return Outcome::Nothing;
                     }
                     self.poly_base = Some(doc.sel.clone());
-                    self.poly_mode = Some(Self::mode(o, ctrl, alt));
+                    self.poly_mode = Some(Self::mode(o, ctrl, alt, shift, secondary));
                 } else {
                     // fin : clic droit, clic près du premier point, double-clic
                     let first = self.poly[0];
@@ -775,23 +852,57 @@ impl Session {
                     self.edges = Some(edge_map(doc));
                 }
                 let p = (x.clamp(0.0, w as f32), y.clamp(0.0, h as f32));
-                self.mag = Some(Magnetic { pts: vec![p], anchors: vec![0], segment: Vec::new(), drag_trace: true, pressed: true, moved: false, mode: Self::mode(o, ctrl, alt) });
+                self.mag = Some(Magnetic { pts: vec![p], anchors: vec![0], segment: Vec::new(), drag_trace: true, pressed: true, moved: false, mode: Self::mode(o, ctrl, alt, shift, secondary) });
                 Outcome::Outline(vec![p])
             }
+            Tool::Clone if alt => {
+                // Alt + clic : source du tampon ; le décalage sera pris au prochain trait
+                self.clone_src = Some((x, y));
+                self.clone_off = None;
+                Outcome::Message("Tampon : source choisie. Peignez pour la reproduire.")
+            }
+            Tool::Clone if self.clone_src.is_none() => Outcome::Message("Tampon : Alt + clic sur l'image pour choisir la source."),
             _ => {
+                if tool == Tool::Clone && self.clone_off.is_none() {
+                    let s = self.clone_src.unwrap_or((x, y));
+                    self.clone_off = Some((s.0 - x, s.1 - y));
+                }
                 let base = doc.layer().px.clone();
+                // trait : copie privée préparée au repos (l'original reste à `base` et à
+                // l'historique) ; la zone touchée est notée à la fin pour la carte graphique
+                if is_stroke(tool) {
+                    doc.adopt_spare();
+                }
+                // le masque de sélection n'est gardé que par les outils qui le modifient
+                let keeps_sel = matches!(tool, Tool::RectSelect | Tool::EllipseSelect | Tool::Lasso | Tool::Move);
+                // Maj + clic au pinceau : trait droit depuis la fin du trait précédent
+                let from = match self.last_end {
+                    Some(e) if shift && is_stroke(tool) && tool != Tool::Heal => Some(e),
+                    _ => None,
+                };
+                let start = from.unwrap_or((x, y));
                 self.drag = Some(Drag {
-                    start: (x, y),
-                    last: (x, y),
+                    start,
+                    last: start,
                     last_radius: (o.size / 2.0).max(0.5),
                     base,
-                    base_sel: doc.sel.clone(),
+                    base_sel: if keeps_sel { doc.sel.clone() } else { None },
                     cover: Cover::new(w, h),
                     seed: (x as u32).wrapping_mul(31).wrapping_add(y as u32),
                     points: vec![(x, y)],
                     secondary,
-                    mode: Self::mode(o, ctrl, alt),
+                    mode: Self::mode(o, ctrl, alt, shift, secondary),
+                    smooth: start,
+                    raw: start,
+                    catch: None,
+                    damage: None,
                 });
+                if from.is_some() {
+                    // pas de lissage sur un trait droit
+                    let mut o2 = o.clone();
+                    o2.smoothing = 0.0;
+                    return self.moved(tool, doc, &o2, x, y, false);
+                }
                 self.moved(tool, doc, o, x, y, true)
             }
         }
@@ -810,16 +921,57 @@ impl Session {
             }
             return Outcome::Nothing;
         }
+        let shift = self.shift;
+        let clone_off = self.clone_off;
         let Some(d) = self.drag.as_mut() else { return Outcome::Nothing };
         let color = if d.secondary { o.secondary } else { o.primary };
         let prev = d.last;
-        if !first && prev == (x, y) && matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser)
+        // Maj : carré / cercle, angle par pas de 15°, déplacement sur un seul axe
+        let (x, y) = if shift && !first {
+            match tool {
+                Tool::RectSelect | Tool::EllipseSelect | Tool::Shape | Tool::RoundRect => square_from(d.start, (x, y)),
+                Tool::Line | Tool::Gradient => snap_angle(d.start, (x, y), 15.0),
+                Tool::Move => {
+                    let (dx, dy) = (x - d.start.0, y - d.start.1);
+                    if dx.abs() >= dy.abs() { (x, d.start.1) } else { (d.start.0, y) }
+                }
+                _ => (x, y),
+            }
+        } else {
+            (x, y)
+        };
+        // lissage du tracé (stabilisateur « laisse ») : le pinceau suit un point qui rattrape
+        // le pointeur, d'autant plus lentement que le lissage est fort
+        d.raw = (x, y);
+        if is_stroke(tool) && o.smoothing > 0.0 && d.catch.is_none() {
+            d.catch = Some(o.clone());
+        }
+        let (x, y) = if is_stroke(tool) && o.smoothing > 0.0 && !first {
+            let k = 1.0 - 0.92 * o.smoothing.clamp(0.0, 1.0);
+            d.smooth = (d.smooth.0 + (x - d.smooth.0) * k, d.smooth.1 + (y - d.smooth.1) * k);
+            d.smooth
+        } else {
+            d.smooth = (x, y);
+            (x, y)
+        };
+        if !first && prev == (x, y) && is_stroke(tool)
             && o.brush != BrushShape::Spray && (d.last_radius - (o.size / 2.0).max(0.5)).abs() < 0.001 {
             return Outcome::Nothing;
         }
         d.last = (x, y);
         match tool {
-            Tool::Brush | Tool::Pencil | Tool::Eraser => {
+            Tool::Smudge => {
+                if first {
+                    return Outcome::Nothing;
+                }
+                let r = (o.size / 2.0).max(1.0);
+                let a = doc.active;
+                let sel = doc.sel.as_deref();
+                let dirty = smudge(&mut doc.layers[a].px, w, h, prev, (x, y), r, o.hardness, o.strength, sel);
+                d.damage = union_rect(d.damage, dirty);
+                Outcome::Redraw(dirty)
+            }
+            Tool::Brush | Tool::Pencil | Tool::Eraser | Tool::Clone | Tool::Heal | Tool::Dodge | Tool::Recolor => {
                 let r = (o.size / 2.0).max(0.5);
                 let previous_radius = d.last_radius;
                 d.last_radius = r;
@@ -840,8 +992,37 @@ impl Session {
                     }
                 }
                 let recent = d.cover.take_recent();
+                d.damage = union_rect(d.damage, recent);
                 let a = doc.active;
-                paint::apply_cover_in(&d.base, &mut doc.layers[a].px, &d.cover, recent, color, o.opacity, tool == Tool::Eraser, doc.sel.as_deref());
+                let sel = doc.sel.as_deref();
+                let out = &mut doc.layers[a].px;
+                match tool {
+                    Tool::Clone => {
+                        let off = clone_off.unwrap_or((0.0, 0.0));
+                        let (ox, oy) = (off.0.round() as isize, off.1.round() as isize);
+                        let base = &d.base;
+                        apply_cover_with(base, out, &d.cover, recent, o.opacity, sel, |x, y, _| {
+                            let (sx, sy) = (x as isize + ox, y as isize + oy);
+                            (sx >= 0 && sy >= 0 && (sx as usize) < w && (sy as usize) < h).then(|| {
+                                let j = (sy as usize * w + sx as usize) * 4;
+                                [base[j], base[j + 1], base[j + 2], base[j + 3]]
+                            })
+                        });
+                    }
+                    // correcteur : la zone peinte est montrée en rouge translucide, reconstituée au relâchement
+                    Tool::Heal => paint::apply_cover_in(&d.base, out, &d.cover, recent, [230, 40, 60, 255], 0.45, false, sel),
+                    Tool::Dodge => {
+                        let (mode, k) = (o.retouch_mode, o.strength.clamp(0.0, 1.0));
+                        apply_cover_with(&d.base, out, &d.cover, recent, 1.0, sel, |_, _, p| Some(tone_pixel(p, mode, k)));
+                    }
+                    Tool::Recolor => {
+                        // couleur secondaire → principale (l'inverse au clic droit), écarts conservés
+                        let (from, to) = if d.secondary { (o.primary, o.secondary) } else { (o.secondary, o.primary) };
+                        let tol = (o.tolerance * 2.55).max(1.0);
+                        apply_cover_with(&d.base, out, &d.cover, recent, o.opacity, sel, |_, _, p| recolor_pixel(p, from, to, tol));
+                    }
+                    _ => paint::apply_cover_in(&d.base, out, &d.cover, recent, color, o.opacity, tool == Tool::Eraser, sel),
+                }
                 Outcome::Redraw(recent)
             }
             Tool::Line | Tool::Shape | Tool::RoundRect => {
@@ -931,6 +1112,7 @@ impl Session {
                 let (x0, y0, x1, y1) = (x0 as f32, y0 as f32, x1 as f32, y1 as f32);
                 Outcome::Outline(vec![(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
             }
+            Tool::EllipseSelect => Outcome::Outline(ellipse_points(d.start, (x, y))),
             Tool::Lasso => {
                 // un point par demi-pixel parcouru suffit (le masque est calculé au relâchement)
                 if d.points.last().map_or(true, |p| (p.0 - x).hypot(p.1 - y) >= 0.5) {
@@ -991,12 +1173,53 @@ impl Session {
             }
             return Outcome::Nothing;
         }
+        // lissage : le point lissé traîne derrière le pointeur ; le trait est fini jusqu'à lui
+        let catch_up = match self.drag.as_mut() {
+            Some(d) if is_stroke(tool) => d.catch.take().filter(|_| (d.raw.0 - d.last.0).hypot(d.raw.1 - d.last.1) > 0.5).map(|o| (o, d.raw)),
+            _ => None,
+        };
+        if let Some((mut o, raw)) = catch_up {
+            o.smoothing = 0.0;
+            let _ = self.moved(tool, doc, &o, raw.0, raw.1, false);
+        }
         let Some(d) = self.drag.take() else { return Outcome::Nothing };
+        self.last_stroke = match (tool, d.damage) {
+            (Tool::Heal, _) | (_, None) => None,
+            (t, Some(r)) if is_stroke(t) => Some((d.base.clone(), r)),
+            _ => None,
+        };
         let moved = (d.last.0 - d.start.0).abs() + (d.last.1 - d.start.1).abs() > 0.5;
+        if is_stroke(tool) {
+            self.last_end = Some(d.last);
+        }
         match tool {
             Tool::Brush => Outcome::Commit("Pinceau"),
             Tool::Eraser => Outcome::Commit("Gomme"),
             Tool::Pencil => Outcome::Commit("Crayon"),
+            Tool::Clone => Outcome::Commit("Tampon de duplication"),
+            Tool::Smudge => Outcome::Commit("Doigt"),
+            Tool::Recolor => Outcome::Commit("Remplacement de couleur"),
+            Tool::Dodge => Outcome::Commit("Densité / éponge"),
+            Tool::Heal => {
+                // aperçu rouge retiré, puis reconstitution de la zone peinte
+                doc.layer_mut().px = d.base;
+                let hole = d.cover.m;
+                if hole.iter().any(|v| *v > 0) && doc.heal_area(&hole).is_some() {
+                    Outcome::Commit("Correcteur")
+                } else {
+                    Outcome::Redraw(None)
+                }
+            }
+            Tool::EllipseSelect => {
+                if !moved {
+                    let next = if d.mode == SelMode::Replace { None } else { d.base_sel };
+                    doc.sel = next;
+                } else {
+                    let pts = ellipse_points(d.start, d.last);
+                    doc.apply_selection(paint::polygon_mask(doc.w, doc.h, &pts), d.mode);
+                }
+                Outcome::Selection
+            }
             Tool::Line if moved => Outcome::Commit("Ligne"),
             Tool::Shape | Tool::RoundRect if moved => Outcome::Commit("Forme"),
             Tool::Gradient if moved => Outcome::Commit("Dégradé"),
@@ -1050,6 +1273,185 @@ fn rect_px(a: (f32, f32), b: (f32, f32), w: usize, h: usize) -> (usize, usize, u
     let (x0, y0) = (a.0.min(b.0).max(0.0) as usize, a.1.min(b.1).max(0.0) as usize);
     let (x1, y1) = ((a.0.max(b.0).max(0.0).ceil() as usize).min(w), (a.1.max(b.1).max(0.0).ceil() as usize).min(h));
     (x0.min(w), y0.min(h), x1, y1)
+}
+
+/// Point `b` ramené au carré de coin `a` (Maj : carré, cercle).
+fn square_from(a: (f32, f32), b: (f32, f32)) -> (f32, f32) {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let s = dx.abs().max(dy.abs());
+    (a.0 + s * dx.signum(), a.1 + s * dy.signum())
+}
+
+/// Point `b` ramené sur la direction la plus proche multiple de `step` degrés autour de `a`.
+fn snap_angle(a: (f32, f32), b: (f32, f32), step: f32) -> (f32, f32) {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let len = dx.hypot(dy);
+    if len < 1e-3 {
+        return b;
+    }
+    let st = step.to_radians();
+    let ang = (dy.atan2(dx) / st).round() * st;
+    (a.0 + len * ang.cos(), a.1 + len * ang.sin())
+}
+
+/// Contour d'une ellipse inscrite dans le rectangle de coins `a`, `b` (polygone assez fin pour
+/// un bord exact : un point tous les 2 px du périmètre).
+pub fn ellipse_points(a: (f32, f32), b: (f32, f32)) -> Vec<(f32, f32)> {
+    let (cx, cy) = ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0);
+    let (rx, ry) = (((b.0 - a.0) / 2.0).abs(), ((b.1 - a.1) / 2.0).abs());
+    let n = ((std::f32::consts::PI * (rx + ry)) as usize).clamp(24, 4000);
+    (0..n)
+        .map(|i| {
+            let t = i as f32 / n as f32 * std::f32::consts::TAU;
+            (cx + rx * t.cos(), cy + ry * t.sin())
+        })
+        .collect()
+}
+
+/// Image entière (calques visibles composés), pour la baguette et le pot « échantillonner
+/// l'image ».
+fn sample_image(doc: &Doc) -> Vec<u8> {
+    let (w, h) = (doc.w, doc.h);
+    let mut flat = vec![0u8; w * h * 4];
+    doc.composite_scaled(&mut flat, 1, (0, 0, w, h), false);
+    flat
+}
+
+/// Applique une couverture de pinceau dont la couleur dépend du pixel : `target(x, y, base)`
+/// donne la couleur visée (None : pixel inchangé). Mélange en couleurs prémultipliées selon la
+/// couverture, l'opacité et la sélection. Rectangle `r` seulement.
+fn apply_cover_with(base: &[u8], out: &mut [u8], cov: &Cover, r: Option<(usize, usize, usize, usize)>, opacity: f32, sel: Option<&[u8]>, target: impl Fn(usize, usize, [u8; 4]) -> Option<[u8; 4]>) {
+    let Some((x0, y0, x1, y1)) = r else { return };
+    let w = cov.w;
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let i = y * w + x;
+            let o = i * 4;
+            let b = [base[o], base[o + 1], base[o + 2], base[o + 3]];
+            let c = cov.m[i];
+            let t = if c == 0 { None } else { target(x, y, b) };
+            let Some(t) = t else {
+                out[o..o + 4].copy_from_slice(&b);
+                continue;
+            };
+            let k = c as f32 / 255.0 * opacity * sel.map_or(1.0, |m| m[i] as f32 / 255.0);
+            let (ba, ta) = (b[3] as f32 / 255.0, t[3] as f32 / 255.0);
+            let a = ba + (ta - ba) * k;
+            if a <= 0.0 {
+                out[o..o + 4].fill(0);
+                continue;
+            }
+            for ch in 0..3 {
+                let v = (b[ch] as f32 * ba * (1.0 - k) + t[ch] as f32 * ta * k) / a;
+                out[o + ch] = (v + 0.5).clamp(0.0, 255.0) as u8;
+            }
+            out[o + 3] = (a * 255.0 + 0.5) as u8;
+        }
+    }
+}
+
+/// Densité − / + (courbe gamma : les noirs et les blancs purs restent intacts, effet surtout
+/// dans les tons moyens, comme la plage « Tons moyens » de Photoshop) et éponge (saturation).
+fn tone_pixel(p: [u8; 4], mode: u8, k: f32) -> [u8; 4] {
+    let mut out = p;
+    match mode {
+        0 | 1 => {
+            let g = if mode == 0 { 1.0 / (1.0 + 1.5 * k) } else { 1.0 + 1.5 * k };
+            for ch in 0..3 {
+                out[ch] = (255.0 * (p[ch] as f32 / 255.0).powf(g) + 0.5) as u8;
+            }
+        }
+        _ => {
+            let l = 0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32;
+            let f = if mode == 2 { 1.0 - k } else { 1.0 + 1.5 * k };
+            for ch in 0..3 {
+                out[ch] = (l + (p[ch] as f32 - l) * f).round().clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+    out
+}
+
+/// Remplacement de couleur (Paint.NET) : un pixel proche de `from` (tolérance `tol`, 0..255)
+/// prend `to`, en gardant son écart à `from` (ombres et reflets conservés).
+fn recolor_pixel(p: [u8; 4], from: [u8; 4], to: [u8; 4], tol: f32) -> Option<[u8; 4]> {
+    let d = ((0..3).map(|c| (p[c] as f32 - from[c] as f32).powi(2)).sum::<f32>() / 3.0).sqrt();
+    if d > tol {
+        return None;
+    }
+    let mut out = p;
+    for c in 0..3 {
+        out[c] = (p[c] as f32 + to[c] as f32 - from[c] as f32).round().clamp(0.0, 255.0) as u8;
+    }
+    // fondu en bord de tolérance : pas de cassure nette
+    let k = (1.0 - d / tol).clamp(0.0, 1.0).min(1.0) * 2.0;
+    let k = k.min(1.0);
+    Some(std::array::from_fn(|c| if c == 3 { p[3] } else { (p[c] as f32 + (out[c] as f32 - p[c] as f32) * k).round() as u8 }))
+}
+
+/// Doigt : étire la couleur du point précédent vers le nouveau, pas à pas (un quart de rayon),
+/// en lisant l'état courant du calque (la couleur se dilue au fil du tracé). Retourne la zone
+/// modifiée.
+fn smudge(px: &mut [u8], w: usize, h: usize, a: (f32, f32), b: (f32, f32), r: f32, hardness: f32, strength: f32, sel: Option<&[u8]>) -> Option<(usize, usize, usize, usize)> {
+    let len = (b.0 - a.0).hypot(b.1 - a.1);
+    let step = (r * 0.25).max(1.0);
+    let n = (len / step).ceil().max(1.0) as usize;
+    let strength = strength.clamp(0.0, 1.0);
+    let mut dirty: Option<(usize, usize, usize, usize)> = None;
+    let mut prev = a;
+    let mut tmp: Vec<u8> = Vec::new();
+    for k in 1..=n {
+        let t = k as f32 / n as f32;
+        let p = (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t);
+        let (dx, dy) = (p.0 - prev.0, p.1 - prev.1);
+        let x0 = ((p.0 - r).floor().max(0.0) as usize).min(w);
+        let y0 = ((p.1 - r).floor().max(0.0) as usize).min(h);
+        let x1 = ((p.0 + r).ceil().max(0.0) as usize + 1).min(w);
+        let y1 = ((p.1 + r).ceil().max(0.0) as usize + 1).min(h);
+        if x1 <= x0 || y1 <= y0 {
+            prev = p;
+            continue;
+        }
+        // source : la même zone décalée vers l'arrière, lue avant d'écrire
+        let (bw, bh) = (x1 - x0, y1 - y0);
+        tmp.resize(bw * bh * 4, 0);
+        for yy in 0..bh {
+            for xx in 0..bw {
+                let sx = ((x0 + xx) as f32 - dx).round().clamp(0.0, (w - 1) as f32) as usize;
+                let sy = ((y0 + yy) as f32 - dy).round().clamp(0.0, (h - 1) as f32) as usize;
+                let s = (sy * w + sx) * 4;
+                tmp[(yy * bw + xx) * 4..(yy * bw + xx) * 4 + 4].copy_from_slice(&px[s..s + 4]);
+            }
+        }
+        let inner = r * hardness.clamp(0.0, 1.0);
+        for yy in 0..bh {
+            for xx in 0..bw {
+                let (fx, fy) = ((x0 + xx) as f32 + 0.5, (y0 + yy) as f32 + 0.5);
+                let dist = (fx - p.0).hypot(fy - p.1);
+                if dist >= r {
+                    continue;
+                }
+                let fall = if dist <= inner { 1.0 } else { 1.0 - (dist - inner) / (r - inner).max(1e-3) };
+                let i = (y0 + yy) * w + x0 + xx;
+                let kk = strength * fall * sel.map_or(1.0, |m| m[i] as f32 / 255.0);
+                if kk <= 0.0 {
+                    continue;
+                }
+                let o = i * 4;
+                let s = &tmp[(yy * bw + xx) * 4..(yy * bw + xx) * 4 + 4];
+                let (da, sa) = (px[o + 3] as f32 / 255.0, s[3] as f32 / 255.0);
+                let na = da + (sa - da) * kk;
+                for c in 0..3 {
+                    let v = if na > 0.0 { (px[o + c] as f32 * da * (1.0 - kk) + s[c] as f32 * sa * kk) / na } else { 0.0 };
+                    px[o + c] = (v + 0.5).clamp(0.0, 255.0) as u8;
+                }
+                px[o + 3] = (na * 255.0 + 0.5) as u8;
+            }
+        }
+        dirty = union(dirty, Some((x0, y0, x1, y1)));
+        prev = p;
+    }
+    dirty
 }
 
 /// Segment et ses reflets selon la symétrie X / Y, autour du centre des axes (`Doc::sym`,
@@ -1384,5 +1786,54 @@ mod tests {
         d.place_layer_content(0, 25, 25, 10, 10, &vec![255u8; 400], true);
         assert!(d.layer().off.is_some());
         assert_eq!(d.layer_content_bounds(0), Some((25, 25, 10, 10)));
+    }
+}
+
+#[cfg(test)]
+mod retouch_tests {
+    use super::*;
+
+    #[test]
+    fn ellipse_select_and_shift_square() {
+        let mut d = Doc::new(40, 40, [255, 255, 255, 255], "t");
+        let o = Opts::default();
+        let mut s = Session::default();
+        s.shift = true;
+        s.press(Tool::EllipseSelect, &mut d, &o, 5.0, 5.0, false, false, false);
+        s.moved(Tool::EllipseSelect, &mut d, &o, 35.0, 25.0, false);
+        s.release(Tool::EllipseSelect, &mut d);
+        let m = d.sel.clone().expect("sélection");
+        // Maj : cercle de 30 px (et non une ellipse 30 × 20)
+        assert_eq!(m[20 * 40 + 20], 255);
+        assert_eq!(m[32 * 40 + 20], 255, "cercle : descend jusqu'à y = 35");
+        assert_eq!(m[6 * 40 + 6], 0, "coin hors du cercle");
+    }
+
+    #[test]
+    fn clone_stamp_copies_source() {
+        let mut d = Doc::new(40, 20, [255, 255, 255, 255], "t");
+        for y in 0..20 {
+            for x in 0..10 {
+                d.layer_mut().px[(y * 40 + x) * 4..(y * 40 + x) * 4 + 4].copy_from_slice(&[255, 0, 0, 255]);
+            }
+        }
+        let mut o = Opts::default();
+        o.size = 6.0;
+        let mut s = Session::default();
+        // Alt + clic : source au milieu du rouge
+        s.press(Tool::Clone, &mut d, &o, 5.0, 10.0, false, false, true);
+        s.press(Tool::Clone, &mut d, &o, 30.0, 10.0, false, false, false);
+        s.release(Tool::Clone, &mut d);
+        assert_eq!(&d.layer().px[(10 * 40 + 30) * 4..(10 * 40 + 30) * 4 + 4], &[255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn dodge_brightens_and_keeps_extremes() {
+        let p = tone_pixel([128, 128, 128, 255], 0, 0.5);
+        assert!(p[0] > 150);
+        assert_eq!(tone_pixel([0, 0, 0, 255], 0, 1.0)[0], 0);
+        assert_eq!(tone_pixel([255, 255, 255, 255], 1, 1.0)[0], 255);
+        let g = tone_pixel([200, 100, 100, 255], 2, 1.0);
+        assert_eq!(g[0], g[1]);
     }
 }

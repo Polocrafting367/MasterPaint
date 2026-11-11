@@ -73,6 +73,26 @@ fn upload(uid: u64, slot: u32, w: usize, h: usize, data: &[u8], ch: u32) -> bool
         .unwrap_or(false)
 }
 
+/// Lignes [y0, y1) d'une texture déjà envoyée remplacées (texSubImage2D) : après un trait, seule
+/// la zone touchée repart (gpu_damage).
+fn upload_rows(uid: u64, slot: u32, w: usize, y0: usize, y1: usize, data: &[u8], ch: u32) -> bool {
+    let row = w * ch as usize;
+    if y1 <= y0 || y1 * row > data.len() {
+        return false;
+    }
+    let view = unsafe { js_sys::Uint8Array::view(&data[y0 * row..y1 * row]) };
+    call("uploadRows", &[JsValue::from_f64(uid as f64), slot.into(), (w as u32).into(), (y0 as u32).into(), ((y1 - y0) as u32).into(), view.into(), ch.into()])
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+/// Lignes à renvoyer (texture tenue : `held`, source actuelle : `now`, largeur `w`, `ch` canaux).
+fn damaged_rows(held: &Weak<Vec<u8>>, now: &Arc<Vec<u8>>, w: usize, ch: usize) -> Option<(usize, usize)> {
+    let (s, e) = crate::gpu_damage::since(held, now)?;
+    let row = w * ch;
+    Some((s / row, e.div_ceil(row)))
+}
+
 fn same(w: &Weak<Vec<u8>>, a: &Arc<Vec<u8>>) -> bool {
     std::ptr::eq(w.as_ptr(), Arc::as_ptr(a))
 }
@@ -80,6 +100,29 @@ fn same(w: &Weak<Vec<u8>>, a: &Arc<Vec<u8>>) -> bool {
 /// Compose le rectangle `r` (pixels de l'affichage au pas `ds`) comme `Doc::composite_scaled`
 /// (`checker` : sur le damier). Mêmes cas refusés que `Gpu::compose_submit`.
 pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: bool) -> Option<Vec<u8>> {
+    let (params, plan, n) = prepare(doc, ds, r, checker)?;
+    let res = call("compose", &[js_sys::Float64Array::from(&params[..]).into(), js_sys::Float64Array::from(&plan[..]).into()])?;
+    let arr = res.dyn_into::<js_sys::Uint8Array>().ok()?;
+    (arr.length() as usize == n).then(|| arr.to_vec())
+}
+
+/// Même composition, relue sans attendre la carte graphique : les calques sont envoyés et le
+/// calcul lancé tout de suite, le résultat arrive plus tard (None : refusé, à composer
+/// autrement). Les compositions suivantes passent après dans la file de la carte graphique.
+pub fn compose_async(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: bool) -> Option<impl std::future::Future<Output = Option<Vec<u8>>>> {
+    let (params, plan, n) = prepare(doc, ds, r, checker)?;
+    let res = call("composeAsync", &[js_sys::Float64Array::from(&params[..]).into(), js_sys::Float64Array::from(&plan[..]).into()])?;
+    let promise = res.dyn_into::<js_sys::Promise>().ok()?;
+    Some(async move {
+        let v = wasm_bindgen_futures::JsFuture::from(promise).await.ok()?;
+        let arr = v.dyn_into::<js_sys::Uint8Array>().ok()?;
+        (arr.length() as usize == n).then(|| arr.to_vec())
+    })
+}
+
+/// Envoie les calques manquants ou modifiés et prépare le plan de `mpGL.compose` :
+/// (paramètres, plan, taille attendue du résultat en octets).
+fn prepare(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: bool) -> Option<(Vec<f64>, Vec<f64>, usize)> {
     let (ok, max) = probe();
     let (w, h) = (doc.w, doc.h);
     let ds = ds.max(1);
@@ -96,6 +139,10 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
     let (off0, off1, ns) = if ds >= 4 { (ds / 4, ds * 3 / 4, 4) } else { (ds / 2, ds / 2, 1) };
     SENT.with(|sent| {
         let mut sent = sent.borrow_mut();
+        // erreur relevée en retard par la passerelle : ses textures sont perdues, tout est renvoyé
+        if call("takeLost", &[]).is_some_and(|v| v.is_truthy()) {
+            sent.clear();
+        }
         // textures des calques disparus libérées
         sent.retain(|uid, _| doc.layers.iter().any(|l| l.uid == *uid));
         let uids: Vec<f64> = sent.keys().map(|u| *u as f64).collect();
@@ -132,6 +179,12 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
                 (None, _) => true,
                 _ => false,
             };
+            let main_rows = if main_ok { None } else { entry.and_then(|e| damaged_rows(&e.main, &main, w, 4)) };
+            let main_ok = main_ok || main_rows.is_some_and(|(y0, y1)| upload_rows(l.uid, 0, w, y0, y1.min(h), &main, 4));
+            let aux_ok = aux_ok || match (&aux, entry.and_then(|e| e.aux.as_ref())) {
+                (Some((a, ch)), Some(old)) => damaged_rows(old, a, aw, *ch as usize).is_some_and(|(y0, y1)| upload_rows(l.uid, 1, aw, y0, y1.min(ah), a, *ch)),
+                _ => false,
+            };
             if !main_ok && !upload(l.uid, 0, w, h, &main, 4) {
                 sent.remove(&l.uid);
                 return None;
@@ -148,9 +201,7 @@ pub fn compose(doc: &Doc, ds: usize, r: (usize, usize, usize, usize), checker: b
         }
         let (rw, rh) = (x1 - x0, y1 - y0);
         let params: Vec<f64> = [w, h, ds, ns, x0, y0, rw, rh, off0, off1, checker as usize].iter().map(|v| *v as f64).collect();
-        let res = call("compose", &[js_sys::Float64Array::from(&params[..]).into(), js_sys::Float64Array::from(&plan[..]).into()])?;
-        let arr = res.dyn_into::<js_sys::Uint8Array>().ok()?;
-        (arr.length() as usize == rw * rh * 4).then(|| arr.to_vec())
+        Some((params, plan, rw * rh * 4))
     })
 }
 

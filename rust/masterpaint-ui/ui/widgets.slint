@@ -157,6 +157,8 @@ export component FlatButton inherits Rectangle {
     in property <string> tip;
     property <string> tip-text: root.tip != "" ? root.tip : Tips.desc(root.label) != "" ? Tips.desc(root.label) : root.label;
     callback clicked();
+    /// clic droit (position dans la fenêtre) : menu de réglages du bouton, s'il en a un
+    callback right-clicked(length, length);
     out property <bool> hovered: ta.has-hover;
     Timer {
         interval: 600ms;
@@ -181,6 +183,12 @@ export component FlatButton inherits Rectangle {
             Tip.shown = false;
             if (root.enabled) {
                 root.clicked();
+            }
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right && root.enabled) {
+                Tip.shown = false;
+                root.right-clicked(self.absolute-position.x + self.mouse-x, self.absolute-position.y + self.mouse-y);
             }
         }
         changed has-hover => {
@@ -429,13 +437,59 @@ export component W10CheckBox inherits Rectangle {
 }
 
 /// Liste déroulante Windows 10 (champ blanc, chevron).
+/// Petit drapeau d'une langue (0 français, 1 anglais, 2 espagnol, 3 allemand, 4 italien,
+/// 5 portugais), dessiné en aplats (pas d'émoji : la police de l'interface n'en a pas).
+export component LangFlag inherits Rectangle {
+    in property <int> lang;
+    width: 18px;
+    height: 12px;
+    clip: true;
+    border-radius: 2px;
+    if root.lang == 0 || root.lang == 4: HorizontalLayout {
+        Rectangle { background: root.lang == 0 ? #0055a4 : #009246; }
+        Rectangle { background: #ffffff; }
+        Rectangle { background: root.lang == 0 ? #ef4135 : #ce2b37; }
+    }
+    if root.lang == 5: HorizontalLayout {
+        Rectangle { horizontal-stretch: 2; background: #006600; }
+        Rectangle { horizontal-stretch: 3; background: #ff0000; }
+    }
+    if root.lang == 3: VerticalLayout {
+        Rectangle { background: #000000; }
+        Rectangle { background: #dd0000; }
+        Rectangle { background: #ffce00; }
+    }
+    if root.lang == 2: VerticalLayout {
+        Rectangle { vertical-stretch: 1; background: #aa151b; }
+        Rectangle { vertical-stretch: 2; background: #f1bf00; }
+        Rectangle { vertical-stretch: 1; background: #aa151b; }
+    }
+    // Union Jack simplifié : croix rouge sur liseré blanc
+    if root.lang == 1: Rectangle {
+        background: #012169;
+        Rectangle { x: 7px; y: 0; width: 4px; height: parent.height; background: #ffffff; }
+        Rectangle { x: 0; y: 4px; width: parent.width; height: 4px; background: #ffffff; }
+        Rectangle { x: 8px; y: 0; width: 2px; height: parent.height; background: #c8102e; }
+        Rectangle { x: 0; y: 5px; width: parent.width; height: 2px; background: #c8102e; }
+    }
+    Rectangle {
+        border-width: 1px;
+        border-color: #00000030;
+        border-radius: 2px;
+        background: transparent;
+    }
+}
+
 export component W10ComboBox inherits Rectangle {
     in property <string> tip;
     in property <[string]> model;
+    /// liste des langues : petit drapeau devant chaque nom (indice = langue)
+    in property <bool> flags;
     in-out property <int> current-index: 0;
     callback selected(int);
     height: 22px;
-    border-radius: Theme.ctl-radius;
+    // même arrondi que sa liste déroulante (le champ paraissait plus carré que la liste)
+    border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
     background: Theme.field-bg;
     border-width: Theme.win98 ? 0px : 1px;
     border-color: (Theme.hover-fx && ta.has-hover) ? Theme.accent : Theme.field-border;
@@ -453,9 +507,14 @@ export component W10ComboBox inherits Rectangle {
             sunken: ta.pressed;
         }
     }
-    Text {
+    if root.flags: LangFlag {
         x: 7px;
-        width: parent.width - 26px;
+        y: (parent.height - self.height) / 2;
+        lang: root.current-index;
+    }
+    Text {
+        x: root.flags ? 31px : 7px;
+        width: parent.width - (root.flags ? 50px : 26px);
         height: parent.height;
         text: root.model[root.current-index];
         font-size: Theme.font-size;
@@ -476,6 +535,8 @@ export component W10ComboBox inherits Rectangle {
         }
     }
     popup := PopupWindow {
+        // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+        TouchArea { }
         x: 0;
         y: root.height;
         width: root.width;
@@ -493,9 +554,14 @@ export component W10ComboBox inherits Rectangle {
                     height: 22px;
                     border-radius: Theme.ctl-radius;
                     background: (Theme.hover-fx && ita.has-hover) ? Theme.accent-14 : i == root.current-index ? Theme.accent-12 : transparent;
-                    Text {
+                    if root.flags: LangFlag {
                         x: 6px;
-                        width: parent.width - 12px;
+                        y: (parent.height - self.height) / 2;
+                        lang: i;
+                    }
+                    Text {
+                        x: root.flags ? 30px : 6px;
+                        width: parent.width - (root.flags ? 36px : 12px);
                         height: parent.height;
                         text: item;
                         font-size: Theme.font-size;
@@ -607,10 +673,13 @@ export component FloatWindow inherits Rectangle {
     /// de la barre de titre, bouton « Fermer » en bas si `sheet-footer`)
     in property <bool> sheet;
     in property <bool> sheet-footer: true;
-    property <length> head-h: root.sheet ? 18px : Theme.title-height;
+    /// mode téléphone : jamais de barre de titre de bureau (croix rouge carrée) ; en-tête de page
+    /// mobile (titre centré, bouton fermer rond, poignée si panneau du bas)
+    property <bool> mob: PhoneDock.on && !root.sheet;
+    property <length> head-h: root.sheet ? 18px : root.mob ? (root.docked ? 46px : 50px) : Theme.title-height;
     property <length> foot-h: root.sheet && root.sheet-footer ? 50px : 0px;
     /// hauteur de la zone de contenu (sous la barre de titre) : à utiliser pour ancrer en bas
-    out property <length> content-height: root.height - root.head-h - root.foot-h - (root.sheet || root.docked || Theme.win98 ? 0px : 1px);
+    out property <length> content-height: root.height - root.head-h - root.foot-h - (root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 1px);
     in property <length> min-window-height: 100px;
     /// position la plus haute (négative : la fenêtre peut monter sur le ruban et les menus)
     in property <length> min-y: 0px;
@@ -687,15 +756,15 @@ export component FloatWindow inherits Rectangle {
         }
     }
     callback close();
-    property <bool> glass: Theme.title-transparent && !Theme.win98 && !root.sheet && !root.docked;
+    property <bool> glass: Theme.title-transparent && !Theme.win98 && !root.sheet && !root.mob && !root.docked;
     // barre de titre translucide : le fond de la fenêtre ne commence que sous elle
-    background: root.sheet ? Theme.mob-surface : root.glass ? transparent : Theme.window-bg;
-    border-radius: root.sheet ? 16px : root.docked ? 0px : Theme.window-radius;
-    border-width: Theme.win98 || root.sheet ? 0px : 1px;
+    background: root.sheet || root.mob ? Theme.mob-surface : root.glass ? transparent : Theme.window-bg;
+    border-radius: root.sheet || (root.mob && !root.docked) ? 16px : root.docked ? 0px : Theme.window-radius;
+    border-width: Theme.win98 || root.sheet || root.mob ? 0px : 1px;
     border-color: Theme.window-border;
-    drop-shadow-blur: root.sheet ? 14px : Theme.win98 || root.docked ? 0px : 10px;
-    drop-shadow-offset-y: root.sheet ? -2px : 2px;
-    drop-shadow-color: Theme.shadows ? (root.sheet ? #0000002e : Theme.window-shadow) : transparent;
+    drop-shadow-blur: root.sheet || (root.mob && !root.docked) ? 14px : Theme.win98 || root.docked ? 0px : 10px;
+    drop-shadow-offset-y: root.sheet || root.mob ? -2px : 2px;
+    drop-shadow-color: Theme.shadows ? (root.sheet || root.mob ? #0000002e : Theme.window-shadow) : transparent;
     // sans évènements de fenêtre (Android natif) : un clic sur le fond la ramène quand même devant
     TouchArea {
         pointer-event(e) => {
@@ -704,7 +773,7 @@ export component FloatWindow inherits Rectangle {
             }
         }
     }
-    if Theme.win98 && !root.sheet: Bevel { }
+    if Theme.win98 && !root.sheet && !root.mob: Bevel { }
     // barre de titre translucide : le corps et la barre restent à l'intérieur du liseré de 1 px
     // (avant, le corps le recouvrait sur les côtés et pas la barre : décalage visible)
     if root.glass: Rectangle {
@@ -723,7 +792,55 @@ export component FloatWindow inherits Rectangle {
         border-radius: 2.5px * Theme.round;
         background: Theme.mob-muted.with-alpha(0.45);
     }
-    if !root.sheet: Rectangle {
+    // téléphone : en-tête de page mobile
+    if root.mob: Rectangle {
+        y: 0;
+        height: root.head-h;
+        if !root.docked: Rectangle {
+            y: 6px;
+            width: 36px;
+            height: 5px;
+            border-radius: 2.5px * Theme.round;
+            background: Theme.mob-muted.with-alpha(0.45);
+        }
+        Text {
+            x: 52px;
+            y: root.docked ? 0px : 8px;
+            width: max(0px, parent.width - 104px);
+            height: parent.height - self.y;
+            text: root.title;
+            font-size: 16px;
+            font-weight: 700;
+            color: Theme.mob-text;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        if root.closable: Rectangle {
+            x: parent.width - 42px;
+            y: (root.docked ? 0px : 8px) + (parent.height - (root.docked ? 0px : 8px) - self.height) / 2;
+            width: 30px;
+            height: 30px;
+            border-radius: 15px * Theme.round;
+            background: mcta.pressed ? Theme.mob-accent-pill : Theme.mob-surface-deep;
+            FaIcon {
+                glyph: "\u{f00d}";
+                size: 12px;
+                color: Theme.mob-text;
+            }
+            mcta := TouchArea {
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.mob-divider;
+        }
+    }
+    if !root.sheet && !root.mob: Rectangle {
         x: Theme.win98 ? 3px : root.docked ? 0px : 1px;
         y: Theme.win98 ? 3px : root.docked ? 0px : 1px;
         width: parent.width - (Theme.win98 ? 6px : root.docked ? 0px : 2px);
@@ -846,6 +963,7 @@ export component FloatWindow inherits Rectangle {
                 size: 10px;
                 color: (Theme.hover-fx && gcta.has-hover) ? Theme.accent : Theme.text-inactive;
             }
+            HoverTip { y: parent.height; hovered: gcta.has-hover; text: @tr("Fermer"); }
             gcta := TouchArea {
                 clicked => {
                     root.close();
@@ -860,12 +978,12 @@ export component FloatWindow inherits Rectangle {
         }
     }
     Rectangle {
-        x: root.sheet || root.docked || Theme.win98 ? 0px : 1px;
+        x: root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 1px;
         y: root.head-h;
-        width: root.width - (root.sheet || root.docked || Theme.win98 ? 0px : 2px);
+        width: root.width - (root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 2px);
         height: root.content-height;
-        border-bottom-left-radius: root.sheet || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
-        border-bottom-right-radius: root.sheet || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
+        border-bottom-left-radius: root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
+        border-bottom-right-radius: root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
         clip: true;
         @children
     }
@@ -1090,10 +1208,14 @@ export global Workspace {
     in-out property <int> reset;
 }
 
+/// Ruban adaptatif (comme Office) : palier choisi selon la largeur disponible (AppWindow.rib-step).
+/// 0 : tout déplié, libellés en plus (Intersection / OU exclusif, Affichage) ; 1 à 3 : ces
+/// libellés puis ceux de Copier / Coller disparaissent ; 4 : plus aucun libellé, jauges
+/// raccourcies ; 5 à 11 : les groupes se replient en menus, du moins utile au plus utile
+/// (Alignement, Affichage, Image, Symétrie, Édition, Pinceau, Sélection). Au-delà : défilement.
 export global RibbonFit {
-    in-out property <bool> tight;
-    /// encore plus étroit (ou téléphone) : les capsules secondaires disparaissent
-    in-out property <bool> narrow;
+    in-out property <int> level;
+    out property <bool> tight: level >= 4;
 }
 
 /// Jauge du ruban MasterPaint : « Libellé  −  [barre remplie   valeur]  + ».
@@ -1446,8 +1568,15 @@ export component ToggleButton inherits Rectangle {
 export component RibbonGroup inherits Rectangle {
     in property <string> label;
     in property <bool> classic;
-    // Photoshop (PhotoCraft) : barre d'options sans titres de groupes
-    property <bool> show-label-c: root.classic && Theme.reference-style != 3;
+    /// barre classique : « Libellé : » devant le contenu (non quand le contenu se nomme déjà,
+    /// « Lissage : Lissage » ; ni dans un groupe replié, où le bouton porte le nom)
+    in property <bool> titled: true;
+    /// sans séparateur (contenu d'un groupe replié)
+    in property <bool> bare: false;
+    // barre réduite (Paint.NET, ruban replié, Photoshop) : pas de titres de groupes, ils
+    // doublaient les libellés des réglages (« Lissage : Lissage ») ; infobulles et libellés
+    // des boutons suffisent
+    property <bool> show-label-c: false && root.titled;
     min-width: classic ? (self.show-label-c ? lbl-c.preferred-width + 4px : 0px) + inner.preferred-width + 12px : max(inner.preferred-width, lbl.preferred-width) + 16px;
     height: classic ? 32px : 88px;
     lbl-c := Text {
@@ -1475,7 +1604,7 @@ export component RibbonGroup inherits Rectangle {
         color: Theme.ribbon-label;
         horizontal-alignment: center;
     }
-    Rectangle {
+    if !root.bare: Rectangle {
         x: parent.width - 1px;
         y: 6px;
         width: 1px;
@@ -1489,6 +1618,8 @@ export component RibbonGroup inherits Rectangle {
 export component Segmented inherits Rectangle {
     in property <string> tip;
     in property <[string]> options;
+    // sans largeur imposée : assez pour des libellés courts
+    min-width: root.options.length * 52px;
     in-out property <int> index;
     callback selected(int);
     height: 30px;
@@ -1499,8 +1630,13 @@ export component Segmented inherits Rectangle {
     HorizontalLayout {
         padding: Theme.win98 ? 0px : 2px;
         spacing: Theme.win98 ? 0px : 2px;
+        // cases égales (largeur ÷ nombre d'options) : ni largeur préférée ni minimum par case,
+        // la place se partage à parts égales (un minimum par case, la largeur de son texte,
+        // était servi d'abord et rendait les cases inégales)
         for o[i] in root.options: Rectangle {
             horizontal-stretch: 1;
+            preferred-width: 0px;
+            min-width: 0px;
             border-radius: Theme.ctl-radius;
             background: Theme.win98 ? (i == root.index ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg)
                 : i == root.index ? Theme.field-bg : (Theme.hover-fx && sta.has-hover) ? Theme.accent-12 : transparent;
@@ -1519,7 +1655,7 @@ export component Segmented inherits Rectangle {
                 border-radius: 1.5px * Theme.round;
                 background: Theme.accent;
             }
-            Text {
+            seg-t := Text {
                 width: parent.width;
                 height: parent.height;
                 font-size: Theme.font-size;

@@ -1,0 +1,5 @@
+<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}">
+  <ellipse cx="8" cy="8" rx="6.4" ry="4.9" fill="{ACCENT}" fill-opacity=".22" stroke="{STROKE}"
+           stroke-width="1.2" stroke-dasharray="2.1 1.5"/>
+</svg>

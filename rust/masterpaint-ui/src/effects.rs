@@ -605,6 +605,47 @@ const GALLERY: &[Field] = &[Field {
         ("sunkissed", "Soleil Doré"),
         ("high_key", "High Key (Lumineux)"),
         ("cinematic_mood", "Ambiance Cinéma Subtile"),
+        ("lc-warm-glow", "LightCraft · Lueur chaude"),
+        ("lc-cool-morning", "LightCraft · Matin frais"),
+        ("lc-teal-orange", "LightCraft · Bleu canard et orange"),
+        ("lc-vivid-pop", "LightCraft · Couleurs vives"),
+        ("lc-soft-pastel", "LightCraft · Pastel doux"),
+        ("lc-faded-matte", "LightCraft · Mat délavé"),
+        ("lc-warm-film", "LightCraft · Pellicule chaude"),
+        ("lc-muted-film", "LightCraft · Pellicule sourde"),
+        ("lc-bw-high-contrast", "LightCraft · N&B très contrasté"),
+        ("lc-bw-soft", "LightCraft · N&B doux"),
+        ("lc-bw-selenium", "LightCraft · Virage sélénium"),
+        ("lc-crisp-landscape", "LightCraft · Paysage net"),
+        ("lc-golden-hour", "LightCraft · Heure dorée"),
+        ("lc-blue-hour", "LightCraft · Heure bleue"),
+        ("lc-soft-skin", "LightCraft · Peau douce"),
+        ("lc-bright-airy", "LightCraft · Clair et aérien"),
+        ("lc-moody", "LightCraft · Ambiance sombre"),
+        ("lc-cinematic", "LightCraft · Cinéma"),
+        ("lc-moody-portrait", "LightCraft · Portrait sombre"),
+        ("lc-golden-glow", "LightCraft · Éclat doré"),
+        ("lc-clean-studio", "LightCraft · Studio net"),
+        ("lc-crisp-vista", "LightCraft · Panorama net"),
+        ("lc-deep-sky", "LightCraft · Ciel profond"),
+        ("lc-lush-greens", "LightCraft · Verts luxuriants"),
+        ("lc-desert-warmth", "LightCraft · Chaleur du désert"),
+        ("lc-misty-morning", "LightCraft · Matin brumeux"),
+        ("lc-gritty-street", "LightCraft · Rue granuleuse"),
+        ("lc-neon-night", "LightCraft · Nuit néon"),
+        ("lc-concrete-cool", "LightCraft · Béton froid"),
+        ("lc-faded-urban", "LightCraft · Ville délavée"),
+        ("lc-fresh-bright", "LightCraft · Frais et lumineux"),
+        ("lc-warm-table", "LightCraft · Table chaleureuse"),
+        ("lc-dark-moody-food", "LightCraft · Sombre et feutré"),
+        ("lc-autumn-gold", "LightCraft · Or d'automne"),
+        ("lc-winter-blue", "LightCraft · Bleu d'hiver"),
+        ("lc-spring-fresh", "LightCraft · Fraîcheur printanière"),
+        ("lc-summer-haze", "LightCraft · Brume d'été"),
+        ("lc-instant-70s", "LightCraft · Instant ’70s"),
+        ("lc-cross-process", "LightCraft · Cross Process"),
+        ("lc-bleach-bypass", "LightCraft · Bleach Bypass"),
+        ("lc-bw-sepia", "LightCraft · Sepia Tone"),
     ],
 }];
 
@@ -1244,7 +1285,8 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
             }
             id => {
                 name = "cameraraw";
-                crate::gallery_gen::PRESETS.iter().find(|p| p.0 == id)?.2.to_vec()
+                crate::gallery_gen::PRESETS.iter().find(|p| p.0 == id).map(|p| p.2.to_vec())
+                    .or_else(|| crate::lightcraft_looks_gen::LOOKS.iter().find(|p| p.0 == id).map(|p| p.3.to_vec()))?
             }
         },
         "cameraraw" => {

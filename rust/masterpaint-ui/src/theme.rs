@@ -605,6 +605,8 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_statusbar_border(border);
         t.set_ribbon_sep(border);
     }
+    // fond de la zone de travail et damier par défaut : ceux du thème
+    crate::appearance::follow_theme(app, dark);
 }
 
 #[cfg(test)]

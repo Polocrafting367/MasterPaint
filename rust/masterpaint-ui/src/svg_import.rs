@@ -386,8 +386,8 @@ fn faded(c: [u8; 4], a: f32) -> [u8; 4] {
     [c[0], c[1], c[2], (c[3] as f32 * a.clamp(0.0, 1.0)).round() as u8]
 }
 
-/// Objets d'une forme SVG : un seul (remplissage et / ou trait de même couleur) ou deux
-/// (remplissage puis contour, quand leurs couleurs diffèrent : un objet n'a qu'une couleur).
+/// Objets d'une forme SVG : un seul objet, remplissage (`fill`) et contour (couleur de l'objet)
+/// compris, même de couleurs différentes.
 fn shapes(tag: &Tag, p: &Pres, grads: &std::collections::HashMap<String, GradDef>) -> Vec<ShapeObj> {
     let sw = p.width * p.scale();
     let fill = p.fill.map(|c| faded(c, p.opacity * p.fill_opacity)).filter(|c| c[3] > 0);
@@ -440,7 +440,13 @@ fn shapes(tag: &Tag, p: &Pres, grads: &std::collections::HashMap<String, GradDef
         let grad = gdef.map(|g| Box::new(g.resolve(p, user)));
         let mut out = match (fill, stroke) {
             (Some(f), Some(s)) if f == s && grad.is_none() => vec![obj(kind, a, b, ShapeStyle::Both, f, points)],
-            (Some(f), Some(s)) => vec![obj(kind, a, b, ShapeStyle::Fill, f, points.clone()), obj(kind, a, b, ShapeStyle::Outline, s, points)],
+            // remplissage et contour de couleurs différentes : un seul objet (contour = couleur de
+            // l'objet, intérieur = `fill`), comme Illustrator / VectorCraft
+            (Some(f), Some(s)) => {
+                let mut o = obj(kind, a, b, ShapeStyle::Both, s, points);
+                o.fill = Some(f);
+                vec![o]
+            }
             (Some(f), None) => vec![obj(kind, a, b, ShapeStyle::Fill, f, points)],
             (None, Some(s)) => vec![obj(kind, a, b, ShapeStyle::Outline, s, points)],
             (None, None) => Vec::new(),
@@ -915,9 +921,45 @@ pub fn import(name: &str, bytes: &[u8]) -> Result<crate::illu::Loaded, String> {
     import_with(name, bytes, SvgMode::Single)
 }
 
+/// SVG normalisé par usvg (comme VectorCraft, `crates/svg/src/import.rs`) : feuilles de style
+/// CSS appliquées (SVG d'Illustrator, d'Inkscape, de Figma : couleurs en classes), `<use>` et
+/// symboles développés, unités résolues, texte converti en courbes (police Selawik en repli),
+/// `switch` résolu. Le résultat ne contient plus que des groupes, des chemins et des dégradés,
+/// que l'importeur ci-dessous reprend tels quels. None : fichier que usvg refuse.
+fn normalize(bytes: &[u8]) -> Option<String> {
+    let mut db = usvg::fontdb::Database::new();
+    db.load_font_data(include_bytes!("../fonts/selawk.ttf").to_vec());
+    db.load_font_data(include_bytes!("../fonts/selawkb.ttf").to_vec());
+    for set in [usvg::fontdb::Database::set_sans_serif_family, usvg::fontdb::Database::set_serif_family, usvg::fontdb::Database::set_monospace_family, usvg::fontdb::Database::set_cursive_family, usvg::fontdb::Database::set_fantasy_family] {
+        set(&mut db, "Selawik");
+    }
+    let opt = usvg::Options { font_family: "Selawik".into(), fontdb: std::sync::Arc::new(db), ..usvg::Options::default() };
+    let tree = usvg::Tree::from_data(bytes, &opt).ok()?;
+    let w = usvg::WriteOptions { indent: usvg::Indent::None, ..usvg::WriteOptions::default() };
+    Some(tree.to_string(&w))
+}
+
 /// Lit un fichier SVG : un document (nouvel onglet) avec un calque vectoriel. Les éléments
-/// non repris sont comptés dans `skipped`.
+/// non repris sont comptés dans `skipped`. Un fichier à feuille de style, `<use>` ou texte passe
+/// d'abord par usvg (`normalize`), sauf une grille d'icônes (symboles posés chacun dans sa case).
 pub fn import_with(name: &str, bytes: &[u8], mode: SvgMode) -> Result<crate::illu::Loaded, String> {
+    let text = String::from_utf8_lossy(bytes);
+    let sprite = mode == SvgMode::Sprite && text.contains("<symbol");
+    // seulement ce que l'importeur simple ne sait pas lire : les formes simples restent des
+    // rectangles / ellipses modifiables (usvg en ferait des chemins)
+    let needs = ["<style", "class=", "<use", "<text", "<symbol", "<switch", "<textPath"].iter().any(|k| text.contains(k));
+    if needs && !sprite {
+        if let Some(n) = normalize(bytes) {
+            if let Ok(done) = import_raw(name, n.as_bytes(), mode) {
+                return Ok(done);
+            }
+        }
+    }
+    import_raw(name, bytes, mode)
+}
+
+/// Importeur des éléments SVG simples (formes, chemins, groupes, dégradés, transformations).
+fn import_raw(name: &str, bytes: &[u8], mode: SvgMode) -> Result<crate::illu::Loaded, String> {
     let src = String::from_utf8_lossy(bytes);
     let all = tags(&src);
     if !all.iter().any(|t| t.name == "svg" && !t.close) {
@@ -1200,5 +1242,27 @@ mod tests {
         assert_eq!(s.style, ShapeStyle::Both);
         assert_eq!(s.fill, Some([255, 0, 0, 255]));
         assert_eq!(d.layers.iter().filter(|l| l.vector.is_none()).count(), 0, "aucun calque de pixels");
+    }
+}
+
+#[cfg(test)]
+mod usvg_tests {
+    use super::*;
+    use crate::vector::Obj;
+
+    /// SVG exporté par Illustrator : couleurs dans une feuille de style (classes), `<use>`.
+    #[test]
+    fn illustrator_css_classes_and_use() {
+        let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="100" height="100">
+  <defs><style>.cls-1{fill:#ff0000;}.cls-2{fill:none;stroke:#0000ff;stroke-width:4px;}</style>
+  <path id="p" class="cls-1" d="M10 10 H40 V40 H10 Z"/></defs>
+  <use xlink:href="#p"/>
+  <circle class="cls-2" cx="70" cy="70" r="20"/>
+</svg>"##;
+        let l = import("ai.svg", svg).unwrap();
+        let v = l.docs[0].layers.iter().find_map(|l| l.vector.as_deref()).expect("calque vectoriel");
+        let shapes: Vec<_> = v.objects.iter().filter_map(|o| if let Obj::Shape(s) = o { Some(s) } else { None }).collect();
+        assert!(shapes.iter().any(|s| s.color[..3] == [255, 0, 0] || s.fill.is_some_and(|f| f[..3] == [255, 0, 0])), "rouge de la classe .cls-1 (via <use>)");
+        assert!(shapes.iter().any(|s| s.style == ShapeStyle::Outline && s.color[..3] == [0, 0, 255]), "contour bleu de .cls-2");
     }
 }

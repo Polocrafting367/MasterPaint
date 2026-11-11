@@ -29,6 +29,7 @@ PDN = {
     'sel-invert': 'menu_edit_invert_selection_icon',
     'sel-new': 'enum_selection_combine_mode_replace', 'sel-add': 'enum_selection_combine_mode_union',
     'sel-sub': 'enum_selection_combine_mode_exclude',
+    'sel-intersect': 'enum_selection_combine_mode_intersect', 'sel-xor': 'enum_selection_combine_mode_xor',
     'lasso': 'lasso_select_tool_icon', 'tool-poly-lasso': 'lasso_select_tool_icon', 'lasso-poly': 'lasso_select_tool_icon',
     'wand': 'magic_wand_tool_icon', 'tool-wand': 'magic_wand_tool_icon', 'wand-magic': 'magic_wand_tool_icon', 'wand-magic-sparkles': 'magic_wand_tool_icon',
     'move': 'move_tool_icon', 'up-down-left-right': 'move_tool_icon', 'arrows': 'move_tool_icon',
@@ -41,10 +42,11 @@ PDN = {
     'gradient': 'gradient_tool_icon', 'tool-gradient': 'gradient_tool_icon',
     'bucket': 'paint_bucket_icon', 'tool-bucket': 'paint_bucket_icon', 'fill': 'paint_bucket_icon', 'fill-drip': 'paint_bucket_icon',
     'eraser': 'eraser_tool_icon', 'tool-eraser': 'eraser_tool_icon',
+    'tool-ellipse-select': 'ellipse_select_tool_icon', 'tool-clone': 'clone_stamp_tool_icon', 'tool-recolor': 'recoloring_tool_icon',
     'text': 'text_tool_icon', 'tool-text': 'text_tool_icon', 'font': 'text_tool_icon', 'vec-text': 'text_tool_icon',
     'shapes': 'shapes_tool_icon', 'tool-shapes-family': 'shapes_tool_icon', 'vec-shape': 'shapes_tool_icon', 'triangle-circle-square': 'shapes_tool_icon',
     'roundrect': 'shapes_tool_icon_16', 'tool-round-3': 'shapes_tool_icon_16',
-    'line': 'line_tool_icon', 'zoom': 'zoom_tool_icon', 'search': 'zoom_tool_icon',
+    'line': 'line_tool_icon', 'zoom': 'zoom_tool_icon', 'search': 'zoom_tool_icon', 'hand': 'pan_tool_icon',
     'stamp': 'clone_stamp_tool_icon',
     'shape-both': 'enum_shape_draw_type_both_dark', 'shape-fill': 'enum_shape_draw_type_interior', 'fill-solid': 'enum_shape_draw_type_interior',
     'shape-stroke': 'enum_shape_draw_type_outline_dark',
@@ -158,6 +160,9 @@ PHOTO = {
     'eyedropper': 'pipette', 'tool-eyedropper': 'pipette', 'brush': 'brush', 'tool-brush': 'brush', 'paintbrush': 'brush', 'brush-round': 'brush',
     'pencil': 'pencil', 'tool-pencil': 'pencil', 'pen-nib': 'pen-tool', 'pen-fancy': 'pen-tool', 'bezier-curve': 'pen-curvature',
     'gradient': 'gradient', 'tool-gradient': 'gradient', 'bucket': 'paint-bucket', 'tool-bucket': 'paint-bucket', 'fill': 'paint-bucket', 'fill-drip': 'paint-bucket',
+    'tool-ellipse-select': 'ellipse-dashed', 'tool-clone': 'stamp', 'tool-heal': 'bandage', 'tool-smudge': 'pointer',
+    'tool-dodge': 'lollipop', 'tool-recolor': 'brush-replace',
+    'sel-intersect': 'path-op-intersect', 'sel-xor': 'path-op-exclude',
     'eraser': 'eraser', 'tool-eraser': 'eraser', 'text': 'type', 'tool-text': 'type', 'font': 'type', 'vec-text': 'type',
     'shapes': 'rectangle-horizontal', 'tool-shapes-family': 'rectangle-horizontal', 'vec-shape': 'pentagon',
     'roundrect': 'rectangle-horizontal', 'tool-round-3': 'rectangle-horizontal', 'shape-round': 'rectangle-horizontal',
@@ -201,5 +206,25 @@ PHOTO = {
     'curves': 'spline', 'temperature': 'flame', 'thermometer-half': 'flame', 'auto-level': 'sparkles', 'vibrance': 'sparkles',
     'clouds': 'cloud', 'cloud': 'cloud', 'red-eye': 'eye', 'glow': 'sun', 'vignette': 'circle-dashed', 'edge-fade': 'circle-dashed',
     'radial': 'circle-dot', 'twist': 'lollipop', 'polar': 'lollipop', 'sharpen': 'triangle', 'feather': 'ellipse-dashed',
-    'chroma-key': 'eraser-magic',
+    'chroma-key': 'eraser-magic', 'gaussian': 'droplet',
+}
+
+
+# VectorCraft (assets/icons/*.svg, Lucide + icônes « dc- » d'Illustrator) : complète le pack
+# PhotoCraft (même famille ArtCraft, même trait) AVANT les icônes dessinées pour MasterPaint.
+VECTOR = {
+    'save': 'save', 'print': 'printer', 'paste': 'clipboard-paste', 'external': 'external-link',
+    'export': 'share-2', 'changelog': 'history', 'repeat': 'history', 'zoom-out': 'dc-zoom-small',
+    'book': 'library', 'gallery': 'dc-graphic-styles', 'transparency': 'dc-transparency',
+    'crystal': 'dc-crystallize', 'cube': 'dc-cube', 'wave': 'waves', 'bulge': 'dc-bloat', 'dents': 'dc-wrinkle',
+    'turbulence': 'tornado', 'tile': 'layout-grid', 'checker': 'grid-3x3', 'contour': 'dc-contour',
+    'outline': 'dc-stroke', 'brush-spray': 'spray-can', 'grad-linear': 'dc-grad-linear', 'grad-conic': 'dc-grad-radial',
+    'shape-hexagon': 'hexagon', 'cap-round': 'dc-cap-round', 'cap-none': 'dc-cap-butt',
+    'fill-none': 'dc-fill-none', 'grad-radial': 'dc-grad-radial', 'fill-gradient': 'dc-gradient',
+    'shape-both': 'dc-new-fill', 'outside-canvas': 'dc-artboards', 'layer-buffer': 'dc-artboard-options',
+    'shadows': 'dc-draw-behind', 'shadow': 'dc-draw-behind', 'quantize': 'dc-swatch-kinds',
+    'mirror': 'dc-mirror-cut', 'flare': 'dc-flare', 'measure': 'dc-measure',
+    'levels': 'chart-column', 'pixelate': 'dc-rect-grid', 'denoise': 'dc-smooth', 'github': 'git-branch',
+    'signature': 'pen-tool', 'cap-arrow': 'dc-arrow-tip', 'cap-arrow-hollow': 'dc-arrow-tip', 'anim-onion': 'blend',
+    'chromatic': 'dc-gamut',
 }

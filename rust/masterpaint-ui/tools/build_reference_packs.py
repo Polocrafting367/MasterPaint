@@ -21,7 +21,8 @@ for _,n,s in fa:(mp_source/(n+'.svg')).write_text('<!-- MasterPaint © 2026 polo
 (root/'rust/masterpaint-ui/src/fa_svg_gen.rs').write_text('// MasterPaint — © polocrafting. SVG visibles dans icon-packs/masterpaint/source/fontawesome/.\npub const FA_SVG: &[(&str, &str)] = &[\n'+''.join(f'    ({json.dumps(n)}, include_str!("../icon-packs/masterpaint/source/fontawesome/{n}.svg")),\n' for _,n,_ in fa)+'];\n')
 (root/'rust/masterpaint-ui/ui/pack-icons.slint').write_text('export global PackIcons {\n in property <[image]> images;\n public pure function index(g: string) -> int { return '+''.join(('' if i==0 else ': ')+f'g == "\\u{{{cp}}}" ? {i} ' for i,(cp,_,_) in enumerate(fa))+': -1; }\n}\n')
 import sys; sys.path.insert(0,str(Path(__file__).resolve().parent))
-from pack_mappings import PDN as pdn, PHOTO as photo
+from pack_mappings import PDN as pdn, PHOTO as photo, VECTOR as vector
+vector_src=root.parent/'masterpaint-inspiration/vectorcraft-main'
 from gen_custom_pack_icons import CUSTOM_ALIAS
 # Also match generated MasterPaint names to upstream names where unambiguous.
 mpnames=re.findall(r'^    \("([^"]+)"',(root/'rust/masterpaint-ui/src/mpicons_gen.rs').read_text(),re.M)
@@ -32,6 +33,11 @@ for kind,src,mapping,ext in [('paintdotjs',root.parent/'masterpaint-inspiration/
  folder=dest/kind;folder.mkdir(exist_ok=True)
  for file in (['LICENSE.md','NOTICE.md'] if kind=='paintdotjs' else ['LICENSE-MIT','LICENSE-APACHE','NOTICE','ATTRIBUTION.md']):shutil.copy(src/file,folder/file)
  for f in (src/'assets/icons').glob('LICENSE*'):shutil.copy(f,folder/f.name)
+ if kind=='photocraft':
+  vlic=folder/'vectorcraft';vlic.mkdir(exist_ok=True)
+  for f in ['LICENSE-MIT','LICENSE-APACHE','NOTICE','ATTRIBUTION.md']:
+   if (vector_src/f).exists():shutil.copy(vector_src/f,vlic/f)
+  for f in (vector_src/'assets/icons').glob('LICENSE*'):shutil.copy(f,vlic/f.name)
  source_dir=folder/'source';source_dir.mkdir(exist_ok=True)
  for original in sorted((src/'assets/icons').glob('*')):
   if original.is_file() and original.suffix.lower() in {'.png','.svg'}:
@@ -42,6 +48,16 @@ for kind,src,mapping,ext in [('paintdotjs',root.parent/'masterpaint-inspiration/
   # correspondance écrite à la main d'abord, puis nom identique (PhotoCraft : noms Lucide)
   stem=mapping.get(n) or mapping.get(n.removeprefix('tool-')) or n
   file=src/'assets/icons'/f'{stem}.{ext}'
+  if not file.exists() and kind=='photocraft':
+   # même famille ArtCraft : icône de VectorCraft (copiée dans photocraft/vectorcraft/)
+   vstem=vector.get(n) or vector.get(n.removeprefix('tool-')) or vector.get(n.split('/')[-1]) or n
+   vf=vector_src/'assets/icons'/f'{vstem}.svg'
+   if vf.exists():
+    vdir=folder/'vectorcraft';vdir.mkdir(exist_ok=True)
+    shutil.copy2(vf,vdir/vf.name)
+    asset_map.setdefault(f'assets/vectorcraft/{vf.name}',[]).append(key)
+    reference_rows.append(('vectorcraft',vf.name,key))
+    return vf.read_text().replace('currentColor','{STROKE}')
   if not file.exists():
    # rien dans le projet de référence : icône dessinée pour MasterPaint (custom/, à part)
    for c in (n, CUSTOM_ALIAS.get(n,''), n.removeprefix('tool-')):
@@ -72,7 +88,8 @@ for kind,src,mapping,ext in [('paintdotjs',root.parent/'masterpaint-inspiration/
  total=len(mpnames)+len(sprites)+len(tools)+len(fa)
  print(kind,f'{len(icons)}/{total} icônes couvertes, dont {len(custom_keys)} dessinées pour MasterPaint')
  notices='\n\n'.join(f.name+'\n'+f.read_text() for f in folder.iterdir() if f.is_file() and f.suffix not in ['.svg','.png'])
- data={'format':'masterpaint-icon-pack','version':2,'name':'PaintJS' if kind=='paintdotjs' else 'PhotoCraft','author':'Paint.NET contributors; PaintJS by LabyStudio' if kind=='paintdotjs' else 'PhotoCraft / Lucide contributors','source':'https://paintjs.net/; https://github.com/LabyStudio/paintdotjs' if kind=='paintdotjs' else 'https://github.com/storytold/photocraft','origin':'https://paint.net/; https://github.com/rivy/OpenPDN' if kind=='paintdotjs' else 'https://github.com/storytold/photocraft','revision':subprocess.check_output(['git','-C',str(src),'rev-parse','HEAD'],text=True).strip(),'license':notices,'icons':icons,'assetMap':asset_map,'assets':sorted(asset_map.keys())}
+ if (folder/'vectorcraft').is_dir(): notices+='\n\n'+'\n\n'.join('vectorcraft/'+f.name+'\n'+f.read_text() for f in (folder/'vectorcraft').iterdir() if f.is_file() and f.suffix!='.svg')
+ data={'format':'masterpaint-icon-pack','version':2,'name':'PaintJS' if kind=='paintdotjs' else 'PhotoCraft','author':'Paint.NET contributors; PaintJS by LabyStudio' if kind=='paintdotjs' else 'ArtCraft (PhotoCraft, VectorCraft) / Lucide contributors — storytold','source':'https://paintjs.net/; https://github.com/LabyStudio/paintdotjs' if kind=='paintdotjs' else 'https://getartcraft.com/apps; https://github.com/storytold','origin':'https://paint.net/; https://github.com/rivy/OpenPDN' if kind=='paintdotjs' else 'https://github.com/storytold/photocraft','revision':(subprocess.run(['git','-C',str(src),'rev-parse','HEAD'],text=True,capture_output=True).stdout.strip() or 'archive'),'license':notices,'icons':icons,'assetMap':asset_map,'assets':sorted(asset_map.keys())}
  data['customIcons']=custom_keys
  data['customNote']='Icônes de custom/ : dessinées pour MasterPaint (polocrafting) là où '+('paintdotjs' if kind=='paintdotjs' else 'PhotoCraft')+" n'a pas d'équivalent ; elles ne viennent pas du projet de référence."
  (dest/(kind+'.json')).write_text(json.dumps(data,ensure_ascii=False,indent=2)); print(kind,len(icons),'mapped,',len(list(source_dir.iterdir())),'originales')
@@ -83,6 +100,11 @@ for original in sorted((dest/'masterpaint'/'source').rglob('*.svg')):
 for kind in ('paintdotjs','photocraft'):
  for original in sorted((dest/kind/'source').glob('*')):
   lines.append(f'    ReferenceAsset {{ pack: {1 if kind=="paintdotjs" else 2}, path: {json.dumps("assets/"+kind+"/"+original.name)}, bytes: include_bytes!("../icon-packs/{kind}/source/{original.name}") }},')
+for original in sorted((dest/'photocraft'/'vectorcraft').glob('*.svg')):
+ lines.append(f'    ReferenceAsset {{ pack: 2, path: {json.dumps("assets/vectorcraft/"+original.name)}, bytes: include_bytes!("../icon-packs/photocraft/vectorcraft/{original.name}") }},')
+for original in sorted((dest/'photocraft'/'vectorcraft').iterdir()):
+ if original.is_file() and original.suffix.lower()!='.svg':
+  lines.append(f'    ReferenceAsset {{ pack: 2, path: {json.dumps("licenses/vectorcraft/"+original.name)}, bytes: include_bytes!("../icon-packs/photocraft/vectorcraft/{original.name}") }},')
 for kind in ('paintdotjs','photocraft'):
  for original in sorted((dest/kind/'custom').glob('*')):
   lines.append(f'    ReferenceAsset {{ pack: {1 if kind=="paintdotjs" else 2}, path: {json.dumps("custom/"+kind+"/"+original.name)}, bytes: include_bytes!("../icon-packs/{kind}/custom/{original.name}") }},')

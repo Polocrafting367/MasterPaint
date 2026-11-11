@@ -1,0 +1,9 @@
+<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="{STROKE}">
+  <g transform="rotate(-45 8 8)">
+    <rect x="1.6" y="5.2" width="12.8" height="5.6" rx="2.8" fill="none" stroke="{STROKE}" stroke-width="1.2"/>
+    <rect x="5.6" y="5.2" width="4.8" height="5.6" fill="{ACCENT}" stroke="{STROKE}" stroke-width="1.1"/>
+    <circle cx="7.1" cy="7" r=".55" fill="{SUBTLE}"/><circle cx="8.9" cy="7" r=".55" fill="{SUBTLE}"/>
+    <circle cx="7.1" cy="9" r=".55" fill="{SUBTLE}"/><circle cx="8.9" cy="9" r=".55" fill="{SUBTLE}"/>
+  </g>
+</svg>

@@ -37,4 +37,8 @@ cp masterpaint-ui/web/mp-worker.js "$dest/"
 # page d'accueil du site
 cp masterpaint-ui/web/index.html ../index.html
 cp "$target"/web-pkg/* "$dest/pkg/"
+# brotli fait à l'avance (servi par .htaccess aux navigateurs qui l'acceptent) ; sans le module
+# Python brotli, seul gzip à la volée reste
+rm -f "$dest"/pkg/*.br
+python3 -I tools/precompress-web.py "$dest/pkg" || echo "brotli indisponible : gzip seulement"
 echo "ok : /rust-app/ ($(du -h "$dest/pkg/masterpaint_ui_bg.wasm" | cut -f1) de wasm)"

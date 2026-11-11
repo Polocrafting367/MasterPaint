@@ -142,7 +142,7 @@ def main():
     lines.append(',\n'.join(entries))
     lines.append('    ];')
 
-    entries = [f'        {{ label: "{esc(g["label"])}", x: {g["x"]}px, w: {g["w"]}px }}' for g in d['groups']]
+    entries = [f'        {{ label: @tr("{esc(g["label"])}"), x: {g["x"]}px, w: {g["w"]}px }}' for g in d['groups']]
     lines.append('    out property <[{label: string, x: length, w: length}]> ribbon-groups: [')
     lines.append(',\n'.join(entries))
     lines.append('    ];')

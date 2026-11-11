@@ -33,6 +33,8 @@ FA_TO_MP = {
 
 A = '{ACCENT}'
 DRAW = {
+    # main ouverte (outil Main : déplacer la vue)
+    'hand': '<path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M10 10V4a1.5 1.5 0 0 1 3 0v6"/><path d="M13 10V5a1.5 1.5 0 0 1 3 0v6"/><path d="M16 11V8a1.5 1.5 0 0 1 3 0v6.5A6.5 6.5 0 0 1 12.5 21h-1a6 6 0 0 1-4.6-2.2L4 15a1.6 1.6 0 0 1 2.3-2.2L7 13.5" fill="' + A + '"/>',
     'arrow-right': '<path d="M4 12h15"/><path d="m13 6 6 6-6 6"/>',
     'arrows-v': '<path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/>',
     'up-down': '<path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/>',

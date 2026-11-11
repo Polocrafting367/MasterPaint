@@ -226,7 +226,7 @@ export component MobToolRow inherits Rectangle {
                 spacing: 2px;
                 // les actions de la fenêtre Outils (désélectionner, ajuster) ont leur place ailleurs
                 for t in (root.vec-mode ? SvgTools.tools : Generated.tools): HorizontalLayout {
-                    if t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2": Rectangle {
+                    if t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2" && t.id != "tool-clear-sel" && t.id != "tool-pan": Rectangle {
                         width: 34px;
                         opacity: root.blocked(t.id) ? 0.35 : 1;
                         border-radius: 7px * Theme.round;

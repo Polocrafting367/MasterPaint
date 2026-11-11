@@ -1166,14 +1166,34 @@ impl Gpu {
                     None => true,
                 };
                 let old = comp.bufs.remove(&l.uid);
+                // tampon déjà envoyé dans une version précédente (trait de pinceau) : seules les
+                // lignes touchées repartent (gpu_damage)
+                let partial = match &old {
+                    Some(b) if fresh && b.buf.size() == (main.len() as u64).div_ceil(4).max(1) * 4 => crate::gpu_damage::since(&b.src, &main),
+                    _ => None,
+                };
                 let (buf, src, old_aux, old_aux_src) = match old {
                     Some(b) if !fresh => (b.buf, b.src, b.aux, b.aux_src),
+                    Some(b) if partial.is_some() => {
+                        let (s, e) = partial.unwrap_or_default();
+                        let (s, e) = (s & !3, (e + 3) & !3);
+                        self.queue.write_buffer(&b.buf, s as u64, &main[s..e.min(main.len())]);
+                        (b.buf, std::sync::Arc::downgrade(&main), b.aux, b.aux_src)
+                    }
                     Some(b) => (self.storage_with(Some(b.buf), &main), std::sync::Arc::downgrade(&main), b.aux, b.aux_src),
                     None => (self.storage_with(None, &main), std::sync::Arc::downgrade(&main), None, None),
                 };
                 let (aux_buf, aux_src) = match &aux {
                     Some(a) => match (old_aux, old_aux_src) {
                         (Some(ab), Some(asrc)) if same_src(&asrc, a) => (Some(ab), Some(asrc)),
+                        (Some(ab), Some(asrc)) if ab.size() == (a.len() as u64).div_ceil(4).max(1) * 4 && crate::gpu_damage::since(&asrc, a).is_some() => {
+                            let (s, e) = crate::gpu_damage::since(&asrc, a).unwrap_or_default();
+                            let (s, e) = (s & !3, ((e + 3) & !3).min(a.len() & !3));
+                            if e > s {
+                                self.queue.write_buffer(&ab, s as u64, &a[s..e]);
+                            }
+                            (Some(ab), Some(std::sync::Arc::downgrade(a)))
+                        }
                         (ab, _) => (Some(self.storage_with(ab, a)), Some(std::sync::Arc::downgrade(a))),
                     },
                     None => (None, None),

@@ -420,9 +420,23 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
   (() => {
     const get = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
-      if (type === 'webgl2' && this.id === 'canvas') attrs = { ...attrs, alpha: false, depth: false, powerPreference: 'high-performance' };
+      if ((type === 'webgl2' || type === 'webgl') && this.id === 'canvas') {
+        const want = { ...attrs, alpha: false, depth: false, powerPreference: 'high-performance' };
+        // carte « rapide » refusée (pilote, liste noire, portable sur batterie) : contexte ordinaire
+        return get.call(this, type, want) || get.call(this, type, { ...attrs, alpha: false, depth: false }) || get.call(this, type, attrs);
+      }
       return get.call(this, type, attrs);
     };
+    // WebGL indisponible (carte graphique bloquée, contexte perdu, trop de contextes ouverts) :
+    // l'interface démarre avec le rendu logiciel de Slint au lieu de s'arrêter sur une erreur
+    // (« opengl.rs … unwrap() on a None value »). Lu par lib.rs::run avant la fenêtre.
+    try {
+      const probe = document.createElement('canvas');
+      const ok = get.call(probe, 'webgl2') || get.call(probe, 'webgl');
+      window.mpNoWebGL = !ok;
+      const lose = ok && ok.getExtension && ok.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+    } catch (e) { window.mpNoWebGL = true; }
   })();
   window.mpMods = { ctrl: false, shift: false, alt: false };
   // clic droit : l'application a ses propres menus contextuels, pas celui du navigateur
@@ -718,11 +732,34 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
         });
       } catch (e) { /* base inaccessible : rien à effacer */ }
     },
-    async load() {
+    // Mode Photo Pro : une clé par fichier d'origine (écrit une fois) et une pour la séance
+    async put(key, bytes) {
+      if (this.broken) return false;
       try {
         const db = await this.db();
         return await new Promise((res) => {
-          const rq = db.transaction('kv').objectStore('kv').get('autosave');
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(new Blob([bytes]), key);
+          tx.oncomplete = () => { db.close(); res(true); };
+          tx.onerror = () => { db.close(); res(false); };
+        });
+      } catch (e) { return false; }
+    },
+    async del(key) {
+      try {
+        const db = await this.db();
+        await new Promise((res) => {
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').delete(key);
+          tx.oncomplete = tx.onerror = () => { db.close(); res(); };
+        });
+      } catch (e) { /* rien à effacer */ }
+    },
+    async load(key) {
+      try {
+        const db = await this.db();
+        return await new Promise((res) => {
+          const rq = db.transaction('kv').objectStore('kv').get(key || 'autosave');
           rq.onsuccess = async () => {
             db.close();
             const v = rq.result || null;
@@ -878,6 +915,15 @@ void main() {
       return { t, fb };
     }
     function free(tg) { if (tg) { gl.deleteTexture(tg.t); gl.deleteFramebuffer(tg.fb); } }
+    // erreur relevée après une relecture (la carte graphique a fini : pas d'attente en plus) ;
+    // en cas d'erreur, toutes les textures des calques sont oubliées et seront renvoyées
+    let lost = false;
+    function checked() {
+      if (gl.getError() === gl.NO_ERROR) return true;
+      for (const e of tex.values()) { if (e.main) gl.deleteTexture(e.main); if (e.aux) gl.deleteTexture(e.aux); }
+      tex.clear(); lost = true;
+      return false;
+    }
     // ---- passes des filtres dynamiques et des effets du menu (même plan que gpu.rs : noyaux
     // KERNELS, 4 tampons) : textures RVBA8 lues / écrites en entiers exacts (0..255)
     const KHEAD = `#version 300 es
@@ -1004,7 +1050,22 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
         const key = slot === 0 ? 'main' : 'aux';
         if (e[key]) gl.deleteTexture(e[key]);
         e[key] = ch === 1 ? newTex(w, h, gl.R8, gl.RED, gl.UNSIGNED_BYTE, data) : newTex(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, data);
-        return gl.getError() === gl.NO_ERROR;
+        // pas de getError ici : dans Chrome il attend la carte graphique comme une relecture
+        // (15 % d'un mouvement) ; l'erreur éventuelle (mémoire) est relevée après la relecture
+        // suivante, et toutes les textures sont alors oubliées (takeLost)
+        return true;
+      },
+      // lignes [y0, y0 + rows) d'une texture déjà envoyée (trait de pinceau : seule la zone touchée)
+      uploadRows(uid, slot, w, y0, rows, data, ch) {
+        if (!init()) return false;
+        const e = tex.get(uid);
+        const t = e && (slot === 0 ? e.main : e.aux);
+        if (!t) return false;
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        if (ch === 1) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y0, w, rows, gl.RED, gl.UNSIGNED_BYTE, data);
+        else gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y0, w, rows, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        return true;
       },
       // calques encore présents : les autres textures sont libérées
       retain(uids) {
@@ -1037,7 +1098,7 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
           gl.bindFramebuffer(gl.FRAMEBUFFER, pbufs[out].fb);
           const px = new Uint8Array(w * h * 4);
           gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-          return gl.getError() === gl.NO_ERROR ? px : null;
+          return checked() ? px : null;
         } catch (e) { console.warn('mpGL', e); return null; }
       },
       // params : w, h, ds, ns, x0, y0, rw, rh, off0, off1, checker
@@ -1073,9 +1134,48 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc[cur].t);
         gl.uniform1i(R.loc.acc, 0); gl.uniform4i(R.loc.u, w, h, ds, ns); gl.uniform4i(R.loc.v, x0, y0, off0, off1); gl.uniform1i(R.loc.checker, checker);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
+        if (params.async) {
+          // relecture asynchrone : copie dans un tampon de la carte graphique, barrière, puis
+          // lecture quand la barrière est passée (le fil de l'interface n'attend pas la fin du
+          // calcul ; les compositions suivantes, plus loin dans la file, ne l'écrasent pas)
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buf);
+          gl.bufferData(gl.PIXEL_PACK_BUFFER, rw * rh * 4, gl.STREAM_READ);
+          gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+          const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+          gl.flush();
+          if (!sync) { gl.deleteBuffer(buf); return null; }
+          return new Promise((done) => {
+            let tries = 0;
+            const poll = () => {
+              try {
+                if (!gl || gl.isContextLost()) { done(null); return; }
+                const st = gl.clientWaitSync(sync, 0, 0);
+                if (st === gl.TIMEOUT_EXPIRED && ++tries < 2000) { setTimeout(poll, tries < 4 ? 0 : 2); return; }
+                gl.deleteSync(sync);
+                const px = new Uint8Array(rw * rh * 4);
+                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buf);
+                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, px);
+                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+                gl.deleteBuffer(buf);
+                done(checked() ? px : null);
+              } catch (e) { console.warn('mpGL', e); done(null); }
+            };
+            setTimeout(poll, 0);
+          });
+        }
         const px = new Uint8Array(rw * rh * 4);
         gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, px);
-        return gl.getError() === gl.NO_ERROR ? px : null;
+        return checked() ? px : null;
+      },
+      // vrai une fois après une erreur relevée en retard : textures oubliées, à renvoyer
+      takeLost() { const l = lost; lost = false; return l; },
+      // même composition, résultat en promesse (Uint8Array ou null)
+      composeAsync(params, plan) {
+        const p = Array.from(params); p.async = true;
+        const r = this.compose(p, plan);
+        return r instanceof Promise ? r : Promise.resolve(r);
       },
     };
   })();
@@ -1159,6 +1259,25 @@ void main() { uvec2 id = uvec2(gl_FragCoord.xy); uint w = P.x, h = P.y, r = P.z,
           const data = msg.data.slice(y * stride, (y + h) * stride);
           parts.push(this.dispatch({...msg, h, data}, [data.buffer], base + i));
         }
+        return Promise.all(parts).then(results => {
+          if (results.some(p => !p)) return null;
+          if (results.some(p => p.length === 0)) return new Uint8Array(0);
+          const out = new Uint8Array(msg.w * msg.h * 4);
+          let offset = 0;
+          for (const part of results) { out.set(part, offset); offset += part.length; }
+          return offset === out.length ? out : null;
+        });
+      }
+      // effets spatiaux (flous, médiane, huile…) : chaque worker reçoit l'image entière et
+      // calcule une bande de lignes ; résultat identique au calcul d'un seul tenant. Mémoire :
+      // une copie de l'image par worker, d'où la limite de taille.
+      if (lane <= 1 && msg.type === 'effect' && msg.bands && !msg.post?.length && msg.w * msg.h >= 400000 && msg.w * msg.h <= 30000000 && count > 1) {
+        const rows = Math.ceil(msg.h / count), stride = msg.w * 4;
+        const jobs = [];
+        for (let i = 0, y = 0; y < msg.h; i++, y += rows) jobs.push([i, y, Math.min(msg.h, y + rows)]);
+        // copies d'abord (la dernière bande reçoit l'original, transféré)
+        const datas = jobs.map((_, k) => k === jobs.length - 1 ? msg.data : msg.data.slice());
+        const parts = jobs.map(([i, y0, y1], k) => this.dispatch({...msg, type: 'effect-band', y0, y1, data: datas[k]}, [datas[k].buffer], base + i));
         return Promise.all(parts).then(results => {
           if (results.some(p => !p)) return null;
           if (results.some(p => p.length === 0)) return new Uint8Array(0);

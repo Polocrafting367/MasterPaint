@@ -288,6 +288,35 @@ fn xy_to_linear_rgb(x: f64, y: f64) -> [f64; 3] {
     ]
 }
 
+/// Pipette de balance des blancs : réglages (température, teinte) du moteur qui rendent neutre
+/// la couleur linéaire `rgb` (gris cliqué). Recherche en grille puis affinage (rapide, sûr).
+pub fn neutral_wb(rgb: [f64; 3]) -> (f32, f32) {
+    let l = luma_linear(rgb[0], rgb[1], rgb[2]).max(1e-6);
+    let err = |t: f64, n: f64| {
+        let g = white_balance_gains(t, n);
+        let c = [rgb[0] * g[0] / l, rgb[1] * g[1] / l, rgb[2] * g[2] / l];
+        (c[0] - c[1]).powi(2) + (c[2] - c[1]).powi(2)
+    };
+    let (mut bt, mut bn, mut be): (f64, f64, f64) = (0.0, 0.0, err(0.0, 0.0));
+    for step in [8.0, 2.0, 0.5] {
+        let (ct, cn) = (bt, bn);
+        let span: f64 = if step == 8.0 { 100.0 } else { step * 5.0 };
+        let mut t = (ct - span).max(-100.0);
+        while t <= (ct + span).min(100.0) {
+            let mut n = (cn - span).max(-100.0);
+            while n <= (cn + span).min(100.0) {
+                let e = err(t, n);
+                if e < be {
+                    (bt, bn, be) = (t, n, e);
+                }
+                n += step;
+            }
+            t += step;
+        }
+    }
+    (bt as f32, bn as f32)
+}
+
 fn white_balance_gains(temp: f64, tint: f64) -> [f64; 3] {
     let mut g = [1.0, 1.0, 1.0];
     let tu = temp / 100.0;
@@ -502,6 +531,100 @@ fn box_blur_channel(src: &[f32], dst: &mut [f32], w: usize, h: usize, r: usize) 
     }
 }
 
+/// Moyenne sur une fenêtre (2r+1)² : une passe horizontale, une verticale.
+fn box_mean(src: &[f32], dst: &mut [f32], w: usize, h: usize, r: usize, tmp: &mut [f32]) {
+    if r < 1 {
+        dst.copy_from_slice(src);
+        return;
+    }
+    blur_h(src, tmp, w, h, r);
+    blur_v(tmp, dst, w, h, r);
+}
+
+/// Filtre guidé (He, Sun, Tang 2010) : lisse `p` en suivant les bords du guide `g` ; coût
+/// indépendant du rayon (moyennes par fenêtre glissante). `eps` : force du lissage.
+fn guided(g: &[f32], p: &[f32], w: usize, h: usize, r: usize, eps: f32) -> Vec<f32> {
+    let n = w * h;
+    let mut tmp = vec![0f32; n];
+    let (mut mi, mut mp, mut mii, mut mip) = (vec![0f32; n], vec![0f32; n], vec![0f32; n], vec![0f32; n]);
+    box_mean(g, &mut mi, w, h, r, &mut tmp);
+    box_mean(p, &mut mp, w, h, r, &mut tmp);
+    let ii: Vec<f32> = g.iter().map(|v| v * v).collect();
+    let ip: Vec<f32> = g.iter().zip(p).map(|(a, b)| a * b).collect();
+    box_mean(&ii, &mut mii, w, h, r, &mut tmp);
+    box_mean(&ip, &mut mip, w, h, r, &mut tmp);
+    let mut a = vec![0f32; n];
+    let mut b = vec![0f32; n];
+    for i in 0..n {
+        let var = mii[i] - mi[i] * mi[i];
+        let cov = mip[i] - mi[i] * mp[i];
+        a[i] = cov / (var + eps);
+        b[i] = mp[i] - a[i] * mi[i];
+    }
+    box_mean(&a, &mut mi, w, h, r, &mut tmp);
+    box_mean(&b, &mut mp, w, h, r, &mut tmp);
+    (0..n).map(|i| mi[i] * g[i] + mp[i]).collect()
+}
+
+/// Réduction du bruit (Photo Pro, comme le panneau Détail de Lightroom / LightCraft) sur le
+/// tampon RVBA en couleurs d'affichage 0..1 : `lum` (0..100) lisse la luminance en gardant les
+/// bords, `col` (0..100) efface les taches de couleur (chrominance guidée par la luminance).
+/// `scale` : taille de l'aperçu rapportée à la pleine résolution (rayons à la même échelle).
+fn denoise(buf: &mut [f32], w: usize, h: usize, lum: f64, col: f64, scale: f64) {
+    let n = w * h;
+    if n == 0 {
+        return;
+    }
+    let mut y = vec![0f32; n];
+    let mut cb = vec![0f32; n];
+    let mut cr = vec![0f32; n];
+    for i in 0..n {
+        let (r, g, b) = (buf[i * 4], buf[i * 4 + 1], buf[i * 4 + 2]);
+        let l = 0.299 * r + 0.587 * g + 0.114 * b;
+        y[i] = l;
+        cb[i] = b - l;
+        cr[i] = r - l;
+    }
+    if col > 0.0 {
+        let k = (col / 100.0).clamp(0.0, 1.0);
+        let r = ((1.0 + 11.0 * k) * scale).round().max(1.0) as usize;
+        let eps = (0.002 + 0.06 * k * k) as f32;
+        cb = guided(&y, &cb, w, h, r, eps);
+        cr = guided(&y, &cr, w, h, r, eps);
+    }
+    if lum > 0.0 {
+        let k = (lum / 100.0).clamp(0.0, 1.0);
+        // rayon jusqu'à 5 pixels d'origine : le bruit d'un capteur forme des taches de
+        // plusieurs pixels (dématriçage), un rayon de 3 le laissait presque intact
+        let r = ((1.0 + 4.0 * k) * scale).round().max(1.0) as usize;
+        let eps = (0.0005 + 0.024 * k * k) as f32;
+        let s = guided(&y, &y, w, h, r, eps);
+        // détail gardé en partie, comme le curseur « Détail » (pas d'effet plastique)
+        let keep = 0.15 * (1.0 - k as f32);
+        for i in 0..n {
+            y[i] = s[i] + (y[i] - s[i]) * keep;
+        }
+    }
+    for i in 0..n {
+        let (l, b, r) = (y[i], y[i] + cb[i], y[i] + cr[i]);
+        let g = (l - 0.299 * r - 0.114 * b) / 0.587;
+        buf[i * 4] = r;
+        buf[i * 4 + 1] = g;
+        buf[i * 4 + 2] = b;
+    }
+}
+
+/// Facteur de saturation d'un curseur −100..100 : vers le haut, exponentiel (comme avant) ;
+/// vers le bas, linéaire jusqu'au gris à −100, comme Lightroom (avant : ×0,41 à −100, les
+/// préréglages noir et blanc gardaient des couleurs).
+fn sat_mult(v: f64) -> f64 {
+    if v < 0.0 {
+        (1.0 + v / 100.0).max(0.0)
+    } else {
+        ((v / 100.0) * 0.9).exp()
+    }
+}
+
 fn soft_knee01(x: f64, knee: f64) -> f64 {
     if x <= knee {
         return if x < 0.0 { 0.0 } else { x };
@@ -679,6 +802,84 @@ pub fn camera_raw(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
 }
 
 pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y1: usize, p: &P) {
+    camera_raw_impl(w, h, src, y0, y1, p, &mut |o, r, g, b, a, d| {
+        dst[o] = (clamp01(r + d) * 255.0 + 0.5) as u8;
+        dst[o + 1] = (clamp01(g + d) * 255.0 + 0.5) as u8;
+        dst[o + 2] = (clamp01(b + d) * 255.0 + 0.5) as u8;
+        dst[o + 3] = (clamp01(a) * 255.0 + 0.5) as u8;
+    });
+}
+
+/// Même pipeline, sortie RVBA 16 bits (export 16 bits du Photo Pro : pas de quantification à
+/// 8 bits, pas de tramage).
+pub fn camera_raw_src16(w: usize, h: usize, src: &Src, p: &P) -> Vec<u16> {
+    let mut out = vec![0u16; w * h * 4];
+    camera_raw_impl(w, h, src, 0, h, p, &mut |o, r, g, b, a, _| {
+        out[o] = (clamp01(r) * 65535.0 + 0.5) as u16;
+        out[o + 1] = (clamp01(g) * 65535.0 + 0.5) as u16;
+        out[o + 2] = (clamp01(b) * 65535.0 + 0.5) as u16;
+        out[o + 3] = (clamp01(a) * 65535.0 + 0.5) as u16;
+    });
+    out
+}
+
+/// Indice où commencent les masques du Photo Pro : après les points des courbes et les deux
+/// réglages de la réduction du bruit.
+pub(crate) fn masks_at(p: &P) -> usize {
+    let mut at = 58usize;
+    for k in 0..4 {
+        at += 2 * p.i(54 + k, 0).max(0) as usize;
+    }
+    at + 2
+}
+
+/// Pipeline Camera Raw ; `emit(indice, r, v, b, a, tramage)` reçoit chaque pixel final (0..1).
+/// Masques du Photo Pro (fx_camraw_masks) : image de base, puis pour chaque masque la même
+/// image avec ses réglages en plus, fondue selon son alpha.
+fn camera_raw_impl(w: usize, h: usize, src: &Src, y0: usize, y1: usize, p: &P, emit: &mut dyn FnMut(usize, f64, f64, f64, f64, f64)) {
+    let Some((base, masks, frame)) = crate::fx_camraw_masks::split(p.0, masks_at(p)) else {
+        return camera_raw_core(w, h, src, y0, y1, p, emit);
+    };
+    let masks: Vec<_> = masks.into_iter().filter(|m| !m.idle()).collect();
+    if masks.is_empty() {
+        return camera_raw_core(w, h, src, y0, y1, &P(&base), emit);
+    }
+    let q = |v: f64| (clamp01(v) * 65535.0 + 0.5) as u16;
+    let mut buf = vec![0u16; w * h * 4];
+    camera_raw_core(w, h, src, 0, h, &P(&base), &mut |o, r, g, b, a, _| {
+        buf[o] = q(r);
+        buf[o + 1] = q(g);
+        buf[o + 2] = q(b);
+        buf[o + 3] = q(a);
+    });
+    // alphas lus sur l'image de base (plages de luminance et de couleur, ciel, sujet)
+    let alphas: Vec<Vec<f32>> = masks.iter().map(|m| crate::fx_camraw_masks::alpha(m, &frame, w, h, &buf)).collect();
+    for (m, a) in masks.iter().zip(&alphas) {
+        if crate::util::cancelled() {
+            return;
+        }
+        if a.iter().all(|v| *v <= 0.0) {
+            continue;
+        }
+        let local = m.local(&base);
+        camera_raw_core(w, h, src, 0, h, &P(&local), &mut |o, r, g, b, _, _| {
+            let k = a[o / 4];
+            if k > 0.0 {
+                for (c, v) in [r, g, b].into_iter().enumerate() {
+                    let old = buf[o + c] as f32 / 65535.0;
+                    buf[o + c] = q((old + (clamp01(v) as f32 - old) * k) as f64);
+                }
+            }
+        });
+    }
+    for i in y0 * w..y1 * w {
+        let o = i * 4;
+        let f = |c: usize| buf[o + c] as f64 / 65535.0;
+        emit(o, f(0), f(1), f(2), f(3), 0.0);
+    }
+}
+
+fn camera_raw_core(w: usize, h: usize, src: &Src, y0: usize, y1: usize, p: &P, emit: &mut dyn FnMut(usize, f64, f64, f64, f64, f64)) {
     let n = w * h;
     let g = |i: usize| p.f(i, 0.0) as f64;
     let tb = Tables::new();
@@ -734,6 +935,8 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
         }
         at += 2 * cnt;
     }
+    // réduction du bruit (Photo Pro) : deux valeurs après les points des courbes
+    let (nr_lum, nr_col) = (g(at), g(at + 1));
     let [lut_m, lut_r, lut_g, lut_b] = curves;
     let has_curves = lut_m.is_some() || lut_r.is_some() || lut_g.is_some() || lut_b.is_some();
     let hsl_hue: Vec<f64> = (30..38).map(g).collect();
@@ -741,7 +944,7 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
     let hsl_lum: Vec<f64> = (46..54).map(g).collect();
     let has_hsl = hsl_hue.iter().chain(&hsl_sat).chain(&hsl_lum).any(|v| *v != 0.0);
     let (saturation, vibrance) = (g(19), g(20));
-    let sat_m = ((saturation / 100.0) * 0.9).exp();
+    let sat_m = sat_mult(saturation);
     let vib_f = (vibrance / 100.0).tanh();
     let has_sat = saturation != 0.0 || vibrance != 0.0;
 
@@ -882,7 +1085,7 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
                 }
                 let d = hsl_sat[i1] * w1 + hsl_sat[i2] * w2;
                 if d != 0.0 {
-                    s = (s * ((d / 100.0) * 0.9).exp()).max(0.0);
+                    s = (s * sat_mult(d)).max(0.0);
                 }
                 let d = hsl_lum[i1] * w1 + hsl_lum[i2] * w2;
                 if d != 0.0 {
@@ -906,6 +1109,14 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
         buf[o + 2] = b as f32;
     }
 
+    if crate::util::cancelled() {
+        return;
+    }
+    // ---- réduction du bruit (avant la netteté, comme Lightroom) ----
+    if nr_lum > 0.0 || nr_col > 0.0 {
+        let full_w = if g(26) > 0.0 { g(26) } else { w as f64 };
+        denoise(&mut buf, w, h, nr_lum, nr_col, (w as f64 / full_w).min(1.0));
+    }
     if crate::util::cancelled() {
         return;
     }
@@ -955,10 +1166,7 @@ pub fn camera_raw_src(w: usize, h: usize, src: &Src, dst: &mut Out, y0: usize, y
                 b += nz * wgt;
             }
             let d = (BAYER4[(y & 3) * 4 + (x & 3)] / 16.0 - 0.5) / 255.0;
-            dst[o] = (clamp01(r + d) * 255.0 + 0.5) as u8;
-            dst[o + 1] = (clamp01(gv + d) * 255.0 + 0.5) as u8;
-            dst[o + 2] = (clamp01(b + d) * 255.0 + 0.5) as u8;
-            dst[o + 3] = (clamp01(buf[o + 3] as f64) * 255.0 + 0.5) as u8;
+            emit(o, r, gv, b, buf[o + 3] as f64, d);
         }
     }
 }

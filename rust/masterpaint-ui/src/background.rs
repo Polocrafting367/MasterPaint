@@ -173,6 +173,14 @@ pub fn mp_worker_effect(name: &str, src: &[u8], w: usize, h: usize, params: &[f3
     px
 }
 
+/// Navigateur, worker : lignes [y0, y1) d'un effet (image entière en contexte) ; la page
+/// répartit les bandes sur plusieurs workers et les recolle (`mpCompute.run`).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn mp_worker_effect_band(name: &str, src: &[u8], w: usize, h: usize, params: &[f32], y0: usize, y1: usize) -> Vec<u8> {
+    masterpaint_core::apply_band(name, src, w, h, params, y0, y1).unwrap_or_default()
+}
+
 /// Navigateur, worker : remplissage de contenu (zone `mask`, un octet par pixel).
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]

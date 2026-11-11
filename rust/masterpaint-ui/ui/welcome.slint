@@ -163,172 +163,6 @@ component StartSection inherits VerticalLayout {
     }
 }
 
-/// Rappel des raccourcis essentiels (la liste complète : fenêtre Raccourcis).
-component ShortcutsSection inherits VerticalLayout {
-    in property <length> w;
-    callback act(string);
-    spacing: 3px;
-    WelHead {
-        title: @tr("Raccourcis essentiels");
-    }
-    for s in [
-        { k: @tr("Ctrl+N · Ctrl+O · Ctrl+S"), t: @tr("Nouvelle image, ouvrir, exporter") },
-        { k: @tr("Ctrl+Z · Ctrl+Y"), t: @tr("Annuler, rétablir") },
-        { k: @tr("Ctrl+C · Ctrl+X · Ctrl+V"), t: @tr("Copier, couper, coller") },
-        { k: @tr("Ctrl + molette"), t: @tr("Zoomer (molette seule : déplacer la toile)") },
-    ]: HorizontalLayout {
-        spacing: 8px;
-        Rectangle {
-            width: min(150px, root.w * 0.48);
-            height: 20px;
-            Rectangle {
-                x: 0;
-                width: min(parent.width, kt.preferred-width + 10px);
-                height: 18px;
-                border-radius: Theme.ctl-radius;
-                background: Theme.dark ? #ffffff12 : #0000000a;
-                border-width: 1px;
-                border-color: Theme.button-border;
-                kt := Text {
-                    text: s.k;
-                    font-size: Theme.small-font-size;
-                    font-weight: 600;
-                    color: Theme.text;
-                    overflow: elide;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-            }
-        }
-        Text {
-            text: s.t;
-            color: Theme.text-inactive;
-            vertical-alignment: center;
-            overflow: elide;
-        }
-    }
-    HorizontalLayout {
-        padding-top: 4px;
-        alignment: LayoutAlignment.start;
-        WelLink {
-            text: @tr("Tous les raccourcis…");
-            clicked => {
-                root.act("shortcuts");
-            }
-        }
-    }
-}
-
-/// Réglages rapides : mêmes propriétés que Paramètres › Apparence / Toile et outils.
-component QuickSettings inherits VerticalLayout {
-    in property <length> w;
-    in-out property <int> toolbar-mode;
-    in-out property <int> layout;
-    in-out property <bool> layout-auto;
-    callback theme(bool, color);
-    callback settings-changed();
-    callback layout-changed(int);
-    callback act(string);
-    spacing: 4px;
-    WelHead {
-        title: @tr("Réglages rapides");
-    }
-    Text {
-        text: @tr("Thème sombre");
-        font-weight: 600;
-        color: Theme.text;
-    }
-    Segmented {
-        options: [@tr("Non"), @tr("Oui")];
-        index: Theme.dark ? 1 : 0;
-        selected(i) => {
-            root.theme(i == 1, Theme.accent-base);
-        }
-    }
-    Text {
-        text: @tr("Couleur d'accentuation");
-        font-weight: 600;
-        color: Theme.text;
-    }
-    HorizontalLayout {
-        spacing: 4px;
-        alignment: start;
-        for a in Theme.accent-options: Rectangle {
-            width: 20px;
-            height: 24px;
-            border-radius: Theme.ctl-radius;
-            background: a;
-            border-width: Theme.accent-base == a ? 3px : 1px;
-            border-color: Theme.accent-base == a ? Theme.text : #808080;
-            TouchArea { mouse-cursor: pointer; clicked => { root.theme(Theme.dark, a); } }
-        }
-    }
-    Text {
-        text: @tr("Barre d'options");
-        font-weight: 600;
-        color: Theme.text;
-    }
-    Segmented {
-        options: [@tr("Ruban MasterPaint"), @tr("Barre compacte")];
-        index <=> root.toolbar-mode;
-        selected(i) => {
-            root.settings-changed();
-        }
-    }
-    Text {
-        text: @tr("Interface");
-        font-weight: 600;
-        color: Theme.text;
-    }
-    Segmented {
-        options: ["MasterPaint", "Paint.NET", "Photoshop", @tr("Téléphone")];
-        index <=> root.layout;
-        selected(i) => {
-            root.layout-changed(i);
-        }
-    }
-    Text {
-        width: root.w;
-        text: @tr("Paint.NET : comme paintdotjs. Photoshop : comme PhotoCraft. Téléphone : tactile.");
-        wrap: word-wrap;
-        font-size: Theme.small-font-size;
-        color: Theme.text-inactive;
-    }
-    HorizontalLayout {
-        spacing: 6px;
-        alignment: LayoutAlignment.start;
-        VerticalLayout {
-            alignment: center;
-            auto-cb := W10CheckBox {
-                checked <=> root.layout-auto;
-                toggled => {
-                    root.settings-changed();
-                }
-            }
-        }
-        Text {
-            text: @tr("Interface tactile automatique sur petit écran");
-            color: Theme.text;
-            vertical-alignment: center;
-            TouchArea {
-                clicked => {
-                    auto-cb.toggle();
-                }
-            }
-        }
-    }
-    HorizontalLayout {
-        padding-top: 4px;
-        alignment: LayoutAlignment.start;
-        WelLink {
-            text: @tr("Tous les paramètres…");
-            clicked => {
-                root.act("settings");
-            }
-        }
-    }
-}
-
 /// Téléphone : intitulé (renvoyé à la ligne) puis choix sur toute la largeur.
 component PhoneRow inherits VerticalLayout {
     in property <string> title;
@@ -370,6 +204,7 @@ component PhoneSettings inherits VerticalLayout {
         w: root.w;
         title: @tr("Langue");
         W10ComboBox {
+            flags: true;
             width: root.w;
             height: 36px;
             model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
@@ -478,6 +313,7 @@ export component WelcomeContent inherits Rectangle {
     property <int> phone-page: 0;
     // téléphone : largeur utile de la colonne (marges seules : pas de barre de défilement fixe)
     property <length> phone-w: max(160px, root.width - 2 * 14px);
+    // ---- bureau : bandeau d'accueil, quatre grandes actions, apparence en une ligne ----
     if !root.phone: ScrollView {
         x: 0;
         y: 0;
@@ -485,130 +321,199 @@ export component WelcomeContent inherits Rectangle {
         height: root.height - 44px;
         content-height: body.preferred-height + 8px;
         body := VerticalLayout {
-            padding: root.pad;
-            spacing: 14px;
+            padding: 0;
+            spacing: 0;
             alignment: LayoutAlignment.start;
-            // en-tête : logo, nom, version, présentation
-            HorizontalLayout {
-                spacing: 12px;
-                alignment: LayoutAlignment.start;
-                Image {
-                    width: 52px;
-                    height: 52px;
-                    source: @image-url("../../packaging/icons/128x128.png");
-                }
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 2px;
-                    HorizontalLayout {
-                        spacing: 8px;
-                        alignment: LayoutAlignment.start;
+            // bandeau : logo, titre, une phrase, version
+            Rectangle {
+                height: 112px;
+                background: @linear-gradient(110deg, Theme.accent.with-alpha(0.30) 0%, Theme.accent.with-alpha(0.06) 55%, transparent 100%);
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    spacing: 16px;
+                    alignment: LayoutAlignment.start;
+                    VerticalLayout {
+                        alignment: center;
+                        Image {
+                            width: 64px;
+                            height: 64px;
+                            source: @image-url("../../packaging/icons/128x128.png");
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 4px;
                         Text {
                             text: @tr("Bienvenue dans MasterPaint");
-                            font-size: Theme.font-size + 7px;
+                            font-size: Theme.font-size + 10px;
                             font-weight: 700;
                             color: Theme.text;
                         }
                         Text {
-                            text: @tr("version ") + root.version;
+                            width: root.inner-w - 110px;
+                            text: @tr("Dessin, retouche photo et vectoriel, gratuit et sans publicité.");
+                            wrap: word-wrap;
                             color: Theme.text-inactive;
-                            vertical-alignment: bottom;
                         }
-                    }
-                    Text {
-                        width: root.inner-w - 64px;
-                        text: @tr("Éditeur d'images inspiré de Paint.NET, Photoshop et Illustrator : calques, effets, sélections, photos RAW. Gratuit, sans publicité ni traceurs, dans le navigateur comme en application.");
-                        wrap: word-wrap;
-                        color: Theme.text-inactive;
+                        HorizontalLayout {
+                            alignment: LayoutAlignment.start;
+                            Rectangle {
+                                height: 18px;
+                                width: vtxt.preferred-width + 14px;
+                                border-radius: 9px * Theme.round;
+                                background: Theme.accent-14;
+                                vtxt := Text {
+                                    text: @tr("version ") + root.version;
+                                    font-size: Theme.small-font-size;
+                                    color: Theme.text;
+                                }
+                            }
+                        }
                     }
                 }
             }
+            // grandes actions
             HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 18px;
+                spacing: 12px;
+                for t in [
+                    { mp: 0, id: "new", title: @tr("Nouvelle image"), hint: @tr("Toile vide") },
+                    { mp: 1, id: "open", title: @tr("Ouvrir"), hint: @tr("Image, photo RAW, PSD, SVG…") },
+                    { mp: 87, id: "example", title: @tr("Exemple"), hint: @tr("Projet tout prêt à explorer") },
+                    { mp: -1, id: "tutorial", title: @tr("Tutoriel"), hint: @tr("Les outils pas à pas") },
+                ]: Rectangle {
+                    horizontal-stretch: 1;
+                    height: 118px;
+                    border-radius: Theme.ctl-radius + 4px * Theme.round;
+                    background: tta.pressed ? Theme.accent-20 : (Theme.hover-fx && tta.has-hover) ? Theme.accent-12 : Theme.button-bg;
+                    border-width: 1px;
+                    border-color: (Theme.hover-fx && tta.has-hover) ? Theme.accent : Theme.button-border;
+                    VerticalLayout {
+                        padding: 12px;
+                        spacing: 6px;
+                        alignment: center;
+                        HorizontalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 20px * Theme.round;
+                                background: Theme.accent-14;
+                                if t.mp >= 0: Image {
+                                    width: 24px;
+                                    height: 24px;
+                                    source: MpIcons.images[t.mp];
+                                }
+                                if t.mp < 0: FaIcon {
+                                    glyph: "\u{f19d}";
+                                    size: 18px;
+                                    color: Theme.accent;
+                                }
+                            }
+                        }
+                        Text {
+                            text: t.title;
+                            font-weight: 600;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: t.hint;
+                            font-size: Theme.small-font-size;
+                            color: Theme.text-inactive;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+                    }
+                    tta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.action(t.id);
+                        }
+                    }
+                }
+            }
+            // apparence : l'essentiel seulement (le reste dans les Paramètres)
+            VerticalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 20px;
                 spacing: 8px;
-                Text { text: @tr("Langue"); color: Theme.text-inactive; vertical-alignment: center; }
+                Text {
+                    text: @tr("Choisissez votre interface");
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+                Segmented {
+                    options: ["MasterPaint", "Paint.NET", "Photoshop", @tr("Téléphone")];
+                    index <=> root.layout;
+                    selected(i) => {
+                        root.layout-changed(i);
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 14px;
+                    alignment: LayoutAlignment.start;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text { text: @tr("Thème"); color: Theme.text-inactive; vertical-alignment: center; }
+                        Segmented {
+                            width: 150px;
+                            options: [@tr("Clair"), @tr("Sombre")];
+                            index: Theme.dark ? 1 : 0;
+                            selected(i) => {
+                                root.theme(i == 1, Theme.accent-base);
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: LayoutAlignment.start;
+                        for a in Theme.accent-options: Rectangle {
+                            width: 18px;
+                            height: 18px;
+                            y: 6px;
+                            border-radius: 9px * Theme.round;
+                            background: a;
+                            border-width: Theme.accent-base == a ? 2px : 0px;
+                            border-color: Theme.text;
+                            TouchArea { mouse-cursor: pointer; clicked => { root.theme(Theme.dark, a); } }
+                        }
+                    }
+                }
+            }
+            // liens : raccourcis, paramètres, langue
+            HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 16px;
+                padding-bottom: 8px;
+                spacing: 16px;
+                alignment: LayoutAlignment.start;
+                VerticalLayout {
+                    alignment: center;
+                    WelLink {
+                        text: @tr("Raccourcis clavier");
+                        clicked => { root.action("shortcuts"); }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    WelLink {
+                        text: @tr("Tous les paramètres…");
+                        clicked => { root.action("settings"); }
+                    }
+                }
+                Rectangle { horizontal-stretch: 1; }
                 W10ComboBox {
-                    width: 170px;
+                    flags: true;
+                    width: 150px;
                     model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
                     current-index: root.language;
                     selected(i) => { root.language = i; root.language-chosen(i); root.settings-changed(); }
-                }
-                Rectangle { horizontal-stretch: 1; }
-            }
-            Rectangle {
-                height: 1px;
-                background: Theme.window-border;
-            }
-            if root.wide: HorizontalLayout {
-                spacing: 20px;
-                alignment: LayoutAlignment.start;
-                VerticalLayout {
-                    width: root.col-w;
-                    spacing: 16px;
-                    alignment: LayoutAlignment.start;
-                    StartSection {
-                        act(id) => {
-                            root.action(id);
-                        }
-                    }
-                    ShortcutsSection {
-                        w: root.col-w;
-                        act(id) => {
-                            root.action(id);
-                        }
-                    }
-                }
-                QuickSettings {
-                    width: root.col-w;
-                    alignment: LayoutAlignment.start;
-                    w: root.col-w;
-                    toolbar-mode <=> root.toolbar-mode;
-                    layout <=> root.layout;
-                    layout-auto <=> root.layout-auto;
-                    theme(d, a) => {
-                        root.theme(d, a);
-                    }
-                    settings-changed => {
-                        root.settings-changed();
-                    }
-                    layout-changed(i) => {
-                        root.layout-changed(i);
-                    }
-                    act(id) => {
-                        root.action(id);
-                    }
-                }
-            }
-            if !root.wide: VerticalLayout {
-                spacing: 16px;
-                alignment: LayoutAlignment.start;
-                StartSection {
-                    act(id) => {
-                        root.action(id);
-                    }
-                }
-                QuickSettings {
-                    w: root.col-w;
-                    toolbar-mode <=> root.toolbar-mode;
-                    layout <=> root.layout;
-                    layout-auto <=> root.layout-auto;
-                    theme(d, a) => {
-                        root.theme(d, a);
-                    }
-                    settings-changed => {
-                        root.settings-changed();
-                    }
-                    layout-changed(i) => {
-                        root.layout-changed(i);
-                    }
-                    act(id) => {
-                        root.action(id);
-                    }
-                }
-                ShortcutsSection {
-                    w: root.col-w;
-                    act(id) => {
-                        root.action(id);
-                    }
                 }
             }
         }

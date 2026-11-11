@@ -449,6 +449,14 @@ pub(crate) fn pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32
                 app.set_canvas_cursor(match hit(&ed.shape, x, y, zoom, curve) {
                     Some(Grab::Move) => 1,
                     Some(Grab::Rotate) => 3,
+                    // poignée du cadre : flèches orientées comme elle (forme tournée comprise)
+                    Some(Grab::Handle(k)) => {
+                        let hs = local_handles(&ed.shape, zoom);
+                        let (x0, y0, x1, y1) = ed.shape.bbox();
+                        let p = ed.shape.to_world(hs[k]);
+                        let c = ed.shape.to_world(((x0 + x1) / 2.0, (y0 + y1) / 2.0));
+                        crate::transform::resize_cursor(p.0 - c.0, p.1 - c.1)
+                    }
                     Some(_) => 2,
                     None => 0,
                 });

@@ -131,20 +131,19 @@ impl OpenGLBackend {
             Err(_) => {
                 use wasm_bindgen::JsCast;
 
-                // I don't believe that there's a way of disabling the 2D canvas.
-                let context_2d = html_canvas
+                // MasterPaint : le canevas peut déjà porter un contexte WebGL raté (get_context("2d")
+                // renvoie alors None) — ne pas paniquer sur ce None, seulement écrire si possible
+                if let Some(context_2d) = html_canvas
                     .get_context("2d")
-                    .unwrap()
-                    .unwrap()
-                    .dyn_into::<web_sys::CanvasRenderingContext2d>()
-                    .unwrap();
-                context_2d.set_font("20px serif");
-                // We don't know if we're rendering on dark or white background, so choose a "color" in the middle for the text.
-                context_2d.set_fill_style_str("red");
-                context_2d
-                    .fill_text("Slint requires WebGL to be enabled in your browser", 0., 30.)
-                    .unwrap();
-                panic!("Cannot proceed without WebGL - aborting")
+                    .ok()
+                    .flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+                {
+                    context_2d.set_font("20px serif");
+                    context_2d.set_fill_style_str("red");
+                    let _ = context_2d.fill_text("Slint requires WebGL to be enabled in your browser", 0., 30.);
+                }
+                panic!("WebGL indisponible : activez l'accélération graphique du navigateur (WebGL) puis rechargez la page")
             }
         };
 

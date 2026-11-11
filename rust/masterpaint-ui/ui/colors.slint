@@ -203,6 +203,8 @@ export component ColorPicker inherits Rectangle {
         y: 0;
         width: root.side;
         height: root.side;
+        // zone de choix de la couleur : croix de visée
+        mouse-cursor: crosshair;
         property <bool> other;
         pointer-event(e) => {
             if (e.kind == PointerEventKind.down) {
@@ -439,6 +441,7 @@ export component SwatchStrip inherits Rectangle {
             spec: { svg-index: 7, fa: "", fa-weight: 900 };
             size: max(10px, root.cell - 1px);
         }
+        HoverTip { y: parent.height; hovered: pta.has-hover; text: @tr("Pipette : prendre une couleur sur l'image"); }
         pta := TouchArea {
             clicked => {
                 root.pipette-clicked();
@@ -472,6 +475,7 @@ export component SwatchStrip inherits Rectangle {
                 color: Theme.on-accent;
             }
         }
+        HoverTip { y: parent.height; hovered: ata.has-hover; text: @tr("Ajouter la couleur active au nuancier"); }
         ata := TouchArea {
             clicked => {
                 root.add();
@@ -616,6 +620,7 @@ export component ColorsPanel inherits Rectangle {
                 to-square: !root.square;
                 wheel: root.wheel;
             }
+            HoverTip { y: parent.height; hovered: mta.has-hover; text: root.square ? @tr("Afficher la roue des couleurs") : @tr("Afficher le carré des couleurs"); }
             mta := TouchArea {
                 clicked => {
                     root.square = !root.square;

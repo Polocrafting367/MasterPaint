@@ -1,4 +1,6 @@
-// Fichier généré par tools/gen_icons.py — ne pas modifier à la main.
+// Fichier généré par tools/gen_icons.py, puis complété à la main (outils 26–31 : sélection
+// elliptique, tampon, correcteur, doigt, densité, remplacement de couleur ; 32–33 : modes de
+// sélection intersection et OU exclusif).
 /// Modèles SVG des icônes (index = `svg-index` de l'interface).
 pub const ICONS: &[&str] = &[
     include_str!("../icon-packs/masterpaint/source/tools/tool-direct-select.svg"),
@@ -27,6 +29,14 @@ pub const ICONS: &[&str] = &[
     include_str!("../icon-packs/masterpaint/source/tools/sel-align-bottom.svg"),
     include_str!("../icon-packs/masterpaint/source/tools/sel-center-both.svg"),
     include_str!("../icon-packs/masterpaint/source/tools/outside-canvas.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-ellipse-select.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-clone.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-heal.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-smudge.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-dodge.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/tool-recolor.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/sel-intersect.svg"),
+    include_str!("../icon-packs/masterpaint/source/tools/sel-xor.svg"),
 ];
 
 /// Identifiants (noms de fichiers, sans extension) dans le même ordre que `ICONS`.
@@ -57,4 +67,12 @@ pub const ICON_NAMES: &[&str] = &[
     "sel-align-bottom",
     "sel-center-both",
     "outside-canvas",
+    "tool-ellipse-select",
+    "tool-clone",
+    "tool-heal",
+    "tool-smudge",
+    "tool-dodge",
+    "tool-recolor",
+    "sel-intersect",
+    "sel-xor",
 ];

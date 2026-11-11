@@ -7,7 +7,7 @@ import "../fonts/fa-brands-400.ttf";
 import "../fonts/selawk.ttf";
 import "../fonts/selawksb.ttf";
 import "../fonts/selawkb.ttf";
-import { ListView, ScrollView } from "std-widgets.slint";
+import { ListView, ScrollView, Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 export { PackIcons } from "pack-icons.slint";
 import { IconSpec, MenuSpec, MenuItemSpec, Icons, ToolPackIcons, EffectField, DocTab, SheetRow, TaskCommand, TaskThumb, SizePreset, IconEntry, IconPackCard, DiagnosticRow } from "types.slint";
@@ -22,13 +22,13 @@ import { AnimPanel, AnimRow } from "anim.slint";
 import { DialogFooter } from "widgets.slint";
 import { WinStack, PhoneDock, Tip, RibbonFit, Icon, FaIcon, GlyphIcon, FlatButton, W10Button, W10Slider, W10CheckBox, W10ComboBox, CloseButton, FloatWindow, VSep, Gauge, ToggleButton, RibbonGroup, Segmented, W10LineEdit, HoverTip, NumEdit, Bevel, GaugeBar } from "widgets.slint";
 import { MobTopBar, MobUndoCapsule, MobToolRow, MobPills, MobDock, MobSheet, MobMenuList, MobDrawer, MobColors, Palettes } from "phone.slint";
-import { PhotoMode, PmThumb } from "photo.slint";
+import { PmMaskRow, PhotoMode, PmThumb } from "photo.slint";
 import { SvgObjectsContent, SvgPanel, SvgTools } from "svg_objects.slint";
 
 export { Theme, Generated, Icons, ToolPackIcons, Sprite, Tip, MpIcons }
 export { SvgPanel, SvgObjRow, SvgTools } from "svg_objects.slint";
 export { EffectField, DocTab, SheetRow, TaskCommand, TaskThumb, SizePreset, IconEntry, IconPackCard, DiagnosticRow } from "types.slint";
-export { PmThumb } from "photo.slint";
+export { PmThumb, PmMaskRow } from "photo.slint";
 export { AnimRow } from "anim.slint";
 export { ColorUtil, ColorPop } from "colors.slint";
 export { Workspace } from "widgets.slint";
@@ -157,6 +157,9 @@ export struct PalGeom {
 
 /// Réglages des outils, partagés par le ruban, la barre classique et le Rust.
 export global ToolOpts {
+    /// outil choisi en dernier dans chaque groupe de la fenêtre Outils (indice de
+    /// `Generated.tools`, rangé à l'indice du premier outil du groupe ; -1 : le premier)
+    in-out property <[int]> group-pick: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
     /// résolution de rendu de la toile : boutons visibles, réduction du projet (1 : pleine),
     /// rendu complet affiché (« Rendre maintenant »)
     in property <bool> render-ctl;
@@ -181,7 +184,17 @@ export global ToolOpts {
     // lasso magnétique : force d'attraction aux bords (%) et écart entre ancres (pixels)
     in-out property <float> magnet-strength: 60;
     in-out property <float> magnet-freq: 32;
-    in-out property <int> sel-mode: 0;  // 0 nouvelle, 1 ajout, 2 retrait, 3 intersection
+    in-out property <int> sel-mode: 0;  // 0 nouvelle, 1 ajout, 2 retrait, 3 intersection, 4 OU exclusif
+    // baguette / pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
+    in-out property <bool> sample-all: false;
+    // densité / éponge : 0 densité −, 1 densité +, 2 éponge −, 3 éponge + ; force (%) des
+    // outils de retouche (doigt, densité, éponge)
+    in-out property <int> retouch-mode: 0;
+    in-out property <float> retouch-strength: 50;
+    // lissage du tracé (%) : stabilisateur des outils de pinceau
+    in-out property <float> smoothing: 0;
+    // transformations (Déplacer, Déformation, 4 coins) : plus proche voisin (pixels nets)
+    in-out property <bool> nearest: false;
     in-out property <int> shape-style: 0;  // 0 contour, 1 plein, 2 les deux
     in-out property <float> line-width: 2;
     in-out property <int> gradient-kind: 0;  // 0 linéaire, 1 radial, 2 losange, 3 conique
@@ -230,7 +243,8 @@ component FontCombo inherits Rectangle {
     in-out property <int> current-index;
     callback selected(int);
     height: 22px;
-    border-radius: Theme.ctl-radius;
+    // même arrondi que sa liste déroulante (le champ paraissait plus carré que la liste)
+    border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
     background: Theme.field-bg;
     border-width: 1px;
     border-color: (Theme.hover-fx && fta.has-hover) ? Theme.accent : Theme.field-border;
@@ -257,6 +271,8 @@ component FontCombo inherits Rectangle {
         }
     }
     popup := PopupWindow {
+        // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+        TouchArea { }
         x: 0;
         y: root.height;
         width: max(root.width, 280px);
@@ -367,24 +383,44 @@ export global MenuState {
 /// Actions de l'interface, traitées par le Rust.
 export global Actions {
     callback ribbon(string);
+    /// clic droit sur un bouton du ruban (identifiant, position dans la fenêtre) : menu de réglages
+    callback ribbon-context(string, length, length);
 }
 
 /// Bouton du ruban d'après le relevé de la version web (index dans Generated.ribbon).
 component RB inherits FlatButton {
     in property <int> idx;
     in property <bool> labelled;
+    /// ruban adaptatif : libellé montré tant que le palier (RibbonFit.level) est inférieur
+    in property <int> label-until: 4;
     icon: Generated.ribbon[idx].icon;
     label: Generated.ribbon[idx].label;
     // effacer / aligner le contenu : grisé sur un calque texte, verrouillé ou un dossier
     enabled: !MenuState.ribbon-blocked(Generated.ribbon[idx].id);
     tip: self.enabled ? Generated.ribbon[idx].title
         : Generated.ribbon[idx].title + (MenuState.layer-block == "calque texte" ? @tr(" — Pixelliser le calque pour l'utiliser") : @tr(" — indisponible sur ce calque"));
-    show-label: labelled && !RibbonFit.tight;
+    show-label: labelled && RibbonFit.level < root.label-until;
     icon-size: 14px;
-    width: labelled && !RibbonFit.tight ? 66px : 26px;
+    /// dans une colonne (VerticalLayout) : même largeur que le plus large de la colonne
+    in property <bool> in-column;
+    // libellé : largeur du texte (icône, marges), 66 px au moins (« Hors toile » débordait de
+    // 66 px fixes et passait sous l'icône voisine)
+    property <length> natural: self.show-label ? max(66px, lbl-m.preferred-width + 36px) : 26px;
+    min-width: self.natural;
+    preferred-width: self.natural;
+    max-width: root.in-column ? 1000px : self.natural;
     height: 26px;
     clicked => {
         Actions.ribbon(Generated.ribbon[idx].id);
+    }
+    right-clicked(x, y) => {
+        Actions.ribbon-context(Generated.ribbon[idx].id, x, y);
+    }
+    // mesure du libellé (jamais affichée)
+    lbl-m := Text {
+        visible: false;
+        text: root.label;
+        font-size: Theme.font-size;
     }
 }
 
@@ -612,10 +648,190 @@ component Field inherits HorizontalLayout {
     }
 }
 
+/// Case de la colonne d'outils Photoshop : l'outil courant du groupe (ou le dernier choisi),
+/// petit triangle s'il y a d'autres outils ; clic droit, appui long ou clic sur le triangle =
+/// menu du groupe (comme PhotoCraft / Photoshop).
+component PsToolSlot inherits Rectangle {
+    in property <[int]> members;
+    in property <int> last;
+    in property <string> current;
+    callback picked(int);
+    // outil montré : celui du groupe qui est actif, sinon le dernier choisi
+    in property <length> icon-size: 16px;
+    /// grisé (calque actif qui refuse les pixels, comme les boutons de la fenêtre Outils)
+    in property <bool> dimmed;
+    in property <string> tip;
+    property <int> shown: root.members.length > 0 && Generated.tools[root.members[0]].id == root.current ? root.members[0]
+        : root.members.length > 1 && Generated.tools[root.members[1]].id == root.current ? root.members[1]
+        : root.members.length > 2 && Generated.tools[root.members[2]].id == root.current ? root.members[2]
+        : root.members.length > 3 && Generated.tools[root.members[3]].id == root.current ? root.members[3]
+        : root.last-ok ? root.last : root.members[0];
+    // le dernier choisi n'appartient pas forcément à ce groupe (groupes différents d'une interface
+    // à l'autre) : sinon, le premier outil du groupe
+    property <bool> last-ok: (root.members.length > 0 && root.last == root.members[0]) || (root.members.length > 1 && root.last == root.members[1])
+        || (root.members.length > 2 && root.last == root.members[2]) || (root.members.length > 3 && root.last == root.members[3]);
+    property <bool> active: Generated.tools[root.shown].id == root.current;
+    border-radius: Theme.ctl-radius;
+    background: ta.pressed ? Theme.accent-20 : root.active ? Theme.accent-14 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : transparent;
+    border-width: root.active ? 1px : 0px;
+    border-color: Theme.accent;
+    Icon {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        spec: Generated.tools[root.shown].icon;
+        size: root.icon-size;
+        opacity: root.dimmed ? 0.35 : 1;
+    }
+    if root.members.length > 1: Path {
+        x: parent.width - 6px;
+        y: parent.height - 6px;
+        width: 4px;
+        height: 4px;
+        commands: "M 4 0 L 4 4 L 0 4 Z";
+        fill: Theme.text-inactive;
+    }
+    HoverTip {
+        y: parent.height;
+        hovered: ta.has-hover;
+        text: root.tip != "" ? root.tip
+            : root.members.length > 1 ? Generated.tools[root.shown].title + " — " + @tr("clic droit : autres outils")
+            : Generated.tools[root.shown].title;
+    }
+    // appui long : menu du groupe (le relâchement qui suit ne choisit rien)
+    property <bool> long-press;
+    Timer {
+        interval: 450ms;
+        running: ta.pressed && root.members.length > 1 && !root.long-press;
+        triggered => {
+            root.long-press = true;
+            flyout.show();
+        }
+    }
+    ta := TouchArea {
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right && root.members.length > 1) {
+                flyout.show();
+            }
+        }
+        clicked => {
+            if (root.long-press) {
+                root.long-press = false;
+            } else if (root.members.length > 1 && self.mouse-x > root.width - 9px && self.mouse-y > root.height - 9px) {
+                flyout.show();
+            } else {
+                root.picked(root.shown);
+            }
+        }
+    }
+    flyout := PopupWindow {
+        // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+        TouchArea { }
+        x: root.width + 4px;
+        y: 0;
+        width: 300px;
+        height: root.members.length * 28px + 8px;
+        Rectangle {
+            background: Theme.menu-bg;
+            border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+            border-width: 1px;
+            border-color: Theme.window-border;
+            drop-shadow-blur: 8px;
+            drop-shadow-color: Theme.shadows ? Theme.window-shadow : transparent;
+            for m[mi] in root.members: Rectangle {
+                x: 4px;
+                y: 4px + mi * 28px;
+                width: parent.width - 8px;
+                height: 28px;
+                border-radius: Theme.ctl-radius;
+                background: (Theme.hover-fx && fta.has-hover) ? Theme.accent-14 : transparent;
+                // outil choisi : petit carré à gauche, comme Photoshop
+                if Generated.tools[m].id == root.current: Rectangle {
+                    x: 4px; y: 11px; width: 5px; height: 5px;
+                    background: Theme.text;
+                }
+                Icon {
+                    x: 14px;
+                    y: 6px;
+                    spec: Generated.tools[m].icon;
+                    size: 16px;
+                }
+                Text {
+                    x: 38px;
+                    width: parent.width - 42px;
+                    height: parent.height;
+                    text: Generated.tools[m].title;
+                    color: Theme.text;
+                    font-size: Theme.font-size;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                fta := TouchArea {
+                    clicked => { root.picked(m); }
+                }
+            }
+        }
+    }
+}
+
+/// Intersection et OU exclusif (Paint.NET : Alt / Ctrl + clic droit ; Photoshop : Maj + Alt).
+/// En ligne dans la barre réduite ; `SelModeColumn` les empile dans le ruban à deux rangées.
+component SelModeExtra inherits HorizontalLayout {
+    FlatButton {
+        width: 26px;
+        height: 26px;
+        icon: { svg-index: 32, fa: "", fa-weight: 900 };
+        icon-size: 14px;
+        show-label: false;
+        tip: @tr("Intersection avec la sélection (Maj + Alt, ou Alt + clic droit)");
+        checked: ToolOpts.sel-mode == 3;
+        clicked => { Actions.ribbon("sel-intersect"); }
+    }
+    FlatButton {
+        width: 26px;
+        height: 26px;
+        icon: { svg-index: 33, fa: "", fa-weight: 900 };
+        icon-size: 14px;
+        show-label: false;
+        tip: @tr("OU exclusif : inverse la sélection sous la nouvelle forme (Ctrl + Alt, ou Ctrl + clic droit)");
+        checked: ToolOpts.sel-mode == 4;
+        clicked => { Actions.ribbon("sel-xor"); }
+    }
+}
+
+component SelModeColumn inherits VerticalLayout {
+    spacing: 4px;
+    alignment: start;
+    // ruban large : libellés (premiers à disparaître quand la place manque)
+    property <bool> wide: RibbonFit.level < 1;
+    FlatButton {
+        width: root.wide ? 66px : 26px;
+        height: 26px;
+        icon: { svg-index: 32, fa: "", fa-weight: 900 };
+        icon-size: 14px;
+        label: @tr("Inter.");
+        show-label: root.wide;
+        tip: @tr("Intersection avec la sélection (Maj + Alt, ou Alt + clic droit)");
+        checked: ToolOpts.sel-mode == 3;
+        clicked => { Actions.ribbon("sel-intersect"); }
+    }
+    FlatButton {
+        width: root.wide ? 66px : 26px;
+        height: 26px;
+        icon: { svg-index: 33, fa: "", fa-weight: 900 };
+        icon-size: 14px;
+        label: @tr("OU ex.");
+        show-label: root.wide;
+        tip: @tr("OU exclusif : inverse la sélection sous la nouvelle forme (Ctrl + Alt, ou Ctrl + clic droit)");
+        checked: ToolOpts.sel-mode == 4;
+        clicked => { Actions.ribbon("sel-xor"); }
+    }
+}
+
 /// Groupe « Sélection » du ruban (2 rangées ou 1 rangée en barre classique).
 component SelectionGroup inherits RibbonGroup {
     label: @tr("Sélection");
-    if !root.classic: VerticalLayout {
+    if !root.classic: HorizontalLayout {
+      VerticalLayout {
         spacing: 4px;
         HorizontalLayout {
             RB {
@@ -648,6 +864,9 @@ component SelectionGroup inherits RibbonGroup {
                 checked: ToolOpts.sel-mode == 2;
             }
         }
+      }
+      // intersection et OU exclusif l'un sous l'autre, à droite des deux rangées (compact)
+      SelModeColumn { }
     }
     if root.classic: HorizontalLayout {
         RB {
@@ -671,6 +890,108 @@ component SelectionGroup inherits RibbonGroup {
             idx: 5;
             checked: ToolOpts.sel-mode == 2;
         }
+        SelModeExtra { }
+    }
+}
+
+/// Outils de retouche : densité − / + et éponge (mode), force du doigt / de la densité, aide du
+/// tampon et du correcteur.
+component RetouchGroup inherits RibbonGroup {
+    in property <string> tool;
+    label: root.tool == "tool-dodge" ? @tr("Densité / éponge") : root.tool == "tool-smudge" ? @tr("Doigt")
+        : root.tool == "tool-clone" ? @tr("Tampon") : @tr("Correcteur");
+    if root.tool == "tool-dodge": VerticalLayout {
+        spacing: root.classic ? 0 : 6px;
+        alignment: center;
+        HorizontalLayout {
+            spacing: 2px;
+            for m[mi] in [@tr("Densité −"), @tr("Densité +"), @tr("Éponge −"), @tr("Éponge +")]: ToggleButton {
+                compact: root.classic;
+                // Font Awesome : les formes « ◐ ◑ » manquent dans la police de l'interface (vides)
+                glyph: mi == 0 ? "\u{f185}" : mi == 1 ? "\u{f186}" : mi == 2 ? "\u{f5c7}" : "\u{f043}";
+                text: m;
+                tip: mi == 0 ? @tr("Densité − : éclaircit (tons moyens)") : mi == 1 ? @tr("Densité + : assombrit (tons moyens)")
+                    : mi == 2 ? @tr("Éponge : désature") : @tr("Éponge : sature");
+                checked: ToolOpts.retouch-mode == mi;
+                clicked => { ToolOpts.retouch-mode = mi; }
+            }
+        }
+        if !root.classic: Gauge {
+            label: @tr("Force");
+            minimum: 1;
+            maximum: 100;
+            unit: "%";
+            value <=> ToolOpts.retouch-strength;
+        }
+    }
+    if root.tool == "tool-smudge" || (root.classic && root.tool == "tool-dodge"): Gauge {
+        label: @tr("Force");
+        label-width: 38px;
+        bar-width: 80px;
+        minimum: 1;
+        maximum: 100;
+        unit: "%";
+        value <=> ToolOpts.retouch-strength;
+    }
+    if root.tool == "tool-clone" || root.tool == "tool-heal": Text {
+        text: root.tool == "tool-clone" ? @tr("Alt + clic : choisir la source,\npuis peindre (source alignée)") : @tr("Peindre sur le défaut :\nil est reconstitué au relâchement");
+        color: Theme.ribbon-fg;
+        font-size: Theme.small-font-size;
+        vertical-alignment: center;
+    }
+}
+
+/// Interpolation des transformations : lisse (bilinéaire, suréchantillonnée en réduction) ou
+/// nette (plus proche voisin, pour le pixel art).
+component InterpGroup inherits RibbonGroup {
+    label: @tr("Interpolation");
+    HorizontalLayout {
+        spacing: 2px;
+        alignment: center;
+        ToggleButton {
+            compact: root.classic;
+            glyph: "\u{f042}";
+            text: @tr("Lisse");
+            tip: @tr("Interpolation lisse (photos) ; plusieurs échantillons par pixel en réduction forte");
+            checked: !ToolOpts.nearest;
+            clicked => { ToolOpts.nearest = false; }
+        }
+        ToggleButton {
+            compact: root.classic;
+            glyph: "\u{f00a}";
+            text: @tr("Nette");
+            tip: @tr("Plus proche voisin : pixels nets, sans flou (pixel art)");
+            checked: ToolOpts.nearest;
+            clicked => { ToolOpts.nearest = true; }
+        }
+    }
+}
+
+/// Lissage du tracé (stabilisateur, comme Photoshop) pour les outils de pinceau.
+component SmoothGroup inherits RibbonGroup {
+    label: @tr("Lissage");
+    titled: false;
+    VerticalLayout {
+        spacing: 4px;
+        alignment: center;
+        Gauge {
+            label: root.classic ? @tr("Lissage") : "";
+            label-width: root.classic ? 44px : 0px;
+            bar-width: root.classic ? 70px : 110px;
+            tip: @tr("Lissage du tracé : le trait suit le pointeur avec un léger retard, il gomme les tremblements de la main (écriture, contours). 0 % = trait direct ; au relâchement, le trait va jusqu'au pointeur.");
+            minimum: 0;
+            maximum: 100;
+            unit: "%";
+            value <=> ToolOpts.smoothing;
+        }
+        // ruban : à quoi ça sert, en deux mots sous le curseur (disparaît avec les autres
+        // libellés quand la place manque)
+        if !root.classic && RibbonFit.level < 4: Text {
+            text: @tr("Lissage du trait,\nun peu retardé");
+            font-size: Theme.small-font-size;
+            color: Theme.ribbon-label;
+            horizontal-alignment: center;
+        }
     }
 }
 
@@ -682,10 +1003,12 @@ component EditGroup inherits RibbonGroup {
         RB {
             idx: 6;
             labelled: true;
+            label-until: 3;
         }
         RB {
             idx: 7;
             labelled: true;
+            label-until: 3;
         }
     }
     if root.classic: HorizontalLayout {
@@ -726,13 +1049,21 @@ component AlignGroup inherits RibbonGroup {
 
 /// Résolution de rendu de la toile : chaque clic passe à la réduction suivante.
 component RenderDivButton inherits Rectangle {
-    width: 26px;
+    /// ruban large : libellé « Rendu ÷2 » (ou « Rendu plein »)
+    in property <bool> labelled;
+    property <bool> wide: root.labelled && RibbonFit.level < 2;
+    property <string> text: ToolOpts.render-div > 1 ? @tr("Rendu ÷{}", ToolOpts.render-div) : @tr("Rendu plein");
+    min-width: root.wide ? max(66px, rd-m.preferred-width + 36px) : 26px;
+    preferred-width: self.min-width;
+    max-width: root.wide ? 1000px : 26px;
     height: 26px;
+    rd-m := Text { visible: false; text: root.text; font-size: Theme.font-size; }
     FlatButton {
-        width: 26px;
+        width: parent.width;
         height: 26px;
         icon-size: 14px;
-        show-label: false;
+        label: root.text;
+        show-label: root.wide;
         img: MpIcons.images[MpIcons.for-menu(@tr("Résolution de rendu de la toile"), "")];
         checked: ToolOpts.render-div > 1;
         tip: ToolOpts.render-div > 1
@@ -742,7 +1073,7 @@ component RenderDivButton inherits Rectangle {
             : @tr("Résolution de rendu de la toile : pleine. Clic : ÷2 (÷4 dès 4 Mpx, ÷8 dès 16 Mpx). L'enregistrement reste en pleine résolution.");
         clicked => { Actions.ribbon("render-cycle"); }
     }
-    if ToolOpts.render-div > 1: Rectangle {
+    if ToolOpts.render-div > 1 && !root.wide: Rectangle {
         x: parent.width - self.width;
         y: parent.height - self.height;
         width: 15px;
@@ -762,42 +1093,71 @@ component RenderDivButton inherits Rectangle {
 
 /// Rendu complet tout de suite, jusqu'à la prochaine modification.
 component RenderNowButton inherits FlatButton {
-    width: 26px;
+    /// ruban large : libellé « Rendu net »
+    in property <bool> labelled;
+    property <bool> wide: root.labelled && RibbonFit.level < 2;
+    min-width: root.wide ? max(66px, rn-m.preferred-width + 36px) : 26px;
+    preferred-width: self.min-width;
+    max-width: root.wide ? 1000px : 26px;
     height: 26px;
     icon-size: 14px;
-    show-label: false;
+    label: @tr("Rendu net");
+    show-label: root.wide;
     img: MpIcons.images[MpIcons.for-menu(@tr("Rendre maintenant"), "")];
     enabled: ToolOpts.render-div > 1 && !ToolOpts.render-full;
     checked: ToolOpts.render-full;
     tip: ToolOpts.render-full ? @tr("Rendu complet affiché, jusqu'à la prochaine modification.") : @tr("Rendre maintenant : affiche l'image en pleine résolution, jusqu'à la prochaine modification.");
     clicked => { Actions.ribbon("render-now"); }
+    rn-m := Text { visible: false; text: root.label; font-size: Theme.font-size; }
 }
 
 component ViewGroup inherits RibbonGroup {
     label: @tr("Affichage");
-    if !root.classic: VerticalLayout {
-        spacing: 4px;
-        HorizontalLayout {
+    // ruban : colonnes alignées (chaque bouton à la largeur du plus large de sa colonne) :
+    // Grille / Règles, Hors toile / Aimantation, Rendu ÷2 / Rendu net
+    if !root.classic: HorizontalLayout {
+        spacing: 2px;
+        VerticalLayout {
+            spacing: 4px;
+            alignment: start;
             RB {
                 idx: 16;
+                in-column: true;
+                labelled: true;
+                label-until: 2;
                 checked: ToolOpts.pixel-grid;
             }
             RB {
                 idx: 17;
+                in-column: true;
+                labelled: true;
+                label-until: 2;
                 checked: ToolOpts.rulers;
             }
-            if ToolOpts.render-ctl: RenderDivButton { }
         }
-        HorizontalLayout {
+        VerticalLayout {
+            spacing: 4px;
+            alignment: start;
             RB {
                 idx: 18;
+                in-column: true;
+                labelled: true;
+                label-until: 2;
                 checked: ToolOpts.outside-canvas;
             }
             RB {
                 idx: 19;
+                in-column: true;
+                labelled: true;
+                label-until: 2;
                 checked: ToolOpts.snap;
             }
-            if ToolOpts.render-ctl: RenderNowButton { }
+        }
+        if ToolOpts.render-ctl: VerticalLayout {
+            spacing: 4px;
+            alignment: start;
+            RenderDivButton { labelled: true; }
+            RenderNowButton { labelled: true; }
         }
     }
     if root.classic: HorizontalLayout {
@@ -827,6 +1187,8 @@ component RegionGroup inherits RibbonGroup {
     in property <string> other-label: @tr("Calque");
     in property <string> other-glyph: "\u{f03e}";
     in property <float> tol-max: 100;
+    // bouton « échantillonner l'image entière » (baguette, pot de peinture)
+    in property <bool> sampling: true;
     if !root.classic: VerticalLayout {
         spacing: 6px;
         HorizontalLayout {
@@ -850,12 +1212,22 @@ component RegionGroup inherits RibbonGroup {
                 }
             }
         }
-        Gauge {
-            label: @tr("Tol.");
-            label-width: 30px;
-            minimum: 0;
-            maximum: root.tol-max;
-            value <=> ToolOpts.tolerance;
+        HorizontalLayout {
+            spacing: 4px;
+            Gauge {
+                label: @tr("Tol.");
+                label-width: 30px;
+                minimum: 0;
+                maximum: root.tol-max;
+                value <=> ToolOpts.tolerance;
+            }
+            if root.sampling: ToggleButton {
+                compact: true;
+                glyph: "\u{f5fd}";
+                tip: @tr("Échantillonner l'image entière (tous les calques visibles)");
+                checked: ToolOpts.sample-all;
+                clicked => { ToolOpts.sample-all = !ToolOpts.sample-all; }
+            }
         }
     }
     if root.classic: HorizontalLayout {
@@ -877,6 +1249,13 @@ component RegionGroup inherits RibbonGroup {
             minimum: 0;
             maximum: root.tol-max;
             value <=> ToolOpts.tolerance;
+        }
+        if root.sampling: ToggleButton {
+            compact: true;
+            glyph: "\u{f5fd}";
+            tip: @tr("Échantillonner l'image entière (tous les calques visibles)");
+            checked: ToolOpts.sample-all;
+            clicked => { ToolOpts.sample-all = !ToolOpts.sample-all; }
         }
     }
 }
@@ -932,6 +1311,7 @@ component MagnetGroup inherits RibbonGroup {
 
 component SizeGroup inherits RibbonGroup {
     label: @tr("Taille / trait");
+    titled: false;
     if !root.classic: VerticalLayout {
         spacing: 8px;
         padding-top: 2px;
@@ -1026,7 +1406,21 @@ component SymmetryGroup inherits RibbonGroup {
 component BrushGroup inherits RibbonGroup {
     in property <bool> pencil;
     label: root.pencil ? @tr("Crayon") : @tr("Pinceau");
-    GridLayout {
+    // barre classique : une seule rangée (la seconde, Spray / Carré, était coupée)
+    if root.classic: HorizontalLayout {
+        spacing: 2px;
+        for k[i] in [{ g: "\u{f111}", t: @tr("Rond") }, { g: "\u{f192}", t: @tr("Doux") }, { g: "\u{f5c7}", t: @tr("Spray") }, { g: "\u{f0c8}", t: @tr("Carré") }]: ToggleButton {
+            compact: true;
+            glyph: k.g;
+            img: i == 0 ? Sprite.brush-round : i == 1 ? Sprite.brush-soft : i == 2 ? Sprite.brush-spray : Sprite.brush-square;
+            text: k.t;
+            checked: ToolOpts.brush-shape == i;
+            clicked => {
+                ToolOpts.brush-shape = i;
+            }
+        }
+    }
+    if !root.classic: GridLayout {
         spacing: 2px;
         Row {
             for k[i] in [{ g: "\u{f111}", t: @tr("Rond") }, { g: "\u{f192}", t: @tr("Doux") }]: ToggleButton {
@@ -1050,6 +1444,173 @@ component BrushGroup inherits RibbonGroup {
                 clicked => {
                     ToolOpts.brush-shape = i + 2;
                 }
+            }
+        }
+    }
+}
+
+/// Barre Paint.NET : groupe replié en un bouton « Libellé ▾ » ; ses réglages s'ouvrent dessous
+/// (moins de place prise, comme les listes déroulantes de la barre d'outils de Paint.NET).
+/// Image : recadrer, pivoter, retourner (ruban MasterPaint seulement : la barre Paint.NET a
+/// déjà assez d'icônes).
+component ImageGroup inherits RibbonGroup {
+    callback crop();
+    label: @tr("Image");
+    VerticalLayout {
+        spacing: 4px;
+        ToggleButton {
+            glyph: "\u{f125}";
+            img: Sprite.img-crop;
+            text: @tr("Recadrer…");
+            tip: @tr("Recadrer l'image (poignées sur la toile)");
+            clicked => {
+                root.crop();
+            }
+        }
+        HorizontalLayout {
+            spacing: 2px;
+            for r in [
+                { id: "rot-ccw", img: Sprite.img-rot-ccw, t: @tr("Pivoter l'image de 90° vers la gauche") },
+                { id: "rot-cw", img: Sprite.img-rot-cw, t: @tr("Pivoter l'image de 90° vers la droite") },
+                { id: "flip-h", img: Sprite.img-flip-h, t: @tr("Retourner l'image horizontalement (miroir)") },
+                { id: "flip-v", img: Sprite.img-flip-v, t: @tr("Retourner l'image verticalement (miroir)") },
+            ]: ToggleButton {
+                compact: true;
+                img: r.img;
+                tip: r.t;
+                clicked => {
+                    Actions.ribbon(r.id);
+                }
+            }
+        }
+    }
+}
+
+component FoldGroup inherits Rectangle {
+    /// "view", "brush", "pencil", "sym", "align", "edit", "image", "sel"
+    in property <string> kind;
+    /// nom du groupe : infobulle (barre compacte, comme paint.js : une icône et ▾) ; sous
+    /// l'icône dans la version haute
+    in property <string> label;
+    in property <bool> has-selection;
+    /// icône du bouton : image du sprite, sinon icône
+    in property <image> img;
+    in property <IconSpec> icon;
+    /// ruban MasterPaint replié faute de place (comme Office) : grand bouton à la hauteur du
+    /// ruban (icône, nom du groupe, ▾) ; le volet montre le groupe complet du ruban
+    in property <bool> tall;
+    callback crop();
+    height: root.tall ? 88px : 32px;
+    width: fold-btn.width + 8px;
+    fold-btn := Rectangle {
+        x: 4px;
+        y: root.tall ? 5px : 3px;
+        width: root.tall ? max(48px, min(84px, fold-lbl.preferred-width + 12px)) : fold-in.preferred-width + 12px;
+        height: root.tall ? 76px : 26px;
+        border-radius: Theme.ctl-radius;
+        background: fold-ta.pressed ? Theme.accent-20 : (Theme.hover-fx && fold-ta.has-hover) ? Theme.accent-14 : transparent;
+        border-width: root.tall && !(Theme.hover-fx && fold-ta.has-hover) ? 0px : 1px;
+        border-color: (Theme.hover-fx && fold-ta.has-hover) ? Theme.accent-60 : Theme.ribbon-sep;
+        fold-in := HorizontalLayout {
+            x: 6px;
+            spacing: 4px;
+            if !root.tall: VerticalLayout {
+                alignment: center;
+                if root.img.width > 0: Image {
+                    width: 16px;
+                    height: 16px;
+                    source: root.img;
+                }
+                if root.img.width == 0: Icon {
+                    spec: root.icon;
+                    size: 16px;
+                    tint: Theme.ribbon-fg;
+                }
+            }
+            // flèche ▾ dessinée (le glyphe du pack, en image, débordait du bouton)
+            if !root.tall: VerticalLayout {
+                alignment: center;
+                Path {
+                    width: 8px;
+                    height: 5px;
+                    commands: "M 0 0 L 8 0 L 4 5 Z";
+                    fill: Theme.ribbon-label;
+                }
+            }
+        }
+        if root.tall && root.img.width > 0: Image {
+            x: (parent.width - 22px) / 2;
+            y: 8px;
+            width: 22px;
+            height: 22px;
+            source: root.img;
+        }
+        if root.tall && root.img.width == 0: Icon {
+            x: (parent.width - 22px) / 2;
+            y: 8px;
+            spec: root.icon;
+            size: 22px;
+            tint: Theme.ribbon-fg;
+        }
+        fold-lbl := Text {
+            visible: root.tall;
+            x: 4px;
+            y: 36px;
+            width: parent.width - 8px;
+            text: root.label;
+            font-size: Theme.small-font-size;
+            color: Theme.ribbon-fg;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+        if root.tall: Path {
+            x: (parent.width - 8px) / 2;
+            y: 56px;
+            width: 8px;
+            height: 5px;
+            commands: "M 0 0 L 8 0 L 4 5 Z";
+            fill: Theme.ribbon-label;
+        }
+        HoverTip { y: parent.height; hovered: fold-ta.has-hover && !root.tall; text: root.label; }
+        fold-ta := TouchArea {
+            clicked => {
+                pop.show();
+            }
+        }
+    }
+    Rectangle {
+        x: parent.width - 1px;
+        y: 6px;
+        width: 1px;
+        height: parent.height - 12px;
+        background: Theme.ribbon-sep;
+    }
+    pop := PopupWindow {
+        x: 4px;
+        y: root.tall ? fold-btn.y + fold-btn.height + 2px : root.height - 1px;
+        width: pop-in.preferred-width + 10px;
+        height: root.tall ? 96px : 38px;
+        close-policy: PopupClosePolicy.close-on-click-outside;
+        Rectangle {
+            background: Theme.ribbon-bg;
+            border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+            border-width: 1px;
+            border-color: Theme.window-border;
+            drop-shadow-blur: 8px;
+            drop-shadow-color: Theme.shadows ? Theme.window-shadow : transparent;
+            // fond qui capte le pointeur : le curseur de l'outil ne reste pas sur le volet
+            TouchArea { }
+            pop-in := HorizontalLayout {
+                x: 3px;
+                y: 3px;
+                height: root.tall ? 88px : 32px;
+                if root.kind == "view": ViewGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "brush" || root.kind == "pencil": BrushGroup { classic: !root.tall; titled: false; bare: true; pencil: root.kind == "pencil"; }
+                if root.kind == "sym": SymmetryGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "align": AlignGroup { classic: !root.tall; titled: false; bare: true; has-selection: root.has-selection; }
+                if root.kind == "edit": EditGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "sel": SelectionGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "image": ImageGroup { titled: false; bare: true; crop => { pop.close(); root.crop(); } }
             }
         }
     }
@@ -1261,6 +1822,8 @@ component LineStylePicker inherits Rectangle {
         clicked => { pop.show(); }
     }
     pop := PopupWindow {
+        // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+        TouchArea { }
         x: 0;
         y: root.height + 2px;
         width: 150px;
@@ -1678,26 +2241,6 @@ component LinkToggle inherits Rectangle {
     }
 }
 
-component AppearanceColorChoice inherits Rectangle {
-    in property <string> label;
-    in property <int> index;
-    in property <color> value;
-    width: 124px;
-    height: 54px;
-    border-radius: Theme.ctl-radius;
-    background: Theme.button-bg;
-    border-width: 1px;
-    border-color: Theme.button-border;
-    HorizontalLayout {
-        x: 8px; y: 6px; width: parent.width - 16px; height: parent.height - 12px; spacing: 8px;
-        Rectangle { width: 30px; height: 30px; background: root.value; border-width: 1px; border-color: Theme.field-border; border-radius: Theme.ctl-radius; }
-        Text { horizontal-stretch: 1; text: root.label; color: Theme.text; wrap: word-wrap; vertical-alignment: center; font-size: Theme.small-font-size; }
-    }
-    HoverTip { y: parent.height; hovered: choice.has-hover; text: @tr("Choisir cette couleur"); }
-    choice := TouchArea {
-        clicked => { ColorPop.show("appearance:" + root.index, root.value, self.absolute-position.x, self.absolute-position.y, self.height); }
-    }
-}
 
 
 /// Paramètres › Toile et outils : pastille de couleur posée sur la maquette de la toile
@@ -1924,13 +2467,15 @@ export component AppWindow inherits Window {
     in property <bool> no-doc;
     // largeur du bloc menus + barre rapide (les onglets commencent après) : 400 px au moins,
     // plus si les titres de menus ne tiennent pas
-    property <length> menu-zone: root.interface-style == 2 ? max(360px, menu-row.preferred-width + 12px) : max(456px, menu-row.preferred-width + 12px, 368px + bug-label-measure.preferred-width);
+    property <length> menu-zone: root.interface-style == 2 ? max(360px, menu-row.preferred-width + 12px) : max(menu-row.preferred-width + 12px, 356px + max(116px, bug-label-measure.preferred-width + 32px));
     // Derive the tab band from the real action-button positions, including translations.
     in property <int> active-tab-index: -1;
     property <length> tabs-end: root.interface-style == 2 ? root.usable-width - 34px - 6 * 27px - 18px : min(info-button.x - 8px, root.custom-frame ? root.usable-width - 146px : root.usable-width - 8px);
     property <length> tabs-room: max(0px, root.tabs-end - root.menu-zone - 18px);
-    property <length> tab-w: clamp((root.tabs-room - max(0, root.tabs.length - 1) * 2px) / max(1, root.tabs.length), 44px, 80px);
-    property <length> tabs-full: root.tabs.length * root.tab-w + max(0, root.tabs.length - 1) * 2px;
+    // onglet de la pellicule du Photo Pro réduite (après les projets)
+    property <length> pm-pill-w: root.pm-count > 0 && !root.pm-open ? 118px : 0px;
+    property <length> tab-w: clamp((root.tabs-room - root.pm-pill-w - max(0, root.tabs.length - 1) * 2px) / max(1, root.tabs.length), 44px, 80px);
+    property <length> tabs-full: root.tabs.length * root.tab-w + max(0, root.tabs.length - 1) * 2px + (root.pm-pill-w > 0 ? root.pm-pill-w + 2px : 0px);
     property <bool> tabs-over: root.tabs-full > root.tabs-room + 1px;
     property <length> tabs-view-room: max(0px, root.tabs-room - (root.tabs-over ? 40px : 0px));
     function scroll-tabs(delta: length) {
@@ -2163,7 +2708,7 @@ export component AppWindow inherits Window {
     callback rmbg-cancel();
     callback snap-ok();
     callback snap-cancel();
-    in property <int> canvas-cursor: 0;  // 0 croix, 1 déplacer, 2 poignée, 3 rotation
+    in property <int> canvas-cursor: 0;  // 0 outil, 1 déplacer, 2 poignée (main), 3 rotation, 5 ↔, 6 ↕, 7 ⤡, 8 ⤢, 9 colonne, 10 rangée, 11 copie
     in property <bool> rotate-hint;
     // zone de saisie de l'outil Texte (coordonnées document)
     in-out property <bool> text-active;
@@ -2224,6 +2769,7 @@ export component AppWindow inherits Window {
             || (root.vec-on && (id == "tool-pencil" || id == "tool-gradient"));
         return root.layer-block != "" && !(shapes && root.layer-block == "calque texte")
             && (id == "tool-brush" || id == "tool-pencil" || id == "tool-eraser" || id == "tool-gradient"
+            || id == "tool-clone" || id == "tool-heal" || id == "tool-smudge" || id == "tool-dodge" || id == "tool-recolor"
             || shapes || id == "tool-deform" || id == "tool-warp-4"
             || (id == "tool-move" && root.layer-block == "verrouillé"));
     }
@@ -2315,12 +2861,50 @@ export component AppWindow inherits Window {
 
     // ---- Mode Photo Pro (pellicule, réglages Camera Raw par photo) ----
     in-out property <bool> pm-open;
+    // widgets standard de Slint (barres de défilement, listes) clairs ou sombres comme le thème
+    property <bool> ui-dark: Theme.dark;
+    changed ui-dark => { Palette.color-scheme = root.ui-dark ? ColorScheme.dark : ColorScheme.light; }
+    /// Photo Pro ouvert avec une fenêtre de dialogue de l'espace de travail (Paramètres, export de
+    /// Photo Pro, contact, notes de version, raccourcis, confirmation, erreur) : elle flotte
+    /// au-dessus de Photo Pro au lieu d'être cachée dessous
+    property <bool> pm-front: root.pm-open && (root.show-settings || root.show-pm-export || root.show-contact || root.show-changelog
+        || root.show-shortcuts || root.show-purge-confirm || root.show-purge-complete || root.show-task || root.show-error || root.show-icons);
     in property <image> pm-image;
     in property <int> pm-img-w: 1;
     in property <int> pm-img-h: 1;
     in property <int> pm-full-w: 1;
     in property <[PmThumb]> pm-photos: [];
     in property <[float]> pm-values: [];
+    // Photo Pro : module, historique, pellicule réduite (onglet), onglet Masque
+    in-out property <int> pm-module: 1;
+    /// fond d'ambiance de Photo Pro en présentation MasterPaint (photo active très réduite)
+    in property <image> pm-ambient;
+    in property <bool> pm-can-undo;
+    in property <bool> pm-can-redo;
+    in property <int> pm-count;
+    // fenêtre d'exportation de Photo Pro : toute la pellicule, format (0 JPEG, 1 PNG 16 bits,
+    // 2 TIFF 16 bits), qualité JPEG, taille (0 originale, puis 4000 / 3000 / 2048 / 1080 px)
+    in-out property <bool> show-pm-export;
+    in-out property <bool> pm-exp-all;
+    in-out property <int> pm-exp-fmt;
+    in-out property <float> pm-exp-quality: 92;
+    in-out property <int> pm-exp-size;
+    in property <string> pm-exp-info;
+    callback pm-export-update();
+    callback pm-export-run();
+    in property <[PmMaskRow]> pm-masks: [];
+    in property <int> pm-mask-sel: -1;
+    in property <int> pm-mask-kind;
+    in property <float> pm-mask-amount: 100;
+    in property <[float]> pm-mask-adjust: [];
+    in property <[float]> pm-mask-shape: [];
+    in property <[float]> pm-mask-handles: [];
+    in property <image> pm-mask-image;
+    in-out property <bool> pm-mask-overlay: true;
+    in property <[float]> pm-brush: [5, 50, 100, 0];
+    callback pm-mask-set(string, float);
+    callback pm-mask-drag(int, float, float, int);
+    in property <[float]> pm-shift: [];
     in property <[string]> pm-presets: [];
     in property <int> pm-preset;
     in property <bool> pm-fx-off;
@@ -2333,6 +2917,15 @@ export component AppWindow inherits Window {
     in property <float> pm-hq-x1: 1;
     in property <float> pm-hq-y1: 1;
     in property <bool> pm-hq-shown;
+    in property <image> pm-hist;
+    in property <bool> pm-clip-lo;
+    in property <bool> pm-clip-hi;
+    callback pm-pick-wb(float, float);
+    // recadrage (x0, y0, x1, y1 en fractions) et redressement (degrés) de la photo active
+    in property <[float]> pm-crop: [0, 0, 1, 1];
+    in property <float> pm-angle;
+    in-out property <bool> pm-crop-mode;
+    callback pm-crop-set(float, float, float, float, float);
     /// zone visible de la photo (0..1) et largeur affichée de l'image entière (pixels logiques)
     callback pm-view(float, float, float, float, float);
     // chargement d'un fichier lourd en tâche de fond (RAW, grande image) : fenêtre de progression
@@ -2552,7 +3145,53 @@ export component AppWindow inherits Window {
     /// y tient avec des marges égales
     property <length> side-pal-w: 230px;
     // Reference ordering, with extra MasterPaint tools retained at the end.
-    property <[int]> reference-tool-slots: root.interface-style == 3 ? [1, 5, 4, 3, 2, 20, 16, 17, 6, 0, 18, 19, 7, 8, 10, 11, 9, 12, 13, 14, 15] : [0, 3, 6, 4, 2, 20, 18, 19, 13, 1, 5, 7, 10, 12, 9, 8, 11, 14, 16, 17, 15];
+    property <[int]> reference-tool-slots: root.interface-style == 3 ? [1, 3, 6, 5, 4, 26, 22, 23, 7, 0, 24, 25, 9, 10, 14, 15, 13, 18, 19, 20, 21, 2, 12, 11, 8, 16, 17] : [0, 2, 6, 5, 3, 26, 23, 24, 13, 1, 7, 25, 10, 12, 9, 8, 11, 19, 21, 22, 20, 4, 15, 14, 16, 17, 18];
+    // Photoshop (PhotoCraft) : une seule colonne d'outils groupés (indices de Generated.tools),
+    // l'outil montré est le dernier choisi du groupe ; clic droit ou appui long = menu du groupe
+    property <[{members: [int]}]> ps-groups: [
+        { members: [9] }, { members: [0, 21] }, { members: [1, 4, 3] }, { members: [2] }, { members: [7, 6] },
+        { members: [8] }, { members: [24] }, { members: [12, 13, 22] }, { members: [23] }, { members: [16] },
+        { members: [14, 15] }, { members: [25, 26] }, { members: [17] }, { members: [18, 19, 20] }, { members: [27, 10] },
+    ];
+    in-out property <[int]> ps-last: [9, 0, 1, 2, 7, 8, 24, 12, 23, 16, 14, 25, 17, 18, 27];
+    // MasterPaint (fenêtre flottante) et Paint.NET : outils voisins réunis comme dans Photoshop
+    // (clic droit, appui long ou petit triangle = menu du groupe) ; la liste s'arrête à
+    // Rectangle arrondi / Ligne. Palettes en colonnes (MasterPaint) : la place ne manque pas,
+    // tous les outils restent visibles. Indices de Generated.tools ; 27 = corbeille (effacer le
+    // contenu de la sélection), à la place du zoom.
+    property <bool> tool-groups: !root.vec-on && root.interface-style != 3 && !root.docked;
+    property <[{members: [int], x: length, y: length, w: length}]> mp-tool-groups: [
+        { members: [0, 21], x: 0px, y: 0px, w: 26px }, { members: [1, 4, 3], x: 26px, y: 0px, w: 26px },
+        { members: [2], x: 0px, y: 27px, w: 26px }, { members: [5], x: 26px, y: 27px, w: 26px },
+        { members: [27], x: 0px, y: 54px, w: 26px }, { members: [9], x: 26px, y: 54px, w: 26px },
+        { members: [6], x: 0px, y: 82px, w: 26px }, { members: [7], x: 26px, y: 82px, w: 26px },
+        { members: [8], x: 0px, y: 109px, w: 26px }, { members: [17], x: 26px, y: 109px, w: 26px },
+        { members: [12, 22, 25, 26], x: 0px, y: 137px, w: 26px }, { members: [13], x: 26px, y: 137px, w: 26px },
+        { members: [14], x: 0px, y: 164px, w: 26px }, { members: [15], x: 26px, y: 164px, w: 26px },
+        { members: [16], x: 0px, y: 191px, w: 26px }, { members: [23, 24], x: 26px, y: 191px, w: 26px },
+        { members: [18], x: 0px, y: 219px, w: 52px },
+        { members: [19], x: 0px, y: 246px, w: 26px }, { members: [20], x: 26px, y: 246px, w: 26px },
+    ];
+    // Paint.NET : ordre de paint.js (sélections, déplacer, remplissage, pinceaux, texte, formes)
+    // Paint.NET : grille de paint.js case pour case (sélection rect. | déplacer, lasso |
+    // déformer, ellipse | zoom, baguette | main, pot | dégradé, pinceau | gomme, crayon |
+    // pipette, tampon | remplacement de couleur, texte | ligne, formes) ; les outils sans
+    // équivalent dans paint.js sont dans le groupe (clic droit) de la case la plus proche
+    property <[{members: [int], x: length, y: length, w: length}]> pdn-tool-groups: [
+        { members: [0], x: 0px, y: 0px, w: 26px }, { members: [9], x: 26px, y: 0px, w: 26px },
+        { members: [1, 4, 3], x: 0px, y: 27px, w: 26px }, { members: [7, 6], x: 26px, y: 27px, w: 26px },
+        { members: [21], x: 0px, y: 54px, w: 26px }, { members: [10, 11], x: 26px, y: 54px, w: 26px },
+        { members: [2], x: 0px, y: 81px, w: 26px }, { members: [28], x: 26px, y: 81px, w: 26px },
+        { members: [15], x: 0px, y: 108px, w: 26px }, { members: [14], x: 26px, y: 108px, w: 26px },
+        { members: [12, 25, 26], x: 0px, y: 135px, w: 26px }, { members: [16], x: 26px, y: 135px, w: 26px },
+        { members: [13], x: 0px, y: 162px, w: 26px }, { members: [8], x: 26px, y: 162px, w: 26px },
+        { members: [23, 24], x: 0px, y: 189px, w: 26px }, { members: [22], x: 26px, y: 189px, w: 26px },
+        { members: [17], x: 0px, y: 216px, w: 26px }, { members: [20], x: 26px, y: 216px, w: 26px },
+        { members: [18, 19], x: 0px, y: 243px, w: 26px }, { members: [27, 5], x: 26px, y: 243px, w: 26px },
+    ];
+    property <bool> ps-rail: root.interface-style == 3 && !root.vec-on;
+    // Photoshop + projet SVG : colonne unique d'outils vectoriels (comme VectorCraft / Illustrator)
+    property <bool> ai-rail: root.interface-style == 3 && root.vec-on;
     // hauteur de la fenêtre Couleurs ancrée : celle que demande son contenu à cette largeur, ou
     // celle choisie au séparateur (ps-h-colors)
     // jamais sous la hauteur de son contenu (roue, palette) : rien ne déborde sur la voisine
@@ -2701,6 +3340,59 @@ export component AppWindow inherits Window {
     // présentation Photoshop (PhotoCraft) : une seule barre de menus (titre du document au centre),
     // barre d'options, onglets de documents en texte, bande d'icônes à droite des panneaux
     property <bool> ps-chrome: root.interface-style == 3 && !root.phone;
+    /// barre réduite (Paint.NET, ruban MasterPaint replié) : groupes secondaires repliés en
+    /// petites icônes à liste (FoldGroup), comme paint.js ; Photoshop garde sa barre d'icônes
+    property <bool> pdn-fold: root.interface-style != 3 && root.classic && !root.phone;
+    // ruban adaptatif (ruban MasterPaint, téléphone compris) : groupes repliés en menus selon le
+    // palier RibbonFit.level, du moins utile au plus utile
+    property <bool> rib-adapt: !root.classic;
+    property <bool> fold-align: root.pdn-fold || (root.rib-adapt && RibbonFit.level >= 5);
+    property <bool> fold-view: root.pdn-fold || (root.rib-adapt && RibbonFit.level >= 6);
+    property <bool> fold-image: root.rib-adapt && RibbonFit.level >= 7;
+    property <bool> fold-sym: root.pdn-fold || (root.rib-adapt && RibbonFit.level >= 8);
+    property <bool> fold-edit: root.rib-adapt && RibbonFit.level >= 9;
+    property <bool> fold-brush: root.pdn-fold || (root.rib-adapt && RibbonFit.level >= 10);
+    property <bool> fold-sel: root.rib-adapt && RibbonFit.level >= 11;
+    /// largeur voulue par la rangée du ruban et largeur offerte (bouton de réduction à droite)
+    property <length> rib-need: ribbon-row.preferred-width;
+    property <length> rib-avail: rib-flick.width - (root.phone ? 4px : 34px);
+    property <int> rib-level: RibbonFit.level;
+    property <bool> rib-on: root.rib-adapt;
+    /// largeur mesurée à chaque palier (négative : inconnue) ; oubliée quand le contenu change
+    property <[length]> rib-w: [-1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px];
+    property <int> rib-last-level: -1;
+    property <length> rib-last-need;
+    /// Un pas vers le palier qui tient : plus replié si la rangée déborde, moins replié si le
+    /// palier précédent tenait (ou n'a pas encore été mesuré). Sans oscillation : un palier
+    /// mesuré trop large n'est plus retenté tant que la largeur offerte ne grandit pas.
+    function rib-step() {
+        if (!root.rib-on) {
+            RibbonFit.level = 0;
+            return;
+        }
+        let lv = RibbonFit.level;
+        root.rib-last-level = lv;
+        root.rib-last-need = root.rib-need;
+        root.rib-w[lv] = root.rib-need;
+        if (root.rib-need > root.rib-avail + 0.5px) {
+            if (lv < 11) {
+                RibbonFit.level = lv + 1;
+            }
+        } else if (lv > 0 && (root.rib-w[lv - 1] < 0px || root.rib-w[lv - 1] <= root.rib-avail + 0.5px)) {
+            RibbonFit.level = lv - 1;
+        }
+    }
+    changed rib-need => {
+        // même palier, autre largeur : le contenu a changé (outil, langue, réglage) ; les
+        // mesures des autres paliers ne valent plus
+        if (RibbonFit.level == root.rib-last-level && root.rib-need != root.rib-last-need) {
+            root.rib-w = [-1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px, -1px];
+        }
+        root.rib-step();
+    }
+    changed rib-avail => { root.rib-step(); }
+    changed rib-level => { root.rib-step(); }
+    changed rib-on => { root.rib-step(); }
     property <length> ps-tabs-h: root.ps-chrome ? 27px : 0px;
     property <length> ps-strip: root.ps-chrome && root.docked ? 34px : 0px;
     property <length> top-height: root.phone ? 48px : root.ps-chrome ? 30px : 52px;
@@ -2711,35 +3403,30 @@ export component AppWindow inherits Window {
     // lignes (Édition, Ajustements et Affichage passent à la ligne)
     property <bool> classic-wrap: effective-toolbar-mode == 1 && root.usable-width < 1100px;
     changed width => {
-        RibbonFit.tight = effective-toolbar-mode == 0 && root.usable-width < 1180px;
-        RibbonFit.narrow = root.usable-width < 900px;
         root.ui-resized();
     }
-    changed toolbar-mode => {
-        RibbonFit.tight = effective-toolbar-mode == 0 && root.usable-width < 1180px;
-    }
     init => {
+        Palette.color-scheme = root.ui-dark ? ColorScheme.dark : ColorScheme.light;
         PhoneDock.on = root.phone;
         PhoneDock.inset = root.strip-height;
         PhoneDock.max-h = root.phone ? root.mob-sheet-max : 100000px;
         MenuState.phone = root.phone;
-        RibbonFit.tight = effective-toolbar-mode == 0 && root.usable-width < 1180px;
-        RibbonFit.narrow = root.usable-width < 900px;
     }
     property <length> status-height: root.phone ? 0px : 26px;
     property <bool> classic: effective-toolbar-mode == 1;
     property <bool> space-down;
+    property <bool> clone-pick;
     property <bool> panning;
     property <length> pan-sx;
     property <length> pan-sy;
 
     // catégories d'outils (choix des groupes du ruban, comme la version web)
     pure function is-sel-tool(t: string) -> bool {
-        return t == "tool-select" || t == "tool-direct-select" || t == "tool-poly-lasso" || t == "tool-magnetic-lasso"
+        return t == "tool-select" || t == "tool-ellipse-select" || t == "tool-direct-select" || t == "tool-poly-lasso" || t == "tool-magnetic-lasso"
             || t == "btn-deselect" || t == "tool-warp-4" || t == "tool-deform" || t == "tool-move";
     }
     pure function is-brush(t: string) -> bool {
-        return t == "tool-brush" || t == "tool-eraser";
+        return t == "tool-brush" || t == "tool-eraser" || t == "tool-clone" || t == "tool-heal" || t == "tool-smudge" || t == "tool-dodge" || t == "tool-recolor";
     }
     pure function is-shape(t: string) -> bool {
         return t == "tool-shapes-family" || t == "tool-round-3" || t == "tool-line";
@@ -2846,6 +3533,15 @@ export component AppWindow inherits Window {
         }
     }
 
+    // fond de toute la fenêtre, derrière tout : sur une zone sans bouton (fond du ruban, barre
+    // d'état, marges), le curseur redevient la flèche (Slint garderait sinon celui de la toile)
+    TouchArea {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        mouse-cursor: root.loading ? MouseCursor.wait : MouseCursor.default;
+    }
     fs := FocusScope {
         x: root.system-left;
         y: root.system-top;
@@ -2954,7 +3650,7 @@ export component AppWindow inherits Window {
                     y: 1px;
                     width: max(0px, parent.width - 2px);
                     height: max(0px, parent.height - 2px);
-                    border-bottom-left-radius: Theme.win98 ? 0px : 11px;
+                    border-bottom-left-radius: Theme.win98 || !root.set-rounded ? 0px : 11px;
                     border-width: 1px;
                     border-color: Theme.header-edge-soft;
                     background: transparent;
@@ -3011,7 +3707,9 @@ export component AppWindow inherits Window {
                 }
                 // Groupes Fichier, historique et zoom ; signalement ancré à droite.
                 for q in Generated.quick: Rectangle {
-                    x: q.label != "" ? parent.width - self.width - 8px
+                    // MasterPaint : signalement juste après le zoom et le bouton Paramètres (avant :
+                    // ancré à droite, un grand vide le séparait des autres boutons)
+                    x: q.label != "" ? (root.interface-style == 2 ? parent.width - self.width - 8px : 348px)
                         : q.id == "illu-tb-new" ? 2px
                         : q.id == "illu-tb-open" ? 26px
                         : q.id == "illu-tb-save" ? 50px
@@ -3084,6 +3782,28 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
+                }
+                // MasterPaint : séparateurs gravés entre les groupes (fichier | historique | zoom |
+                // paramètres | signalement) et bouton Paramètres
+                if root.interface-style != 2: Rectangle {
+                    for sx in [112px, 177px, 308px, 342px]: Rectangle {
+                        x: sx;
+                        y: 6px;
+                        width: 1px;
+                        height: 15px;
+                        background: Theme.ribbon-sep;
+                    }
+                }
+                if root.interface-style != 2: FlatButton {
+                    x: 313px;
+                    y: 2px;
+                    width: 26px;
+                    height: 23px;
+                    icon: { svg-index: -1, fa: "\u{f013}", fa-weight: 900 };
+                    icon-size: 14px;
+                    show-label: false;
+                    tip: @tr("Paramètres");
+                    clicked => { root.show-settings = true; }
                 }
                 // Paint.NET : le zoom est dans la barre d'état, comme paintdotjs
                 if root.interface-style != 2: Text {
@@ -3218,6 +3938,7 @@ export component AppWindow inherits Window {
                             size: 9px;
                             color: #ffffff;
                         }
+                        HoverTip { y: parent.height; hovered: cla.has-hover; text: @tr("Fermer ce projet"); }
                         cla := TouchArea {
                             clicked => {
                                 root.tab-close(ti);
@@ -3225,6 +3946,24 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
+                }
+                // pellicule du Photo Pro réduite : onglet pour la rouvrir (comme un projet)
+                if root.pm-count > 0 && !root.pm-open: Rectangle {
+                    width: root.pm-pill-w;
+                    border-radius: Theme.ctl-radius;
+                    background: (Theme.hover-fx && pmta.has-hover) ? Theme.accent-20 : Theme.accent-12;
+                    border-width: 1px;
+                    border-color: Theme.accent-60;
+                    HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        spacing: 6px;
+                        alignment: center;
+                        VerticalLayout { alignment: center; FaIcon { glyph: "\u{f030}"; size: 12px; color: Theme.accent; } }
+                        Text { text: @tr("Photo Pro") + " (" + root.pm-count + ")"; font-size: Theme.small-font-size; color: Theme.text; vertical-alignment: center; }
+                    }
+                    HoverTip { y: parent.height; hovered: pmta.has-hover; text: @tr("Rouvrir le Mode Photo Pro : la pellicule et ses réglages sont gardés"); }
+                    pmta := TouchArea { clicked => { root.menu-action("pm:reopen", ""); } }
                 }
             }
             }
@@ -3267,6 +4006,8 @@ export component AppWindow inherits Window {
                 HoverTip { y: parent.height; hovered: project-menu-touch.has-hover; text: @tr("Projets ouverts") + " (" + root.tabs.length + ")"; }
                 project-menu-touch := TouchArea { clicked => { project-popup.show(); } }
                 project-popup := PopupWindow {
+                    // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+                    TouchArea { }
                     x: parent.width - self.width;
                     y: parent.height + 4px;
                     width: min(340px, root.usable-width - 16px);
@@ -3436,16 +4177,17 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                // espace de travail, comme « Essentials » de PhotoCraft : ouvre Apparence
+                // à la place de l'espace de travail de PhotoCraft : « Signaler un problème », pour ne
+                // pas perdre cette fonction (la barre rapide n'existe pas dans cette présentation)
                 Rectangle {
-                    width: ws-lbl.preferred-width + 34px;
+                    width: ws-lbl.preferred-width + 36px;
                     border-radius: Theme.ctl-radius;
-                    background: Theme.field-bg;
+                    background: (Theme.hover-fx && ws-ta.has-hover) ? Theme.accent-12 : Theme.field-bg;
                     border-width: 1px;
                     border-color: (Theme.hover-fx && ws-ta.has-hover) ? Theme.accent : Theme.field-border;
-                    ws-lbl := Text { x: 10px; height: parent.height; text: @tr("Photoshop"); color: Theme.text; vertical-alignment: center; }
-                    FaIcon { x: parent.width - 18px; width: 12px; glyph: "\u{f078}"; size: 9px; color: Theme.text-inactive; }
-                    ws-ta := TouchArea { clicked => { root.settings-page = 0; root.show-settings = true; } }
+                    FaIcon { x: 9px; width: 14px; glyph: "\u{f188}"; size: 11px; color: Theme.text-inactive; }
+                    ws-lbl := Text { x: 27px; height: parent.height; text: @tr("Signaler un problème"); color: Theme.text; vertical-alignment: center; }
+                    ws-ta := TouchArea { clicked => { root.quick-action("signaler-un-bug"); } }
                 }
             }
             // boutons de la fenêtre (barre de titre intégrée, bureau)
@@ -3526,6 +4268,7 @@ export component AppWindow inherits Window {
                                 border-radius: 3px * Theme.round;
                                 background: (Theme.hover-fx && ps-tab-x.has-hover) ? Theme.accent-20 : transparent;
                                 FaIcon { glyph: "\u{f00d}"; size: 9px; color: Theme.text-inactive; }
+                                HoverTip { y: parent.height; hovered: ps-tab-x.has-hover; text: @tr("Fermer ce projet"); }
                                 ps-tab-x := TouchArea { clicked => { root.tab-close(ti); } }
                             }
                             ps-tab-txt := Text {
@@ -3543,7 +4286,7 @@ export component AppWindow inherits Window {
                     }
                 }
             }
-            Flickable {
+            rib-flick := Flickable {
                 interactive: root.phone;
                 // y explicite : sans lui, Slint centre la rangée dans la barre (Photoshop : rangée
                 // descendue sur la bande des onglets, traversée par son liseré)
@@ -3565,7 +4308,7 @@ export component AppWindow inherits Window {
                     classic: root.classic;
                     Rectangle {
                         width: root.ps-chrome ? 40px : root.classic ? 28px : 56px;
-                        if root.ps-chrome: FaIcon { x: 26px; width: 10px; glyph: "\u{f078}"; size: 7px; color: Theme.ribbon-label; }
+
                         // bouton arrondi comme son menu (Windows 11)
                         border-radius: Theme.ctl-radius;
                         background: pta.pressed ? Theme.accent-20 : (Theme.hover-fx && pta.has-hover) ? Theme.accent-12 : transparent;
@@ -3595,16 +4338,20 @@ export component AppWindow inherits Window {
                             color: Theme.ribbon-label;
                         }
                         pta := TouchArea {
+                            // Photoshop : icône de l'outil seulement (les outils sont dans la colonne)
+                            enabled: !root.ps-chrome;
                             clicked => {
                                 picker.show();
                             }
                         }
                         // même grille que la palette Outils : boutons centrés, séparateurs gravés
                         picker := PopupWindow {
+                            // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+                            TouchArea { }
                             x: (parent.width - self.width) / 2;
                             y: parent.height;
                             width: 61px;
-                            height: root.vec-on ? 203px : 312px;
+                            height: root.vec-on ? 203px : 393px;
                             Rectangle {
                                 background: Theme.menu-bg;
                                 border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
@@ -3612,7 +4359,7 @@ export component AppWindow inherits Window {
                                 border-color: Theme.window-border;
                                 drop-shadow-blur: 6px;
                                 drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
-                                for sy in (root.vec-on ? [58px, 140px] : root.interface-style >= 2 ? [] : [85px, 167px, 249px]): Rectangle {
+                                for sy in (root.vec-on ? [58px, 140px] : root.interface-style >= 2 ? [] : [85px, 167px, 249px, 303px]): Rectangle {
                                     x: 6px;
                                     y: sy;
                                     width: parent.width - 12px;
@@ -3643,6 +4390,18 @@ export component AppWindow inherits Window {
 
                 if root.current-tool == "tool-wand": RegionGroup {
                     label: @tr("Baguette");
+                    classic: root.classic;
+                }
+                if root.current-tool == "tool-recolor": RegionGroup {
+                    label: @tr("Tolérance");
+                    classic: root.classic;
+                    sampling: false;
+                }
+                if root.current-tool == "tool-dodge" || root.current-tool == "tool-smudge" || root.current-tool == "tool-clone" || root.current-tool == "tool-heal": RetouchGroup {
+                    classic: root.classic;
+                    tool: root.current-tool;
+                }
+                if root.current-tool == "tool-move" || root.current-tool == "tool-deform" || root.current-tool == "tool-warp-4": InterpGroup {
                     classic: root.classic;
                 }
                 if root.current-tool == "tool-magnetic-lasso": MagnetGroup {
@@ -3737,59 +4496,82 @@ export component AppWindow inherits Window {
                     classic: root.classic;
                     text: true;
                 }
-                if root.is-brush(root.current-tool) || root.current-tool == "tool-pencil": SymmetryGroup {
+                if (root.is-brush(root.current-tool) || root.current-tool == "tool-pencil") && !root.fold-sym: SymmetryGroup {
                     classic: root.classic;
                 }
-                if root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand": SelectionGroup {
+                if (root.is-brush(root.current-tool) || root.current-tool == "tool-pencil") && root.fold-sym: FoldGroup {
+                    kind: "sym";
+                    tall: !root.classic;
+                    label: @tr("Symétrie");
+                    img: Sprite.sym-x;
+                }
+                if (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand") && !root.fold-sel: SelectionGroup {
                     classic: root.classic;
+                }
+                if (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand") && root.fold-sel: FoldGroup {
+                    kind: "sel";
+                    tall: true;
+                    label: @tr("Sélection");
+                    icon: Generated.ribbon[3].icon;
                 }
                 // Image : recadrer, pivoter, retourner (ruban MasterPaint seulement : la barre
                 // Paint.NET a déjà assez d'icônes)
-                if !root.classic && !RibbonFit.narrow && (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand"): RibbonGroup {
+                if !root.classic && !root.fold-image && (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand"): ImageGroup {
+                    crop => { root.menu-action("fn:startIlluInteractiveCrop()", @tr("Recadrer")); }
+                }
+                if !root.classic && root.fold-image && (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand"): FoldGroup {
+                    kind: "image";
+                    tall: true;
                     label: @tr("Image");
-                    VerticalLayout {
-                        spacing: 4px;
-                        ToggleButton {
-                            glyph: "\u{f125}";
-                            img: Sprite.img-crop;
-                            text: @tr("Recadrer…");
-                            tip: @tr("Recadrer l'image (poignées sur la toile)");
-                            clicked => {
-                                root.menu-action("fn:startIlluInteractiveCrop()", @tr("Recadrer"));
-                            }
-                        }
-                        HorizontalLayout {
-                            spacing: 2px;
-                            for r in [
-                                { id: "rot-ccw", img: Sprite.img-rot-ccw, t: @tr("Pivoter l'image de 90° vers la gauche") },
-                                { id: "rot-cw", img: Sprite.img-rot-cw, t: @tr("Pivoter l'image de 90° vers la droite") },
-                                { id: "flip-h", img: Sprite.img-flip-h, t: @tr("Retourner l'image horizontalement (miroir)") },
-                                { id: "flip-v", img: Sprite.img-flip-v, t: @tr("Retourner l'image verticalement (miroir)") },
-                            ]: ToggleButton {
-                                compact: true;
-                                img: r.img;
-                                tip: r.t;
-                                clicked => {
-                                    Actions.ribbon(r.id);
-                                }
-                            }
-                        }
-                    }
+                    img: Sprite.img-crop;
+                    crop => { root.menu-action("fn:startIlluInteractiveCrop()", @tr("Recadrer")); }
                 }
                 // Photoshop : copier / coller et affichage restent dans les menus, comme PhotoCraft
                 if !root.classic-wrap && !(root.ps-chrome && root.classic) && (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand" || root.current-tool == "tool-eyedropper"
-                    || root.current-tool == "tool-zoom" || root.current-tool == "tool-text"): EditGroup {
+                    || root.current-tool == "tool-zoom" || root.current-tool == "tool-text") && !root.fold-edit: EditGroup {
                     classic: root.classic;
                 }
-                if !root.classic-wrap && !RibbonFit.narrow && root.is-sel-tool(root.current-tool): AlignGroup {
+                if !root.classic && root.fold-edit && (root.is-sel-tool(root.current-tool) || root.current-tool == "tool-wand" || root.current-tool == "tool-eyedropper"
+                    || root.current-tool == "tool-zoom" || root.current-tool == "tool-text"): FoldGroup {
+                    kind: "edit";
+                    tall: true;
+                    label: @tr("Édition");
+                    icon: Generated.ribbon[6].icon;
+                }
+                if !root.classic-wrap && root.is-sel-tool(root.current-tool) && !root.fold-align: AlignGroup {
                     classic: root.classic;
                     has-selection: root.has-selection;
                 }
-                if !root.classic-wrap && !(root.ps-chrome && root.classic): ViewGroup {
+                if !root.classic-wrap && root.is-sel-tool(root.current-tool) && root.fold-align: FoldGroup {
+                    kind: "align";
+                    tall: !root.classic;
+                    label: @tr("Ajustements");
+                    img: Sprite.sel-center-both;
+                    has-selection: root.has-selection;
+                }
+                // Affichage (grille, règles, hors toile, aimantation, résolution de rendu) : présent
+                // dans toutes les interfaces (la résolution de rendu n'a pas d'autre accès)
+                if !root.classic-wrap && !root.fold-view: ViewGroup {
                     classic: root.classic;
                 }
-                if root.current-tool == "tool-brush" || root.current-tool == "tool-pencil": BrushGroup {
+                if !root.classic-wrap && root.fold-view: FoldGroup {
+                    kind: "view";
+                    tall: !root.classic;
+                    label: @tr("Affichage");
+                    icon: { svg-index: -1, fa: "\u{f84c}", fa-weight: 900 };
+                }
+                if (root.current-tool == "tool-brush" || root.current-tool == "tool-pencil") && !root.fold-brush: BrushGroup {
                     pencil: root.current-tool == "tool-pencil";
+                    classic: root.classic;
+                }
+                if (root.current-tool == "tool-brush" || root.current-tool == "tool-pencil") && root.fold-brush: FoldGroup {
+                    tall: !root.classic;
+                    kind: root.current-tool == "tool-pencil" ? "pencil" : "brush";
+                    img: ToolOpts.brush-shape == 0 ? Sprite.brush-round : ToolOpts.brush-shape == 1 ? Sprite.brush-soft : ToolOpts.brush-shape == 2 ? Sprite.brush-spray : Sprite.brush-square;
+                    label: root.current-tool == "tool-pencil" ? @tr("Crayon") : @tr("Pinceau");
+                }
+                // lissage du tracé : après les types de pinceau / crayon
+                if root.is-brush(root.current-tool) || root.current-tool == "tool-pencil": SmoothGroup {
                     classic: root.classic;
                 }
             }
@@ -3805,12 +4587,23 @@ export component AppWindow inherits Window {
                     || root.current-tool == "tool-zoom" || root.current-tool == "tool-text": EditGroup {
                     classic: true;
                 }
-                if root.is-sel-tool(root.current-tool): AlignGroup {
+                if root.is-sel-tool(root.current-tool) && !root.pdn-fold: AlignGroup {
                     classic: true;
                     has-selection: root.has-selection;
                 }
-                ViewGroup {
+                if root.is-sel-tool(root.current-tool) && root.pdn-fold: FoldGroup {
+                    kind: "align";
+                    label: @tr("Ajustements");
+                    img: Sprite.sel-center-both;
+                    has-selection: root.has-selection;
+                }
+                if !root.pdn-fold: ViewGroup {
                     classic: true;
+                }
+                if root.pdn-fold: FoldGroup {
+                    kind: "view";
+                    label: @tr("Affichage");
+                    icon: { svg-index: -1, fa: "\u{f84c}", fa-weight: 900 };
                 }
             }
             if !root.phone: Rectangle {
@@ -3818,18 +4611,27 @@ export component AppWindow inherits Window {
                 height: 1px;
                 background: Theme.statusbar-border;
             }
-                    // réduire le ruban en barre compacte (^) ou le redévelopper (v), comme Office
+            // réduire le ruban en barre compacte (^) ou le redévelopper (v), comme Office et
+            // paint.js : bouton bien visible (cadre au survol, bulle d'aide)
             if !root.phone: Rectangle {
-                x: parent.width - 26px;
-                y: 3px;
-                width: 20px;
-                height: 18px;
-                border-radius: 3px * Theme.round;
-                background: (Theme.hover-fx && ribbon-toggle.has-hover) ? Theme.accent-14 : transparent;
+                x: parent.width - 28px;
+                y: root.effective-toolbar-mode == 0 ? 4px : (parent.height - 22px) / 2;
+                width: 22px;
+                height: 22px;
+                border-radius: Theme.ctl-radius;
+                background: ribbon-toggle.pressed ? Theme.accent-20 : (Theme.hover-fx && ribbon-toggle.has-hover) ? Theme.accent-14 : transparent;
+                border-width: ribbon-toggle.has-hover ? 1px : 0px;
+                border-color: Theme.accent;
                 FaIcon {
                     glyph: root.effective-toolbar-mode == 0 ? "\u{f077}" : "\u{f078}";
-                    size: 10px;
-                    color: Theme.ribbon-fg;
+                    size: 12px;
+                    color: Theme.text;
+                }
+                HoverTip {
+                    x: parent.width - 180px;
+                    y: parent.height;
+                    hovered: ribbon-toggle.has-hover;
+                    text: root.effective-toolbar-mode == 0 ? @tr("Réduire le ruban") : @tr("Développer le ruban");
                 }
                 ribbon-toggle := TouchArea {
                     clicked => {
@@ -3883,7 +4685,7 @@ export component AppWindow inherits Window {
                     }
                 }
                 for part in [
-                    root.mode-text + root.work-mode + " · 8 bits",
+                    root.mode-text + root.work-mode + @tr(" · 8 bits"),
                     root.doc-width + " × " + root.doc-height + " px",
                     root.layers.length + (root.layers.length > 1 ? @tr(" calques") : @tr(" calque")),
                     root.status-text != "" ? root.status-text : root.cursor-text,
@@ -3980,8 +4782,12 @@ export component AppWindow inherits Window {
             width: root.usable-width;
             // téléphone : la barre du bas flotte sur la toile (plus de bande grise dessous)
             height: root.usable-height - self.y - root.status-height;
-            background: root.platform-insets ? root.ws-color : transparent;
+            background: root.platform-insets && !root.pm-front ? root.ws-color : transparent;
+            // fenêtre de dialogue ouverte depuis Photo Pro (Paramètres, export…) : l'espace de
+            // travail passe au-dessus de Photo Pro (z 10), seules ses fenêtres de dialogue visibles
+            z: root.pm-front ? 11 : 0;
             if root.mask-doc: Rectangle {
+                visible: !root.pm-front;
                 y: 6px;
                 height: 22px;
                 width: mask-lbl.preferred-width + 24px;
@@ -4002,7 +4808,7 @@ export component AppWindow inherits Window {
             // toile et ce qui s'y rattache : découpés à l'espace de travail (les fenêtres, elles,
             // peuvent aller sur le ruban et la barre d'état) ; aucun projet : rien
             Rectangle {
-                visible: !root.no-doc;
+                visible: !root.no-doc && !root.pm-front;
                 clip: true;
                 // fond de la toile, borné à la partie visible : une ombre (ou une opacité) à la
                 // taille de la toile zoomée ferait calculer une image géante. Image opaque : ni
@@ -4206,10 +5012,22 @@ export component AppWindow inherits Window {
                     ended => { root.native-pinch(false); }
                     cancelled => { root.native-pinch(false); }
                 cta := TouchArea {
-                    mouse-cursor: root.panning || root.space-down ? MouseCursor.grab
+                    // curseurs système (pas d'image) : main, déplacement, flèches de
+                    // redimensionnement orientées comme la poignée, interdit sur un calque qui
+                    // refuse l'outil
+                    mouse-cursor: root.panning ? MouseCursor.grabbing
+                        : root.space-down || root.current-tool == "tool-pan" ? MouseCursor.grab
                         : root.canvas-cursor == 1 ? MouseCursor.move
-                        : root.canvas-cursor == 2 ? MouseCursor.grab
+                        : root.canvas-cursor == 2 ? (self.pressed ? MouseCursor.grabbing : MouseCursor.grab)
                         : root.canvas-cursor == 3 ? MouseCursor.alias
+                        : root.canvas-cursor == 5 ? MouseCursor.ew-resize
+                        : root.canvas-cursor == 6 ? MouseCursor.ns-resize
+                        : root.canvas-cursor == 7 ? MouseCursor.nwse-resize
+                        : root.canvas-cursor == 8 ? MouseCursor.nesw-resize
+                        : root.canvas-cursor == 9 ? MouseCursor.col-resize
+                        : root.canvas-cursor == 10 ? MouseCursor.row-resize
+                        : root.canvas-cursor == 11 || root.clone-pick ? MouseCursor.copy
+                        : root.tool-blocked(root.current-tool) ? MouseCursor.not-allowed
                         : root.current-tool == "tool-zoom" ? MouseCursor.pointer
                         : root.current-tool == "tool-text" ? MouseCursor.text
                         : root.tool-cursor-on ? MouseCursor.custom(root.tool-cursor, root.tool-cursor-hx, root.tool-cursor-hy) : MouseCursor.crosshair;
@@ -4222,7 +5040,7 @@ export component AppWindow inherits Window {
                     pointer-event(e) => {
                         if (e.kind == PointerEventKind.down) {
                             fs.focus();
-                            if (e.button == PointerEventButton.middle || root.space-down) {
+                            if (e.button == PointerEventButton.middle || root.space-down || (root.current-tool == "tool-pan" && e.button == PointerEventButton.left)) {
                                 root.panning = true;
                                 root.pan-sx = self.mouse-x - root.pan-x;
                                 root.pan-sy = self.mouse-y - root.pan-y;
@@ -4247,6 +5065,8 @@ export component AppWindow inherits Window {
                                 root.pan-y = self.mouse-y - root.pan-sy;
                                 return;
                             }
+                            // tampon : Alt + clic choisit la source (curseur « copie »)
+                            root.clone-pick = e.modifiers.alt && root.current-tool == "tool-clone";
                             root.canvas-pointer(1, self.dx(), self.dy(), 0, e.modifiers.control, e.modifiers.shift, e.modifiers.alt);
                         }
                     }
@@ -4466,6 +5286,7 @@ export component AppWindow inherits Window {
 
             // ---- aucun projet ouvert : fond de l'espace de travail et deux actions ----
             if root.no-doc: Rectangle {
+                visible: !root.pm-front;
                 width: min(parent.width - 32px, 340px);
                 height: nd-col.preferred-height;
                 x: root.dock-left + (root.view-w - self.width) / 2;
@@ -4512,6 +5333,7 @@ export component AppWindow inherits Window {
 
             // ---- frise du mode Animation : sous la toile, entre les colonnes ancrées ----
             if root.anim-on && root.anim-open: AnimPanel {
+                visible: !root.pm-front;
                 x: root.dock-left;
                 y: root.view-bottom;
                 width: root.view-w;
@@ -4541,6 +5363,7 @@ export component AppWindow inherits Window {
             }
             // frise réduite : bouton pour la rouvrir
             if root.anim-on && !root.anim-open: Rectangle {
+                visible: !root.pm-front;
                 x: root.dock-left + 8px;
                 y: root.view-bottom - 34px;
                 width: reopen-t.preferred-width + 34px;
@@ -4554,6 +5377,7 @@ export component AppWindow inherits Window {
 
             // ---- Outils ----
             if root.show-tools && !root.phone: tw := FloatWindow {
+                visible: !root.pm-front;
                 docked: root.docked;
                 grip: true;
                 dock-x: 0px;
@@ -4572,7 +5396,8 @@ export component AppWindow inherits Window {
                 z: self.docked ? 5 : self.rank;
                 // taille fixe : 2 colonnes d'outils groupées comme Paint.NET (pas redimensionnable)
                 float-w: 57px;
-                float-h: root.vec-on ? 224px : 333px;
+                float-h: root.ai-rail ? (8px + SvgTools.tools.length * 28px) : root.vec-on ? 224px : root.ps-rail ? (4px + root.ps-groups.length * 28px + 52px)
+                    : root.tool-groups ? (root.interface-style == 2 ? 307px : 310px) : root.interface-style == 2 ? 390px : 422px;
                 // Photoshop : colonne étroite sans titre (comme PhotoCraft)
                 title: root.interface-style == 3 ? "" : @tr("Outils");
                 bounds-width: ws.width;
@@ -4586,7 +5411,7 @@ export component AppWindow inherits Window {
                     root.palette-geometry("tools", self.float-x, self.float-y, self.float-w, self.float-h);
                 }
                 // séparateurs des groupes d'outils (gravés, comme sous Windows)
-                for sy in (root.vec-on ? [58px, 140px] : root.interface-style >= 2 ? [] : [85px, 167px, 249px]): Rectangle {
+                for sy in (root.ai-rail ? [] : root.vec-on ? [58px, 140px] : root.interface-style >= 2 ? [] : root.tool-groups ? [85px, 140px, 222px] : [85px, 167px, 249px, 303px]): Rectangle {
                     x: 5px;
                     y: sy;
                     width: parent.width - 10px;
@@ -4594,24 +5419,67 @@ export component AppWindow inherits Window {
                     Rectangle { y: 0; height: 1px; background: Theme.window-border.darker(15%); }
                     Rectangle { y: 1px; height: 1px; background: Theme.dark ? #00000040 : #ffffff; }
                 }
-                for t[ti] in (root.vec-on ? SvgTools.tools : Generated.tools): FlatButton {
+                // Photoshop : colonne unique d'outils groupés
+                for g[gi] in (root.ps-rail ? root.ps-groups : []): PsToolSlot {
+                    x: 3px;
+                    y: 4px + gi * 28px;
+                    width: parent.width - 6px;
+                    height: 26px;
+                    members: g.members;
+                    last: root.ps-last[gi];
+                    current: root.current-tool;
+                    picked(idx) => {
+                        root.ps-last[gi] = idx;
+                        if (Generated.tools[idx].id != "btn-deselect" && Generated.tools[idx].id != "illu-tb-zoom-fit-2" && Generated.tools[idx].id != "tool-clear-sel") {
+                            root.current-tool = Generated.tools[idx].id;
+                        }
+                        root.tool-selected(Generated.tools[idx].id);
+                        fs.focus();
+                    }
+                }
+                // MasterPaint (flottante) et Paint.NET : outils groupés
+                for g in (root.tool-groups ? (root.interface-style == 2 ? root.pdn-tool-groups : root.mp-tool-groups) : []): PsToolSlot {
+                    x: g.x + 2px;
+                    y: g.y + 4px;
+                    width: g.w;
+                    height: 26px;
+                    members: g.members;
+                    last: ToolOpts.group-pick[g.members[0]];
+                    current: root.current-tool;
+                    icon-size: Generated.tools[g.members[0]].id == "tool-shapes-family" ? 20px : 15px;
+                    dimmed: root.tool-blocked(Generated.tools[g.members[0]].id);
+                    picked(idx) => {
+                        if (root.tool-blocked(Generated.tools[idx].id)) {
+                            return;
+                        }
+                        ToolOpts.group-pick[g.members[0]] = idx;
+                        if (Generated.tools[idx].id != "btn-deselect" && Generated.tools[idx].id != "illu-tb-zoom-fit-2" && Generated.tools[idx].id != "tool-clear-sel") {
+                            root.current-tool = Generated.tools[idx].id;
+                        }
+                        root.tool-selected(Generated.tools[idx].id);
+                        fs.focus();
+                    }
+                }
+                for t[ti] in (root.ps-rail || root.tool-groups ? [] : root.vec-on ? SvgTools.tools : Generated.tools): FlatButton {
+                    // palettes en colonnes : le zoom laisse sa place à la corbeille
+                    visible: t.id != "tool-zoom" && t.id != "tool-pan";
                     // grisé si le calque actif refuse les pixels (calque texte, verrou, dossier)
                     enabled: !root.tool-blocked(t.id);
                     tip: self.enabled ? t.title : root.tool-blocked-tip(t.title);
                     property <bool> reference: root.interface-style >= 2 && !root.vec-on;
                     property <int> slot: root.reference-tool-slots[ti];
                     // Paint.NET : deux colonnes de 26 px ; Photoshop (PhotoCraft) : deux colonnes serrées
-                    x: (self.reference ? (root.interface-style == 3 ? mod(self.slot, 2) * 23px : mod(self.slot, 2) * 26px) : t.x) + (root.interface-style == 3 ? 1px : 2px);
-                    y: (self.reference ? (root.interface-style == 3 ? floor(self.slot / 2) * 25px : floor(self.slot / 2) * 27px) : t.y) + 4px;
-                    width: self.reference ? (root.interface-style == 3 ? 23px : 26px) : min(t.w, parent.width - self.x - 2px);
-                    height: root.interface-style == 3 && self.reference ? 24px : t.h;
+                    x: root.ai-rail ? 3px : (self.reference ? (root.interface-style == 3 ? mod(self.slot, 2) * 23px : mod(self.slot, 2) * 26px) : t.x) + (root.interface-style == 3 ? 1px : 2px);
+                    y: root.ai-rail ? 4px + ti * 28px : (self.reference ? (root.interface-style == 3 ? floor(self.slot / 2) * 25px : floor(self.slot / 2) * 27px) : t.y) + 4px;
+                    width: root.ai-rail ? parent.width - 6px : self.reference ? (root.interface-style == 3 ? 23px : 26px) : min(t.w, parent.width - self.x - 2px);
+                    height: root.ai-rail ? 26px : root.interface-style == 3 && self.reference ? 24px : t.h;
                     icon: t.icon;
                     show-label: false;
                     icon-size: root.interface-style == 3 ? 16px : t.id == "tool-shapes-family" ? 20px : 15px;
                     icon-width: t.id == "tool-shapes-family" ? min(40px, self.width - 8px) : self.icon-size;
                     checked: root.current-tool == t.id;
                     clicked => {
-                        if (t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2") {
+                        if (t.id != "btn-deselect" && t.id != "illu-tb-zoom-fit-2" && t.id != "tool-clear-sel") {
                             root.current-tool = t.id;
                         }
                         root.tool-selected(t.id);
@@ -4619,28 +5487,51 @@ export component AppWindow inherits Window {
                     }
                 }
                 // Photoshop : couleurs de premier plan et d'arrière-plan sous les outils
-                if root.interface-style == 3 && !root.vec-on: Rectangle {
+                if root.ps-rail: Rectangle {
                     x: 6px;
-                    y: 4px + ceil(root.reference-tool-slots.length / 2) * 25px + 10px;
+                    y: 4px + root.ps-groups.length * 28px + 10px;
                     width: 36px;
                     height: 36px;
+                    // clic sur une pastille : sélecteur de couleur flottant (celui des
+                    // Paramètres) ; ⇄ échange les deux, comme la fenêtre Couleurs
                     Rectangle {
                         x: 13px; y: 13px; width: 20px; height: 20px;
                         background: root.secondary-color;
                         border-width: 1px; border-color: Theme.text-inactive;
+                        HoverTip { y: parent.height; hovered: bgta.has-hover; text: @tr("Couleur secondaire : cliquer pour la choisir"); }
+                        bgta := TouchArea {
+                            clicked => { ColorPop.show("paint:1", root.secondary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
+                        }
                     }
                     Rectangle {
                         x: 0; y: 0; width: 20px; height: 20px;
                         background: root.primary-color;
                         border-width: 1px; border-color: Theme.text-inactive;
+                        HoverTip { y: parent.height; hovered: fgta.has-hover; text: @tr("Couleur principale : cliquer pour la choisir"); }
+                        fgta := TouchArea {
+                            clicked => { ColorPop.show("paint:0", root.primary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
+                        }
                     }
-                    HoverTip { y: parent.height; hovered: fgbg.has-hover; text: @tr("Couleurs principale et secondaire"); }
-                    fgbg := TouchArea { clicked => { root.show-colors = true; } }
+                    Rectangle {
+                        x: 22px; y: 0; width: 14px; height: 12px;
+                        border-radius: 2px * Theme.round;
+                        background: (Theme.hover-fx && swta2.has-hover) ? Theme.accent-14 : transparent;
+                        GlyphIcon { glyph: "\u{f362}"; size: 8px; }
+                        HoverTip { y: parent.height; hovered: swta2.has-hover; text: @tr("Échanger les couleurs principale et secondaire"); }
+                        swta2 := TouchArea {
+                            clicked => {
+                                let c = root.primary-color;
+                                root.primary-color = root.secondary-color;
+                                root.secondary-color = c;
+                            }
+                        }
+                    }
                 }
             }
 
             // ---- Photoshop : bande d'icônes des panneaux, à gauche de la colonne de droite ----
             if root.ps-strip > 0px: Rectangle {
+                visible: !root.pm-front;
                 x: ws.width - root.dock-right - root.ps-strip;
                 width: root.ps-strip;
                 height: ws.height;
@@ -4676,11 +5567,24 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
+                    // projet SVG (Illustrator / VectorCraft) : panneau des objets
+                    if root.vec-on: Rectangle {
+                        height: 30px;
+                        Rectangle {
+                            x: 4px; width: parent.width - 8px;
+                            border-radius: Theme.ctl-radius;
+                            background: SvgPanel.open ? Theme.accent-14 : (Theme.hover-fx && ps-svg-ta.has-hover) ? Theme.accent-12 : transparent;
+                        }
+                        FaIcon { glyph: "\u{f55b}"; size: 14px; color: SvgPanel.open ? Theme.text : Theme.text-inactive; }
+                        HoverTip { y: parent.height; hovered: ps-svg-ta.has-hover; text: @tr("Objets SVG"); }
+                        ps-svg-ta := TouchArea { clicked => { root.menu-action("fn:window.toggleFloatingPaletteVisibility('win-svg-objects')", @tr("Objets SVG")); } }
+                    }
                 }
             }
 
             // ---- Historique ----
             if root.show-history: FloatWindow {
+                visible: !root.pm-front;
                 docked: root.docked || root.phone;
                 sheet: root.phone;
                 grip: true;
@@ -4763,6 +5667,7 @@ export component AppWindow inherits Window {
 
             // ---- Couleurs ----
             if root.show-colors && !root.phone: FloatWindow {
+                visible: !root.pm-front;
                 docked: root.docked;
                 grip: true;
                 dock-movable: root.docked;
@@ -4927,6 +5832,7 @@ export component AppWindow inherits Window {
 
             // ---- Calques ----
             if root.show-layers: FloatWindow {
+                visible: !root.pm-front;
                 docked: root.docked || root.phone;
                 sheet: root.phone;
                 grip: true;
@@ -5056,6 +5962,7 @@ export component AppWindow inherits Window {
                                 size: 9px;
                                 color: Theme.text;
                             }
+                            HoverTip { y: parent.height; hovered: chev.has-hover; text: l.collapsed ? @tr("Déplier le dossier") : @tr("Replier le dossier"); }
                             chev := TouchArea {
                                 clicked => {
                                     root.layer-toggle(l.index, "collapse");
@@ -5281,7 +6188,7 @@ export component AppWindow inherits Window {
             // prend le reste. Séparateur du bas : la palette grandit vers le bas ; séparateur du
             // haut (palette de remplissage au-dessus) : elle grandit vers le haut.
             for id in [0, 1]: Rectangle {
-                visible: root.docked && root.ps-shown(id) && root.ps-filler != id;
+                visible: root.docked && root.ps-shown(id) && root.ps-filler != id && !root.pm-front;
                 x: ws.width - root.dock-right;
                 y: 0px;
                 width: root.dock-right;
@@ -5320,6 +6227,7 @@ export component AppWindow inherits Window {
                 }
             }
             if root.docked && root.ps-drag-id >= 0: Rectangle {
+                visible: !root.pm-front;
                 x: ws.width - root.dock-right + 4px;
                 width: root.dock-right - 8px;
                 y: clamp(root.ps-marker-y(root.ps-drag-id, root.ps-drag-y) - 1.5px, 0px, ws.height - 3px);
@@ -5331,6 +6239,7 @@ export component AppWindow inherits Window {
 
             // ---- Effets du calque texte (non destructifs, rejoués sur le rendu du texte) ----
             if root.show-text-fx: FloatWindow {
+                visible: !root.pm-front;
                 float-x: max(10px, ws.width - 560px);
                 float-y: 40px;
                 z: self.rank;
@@ -5435,6 +6344,7 @@ export component AppWindow inherits Window {
 
             // Applied effects only: adding new effects stays in the Effects menu.
             if root.show-applied-fx: FloatWindow {
+                visible: !root.pm-front;
                 float-x: max(6px, ws.width - 690px);
                 float-y: 30px;
                 float-w: min(440px, ws.width - 12px);
@@ -5592,6 +6502,7 @@ export component AppWindow inherits Window {
 
             // ---- Objets SVG (bêta) : objets du calque vectoriel actif (ui/svg_objects.slint) ----
             if SvgPanel.open: FloatWindow {
+                visible: !root.pm-front;
                 float-x: max(6px, ws.width - 640px);
                 float-y: 60px;
                 float-w: min(320px, ws.width - 12px);
@@ -5617,6 +6528,7 @@ export component AppWindow inherits Window {
 
             // ---- Courbes ----
             if root.show-curves: FloatWindow {
+                visible: !root.pm-front;
                 float-x: max(10px, ws.width - 640px);
                 float-y: 20px;
                 z: self.rank;
@@ -5688,6 +6600,8 @@ export component AppWindow inherits Window {
                         border-color: Theme.text;
                     }
                     TouchArea {
+                        // courbe : croix de visée, main fermée pendant le glisser d'un point
+                        mouse-cursor: self.pressed ? MouseCursor.grabbing : MouseCursor.crosshair;
                         pointer-event(e) => {
                             let cx = self.mouse-x / self.width * 255;
                             let cy = 255 - self.mouse-y / self.height * 255;
@@ -5828,18 +6742,24 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
-                    }
-                    Rectangle {
-                        x: 8px;
-                        y: parent.height - 108px;
-                        width: parent.width - 16px;
-                        height: 100px;
+                        // langue : rattachée au bas de la liste des sections (elle flottait en bas
+                        // de la colonne, loin de la liste)
+                        Rectangle {
+                            height: 13px;
+                            Rectangle { x: 4px; y: 6px; width: parent.width - 8px; height: 1px; background: Theme.window-border; }
+                        }
                         VerticalLayout {
-                            spacing: 6px;
-                            padding-top: 8px;
-                            alignment: start;
-                            Text { text: @tr("Langue"); color: Theme.text-inactive; font-size: Theme.small-font-size; }
+                            spacing: 5px;
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            HorizontalLayout {
+                                spacing: 6px;
+                                alignment: start;
+                                GlyphIcon { width: 14px; glyph: "\u{f1ab}"; size: 11px; tint: Theme.text-inactive; }
+                                Text { text: @tr("Langue"); color: Theme.text-inactive; font-size: Theme.small-font-size; vertical-alignment: center; }
+                            }
                             W10ComboBox {
+                                flags: true;
                                 model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
                                 current-index: root.set-language;
                                 selected(i) => {
@@ -5876,15 +6796,19 @@ export component AppWindow inherits Window {
                     }
                     W10ComboBox {
                         horizontal-stretch: 1;
+                        flags: true;
                         model: [@tr("Français"), @tr("English"), @tr("Español"), @tr("Deutsch"), @tr("Italiano"), @tr("Português")];
                         current-index: root.set-language;
                         selected(i) => { root.set-language = i; root.language-chosen(i); root.settings-changed(); }
                     }
                 }
+                // titre de la page et « Réinitialiser la section » : même marge (16 px, celle de la
+                // page) à gauche du titre et à droite du bouton, bouton centré sur la ligne
                 HorizontalLayout {
-                    x: parent.sidebar-width + 12px;
+                    x: parent.sidebar-width + 16px;
                     y: parent.compact ? 42px : 0px;
-                    width: parent.width - parent.sidebar-width - 24px;
+                    // à droite : bord des cartes (marge de la page + barre de défilement)
+                    width: parent.width - parent.sidebar-width - 49px;
                     height: 38px;
                     spacing: 8px;
                     Text {
@@ -5892,10 +6816,14 @@ export component AppWindow inherits Window {
                         text: root.settings-page == 0 ? @tr("Apparence") : root.settings-page == 1 ? @tr("Toile et outils") : root.settings-page == 2 ? @tr("Édition") : root.settings-page == 3 ? @tr("Performances") : root.settings-page == 4 ? @tr("Données") : root.settings-page == 5 ? @tr("Raccourcis") : root.settings-page == 6 ? @tr("Avancé et infos") : root.settings-page == 7 ? @tr("Crédits") : root.settings-page == 9 ? @tr("Personnalisation") : @tr("Icônes");
                         color: Theme.text; font-size: Theme.font-size + 4px; font-weight: 700; vertical-alignment: center;
                     }
-                    if root.settings-page <= 4 || root.settings-page == 9: W10Button {
-                        text: settingswin.compact ? "↺" : @tr("Réinitialiser la section");
-                        tip: @tr("Remet les réglages de cette page à leurs valeurs d’origine");
-                        clicked => { root.settings-reset(root.settings-page); }
+                    if root.settings-page <= 4 || root.settings-page == 9: VerticalLayout {
+                        alignment: center;
+                        W10Button {
+                            height: 26px;
+                            text: settingswin.compact ? "↺" : @tr("Réinitialiser la section");
+                            tip: @tr("Remet les réglages de cette page à leurs valeurs d’origine");
+                            clicked => { root.settings-reset(root.settings-page); }
+                        }
                     }
                 }
                 ScrollView {
@@ -6397,7 +7325,7 @@ export component AppWindow inherits Window {
                                 }
                                 HorizontalLayout {
                                     width: cw; spacing: 10px;
-                                    Text { width: min(190px, cw * 0.45); text: @tr("Fréquence") + " · " + (root.set-autosave-min < 1 ? @tr("en continu") : round(root.set-autosave-min) + " min"); font-weight: 600; color: Theme.text; vertical-alignment: center; wrap: word-wrap; }
+                                    Text { width: min(190px, cw * 0.45); text: @tr("Fréquence") + " · " + (root.set-autosave-min < 1 ? @tr("en continu") : round(root.set-autosave-min) + @tr(" min")); font-weight: 600; color: Theme.text; vertical-alignment: center; wrap: word-wrap; }
                                     GaugeBar { horizontal-stretch: 1; minimum: 0; maximum: 60; value: root.set-autosave-min; changed(v) => { root.set-autosave-min = v; } }
                                 }
                                 Text {
@@ -6446,7 +7374,7 @@ export component AppWindow inherits Window {
                             W10Button { text: "polocrafting.fr ↗"; clicked => { root.quick-action("open-author"); } }
                             W10Button { text: "GitHub · Polocrafting367/MasterPaint ↗"; clicked => { root.quick-action("open-github"); } }
                             SetHead { text-w: tw; title: @tr("Inspirations et projets sources"); hint: @tr("Ces interfaces sont adaptées aux fonctionnalités de MasterPaint. Les projets cités restent indépendants et ne sont pas les auteurs de MasterPaint."); }
-                            SetHead { text-w: tw; title: "Paint.NET · projet original"; hint: @tr("Projet original créé par Rick Brewster, dotPDN et ses contributeurs. Ce projet est distinct de PaintJS."); }
+                            SetHead { text-w: tw; title: @tr("Paint.NET · projet original"); hint: @tr("Projet original créé par Rick Brewster, dotPDN et ses contributeurs. Ce projet est distinct de PaintJS."); }
                             HorizontalLayout {
                                 spacing: 6px;
                                 W10Button { text: "paint.net ↗"; clicked => { root.quick-action("credits-paintnet"); } }
@@ -6459,8 +7387,12 @@ export component AppWindow inherits Window {
                                 W10Button { text: "PaintJS ↗"; clicked => { root.quick-action("credits-paintjs"); } }
                                 W10Button { text: "GitHub · LabyStudio/paintdotjs ↗"; clicked => { root.quick-action("credits-paintdotjs"); } }
                             }
-                            SetHead { text-w: tw; title: "PhotoCraft · storytold"; hint: @tr("PhotoCraft et ses contributeurs : référence du style Photoshop et source du pack PhotoCraft. Code et créations propres sous MIT ou Apache-2.0 ; icônes Lucide / Feather et autres contributeurs selon les notices jointes."); }
-                            W10Button { text: "GitHub · storytold/photocraft ↗"; clicked => { root.quick-action("credits-photocraft"); } }
+                            SetHead { text-w: tw; title: "ArtCraft · PhotoCraft, VectorCraft, LightCraft"; hint: @tr("Les applications ArtCraft de storytold et de leurs contributeurs : PhotoCraft (référence de l'interface Photoshop et du pack d'icônes), VectorCraft (projets SVG façon Illustrator, icônes) et LightCraft (Photo Pro façon Lightroom, remplissage de contenu PatchMatch). Code et créations propres sous MIT ou Apache-2.0 ; icônes Lucide / Feather et autres contributeurs selon les notices jointes."); }
+                            HorizontalLayout {
+                                spacing: 6px;
+                                W10Button { text: "getartcraft.com/apps ↗"; clicked => { root.quick-action("credits-artcraft"); } }
+                                W10Button { text: "GitHub · storytold ↗"; clicked => { root.quick-action("credits-storytold"); } }
+                            }
                             SetHead { text-w: tw; title: @tr("Conditions de réutilisation"); hint: @tr("Les créations MasterPaint peuvent être copiées et adaptées sous un autre nom, avec les crédits et liens conservés. Utilisation non commerciale uniquement. Les icônes personnalisées de polocrafting sont réservées à MasterPaint ; les exports PNG servent à les utiliser dans ce logiciel."); }
                             Text { width: tw; text: @tr("Ne pas supprimer ni masquer les mentions et liens cliquables, dont polocrafting.fr et le dépôt MasterPaint. Pas de vente, d’accès payant ou de redistribution du projet tel quel contre de l’argent, y compris par intermédiaire ou contournement. Ces conditions concernent les créations propres à MasterPaint ; les projets tiers gardent leurs licences et crédits distincts."); wrap: word-wrap; color: Theme.text; }
                             SetHead { text-w: tw; title: @tr("Autres ressources"); hint: @tr("Font Awesome Free (icônes CC BY 4.0, polices SIL OFL 1.1), Selawik, Rust, Slint et les bibliothèques utilisées par MasterPaint. Les droits et licences de chaque auteur sont conservés. Photoshop et Illustrator sont des références d'interface, sans affiliation à Adobe."); }
@@ -6564,6 +7496,49 @@ export component AppWindow inherits Window {
                 }
             }
 
+            // ---- Photo Pro : fenêtre d'exportation (au-dessus de Photo Pro, voir pm-front) ----
+            if root.show-pm-export: FloatWindow {
+                float-x: (ws.width - 460px) / 2; float-y: max(24px, (ws.height - 380px) / 2);
+                z: self.rank; float-w: min(460px, ws.width - 32px); float-h: 380px;
+                title: @tr("Exporter les photos"); bounds-width: ws.width; bounds-height: root.usable-height - ws.y;
+                close => { root.show-pm-export = false; }
+                VerticalLayout {
+                    padding: 18px; padding-bottom: 56px; spacing: 8px;
+                    Text { text: @tr("Photos"); color: Theme.text; font-weight: 600; }
+                    Segmented {
+                        options: [@tr("Cette photo"), @tr("Toutes les photos") + " (" + root.pm-count + ")"];
+                        index: root.pm-exp-all ? 1 : 0;
+                        selected(i) => { root.pm-exp-all = i == 1; root.pm-export-update(); }
+                        tip: @tr("Exporter la photo affichée ou toute la pellicule");
+                    }
+                    Text { text: @tr("Format"); color: Theme.text; font-weight: 600; }
+                    Segmented {
+                        options: [@tr("JPEG"), @tr("PNG 16 bits"), @tr("TIFF 16 bits")];
+                        index <=> root.pm-exp-fmt;
+                        selected(i) => { root.pm-export-update(); }
+                        tip: @tr("JPEG : léger, partout ; PNG / TIFF 16 bits : sans perte, pour retoucher encore");
+                    }
+                    if root.pm-exp-fmt == 0: HorizontalLayout {
+                        spacing: 10px;
+                        Text { text: @tr("Qualité JPEG"); color: Theme.text; vertical-alignment: center; width: 110px; }
+                        Gauge { minimum: 50; maximum: 100; value <=> root.pm-exp-quality; unit: ""; bar-width: 200px; tip: @tr("Qualité JPEG : 92 est un bon équilibre entre poids et finesse"); }
+                    }
+                    Text { text: @tr("Taille"); color: Theme.text; font-weight: 600; }
+                    Segmented {
+                        options: [@tr("Originale"), "4000 px", "3000 px", "2048 px", "1080 px"];
+                        index <=> root.pm-exp-size;
+                        selected(i) => { root.pm-export-update(); }
+                        tip: @tr("Plus grand côté de l'image exportée (jamais agrandie)");
+                    }
+                    Text { text: root.pm-exp-info; color: Theme.text-inactive; wrap: word-wrap; font-size: Theme.small-font-size; }
+                }
+                DialogFooter {
+                    y: parent.content-height - 44px;
+                    W10Button { text: @tr("Annuler"); clicked => { root.show-pm-export = false; } }
+                    Rectangle { horizontal-stretch: 1; }
+                    W10Button { text: @tr("Exporter"); primary: true; clicked => { root.show-pm-export = false; root.pm-export-run(); } }
+                }
+            }
             if root.show-purge-confirm: FloatWindow {
                 float-x: (ws.width - 440px) / 2; float-y: max(24px, (ws.height - 230px) / 2);
                 z: self.rank; float-w: min(440px, ws.width - 32px); float-h: 230px;
@@ -6575,6 +7550,8 @@ export component AppWindow inherits Window {
                     Text { text: @tr("Après l’effacement, MasterPaint vous proposera de redémarrer ou de quitter vers polocrafting.fr."); width: parent.width - 36px; wrap: word-wrap; color: Theme.text-inactive; }
                 }
                 DialogFooter {
+                    // pied en bas de la fenêtre (sinon posé en haut, par-dessus le texte)
+                    y: parent.content-height - 44px;
                     W10Button { text: @tr("Annuler"); clicked => { root.show-purge-confirm = false; } }
                     Rectangle { horizontal-stretch: 1; }
                     W10Button { text: @tr("Effacer définitivement"); primary: true; clicked => { root.show-purge-confirm = false; root.data-action("purge-confirmed"); } }
@@ -6590,6 +7567,8 @@ export component AppWindow inherits Window {
                     Text { text: @tr("Les données locales de MasterPaint ont été supprimées. Choisissez comment quitter cette session."); width: parent.width - 36px; wrap: word-wrap; color: Theme.text; }
                 }
                 DialogFooter {
+                    // pied en bas de la fenêtre (sinon posé en haut, par-dessus le texte)
+                    y: parent.content-height - 44px;
                     W10Button { text: @tr("Quitter vers polocrafting.fr"); clicked => { root.data-action("purge-leave"); } }
                     Rectangle { horizontal-stretch: 1; }
                     W10Button { text: @tr("Redémarrer"); primary: true; clicked => { root.data-action("purge-restart"); } }
@@ -6712,7 +7691,7 @@ export component AppWindow inherits Window {
                         clicked => {
                             // une seule fois pour le serveur : le message, puis le journal
                             root.contact-send(root.contact-kind, root.contact-with-journal && root.contact-journal != ""
-                                ? root.contact-message + "\n\n--- Journal ---\n" + root.contact-journal
+                                ? root.contact-message + @tr("\n\n--- Journal ---\n") + root.contact-journal
                                 : root.contact-message, root.contact-info);
                         }
                     }
@@ -6819,10 +7798,10 @@ export component AppWindow inherits Window {
             // ---- Bienvenue (deux premières ouvertures, Fichier › Bienvenue / Informations) ----
             if root.show-welcome && !root.pm-open: FloatWindow {
                 float-x: (ws.width - 680px) / 2;
-                float-y: max(10px, (ws.height - 580px) / 2);
+                float-y: max(10px, (ws.height - 500px) / 2);
                 z: self.rank;
                 float-w: 680px;
-                float-h: min(580px, root.usable-height - ws.y - 20px);
+                float-h: min(500px, root.usable-height - ws.y - 20px);
                 // téléphone : panneau plein écran, le contenu défile ; il s'arrête au-dessus de la
                 // barre du bas (sinon elle recouvre « Commencer »)
                 docked: root.phone;
@@ -7324,6 +8303,7 @@ export component AppWindow inherits Window {
                                     size: 11px;
                                     color: Theme.on-accent;
                                 }
+                                HoverTip { y: parent.height; hovered: anta.has-hover; text: @tr("Ancrage : l'image reste collée de ce côté quand la toile change de taille"); }
                                 anta := TouchArea {
                                     clicked => {
                                         root.rs-anchor = a;
@@ -9619,6 +10599,26 @@ export component AppWindow inherits Window {
             full-w: root.pm-full-w;
             photos: root.pm-photos;
             values: root.pm-values;
+            shift: root.pm-shift;
+            module <=> root.pm-module;
+            // allure propre à chaque présentation : MasterPaint (verre, ambiance), Paint.NET
+            // (aplats), Photoshop (Lightroom)
+            look: root.interface-style == 3 ? 2 : root.interface-style == 2 ? 1 : 0;
+            ambient: root.pm-ambient;
+            can-undo: root.pm-can-undo;
+            can-redo: root.pm-can-redo;
+            masks: root.pm-masks;
+            mask-sel: root.pm-mask-sel;
+            mask-kind: root.pm-mask-kind;
+            mask-amount: root.pm-mask-amount;
+            mask-adjust: root.pm-mask-adjust;
+            mask-shape: root.pm-mask-shape;
+            mask-handles: root.pm-mask-handles;
+            mask-image: root.pm-mask-image;
+            mask-overlay <=> root.pm-mask-overlay;
+            brush: root.pm-brush;
+            mask-set(f, v) => { root.pm-mask-set(f, v); }
+            mask-drag(h, u, v, ph) => { root.pm-mask-drag(h, u, v, ph); }
             presets: root.pm-presets;
             preset: root.pm-preset;
             fx-off: root.pm-fx-off;
@@ -9630,6 +10630,22 @@ export component AppWindow inherits Window {
             hq-x1: root.pm-hq-x1;
             hq-y1: root.pm-hq-y1;
             hq-shown: root.pm-hq-shown;
+            // interface Photoshop : Photo Pro façon Lightroom (LightCraft)
+            // présentation Lightroom (navigateur, préréglages en liste, Bibliothèque) dans toutes
+            // les interfaces : une interface ne retire jamais un volet
+            lr: true;
+            hist: root.pm-hist;
+            clip-lo: root.pm-clip-lo;
+            clip-hi: root.pm-clip-hi;
+            pick(u, v) => {
+                root.pm-pick-wb(u, v);
+            }
+            crop: root.pm-crop;
+            angle: root.pm-angle;
+            crop-mode <=> root.pm-crop-mode;
+            crop-set(x0, y0, x1, y1, a) => {
+                root.pm-crop-set(x0, y0, x1, y1, a);
+            }
             view-changed(x0, y0, x1, y1, d) => {
                 root.pm-view(x0, y0, x1, y1, d);
             }
@@ -9697,7 +10713,7 @@ export component AppWindow inherits Window {
     if root.loading: Rectangle {
         z: 900;
         background: #00000050;
-        TouchArea {}
+        TouchArea { mouse-cursor: progress; }
         FloatWindow {
             title: root.load-title;
             closable: false;

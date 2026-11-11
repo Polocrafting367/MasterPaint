@@ -4,12 +4,14 @@ fn main() {
     // à poser avant CompilerConfiguration::new, qui lit cette variable
     std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
     // style « fluent » : seuls nos propres contrôles Windows 10 sont utilisés, mais il fixe
-    // aussi l'apparence des éléments Slint standard (popups, barres de défilement).
+    // aussi l'apparence des éléments Slint standard (popups, barres de défilement). Variante
+    // claire ou sombre suivie du thème de l'application (Palette.color-scheme, app.slint) :
+    // avec « fluent-light », les barres de défilement restaient claires en thème sombre.
     // traductions : textes @tr("…") des fichiers .slint, traduits par lang/<langue>/LC_MESSAGES/
     // masterpaint-ui.po (fichiers embarqués ; tools/gen_lang.py les tient à jour). Le français
     // est la langue des sources ; pas de contexte par composant (msgid seul).
     let config = slint_build::CompilerConfiguration::new()
-        .with_style("fluent-light".into())
+        .with_style("fluent".into())
         .with_bundled_translations("lang")
         .with_default_translation_context(slint_build::DefaultTranslationContext::None);
     slint_build::compile_with_config("ui/app.slint", config).expect("compilation de l'interface Slint");

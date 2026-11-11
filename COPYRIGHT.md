@@ -11,11 +11,11 @@ Dépôt : [Polocrafting367/MasterPaint](https://github.com/Polocrafting367/Maste
 
 - **Paint.NET** est le projet original de **Rick Brewster, dotPDN et ses contributeurs** : [paint.net](https://paint.net/) · [dépôt OpenPDN](https://github.com/rivy/OpenPDN). Ses ressources et licences restent celles de leurs auteurs.
 - **PaintJS / paintdotjs** est un autre projet, réalisé par **LabyStudio** : [paintjs.net](https://paintjs.net/) · [dépôt paintdotjs](https://github.com/LabyStudio/paintdotjs). Il sert de référence d'interface web et fournit le pack d'icônes PaintJS. Il ne s'agit pas du projet Paint.NET.
-- **PhotoCraft**, par **storytold et les contributeurs** : [dépôt](https://github.com/storytold/photocraft). Référence de l'interface Photoshop et source du pack PhotoCraft. Code et créations propres MIT ou Apache-2.0 ; icônes Lucide/Feather et autres créations selon les notices et licences conservées dans `rust/masterpaint-ui/icon-packs/photocraft/`.
+- **ArtCraft** — **PhotoCraft**, **VectorCraft** et **LightCraft**, par **storytold et les contributeurs** : [getartcraft.com/apps](https://getartcraft.com/apps) · [dépôts storytold](https://github.com/storytold). PhotoCraft est la référence de l'interface Photoshop et la source du pack d'icônes PhotoCraft ; VectorCraft, celle des projets SVG façon Illustrator et une source d'icônes ; LightCraft, celle du Photo Pro façon Lightroom. Le remplissage de contenu PatchMatch (`rust/masterpaint-core/src/inpaint/`) est repris de LightCraft (`crates/inpaint`, lui-même porté de PhotoCraft). Code et créations propres MIT ou Apache-2.0 ; icônes Lucide/Feather et autres créations selon les notices et licences conservées dans `rust/masterpaint-ui/icon-packs/photocraft/`.
 - **Font Awesome Free** : icônes sous CC BY 4.0, polices sous SIL OFL 1.1 ; [licences](https://fontawesome.com/license/free).
 - **Selawik**, Rust, Slint et les autres bibliothèques gardent leurs droits et licences respectifs.
 
-Les noms Paint.NET, PaintJS, Photoshop et Illustrator désignent des projets ou références indépendants. MasterPaint n'est affilié à aucun d'eux.
+Les noms Paint.NET, PaintJS, ArtCraft, Photoshop, Illustrator et Lightroom désignent des projets ou références indépendants. MasterPaint n'est affilié à aucun d'eux.
 
 ## Conditions de réutilisation des créations MasterPaint
 

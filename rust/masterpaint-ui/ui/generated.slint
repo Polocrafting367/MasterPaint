@@ -1,4 +1,6 @@
-// Fichier généré par tools/gen_icons.py — ne pas modifier à la main.
+// Fichier généré par tools/gen_icons.py (la page HTML source a été retirée) ; outils de retouche,
+// sélection elliptique et corbeille (effacer le contenu de la sélection) ajoutés à la main à la
+// fin de `tools`.
 import { IconSpec, MenuSpec } from "types.slint";
 
 export global Generated {
@@ -23,7 +25,15 @@ export global Generated {
         { id: "tool-text", title: @tr("Texte"), icon: { svg-index: 13, fa: "", fa-weight: 900 }, x: 26px, y: 218px, w: 26px, h: 26px },
         { id: "tool-shapes-family", title: @tr("Formes multiples"), icon: { svg-index: 14, fa: "", fa-weight: 900 }, x: 0px, y: 246px, w: 57px, h: 26px },
         { id: "tool-round-3", title: @tr("Rectangle à coins arrondis"), icon: { svg-index: 15, fa: "", fa-weight: 900 }, x: 0px, y: 273px, w: 26px, h: 26px },
-        { id: "tool-line", title: @tr("Ligne"), icon: { svg-index: -1, fa: "\u{f068}", fa-weight: 900 }, x: 26px, y: 273px, w: 26px, h: 26px }
+        { id: "tool-line", title: @tr("Ligne"), icon: { svg-index: -1, fa: "\u{f068}", fa-weight: 900 }, x: 26px, y: 273px, w: 26px, h: 26px },
+        { id: "tool-ellipse-select", title: @tr("Sélection elliptique (Maj : cercle)"), icon: { svg-index: 26, fa: "", fa-weight: 900 }, x: 0px, y: 309px, w: 26px, h: 26px },
+        { id: "tool-recolor", title: @tr("Remplacement de couleur : la couleur secondaire devient la principale"), icon: { svg-index: 31, fa: "", fa-weight: 900 }, x: 26px, y: 309px, w: 26px, h: 26px },
+        { id: "tool-clone", title: @tr("Tampon de duplication (Alt + clic : source)"), icon: { svg-index: 27, fa: "", fa-weight: 900 }, x: 0px, y: 336px, w: 26px, h: 26px },
+        { id: "tool-heal", title: @tr("Correcteur : peindre sur un défaut pour l'effacer"), icon: { svg-index: 28, fa: "", fa-weight: 900 }, x: 26px, y: 336px, w: 26px, h: 26px },
+        { id: "tool-smudge", title: @tr("Doigt : étirer la couleur"), icon: { svg-index: 29, fa: "", fa-weight: 900 }, x: 0px, y: 363px, w: 26px, h: 26px },
+        { id: "tool-dodge", title: @tr("Densité − / + et éponge"), icon: { svg-index: 30, fa: "", fa-weight: 900 }, x: 26px, y: 363px, w: 26px, h: 26px },
+        { id: "tool-clear-sel", title: @tr("Effacer le contenu de la sélection (Suppr)"), icon: { svg-index: -1, fa: "\u{f1f8}", fa-weight: 900 }, x: 0px, y: 136px, w: 26px, h: 26px },
+        { id: "tool-pan", title: @tr("Main : déplacer la vue (aussi : Espace + glisser)"), icon: { svg-index: -1, fa: "\u{f256}", fa-weight: 900 }, x: 0px, y: 136px, w: 26px, h: 26px }
     ];
     out property <[{id: string, title: string, label: string, icon: IconSpec, x: length}]> quick: [
         { id: "illu-tb-new", title: @tr("Nouveau document…"), label: "", icon: { svg-index: -1, fa: "\u{e494}", fa-weight: 900 }, x: 2px },
@@ -92,11 +102,11 @@ export global Generated {
         { kind: 0, id: "ribbon-snap-toggle", label: "", icon: { svg-index: -1, fa: "\u{f076}", fa-weight: 900 } }
     ];
     out property <[{label: string, x: length, w: length}]> ribbon-groups: [
-        { label: "Outil", x: 20px, w: 32px },
-        { label: "Sélection", x: 158px, w: 52px },
-        { label: "Édition", x: 316px, w: 42px },
-        { label: "Ajustements", x: 408px, w: 68px },
-        { label: "Affichage", x: 516px, w: 54px }
+        { label: @tr("Outil"), x: 20px, w: 32px },
+        { label: @tr("Sélection"), x: 158px, w: 52px },
+        { label: @tr("Édition"), x: 316px, w: 42px },
+        { label: @tr("Ajustements"), x: 408px, w: 68px },
+        { label: @tr("Affichage"), x: 516px, w: 54px }
     ];
     out property <[MenuSpec]> menus: [
         { title: @tr("Fichier"), items: [
@@ -112,7 +122,8 @@ export global Generated {
             { label: @tr("Paramètres…"), separator: false, submenu: false, fa: "\u{f013}", fa-weight: 900, shortcut: "", action: "fn:showSettingsDialog(true)", children: [], badge: "" },
             { label: "", separator: true, submenu: false, fa: "", fa-weight: 900, shortcut: "", action: "", children: [], badge: "" },
             { label: @tr("Historique des versions..."), separator: false, submenu: false, fa: "\u{f46d}", fa-weight: 900, shortcut: "", action: "fn:window.showChangelog && window.showChangelog()", children: [], badge: "" },
-            { label: @tr("Bienvenue / Informations…"), separator: false, submenu: false, fa: "\u{f05a}", fa-weight: 900, shortcut: "", action: "fn:window.showWelcomeDialog && window.showWelcomeDialog(true)", children: [], badge: "" }
+            { label: @tr("Bienvenue / Informations…"), separator: false, submenu: false, fa: "\u{f05a}", fa-weight: 900, shortcut: "", action: "fn:window.showWelcomeDialog && window.showWelcomeDialog(true)", children: [], badge: "" },
+            { label: @tr("Télécharger l'application…"), separator: false, submenu: false, fa: "\u{f019}", fa-weight: 900, shortcut: "", action: "fn:showDownloadDialog()", children: [], badge: "" }
         ] },
         { title: @tr("Édition"), items: [
             { label: @tr("Annuler la dernière action"), separator: false, submenu: false, fa: "\u{f2ea}", fa-weight: 900, shortcut: @tr("Ctrl+Z"), action: "fn:undo()", children: [], badge: "" },

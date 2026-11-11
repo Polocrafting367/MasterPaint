@@ -11,3 +11,7 @@ crate-type = ["rlib"]
 path = "src/lib.rs"
 
 [dependencies]
+
+# remplissage de contenu (inpaint, repris de LightCraft) : calcul parallèle sur le bureau
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = "1"

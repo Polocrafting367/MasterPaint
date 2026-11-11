@@ -12,6 +12,32 @@ use masterpaint_core::util::{homography, invert3x3};
 
 pub type Pt = (f32, f32);
 
+/// Interpolation « plus proche voisin » (pixels nets, pixel art) au lieu du bilinéaire ; posée
+/// par l'interface d'après le ruban.
+pub static NEAREST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Façon d'échantillonner la source : plus proche voisin, ou nx × ny échantillons bilinéaires
+/// répartis dans l'empreinte (fx, fy) d'un pixel d'arrivée (réduction forte sans moiré).
+#[derive(Clone, Copy)]
+struct Sampling {
+    nearest: bool,
+    nx: usize,
+    ny: usize,
+    fx: f64,
+    fy: f64,
+}
+
+impl Sampling {
+    fn for_quad(q: &[Pt; 4], sw: f64, sh: f64) -> Sampling {
+        let nearest = NEAREST.load(std::sync::atomic::Ordering::Relaxed);
+        let dist = |a: Pt, b: Pt| ((a.0 - b.0) as f64).hypot((a.1 - b.1) as f64).max(1e-6);
+        let fx = (sw / dist(q[0], q[1])).max(sw / dist(q[3], q[2]));
+        let fy = (sh / dist(q[0], q[3])).max(sh / dist(q[1], q[2]));
+        let (nx, ny) = if nearest { (1, 1) } else { ((fx.ceil() as usize).clamp(1, 4), (fy.ceil() as usize).clamp(1, 4)) };
+        Sampling { nearest, nx, ny, fx, fy }
+    }
+}
+
 /// Poignée saisie au clic.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Grab {
@@ -61,6 +87,9 @@ pub struct Floating {
     /// « Hors toile » : contenu du dehors resté en place (non soulevé), auquel s'ajoute ce qui
     /// dépasse de la toile au relâchement (voir `write_outside`)
     off_base: Option<crate::editor::Off>,
+    /// brouillon pendant un glisser sur une grande zone : un échantillon par bloc de
+    /// `draft` × `draft` pixels (rendu exact au relâchement, voir lib.rs::transform_pointer)
+    pub draft: usize,
 }
 
 impl Floating {
@@ -115,6 +144,7 @@ impl Floating {
             last: std::sync::Mutex::new(Some((x0, y0, x1, y1))),
             quad: None,
             off_base: doc.layer().off.clone(),
+            draft: 1,
         })
     }
 
@@ -140,6 +170,7 @@ impl Floating {
             last: std::sync::Mutex::new(None),
             quad: None,
             off_base: None,
+            draft: 1,
         }
     }
 
@@ -184,6 +215,7 @@ impl Floating {
             }
         }
         let (sw, sh) = (self.sw as f64, self.sh as f64);
+        let smp = Sampling::for_quad(&q, sw, sh);
         let mut any = self.off_base.is_some();
         for y in qy0..qy1 {
             for x in qx0..qx1 {
@@ -200,7 +232,7 @@ impl Floating {
                 if u < -0.5 || v < -0.5 || u > sw + 0.5 || v > sh + 0.5 {
                     continue;
                 }
-                let (m, c) = self.sample(u - 0.5, v - 0.5);
+                let (m, c) = self.sample_with(u, v, smp);
                 if m <= 0.0 || c[3] <= 0.0 {
                     continue;
                 }
@@ -236,6 +268,7 @@ impl Floating {
             last: std::sync::Mutex::new(None),
             quad: None,
             off_base: doc.layer().off.clone(),
+            draft: 1,
         }
     }
 
@@ -418,6 +451,7 @@ impl Floating {
             quad: self.quad,
             last: std::sync::Mutex::new(None),
             off_base: None,
+            draft: 1,
         }
     }
 
@@ -463,9 +497,26 @@ impl Floating {
         }
         // nouveau contenu, ligne par ligne (bandes réparties sur les cœurs sur le bureau)
         let (sw, sh) = (self.sw as f64, self.sh as f64);
+        let smp = Sampling::for_quad(&q, sw, sh);
         let move_sel = self.kind == Kind::MoveSelection;
+        let d = self.draft.max(1);
         let row = |y: usize, lrow: &mut [u8], srow: &mut [u8]| {
+            // brouillon : seules les rangées de tête de bloc sont calculées (copiées ensuite)
+            if d > 1 && (y - y0) % d != 0 {
+                return;
+            }
             for x in x0..x1 {
+                if d > 1 && (x - x0) % d != 0 {
+                    // même échantillon que le début du bloc
+                    let lx = x - (x - x0) % d;
+                    srow[x] = srow[lx];
+                    if !move_sel {
+                        let (a, b) = (lx * 4, x * 4);
+                        let v = [lrow[a], lrow[a + 1], lrow[a + 2], lrow[a + 3]];
+                        lrow[b..b + 4].copy_from_slice(&v);
+                    }
+                    continue;
+                }
                 let (px, py) = (x as f64 + 0.5, y as f64 + 0.5);
                 let d = inv[6] * px + inv[7] * py + inv[8];
                 if d.abs() < 1e-12 {
@@ -476,7 +527,7 @@ impl Floating {
                 if u < -0.5 || v < -0.5 || u > sw + 0.5 || v > sh + 0.5 {
                     continue;
                 }
-                let (m, c) = self.sample(u - 0.5, v - 0.5);
+                let (m, c) = self.sample_with(u, v, smp);
                 if m <= 0.0 {
                     continue;
                 }
@@ -521,11 +572,68 @@ impl Floating {
                 row(y0 + j, lr, sr);
             }
         }
+        if d > 1 {
+            // rangées intérieures des blocs : copie de la rangée de tête
+            for y in y0..y1 {
+                let k = (y - y0) % d;
+                if k == 0 {
+                    continue;
+                }
+                let ly = y - k;
+                sel.copy_within(ly * w + x0..ly * w + x1, y * w + x0);
+                if self.kind != Kind::MoveSelection {
+                    lay.copy_within((ly * w + x0) * 4..(ly * w + x1) * 4, (y * w + x0) * 4);
+                }
+            }
+        }
         doc.sel = Some(sel);
         if let Ok(mut g) = self.last.lock() {
             *g = Some((x0, y0, x1, y1));
         }
         Some((dx0, dy0, dx1, dy1))
+    }
+
+    /// Échantillon au point (u, v) de la source selon `smp` (voir `Sampling`).
+    fn sample_with(&self, u: f64, v: f64, smp: Sampling) -> (f32, [f32; 4]) {
+        if smp.nearest {
+            let (x, y) = (u.floor() as isize, v.floor() as isize);
+            if x < 0 || y < 0 || x >= self.sw as isize || y >= self.sh as isize {
+                return (0.0, [0.0; 4]);
+            }
+            let o = y as usize * self.sw + x as usize;
+            let m = self.mask[o] as f32 / 255.0;
+            if self.kind == Kind::MoveSelection {
+                return (m, [0.0; 4]);
+            }
+            let p = &self.src[o * 4..o * 4 + 4];
+            return (m, [p[0] as f32, p[1] as f32, p[2] as f32, p[3] as f32 * m]);
+        }
+        if smp.nx * smp.ny == 1 {
+            return self.sample(u - 0.5, v - 0.5);
+        }
+        // moyenne en couleurs prémultipliées des échantillons de l'empreinte
+        let (mut m, mut acc) = (0f32, [0f32; 4]);
+        for j in 0..smp.ny {
+            for i in 0..smp.nx {
+                let du = ((i as f64 + 0.5) / smp.nx as f64 - 0.5) * smp.fx;
+                let dv = ((j as f64 + 0.5) / smp.ny as f64 - 0.5) * smp.fy;
+                let (mm, cc) = self.sample(u - 0.5 + du, v - 0.5 + dv);
+                m += mm;
+                for k in 0..3 {
+                    acc[k] += cc[k] * cc[3];
+                }
+                acc[3] += cc[3];
+            }
+        }
+        let n = (smp.nx * smp.ny) as f32;
+        let mut c = [0f32; 4];
+        if acc[3] > 0.0 {
+            for k in 0..3 {
+                c[k] = acc[k] / acc[3];
+            }
+        }
+        c[3] = acc[3] / n;
+        (m / n, c)
     }
 
     /// Échantillon bilinéaire : (couverture du masque 0..1, couleur RGBA prémultipliée par le masque).
@@ -571,6 +679,40 @@ impl Floating {
     pub fn outline_path(&self) -> String {
         let q = self.corners();
         format!("M {} {} L {} {} L {} {} L {} {} Z", q[0].0, q[0].1, q[1].0, q[1].1, q[2].0, q[2].1, q[3].0, q[3].1)
+    }
+}
+
+/// Curseur système d'une poignée de redimensionnement (code de `canvas-cursor`), selon la
+/// direction centre → poignée à l'écran (y vers le bas) : 5 ↔, 6 ↕, 7 ⤡ (haut-gauche /
+/// bas-droite), 8 ⤢. Suit la rotation du cadre, au huitième de tour près.
+pub fn resize_cursor(dx: f32, dy: f32) -> i32 {
+    if dx.abs() < 1e-6 && dy.abs() < 1e-6 {
+        return 1;
+    }
+    let a = dy.atan2(dx).to_degrees().rem_euclid(180.0);
+    if !(22.5..157.5).contains(&a) {
+        5
+    } else if a < 67.5 {
+        7
+    } else if a < 112.5 {
+        6
+    } else {
+        8
+    }
+}
+
+impl Floating {
+    /// Curseur de la prise `g` au survol : flèches orientées sur une poignée, rotation, déplacement.
+    pub fn grab_cursor(&self, g: Grab) -> i32 {
+        let q = self.corners();
+        let c = ((q[0].0 + q[1].0 + q[2].0 + q[3].0) / 4.0, (q[0].1 + q[1].1 + q[2].1 + q[3].1) / 4.0);
+        let p = match g {
+            Grab::Edge(i) => self.handles().get(i as usize).map(|h| h.0),
+            Grab::Corner(i) => q.get(i as usize).copied(),
+            Grab::Rotate => return 3,
+            Grab::Translate => return 1,
+        };
+        p.map_or(2, |p| resize_cursor(p.0 - c.0, p.1 - c.1))
     }
 }
 

@@ -76,6 +76,18 @@ pub fn reduce_noise(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
 /// Flou bokeh / Défocaliser : disque circulaire en espace « lumière ».
 /// p: [rayon, hautes lumières %(0 = Défocaliser Paint.NET, >0 = Bokeh)]
 pub fn bokeh(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
+    // par bandes de BAND lignes : les sommes-préfixes de toute l'image (32 octets par pixel)
+    // demandaient ~560 Mo sur une photo de 17 Mpx, calculée d'un seul tenant dans le navigateur
+    const BAND: usize = 96;
+    let mut y = y0;
+    while y < y1 {
+        let e = (y + BAND).min(y1);
+        bokeh_band(src, dst, y, e, p);
+        y = e;
+    }
+}
+
+fn bokeh_band(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let radius = p.f(0, 8.0).max(1.0) as usize;
     let hl = clampf(p.f(1, 55.0) / 100.0, 0.0, 1.0);
     let gamma = 1.0 + hl * 3.0;

@@ -33,7 +33,9 @@ mod colorspace;
 mod curves;
 mod editor;
 mod gallery_gen;
+mod lightcraft_looks_gen;
 mod gpu;
+mod gpu_damage;
 mod gpuview;
 mod groups;
 mod vector;
@@ -56,9 +58,12 @@ mod mpicons_gen;
 mod mp_fa_gen;
 mod fa_used_gen;
 mod pdn;
+mod psd;
 mod paint;
 mod pen;
 mod photo;
+mod pm_store;
+mod pm_masks;
 mod raw;
 mod scene;
 mod i18n;
@@ -563,9 +568,20 @@ fn decode(bytes: &[u8]) -> Option<(usize, usize, Vec<u8>)> {
         let h = u32::from_le_bytes(bytes[12..16].try_into().ok()?) as usize;
         return (bytes.len() == 16 + w * h * 4).then(|| (w, h, bytes[16..].to_vec()));
     }
-    let img = image::load_from_memory(bytes).ok()?.to_rgba8();
+    let img = decode_oriented(bytes)?.to_rgba8();
     let (w, h) = img.dimensions();
     Some((w as usize, h as usize, img.into_raw()))
+}
+
+/// Décode une image en appliquant son orientation EXIF (photos de téléphone prises en
+/// portrait : sans cela elles s'ouvraient couchées).
+pub(crate) fn decode_oriented(bytes: &[u8]) -> Option<image::DynamicImage> {
+    use image::ImageDecoder;
+    let mut dec = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().ok()?.into_decoder().ok()?;
+    let orientation = dec.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
+    let mut img = image::DynamicImage::from_decoder(dec).ok()?;
+    img.apply_orientation(orientation);
+    Some(img)
 }
 
 /// Vignette sur damier (calques).
@@ -832,6 +848,7 @@ fn opts(app: &AppWindow) -> tools::Opts {
             1 => SelMode::Add,
             2 => SelMode::Subtract,
             3 => SelMode::Intersect,
+            4 => SelMode::Xor,
             _ => SelMode::Replace,
         },
         style: match t.get_shape_style() {
@@ -866,7 +883,16 @@ fn opts(app: &AppWindow) -> tools::Opts {
         grad_radial: t.get_shape_grad_type() == 1,
         grad_angle: t.get_shape_grad_angle(),
         grad_smart: t.get_shape_grad_smart(),
+        retouch_mode: t.get_retouch_mode().clamp(0, 3) as u8,
+        strength: t.get_retouch_strength() / 100.0,
+        smoothing: t.get_smoothing() / 100.0,
+        sample_all: t.get_sample_all(),
     }
+}
+
+/// Interpolation des transformations (Déplacer, Déformation, 4 coins) d'après le ruban.
+fn sync_interp(app: &AppWindow) {
+    transform::NEAREST.store(app.global::<ToolOpts>().get_nearest(), std::sync::atomic::Ordering::Relaxed);
 }
 
 // ------------------------------------------------------------------ affichage
@@ -1272,6 +1298,9 @@ fn update_dynamic(app: &AppWindow, st: &mut State) -> bool {
     }
     // fin de trait : les derniers points, encore en attente, sans recalculer toute l'image
     dyn_patch(app, st, None);
+    if !st.session.busy() && !st.doc.needs_refine().is_empty() {
+        arm_low_refine(app);
+    }
     DYN_DEFER_SAID.with(|s| s.set(false));
     let mut started = false;
     let (w, h) = (st.doc.w, st.doc.h);
@@ -1281,10 +1310,23 @@ fn update_dynamic(app: &AppWindow, st: &mut State) -> bool {
     // calque en cours de réglage : un calcul pleine résolution déjà lancé ne bloque pas le
     // rendu réduit du dernier réglage (son résultat, périmé, sera ignoré)
     let excluded: std::collections::HashSet<u64> = st.dyn_inflight.iter().copied().filter(|u| st.dyn_draft != Some(*u)).chain(st.dyn_draft_flight.iter().copied()).collect();
-    let jobs = st.doc.dynamic_jobs_excluding(&excluded);
+    // geste en cours : pas du brouillon de chaque calque ƒ, entrée composée à ce pas
+    let plans: std::collections::HashMap<u64, (usize, Vec<editor::Stage>)> = if gesture_active() {
+        st.doc.layers.iter().filter(|l| l.dynamic.is_some()).filter_map(|l| gesture_plan(st, l.uid).map(|p| (l.uid, p))).collect()
+    } else {
+        Default::default()
+    };
+    let jobs = st.doc.dynamic_jobs_step(&excluded, &|uid| plans.get(&uid).map_or(1, |p| p.0));
     if jobs.is_empty() { break; }
     started = true;
     for j in jobs {
+        if j.step > 1 {
+            if let Some((_, stages)) = plans.get(&j.uid) {
+                st.dyn_draft_flight.insert(j.uid);
+                dyn_chain(app, st, j.uid, j.serial, j.src.clone(), std::sync::Arc::new(stages.clone()), 0, (w.div_ceil(j.step), h.div_ceil(j.step)));
+                continue;
+            }
+        }
         if st.dyn_draft == Some(j.uid) {
             if let Some(plan) = draft_plan(st, j.uid) {
                 dyn_low_job(app, st, &j, plan);
@@ -1413,7 +1455,13 @@ fn dyn_chain(app: &AppWindow, st: &mut State, uid: u64, serial: u64, src: std::s
         }
         done(st);
         schedule_dynamic(app, st);
-        redraw_canvas(app, st);
+        // brouillons d'un geste : plusieurs calques ƒ rendent presque en même temps, une seule
+        // recomposition pour eux tous (avant : une recomposition complète par calque)
+        if draft && gesture_active() {
+            redraw_soon(app);
+        } else {
+            redraw_canvas(app, st);
+        }
         return;
     };
     let job = background::Heavy::Effect { name, src: img.clone(), w, h, p, post };
@@ -1442,6 +1490,52 @@ fn dyn_invalidate(st: &mut State, uid: u64) {
     st.dyn_draft_flight.remove(&uid);
 }
 
+thread_local! {
+    /// geste en cours qui change l'entrée des filtres ƒ à chaque mouvement (déplacer un calque,
+    /// régler une opacité) : instant (ms) jusqu'auquel les filtres sont calculés en brouillon
+    static GESTURE_UNTIL: std::cell::Cell<f64> = const { std::cell::Cell::new(0.0) };
+}
+
+/// Geste en cours (voir `note_gesture`).
+fn gesture_active() -> bool {
+    GESTURE_UNTIL.with(|g| now_ms() < g.get())
+}
+
+/// Un mouvement du geste : les filtres ƒ au-dessus suivent en brouillon (rendu réduit), la
+/// pleine résolution est calculée quand le geste s'arrête (`arm_low_refine`). Avant, le projet
+/// d'exemple recalculait toutes ses piles en entier à chaque mouvement : 350 ms par image.
+fn note_gesture(app: &AppWindow) {
+    GESTURE_UNTIL.with(|g| g.set(now_ms() + 250.0));
+    arm_low_refine(app);
+}
+
+/// Fin du geste (relâchement) : le prochain calcul repasse en pleine résolution.
+fn end_gesture() {
+    GESTURE_UNTIL.with(|g| g.set(0.0));
+}
+
+/// Pas du brouillon d'un filtre ƒ pendant un geste : le budget de pixels par mouvement est
+/// partagé entre les calques ƒ du projet. None : image assez petite pour tout calculer.
+fn gesture_plan(st: &State, uid: u64) -> Option<(usize, Vec<editor::Stage>)> {
+    let (w, h) = (st.doc.w, st.doc.h);
+    let layer = st.doc.layers.iter().find(|l| l.uid == uid)?;
+    // filtre appliqué au calque lui-même (anciens projets) : son brouillon serait agrandi et
+    // gardé comme rendu final
+    if layer.dynamic_mode == 1 {
+        return None;
+    }
+    let list = layer.dynamic.as_ref()?;
+    let n = st.doc.layers.iter().filter(|l| l.dynamic.is_some() && l.visible).count().max(1);
+    let budget = if cfg!(target_arch = "wasm32") { 360_000.0 } else { 1_600_000.0 } / n as f64;
+    if ((w * h) as f64) <= budget {
+        return None;
+    }
+    let want = (((w * h) as f64 / budget).sqrt().ceil() as usize).clamp(2, 16).max(st.ds);
+    // aspect exact si un pas voisin le permet, sinon au plus près
+    (want..=(want + 2).min(16)).find_map(|k| editor::draft_stages(list, k).map(|s| (k, s)))
+        .or_else(|| Some((want, editor::draft_stages_loose(list, want))))
+}
+
 /// Au-delà de ce nombre de pixels, le réglage d'un calque dynamique passe par un rendu réduit.
 const DRAFT_MIN: usize = 1_000_000;
 /// Au-delà, un filtre ƒ au-dessus du tracé n'est recalculé que là où passe le pinceau
@@ -1459,7 +1553,16 @@ fn dyn_patch(app: &AppWindow, st: &mut State, rect: Option<PaintRect>) -> Option
         return rect;
     }
     let budget = if cfg!(target_arch = "wasm32") { 1_200_000 } else { 6_000_000 };
-    let done = st.doc.patch_dynamic(budget);
+    // nouveau trait pendant le recalcul complet d'un brouillon : ce recalcul (déjà périmé) est
+    // abandonné, pour que le filtre suive le pinceau au lieu d'attendre la fin du trait
+    if st.session.busy() {
+        for l in st.doc.layers.iter_mut() {
+            if l.dyn_low.is_some() && l.dyn_done != l.dyn_serial && st.dyn_inflight.contains(&l.uid) && st.dyn_draft != Some(l.uid) {
+                l.dyn_serial = l.dyn_done;
+            }
+        }
+    }
+    let done = st.doc.patch_dynamic(budget, st.ds.max(1));
     if st.session.busy() && !DYN_DEFER_SAID.with(|s| s.get()) && st.doc.layers.iter().any(|l| l.dynamic.is_some() && l.dyn_dirty.is_some()) {
         DYN_DEFER_SAID.with(|s| s.set(true));
         status(app, "Filtre ƒ trop étendu pour suivre le pinceau : recalculé à la fin du trait");
@@ -1509,6 +1612,42 @@ fn arm_refine(app: &AppWindow) {
     });
 }
 
+thread_local! {
+    static LOW_REFINE: slint::Timer = slint::Timer::default();
+}
+
+/// Brouillons ƒ plus réduits que la résolution de rendu (retouche pendant un trait vu de loin,
+/// étape d'historique) : pleine résolution une fois le geste fini depuis un instant. Un nouveau
+/// trait repousse le calcul.
+fn arm_low_refine(app: &AppWindow) {
+    let weak = app.as_weak();
+    LOW_REFINE.with(|t| {
+        t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(700), move || {
+            let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
+            let Ok(mut st) = state.try_borrow_mut() else { return arm_low_refine(&app) };
+            let st = &mut *st;
+            if st.session.busy() || st.dyn_draft.is_some() || st.effect.is_some() || st.transform_drag.is_some() || gesture_active() {
+                return arm_low_refine(&app);
+            }
+            // affichage grossier du geste : recomposé net
+            let mut any = gpuview::take_coarse();
+            for uid in st.doc.needs_refine() {
+                if st.dyn_inflight.contains(&uid) {
+                    continue;
+                }
+                if let Some(l) = st.doc.layers.iter_mut().find(|l| l.uid == uid) {
+                    l.dyn_key = None;
+                    any = true;
+                }
+            }
+            if any {
+                update_dynamic(&app, st);
+                redraw_canvas(&app, st);
+            }
+        })
+    });
+}
+
 /// Fin du réglage : le calque est recalculé en pleine résolution.
 fn dyn_refine(app: &AppWindow, st: &mut State) {
     // fenêtre d'effet ouverte sur ce calque : l'aperçu reste à la taille affichée ; la pleine
@@ -1526,6 +1665,25 @@ fn dyn_refine(app: &AppWindow, st: &mut State) {
     redraw_canvas(app, st);
 }
 
+thread_local! {
+    static REDRAW_SOON: slint::Timer = slint::Timer::default();
+}
+
+/// Recomposition de la toile regroupée (une par image affichée au plus).
+fn redraw_soon(app: &AppWindow) {
+    if REDRAW_SOON.with(|t| t.running()) {
+        return;
+    }
+    let weak = app.as_weak();
+    REDRAW_SOON.with(|t| {
+        t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(12), move || {
+            let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
+            let Ok(mut st) = state.try_borrow_mut() else { return redraw_soon(&app) };
+            redraw_canvas(&app, &mut st);
+        })
+    });
+}
+
 /// Recompose toute la toile (sans toucher aux panneaux).
 fn redraw_canvas(app: &AppWindow, st: &mut State) {
     vecview::sync_mode(app, st);
@@ -1533,6 +1691,11 @@ fn redraw_canvas(app: &AppWindow, st: &mut State) {
         return vecview::touch(app, st);
     }
     compose_display(app, st);
+    // geste sous filtres ƒ, navigateur : rien d'écrit, le résultat est posé et envoyé à son
+    // arrivée (gpuview::arrive) ; renvoyer l'ancienne image ne servirait à rien
+    if gpuview::take_deferred() {
+        return;
+    }
     upload_full(app, st);
     perf::render_finished(app, st, 0.0);
 }
@@ -1580,10 +1743,16 @@ fn compose_display(app: &AppWindow, st: &mut State) {
         st.bs = 0;
         // affichage neuf (vide) : composé tout de suite ; sinon carte graphique si possible
         // (navigateur : l'image précédente reste le temps du calcul)
-        if fresh || !gpuview::compose(app, st, gpuview::Target::Display, (0, 0, dw, dh)) {
+        if fresh {
             gpuview::cpu(st, gpuview::Target::Display, (0, 0, dw, dh));
+        } else {
+            // geste sous filtres ƒ : composition grossière (voir gpuview::coarse)
+            gpuview::view(app, st, gpuview::Target::Display, (0, 0, dw, dh));
         }
-        st.doc.draw_ants_scaled(&mut st.display, st.ants_phase, st.ds, (0, 0, dw, dh));
+        // résultat attendu de la carte graphique : fourmis tracées à son arrivée
+        if !gpuview::deferred() {
+            st.doc.draw_ants_scaled(&mut st.display, st.ants_phase, st.ds, (0, 0, dw, dh));
+        }
         return;
     }
     compose_backdrop(app, st);
@@ -1621,7 +1790,11 @@ fn schedule_dynamic(app: &AppWindow, st: &State) {
         // rien à recalculer (on peint sur le calque de filtre lui-même : refresh_rect a déjà refait
         // la zone touchée) : surtout ne pas recomposer toute la vue à chaque mouvement
         if update_dynamic(&app, st) {
-            redraw_canvas(&app, st);
+            if gesture_active() {
+                redraw_soon(&app);
+            } else {
+                redraw_canvas(&app, st);
+            }
         }
     });
 }
@@ -1641,8 +1814,33 @@ fn gpu_ready() -> bool {
 #[cfg(not(target_arch = "wasm32"))]
 static GPU_READY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+thread_local! {
+    static SPARE: slint::Timer = slint::Timer::default();
+}
+
+/// Au repos (outil de pinceau) : copie privée du calque actif préparée pour le prochain trait
+/// (`Doc::prepare_spare`).
+fn schedule_spare(app: &AppWindow) {
+    let weak = app.as_weak();
+    SPARE.with(|t| {
+        t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(350), move || {
+            let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
+            let Ok(mut st) = state.try_borrow_mut() else { return schedule_spare(&app) };
+            if st.session.busy() || st.transform_drag.is_some() || gesture_active() {
+                return schedule_spare(&app);
+            }
+            if tools::is_stroke(st.tool) && st.doc.mask_of.is_none() {
+                st.doc.prepare_spare();
+            } else {
+                st.doc.spare = None;
+            }
+        })
+    });
+}
+
 /// Recompose tout l'affichage et met à jour les panneaux.
 fn refresh_all(app: &AppWindow, st: &mut State) {
+    schedule_spare(app);
     let render_t0 = now_ms();
     app.set_work_mode(SharedString::from(match (st.doc.vector_mode, st.doc.anim.is_some()) {
         (true, true) => i18n::tr(" · Animation SVG"),
@@ -1679,7 +1877,9 @@ fn refresh_all(app: &AppWindow, st: &mut State) {
     }
     update_dynamic(app, st);
     compose_display(app, st);
-    upload_full(app, st);
+    if !gpuview::take_deferred() {
+        upload_full(app, st);
+    }
     vecview::render_now(app, st);
     sync_panels(app, st);
     sync_anim(app, st);
@@ -1758,6 +1958,10 @@ fn refresh_rect(app: &AppWindow, st: &mut State, r: Option<(usize, usize, usize,
     }
     gpuview::view(app, st, gpuview::Target::Display, (x0, y0, x1, y1));
     schedule_dynamic(app, st);
+    // résultat attendu de la carte graphique : posé et envoyé à son arrivée
+    if gpuview::take_deferred() {
+        return;
+    }
     // fourmis : un pixel de marge (le contour dépend des voisins)
     let ants = (x0.saturating_sub(1), y0.saturating_sub(1), (x1 + 1).min(dw), (y1 + 1).min(dh));
     st.doc.draw_ants_scaled(&mut st.display, st.ants_phase, st.ds, ants);
@@ -2937,17 +3141,18 @@ fn open_file(app: &AppWindow, state: &Shared) {
     #[cfg(target_arch = "wasm32")]
     let task = async move {
         // web : sélecteur de fichier du navigateur
-        let Some((name, bytes)) = web::pick_file(&format!("image/*,.illu,.svg,.pdn,{}", raw_accept())).await else { return };
+        let Some((name, bytes)) = web::pick_file(&format!("image/*,.illu,.svg,.pdn,.psd,.psb,.tga,.qoi,{}", raw_accept())).await else { return };
         let Some(app) = weak.upgrade() else { return };
         load_bytes(&app, &state, &name, bytes);
     };
     #[cfg(not(target_arch = "wasm32"))]
     let task = async move {
-        let all: Vec<&str> = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "illu", "svg", "pdn"].into_iter().chain(raw::EXTENSIONS.iter().copied()).collect();
+        let all: Vec<&str> = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "tga", "qoi", "illu", "svg", "pdn", "psd", "psb"].into_iter().chain(raw::EXTENSIONS.iter().copied()).collect();
         let Some(file) = rfd::AsyncFileDialog::new()
             .add_filter(i18n::tr("Images, photos RAW et projets MasterPaint"), &all)
             .add_filter(i18n::tr("Projet MasterPaint (.illu)"), &["illu"])
             .add_filter(i18n::tr("Paint.NET (.pdn)"), &["pdn"])
+            .add_filter(i18n::tr("Photoshop (.psd, .psb)"), &["psd", "psb"])
             .add_filter(i18n::tr("Dessin SVG"), &["svg"])
             .add_filter(i18n::tr("Photos RAW"), raw::EXTENSIONS)
             .pick_file()
@@ -3241,9 +3446,15 @@ fn crop_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32) {
         }
         1 => {
             let Some((grab, (sx, sy, sw, sh), (fx, fy))) = c.drag else {
-                // curseur : déplacement à l'intérieur du cadre
+                // curseur : flèches orientées sur une poignée, déplacement à l'intérieur du cadre
                 let (rx, ry, rw, rh) = c.r;
-                app.set_canvas_cursor(if x >= rx && x <= rx + rw && y >= ry && y <= ry + rh { 1 } else { 0 });
+                let (cx, cy) = (rx + rw / 2.0, ry + rh / 2.0);
+                let cur = match crop_points(c.r).iter().find(|p| (p.0 - x).abs() <= tol && (p.1 - y).abs() <= tol) {
+                    Some(p) => transform::resize_cursor(p.0 - cx, p.1 - cy),
+                    None if x >= rx && x <= rx + rw && y >= ry && y <= ry + rh => 1,
+                    None => 0,
+                };
+                app.set_canvas_cursor(cur);
                 return;
             };
             let (ddx, ddy) = (x - fx, y - fy);
@@ -4597,6 +4808,12 @@ fn preview_effect(app: &AppWindow, st: &mut State) {
 
 /// Au-delà de ce nombre de pixels, une image vue de loin a un aperçu réduit.
 const LOD_MIN: usize = 1_500_000;
+/// Pixels calculés au plus pour l'aperçu d'un effet sur l'image entière (le rendu complet ne se
+/// fait qu'à OK) : 17 Mpx → pas de 4 dans le navigateur.
+#[cfg(target_arch = "wasm32")]
+const PREVIEW_BUDGET: usize = 1_500_000;
+#[cfg(not(target_arch = "wasm32"))]
+const PREVIEW_BUDGET: usize = 4_000_000;
 
 /// Pas de l'aperçu d'un effet : un pixel d'aperçu par pixel de l'écran, rien de plus (une photo
 /// de 5472 px vue à 19 % n'occupe que 1040 px à l'écran).
@@ -4714,13 +4931,21 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
         es.queued = true;
         return;
     }
-    // grande image + effet local : seule la zone visible (et une marge) est calculée
-    let region = visible_region(app, w, h, name, &p);
     // pas réduit choisi pour garder les réglages de grille exacts (carreaux de Pixeliser…) :
-    // l'aperçu a les mêmes proportions que le rendu final
+    // l'aperçu a les mêmes proportions que le rendu final. Il suit aussi la résolution de rendu
+    // du projet (÷2 ÷4 ÷8, groupe Affichage) : avant, elle était ignorée par les effets du menu.
     let _ = ds;
-    let want = preview_lod(app, w, h);
-    let lod = if full || region.is_some() || want < 2 { 1 } else { effects::preview_step(es.fields, &es.vals, want) };
+    let want = preview_lod(app, w, h).max(st.doc.effective_div().max(1));
+    let mut lod = if full || want < 2 { 1 } else { effects::preview_step(es.fields, &es.vals, want) };
+    // grande image vue de près + effet local : seule la zone visible (et une marge) est calculée,
+    // en pleine résolution. Vue de loin, l'image réduite entière : avant, une zone visible
+    // trouvée forçait la pleine résolution (des millions de pixels, plusieurs secondes).
+    let region = if lod == 1 { visible_region(app, w, h, name, &p) } else { None };
+    // plafond de l'aperçu : jamais plus de PREVIEW_BUDGET pixels calculés par réglage
+    if !full && lod == 1 && region.is_none() && w * h > PREVIEW_BUDGET {
+        let k = ((w * h) as f64 / PREVIEW_BUDGET as f64).sqrt().ceil() as usize;
+        lod = effects::preview_step(es.fields, &es.vals, k.max(2));
+    }
     let (name, p, vals) = if lod > 1 {
         let v = effects::scale_px(es.fields, &es.vals, 1.0 / lod as f32);
         match effects::params(&es.id, &v, secondary, es.seed) {
@@ -4757,7 +4982,8 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
     let job = preview_job(name, src.clone(), sw, sh, &p, post.clone(), &vals, secondary);
     let t0 = now_ms();
     // aperçu réduit : affiché tel quel, à sa taille ; le calque garde ses pixels jusqu'à OK
-    let direct = lod > 1 && !all_layers && !st.doc.layers.iter().any(|l| l.dynamic.is_some() || l.off.is_some());
+    // (le contenu « Hors toile » n'est pas visible : il ne gêne pas l'aperçu réduit)
+    let direct = lod > 1 && !all_layers && !st.doc.layers.iter().any(|l| l.dynamic.is_some());
     background::spawn(app, st, job, move |app, st, out| {
         if direct {
             let small = out.map(|mut o| {
@@ -5265,7 +5491,7 @@ fn transform_kind(tool: Tool) -> Option<transform::Kind> {
         Tool::Move => Some(transform::Kind::MovePixels),
         Tool::Deform => Some(transform::Kind::Deform),
         Tool::Warp => Some(transform::Kind::Warp),
-        Tool::RectSelect => Some(transform::Kind::MoveSelection),
+        Tool::RectSelect | Tool::EllipseSelect => Some(transform::Kind::MoveSelection),
         _ => None,
     }
 }
@@ -5322,6 +5548,7 @@ fn drop_floating(app: &AppWindow, st: &mut State) {
 /// Événement de la toile pour les outils de transformation. Retourne true s'il est traité.
 fn transform_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32, button: i32, shift: bool, alt: bool) -> bool {
     let Some(tk) = transform_kind(st.tool) else { return false };
+    sync_interp(app);
     let zoom = app.get_zoom().max(0.01);
     let (tol, rot) = (7.0 / zoom, 32.0 / zoom);
     // Déformation / 4 coins : clic hors de la sélection (ou sans sélection) = nouvelle sélection
@@ -5403,6 +5630,17 @@ fn transform_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32,
                         }
                     }
                     show_snap_guides(app, guides.0, guides.1);
+                    // grande zone : brouillon par blocs pendant le glisser (≈ 1,5 Mpx calculés
+                    // par mouvement), rendu exact au relâchement
+                    let q = f.corners();
+                    let bw = q.iter().map(|p| p.0).fold(f32::MIN, f32::max) - q.iter().map(|p| p.0).fold(f32::MAX, f32::min);
+                    let bh = q.iter().map(|p| p.1).fold(f32::MIN, f32::max) - q.iter().map(|p| p.1).fold(f32::MAX, f32::min);
+                    let area = (bw.max(0.0) * bh.max(0.0)).min((st.doc.w * st.doc.h) as f32 * 4.0);
+                    let under_fx = st.doc.layers.iter().any(|l| l.dynamic.is_some());
+                    f.draft = if area > 2.0e6 { ((area / 1.5e6).sqrt().ceil() as usize).clamp(1, 8) } else if under_fx && area > 400_000.0 { 2 } else { 1 };
+                    if under_fx {
+                        note_gesture(app);
+                    }
                     let r = f.render(&mut st.doc);
                     refresh_rect(app, st, r);
                     show_handles(app, st);
@@ -5411,17 +5649,20 @@ fn transform_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32,
                 if st.session.busy() {
                     return false;
                 }
-                let on_handle = st.floating.as_ref().map_or(false, |f| matches!(f.hit(x, y, tol, 0.0, false), transform::Grab::Edge(_)));
-                app.set_canvas_cursor(if on_handle { 2 } else { 0 });
+                // poignée : flèches orientées comme elle
+                let cur = st.floating.as_ref().map_or(0, |f| match f.hit(x, y, tol, 0.0, false) {
+                    g @ transform::Grab::Edge(_) => f.grab_cursor(g),
+                    _ => 0,
+                });
+                app.set_canvas_cursor(cur);
                 return false;
             } else {
                 // survol : curseur selon la zone (poignée, rotation, déplacement)
                 let (cur, hint) = match &st.floating {
-                    Some(f) => match f.hit(x, y, tol, rot, false) {
-                        transform::Grab::Edge(_) | transform::Grab::Corner(_) => (2, false),
-                        transform::Grab::Rotate => (3, true),
-                        transform::Grab::Translate => (1, false),
-                    },
+                    Some(f) => {
+                        let g = f.hit(x, y, tol, rot, false);
+                        (f.grab_cursor(g), g == transform::Grab::Rotate)
+                    }
                     None => (1, false),
                 };
                 app.set_canvas_cursor(cur);
@@ -5433,6 +5674,16 @@ fn transform_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32,
                 return false;
             }
             if let Some((grab, _, _)) = st.transform_drag.take() {
+                end_gesture();
+                gpuview::take_coarse();
+                // brouillon du glisser : rendu exact avant l'étape d'historique
+                if let Some(f) = st.floating.as_mut() {
+                    if f.draft > 1 {
+                        f.draft = 1;
+                        let r = f.render(&mut st.doc);
+                        refresh_rect(app, st, r);
+                    }
+                }
                 let label = match (tk, grab) {
                     (transform::Kind::MoveSelection, _) => "Redimensionner la sélection",
                     (transform::Kind::Warp, _) => "Déformation 4 coins",
@@ -6021,7 +6272,7 @@ fn sync_layer_blocks(app: &AppWindow, st: &State) {
 
 /// Outils qui peignent dans le calque actif.
 fn paints_pixels(t: Tool) -> bool {
-    matches!(t, Tool::Brush | Tool::Pencil | Tool::Eraser | Tool::Fill | Tool::Gradient | Tool::Shape | Tool::RoundRect | Tool::Line)
+    tools::is_stroke(t) || matches!(t, Tool::Fill | Tool::Gradient | Tool::Shape | Tool::RoundRect | Tool::Line)
 }
 
 /// Le calque actif refuse les pixels (verrou, dossier) : message, `true`. Calque texte :
@@ -6344,7 +6595,7 @@ thread_local! {
 
 /// Entrées de menu utilisables sans projet ouvert.
 const NO_DOC_ACTIONS: &[&str] = &[
-    "showNewProjectDialog", "showSettingsDialog", "showChangelog", "showWelcomeDialog", "PhotoModeManager.open", "win-", "toggleIllu",
+    "showNewProjectDialog", "showSettingsDialog", "showChangelog", "showDownloadDialog", "showWelcomeDialog", "PhotoModeManager.open", "win-", "toggleIllu",
     "resetWorkspace", "illuOpenSnapSettings", "openIconViewerWindow", "ctxPaste", "rust:paste-new",
 ];
 
@@ -6996,6 +7247,14 @@ fn set_tool(app: &AppWindow, st: &mut State, id: &str) {
             app.invoke_zoom_fit();
             return;
         }
+        // corbeille de la fenêtre Outils : comme Édition › Effacer la sélection (Suppr)
+        "tool-clear-sel" => {
+            drop_floating(app, st);
+            st.doc.erase_selection();
+            st.doc.commit("Effacer la sélection");
+            refresh_all(app, st);
+            return;
+        }
         _ => {}
     }
     let id = vecedit::tool_for_mode(st.doc.vector_mode, id);
@@ -7029,13 +7288,14 @@ fn set_tool(app: &AppWindow, st: &mut State, id: &str) {
     let icon = info.and_then(|t| tool_cursor_icon(app, id, t.1));
     TOOL_CURSOR_ICON.with(|c| *c.borrow_mut() = icon);
     refresh_tool_cursor(app);
-    if st.tool == Tool::Unsupported {
+    if st.tool == Tool::Unsupported && id != "tool-pan" {
         status(app, "Cet outil n'est pas encore porté dans la version Rust");
     } else {
         status(app, "");
     }
     // outil et réglages de l'outil quitté retenus pour le prochain lancement
     save_settings(app);
+    schedule_spare(app);
 }
 
 thread_local! {
@@ -7046,7 +7306,7 @@ thread_local! {
 /// Icône du curseur d'un outil. None : outils qui gardent un curseur système (Déplacer, Zoom,
 /// Texte) ou icône introuvable.
 fn tool_cursor_icon(app: &AppWindow, id: &str, icon: IconSpec) -> Option<String> {
-    if matches!(id, "tool-move" | "tool-node" | "tool-zoom" | "tool-text" | "btn-deselect") {
+    if matches!(id, "tool-move" | "tool-node" | "tool-zoom" | "tool-text" | "btn-deselect" | "tool-pan") {
         return None;
     }
     let k = app.global::<MpIcons>().invoke_for_spec(icon);
@@ -7287,6 +7547,16 @@ fn handle_outcome(app: &AppWindow, st: &mut State, out: Outcome) {
                     render_vector_layer(app, st, uid);
                 }
             }
+            // fin d'un trait : zone touchée notée pour la carte graphique (seules ces lignes
+            // repartent), et filtres ƒ du dessus terminés AVANT l'étape d'historique (sinon
+            // l'étape gardait un rendu ƒ périmé : recalcul complet à chaque annulation)
+            if let Some((base, r)) = st.session.last_stroke.take().filter(|_| tools::is_stroke(st.tool)) {
+                let px = st.doc.layer().px.arc();
+                if base.len() == px.len() {
+                    gpu_damage::note(&base.weak(), &px, gpu_damage::rows(st.doc.w, r.1, r.3));
+                }
+            }
+            dyn_patch(app, st, None);
             st.doc.commit(label);
             // animation « avancer après chaque tracé » : image suivante (la frise s'allonge)
             if st.doc.anim.as_ref().is_some_and(|a| a.draw_step) && paints_pixels(st.tool) {
@@ -7365,12 +7635,13 @@ fn sym_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32) -> bo
             }
             st.sym_click = now;
             st.sym_drag = grab;
-            app.set_canvas_cursor(2);
+            // axe vertical : glissé de gauche à droite ; axe horizontal : de haut en bas
+            app.set_canvas_cursor(if grab == 1 { 9 } else { 10 });
             true
         }
         1 => {
             if st.sym_drag == 0 {
-                app.set_canvas_cursor(if near_x || near_y { 2 } else { 0 });
+                app.set_canvas_cursor(if near_x { 9 } else if near_y { 10 } else { 0 });
                 return false;
             }
             // aimantation : grille, puis bords et centre de l'image ; sinon au demi-pixel
@@ -7476,6 +7747,12 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
         }
         if ctrl && ch.eq_ignore_ascii_case(&'s') {
             pm_action(app, state, "export");
+            return true;
+        }
+        // annuler / rétablir les réglages de la photo active
+        if ctrl && (ch.eq_ignore_ascii_case(&'z') || ch.eq_ignore_ascii_case(&'y')) {
+            let back = ch.eq_ignore_ascii_case(&'z') && !shift;
+            pm_store::undo(app, &mut state.borrow_mut(), back);
             return true;
         }
         return false;
@@ -7661,10 +7938,21 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
         if alt {
             return false;
         }
+        // Maj+F6 : contour progressif de la sélection (Photoshop)
+        if shift && k(Key::F6) {
+            if st.doc.sel.is_some() {
+                prompt(app, "selfeather", "Contour progressif", "Rayon (pixels)", "8");
+            }
+            return true;
+        }
         let tool = match c {
             'b' if shift => "tool-brush",
             _ if shift => "",
+            // S répété : rectangle ↔ ellipse (Paint.NET)
+            's' if st.tool == Tool::RectSelect => "tool-ellipse-select",
             's' => "tool-select",
+            'k' => "tool-clone",
+            'j' => "tool-heal",
             'm' | 'v' => "tool-move",
             // projet SVG : A = Sélection directe des points (comme Illustrator)
             'a' if st.doc.vector_mode => "tool-node",
@@ -7810,7 +8098,7 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
 const HANDLED_ACTIONS: &[&str] = &[
     "showSelectionExpandDialog", "showImageBorderDialog", "alignActiveLayerWidthToCanvas",
     "illuTriggerFileImport", "showExportDialog", "showNewProjectDialog", "requestCloseActiveDocument", "showSettingsDialog",
-    "showChangelog", "showWelcomeDialog", "undo()", "redo()", "ctxCut", "ctxCopy", "ctxPaste", "selectAll", "deselectAll",
+    "showChangelog", "showDownloadDialog", "showWelcomeDialog", "undo()", "redo()", "ctxCut", "ctxCopy", "ctxPaste", "selectAll", "deselectAll",
     "invertSelection", "clearSelectionContent", "cropToSelection", "startIlluInteractiveCrop", "resizeCanvas()",
     "showExtendCanvasDialog", "showPixelTransformDialog", "expandCanvasToLayers", "addLayer", "deleteLayer",
     "duplicateActiveLayer", "moveLayer(1)", "moveLayer(-1)", "mergeLayers", "splitActiveLayerRgbChannels", "centerSelection",
@@ -7977,6 +8265,17 @@ fn paint_net_order(mut menus: Vec<MenuSpec>) -> Vec<MenuSpec> {
         let mut list = items_of(&menus[edit]);
         let at = list.iter().position(|it| it.action.contains("ctxPaste")).map_or(list.len(), |i| i + 1);
         list.insert(at, item("Coller dans une nouvelle image", "rust:paste-new", "\u{f0ea}", "Ctrl+Alt+V"));
+        // Sélection › Modifier (Photoshop) : sous « Étendre / réduire »
+        let at = list.iter().position(|it| it.action.contains("showSelectionExpandDialog")).map_or(list.len(), |i| i + 1);
+        let more = [
+            item("Contour progressif (plume)…", "rust:sel-feather", "\u{f52d}", "Maj+F6"),
+            item("Bordure de la sélection…", "rust:sel-border", "\u{f850}", ""),
+            item("Lisser la sélection…", "rust:sel-smooth", "\u{f111}", ""),
+            item("Sélectionner l'opacité du calque", "rust:sel-alpha", "\u{f5fd}", ""),
+        ];
+        for (k, it) in more.into_iter().enumerate() {
+            list.insert(at + k, it);
+        }
         menus[edit].items = ModelRc::new(VecModel::from(list));
     }
     // Image : rotations directes et Aplatir (raccourcis de Paint.NET)
@@ -8155,19 +8454,25 @@ fn layer_context_extra(app: &AppWindow, base: ModelRc<MenuItemSpec>) -> Vec<Menu
 fn context_menu(app: &AppWindow, kind: &str, x: f32, y: f32, ctrl: bool, outside: bool) -> bool {
     let wanted: &[&str] = match kind {
         "canvas" => {
-            let painting = matches!(
-                Tool::from_id(app.get_current_tool().as_str()),
-                Tool::Brush | Tool::Pencil | Tool::Eraser | Tool::Fill | Tool::Gradient | Tool::Text | Tool::Shape | Tool::RoundRect | Tool::Line | Tool::Deform | Tool::Warp
+            let cur = Tool::from_id(app.get_current_tool().as_str());
+            let painting = tools::is_stroke(cur) || matches!(
+                cur,
+                Tool::Fill | Tool::Gradient | Tool::Text | Tool::Shape | Tool::RoundRect | Tool::Line | Tool::Deform | Tool::Warp
             );
             #[cfg(target_arch = "wasm32")]
             let ctrl = ctrl || web::modifiers().0;
             if painting && !ctrl {
                 return false;
             }
+            // outils de sélection : Ctrl + clic droit = OU exclusif (Paint.NET), pas de menu
+            if ctrl && matches!(cur, Tool::RectSelect | Tool::EllipseSelect | Tool::Lasso | Tool::PolyLasso | Tool::MagneticLasso | Tool::Wand) {
+                return false;
+            }
             &[
                 "ctxCut", "ctxCopy", "ctxPaste", "-", "EditorManager.selectAll", "illuDeselectLikeCtrlD", "invertSelection", "clearSelectionContent", "-", "startIlluInteractiveCrop", "EditorManager.addLayer()", "-", "undo()", "redo()",
             ]
         }
+        "snap" => &["toggleIlluSnapToEdges", "illuOpenSnapSettings"],
         "layer" => &["EditorManager.addLayer()", "duplicateActiveLayer", "deleteLayer()", "-", "moveLayer(1)", "moveLayer(-1)", "mergeLayers", "-", "openImageLayerBoundsDialog", "fx:rotatezoom"],
         _ => &["requestCloseActiveDocumentFromMenu", "-", "showExportDialog", "PhotoModeManager.open()", "showNewProjectDialog"],
     };
@@ -8241,6 +8546,22 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
     if action == "rust:flatten" {
         return flatten_image(app, st);
     }
+    match action {
+        "rust:sel-feather" | "rust:sel-border" | "rust:sel-smooth" if st.doc.sel.is_none() => {
+            return status(app, "Aucune sélection : sélectionnez d'abord une zone");
+        }
+        "rust:sel-feather" => return prompt(app, "selfeather", "Contour progressif", "Rayon (pixels)", "8"),
+        "rust:sel-border" => return prompt(app, "selborder", "Bordure de la sélection", "Largeur (pixels)", "10"),
+        "rust:sel-smooth" => return prompt(app, "selsmooth", "Lisser la sélection", "Rayon (pixels)", "4"),
+        "rust:sel-alpha" => {
+            let a = st.doc.active;
+            let mode = opts(app).sel_mode;
+            st.doc.select_layer_alpha(a, mode);
+            st.doc.selection_changed();
+            return sel_changed(app, st);
+        }
+        _ => {}
+    }
     if st.doc.anim.is_some() && ANIM_BLOCKED.iter().any(|k| action.contains(k)) {
         status(app, "Mode animation : changer la taille de l'image n'est pas encore possible (Rotation / retournement fonctionne sur toutes les images)");
         return;
@@ -8303,6 +8624,10 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
     } else if has("showChangelog") {
         app.set_changelog_text(SharedString::from(include_str!("../../../changelog.txt")));
         app.set_show_changelog(true);
+    } else if has("showDownloadDialog") {
+        // Fichier › Télécharger l'application : même fenêtre que le bouton de la barre MasterPaint,
+        // pour que toutes les interfaces y aient accès
+        app.set_show_download(true);
     } else if has("showWelcomeDialog") {
         // Fichier › Bienvenue / Informations : toujours, même après « Ne plus afficher »
         app.set_show_welcome(true);
@@ -8628,6 +8953,13 @@ impl LoadJob {
         if name.to_lowercase().ends_with(".illu") {
             return self.out.push(Loaded::Illu(illu::load(&bytes)));
         }
+        // fichier Photoshop : calques, dossiers, masques, modes de fusion
+        if name.to_lowercase().ends_with(".psd") || name.to_lowercase().ends_with(".psb") {
+            return self.out.push(Loaded::Illu(psd::load(&name, &bytes).map(|(doc, notes)| illu::Loaded {
+                docs: vec![doc],
+                skipped: notes,
+            })));
+        }
         // fichier Paint.NET : calques, noms, visibilité, opacité, modes de fusion
         if name.to_lowercase().ends_with(".pdn") {
             return self.out.push(Loaded::Illu(pdn::load(&name, &bytes).map(|(doc, notes)| illu::Loaded {
@@ -8642,7 +8974,7 @@ impl LoadJob {
         match decode(&bytes) {
             Some((w, h, px)) if self.to == LoadTo::Photos => self.out.push(Loaded::Photo(Box::new(photo::Photo::new(&name, w, h, px)))),
             Some((w, h, px)) => self.out.push(Loaded::Pixels(name, w, h, px)),
-            None => self.out.push(Loaded::Failed(name.clone(), i18n::tr_format!("« {name} » : format d'image non reconnu (formats lus : PNG, JPEG, WebP, BMP, GIF, ICO, TIFF, RAW, .illu)."))),
+            None => self.out.push(Loaded::Failed(name.clone(), i18n::tr_format!("« {name} » : format d'image non reconnu (formats lus : PNG, JPEG, WebP, BMP, GIF, ICO, TIFF, TGA, QOI, RAW, PSD, PDN, SVG, .illu)."))),
         }
     }
 }
@@ -8666,6 +8998,15 @@ fn start_load(app: &AppWindow, st: &mut State, to: LoadTo, files: Vec<(String, V
     }
     let single = files.len() == 1;
     let first = files[0].0.clone();
+    // photos (et RAW, qui vont toujours au Photo Pro) : fichier d'origine gardé pour la
+    // sauvegarde automatique de la pellicule (pm_store), sauf pendant sa restauration
+    if !st.photo.restoring {
+        for (n, b) in &files {
+            if to == LoadTo::Photos || raw::is_raw(n) {
+                st.photo.pending_orig.push((n.clone(), std::sync::Arc::new(b.clone())));
+            }
+        }
+    }
     let mut job = LoadJob::new(to, files);
     if SYNC_LOADS.load(Relaxed) {
         while job.plan().is_some() {
@@ -8912,15 +9253,33 @@ fn load_done(app: &AppWindow, st: &mut State, to: LoadTo, out: Vec<Loaded>) {
                 cmds.push(("Annuler", "N'ouvre pas le fichier."));
                 show_task(app, "Ouvrir un SVG", &intro, "", "", &cmds, Vec::new());
             }
-            Loaded::Photo(p) => {
+            Loaded::Photo(mut p) => {
+                if st.photo.restoring {
+                    pm_store::restored(st, &mut p);
+                }
                 st.photo.photos.push(*p);
+                let idx = st.photo.photos.len() - 1;
+                pm_store::photo_added(st, idx);
                 photos += 1;
             }
             Loaded::Failed(name, e) => failed.push((name, e)),
         }
     }
+    // restauration de la pellicule au démarrage : mode laissé fermé (onglet « Photo Pro »)
+    if st.photo.restoring {
+        st.photo.restoring = false;
+        st.photo.restore.clear();
+        st.photo.active = st.photo.restore_active.min(st.photo.photos.len().saturating_sub(1));
+        pm_store::save_session(st);
+        app.set_pm_count(st.photo.photos.len() as i32);
+        if photos > 0 {
+            status(app, i18n::tr_format!("Photo Pro : {photos} photo(s) retrouvée(s) avec leurs réglages (onglet Photo Pro)"));
+        }
+        return;
+    }
     if photos > 0 {
         st.photo.active = st.photo.photos.len() - 1;
+        pm_store::save_session(st);
         if app.get_pm_open() {
             pm_sync(app, st);
             pm_render(app, st);
@@ -8939,6 +9298,10 @@ fn load_done(app: &AppWindow, st: &mut State, to: LoadTo, out: Vec<Loaded>) {
 /// Ouvre le Mode Photo Pro (pellicule gardée d'une ouverture à l'autre).
 fn pm_open(app: &AppWindow, st: &mut State) {
     finish_edits(app, st);
+    if st.photo.brush.0 <= 0.0 {
+        st.photo.brush = (5.0, 50.0, 100.0, false);
+    }
+    pm_masks::sync_brush(app, st);
     app.set_phone_menu(false);
     app.set_phone_sheet(SharedString::default());
     let names: Vec<SharedString> = photo::preset_names().into_iter().map(|name| SharedString::from(i18n::tr(name))).collect();
@@ -9015,18 +9378,28 @@ fn photo_menus() -> ModelRc<MenuSpec> {
             vec![
                 item("Importer des photos…", '\u{f030}', "Ctrl+O", "pm:import"),
                 item("Ouvrir dans l'éditeur", '\u{f35d}', "", "pm:open-editor"),
-                item("Exporter…", '\u{f56e}', "Ctrl+S", "pm:export"),
+                item("Exporter en JPEG…", '\u{f56e}', "Ctrl+S", "pm:export"),
+                item("Exporter en PNG 16 bits…", '\u{f56e}', "", "pm:export:png16"),
+                item("Exporter en TIFF 16 bits…", '\u{f56e}', "", "pm:export:tiff16"),
                 sep(),
+                item("Paramètres…", '\u{f013}', "", "pm:settings"),
+                sep(),
+                item("Réduire (garder la pellicule)", '\u{f2d1}', "", "pm:minimize"),
                 item("Fermer le Mode Photo Pro", '\u{f00d}', "", "pm:close"),
             ],
         ),
         menu(
             "Édition",
             vec![
+                item("Annuler", '\u{f0e2}', "Ctrl+Z", "pm:undo"),
+                item("Rétablir", '\u{f01e}', "Ctrl+Y", "pm:redo"),
+                sep(),
                 item("Réinitialiser les réglages", '\u{f0e2}', "", "pm:reset"),
                 item("Appliquer à toutes les photos", '\u{f0c5}', "", "pm:apply-all"),
                 sep(),
                 item("Rotation de 90°", '\u{f2f9}', "", "pm:rotate"),
+                item("Recadrer et redresser", '\u{f125}', "", "pm:crop"),
+                item("Annuler le recadrage", '\u{f0e2}', "", "pm:crop-reset"),
                 item("Comparer avec l'original", '\u{f06e}', "", "pm:fx"),
             ],
         ),
@@ -9045,7 +9418,8 @@ fn photo_menus() -> ModelRc<MenuSpec> {
 fn pm_preset(app: &AppWindow, st: &mut State, k: i32) {
     let active = st.photo.active;
     let Some(p) = st.photo.photos.get_mut(active) else { return };
-    p.params = photo::preset_params(k);
+    // le filtre se pose par-dessus les réglages de l'utilisateur (photo::with_preset) : ils
+    // restent tels quels, en changeant de filtre comme en le retirant
     p.preset = k;
     p.modified = true;
     pm_sync(app, st);
@@ -9062,19 +9436,30 @@ fn pm_sync(app: &AppWindow, st: &State) {
         .map(|(i, p)| PmThumb { name: p.name.as_str().into(), thumb: to_image(&p.thumb.2, p.thumb.0, p.thumb.1), active: i == pm.active, modified: p.modified })
         .collect();
     app.set_pm_photos(ModelRc::new(VecModel::from(thumbs)));
+    app.set_pm_count(pm.photos.len() as i32);
+    pm_store::sync_undo(app, st);
+    pm_masks::sync(app, st);
     app.set_pm_fx_off(pm.fx_off);
     match pm.photos.get(pm.active) {
         Some(p) => {
             app.set_pm_values(ModelRc::new(VecModel::from(p.params.clone())));
+            app.set_pm_shift(ModelRc::new(VecModel::from(p.preset_shift())));
+            // fond d'ambiance (MasterPaint) : la vignette réduite à 28 px, agrandie en douceur
+            let (tw, th, t) = &p.thumb;
+            let (aw, ah, amb) = photo::downscale(t, *tw, *th, 28);
+            app.set_pm_ambient(to_image(&amb, aw, ah));
             app.set_pm_preset(p.preset);
             app.set_pm_img_w(p.pw as i32);
             app.set_pm_img_h(p.ph as i32);
             app.set_pm_full_w(p.w as i32);
+            app.set_pm_crop(ModelRc::new(VecModel::from(vec![p.crop.0, p.crop.1, p.crop.2, p.crop.3])));
+            app.set_pm_angle(p.angle);
             let note = if p.note.is_empty() { String::new() } else { format!(" · {}", p.note) };
             app.set_pm_info(SharedString::from(i18n::tr_format!("{} — {} × {} px{note}", p.name, p.w, p.h)));
         }
         None => {
             app.set_pm_values(ModelRc::new(VecModel::from(photo::neutral())));
+            app.set_pm_shift(ModelRc::default());
             app.set_pm_preset(0);
             app.set_pm_info(SharedString::default());
         }
@@ -9085,6 +9470,8 @@ fn pm_sync(app: &AppWindow, st: &State) {
 /// en basse résolution (curseurs fluides ; le dernier réglage gagne), puis, après une courte
 /// pause, la zone visible à la résolution de l'écran (`pm_hq`). Les deux en arrière-plan.
 fn pm_render(app: &AppWindow, st: &mut State) {
+    // historique : l'état sera rangé peu après le dernier réglage
+    pm_store::touch(app);
     // réglage ou photo changés : la zone haute résolution affichée n'est plus juste, et celle
     // en cours de calcul est abandonnée (bureau : jeton d'annulation ; navigateur : sa file de
     // worker est arrêtée)
@@ -9103,6 +9490,7 @@ fn pm_render(app: &AppWindow, st: &mut State) {
     };
     if pm.fx_off {
         app.set_pm_image(to_image(&ph.preview, ph.pw, ph.ph));
+        pm_histogram(app, &ph.preview);
         app.set_pm_busy(false);
         return;
     }
@@ -9133,7 +9521,12 @@ fn pm_rendered(app: &AppWindow, st: &mut State, gen: u64, idx: usize, w: usize, 
     let same = pm.photos.get(pm.active).is_some_and(|p| idx == pm.active && p.lw == w && p.lh == h);
     if same && !pm.fx_off && px.len() == w * h * 4 {
         app.set_pm_image(to_image(&px, w, h));
+        pm_histogram(app, &px);
+        pm.last_live = (w, h, std::sync::Arc::new(px));
+        let px = st.photo.last_live.2.clone();
+        pm_masks::overlay(app, st, &px, w, h);
     }
+    let pm = &mut st.photo;
     if std::mem::take(&mut pm.queued) || !same {
         pm_render(app, st);
     } else {
@@ -9142,6 +9535,19 @@ fn pm_rendered(app: &AppWindow, st: &mut State, gen: u64, idx: usize, w: usize, 
             app.set_pm_info(SharedString::from(i18n::tr_format!("{} — {} × {} px — aperçu {ms:.0} ms", p.name, p.w, p.h)));
         }
     }
+}
+
+fn p_angle(a: f32) -> f32 {
+    a.clamp(-45.0, 45.0)
+}
+
+/// Histogramme RVB et alertes d'écrêtage de l'aperçu (toutes les présentations : une
+/// interface ne change que la mise en page, jamais les fonctions).
+fn pm_histogram(app: &AppWindow, px: &[u8]) {
+    let (img, lo, hi) = photo::histogram(px);
+    app.set_pm_hist(to_image(&img, 256, 96));
+    app.set_pm_clip_lo(lo);
+    app.set_pm_clip_hi(hi);
 }
 
 /// Rendu haute résolution de la zone visible, après `ms` sans changement de réglage ni de vue.
@@ -9267,15 +9673,46 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
         let _ = slint::spawn_local(task);
         return;
     }
-    if a == "export" {
-        return pm_export(app, state);
+    if a == "export" || a == "export-dialog" {
+        return pm_export_dialog(app, &state.borrow(), 0);
+    }
+    if a == "crop" {
+        app.set_pm_crop_mode(true);
+        return;
+    }
+    if a == "settings" {
+        app.set_show_settings(true);
+        return;
+    }
+    if a == "undo" || a == "redo" {
+        return pm_store::undo(app, &mut state.borrow_mut(), a == "undo");
+    }
+    // réduire : le mode se ferme, la pellicule reste (onglet « Photo Pro » pour le rouvrir)
+    if a == "minimize" {
+        pm_set_open(app, false);
+        app.set_pm_count(state.borrow().photo.photos.len() as i32);
+        return;
+    }
+    if a == "reopen" {
+        return pm_open(app, &mut state.borrow_mut());
+    }
+    if a == "export:png16" {
+        return pm_export_dialog(app, &state.borrow(), 1);
+    }
+    if a == "export:tiff16" {
+        return pm_export_dialog(app, &state.borrow(), 2);
     }
     let mut st = state.borrow_mut();
     let st = &mut *st;
+    if a.starts_with("mask-") {
+        pm_masks::action(app, st, a);
+        return;
+    }
     let active = st.photo.active;
     match a {
         "close" => {
             pm_set_open(app, false);
+            app.set_pm_count(st.photo.photos.len() as i32);
             return;
         }
         "fx" => st.photo.fx_off = !st.photo.fx_off,
@@ -9297,6 +9734,9 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
                 // calcul impossible en arrière-plan : refait ici
                 let px = out.filter(|px| px.len() == w * h * 4).or_else(|| st.photo.photos.get(active).map(|p| p.render_full()));
                 let Some(px) = px else { return };
+                // recadrage et redressement du Photo Pro
+                let (angle, crop) = st.photo.photos.get(active).map_or((0.0, (0.0, 0.0, 1.0, 1.0)), |p| (p.angle, p.crop));
+                let (px, w, h) = photo::geometry(&px, w, h, angle, crop);
                 let doc = Doc::from_pixels(w, h, px, &name);
                 pm_set_open(app, false);
                 set_document(app, st, doc);
@@ -9334,19 +9774,31 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
                     p.note.clear();
                 }
                 "rotate" => p.rotate90(),
+                "crop-reset" => {
+                    p.crop = (0.0, 0.0, 1.0, 1.0);
+                    p.angle = 0.0;
+                }
                 "auto" => {
                     let (_, note) = pm_auto(p);
                     status(app, note);
                 }
+                // Auto d'une section : réglage automatique de toute la photo (comme le bouton
+                // Auto), dont seuls les réglages de cette section sont repris ; les autres
+                // retouches à la main restent
+                s if s.starts_with("auto-section:") => {
+                    let mut t = p.clone();
+                    let (_, note) = pm_auto(&mut t);
+                    t.params.resize(photo::NP, 0.0);
+                    p.params.resize(photo::NP, 0.0);
+                    for i in pm_section(s.trim_start_matches("auto-section:")) {
+                        p.params[i] = t.params[i];
+                    }
+                    status(app, note);
+                }
                 s if s.starts_with("reset-section:") => {
-                    let idx: Vec<usize> = match s.trim_start_matches("reset-section:") {
-                        "0" => vec![0, 18, 5, 3, 6, 4],
-                        "1" => vec![1, 2, 20, 19],
-                        "2" => vec![16, 17, 22, 21, 23, 24],
-                        "3" => (7..=15).collect(),
-                        _ => (30..=53).collect(),
-                    };
+                    let idx = pm_section(s.trim_start_matches("reset-section:"));
                     let n = photo::neutral();
+                    p.params.resize(photo::NP, 0.0);
                     for i in idx {
                         p.params[i] = n[i];
                     }
@@ -9358,6 +9810,18 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
     }
     pm_sync(app, st);
     pm_render(app, st);
+}
+
+/// Réglages d'une section du panneau de Photo Pro (0 Lumière, 1 Couleur, 2 Présence, 3 Color
+/// grading, 4 Mélangeur TSL).
+fn pm_section(k: &str) -> Vec<usize> {
+    match k {
+        "0" => vec![0, 18, 5, 3, 6, 4],
+        "1" => vec![1, 2, 20, 19],
+        "2" => vec![16, 17, 22, 21, 23, 24, 58, 59],
+        "3" => (7..=15).collect(),
+        _ => (30..=53).collect(),
+    }
 }
 
 /// Réglage automatique d'une photo d'après l'analyse de sa scène (`scene`) : seuls les réglages
@@ -9379,7 +9843,6 @@ fn pm_auto(p: &mut photo::Photo) -> (scene::Kind, String) {
     for &i in &auto.keys {
         p.params[i] = auto.params[i];
     }
-    p.preset = 0;
     p.modified = true;
     p.note = auto.note;
     (auto.kind, p.note.clone())
@@ -9430,13 +9893,80 @@ mod auto_look {
 
 /// Exporte toutes les photos en JPEG (pleine résolution). Bureau : dans un dossier choisi ;
 /// web : un téléchargement par photo.
-fn pm_export(app: &AppWindow, state: &Shared) {
-    let jobs: Vec<(String, usize, usize, photo::Src, Vec<f32>)> =
-        state.borrow().photo.photos.iter().map(|p| (p.stem(), p.w, p.h, p.full_src(), p.engine_params())).collect();
-    if jobs.is_empty() {
+/// Photo exportée : (nom, octets, type MIME) — JPEG 8 bits (0), PNG 16 bits (1), TIFF 16 bits
+/// (2) ; recadrage et redressement appliqués.
+/// Taille de sortie : plus grand côté `max` (0 : taille d'origine, jamais agrandie).
+fn pm_fit(w: usize, h: usize, max: usize) -> (usize, usize) {
+    if max == 0 || w.max(h) <= max {
+        return (w, h);
+    }
+    let k = max as f32 / w.max(h) as f32;
+    (((w as f32 * k).round() as usize).max(1), ((h as f32 * k).round() as usize).max(1))
+}
+
+/// Plus grand côté choisi dans la fenêtre d'exportation (0 : taille d'origine).
+fn pm_export_edge(i: i32) -> usize {
+    [0, 4000, 3000, 2048, 1080].get(i.max(0) as usize).copied().unwrap_or(0)
+}
+
+fn pm_encode(p: &photo::Photo, fmt: u8, quality: u8, max: usize) -> Option<(String, Vec<u8>, &'static str)> {
+    let stem = p.stem();
+    if fmt == 0 {
+        let (px, w, h) = photo::geometry(&p.render_full(), p.w, p.h, p.angle, p.crop);
+        let (tw, th) = pm_fit(w, h, max);
+        let (px, w, h) = if (tw, th) == (w, h) {
+            (px, w, h)
+        } else {
+            let img = image::RgbaImage::from_raw(w as u32, h as u32, px)?;
+            (image::imageops::resize(&img, tw as u32, th as u32, image::imageops::FilterType::Lanczos3).into_raw(), tw, th)
+        };
+        return encode_jpeg(&px, w, h, quality.clamp(50, 100)).map(|b| (format!("{stem}-photo-pro.jpg"), b, "image/jpeg"));
+    }
+    let (px, w, h) = photo::geometry(&p.render_full16(), p.w, p.h, p.angle, p.crop);
+    let mut img = image::ImageBuffer::<image::Rgba<u16>, Vec<u16>>::from_raw(w as u32, h as u32, px)?;
+    let (tw, th) = pm_fit(w, h, max);
+    if (tw, th) != (w, h) {
+        img = image::imageops::resize(&img, tw as u32, th as u32, image::imageops::FilterType::Lanczos3);
+    }
+    // photo opaque : RVB 16 bits (un tiers plus léger que RVBA)
+    let rgb = image::DynamicImage::ImageRgba16(img).to_rgb16();
+    let mut out = std::io::Cursor::new(Vec::new());
+    let (format, ext, mime) = if fmt == 1 { (image::ImageFormat::Png, "png", "image/png") } else { (image::ImageFormat::Tiff, "tif", "image/tiff") };
+    image::DynamicImage::ImageRgb16(rgb).write_to(&mut out, format).ok()?;
+    Some((format!("{stem}-photo-pro-16bits.{ext}"), out.into_inner(), mime))
+}
+
+/// Fenêtre d'exportation de Photo Pro : ouverte sur le format `fmt`.
+fn pm_export_dialog(app: &AppWindow, st: &State, fmt: i32) {
+    if st.photo.photos.is_empty() {
+        return status(app, "Aucune photo à exporter");
+    }
+    app.set_pm_exp_fmt(fmt);
+    app.set_show_pm_export(true);
+    pm_export_info(app, st);
+}
+
+/// Dimensions et nombre de photos exportées, sous les choix de la fenêtre.
+fn pm_export_info(app: &AppWindow, st: &State) {
+    let Some(p) = st.photo.photos.get(st.photo.active) else { return };
+    // recadrage compris (fractions du cadre)
+    let (cw, ch) = (((p.crop.2 - p.crop.0) * p.w as f32).round().max(1.0) as usize, ((p.crop.3 - p.crop.1) * p.h as f32).round().max(1.0) as usize);
+    let (tw, th) = pm_fit(cw, ch, pm_export_edge(app.get_pm_exp_size()));
+    let n = if app.get_pm_exp_all() { st.photo.photos.len() } else { 1 };
+    app.set_pm_exp_info(i18n::tr_format!("{n} photo(s) — celle-ci : {tw} × {th} px (recadrage compris)").into());
+}
+
+fn pm_export(app: &AppWindow, state: &Shared, fmt: u8) {
+    if state.borrow().photo.photos.is_empty() {
         status(app, "Aucune photo à exporter");
         return;
     }
+    let (quality, max, all) = (app.get_pm_exp_quality().round() as u8, pm_export_edge(app.get_pm_exp_size()), app.get_pm_exp_all());
+    // copies légères (images partagées) : l'export tourne hors du fil de l'interface
+    let photos: Vec<photo::Photo> = {
+        let st = state.borrow();
+        if all { st.photo.photos.clone() } else { st.photo.photos.get(st.photo.active).cloned().into_iter().collect() }
+    };
     for p in &mut state.borrow_mut().photo.photos {
         p.modified = false;
     }
@@ -9445,14 +9975,13 @@ fn pm_export(app: &AppWindow, state: &Shared) {
     {
         let Some(dir) = rfd::FileDialog::new().set_title(i18n::tr("Dossier d'exportation des photos")).pick_folder() else { return };
         app.set_pm_busy(true);
-        status(app, i18n::tr_format!("Export de {} photo(s)…", jobs.len()));
+        status(app, i18n::tr_format!("Export de {} photo(s)…", photos.len()));
         let weak = app.as_weak();
         std::thread::spawn(move || {
             let mut done = 0;
-            for (stem, w, h, px, p) in &jobs {
-                let out = photo::render_src(px, *w, *h, p);
-                if let Some(bytes) = encode_jpeg(&out, *w, *h, 92) {
-                    if std::fs::write(dir.join(format!("{stem}-photo-pro.jpg")), bytes).is_ok() {
+            for p in &photos {
+                if let Some((name, bytes, _)) = pm_encode(p, fmt, quality, max) {
+                    if std::fs::write(dir.join(name), bytes).is_ok() {
                         done += 1;
                     }
                 }
@@ -9469,24 +9998,21 @@ fn pm_export(app: &AppWindow, state: &Shared) {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        for (stem, w, h, px, p) in &jobs {
-            let out = photo::render_src(px, *w, *h, p);
-            if let Some(bytes) = encode_jpeg(&out, *w, *h, 92) {
-                web::download_bytes(&bytes, &format!("{stem}-photo-pro.jpg"), "image/jpeg");
+        for p in &photos {
+            if let Some((name, bytes, mime)) = pm_encode(p, fmt, quality, max) {
+                web::download_bytes(&bytes, &name, mime);
             }
         }
-        status(app, i18n::tr_format!("{} photo(s) exportée(s)", jobs.len()));
+        status(app, i18n::tr_format!("{} photo(s) exportée(s)", photos.len()));
     }
     #[cfg(target_os = "android")]
     {
-        for (stem, w, h, px, p) in jobs {
-            let out = photo::render_src(&px, w, h, &p);
-            if let Some(bytes) = encode_jpeg(&out, w, h, 92) {
-                android_io::save(&format!("{stem}-photo-pro.jpg"), "image/jpeg", bytes, |_| {});
+        for p in &photos {
+            if let Some((name, bytes, mime)) = pm_encode(p, fmt, quality, max) {
+                android_io::save(&name, mime, bytes, |_| {});
             }
         }
     }
-
 }
 
 /// Panneau de menu du mode téléphone (barre du bas) : entrées d'Ajustements, ou des sous-menus
@@ -9645,7 +10171,13 @@ fn tool_state(app: &AppWindow) -> serde_json::Value {
         "fontSize": t.get_font_size(),
         "textAlign": t.get_text_align(),
         "antialias": t.get_antialias(),
+        "retouchMode": t.get_retouch_mode(),
+        "retouchStrength": t.get_retouch_strength(),
+        "smoothing": t.get_smoothing(),
+        "sampleAll": t.get_sample_all(),
+        "nearest": t.get_nearest(),
         "panels": [app.get_show_tools(), app.get_show_colors(), app.get_show_history(), app.get_show_layers()],
+        "groupPick": t.get_group_pick().iter().collect::<Vec<i32>>(),
     })
 }
 
@@ -9660,7 +10192,20 @@ fn restore_tool_state(app: &AppWindow, v: &serde_json::Value) -> Option<String> 
     if let Some(x) = i("brushShape") { t.set_brush_shape(x.clamp(0, 3)); }
     if let Some(x) = f("tolerance") { t.set_tolerance(x.max(0.0)); }
     if let Some(x) = b("contiguous") { t.set_contiguous(x); }
-    if let Some(x) = i("selMode") { t.set_sel_mode(x.clamp(0, 3)); }
+    if let Some(x) = i("selMode") { t.set_sel_mode(x.clamp(0, 4)); }
+    if let Some(x) = i("retouchMode") { t.set_retouch_mode(x.clamp(0, 3)); }
+    // outil retenu dans chaque groupe de la fenêtre Outils
+    if let Some(a) = v.get("groupPick").and_then(|x| x.as_array()) {
+        let mut pick: Vec<i32> = t.get_group_pick().iter().collect();
+        for (k, x) in a.iter().enumerate().take(pick.len()) {
+            pick[k] = x.as_i64().map_or(-1, |x| x as i32);
+        }
+        t.set_group_pick(ModelRc::new(VecModel::from(pick)));
+    }
+    if let Some(x) = f("retouchStrength") { t.set_retouch_strength(x.clamp(1.0, 100.0)); }
+    if let Some(x) = f("smoothing") { t.set_smoothing(x.clamp(0.0, 100.0)); }
+    if let Some(x) = b("sampleAll") { t.set_sample_all(x); }
+    if let Some(x) = b("nearest") { t.set_nearest(x); }
     if let Some(x) = i("shapeStyle") { t.set_shape_style(x.clamp(0, 2)); }
     if let Some(x) = i("shapeFillType") { t.set_shape_fill_type(x.clamp(0, 1)); }
     if let Some(x) = i("shapeGradType") { t.set_shape_grad_type(x.clamp(0, 1)); }
@@ -9811,6 +10356,13 @@ fn save_settings(app: &AppWindow) {
 /// sauf « Ne plus afficher », hors captures / démonstrations et hors Photo Mode Pro. Appelée
 /// une fois les projets restaurés (écran de chargement retiré sur le web).
 fn welcome_at_start(app: &AppWindow) {
+    // pellicule du Photo Pro de la dernière séance (une fois, après les projets)
+    static PM_RESTORE: std::sync::Once = std::sync::Once::new();
+    PM_RESTORE.call_once(|| {
+        if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
+            pm_store::start_restore(app, &state);
+        }
+    });
     if SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) || app.get_welcome_hide() || app.get_welcome_count() >= 2 || app.get_pm_open() {
         return;
     }
@@ -10033,6 +10585,9 @@ fn handle_ribbon(app: &AppWindow, state: &Shared, id: &str) {
         id if id.starts_with("nouvelle") => t.set_sel_mode(0),
         id if id.starts_with("ajouter") => t.set_sel_mode(1),
         id if id.starts_with("soustraire") => t.set_sel_mode(2),
+        // intersection / OU exclusif : un second clic revient à « Nouvelle »
+        "sel-intersect" => t.set_sel_mode(if t.get_sel_mode() == 3 { 0 } else { 3 }),
+        "sel-xor" => t.set_sel_mode(if t.get_sel_mode() == 4 { 0 } else { 4 }),
         id if id.starts_with("autoriser") => toggle_outside(app, st),
         _ => status(app, "Option pas encore portée dans la version Rust"),
     }
@@ -10076,6 +10631,12 @@ fn run() -> Result<(), slint::PlatformError> {
     // capture sans fenêtre (--snapshot=…) : plateforme logicielle installée avant la fenêtre
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
     let snap = snapshot::install(&std::env::args().skip(1).collect::<Vec<_>>());
+    // navigateur sans WebGL (voir web/index.html, mpNoWebGL) : rendu logiciel plutôt qu'un arrêt
+    #[cfg(target_arch = "wasm32")]
+    if web::flag("mpNoWebGL") {
+        web_sys::console::warn_1(&"MasterPaint : WebGL indisponible, rendu logiciel".into());
+        let _ = slint::BackendSelector::new().renderer_name("software".into()).select();
+    }
     let app = AppWindow::new()?;
     #[cfg(target_os = "android")]
     app.set_platform_insets(true);
@@ -11319,7 +11880,9 @@ fn run() -> Result<(), slint::PlatformError> {
             // pipette : la couleur suit le pointeur tant que le bouton reste appuyé
             if st.tool == Tool::Eyedropper {
                 match kind {
-                    0 => st.picking = Some(button == 1),
+                    // clic gauche : la couleur active (principale ou secondaire, choisie dans la
+                    // fenêtre Couleurs) ; clic droit : l'autre (avant : toujours la principale)
+                    0 => st.picking = Some((button == 1) != app.get_color_edit_secondary()),
                     1 if st.picking.is_some() => {}
                     2 => {
                         st.picking = None;
@@ -11439,9 +12002,11 @@ fn run() -> Result<(), slint::PlatformError> {
             }
             let pen = pen::current();
             let tool = if pen.eraser && matches!(st.tool, Tool::Brush | Tool::Eraser | Tool::Pencil) { Tool::Eraser } else { st.tool };
+            // Maj : contraintes (carré, 15°, trait droit, baguette globale) lues par les outils
+            st.session.shift = _shift;
             let size = o.size;
-            if matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) { o.size *= pen.pressure.max(0.02); }
-            let samples = if kind == 1 && st.session.busy() && matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) {
+            if tools::is_stroke(tool) { o.size *= pen.pressure.max(0.02); }
+            let samples = if kind == 1 && st.session.busy() && tools::is_stroke(tool) {
                 pen::points(x, y, app.get_zoom(), app.window().scale_factor())
             } else { vec![] };
             let outside = app.global::<ToolOpts>().get_outside_canvas();
@@ -11453,7 +12018,7 @@ fn run() -> Result<(), slint::PlatformError> {
                 } else { st.session.moved(tool, &mut st.doc, &o, sx, sy, false) };
                 if let Outcome::Redraw(rect) = outcome { queue_paint_frame(&app, st, rect); }
             }
-            if matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) { o.size = size * pen.pressure.max(0.02); }
+            if tools::is_stroke(tool) { o.size = size * pen.pressure.max(0.02); }
             let out = if let Some(out) = outside.then(|| st.session.outside_pointer(tool, &mut st.doc, &o, kind, x, y, button == 1, ctrl, alt)).flatten() {
                 out
             } else {
@@ -11468,7 +12033,7 @@ fn run() -> Result<(), slint::PlatformError> {
             }
             let committed = matches!(out, Outcome::Commit(_));
             match out {
-                Outcome::Redraw(rect) if matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) => queue_paint_frame(&app, st, rect),
+                Outcome::Redraw(rect) if tools::is_stroke(tool) => queue_paint_frame(&app, st, rect),
                 out => handle_outcome(&app, st, out),
             }
             if kind == 2 && !committed {
@@ -11659,6 +12224,11 @@ fn run() -> Result<(), slint::PlatformError> {
                 save_settings(&app);
             } else if let Some(n) = target.strip_prefix("effect:").and_then(|n| n.parse::<i32>().ok()) {
                 app.invoke_effect_color_picked(n, c);
+            } else if target == "paint:0" {
+                // pastilles de la colonne d'outils (Photoshop) : couleur principale / secondaire
+                app.set_primary_color(c);
+            } else if target == "paint:1" {
+                app.set_secondary_color(c);
             }
         });
         let weak = app.as_weak();
@@ -11951,6 +12521,15 @@ fn run() -> Result<(), slint::PlatformError> {
         let weak = app.as_weak();
         let state = state.clone();
         app.global::<Actions>().on_ribbon(move |id| handle_ribbon(&weak.unwrap(), &state, &id));
+        // clic droit sur un bouton du ruban : Aimantation → bascule et réglages
+        let weak2 = app.as_weak();
+        app.global::<Actions>().on_ribbon_context(move |id, x, y| {
+            if id.as_str() == "ribbon-snap-toggle" {
+                if let Some(app) = weak2.upgrade() {
+                    context_menu(&app, "snap", x, y, false, false);
+                }
+            }
+        });
     }
     {
         let weak = app.as_weak();
@@ -11958,7 +12537,7 @@ fn run() -> Result<(), slint::PlatformError> {
         app.on_quick_action(move |id| {
             let app = weak.unwrap();
             // aucun projet ouvert : boutons qui touchent l'image sans effet (message)
-            const NO_DOC: [&str; 19] = ["credits-paintdotjs", "credits-paintjs", "credits-paintnet", "credits-openpdn", "credits-photocraft", "signaler-un-bug", "illu-tb-new", "illu-tb-open", "illu-tb-print", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
+            const NO_DOC: [&str; 21] = ["credits-paintdotjs", "credits-paintjs", "credits-paintnet", "credits-openpdn", "credits-photocraft", "credits-artcraft", "credits-storytold", "signaler-un-bug", "illu-tb-new", "illu-tb-open", "illu-tb-print", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
             if state.borrow().empty && !NO_DOC.contains(&id.as_str()) && !id.starts_with("opt-") {
                 status(&app, "Aucun projet ouvert : créez une nouvelle image ou ouvrez un fichier");
                 return;
@@ -12002,6 +12581,8 @@ fn run() -> Result<(), slint::PlatformError> {
                 "credits-paintnet" => { let _ = webbrowser::open("https://paint.net/"); }
                 "credits-openpdn" => { let _ = webbrowser::open("https://github.com/rivy/OpenPDN"); }
                 "credits-photocraft" => { let _ = webbrowser::open("https://github.com/storytold/photocraft"); }
+                "credits-artcraft" => { let _ = webbrowser::open("https://getartcraft.com/apps"); }
+                "credits-storytold" => { let _ = webbrowser::open("https://github.com/storytold"); }
                 "open-author" => {
                     let _ = webbrowser::open("https://polocrafting.fr/");
                 }
@@ -12229,10 +12810,15 @@ fn run() -> Result<(), slint::PlatformError> {
             let app = weak.unwrap();
             let mut st = state.borrow_mut();
             let l = st.doc.layer_mut();
+            let moved = (l.opacity - (opacity / 100.0).clamp(0.0, 1.0)).abs() > 1e-4;
             l.opacity = (opacity / 100.0).clamp(0.0, 1.0);
             l.blend = Blend::from_index(blend);
             let (w, h) = (st.doc.w, st.doc.h);
             let st = &mut *st;
+            // curseur d'opacité sous des filtres ƒ : brouillon pendant le glisser
+            if moved && st.doc.layers[st.doc.active + 1..].iter().any(|l| l.dynamic.is_some()) {
+                note_gesture(&app);
+            }
             refresh_rect(&app, st, Some((0, 0, w, h)));
             // historique : mode de fusion aussitôt, opacité en fin de geste (pas une étape par cran)
             let (op, bl) = (st.doc.layer().opacity, st.doc.layer().blend);
@@ -12585,7 +13171,9 @@ fn run() -> Result<(), slint::PlatformError> {
             app.set_show_tools(i != 3);
             if app.get_set_follow_interface_style() {
                 let pack = match i.clamp(0, 3) { 1 => 1, 2 => 2, _ => 0 };
-                app.set_set_rounded(i == 0);
+                // coins arrondis : MasterPaint et Photoshop (PhotoCraft arrondit ses contrôles) ;
+                // Paint.NET reste carré comme paintdotjs
+                app.set_set_rounded(i == 0 || i == 2);
                 app.set_set_pronounced_borders(i == 1 || i == 2);
                 // couleur d'accentuation de la référence (bleu Paint.NET, bleu PhotoCraft), modifiable
                 // ensuite ; seul Photoshop (PhotoCraft) passe en sombre. En le quittant, le thème
@@ -12683,6 +13271,7 @@ fn run() -> Result<(), slint::PlatformError> {
             let mut st = state2.borrow_mut();
             if (i as usize) < st.photo.photos.len() {
                 st.photo.active = i as usize;
+                pm_store::save_session(&st);
                 pm_sync(&app, &st);
                 pm_render(&app, &mut st);
             }
@@ -12694,12 +13283,40 @@ fn run() -> Result<(), slint::PlatformError> {
             let mut st = state2.borrow_mut();
             let i = i as usize;
             if i < st.photo.photos.len() {
-                st.photo.photos.remove(i);
+                let gone = st.photo.photos.remove(i);
+                pm_store::photo_removed(gone.uid);
                 let n = st.photo.photos.len();
                 st.photo.active = if st.photo.active > i { st.photo.active - 1 } else { st.photo.active.min(n.saturating_sub(1)) };
+                pm_store::save_session(&st);
                 pm_sync(&app, &st);
                 pm_render(&app, &mut st);
             }
+        });
+        // onglet Masque : réglages du masque choisi et glisser sur la photo
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_export_update(move || {
+            let app = weak.unwrap();
+            pm_export_info(&app, &state2.borrow());
+        });
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_export_run(move || {
+            let app = weak.unwrap();
+            let fmt = app.get_pm_exp_fmt().clamp(0, 2) as u8;
+            pm_export(&app, &state2, fmt);
+        });
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_mask_set(move |field, v| {
+            let app = weak.unwrap();
+            pm_masks::set(&app, &mut state2.borrow_mut(), &field, v);
+        });
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_mask_drag(move |handle, u, v, phase| {
+            let app = weak.unwrap();
+            pm_masks::drag(&app, &mut state2.borrow_mut(), handle, u, v, phase);
         });
         let weak = app.as_weak();
         let state2 = state.clone();
@@ -12708,6 +13325,9 @@ fn run() -> Result<(), slint::PlatformError> {
             let mut st = state2.borrow_mut();
             let active = st.photo.active;
             let Some(p) = st.photo.photos.get_mut(active) else { return };
+            if p.params.len() < photo::NP {
+                p.params.resize(photo::NP, 0.0);
+            }
             if let Some(slot) = p.params.get_mut(i as usize) {
                 *slot = v;
                 p.modified = true;
@@ -12718,6 +13338,41 @@ fn run() -> Result<(), slint::PlatformError> {
         let weak = app.as_weak();
         let state2 = state.clone();
         app.on_pm_preset_chosen(move |k| pm_preset(&weak.unwrap(), &mut state2.borrow_mut(), k));
+        // pipette de balance des blancs : le gris cliqué devient neutre
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_crop_set(move |x0, y0, x1, y1, angle| {
+            let app = weak.unwrap();
+            let mut st = state2.borrow_mut();
+            let st = &mut *st;
+            let active = st.photo.active;
+            let Some(p) = st.photo.photos.get_mut(active) else { return };
+            let (x0, x1) = (x0.clamp(0.0, 1.0).min(x1), x1.clamp(0.0, 1.0));
+            let (y0, y1) = (y0.clamp(0.0, 1.0).min(y1), y1.clamp(0.0, 1.0));
+            p.crop = (x0, y0, x1.max(x0 + 0.01), y1.max(y0 + 0.01));
+            p.angle = angle.clamp(-45.0, 45.0);
+            p.modified = true;
+            let (cw, ch) = (((p.crop.2 - p.crop.0) * p.w as f32).round(), ((p.crop.3 - p.crop.1) * p.h as f32).round());
+            pm_sync(&app, st);
+            status(&app, &i18n::tr_format!("Recadrage : {cw} × {ch} px, redressement {:.1}°", p_angle(angle)));
+        });
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        app.on_pm_pick_wb(move |u, v| {
+            let app = weak.unwrap();
+            let mut st = state2.borrow_mut();
+            let st = &mut *st;
+            let active = st.photo.active;
+            let Some(p) = st.photo.photos.get_mut(active) else { return };
+            let rgb = photo::sample_linear(&p.live_src(), p.lw, p.lh, u, v);
+            let (t, n) = masterpaint_core::neutral_wb(rgb);
+            p.params[1] = t;
+            p.params[2] = n;
+            p.modified = true;
+            pm_sync(&app, st);
+            pm_render(&app, st);
+            status(&app, &i18n::tr_format!("Balance des blancs : température {:.0}, teinte {:.0}", t, n));
+        });
         let weak = app.as_weak();
         let state2 = state.clone();
         app.on_pm_view(move |x0, y0, x1, y1, disp| {
@@ -12849,6 +13504,18 @@ fn run() -> Result<(), slint::PlatformError> {
                         return;
                     }
                     st.doc.grow_selection(v.round() as i32);
+                    st.doc.selection_changed();
+                }
+                "selfeather" | "selborder" | "selsmooth" => {
+                    if st.doc.sel.is_none() || v <= 0.0 {
+                        return;
+                    }
+                    let v = v.min(500.0);
+                    match kind.as_str() {
+                        "selfeather" => st.doc.feather_selection(v),
+                        "selborder" => st.doc.border_selection(v),
+                        _ => st.doc.smooth_selection(v),
+                    }
                     st.doc.selection_changed();
                 }
                 _ => return,
@@ -13067,6 +13734,11 @@ mod web {
                 set("params", &js_sys::Float32Array::from(&p[..]));
                 if let Some(ca) = post {
                     set("post", &js_sys::Float32Array::from(&ca[..]));
+                }
+                // effet spatial calculable par bandes : la page peut le répartir sur plusieurs
+                // workers (image entière envoyée à chacun, une bande de lignes calculée chacun)
+                if post.is_none() && masterpaint_core::bandable(name) {
+                    set("bands", &true.into());
                 }
                 (*w, *h, (*w * *h > 700_000) as u32)
             }
@@ -13371,6 +14043,11 @@ mod web {
         let p: js_sys::Promise = f.call0(&cb).ok()?.dyn_into().ok()?;
         let v = wasm_bindgen_futures::JsFuture::from(p).await.ok()?;
         raw_image(&v)
+    }
+
+    /// Drapeau booléen posé par la page (`window.<nom>`).
+    pub fn flag(name: &str) -> bool {
+        web_sys::window().and_then(|w| js_sys::Reflect::get(&w, &name.into()).ok()).and_then(|v| v.as_bool()).unwrap_or(false)
     }
 
     /// Le focus est dans un champ de texte (élément <input> invisible de Slint).

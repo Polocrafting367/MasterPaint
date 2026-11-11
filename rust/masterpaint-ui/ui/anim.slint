@@ -349,6 +349,8 @@ export component AnimPanel inherits Rectangle {
 
     // ---- menu d'un dessin (clic droit) ----
     menu := PopupWindow {
+        // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+        TouchArea { }
         x: root.menu-x;
         y: root.menu-y;
         width: 230px;

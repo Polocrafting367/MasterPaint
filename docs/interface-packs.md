@@ -26,7 +26,7 @@ Un JSON de pack utilise `format: "masterpaint-icon-pack"`, une version 1 ou 2, u
 
 - MasterPaint : [dépôt GitHub](https://github.com/Polocrafting367/MasterPaint), développé par polocrafting — [polocrafting.fr](https://polocrafting.fr).
 - Paint.NET / paintdotjs : [dépôt LabyStudio](https://github.com/LabyStudio/paintdotjs), [site paintjs.net](https://paintjs.net/).
-- PhotoCraft : [dépôt GitHub](https://github.com/storytold/photocraft).
+- ArtCraft (PhotoCraft, VectorCraft, LightCraft) : [getartcraft.com/apps](https://getartcraft.com/apps), [dépôts storytold](https://github.com/storytold). Le pack PhotoCraft complète ses icônes par celles de VectorCraft avant toute icône dessinée pour MasterPaint.
 - Font Awesome Free : [licences et attributions](https://fontawesome.com/license/free).
 
 Les révisions de référence sont inscrites dans `icon-packs/paintdotjs.json` et `icon-packs/photocraft.json`. Les dépôts sources locaux sont dans `../masterpaint-inspiration/`. Voir [COPYRIGHT.md](../COPYRIGHT.md) et les notices conservées sous `rust/masterpaint-ui/icon-packs/`.

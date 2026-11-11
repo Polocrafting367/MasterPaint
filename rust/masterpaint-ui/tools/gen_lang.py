@@ -38,6 +38,10 @@ def human_text(text):
     Do not translate IDs, filenames, SVG paths, font families, or serialized keys.
     Keep lower-case French messages as well as capitalized labels/options.
     """
+    if text in {'model name', 'Hardware', 'PROCESSOR_IDENTIFIER', 'MemTotal:', 'MemAvailable:', 'basic render'}:
+        return False
+    if re.search(r'(?:fill|stroke|transform)[\w-]*=\\"', text):
+        return False
     if (re.fullmatch(r'mp[A-Z][A-Za-z0-9]*|[a-z]+(?:[A-Z][a-zA-Z0-9]*)+|\{[A-Z_]+\}', text)
             or text in {'PhotoModeManager.open', 'IlluGifImport'}):
         return False
@@ -169,7 +173,7 @@ def update_web(check=False):
 
 def audit_slint():
     """Reject readable literals that bypass @tr, apart from stable internal codes."""
-    allowed = {'calque texte', 'verrouillé', 'dossier', 'Font Awesome 6 Brands'}
+    allowed = {'calque texte', 'verrouillé', 'dossier', 'Font Awesome 6 Brands', 'MasterPaint — polocrafting', '© 2026 polocrafting — polocrafting.fr', 'polocrafting.fr ↗', 'GitHub · Polocrafting367/MasterPaint ↗', 'paint.net ↗', 'GitHub · rivy/OpenPDN ↗', 'PaintJS · LabyStudio', 'PaintJS ↗', 'GitHub · LabyStudio/paintdotjs ↗', 'ArtCraft · PhotoCraft, VectorCraft, LightCraft', 'getartcraft.com/apps ↗', 'GitHub · storytold ↗'}
     ok = True
     for path in sorted(Path(CRATE, 'ui').glob('*.slint')):
         content = path.read_text(encoding='utf-8')

@@ -15,6 +15,9 @@
 pub mod util;
 /// Calculs des outils (pot de peinture, baguette magique).
 pub mod region;
+/// Remplissage de contenu par correspondance de pièces (PatchMatch + membrane), repris de
+/// LightCraft / PhotoCraft (MIT OR Apache-2.0).
+pub mod inpaint;
 mod fx_adjust;
 mod fx_artistic;
 mod fx_blur;
@@ -28,6 +31,7 @@ mod fx_chroma;
 mod fx_dynamic;
 mod fx_halftone;
 mod fx_camraw;
+mod fx_camraw_masks;
 mod fx_render;
 mod fx_stylize;
 
@@ -39,6 +43,8 @@ pub use util::{cancel_token, cancelled, with_cancel, with_token, CancelToken};
 pub use fx_distort::chromatic_post;
 /// Remplissage de contenu (Effets › Détourage), voir fx_object::content_fill.
 pub use fx_object::content_fill;
+/// Pipette de balance des blancs du Photo Pro.
+pub use fx_camraw::neutral_wb;
 /// Incrustation : couleur du fond détectée sur le pourtour de l'image (bouton « Auto »).
 pub use fx_chroma::detect_key as chroma_detect_key;
 /// Niveaux et taille de point du tramage ordonné ƒ (partagés avec le calcul sur carte graphique).
@@ -205,8 +211,50 @@ pub fn apply_image(name: &str, src: &[u8], w: usize, h: usize, params: &[f32]) -
     if apply(id, &img, &mut o, 0, h, &P(params)) { Some(out) } else { None }
 }
 
+/// Lignes [y0, y1) d'un effet calculé sur toute l'image (contexte complet) : un worker du
+/// navigateur par bande, résultat identique au calcul d'un bloc (mêmes bandes que
+/// `apply_parallel`). None pour un effet qui lit toute l'image d'un seul tenant.
+pub fn apply_band(name: &str, src: &[u8], w: usize, h: usize, params: &[f32], y0: usize, y1: usize) -> Option<Vec<u8>> {
+    let id = effect_id(name)?;
+    if WHOLE_IMAGE.contains(&name) || src.len() < w * h * 4 || y0 >= y1 || y1 > h {
+        return None;
+    }
+    let img = Img { d: &src[..w * h * 4], w, h };
+    let mut out = src[y0 * w * 4..y1 * w * 4].to_vec();
+    let mut o = Out { d: &mut out, base: y0 * w * 4 };
+    if apply(id, &img, &mut o, y0, y1, &P(params)) { Some(out) } else { None }
+}
+
+/// Effet calculable par bandes de lignes indépendantes (voir `apply_band`).
+pub fn bandable(name: &str) -> bool {
+    effect_id(name).is_some() && !WHOLE_IMAGE.contains(&name)
+}
+
 /// Camera Raw sur un RAW développé en flottant linéaire (RVB, `w × h × 3`) : tout le
 /// traitement en flottant, une seule quantification 8 bits en sortie.
+/// Camera Raw en sortie 16 bits (export du Photo Pro) : source 8 bits RVBA ou RVB linéaire.
+pub fn camera_raw16(src8: Option<&[u8]>, lin: Option<&[f32]>, w: usize, h: usize, params: &[f32]) -> Option<Vec<u16>> {
+    let src = match (src8, lin) {
+        (Some(s), _) if s.len() >= w * h * 4 => fx_camraw::Src::U8(s),
+        (_, Some(l)) if l.len() >= w * h * 3 => fx_camraw::Src::Linear(l),
+        _ => return None,
+    };
+    Some(fx_camraw::camera_raw_src16(w, h, &src, &P(params)))
+}
+
+/// Alpha (0..255, `w` × `h`) du masque `mask` des réglages `params` (Photo Pro), lu sur
+/// l'image affichée `rgba8` (plages de luminance, de couleur…) : voile rouge de l'onglet Masque.
+pub fn camera_raw_mask_alpha(params: &[f32], mask: usize, w: usize, h: usize, rgba8: &[u8]) -> Option<Vec<u8>> {
+    if rgba8.len() < w * h * 4 {
+        return None;
+    }
+    let (_, masks, frame) = fx_camraw_masks::split(params, fx_camraw::masks_at(&P(params)))?;
+    let m = masks.get(mask)?;
+    let base: Vec<u16> = rgba8[..w * h * 4].iter().map(|v| *v as u16 * 257).collect();
+    let a = fx_camraw_masks::alpha(m, &frame, w, h, &base);
+    Some(a.iter().map(|v| (v * 255.0 + 0.5) as u8).collect())
+}
+
 pub fn camera_raw_linear(lin: &[f32], w: usize, h: usize, params: &[f32]) -> Option<Vec<u8>> {
     if lin.len() < w * h * 3 {
         return None;
@@ -296,6 +344,12 @@ mod tests {
             if !WHOLE_IMAGE.contains(name) {
                 let banded = apply_parallel(name, &src, w, h, p, 4).expect(name);
                 assert!(whole == banded, "{name} : bandes différentes");
+                // workers du navigateur : bandes calculées à part puis recollées
+                let mut stitched = Vec::new();
+                for (y0, y1) in [(0, 30), (30, 31), (31, h)] {
+                    stitched.extend(apply_band(name, &src, w, h, p, y0, y1).expect(name));
+                }
+                assert!(whole == stitched, "{name} : bandes des workers différentes");
             }
         }
     }

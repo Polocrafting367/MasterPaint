@@ -3,7 +3,15 @@
 // css/photo-mode.css) — interface sombre type Lightroom, toile au centre, pellicule en bas,
 // réglages à droite (en bas sur téléphone).
 import { Theme } from "theme.slint";
-import { FaIcon, GlyphIcon } from "widgets.slint";
+import { FaIcon, GlyphIcon, HoverTip } from "widgets.slint";
+
+/// Ligne de la liste des masques (onglet Masque).
+export struct PmMaskRow {
+    name: string,
+    kind: int,
+    visible: bool,
+    invert: bool,
+}
 
 export struct PmThumb {
     name: string,
@@ -15,16 +23,34 @@ export struct PmThumb {
 /// Teintes du Mode Photo Pro (toujours sombre) : contrôles Windows 10/11 du thème sombre
 /// de l'application (theme.rs), quel que soit le thème choisi.
 global Pm {
+    /// présentation : 0 MasterPaint (verre sur fond d'ambiance tiré de la photo, pastilles
+    /// arrondies, curseurs en dégradé), 1 Paint.NET (aplats carrés, gris Windows), 2 Photoshop
+    /// (Lightroom / LightCraft). Seule l'allure change, jamais les fonctions.
+    in-out property <int> look: 2;
     out property <color> accent: Theme.dark ? Theme.accent : Theme.accent.brighter(30%);
-    out property <color> button: #383838;
-    out property <color> button-hover: #454545;
-    out property <color> button-press: #303030;
-    out property <color> edge: #ffffff17;
-    out property <color> field: #1f1f1f;
-    out property <color> field-border: #6a6a6a;
-    out property <color> track: #5a5a5a;
-    out property <color> text: #e6e6e6;
-    out property <color> label: #c8c8c8;
+    out property <color> button: self.look == 0 ? #ffffff14 : self.look == 1 ? #3c3c3c : #383838;
+    out property <color> button-hover: self.look == 0 ? #ffffff24 : self.look == 1 ? #4a4a4a : #454545;
+    out property <color> button-press: self.look == 0 ? #ffffff0c : self.look == 1 ? #2e2e2e : #303030;
+    out property <color> edge: self.look == 0 ? #ffffff22 : self.look == 1 ? #5a5a5a : #ffffff17;
+    out property <color> field: self.look == 0 ? #00000040 : self.look == 1 ? #1e1e1e : #1f1f1f;
+    out property <color> field-border: self.look == 0 ? #ffffff40 : self.look == 1 ? #6a6a6a : #6a6a6a;
+    out property <color> track: self.look == 0 ? #ffffff30 : self.look == 1 ? #555555 : #5a5a5a;
+    out property <color> text: self.look == 0 ? #f1f4f9 : #e6e6e6;
+    out property <color> label: self.look == 0 ? #cfd6e2 : self.look == 1 ? #d0d0d0 : #c8c8c8;
+    // fonds : fenêtre, en-tête, colonne des réglages, colonne gauche, pellicule, titres de
+    // section, séparateurs (MasterPaint : translucides sur le fond d'ambiance)
+    out property <color> bg: self.look == 0 ? #0b0d12 : self.look == 1 ? #1b1b1b : #111111;
+    out property <color> head-bg: self.look == 0 ? #0d1016b8 : self.look == 1 ? #2b2b2b : #1a1a1a;
+    out property <color> panel-bg: self.look == 0 ? #12151cc4 : self.look == 1 ? #2b2b2b : #252526;
+    out property <color> side2-bg: self.look == 0 ? #0f1218b0 : self.look == 1 ? #262626 : #222222;
+    out property <color> film-bg: self.look == 0 ? #0d1016b8 : self.look == 1 ? #242424 : #1e1e1e;
+    out property <color> sec-bg: self.look == 0 ? #ffffff0a : self.look == 1 ? #353535 : #282828;
+    out property <color> sec-hover: self.look == 0 ? #ffffff16 : self.look == 1 ? #3f3f3f : #2f2f2f;
+    out property <color> divider: self.look == 0 ? #ffffff14 : self.look == 1 ? #454545 : #333333;
+    /// arrondi des boutons : pastille (MasterPaint), presque carré (Paint.NET)
+    out property <length> radius: self.look == 0 ? 13px : self.look == 1 ? 2px : Theme.ctl-radius;
+    /// part d'un filtre (préréglage) sur un curseur : teinte opposée à l'accent
+    out property <color> fx: hsv(mod(self.accent.to-hsv().hue + 180, 360), 0.7, 0.95);
 }
 
 /// Bouton Windows 11 sombre : 0 principal (accent), 1 normal, 2 danger (rouge au survol).
@@ -32,11 +58,22 @@ component PmButton inherits Rectangle {
     in property <string> glyph;
     in property <string> text;
     in property <int> kind;
+    /// infobulle (par défaut : le libellé, utile quand il est masqué sur téléphone)
+    in property <string> tip;
     callback clicked();
+    HoverTip { y: parent.height + 2px; hovered: ta.has-hover && !ta.pressed; text: root.tip != "" ? root.tip : root.text; }
     property <bool> filled: root.kind == 0;
+    /// rangée de boutons égaux (horizontal-stretch) : la place se partage à parts égales, un
+    /// libellé trop long garde sa largeur ; sinon largeur du libellé
+    in property <bool> fill;
+    out property <length> natural: lbl.text != "" ? lbl.preferred-width + (root.glyph != "" ? 40px : 24px) : 30px;
     height: 26px;
-    width: lbl.text != "" ? lbl.preferred-width + (root.glyph != "" ? 40px : 24px) : 30px;
-    border-radius: Theme.ctl-radius;
+    // rangée « fill » : aucun minimum par bouton (servi d'abord, il rendait les boutons
+    // inégaux), parts égales
+    min-width: root.fill ? 0px : root.natural;
+    preferred-width: root.fill ? 0px : root.natural;
+    max-width: root.fill ? 100000px : root.natural;
+    border-radius: Pm.radius;
     background: root.filled ? (ta.pressed ? Pm.accent.darker(15%) : (Theme.hover-fx && ta.has-hover) ? Pm.accent.brighter(10%) : Pm.accent)
         : root.kind == 2 && (Theme.hover-fx && ta.has-hover) ? (ta.pressed ? #a52a1f : #c42b1c)
         : ta.pressed ? Pm.button-press : (Theme.hover-fx && ta.has-hover) ? Pm.button-hover : Pm.button;
@@ -80,21 +117,35 @@ component PmSlider inherits Rectangle {
     in property <float> minimum: -100;
     in property <float> maximum: 100;
     in property <float> reset-value: 0;
+    /// part du filtre actif (préréglage) ajoutée à la valeur de l'utilisateur : montrée sur la
+    /// piste et en « +18 », jamais écrite dans la valeur
+    in property <float> fx: 0;
     callback changed(float);
     /// appui tenu sur la piste : la colonne ne doit pas défiler pendant le réglage
     callback hold(bool);
     height: 42px;
     property <float> ratio: clamp((root.value - root.minimum) / (root.maximum - root.minimum), 0, 1);
+    property <float> fx-ratio: clamp((root.value + root.fx - root.minimum) / (root.maximum - root.minimum), 0, 1);
+    property <bool> has-fx: abs(root.fx) >= 0.5;
     property <float> zero: clamp((root.reset-value - root.minimum) / (root.maximum - root.minimum), 0, 1);
     property <length> usable: root.width - 11px;
     Text {
         x: 0;
         y: 2px;
-        width: parent.width - 52px;
+        width: parent.width - 52px - (root.has-fx ? fxt.preferred-width + 6px : 0px);
         text: root.label;
         font-size: Theme.font-size;
         color: Pm.label;
         overflow: elide;
+    }
+    fxt := Text {
+        visible: root.has-fx;
+        x: parent.width - 48px - self.width;
+        y: 2px;
+        text: (root.fx > 0 ? "+" : "") + round(root.fx);
+        font-size: Theme.small-font-size;
+        font-weight: 700;
+        color: Pm.fx;
     }
     Rectangle {
         x: parent.width - 42px;
@@ -115,14 +166,32 @@ component PmSlider inherits Rectangle {
         x: 5px;
         y: 28px;
         width: parent.width - 10px;
-        height: 5px;
+        height: Pm.look == 1 ? 4px : 5px;
+        border-radius: Pm.look == 0 ? 2.5px : 0px;
         background: Pm.track;
         Rectangle {
             x: min(root.ratio, root.zero) * parent.width;
             width: abs(root.ratio - root.zero) * parent.width;
             height: parent.height;
-            background: Pm.accent;
+            border-radius: Pm.look == 0 ? parent.height / 2 : 0px;
+            background: Pm.look == 0 ? @linear-gradient(90deg, Pm.accent.darker(10%) 0%, Pm.accent.brighter(45%) 100%) : Pm.accent;
         }
+        // part du filtre : de la valeur de l'utilisateur à la valeur appliquée
+        if root.has-fx: Rectangle {
+            x: min(root.ratio, root.fx-ratio) * parent.width;
+            y: 1px;
+            width: max(2px, abs(root.fx-ratio - root.ratio) * parent.width);
+            height: parent.height - 2px;
+            background: Pm.fx;
+        }
+    }
+    // repère de la valeur appliquée (filtre compris)
+    if root.has-fx: Rectangle {
+        x: 5px + (root.width - 10px) * root.fx-ratio - 1px;
+        y: 24px;
+        width: 2px;
+        height: 13px;
+        background: Pm.fx;
     }
     Path {
         x: root.usable * root.ratio;
@@ -131,7 +200,7 @@ component PmSlider inherits Rectangle {
         height: 19px;
         viewbox-width: 11;
         viewbox-height: 19;
-        commands: "M0 0 L11 0 L11 13 L5.5 19 L0 13 Z";
+        commands: Pm.look == 0 ? "M5.5 4 A 5.5 5.5 0 1 1 5.4 4 Z" : Pm.look == 1 ? "M1 3 L10 3 L10 17 L1 17 Z" : "M0 0 L11 0 L11 13 L5.5 19 L0 13 Z";
         fill: ta.pressed ? #cccccc : (Theme.hover-fx && ta.has-hover) ? Pm.accent.brighter(25%) : Pm.accent;
     }
     ta := TouchArea {
@@ -156,13 +225,10 @@ component PmSlider inherits Rectangle {
         double-clicked => {
             root.changed(root.reset-value);
         }
-        // molette : un cran = ±1 (la colonne défile ailleurs que sur la piste)
+        // molette : la colonne défile, la valeur ne change jamais (avant : un cran = ±1, la
+        // valeur bougeait en faisant défiler la liste)
         scroll-event(e) => {
-            if (e.delta-y == 0) {
-                return reject;
-            }
-            root.changed(clamp(root.value + (e.delta-y > 0 ? 1 : -1), root.minimum, root.maximum));
-            accept
+            reject
         }
     }
 }
@@ -172,19 +238,31 @@ component PmSectionHead inherits Rectangle {
     in property <string> title;
     in property <bool> collapsed;
     in property <bool> resettable: true;
+    /// bouton Auto : réglage automatique de la photo, appliqué à cette section seulement
+    in property <bool> autoable: root.resettable;
     callback toggle();
     callback reset();
+    callback auto();
     height: 34px;
-    background: (Theme.hover-fx && hta.has-hover) ? #2f2f2f : #282828;
+    background: (Theme.hover-fx && hta.has-hover) ? Pm.sec-hover : Pm.sec-bg;
     Rectangle {
         y: parent.height - 1px;
         height: 1px;
-        background: #3a3a3a;
+        background: Pm.divider;
     }
     hta := TouchArea {
         clicked => {
             root.toggle();
         }
+    }
+    // MasterPaint : barre d'accent lumineuse à gauche du titre
+    if Pm.look == 0: Rectangle {
+        x: 3px;
+        y: 9px;
+        width: 3px;
+        height: parent.height - 18px;
+        border-radius: 1.5px;
+        background: @linear-gradient(180deg, Pm.accent.brighter(40%) 0%, Pm.accent 100%);
     }
     FaIcon {
         x: 12px;
@@ -195,13 +273,35 @@ component PmSectionHead inherits Rectangle {
     }
     Text {
         x: 32px;
-        width: parent.width - 76px;
+        width: parent.width - (root.autoable ? 104px : 76px);
         text: root.title;
         font-size: Theme.small-font-size;
         font-weight: 600;
         color: (Theme.hover-fx && hta.has-hover) ? #ffffff : Pm.label;
         vertical-alignment: center;
         overflow: elide;
+    }
+    if root.autoable: Rectangle {
+        x: parent.width - 66px;
+        y: 5px;
+        width: 26px;
+        height: 24px;
+        border-radius: Theme.ctl-radius;
+        background: ata.pressed ? Pm.button-press : (Theme.hover-fx && ata.has-hover) ? Pm.button-hover : Pm.button;
+        border-width: 1px;
+        border-color: Pm.edge;
+        GlyphIcon {
+            glyph: "\u{e2ca}";
+            size: 11px;
+            tint: #ffffff;
+            on-accent: true;
+        }
+        HoverTip { x: parent.width - 220px; y: parent.height; hovered: ata.has-hover; text: @tr("Auto : réglage automatique de cette section seulement (retrouve les valeurs calculées après des retouches à la main)"); }
+        ata := TouchArea {
+            clicked => {
+                root.auto();
+            }
+        }
     }
     if root.resettable: Rectangle {
         x: parent.width - 36px;
@@ -218,6 +318,7 @@ component PmSectionHead inherits Rectangle {
             tint: #ffffff;
             on-accent: true;
         }
+        HoverTip { x: parent.width - 220px; y: parent.height; hovered: rta.has-hover; text: @tr("Remettre les réglages de cette section à zéro"); }
         rta := TouchArea {
             clicked => {
                 root.reset();
@@ -228,12 +329,19 @@ component PmSectionHead inherits Rectangle {
 
 export component PhotoMode inherits Rectangle {
     in property <bool> phone;
+    /// présentation (voir Pm.look) et fond d'ambiance de MasterPaint (photo active réduite à
+    /// quelques dizaines de pixels : agrandie en douceur, elle fait un flou)
+    in property <int> look: 2;
+    in property <image> ambient;
+    changed look => { Pm.look = root.look; }
     in property <image> image;
     in property <int> img-w: 1;
     in property <int> img-h: 1;
     in property <int> full-w: 1;
     in property <[PmThumb]> photos: [];
     in property <[float]> values: [];
+    /// part du filtre actif dans chaque réglage (même indices que `values`)
+    in property <[float]> shift: [];
     in property <[string]> presets: [];
     in property <int> preset;
     in property <bool> fx-off;
@@ -253,6 +361,85 @@ export component PhotoMode inherits Rectangle {
     callback remove(int);
     callback set(int, float);
     callback preset-chosen(int);
+    /// présentation Lightroom (interface Photoshop, inspirée de LightCraft) : modules en tête,
+    /// colonne gauche (navigateur, préréglages), histogramme en haut des réglages
+    in property <bool> lr;
+    /// histogramme RVB de l'aperçu et alertes d'écrêtage (noirs bouchés, blancs brûlés)
+    in property <image> hist;
+    in property <bool> clip-lo;
+    in property <bool> clip-hi;
+    /// pipette de balance des blancs : le prochain clic sur l'image choisit un gris neutre
+    in-out property <bool> pick-wb;
+    callback pick(float, float);
+    /// recadrage enregistré (fractions du cadre) et redressement (degrés, sens horaire)
+    in property <[float]> crop: [0, 0, 1, 1];
+    in property <float> angle;
+    /// mode Recadrer : cadre modifiable, proportions, angle ; Appliquer → crop-set
+    in-out property <bool> crop-mode;
+    callback crop-set(float, float, float, float, float);
+    /// module affiché : 0 Bibliothèque, 1 Développement, 2 Masque
+    in-out property <int> module: 1;
+    /// historique de la photo active
+    in property <bool> can-undo;
+    in property <bool> can-redo;
+    /// onglet Masque : liste, masque choisi (genre, quantité, réglages locaux, forme, poignées
+    /// u, v), voile rouge, pinceau (taille %, contour, flux, gomme)
+    in property <[PmMaskRow]> masks: [];
+    in property <int> mask-sel: -1;
+    in property <int> mask-kind;
+    in property <float> mask-amount: 100;
+    in property <[float]> mask-adjust: [];
+    in property <[float]> mask-shape: [];
+    in property <[float]> mask-handles: [];
+    in property <image> mask-image;
+    in-out property <bool> mask-overlay: true;
+    in property <[float]> brush: [5, 50, 100, 0];
+    callback mask-set(string, float);
+    callback mask-drag(int, float, float, int);
+    // cadre en cours de réglage, proportion (0 libre, -1 originale, sinon largeur / hauteur)
+    property <float> e-x0;
+    property <float> e-y0;
+    property <float> e-x1: 1;
+    property <float> e-y1: 1;
+    property <float> e-angle;
+    property <float> ratio;
+    property <float> s-x0;
+    property <float> s-y0;
+    property <float> s-x1;
+    property <float> s-y1;
+    property <bool> cropped: root.crop[0] > 0 || root.crop[1] > 0 || root.crop[2] < 1 || root.crop[3] < 1;
+    // rotation affichée, et agrandissement qui garde le cadre couvert (pas de coins vides)
+    property <angle> show-angle: (root.crop-mode ? root.e-angle : root.angle) * 1deg;
+    property <float> cover: max((root.disp-w * abs(cos(root.show-angle)) + root.disp-h * abs(sin(root.show-angle))) / max(1px, root.disp-w),
+        (root.disp-w * abs(sin(root.show-angle)) + root.disp-h * abs(cos(root.show-angle))) / max(1px, root.disp-h));
+    changed crop-mode => {
+        if (root.crop-mode) {
+            root.e-x0 = root.crop[0];
+            root.e-y0 = root.crop[1];
+            root.e-x1 = root.crop[2];
+            root.e-y1 = root.crop[3];
+            root.e-angle = root.angle;
+            root.pick-wb = false;
+        }
+    }
+    /// proportion imposée : le cadre le plus grand de ce rapport, centré sur le cadre actuel
+    function apply-ratio(r: float) {
+        root.ratio = r;
+        if (r == 0) { return; }
+        let want = r < 0 ? root.img-w / root.img-h : r;
+        let cx = (root.e-x0 + root.e-x1) / 2;
+        let cy = (root.e-y0 + root.e-y1) / 2;
+        // largeur et hauteur en fractions : (fw · W) / (fh · H) = want
+        let fw = min(1, want * root.img-h / root.img-w);
+        let fh = fw * root.img-w / (want * root.img-h);
+        root.e-x0 = clamp(cx - fw / 2, 0, 1 - fw);
+        root.e-x1 = root.e-x0 + fw;
+        root.e-y0 = clamp(cy - fh / 2, 0, 1 - fh);
+        root.e-y1 = root.e-y0 + fh;
+    }
+    /// module Bibliothèque : grille des photos importées
+    property <bool> lib-view: root.module == 0;
+    property <int> lib-cols: max(1, floor((root.main-w - 16px) / 176px));
     // sections repliées (Filtres, Lumière, Couleur, Présence, Grading, TSL)
     in-out property <[bool]> folded: [false, false, false, false, true, true];
     property <int> hsl-band: 0;
@@ -261,14 +448,42 @@ export component PhotoMode inherits Rectangle {
     property <float> zoom: 1;
     property <length> pan-x;
     property <length> pan-y;
-    background: #111111;
+    property <length> pan-sx;
+    property <length> pan-sy;
+    // l'image ne sort pas de la zone : décalage au plus de ce qui dépasse (aucun si elle tient)
+    pure function clamp-pan-x(v: length) -> length {
+        let m = max(0px, (root.disp-w - root.main-w) / 2);
+        return clamp(v, -m, m);
+    }
+    pure function clamp-pan-y(v: length) -> length {
+        let m = max(0px, (root.disp-h - root.view-h) / 2);
+        return clamp(v, -m, m);
+    }
+    changed zoom => {
+        root.pan-x = root.clamp-pan-x(root.pan-x);
+        root.pan-y = root.clamp-pan-y(root.pan-y);
+    }
+    background: Pm.bg;
     // un appui ne traverse jamais vers l'éditeur en dessous
     TouchArea { }
+    // MasterPaint : fond d'ambiance (photo floutée, assombrie) sous les panneaux translucides
+    if Pm.look == 0 && root.ambient.width > 0: Image {
+        width: parent.width;
+        height: parent.height;
+        source: root.ambient;
+        image-fit: ImageFit.cover;
+        image-rendering: smooth;
+        opacity: 0.85;
+    }
+    if Pm.look == 0: Rectangle {
+        background: @linear-gradient(160deg, #0b0d1260 0%, #0b0d12b0 75%);
+    }
 
     property <length> head-h: 46px;
     property <length> side-w: root.phone ? root.width : 300px;
+    property <length> left-w: root.lr && !root.phone ? 220px : 0px;
     property <length> body-h: root.height - root.head-h;
-    property <length> main-w: root.phone ? root.width : root.width - root.side-w;
+    property <length> main-w: root.phone ? root.width : root.width - root.side-w - root.left-w;
     property <length> main-h: root.phone ? root.body-h * 0.55 : root.body-h;
     property <length> film-h: root.photos.length == 0 ? 0px : root.phone ? 80px : 110px;
     property <length> view-h: root.main-h - root.film-h;
@@ -290,6 +505,7 @@ export component PhotoMode inherits Rectangle {
         }
     }
     init => {
+        Pm.look = root.look;
         root.report-view();
     }
     changed disp-w => {
@@ -315,11 +531,11 @@ export component PhotoMode inherits Rectangle {
     Rectangle {
         height: root.head-h;
         y: 0;
-        background: #252526;
+        background: Pm.head-bg;
         Rectangle {
             y: parent.height - 1px;
             height: 1px;
-            background: #333333;
+            background: Pm.divider;
         }
         GlyphIcon {
             x: 16px;
@@ -330,20 +546,53 @@ export component PhotoMode inherits Rectangle {
         }
         if !root.phone: Text {
             x: 42px;
-            text: @tr("Mode Photo Pro");
+            text: root.lr ? @tr("Photo Pro") : @tr("Mode Photo Pro");
             font-size: 15px;
             font-weight: 500;
             color: #ffffff;
             vertical-alignment: center;
+        }
+        // Lightroom / LightCraft : modules Bibliothèque | Développement
+        if root.lr && !root.phone: HorizontalLayout {
+            x: 150px;
+            // largeur de son contenu : étiré, « Développement » partait sous les boutons
+            width: self.preferred-width;
+            height: parent.height;
+            alignment: start;
+            spacing: 18px;
+            for m[mi] in [@tr("Bibliothèque"), @tr("Développement"), @tr("Masque")]: Text {
+                text: m;
+                font-size: 14px;
+                font-weight: mi == root.module ? 600 : 400;
+                color: mi == root.module ? #ffffff : (Theme.hover-fx && mta.has-hover) ? #d0d0d0 : #8a8a8a;
+                vertical-alignment: center;
+                mta := TouchArea { clicked => { root.module = mi; } }
+            }
         }
         HorizontalLayout {
             x: parent.width - self.preferred-width - 10px;
             y: 10px;
             height: 26px;
             spacing: 6px;
+            // annuler / rétablir les réglages de la photo (Ctrl+Z, Ctrl+Y)
+            PmButton {
+                glyph: "\u{f0e2}";
+                kind: 1;
+                opacity: root.can-undo ? 1 : 0.4;
+                tip: @tr("Annuler le dernier réglage de cette photo (Ctrl+Z)");
+                clicked => { root.action("undo"); }
+            }
+            PmButton {
+                glyph: "\u{f01e}";
+                kind: 1;
+                opacity: root.can-redo ? 1 : 0.4;
+                tip: @tr("Rétablir (Ctrl+Y)");
+                clicked => { root.action("redo"); }
+            }
             PmButton {
                 glyph: "\u{2b}";
                 text: root.phone ? @tr("Importer") : @tr("Importer photos");
+                tip: @tr("Importer des photos dans la pellicule (JPEG, PNG, RAW…)");
                 clicked => {
                     root.action("import");
                 }
@@ -351,21 +600,52 @@ export component PhotoMode inherits Rectangle {
             PmButton {
                 glyph: "\u{f35d}";
                 text: root.phone ? "" : @tr("Ouvrir");
+                tip: @tr("Ouvrir la photo réglée dans l'éditeur MasterPaint");
                 kind: 1;
                 clicked => {
                     root.action("open-editor");
                 }
             }
-            PmButton {
-                glyph: "\u{f56e}";
-                text: root.phone ? @tr("Exporter") : @tr("Exporter…");
-                clicked => {
-                    root.action("export");
+            Rectangle {
+                width: ebtn.natural;
+                ebtn := PmButton {
+                    glyph: "\u{f56e}";
+                    text: root.phone ? @tr("Exporter") : @tr("Exporter…");
+                    tip: @tr("Exporter la photo : JPEG, PNG ou TIFF 16 bits");
+                    clicked => {
+                        root.action("export-dialog");
+                    }
+                }
+                export-pop := PopupWindow {
+                    // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+                    TouchArea { }
+                    x: 0;
+                    y: parent.height + 4px;
+                    width: 210px;
+                    Rectangle {
+                        background: #2b2b2b;
+                        border-width: 1px;
+                        border-color: #454545;
+                        border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+                        drop-shadow-blur: 8px;
+                        drop-shadow-color: Theme.shadows ? (#00000080) : transparent;
+                        VerticalLayout {
+                            padding: 3px;
+                            for f in [{ id: "export", t: @tr("JPEG (8 bits)") }, { id: "export:png16", t: @tr("PNG 16 bits") }, { id: "export:tiff16", t: @tr("TIFF 16 bits") }]: Rectangle {
+                                height: 26px;
+                                border-radius: Theme.ctl-radius;
+                                background: (Theme.hover-fx && eta.has-hover) ? #3d3d3d : transparent;
+                                Text { x: 10px; text: f.t; font-size: Theme.font-size; color: Pm.text; vertical-alignment: center; }
+                                eta := TouchArea { clicked => { root.action(f.id); } }
+                            }
+                        }
+                    }
                 }
             }
             PmButton {
                 glyph: "\u{f0c5}";
                 text: root.phone ? "" : @tr("Appliquer à toutes");
+                tip: @tr("Appliquer les réglages et le filtre de cette photo à toutes les photos de la pellicule");
                 kind: 1;
                 clicked => {
                     root.action("apply-all");
@@ -375,14 +655,23 @@ export component PhotoMode inherits Rectangle {
             PmButton {
                 glyph: "\u{e2ca}";
                 text: root.phone ? "" : @tr("Auto sur toutes");
+                tip: @tr("Réglage automatique de chaque photo d'après sa scène (portrait, paysage, nuit…)");
                 kind: 1;
                 clicked => {
                     root.action("auto-all");
                 }
             }
+            // réduire : retour à l'éditeur, la pellicule reste (onglet « Photo Pro » pour revenir)
+            PmButton {
+                glyph: "\u{f2d1}";
+                kind: 1;
+                tip: @tr("Réduire : revenir à l'éditeur, la pellicule et ses réglages restent (onglet Photo Pro pour revenir)");
+                clicked => { root.action("minimize"); }
+            }
             PmButton {
                 glyph: "\u{f00d}";
                 kind: 2;
+                tip: @tr("Fermer le Mode Photo Pro (la pellicule et ses réglages sont gardés)");
                 clicked => {
                     root.action("close");
                 }
@@ -392,11 +681,11 @@ export component PhotoMode inherits Rectangle {
 
     // ================= toile =================
     Rectangle {
-        x: 0;
+        x: root.left-w;
         y: root.head-h;
         width: root.main-w;
         height: root.view-h;
-        background: @radial-gradient(circle, #222222 0%, #000000 100%);
+        background: Pm.look == 0 ? @radial-gradient(circle, #ffffff08 0%, #00000070 100%) : @radial-gradient(circle, #222222 0%, #000000 100%);
         clip: true;
         if root.photos.length > 0: Rectangle {
             x: (parent.width - root.disp-w) / 2 + root.pan-x;
@@ -406,14 +695,26 @@ export component PhotoMode inherits Rectangle {
             background: #000000;
             drop-shadow-blur: 30px;
             drop-shadow-color: Theme.shadows ? (#000000) : transparent;
+            clip: root.show-angle != 0deg;
             Image {
-                width: parent.width;
-                height: parent.height;
+                // redressement : rotation autour du centre, image agrandie pour couvrir le cadre
+                width: parent.width * root.cover;
+                height: parent.height * root.cover;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                transform-rotation: root.show-angle;
                 source: root.image;
                 image-fit: fill;
                 image-rendering: root.zoom > 1.5 ? pixelated : smooth;
             }
-            if root.hq-shown && !root.fx-off: Image {
+            // recadrage enregistré (hors du mode Recadrer) : le dehors voilé
+            if root.cropped && !root.crop-mode: Rectangle {
+                Rectangle { x: 0; y: 0; width: parent.width; height: root.crop[1] * parent.height; background: #000000d8; }
+                Rectangle { x: 0; y: root.crop[3] * parent.height; width: parent.width; height: parent.height - self.y; background: #000000d8; }
+                Rectangle { x: 0; y: root.crop[1] * parent.height; width: root.crop[0] * parent.width; height: (root.crop[3] - root.crop[1]) * parent.height; background: #000000d8; }
+                Rectangle { x: root.crop[2] * parent.width; y: root.crop[1] * parent.height; width: parent.width - self.x; height: (root.crop[3] - root.crop[1]) * parent.height; background: #000000d8; }
+            }
+            if root.hq-shown && !root.fx-off && root.show-angle == 0deg: Image {
                 x: root.hq-x0 * parent.width;
                 y: root.hq-y0 * parent.height;
                 width: (root.hq-x1 - root.hq-x0) * parent.width;
@@ -424,11 +725,28 @@ export component PhotoMode inherits Rectangle {
         }
         // glisser = déplacer, molette = zoom, double-clic = ajuster
         TouchArea {
-            mouse-cursor: root.zoom > 1 ? MouseCursor.move : MouseCursor.default;
+            mouse-cursor: root.pick-wb ? MouseCursor.crosshair : root.zoom > 1 ? MouseCursor.move : MouseCursor.default;
+            clicked => {
+                if (root.pick-wb && root.photos.length > 0) {
+                    root.pick-wb = false;
+                    root.pick(
+                        clamp((self.mouse-x - (self.width - root.disp-w) / 2 - root.pan-x) / root.disp-w, 0, 1),
+                        clamp((self.mouse-y - (self.height - root.disp-h) / 2 - root.pan-y) / root.disp-h, 0, 1));
+                }
+            }
+            // déplacement : décalage depuis l'appui posé sur la position de départ (avant, ajouté
+            // à chaque mouvement : l'image filait bien plus vite que le pointeur), borné pour
+            // que l'image ne quitte pas la zone
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down) {
+                    root.pan-sx = root.pan-x;
+                    root.pan-sy = root.pan-y;
+                }
+            }
             moved => {
                 if (self.pressed) {
-                    root.pan-x += self.mouse-x - self.pressed-x;
-                    root.pan-y += self.mouse-y - self.pressed-y;
+                    root.pan-x = root.clamp-pan-x(root.pan-sx + self.mouse-x - self.pressed-x);
+                    root.pan-y = root.clamp-pan-y(root.pan-sy + self.mouse-y - self.pressed-y);
                 }
             }
             double-clicked => {
@@ -439,6 +757,246 @@ export component PhotoMode inherits Rectangle {
             scroll-event(e) => {
                 root.zoom = clamp(root.zoom * (e.delta-y > 0 ? 1.15 : 1 / 1.15), 0.2, 12);
                 accept
+            }
+        }
+        // ---- onglet Masque : voile rouge, poignées des dégradés, pinceau, pipette ----
+        if root.module == 2 && root.mask-sel >= 0 && root.photos.length > 0 && !root.crop-mode: mlayer := Rectangle {
+            x: (parent.width - root.disp-w) / 2 + root.pan-x;
+            y: (parent.height - root.disp-h) / 2 + root.pan-y;
+            width: root.disp-w;
+            height: root.disp-h;
+            if root.mask-overlay && root.mask-image.width > 0 && root.show-angle == 0deg: Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.mask-image;
+                image-fit: fill;
+            }
+            // pinceau et pipette : toute la photo
+            if root.mask-kind == 3 || root.mask-kind == 5: bta2 := TouchArea {
+                mouse-cursor: crosshair;
+                pointer-event(e) => {
+                    if (e.button == PointerEventButton.left && e.kind == PointerEventKind.down) {
+                        root.held = true;
+                        root.mask-drag(-1, self.mouse-x / self.width, self.mouse-y / self.height, 0);
+                    } else if (e.kind == PointerEventKind.up) {
+                        root.held = false;
+                        root.mask-drag(-1, self.mouse-x / self.width, self.mouse-y / self.height, 2);
+                    }
+                }
+                moved => {
+                    if (self.pressed) {
+                        root.mask-drag(-1, self.mouse-x / self.width, self.mouse-y / self.height, 1);
+                    }
+                }
+                // contour du pinceau sous le pointeur
+                if root.mask-kind == 3 && bta2.has-hover: Rectangle {
+                    property <length> r: root.brush[0] / 100 * max(mlayer.width, mlayer.height);
+                    x: bta2.mouse-x - self.r;
+                    y: bta2.mouse-y - self.r;
+                    width: 2 * self.r;
+                    height: 2 * self.r;
+                    border-radius: self.r;
+                    border-width: 1px;
+                    border-color: root.brush[3] > 0.5 ? #ff8080 : #ffffff;
+                    Rectangle {
+                        x: (1 - root.brush[1] / 100) * parent.r * 0 + parent.r * root.brush[1] / 100;
+                        y: self.x;
+                        width: parent.width - 2 * self.x;
+                        height: self.width;
+                        border-radius: self.width / 2;
+                        border-width: 1px;
+                        border-color: #ffffff60;
+                    }
+                }
+            }
+            // dégradé linéaire : pointillés entre les deux poignées (un tracé Path se plaçait mal)
+            if root.mask-kind == 1 && root.mask-handles.length >= 4: Rectangle {
+                for k in 33: Rectangle {
+                    x: (root.mask-handles[0] + (root.mask-handles[2] - root.mask-handles[0]) * k / 32) * mlayer.width - 1.5px;
+                    y: (root.mask-handles[1] + (root.mask-handles[3] - root.mask-handles[1]) * k / 32) * mlayer.height - 1.5px;
+                    width: 3px;
+                    height: 3px;
+                    border-radius: 1.5px;
+                    background: #ffffffd0;
+                }
+            }
+            // dégradé radial : ellipse en pointillés
+            if root.mask-kind == 2 && root.mask-handles.length >= 6: Rectangle {
+                property <float> cx: root.mask-handles[0];
+                property <float> cy: root.mask-handles[1];
+                property <float> rx: abs(root.mask-handles[2] - self.cx);
+                property <float> ry: abs(root.mask-handles[5] - self.cy);
+                for k in 72: Rectangle {
+                    x: (parent.cx + parent.rx * cos(k * 5deg)) * mlayer.width - 1.5px;
+                    y: (parent.cy + parent.ry * sin(k * 5deg)) * mlayer.height - 1.5px;
+                    width: 3px;
+                    height: 3px;
+                    border-radius: 1.5px;
+                    background: #ffffffd0;
+                }
+            }
+            for i in root.mask-handles.length / 2: Rectangle {
+                x: root.mask-handles[i * 2] * parent.width - 7px;
+                y: root.mask-handles[i * 2 + 1] * parent.height - 7px;
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                background: i == 0 ? #ffffff : #ffffff40;
+                border-width: 2px;
+                border-color: i == 0 ? Pm.accent : #ffffff;
+                HoverTip {
+                    y: parent.height;
+                    hovered: hta2.has-hover && !hta2.pressed;
+                    text: root.mask-kind == 1 ? (i == 0 ? @tr("Départ : effet entier") : @tr("Arrivée : plus d'effet")) : (i == 0 ? @tr("Centre : déplacer l'ellipse") : @tr("Bord : largeur ou hauteur"));
+                }
+                hta2 := TouchArea {
+                    mouse-cursor: root.mask-kind == 1 || i == 0 ? MouseCursor.move : i == 1 ? MouseCursor.ew-resize : MouseCursor.ns-resize;
+                    function uv-x() -> float { return (self.absolute-position.x + self.mouse-x - mlayer.absolute-position.x) / mlayer.width; }
+                    function uv-y() -> float { return (self.absolute-position.y + self.mouse-y - mlayer.absolute-position.y) / mlayer.height; }
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down) { root.held = true; }
+                        if (e.kind == PointerEventKind.up) {
+                            root.held = false;
+                            root.mask-drag(i, self.uv-x(), self.uv-y(), 2);
+                        }
+                    }
+                    moved => {
+                        if (self.pressed) {
+                            root.mask-drag(i, self.uv-x(), self.uv-y(), 1);
+                        }
+                    }
+                }
+            }
+        }
+        // ---- mode Recadrer : cadre, tiers, poignées ----
+        if root.crop-mode && root.photos.length > 0: Rectangle {
+            x: (parent.width - root.disp-w) / 2 + root.pan-x;
+            y: (parent.height - root.disp-h) / 2 + root.pan-y;
+            width: root.disp-w;
+            height: root.disp-h;
+            Rectangle { x: 0; y: 0; width: parent.width; height: root.e-y0 * parent.height; background: #000000a0; }
+            Rectangle { x: 0; y: root.e-y1 * parent.height; width: parent.width; height: parent.height - self.y; background: #000000a0; }
+            Rectangle { x: 0; y: root.e-y0 * parent.height; width: root.e-x0 * parent.width; height: (root.e-y1 - root.e-y0) * parent.height; background: #000000a0; }
+            Rectangle { x: root.e-x1 * parent.width; y: root.e-y0 * parent.height; width: parent.width - self.x; height: (root.e-y1 - root.e-y0) * parent.height; background: #000000a0; }
+            Rectangle {
+                x: root.e-x0 * parent.width;
+                y: root.e-y0 * parent.height;
+                width: (root.e-x1 - root.e-x0) * parent.width;
+                height: (root.e-y1 - root.e-y0) * parent.height;
+                border-width: 1px;
+                border-color: #ffffff;
+                // règle des tiers
+                for t in [1, 2]: Rectangle { x: parent.width * t / 3; y: 0; width: 1px; height: parent.height; background: #ffffff60; }
+                for t in [1, 2]: Rectangle { x: 0; y: parent.height * t / 3; width: parent.width; height: 1px; background: #ffffff60; }
+                // glisser l'intérieur : déplacer le cadre
+                TouchArea {
+                    mouse-cursor: move;
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down) {
+                            root.s-x0 = root.e-x0; root.s-y0 = root.e-y0; root.s-x1 = root.e-x1; root.s-y1 = root.e-y1;
+                        }
+                    }
+                    moved => {
+                        if (self.pressed) {
+                            let fw = root.s-x1 - root.s-x0;
+                            let fh = root.s-y1 - root.s-y0;
+                            root.e-x0 = clamp(root.s-x0 + (self.mouse-x - self.pressed-x) / root.disp-w, 0, 1 - fw);
+                            root.e-x1 = root.e-x0 + fw;
+                            root.e-y0 = clamp(root.s-y0 + (self.mouse-y - self.pressed-y) / root.disp-h, 0, 1 - fh);
+                            root.e-y1 = root.e-y0 + fh;
+                        }
+                    }
+                }
+            }
+            // poignées des quatre coins (proportion gardée si elle est imposée)
+            for c in [{ cx: 0, cy: 0 }, { cx: 1, cy: 0 }, { cx: 1, cy: 1 }, { cx: 0, cy: 1 }]: Rectangle {
+                x: (c.cx == 0 ? root.e-x0 : root.e-x1) * parent.width - 7px;
+                y: (c.cy == 0 ? root.e-y0 : root.e-y1) * parent.height - 7px;
+                width: 14px;
+                height: 14px;
+                border-radius: 2px;
+                background: #ffffff;
+                border-width: 1px;
+                border-color: #00000080;
+                TouchArea {
+                    mouse-cursor: (c.cx == c.cy) ? MouseCursor.nwse-resize : MouseCursor.nesw-resize;
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down) {
+                            root.s-x0 = root.e-x0; root.s-y0 = root.e-y0; root.s-x1 = root.e-x1; root.s-y1 = root.e-y1;
+                        }
+                    }
+                    moved => {
+                        if (self.pressed) {
+                            let dx = (self.mouse-x - self.pressed-x) / root.disp-w;
+                            let dy = (self.mouse-y - self.pressed-y) / root.disp-h;
+                            if (c.cx == 0) { root.e-x0 = clamp(root.s-x0 + dx, 0, root.s-x1 - 0.05); } else { root.e-x1 = clamp(root.s-x1 + dx, root.s-x0 + 0.05, 1); }
+                            if (root.ratio == 0) {
+                                if (c.cy == 0) { root.e-y0 = clamp(root.s-y0 + dy, 0, root.s-y1 - 0.05); } else { root.e-y1 = clamp(root.s-y1 + dy, root.s-y0 + 0.05, 1); }
+                            } else {
+                                let want = root.ratio < 0 ? root.img-w / root.img-h : root.ratio;
+                                let fh = (root.e-x1 - root.e-x0) * root.img-w / (want * root.img-h);
+                                if (c.cy == 0) { root.e-y0 = max(0, root.e-y1 - fh); } else { root.e-y1 = min(1, root.e-y0 + fh); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // barre du mode Recadrer : proportions, redressement, appliquer / annuler
+        if root.crop-mode && root.photos.length > 0: Rectangle {
+            x: 10px;
+            y: 10px;
+            width: parent.width - 20px;
+            height: 50px;
+            border-radius: 8px * Theme.round;
+            background: #141414eb;
+            border-width: 1px;
+            border-color: #ffffff26;
+            HorizontalLayout {
+                padding: 6px;
+                padding-left: 10px;
+                spacing: 6px;
+                for r in [{ v: 0, t: @tr("Libre") }, { v: -1, t: @tr("Originale") }, { v: 1, t: "1:1" }, { v: 4 / 3, t: "4:3" }, { v: 3 / 2, t: "3:2" }, { v: 16 / 9, t: "16:9" }]: Rectangle {
+                    y: 8px;
+                    height: 22px;
+                    width: rt.preferred-width + 16px;
+                    border-radius: 11px * Theme.round;
+                    background: root.ratio == r.v ? Pm.accent : (Theme.hover-fx && rta.has-hover) ? #ffffff26 : #ffffff12;
+                    rt := Text { text: r.t; font-size: 11px; color: #ffffff; }
+                    rta := TouchArea { clicked => { root.apply-ratio(r.v); } }
+                }
+                PmSlider {
+                    width: 190px;
+                    label: @tr("Redresser (°)");
+                    minimum: -45;
+                    maximum: 45;
+                    value: root.e-angle;
+                    changed(v) => { root.e-angle = v; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                PmButton {
+                    y: 6px;
+                    text: @tr("Réinitialiser");
+                    kind: 1;
+                    clicked => {
+                        root.e-x0 = 0; root.e-y0 = 0; root.e-x1 = 1; root.e-y1 = 1; root.e-angle = 0; root.ratio = 0;
+                    }
+                }
+                PmButton {
+                    y: 6px;
+                    text: @tr("Annuler");
+                    kind: 1;
+                    clicked => { root.crop-mode = false; }
+                }
+                PmButton {
+                    y: 6px;
+                    glyph: "\u{f00c}";
+                    text: @tr("Appliquer");
+                    clicked => {
+                        root.crop-set(root.e-x0, root.e-y0, root.e-x1, root.e-y1, root.e-angle);
+                        root.crop-mode = false;
+                    }
+                }
             }
         }
         // photo sans pellicule : invitation à importer
@@ -474,16 +1032,28 @@ export component PhotoMode inherits Rectangle {
                 }
             }
         }
-        if root.photos.length > 0 && root.info != "": Text {
+        // nom, taille, temps d'aperçu : pastille sombre (lisible sur la photo), sous la barre
+        // du mode Recadrer quand elle est affichée (le texte passait dessus)
+        if root.photos.length > 0 && root.info != "": Rectangle {
             x: 12px;
-            y: 10px;
-            text: root.info;
-            font-size: 11px;
-            color: #ffffffb0;
+            y: root.crop-mode ? 68px : 10px;
+            width: min(parent.width - 110px, info-t.preferred-width + 16px);
+            height: 22px;
+            border-radius: 11px * Theme.round;
+            background: #141414c0;
+            info-t := Text {
+                x: 8px;
+                width: parent.width - 16px;
+                text: root.info;
+                font-size: 11px;
+                color: #ffffffc8;
+                vertical-alignment: center;
+                overflow: elide;
+            }
         }
         if root.busy: Rectangle {
             x: parent.width - 86px;
-            y: 10px;
+            y: root.crop-mode ? 68px : 10px;
             width: 74px;
             height: 22px;
             border-radius: 11px * Theme.round;
@@ -498,7 +1068,8 @@ export component PhotoMode inherits Rectangle {
         if root.photos.length > 0: Rectangle {
             x: 14px;
             y: parent.height - 46px;
-            width: zl.preferred-width + 32px;
+            // largeur : la rangée et ses deux marges de 12 px (la rangée débordait à droite)
+            width: zl.preferred-width + 24px;
             height: 32px;
             border-radius: 16px * Theme.round;
             background: #141414d9;
@@ -506,6 +1077,7 @@ export component PhotoMode inherits Rectangle {
             border-color: #ffffff26;
             zl := HorizontalLayout {
                 x: 12px;
+                width: parent.width - 24px;
                 height: parent.height;
                 spacing: 8px;
                 Text {
@@ -525,6 +1097,7 @@ export component PhotoMode inherits Rectangle {
                         size: 11px;
                         tint: #ffffff;
                     }
+                    HoverTip { y: parent.height; hovered: fta.has-hover; text: @tr("Ajuster la photo à la zone (aussi : double-clic sur la photo)"); }
                     fta := TouchArea {
                         clicked => {
                             root.zoom = 1;
@@ -533,10 +1106,51 @@ export component PhotoMode inherits Rectangle {
                         }
                     }
                 }
+                // recadrer et redresser
+                Rectangle {
+                    width: 24px;
+                    y: 4px;
+                    height: 24px;
+                    border-radius: 12px * Theme.round;
+                    background: root.crop-mode ? Pm.accent : (Theme.hover-fx && cta2.has-hover) ? #ffffff26 : #ffffff0d;
+                    GlyphIcon {
+                        glyph: "\u{f125}";
+                        size: 11px;
+                        tint: #ffffff;
+                        on-accent: root.crop-mode;
+                    }
+                    HoverTip { y: parent.height; hovered: cta2.has-hover; text: @tr("Recadrer et redresser la photo"); }
+                    cta2 := TouchArea {
+                        clicked => {
+                            root.crop-mode = !root.crop-mode;
+                        }
+                    }
+                }
+                // pipette de balance des blancs (cliquer ensuite un gris de l'image)
+                Rectangle {
+                    width: 24px;
+                    y: 4px;
+                    height: 24px;
+                    border-radius: 12px * Theme.round;
+                    background: root.pick-wb ? Pm.accent : (Theme.hover-fx && wta.has-hover) ? #ffffff26 : #ffffff0d;
+                    GlyphIcon {
+                        glyph: "\u{f1fb}";
+                        size: 11px;
+                        tint: #ffffff;
+                        on-accent: root.pick-wb;
+                    }
+                    HoverTip { y: parent.height; hovered: wta.has-hover; text: @tr("Pipette de balance des blancs : cliquez ensuite sur un gris ou un blanc neutre de la photo, la température et la teinte se règlent pour le rendre neutre"); }
+                    wta := TouchArea {
+                        clicked => {
+                            root.pick-wb = !root.pick-wb;
+                        }
+                    }
+                }
                 Rectangle {
                     y: 4px;
                     height: 24px;
-                    width: tl.preferred-width + 34px;
+                    // largeur fixe : le libellé (ON / OFF, Avant / Après) ne fait pas bouger la pastille
+                    width: 66px;
                     border-radius: 12px * Theme.round;
                     background: root.fx-off ? #e74c3c : (Theme.hover-fx && tta.has-hover) ? #ffffff33 : #ffffff1a;
                     GlyphIcon {
@@ -549,12 +1163,13 @@ export component PhotoMode inherits Rectangle {
                     }
                     tl := Text {
                         x: 26px;
-                        text: root.fx-off ? @tr("OFF") : @tr("ON");
+                        text: root.lr ? (root.fx-off ? @tr("Avant") : @tr("Après")) : root.fx-off ? @tr("OFF") : @tr("ON");
                         font-size: 10px;
                         font-weight: 700;
                         color: #ffffff;
                         vertical-alignment: center;
                     }
+                    HoverTip { y: parent.height; hovered: tta.has-hover; text: @tr("Comparer avec l'original : réglages affichés (ON) ou photo d'origine (OFF)"); }
                     tta := TouchArea {
                         clicked => {
                             root.action("fx");
@@ -567,15 +1182,15 @@ export component PhotoMode inherits Rectangle {
 
     // ================= pellicule =================
     if root.photos.length > 0: Rectangle {
-        x: 0;
+        x: root.left-w;
         y: root.head-h + root.view-h;
         width: root.main-w;
         height: root.film-h;
-        background: #1e1e1e;
+        background: Pm.film-bg;
         Rectangle {
             y: 0;
             height: 1px;
-            background: #333333;
+            background: Pm.divider;
         }
         Flickable {
             content-width: fl.width;
@@ -626,6 +1241,7 @@ export component PhotoMode inherits Rectangle {
                             size: 9px;
                             color: #ffffff;
                         }
+                        HoverTip { y: parent.height; hovered: xta.has-hover; text: @tr("Retirer cette photo de la pellicule"); }
                         xta := TouchArea {
                             clicked => {
                                 root.remove(i);
@@ -637,13 +1253,107 @@ export component PhotoMode inherits Rectangle {
         }
     }
 
+    // ================= Lightroom : colonne gauche =================
+    if root.lr && !root.phone: Rectangle {
+        x: 0;
+        y: root.head-h;
+        width: root.left-w;
+        height: root.body-h;
+        background: Pm.side2-bg;
+        Rectangle { x: parent.width - 1px; width: 1px; background: Pm.divider; }
+        VerticalLayout {
+            width: parent.width - 1px;
+            padding: 12px;
+            spacing: 8px;
+            Text { text: @tr("NAVIGATEUR"); font-size: 11px; font-weight: 600; color: #9a9a9a; }
+            Rectangle {
+                height: 130px;
+                background: #161616;
+                border-radius: 3px * Theme.round;
+                if root.photos.length > 0: Image {
+                    width: parent.width - 8px;
+                    height: parent.height - 8px;
+                    source: root.image;
+                    image-fit: contain;
+                }
+            }
+            Text { text: @tr("PRÉRÉGLAGES"); font-size: 11px; font-weight: 600; color: #9a9a9a; }
+            Flickable {
+                vertical-stretch: 1;
+                content-height: plv.preferred-height;
+                plv := VerticalLayout {
+                    for n[k] in root.presets: Rectangle {
+                        height: 24px;
+                        border-radius: 3px * Theme.round;
+                        background: k == root.preset ? #3a3a3a : (Theme.hover-fx && lta.has-hover) ? #2c2c2c : transparent;
+                        Text {
+                            x: 8px;
+                            width: parent.width - 12px;
+                            text: n;
+                            font-size: Theme.font-size;
+                            color: k == root.preset ? #ffffff : #c8c8c8;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                        lta := TouchArea { clicked => { root.preset-chosen(k); } }
+                    }
+                }
+            }
+        }
+    }
+
+    // ================= Lightroom : module Bibliothèque (grille) =================
+    if root.lr && root.lib-view && !root.phone: Rectangle {
+        x: root.left-w;
+        y: root.head-h;
+        width: root.main-w;
+        height: root.main-h;
+        background: Pm.side2-bg;
+        Flickable {
+            content-height: ceil(root.photos.length / root.lib-cols) * 156px + 16px;
+            for p[i] in root.photos: Rectangle {
+                x: 12px + mod(i, root.lib-cols) * 176px;
+                y: 12px + floor(i / root.lib-cols) * 156px;
+                width: 164px;
+                height: 144px;
+                border-radius: 4px * Theme.round;
+                background: p.active ? #3a3a3a : (Theme.hover-fx && gta.has-hover) ? #2e2e2e : #262626;
+                border-width: p.active ? 2px : 1px;
+                border-color: p.active ? Pm.accent : #333333;
+                Image {
+                    x: 8px; y: 8px;
+                    width: parent.width - 16px;
+                    height: parent.height - 34px;
+                    source: p.thumb;
+                    image-fit: contain;
+                }
+                Text {
+                    x: 8px;
+                    y: parent.height - 24px;
+                    width: parent.width - 16px;
+                    height: 18px;
+                    text: p.name;
+                    font-size: 11px;
+                    color: #c8c8c8;
+                    overflow: elide;
+                }
+                gta := TouchArea {
+                    clicked => { root.select(i); }
+                    double-clicked => { root.select(i); root.module = 1; }
+                }
+            }
+        }
+    }
+
     // ================= réglages =================
     Rectangle {
-        x: root.phone ? 0 : root.main-w;
+        // à droite de la colonne gauche et de la vue (sans `left-w`, le panneau recouvrait la
+        // photo et laissait une bande vide au bord de la fenêtre)
+        x: root.phone ? 0 : root.left-w + root.main-w;
         y: root.phone ? root.head-h + root.main-h : root.head-h;
         width: root.side-w;
         height: root.phone ? root.body-h - root.main-h : root.body-h;
-        background: #252526;
+        background: Pm.panel-bg;
         Rectangle {
             x: 0;
             y: 0;
@@ -664,6 +1374,314 @@ export component PhotoMode inherits Rectangle {
                 x: 0;
                 width: parent.width - (root.phone ? 0px : 10px);
                 alignment: start;
+                // ---- histogramme et alertes d'écrêtage (toutes les interfaces) ----
+                Rectangle {
+                    height: 118px;
+                    Rectangle {
+                        x: 12px;
+                        y: 10px;
+                        width: parent.width - 24px;
+                        height: 98px;
+                        border-radius: 3px * Theme.round;
+                        background: #161616;
+                        clip: true;
+                        Image {
+                            width: parent.width;
+                            height: parent.height;
+                            source: root.hist;
+                            image-fit: fill;
+                        }
+                        // triangles d'écrêtage : allumés quand des pixels sont bouchés / brûlés
+                        Path {
+                            x: 4px; y: 4px; width: 8px; height: 8px;
+                            commands: "M 0 0 L 8 0 L 0 8 Z";
+                            fill: root.clip-lo ? #4aa3ff : #ffffff30;
+                        }
+                        Path {
+                            x: parent.width - 12px; y: 4px; width: 8px; height: 8px;
+                            commands: "M 0 0 L 8 0 L 8 8 Z";
+                            fill: root.clip-hi ? #ff5a4a : #ffffff30;
+                        }
+                    }
+                }
+                // téléphone : onglets Développement | Masque en tête de la colonne
+                if root.phone: HorizontalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+                    height: 42px;
+                    PmButton { fill: true; horizontal-stretch: 1; glyph: "\u{f1de}"; text: @tr("Développement"); kind: root.module != 2 ? 0 : 1; clicked => { root.module = 1; } }
+                    PmButton { fill: true; horizontal-stretch: 1; glyph: "\u{f5c1}"; text: @tr("Masque"); kind: root.module == 2 ? 0 : 1; clicked => { root.module = 2; } }
+                }
+                // ================= module Masque (repris de LightCraft) =================
+                if root.module == 2: VerticalLayout {
+                    PmSectionHead {
+                        title: @tr("MASQUES");
+                        resettable: false;
+                        autoable: false;
+                    }
+                    VerticalLayout {
+                        padding: 12px;
+                        spacing: 6px;
+                        Text {
+                            text: @tr("Ajouter un masque : ses réglages ne touchent que la zone choisie.");
+                            font-size: Theme.small-font-size;
+                            color: Pm.label;
+                            wrap: word-wrap;
+                        }
+                        for row in [
+                            [{ k: 1, g: "\u{f7a4}", t: @tr("Linéaire"), tip: @tr("Dégradé linéaire : effet entier d'un côté, nul de l'autre (ciel, premier plan)") },
+                             { k: 2, g: "\u{f192}", t: @tr("Radial"), tip: @tr("Dégradé radial : une ellipse au contour progressif (visage, sujet)") }],
+                            [{ k: 3, g: "\u{f1fc}", t: @tr("Pinceau"), tip: @tr("Pinceau : peignez la zone sur la photo (gomme pour retirer)") },
+                             { k: 4, g: "\u{f042}", t: @tr("Luminance"), tip: @tr("Plage de luminance : les zones claires ou sombres de la photo") }],
+                            [{ k: 5, g: "\u{f1fb}", t: @tr("Couleur"), tip: @tr("Plage de couleur : cliquez sur une couleur de la photo") },
+                             { k: 6, g: "\u{f0c2}", t: @tr("Ciel"), tip: @tr("Ciel : sélection automatique des zones claires et bleutées du haut") }],
+                            [{ k: 7, g: "\u{f007}", t: @tr("Sujet"), tip: @tr("Sujet : sélection automatique du centre contrasté de la photo") },
+                             { k: 8, g: "\u{f03e}", t: @tr("Arrière-plan"), tip: @tr("Arrière-plan : tout sauf le sujet") }],
+                        ]: HorizontalLayout {
+                            spacing: 6px;
+                            height: 26px;
+                            for b in row: PmButton {
+                                fill: true;
+                                horizontal-stretch: 1;
+                                glyph: b.g;
+                                text: b.t;
+                                kind: 1;
+                                tip: b.tip;
+                                clicked => { root.action("mask-add:" + b.k); }
+                            }
+                        }
+                        // liste des masques de la photo
+                        for m[mi] in root.masks: Rectangle {
+                            height: 30px;
+                            border-radius: Theme.ctl-radius;
+                            background: mi == root.mask-sel ? Pm.accent.with-alpha(0.28) : (Theme.hover-fx && mrta.has-hover) ? #ffffff12 : #ffffff08;
+                            border-width: mi == root.mask-sel ? 1px : 0px;
+                            border-color: Pm.accent;
+                            mrta := TouchArea { clicked => { root.action("mask-sel:" + mi); } }
+                            HorizontalLayout {
+                                padding-left: 4px;
+                                padding-right: 4px;
+                                spacing: 4px;
+                                for t in [
+                                    { a: "mask-vis:", g: m.visible ? "\u{f06e}" : "\u{f070}", tip: @tr("Afficher / masquer l'effet de ce masque") },
+                                ]: Rectangle {
+                                    width: 24px;
+                                    GlyphIcon { glyph: t.g; size: 11px; tint: m.visible ? #ffffff : #7a7a7a; }
+                                    HoverTip { y: parent.height; hovered: vta.has-hover; text: t.tip; }
+                                    vta := TouchArea { clicked => { root.action(t.a + mi); } }
+                                }
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: m.name + (m.invert ? @tr(" (inversé)") : "");
+                                    font-size: Theme.font-size;
+                                    color: m.visible ? Pm.text : #8a8a8a;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                                for t in [
+                                    { a: "mask-inv:", g: "\u{f362}", tip: @tr("Inverser le masque (l'effet passe de l'autre côté)") },
+                                    { a: "mask-dup:", g: "\u{f0c5}", tip: @tr("Dupliquer le masque") },
+                                    { a: "mask-del:", g: "\u{f1f8}", tip: @tr("Supprimer le masque") },
+                                ]: Rectangle {
+                                    width: 24px;
+                                    border-radius: Theme.ctl-radius;
+                                    background: (Theme.hover-fx && ita2.has-hover) ? #ffffff1a : transparent;
+                                    GlyphIcon { glyph: t.g; size: 10px; tint: #d0d0d0; }
+                                    HoverTip { y: parent.height; hovered: ita2.has-hover; text: t.tip; }
+                                    ita2 := TouchArea { clicked => { root.action(t.a + mi); } }
+                                }
+                            }
+                        }
+                        if root.masks.length == 0: Text {
+                            text: @tr("Aucun masque pour cette photo.");
+                            font-size: Theme.small-font-size;
+                            color: #8a8a8a;
+                        }
+                    }
+                    // ---- masque choisi : forme et réglages locaux ----
+                    if root.mask-sel >= 0: VerticalLayout {
+                        PmSectionHead {
+                            title: root.mask-sel < root.masks.length ? root.masks[root.mask-sel].name : "";
+                            resettable: false;
+                            autoable: false;
+                        }
+                        VerticalLayout {
+                            padding: 14px;
+                            padding-top: 10px;
+                            spacing: 4px;
+                            HorizontalLayout {
+                                spacing: 6px;
+                                height: 26px;
+                                PmButton {
+                                    fill: true;
+                                    horizontal-stretch: 1;
+                                    glyph: "\u{f06e}";
+                                    text: @tr("Voir le masque");
+                                    kind: root.mask-overlay ? 0 : 1;
+                                    tip: @tr("Voile rouge sur la zone du masque");
+                                    clicked => { root.mask-overlay = !root.mask-overlay; root.action("mask-sel:" + root.mask-sel); }
+                                }
+                            }
+                            Text {
+                                text: root.mask-kind == 1 ? @tr("Glissez les deux poignées sur la photo : effet entier au point plein, nul au point creux.")
+                                    : root.mask-kind == 2 ? @tr("Glissez le centre et les deux bords de l'ellipse sur la photo.")
+                                    : root.mask-kind == 3 ? @tr("Peignez la zone sur la photo ; « Gomme » pour en retirer.")
+                                    : root.mask-kind == 5 ? @tr("Cliquez (ou glissez) sur la photo pour choisir la couleur.")
+                                    : root.mask-kind == 4 ? @tr("Choisissez la plage de luminance touchée.")
+                                    : @tr("Sélection automatique d'après la photo ; affinez avec « Inverser » et la quantité.");
+                                font-size: Theme.small-font-size;
+                                color: Pm.label;
+                                wrap: word-wrap;
+                            }
+                            PmSlider {
+                                label: @tr("Quantité");
+                                minimum: 0;
+                                maximum: 100;
+                                reset-value: 100;
+                                value: root.mask-amount;
+                                changed(v) => { root.mask-set("amount", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 2: PmSlider {
+                                label: @tr("Contour progressif");
+                                minimum: 0;
+                                maximum: 100;
+                                reset-value: 50;
+                                value: root.mask-shape[5];
+                                changed(v) => { root.mask-set("shape:5", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 2: PmSlider {
+                                label: @tr("Angle (°)");
+                                minimum: -90;
+                                maximum: 90;
+                                value: root.mask-shape[4];
+                                changed(v) => { root.mask-set("shape:4", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 3: PmSlider {
+                                label: @tr("Taille du pinceau (%)");
+                                minimum: 1;
+                                maximum: 40;
+                                reset-value: 5;
+                                value: root.brush[0];
+                                changed(v) => { root.mask-set("brush:size", v); }
+                            }
+                            if root.mask-kind == 3: PmSlider {
+                                label: @tr("Contour progressif");
+                                minimum: 0;
+                                maximum: 100;
+                                reset-value: 50;
+                                value: root.brush[1];
+                                changed(v) => { root.mask-set("brush:feather", v); }
+                            }
+                            if root.mask-kind == 3: PmSlider {
+                                label: @tr("Flux");
+                                minimum: 1;
+                                maximum: 100;
+                                reset-value: 100;
+                                value: root.brush[2];
+                                changed(v) => { root.mask-set("brush:flow", v); }
+                            }
+                            if root.mask-kind == 3: HorizontalLayout {
+                                spacing: 6px;
+                                height: 26px;
+                                PmButton {
+                                    fill: true;
+                                    horizontal-stretch: 1;
+                                    glyph: "\u{f12d}";
+                                    text: @tr("Gomme");
+                                    kind: root.brush[3] > 0.5 ? 0 : 1;
+                                    tip: @tr("Gomme : retirer de la zone peinte");
+                                    clicked => { root.mask-set("brush:erase", root.brush[3] > 0.5 ? 0 : 1); }
+                                }
+                                PmButton {
+                                    fill: true;
+                                    horizontal-stretch: 1;
+                                    glyph: "\u{f1f8}";
+                                    text: @tr("Tout effacer");
+                                    kind: 1;
+                                    tip: @tr("Effacer tous les traits de ce masque");
+                                    clicked => { root.mask-set("brush-clear", 0); }
+                                }
+                            }
+                            if root.mask-kind == 4: PmSlider {
+                                label: @tr("Luminance basse");
+                                minimum: 0;
+                                maximum: 100;
+                                value: root.mask-shape[0];
+                                changed(v) => { root.mask-set("shape:0", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 4: PmSlider {
+                                label: @tr("Luminance haute");
+                                minimum: 0;
+                                maximum: 100;
+                                reset-value: 100;
+                                value: root.mask-shape[1];
+                                changed(v) => { root.mask-set("shape:1", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 4: PmSlider {
+                                label: @tr("Transition");
+                                minimum: 0;
+                                maximum: 50;
+                                reset-value: 15;
+                                value: root.mask-shape[2];
+                                changed(v) => { root.mask-set("shape:2", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                            if root.mask-kind == 5: HorizontalLayout {
+                                spacing: 8px;
+                                height: 24px;
+                                Rectangle {
+                                    width: 36px;
+                                    border-radius: Theme.ctl-radius;
+                                    border-width: 1px;
+                                    border-color: Pm.edge;
+                                    background: rgb(root.mask-shape[0] * 255, root.mask-shape[1] * 255, root.mask-shape[2] * 255);
+                                }
+                                Text { text: @tr("Couleur choisie"); color: Pm.label; vertical-alignment: center; font-size: Theme.small-font-size; }
+                            }
+                            if root.mask-kind == 5: PmSlider {
+                                label: @tr("Tolérance");
+                                minimum: 0;
+                                maximum: 100;
+                                reset-value: 50;
+                                value: root.mask-shape[3];
+                                changed(v) => { root.mask-set("shape:3", v); }
+                                hold(b) => { root.held = b; }
+                            }
+                        }
+                        PmSectionHead {
+                            title: @tr("RÉGLAGES DU MASQUE");
+                            resettable: false;
+                            autoable: false;
+                        }
+                        VerticalLayout {
+                            padding: 14px;
+                            padding-top: 10px;
+                            spacing: 4px;
+                            for a[j] in [
+                                { l: @tr("Exposition"), mn: -150, mx: 150 }, { l: @tr("Contraste"), mn: -80, mx: 80 },
+                                { l: @tr("Hautes lumières"), mn: -170, mx: 170 }, { l: @tr("Ombres"), mn: -170, mx: 170 },
+                                { l: @tr("Blancs"), mn: -140, mx: 140 }, { l: @tr("Noirs"), mn: -140, mx: 140 },
+                                { l: @tr("Température"), mn: -100, mx: 100 }, { l: @tr("Teinte"), mn: -100, mx: 100 },
+                                { l: @tr("Saturation"), mn: -100, mx: 100 }, { l: @tr("Clarté (micro-contraste)"), mn: -70, mx: 70 },
+                                { l: @tr("Correction du voile"), mn: -70, mx: 70 }, { l: @tr("Netteté (piqué)"), mn: 0, mx: 100 },
+                                { l: @tr("Réduction du bruit"), mn: 0, mx: 100 },
+                            ]: PmSlider {
+                                label: a.l;
+                                minimum: a.mn;
+                                maximum: a.mx;
+                                value: root.mask-adjust[j];
+                                changed(v) => { root.mask-set("adj:" + j, v); }
+                                hold(b) => { root.held = b; }
+                            }
+                        }
+                    }
+                }
+                if root.module != 2: VerticalLayout {
                 // ---- Filtres & Reset ----
                 PmSectionHead {
                     title: @tr("FILTRES & RESET");
@@ -709,6 +1727,8 @@ export component PhotoMode inherits Rectangle {
                             }
                         }
                         plist := PopupWindow {
+                            // fond qui capte le pointeur : le curseur de la toile ne reste pas sur le volet
+                            TouchArea { }
                             x: 0;
                             y: parent.height + 2px;
                             width: parent.width;
@@ -751,24 +1771,63 @@ export component PhotoMode inherits Rectangle {
                             }
                         }
                     }
+                    // filtre actif : il s'ajoute aux réglages (part montrée sur chaque curseur)
+                    if root.preset > 0: Text {
+                        text: @tr("Le filtre s'ajoute à vos réglages : sa part est montrée sur les curseurs.");
+                        font-size: Theme.small-font-size;
+                        color: Pm.fx;
+                        wrap: word-wrap;
+                    }
                     HorizontalLayout {
                         spacing: 6px;
                         height: 26px;
                         PmButton {
                             horizontal-stretch: 1;
-                            glyph: "\u{f0e2}";
-                            text: @tr("Réinitialiser");
+                            fill: true;
+                            glyph: "\u{f2f9}";
+                            text: @tr("Rotation");
                             kind: 1;
+                            tip: @tr("Tourner la photo d'un quart de tour vers la droite");
                             clicked => {
-                                root.action("reset");
+                                root.action("rotate");
                             }
                         }
                         PmButton {
                             horizontal-stretch: 1;
-                            glyph: "\u{f2f9}";
-                            text: @tr("Rotation");
+                            fill: true;
+                            glyph: "\u{f125}";
+                            text: @tr("Recadrer");
+                            kind: root.crop-mode ? 0 : 1;
+                            tip: @tr("Recadrer et redresser la photo (cadre et poignées sur l'image)");
                             clicked => {
-                                root.action("rotate");
+                                root.crop-mode = !root.crop-mode;
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        height: 26px;
+                        // réglage automatique d'après la scène (sous le filtre éventuel)
+                        PmButton {
+                            horizontal-stretch: 1;
+                            fill: true;
+                            glyph: "\u{e2ca}";
+                            text: @tr("Auto");
+                            kind: 0;
+                            tip: @tr("Réglage automatique de toute la photo d'après sa scène (sous le filtre éventuel)");
+                            clicked => {
+                                root.action("auto");
+                            }
+                        }
+                        PmButton {
+                            horizontal-stretch: 1;
+                            fill: true;
+                            glyph: "\u{f0e2}";
+                            text: @tr("Réinitialiser");
+                            kind: 1;
+                            tip: @tr("Remettre tous les réglages à zéro et retirer le filtre");
+                            clicked => {
+                                root.action("reset");
                             }
                         }
                     }
@@ -785,7 +1844,8 @@ export component PhotoMode inherits Rectangle {
                     { title: @tr("PRÉSENCE ET DÉTAIL"), auto: false, sliders: [
                         { i: 16, l: @tr("Clarté (micro-contraste)"), mn: -70, mx: 70 }, { i: 17, l: @tr("Correction du voile"), mn: -70, mx: 70 },
                         { i: 22, l: @tr("Vignettage"), mn: -85, mx: 85 }, { i: 21, l: @tr("Netteté (piqué)"), mn: 0, mx: 100 },
-                        { i: 23, l: @tr("Grain film"), mn: 0, mx: 100 }, { i: 24, l: @tr("Piqué du grain"), mn: 0, mx: 100 }] },
+                        { i: 23, l: @tr("Grain film"), mn: 0, mx: 100 }, { i: 24, l: @tr("Piqué du grain"), mn: 0, mx: 100 },
+                        { i: 58, l: @tr("Réduction du bruit (luminance)"), mn: 0, mx: 100 }, { i: 59, l: @tr("Réduction du bruit (couleur)"), mn: 0, mx: 100 }] },
                     { title: @tr("COLOR GRADING (RVB)"), auto: false, sliders: [
                         { i: 7, l: @tr("Rouge"), mn: -80, mx: 80 }, { i: 8, l: @tr("Rouge — hautes lumières"), mn: -70, mx: 70 }, { i: 9, l: @tr("Rouge — ombres"), mn: -70, mx: 70 },
                         { i: 10, l: @tr("Vert"), mn: -80, mx: 80 }, { i: 11, l: @tr("Vert — hautes lumières"), mn: -70, mx: 70 }, { i: 12, l: @tr("Vert — ombres"), mn: -70, mx: 70 },
@@ -800,28 +1860,21 @@ export component PhotoMode inherits Rectangle {
                         reset => {
                             root.action("reset-section:" + si);
                         }
+                        auto => {
+                            root.action("auto-section:" + si);
+                        }
                     }
                     if !root.folded[si + 1]: VerticalLayout {
                         padding: 14px;
                         padding-top: 10px;
                         spacing: 4px;
-                        if sec.auto: HorizontalLayout {
-                            alignment: end;
-                            PmButton {
-                                glyph: "\u{e2ca}";
-                                text: @tr("Auto");
-                                kind: 1;
-                                clicked => {
-                                    root.action("auto");
-                                }
-                            }
-                        }
                         for s in sec.sliders: PmSlider {
                             label: s.l;
                             minimum: s.mn;
                             maximum: s.mx;
                             reset-value: s.i == 24 ? 50 : 0;
                             value: root.values[s.i];
+                            fx: root.shift[s.i];
                             changed(v) => {
                                 root.set(s.i, v);
                             }
@@ -840,6 +1893,9 @@ export component PhotoMode inherits Rectangle {
                     }
                     reset => {
                         root.action("reset-section:4");
+                    }
+                    auto => {
+                        root.action("auto-section:4");
                     }
                 }
                 if !root.folded[5]: VerticalLayout {
@@ -871,6 +1927,7 @@ export component PhotoMode inherits Rectangle {
                     PmSlider {
                         label: @tr("Teinte");
                         value: root.values[30 + root.hsl-band];
+                        fx: root.shift[30 + root.hsl-band];
                         changed(v) => {
                             root.set(30 + root.hsl-band, v);
                         }
@@ -881,6 +1938,7 @@ export component PhotoMode inherits Rectangle {
                     PmSlider {
                         label: @tr("Saturation");
                         value: root.values[38 + root.hsl-band];
+                        fx: root.shift[38 + root.hsl-band];
                         changed(v) => {
                             root.set(38 + root.hsl-band, v);
                         }
@@ -891,6 +1949,7 @@ export component PhotoMode inherits Rectangle {
                     PmSlider {
                         label: @tr("Luminance");
                         value: root.values[46 + root.hsl-band];
+                        fx: root.shift[46 + root.hsl-band];
                         changed(v) => {
                             root.set(46 + root.hsl-band, v);
                         }
@@ -898,6 +1957,7 @@ export component PhotoMode inherits Rectangle {
                             root.held = b;
                         }
                     }
+                }
                 }
                 Rectangle {
                     height: 24px;
