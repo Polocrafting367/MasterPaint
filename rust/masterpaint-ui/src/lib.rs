@@ -9,6 +9,9 @@
 #![recursion_limit = "256"]
 
 mod anim;
+mod ai_sel;
+mod vectorize;
+mod seg;
 mod icon_packs;
 mod reference_assets_gen;
 mod fa_svg_gen;
@@ -887,6 +890,7 @@ fn opts(app: &AppWindow) -> tools::Opts {
         strength: t.get_retouch_strength() / 100.0,
         smoothing: t.get_smoothing() / 100.0,
         sample_all: t.get_sample_all(),
+        sel_ai: t.get_sel_ai(),
     }
 }
 
@@ -2687,6 +2691,13 @@ enum Task {
     SvgOpen(String, Vec<u8>, bool),
     /// pack d'icônes incomplet choisi : remplacer les manquantes par MasterPaint ou un équivalent
     IconFallback,
+    /// démarrage : rouvrir ou non la séance du Mode Photo Pro (les projets de l'éditeur, eux,
+    /// sont toujours restaurés)
+    PmRestore,
+    /// fermer le Mode Photo Pro : les photos quittent la pellicule sans être enregistrées
+    PmClose,
+    /// sélection IA sur une grande image : Rapide ou Précise
+    AiQuality(ai_sel::AiJob),
 }
 
 /// Pack d'icônes incomplet : demander par quoi remplacer les icônes qui lui manquent.
@@ -2723,6 +2734,7 @@ fn show_task(app: &AppWindow, title: &str, intro: &str, info: &str, header: &str
     let cmds: Vec<TaskCommand> = commands.iter().map(|(a, x)| TaskCommand { title: t(a).into(), text: t(x).into(), glyph: "".into() }).collect();
     app.set_task_commands(ModelRc::new(VecModel::from(cmds)));
     app.set_task_thumbs(ModelRc::new(VecModel::from(thumbs)));
+    app.set_task_check_text(SharedString::default());
     app.set_show_task(true);
 }
 
@@ -2831,6 +2843,34 @@ fn task_result(app: &AppWindow, state: &Shared, r: i32) {
             if r == 0 {
                 perf::open_report(app, &state.borrow());
             }
+        }
+        Task::AiQuality(job) => {
+            let mut st = state.borrow_mut();
+            ai_sel::quality_answer(app, &mut st, job, r);
+        }
+        Task::PmClose => match r {
+            0 => pm_action(app, state, "close-now"),
+            1 => pm_action(app, state, "minimize"),
+            _ => {}
+        },
+        Task::PmRestore => {
+            // « Se souvenir de mon choix » : Paramètres › Sauvegarde (toujours / jamais)
+            let remember = app.get_task_check();
+            if r == 1 {
+                // ne pas restaurer = séance effacée pour de bon (fichiers d'origine et réglages)
+                if remember {
+                    app.set_set_pm_restore(2);
+                    save_settings(app);
+                }
+                pm_store::forget_session();
+                status(app, "Séance Photo Pro effacée");
+            } else if r == 0 && remember {
+                app.set_set_pm_restore(1);
+                save_settings(app);
+            } else if r < 0 {
+                pm_store::skip_restore();
+            }
+            welcome_at_start(app);
         }
         Task::IconFallback => {
             if r == 0 || r == 1 {
@@ -3203,6 +3243,15 @@ fn show_export(app: &AppWindow, st: &State) {
     let base = t.rsplit_once('.').map(|(a, _)| a.to_string()).unwrap_or(t.clone());
     app.set_ex_name(SharedString::from(base));
     app.set_ex_tabs(st.tabs.len() as i32);
+    // animation ouverte depuis un GIF (ou autre) : son format d'origine signalé en premier
+    let ext = t.rsplit_once('.').map(|(_, e)| e.to_lowercase()).unwrap_or_default();
+    app.set_ex_anim_origin(SharedString::from(match ext.as_str() {
+        "gif" => "gif",
+        "mp4" => "mp4",
+        "webm" => "webm",
+        "png" | "apng" if st.doc.anim.is_some() => "apng",
+        _ => "",
+    }));
     app.set_show_export(true);
 }
 
@@ -3255,6 +3304,11 @@ fn encode_with(doc: &Doc, fmt: &str, quality: u8, bits: &str) -> Option<Vec<u8>>
 /// Exporte selon la fenêtre Exporter : bureau = fenêtre d'enregistrement du système (nom
 /// proposé), web = téléchargement. `all` : tous les onglets dans un seul .illu.
 fn export_to(app: &AppWindow, state: &Shared, fmt: &str, name: &str, quality: i32, bits: &str, all: bool) {
+    // animation : GIF, MP4, WebM, APNG, séquence, planche
+    if let Some(kind) = fmt.strip_prefix("anim:") {
+        let mut st = state.borrow_mut();
+        return export_anim(app, &mut st, kind, Some(name.trim().to_string()));
+    }
     let (ext, mime, label) = match fmt {
         "jpeg" => ("jpg", "image/jpeg", "JPEG"),
         "webp" => ("webp", "image/webp", "WebP"),
@@ -4472,6 +4526,11 @@ fn slider_track(f: &effects::Field) -> (i32, Color, Color) {
     let id = f.id;
     let c = |h: u32| Color::from_rgb_u8((h >> 16) as u8, (h >> 8) as u8, h as u8);
     let has = |k: &str| l.contains(k) || id.contains(k);
+    // angle (« Angle de la lumière ») : piste neutre, le cadran suffit (avant : dégradé noir → blanc
+    // à cause de « lumière »)
+    if effects::is_angle(f) && !has("teinte") && !has("hue") {
+        return (0, c(0), c(0));
+    }
     if (has("teinte") || has("hue")) && !l.contains("teinte r") && !l.contains("teinte v") && !l.contains("teinte b") && (f.max - f.min) >= 180.0 {
         (2, c(0), c(0))
     } else if has("tint") || (has("teinte") && (id.contains("tt-") || id.contains("cr-") || id.contains("bc-"))) {
@@ -4806,6 +4865,57 @@ fn preview_effect(app: &AppWindow, st: &mut State) {
     preview_effect_at(app, st, false);
 }
 
+thread_local! {
+    /// coût mesuré des aperçus (ms par mégapixel) de chaque effet du moteur
+    static FX_COST: std::cell::RefCell<std::collections::HashMap<&'static str, f64>> = Default::default();
+    /// aperçu net demandé après un aperçu réduit (réglages immobiles)
+    static FX_REFINE: slint::Timer = slint::Timer::default();
+    static FX_REFINING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Coût d'un aperçu calculé (`px` pixels en `ms`).
+fn note_fx_cost(name: &'static str, ms: f64, px: usize) {
+    if px >= 20_000 && ms.is_finite() {
+        FX_COST.with(|c| c.borrow_mut().insert(name, ms / (px as f64 / 1e6)));
+    }
+}
+
+/// Effet lent (Mandelbrot, flou radial, flou de surface…) : aperçu réduit pendant les réglages,
+/// puis net une demi-seconde après le dernier (avant : plusieurs secondes de retard à chaque
+/// mouvement du curseur). Renvoie le pas réduit (1 : pleine résolution) et si l'aperçu net
+/// suivra : pas au-delà de 2,5 s (un calcul en cours ne s'interrompt pas, il retarderait le
+/// réglage suivant d'autant) ; la pleine résolution est alors calculée à OK.
+fn progressive_step(name: &'static str, w: usize, h: usize) -> (usize, bool) {
+    if FX_REFINING.with(|r| r.get()) {
+        return (1, false);
+    }
+    let est = FX_COST.with(|c| c.borrow().get(name).copied()).unwrap_or(0.0) * (w * h) as f64 / 1e6;
+    if est < 180.0 {
+        return (1, false);
+    }
+    (((est / 90.0).sqrt().ceil() as usize).clamp(2, 8), est < 2500.0)
+}
+
+/// Aperçu net après un aperçu réduit, 500 ms après le dernier réglage.
+fn arm_fx_refine(app: &AppWindow) {
+    let weak = app.as_weak();
+    FX_REFINE.with(|t| {
+        t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(500), move || {
+            let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
+            let Ok(mut st) = state.try_borrow_mut() else { return arm_fx_refine(&app) };
+            let st = &mut *st;
+            let Some(es) = st.effect.as_ref() else { return };
+            // calcul encore en cours : on attend sa fin
+            if es.running {
+                return arm_fx_refine(&app);
+            }
+            FX_REFINING.with(|r| r.set(true));
+            preview_effect(&app, st);
+            FX_REFINING.with(|r| r.set(false));
+        })
+    });
+}
+
 /// Au-delà de ce nombre de pixels, une image vue de loin a un aperçu réduit.
 const LOD_MIN: usize = 1_500_000;
 /// Pixels calculés au plus pour l'aperçu d'un effet sur l'image entière (le rendu complet ne se
@@ -4918,6 +5028,16 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
             }
         }
     }
+    // vectorisation : aperçu des couleurs réduites et des taches fondues (les contours ne sont
+    // tracés qu'à OK) ; grande image analysée réduite, comme le tracé
+    if let Some(es) = st.effect.as_ref().filter(|e| e.id == "vectorize") {
+        let (o, _) = effects::vectorize_opts(&es.vals);
+        let px = vectorize_preview(&es.base, w, h, &o);
+        st.doc.layer_mut().px = px.into();
+        app.set_effect_info(SharedString::from(i18n::tr("Aperçu des couleurs ; contours tracés à la validation (OK)")));
+        refresh_all(app, st);
+        return;
+    }
     let Some(es) = st.effect.as_mut() else { return };
     let Some((name, p)) = effects::params(&es.id, &es.vals, secondary, es.seed) else {
         app.set_effect_info(SharedString::from(i18n::tr(if SPECIAL_DIALOGS.contains(&es.id.as_str()) {
@@ -4946,6 +5066,21 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
         let k = ((w * h) as f64 / PREVIEW_BUDGET as f64).sqrt().ceil() as usize;
         lod = effects::preview_step(es.fields, &es.vals, k.max(2));
     }
+    // effet lent : aperçu réduit d'abord, net ensuite (`arm_fx_refine`)
+    if !full && lod == 1 {
+        let (rw, rh) = region.map_or((w, h), |r| (r.2 - r.0, r.3 - r.1));
+        let (k, refine) = progressive_step(name, rw, rh);
+        if k > 1 {
+            let k2 = effects::preview_step(es.fields, &es.vals, k);
+            if k2 > 1 {
+                lod = k2;
+                if refine {
+                    arm_fx_refine(app);
+                }
+            }
+        }
+    }
+    let region = if lod > 1 { None } else { region };
     let (name, p, vals) = if lod > 1 {
         let v = effects::scale_px(es.fields, &es.vals, 1.0 / lod as f32);
         match effects::params(&es.id, &v, secondary, es.seed) {
@@ -4984,7 +5119,9 @@ fn preview_effect_at(app: &AppWindow, st: &mut State, full: bool) {
     // aperçu réduit : affiché tel quel, à sa taille ; le calque garde ses pixels jusqu'à OK
     // (le contenu « Hors toile » n'est pas visible : il ne gêne pas l'aperçu réduit)
     let direct = lod > 1 && !all_layers && !st.doc.layers.iter().any(|l| l.dynamic.is_some());
+    let cost_px = region.map_or(sw * sh, |r| (r.2 - r.0) * (r.3 - r.1));
     background::spawn(app, st, job, move |app, st, out| {
+        note_fx_cost(name, now_ms() - t0, cost_px);
         if direct {
             let small = out.map(|mut o| {
                 mode.constrain(&mut o);
@@ -5221,6 +5358,30 @@ fn view_moved(app: &AppWindow) {
     });
 }
 
+/// Aperçu de la vectorisation à la taille du calque (analyse sur 1 Mpx au plus, agrandie au plus
+/// proche voisin).
+fn vectorize_preview(px: &[u8], w: usize, h: usize, o: &vectorize::Opts) -> Vec<u8> {
+    const MAX: usize = 1_000_000;
+    if w * h <= MAX {
+        return vectorize::preview(px, w, h, o);
+    }
+    let k = ((w * h) as f32 / MAX as f32).sqrt();
+    let (sw, sh) = (((w as f32 / k) as usize).max(1), ((h as f32 / k) as usize).max(1));
+    let small = photo::crop_resize::<u8, 4>(px, w, (0, 0, w, h), sw, sh);
+    let mut o2 = *o;
+    o2.min_area = ((o.min_area as f32) / (k * k)).round() as usize;
+    let pv = vectorize::preview(&small, sw, sh, &o2);
+    let mut out = vec![0u8; w * h * 4];
+    for y in 0..h {
+        let sy = (y * sh / h).min(sh - 1);
+        for x in 0..w {
+            let sx = (x * sw / w).min(sw - 1);
+            out[(y * w + x) * 4..][..4].copy_from_slice(&pv[(sy * sw + sx) * 4..][..4]);
+        }
+    }
+    out
+}
+
 fn cancel_effect(app: &AppWindow, st: &mut State) {
     restore_effect_others(st);
     dyn_preview_end(app, st, None);
@@ -5244,6 +5405,34 @@ fn commit_special(app: &AppWindow, st: &mut State, es: &EffectSession) -> bool {
             st.doc.split_rgb_with(gray, off, hide);
             st.doc.commit(&es.title);
             refresh_all(app, st);
+        }
+        "vectorize" => {
+            let (o, hide) = effects::vectorize_opts(&es.vals);
+            let (w, h) = (st.doc.w, st.doc.h);
+            let (shapes, nodes) = vectorize::vectorize(&es.base, w, h, &o);
+            if shapes.is_empty() {
+                refresh_all(app, st);
+                return { status(app, "Vectoriser : calque vide (rien d'opaque à tracer)"); true };
+            }
+            let (src, name) = (st.doc.active, st.doc.layer().name.clone());
+            // même fusion et même opacité que l'original (un calque en Produit à 61 % devenait un
+            // aplat Normal opaque qui recouvrait toute l'image)
+            let (blend, opacity) = (st.doc.layer().blend, st.doc.layer().opacity);
+            if hide {
+                st.doc.layers[src].visible = false;
+            }
+            st.doc.add_layer_in();
+            let n = shapes.len();
+            let l = st.doc.layer_mut();
+            l.name = i18n::tr_format!("{name} (vectoriel)");
+            l.blend = blend;
+            l.opacity = opacity;
+            l.vector = Some(Box::new(vector::VectorLayer { objects: shapes.into_iter().map(vector::Obj::Shape).collect(), effects: Vec::new(), serial: 0 }));
+            let uid = l.uid;
+            render_vector_layer(app, st, uid);
+            st.doc.commit(&es.title);
+            refresh_all(app, st);
+            status(app, i18n::tr_format!("Vectorisé : {n} chemins, {nodes} points (Objets SVG : modifier, Fichier › Exporter en SVG)"));
         }
         "cutoutsel" => {
             let (feather, grow, invert, mask) = effects::cutout_opts(&es.vals);
@@ -5288,7 +5477,7 @@ fn commit_special(app: &AppWindow, st: &mut State, es: &EffectSession) -> bool {
 }
 
 /// Fenêtres de `commit_special` (sans aperçu : appliquées à OK).
-const SPECIAL_DIALOGS: [&str; 3] = ["splitrgb", "cutoutsel", "contentfill"];
+const SPECIAL_DIALOGS: [&str; 4] = ["splitrgb", "cutoutsel", "contentfill", "vectorize"];
 
 fn commit_effect(app: &AppWindow, st: &mut State) {
     app.set_show_effect(false);
@@ -6758,8 +6947,10 @@ fn anim_action(app: &AppWindow, st: &mut State, what: &str) {
             sync_anim(app, st);
             return;
         }
-        "export-gif" => return export_anim(app, st, true),
-        "export-sheet" => return export_anim(app, st, false),
+        "export-gif" => return export_anim(app, st, "gif", None),
+        "export-sheet" => return export_anim(app, st, "sheet", None),
+        // autres formats : fenêtre Exporter, section Animation
+        "export-more" => return show_export(app, st),
         "exit" => return anim_action(app, st, "toggle"),
         "add" => {
             anim::add_frame(&mut st.doc);
@@ -6909,26 +7100,79 @@ fn anim_map_cels(doc: &mut Doc, op: impl Fn(&mut Doc)) {
     anim::resolve(doc);
 }
 
-/// Export de l'animation : GIF animé ou planche de sprites (PNG), encodé en arrière-plan.
-fn export_anim(app: &AppWindow, st: &mut State, gif: bool) {
+/// Formats d'export d'une animation : (clé, extension, type MIME, libellé).
+const ANIM_FORMATS: [(&str, &str, &str, &str); 6] = [
+    ("gif", "gif", "image/gif", "GIF animé"),
+    ("mp4", "mp4", "video/mp4", "Vidéo MP4"),
+    ("webm", "webm", "video/webm", "Vidéo WebM"),
+    ("apng", "png", "image/apng", "PNG animé (APNG)"),
+    ("zip", "zip", "application/zip", "Séquence PNG (ZIP)"),
+    ("sheet", "png", "image/png", "Planche de sprites"),
+];
+
+/// Export de l'animation (`kind` : gif, mp4, webm, apng, zip, sheet), encodé en arrière-plan ;
+/// `name` : nom choisi dans la fenêtre Exporter (sinon le titre du projet).
+fn export_anim(app: &AppWindow, st: &mut State, kind: &str, name: Option<String>) {
     let Some(a) = st.doc.anim.clone() else { return };
+    let Some(&(kind, ext, mime, label)) = ANIM_FORMATS.iter().find(|f| f.0 == kind) else { return };
     stop_anim(app);
     anim::stash(&mut st.doc);
     let (w, h) = (st.doc.w, st.doc.h);
     let frames = anim::all_frames(&st.doc);
-    let stem = st.doc.title.rsplit_once('.').map(|(a, _)| a.to_string()).unwrap_or_else(|| st.doc.title.clone());
-    let title = if gif { "GIF animé" } else { "Planche de sprites" };
-    begin_busy(app, title, "Encodage des images…", w * h * frames.len() > 2_000_000);
-    let job = background::Heavy::Local(Box::new(move || if gif { anim::encode_gif(&frames, w, h, a.fps, a.looping) } else { anim::sprite_sheet(&frames, w, h) }));
+    let stem = name.filter(|n| !n.trim().is_empty()).unwrap_or_else(|| st.doc.title.rsplit_once('.').map(|(a, _)| a.to_string()).unwrap_or_else(|| st.doc.title.clone()));
+    let file = if kind == "sheet" { format!("{stem}-planche.png") } else { format!("{stem}.{ext}") };
+    app.set_show_export(false);
+    // vidéo dans le navigateur : encodeur de la page (WebCodecs), image par image
+    #[cfg(target_arch = "wasm32")]
+    if kind == "mp4" || kind == "webm" {
+        begin_busy(app, label, "Encodage de la vidéo…", true);
+        let weak = app.as_weak();
+        let n = frames.len();
+        let _ = slint::spawn_local(async move {
+            let wk = weak.clone();
+            let res = web::video_encode(&frames, w, h, a.fps, kind, move |k| {
+                if let Some(app) = wk.upgrade() {
+                    status(&app, i18n::tr_format!("Vidéo : image {k} / {n}"));
+                }
+            })
+            .await;
+            let Some(app) = weak.upgrade() else { return };
+            end_busy(&app);
+            match res {
+                Ok(bytes) => offer_file(&app, &file, label, ext, mime, bytes),
+                Err(e) => show_error(&app, label, &i18n::tr_format!("La vidéo n'a pas pu être encodée ({e})."))
+            }
+        });
+        return;
+    }
+    begin_busy(app, label, "Encodage des images…", w * h * frames.len() > 2_000_000);
+    let why = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    #[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
+    let why2 = why.clone();
+    let (fps, looping) = (a.fps, a.looping);
+    let stem2 = stem.clone();
+    let job = background::Heavy::Local(Box::new(move || match kind {
+        "gif" => anim::encode_gif(&frames, w, h, fps, looping),
+        "apng" => anim::encode_apng(&frames, w, h, fps, looping),
+        "zip" => anim::png_sequence_zip(&frames, w, h, &stem2),
+        #[cfg(not(target_arch = "wasm32"))]
+        "mp4" | "webm" => match anim::encode_video_ffmpeg(&frames, w, h, fps, kind == "webm") {
+            Ok(b) => Some(b),
+            Err(e) => {
+                *why2.lock().unwrap_or_else(|e| e.into_inner()) = e;
+                None
+            }
+        },
+        _ => anim::sprite_sheet(&frames, w, h),
+    }));
     background::spawn(app, st, job, move |app, _st, out| {
         end_busy(app);
         let Some(bytes) = out else {
-            show_error(app, title, &i18n::tr("L'animation n'a pas pu être encodée."));
+            let e = why.lock().map(|s| s.clone()).unwrap_or_default();
+            show_error(app, label, &if e.is_empty() { i18n::tr("L'animation n'a pas pu être encodée.") } else { i18n::tr(&e) });
             return;
         };
-        let (ext, mime, label) = if gif { ("gif", "image/gif", "GIF") } else { ("png", "image/png", "PNG") };
-        let name = if gif { format!("{stem}.gif") } else { format!("{stem}-planche.png") };
-        offer_file(app, &name, label, ext, mime, bytes);
+        offer_file(app, &file, label, ext, mime, bytes);
     });
 }
 
@@ -7570,6 +7814,10 @@ fn handle_outcome(app: &AppWindow, st: &mut State, out: Outcome) {
         }
         Outcome::Selection => {
             sel_changed(app, st);
+            // rectangle / ellipse avec l'option IA : sélection d'objet (sujet dans le cadre)
+            if let Some((shape, mode, base)) = st.session.ai_pending.take() {
+                ai_sel::select_object(app, st, shape, mode, base);
+            }
         }
         Outcome::PickColor(c, secondary) => {
             let col = Color::from_argb_u8(c[3], c[0], c[1], c[2]);
@@ -8106,7 +8354,7 @@ const HANDLED_ACTIONS: &[&str] = &[
     "toggleIlluSnapToEdges", "toggleIlluAllowOutsideCanvas", "toggleIlluShowAllRibbonOptions", "win-tools", "win-colors",
     "win-layers", "win-history", "win-svg-objects", "resetWorkspace", "openCanvasLivePreviewWindow", "openIconViewerWindow",
     "openImageLayerBoundsDialog", "illuOpenSnapSettings", "illuRemoveBackgroundIntelligent", "illuGuidedCutoutToolStart", "showContentAwareFillDialog", "convertActiveProjectTo", "PhotoModeManager", "openActiveProjectInPhotoModePro",
-    "toggleAnimationMode", "IlluGifImport",
+    "toggleAnimationMode", "IlluGifImport", "illuMenuVectorizeBitmap",
 ];
 
 /// Marqueur d'une entrée de menu : vide si la fonction est en Rust, « à venir » sinon.
@@ -8119,7 +8367,7 @@ fn action_badge(action: &str, label: &str) -> &'static str {
         return if effects::params(fx, &v, 0xffffff, 1).is_some() { "" } else { "à venir" };
     }
     if action.is_empty() {
-        let ported = ["Palettes volantes (Paint.NET)", "Interface : mode téléphone (menu ☰, palettes en colonnes)", "Palettes : ancrage fixe (style Adobe)"];
+        let ported = ["Palettes volantes (Paint.NET)", "Interface : mode téléphone", "Palettes : ancrage fixe (style Adobe)"];
         return if ported.iter().any(|p| label == i18n::tr(p)) { "" } else { "à venir" };
     }
     // mode SVG (calques vectoriels) : porté, encore en bêta
@@ -8272,6 +8520,10 @@ fn paint_net_order(mut menus: Vec<MenuSpec>) -> Vec<MenuSpec> {
             item("Bordure de la sélection…", "rust:sel-border", "\u{f850}", ""),
             item("Lisser la sélection…", "rust:sel-smooth", "\u{f111}", ""),
             item("Sélectionner l'opacité du calque", "rust:sel-alpha", "\u{f5fd}", ""),
+            sep(),
+            item("Sélectionner le sujet (IA)", "rust:sel-subject", "\u{f007}", ""),
+            item("Sélectionner l'arrière-plan (IA)", "rust:sel-background", "\u{f03e}", ""),
+            item("Sélectionner le ciel", "rust:sel-sky", "\u{f0c2}", ""),
         ];
         for (k, it) in more.into_iter().enumerate() {
             list.insert(at + k, it);
@@ -8283,8 +8535,8 @@ fn paint_net_order(mut menus: Vec<MenuSpec>) -> Vec<MenuSpec> {
         let mut list = items_of(&menus[im]);
         let at = list.iter().position(|it| it.action.contains("showPixelTransformDialog")).map_or(list.len(), |i| i + 1);
         let extra = [
-            item("Rotation de 90° dans le sens horaire", "rust:quick:rot-cw", "\u{f01e}", "Ctrl+H"),
-            item("Rotation de 90° dans le sens antihoraire", "rust:quick:rot-ccw", "\u{f0e2}", "Ctrl+G"),
+            item("Rotation de 90° horaire", "rust:quick:rot-cw", "\u{f01e}", "Ctrl+H"),
+            item("Rotation de 90° antihoraire", "rust:quick:rot-ccw", "\u{f0e2}", "Ctrl+G"),
             item("Rotation de 180°", "rust:quick:rot-180", "\u{f2f1}", "Ctrl+J"),
             item("Retourner horizontalement", "rust:quick:flip-h", "\u{f337}", ""),
             item("Retourner verticalement", "rust:quick:flip-v", "\u{f338}", ""),
@@ -8314,6 +8566,31 @@ fn paint_net_order(mut menus: Vec<MenuSpec>) -> Vec<MenuSpec> {
             list.insert(at + k, it);
         }
         menus[im].items = ModelRc::new(VecModel::from(tidy(list)));
+    }
+    // Effets : effets créatifs (fx_creative) rangés dans leurs sous-menus
+    if let Some(fx) = pos(&menus, "Effets") {
+        let list = items_of(&menus[fx]);
+        let add: [(&str, &[(&str, &str, &str)]); 3] = [
+            ("Artistique", &[("Linogravure…", "fx:linocut", "\u{f5ad}"), ("Pointillisme…", "fx:pointillism", "\u{f111}"), ("Vitrail…", "fx:stainedglass", "\u{f51d}"), ("Mosaïque…", "fx:hexmosaic", "\u{f84c}"), ("Tramage ordonné…", "fx:ordereddither", "\u{f00a}")]),
+            ("Déformer", &[("Sphériser…", "fx:spherize", "\u{f111}"), ("Vagues tourbillonnantes…", "fx:swirlwaves", "\u{f773}")]),
+            ("", &[]),
+        ];
+        let list: Vec<MenuItemSpec> = list
+            .into_iter()
+            .map(|mut it| {
+                if let Some((_, extra)) = add.iter().find(|(t, _)| !t.is_empty() && it.submenu && it.label.as_str() == i18n::tr(t)) {
+                    let mut ch: Vec<SubItemSpec> = (0..it.children.row_count()).filter_map(|k| it.children.row_data(k)).collect();
+                    for (l, a, f) in extra.iter() {
+                        if !ch.iter().any(|c| c.action.as_str() == *a) {
+                            ch.push(SubItemSpec { label: i18n::tr(l).into(), action: (*a).into(), fa: (*f).into(), fa_weight: 900, badge: SharedString::default() });
+                        }
+                    }
+                    it.children = ModelRc::new(VecModel::from(ch));
+                }
+                it
+            })
+            .collect();
+        menus[fx].items = ModelRc::new(VecModel::from(list));
     }
     let view_menu = MenuSpec { title: i18n::tr("Affichage").into(), items: ModelRc::new(VecModel::from(tidy(view))) };
     menus.insert(edit + 1, view_menu);
@@ -8553,6 +8830,9 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         "rust:sel-feather" => return prompt(app, "selfeather", "Contour progressif", "Rayon (pixels)", "8"),
         "rust:sel-border" => return prompt(app, "selborder", "Bordure de la sélection", "Largeur (pixels)", "10"),
         "rust:sel-smooth" => return prompt(app, "selsmooth", "Lisser la sélection", "Rayon (pixels)", "4"),
+        "rust:sel-subject" => return ai_sel::select_subject(app, st, false),
+        "rust:sel-background" => return ai_sel::select_subject(app, st, true),
+        "rust:sel-sky" => return ai_sel::select_sky(app, st),
         "rust:sel-alpha" => {
             let a = st.doc.active;
             let mode = opts(app).sel_mode;
@@ -8596,11 +8876,21 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
     if has("showNewProjectDialog") {
         show_new_project(app, st);
     } else if has("openActiveProjectInPhotoModePro") {
-        // projet aplati, ajouté à la pellicule
+        // projet aplati, ajouté à la pellicule ; son PNG sert de fichier d'origine (rangé avec la
+        // séance) : sans lui, la photo n'était pas restaurée au lancement suivant
         let flat = st.doc.flatten_final();
-        let name = st.doc.title.clone();
-        st.photo.photos.push(photo::Photo::new(&name, st.doc.w, st.doc.h, flat));
-        st.photo.active = st.photo.photos.len() - 1;
+        let (w, h) = (st.doc.w, st.doc.h);
+        let title = st.doc.title.clone();
+        let lower = title.to_lowercase();
+        let name = if [".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"].iter().any(|e| lower.ends_with(e)) { title } else { format!("{title}.png") };
+        let png = illu::png_bytes(w, h, &flat);
+        let mut p = photo::Photo::new(&name, w, h, flat);
+        p.orig = Some(std::sync::Arc::new(png));
+        st.photo.photos.push(p);
+        let idx = st.photo.photos.len() - 1;
+        st.photo.active = idx;
+        pm_store::photo_added(st, idx);
+        pm_store::save_session(st);
         pm_open(app, st);
     } else if has("PhotoModeManager") {
         pm_open(app, st);
@@ -8713,6 +9003,8 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         layer_op(app, st, "down");
     } else if has("mergeLayers") {
         layer_op(app, st, "merge");
+    } else if has("illuMenuVectorizeBitmap") {
+        open_effect(app, st, "vectorize", "Vectoriser un bitmap");
     } else if has("splitActiveLayerRgbChannels") {
         // menus Calques et Effets › Couleur : fenêtre (couleur / gris, décalages, original masqué)
         open_effect(app, st, "splitrgb", "Séparer les canaux RVB");
@@ -8803,11 +9095,11 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         } else {
             status(app, "Fenêtre pas encore portée dans la version Rust");
         }
-    } else if label == i18n::tr("Interface : mode téléphone (menu ☰, palettes en colonnes)") || label == i18n::tr("Palettes : ancrage fixe (style Adobe)") {
+    } else if label == i18n::tr("Interface : mode téléphone") || label == i18n::tr("Palettes : ancrage fixe (style Adobe)") {
         // bascule de disposition (Paint.NET ↔ téléphone / Photoshop), enregistrée ; quitter
         // l'interface téléphone affichée d'office sur un écran étroit la désactive (le choix
         // est respecté, l'interface n'est jamais imposée)
-        let target = if label == i18n::tr("Interface : mode téléphone (menu ☰, palettes en colonnes)") { 2 } else { 1 };
+        let target = if label == i18n::tr("Interface : mode téléphone") { 2 } else { 1 };
         let layout = if target == 2 && app.get_phone() {
             if app.get_set_layout() == 2 { 0 } else { app.get_set_layout() }
         } else if app.get_set_layout() == target {
@@ -9470,6 +9762,8 @@ fn pm_sync(app: &AppWindow, st: &State) {
 /// en basse résolution (curseurs fluides ; le dernier réglage gagne), puis, après une courte
 /// pause, la zone visible à la résolution de l'écran (`pm_hq`). Les deux en arrière-plan.
 fn pm_render(app: &AppWindow, st: &mut State) {
+    // masque Sujet / Arrière-plan sans carte de l'IA : analyse lancée (une fois par photo)
+    ai_sel::pm_ensure(app, st);
     // historique : l'état sera rangé peu après le dernier réglage
     pm_store::touch(app);
     // réglage ou photo changés : la zone haute résolution affichée n'est plus juste, et celle
@@ -9710,9 +10004,37 @@ fn pm_action(app: &AppWindow, state: &Shared, a: &str) {
     }
     let active = st.photo.active;
     match a {
-        "close" => {
+        // fermer = la pellicule est vidée sans rien enregistrer, après confirmation (Réduire
+        // garde tout) ; pellicule vide : fermé tout de suite
+        "close" | "close-now" => {
+            let n = st.photo.photos.len();
+            if a == "close" && n > 0 && st.task.is_none() {
+                st.task = Some(Task::PmClose);
+                let intro = if n > 1 { i18n::tr_format!("Les {n} photos de la pellicule et leurs réglages seront retirés sans être enregistrés.") } else { i18n::tr("La photo de la pellicule et ses réglages seront retirés sans être enregistrés.") };
+                show_task(
+                    app,
+                    "Fermer le Mode Photo Pro ?",
+                    &intro,
+                    "Exportez d'abord les photos pour garder le résultat. « Réduire » met le mode de côté sans rien perdre.",
+                    "",
+                    &[
+                        ("Fermer sans enregistrer", "Vide la pellicule et ferme le Mode Photo Pro."),
+                        ("Réduire", "Revient à l'éditeur ; la pellicule et ses réglages restent (onglet Photo Pro)."),
+                        ("Annuler", "Reste dans le Mode Photo Pro."),
+                    ],
+                    Vec::new(),
+                );
+                return;
+            }
+            for p in st.photo.photos.drain(..) {
+                pm_store::photo_removed(p.uid);
+            }
+            st.photo.active = 0;
+            st.photo.mask_sel = -1;
+            pm_store::save_session(st);
             pm_set_open(app, false);
-            app.set_pm_count(st.photo.photos.len() as i32);
+            app.set_pm_count(0);
+            pm_sync(app, st);
             return;
         }
         "fx" => st.photo.fx_off = !st.photo.fx_off,
@@ -10175,6 +10497,7 @@ fn tool_state(app: &AppWindow) -> serde_json::Value {
         "retouchStrength": t.get_retouch_strength(),
         "smoothing": t.get_smoothing(),
         "sampleAll": t.get_sample_all(),
+        "selAi": t.get_sel_ai(),
         "nearest": t.get_nearest(),
         "panels": [app.get_show_tools(), app.get_show_colors(), app.get_show_history(), app.get_show_layers()],
         "groupPick": t.get_group_pick().iter().collect::<Vec<i32>>(),
@@ -10205,6 +10528,7 @@ fn restore_tool_state(app: &AppWindow, v: &serde_json::Value) -> Option<String> 
     if let Some(x) = f("retouchStrength") { t.set_retouch_strength(x.clamp(1.0, 100.0)); }
     if let Some(x) = f("smoothing") { t.set_smoothing(x.clamp(0.0, 100.0)); }
     if let Some(x) = b("sampleAll") { t.set_sample_all(x); }
+    if let Some(x) = b("selAi") { t.set_sel_ai(x); }
     if let Some(x) = b("nearest") { t.set_nearest(x); }
     if let Some(x) = i("shapeStyle") { t.set_shape_style(x.clamp(0, 2)); }
     if let Some(x) = i("shapeFillType") { t.set_shape_fill_type(x.clamp(0, 1)); }
@@ -10283,6 +10607,8 @@ fn save_settings(app: &AppWindow) {
         default_zoom: app.get_set_default_zoom(),
         default_tool: tool_id_at(app, app.get_set_default_tool()),
         autosave: app.get_set_autosave(),
+        pm_restore: app.get_set_pm_restore(),
+        ai_quality: app.get_set_ai_quality(),
         use_gpu: app.get_set_use_gpu(),
         paste_mode: app.get_set_paste_mode(),
         paste_ask: app.get_set_paste_ask(),
@@ -10357,6 +10683,25 @@ fn save_settings(app: &AppWindow) {
 /// une fois les projets restaurés (écran de chargement retiré sur le web).
 fn welcome_at_start(app: &AppWindow) {
     // pellicule du Photo Pro de la dernière séance (une fois, après les projets)
+    // séance du Mode Photo Pro : selon Paramètres › Sauvegarde (demander, toujours, jamais),
+    // avant de relire ses photos (leur développement peut être long)
+    if !RESTORE_ASKED.swap(true, std::sync::atomic::Ordering::Relaxed) && AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) && !SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
+        match app.get_set_pm_restore() {
+            2 => pm_store::forget_session(),
+            1 => {}
+            _ => {
+                let weak = app.as_weak();
+                let _ = slint::spawn_local(async move {
+                    let photos = pm_store::session_count().await;
+                    let Some(app) = weak.upgrade() else { return };
+                    if photos == 0 || !ask_pm_restore(&app, photos) {
+                        welcome_at_start(&app);
+                    }
+                });
+                return;
+            }
+        }
+    }
     static PM_RESTORE: std::sync::Once = std::sync::Once::new();
     PM_RESTORE.call_once(|| {
         if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
@@ -10369,6 +10714,42 @@ fn welcome_at_start(app: &AppWindow) {
     app.set_welcome_count(app.get_welcome_count() + 1);
     app.set_show_welcome(true);
     save_settings(app);
+}
+
+/// La question « Restaurer la dernière séance ? » a été posée (une fois par lancement).
+static RESTORE_ASKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Démarrage : propose de rouvrir la séance du Mode Photo Pro (`photos` photos), avec « Se
+/// souvenir de mon choix ». Faux si la fenêtre n'a pas pu s'ouvrir (une autre question est en
+/// cours).
+fn ask_pm_restore(app: &AppWindow, photos: usize) -> bool {
+    let Some(state) = APP_STATE.with(|s| s.borrow().clone()) else { return false };
+    let Ok(mut st) = state.try_borrow_mut() else { return false };
+    if st.task.is_some() {
+        return false;
+    }
+    st.task = Some(Task::PmRestore);
+    drop(st);
+    let what = if photos > 1 {
+        i18n::tr_format!("{photos} photos étaient ouvertes dans le Mode Photo Pro lors de la dernière utilisation.")
+    } else {
+        i18n::tr("1 photo était ouverte dans le Mode Photo Pro lors de la dernière utilisation.")
+    };
+    show_task(
+        app,
+        "Restaurer la séance Photo Pro ?",
+        &what,
+        "Leur développement peut prendre un moment. Vos projets de l'éditeur, eux, sont rouverts comme d'habitude.",
+        "",
+        &[
+            ("Restaurer", "Rouvre la pellicule et les réglages de chaque photo tels que vous les avez laissés."),
+            ("Ne pas restaurer", "Efface définitivement la séance gardée (photos et réglages) et commence sans pellicule."),
+        ],
+        Vec::new(),
+    );
+    app.set_task_check(false);
+    app.set_task_check_text(i18n::tr("Se souvenir de mon choix (réglable dans Paramètres › Choix retenus)").into());
+    true
 }
 
 /// Sauvegarde automatique et carte graphique autorisées (Paramètres).
@@ -10490,6 +10871,21 @@ fn toggle_outside(app: &AppWindow, st: &mut State) {
 }
 
 fn handle_ribbon(app: &AppWindow, state: &Shared, id: &str) {
+    if id == "sel-ai" {
+        // option « Objet (IA) » : retenue, et le modèle se charge déjà
+        save_settings(app);
+        if app.global::<ToolOpts>().get_sel_ai() {
+            ai_sel::preload();
+        }
+        return;
+    }
+    if matches!(id, "sel-subject" | "sel-background" | "sel-sky") {
+        let Ok(mut st) = state.try_borrow_mut() else { return };
+        return match id {
+            "sel-sky" => ai_sel::select_sky(app, &mut st),
+            _ => ai_sel::select_subject(app, &mut st, id == "sel-background"),
+        };
+    }
     if id == "magnet-opts" {
         // force / ancres du lasso magnétique : lus à chaque mouvement (opts), seulement retenus
         save_settings(app);
@@ -10686,6 +11082,8 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_ui_zoom(cfg.ui_zoom);
     app.set_set_default_zoom(cfg.default_zoom);
     app.set_set_autosave(cfg.autosave);
+    app.set_set_pm_restore(cfg.pm_restore);
+    app.set_set_ai_quality(cfg.ai_quality);
     app.set_set_use_gpu(cfg.use_gpu);
     app.set_set_paste_mode(cfg.paste_mode);
     app.set_set_paste_ask(cfg.paste_ask);
@@ -12521,6 +12919,9 @@ fn run() -> Result<(), slint::PlatformError> {
         let weak = app.as_weak();
         let state = state.clone();
         app.global::<Actions>().on_ribbon(move |id| handle_ribbon(&weak.unwrap(), &state, &id));
+        // Annuler dans la fenêtre d'attente (détection du sujet par l'IA)
+        let weak2 = app.as_weak();
+        app.on_load_cancelled(move || ai_sel::cancel(&weak2.unwrap()));
         // clic droit sur un bouton du ruban : Aimantation → bascule et réglages
         let weak2 = app.as_weak();
         app.global::<Actions>().on_ribbon_context(move |id, x, y| {
@@ -13073,6 +13474,8 @@ fn run() -> Result<(), slint::PlatformError> {
                 }
                 4 => {
                     app.set_set_autosave(d.autosave);
+                    app.set_set_pm_restore(d.pm_restore);
+                    app.set_set_ai_quality(d.ai_quality);
                     app.set_set_autosave_min(d.autosave_min as f32);
                     AUTOSAVE_ON.store(d.autosave, std::sync::atomic::Ordering::Relaxed);
                 }
@@ -13960,6 +14363,45 @@ mod web {
         })?;
         drop(cb);
         Ok(js_sys::Uint8Array::new(&r).to_vec())
+    }
+
+    /// Vidéo d'une animation par l'encodeur de la page (`window.mpVideo`) : MP4 ou WebM.
+    pub async fn video_encode(frames: &[Vec<u8>], w: usize, h: usize, fps: u32, kind: &str, progress: impl Fn(usize)) -> Result<Vec<u8>, String> {
+        let msg = |e: wasm_bindgen::JsValue| e.dyn_ref::<js_sys::Error>().map(|x| String::from(x.message())).or_else(|| e.as_string()).unwrap_or_else(|| "échec".into());
+        let v = web_sys::window().and_then(|win| js_sys::Reflect::get(&win, &"mpVideo".into()).ok()).filter(|v| v.is_object()).ok_or("module vidéo indisponible")?;
+        let call = |name: &str, args: &js_sys::Array| -> Result<js_sys::Promise, String> {
+            let f: js_sys::Function = js_sys::Reflect::get(&v, &name.into()).map_err(|_| "module vidéo indisponible")?.dyn_into().map_err(|_| "module vidéo indisponible")?;
+            f.apply(&v, args).map_err(msg)?.dyn_into::<js_sys::Promise>().map_err(|_| "module vidéo indisponible".to_string())
+        };
+        let begin = call("begin", &js_sys::Array::of4(&(w as f64).into(), &(h as f64).into(), &(fps.max(1) as f64).into(), &kind.into()))?;
+        wasm_bindgen_futures::JsFuture::from(begin).await.map_err(msg)?;
+        for (k, f) in frames.iter().enumerate() {
+            let p = call("push", &js_sys::Array::of1(&js_sys::Uint8Array::from(&f[..])));
+            let r = match p {
+                Ok(p) => wasm_bindgen_futures::JsFuture::from(p).await.map_err(msg),
+                Err(e) => Err(e),
+            };
+            if let Err(e) = r {
+                if let Ok(f) = js_sys::Reflect::get(&v, &"abort".into()).and_then(|f| f.dyn_into::<js_sys::Function>().map_err(|e| e)) {
+                    let _ = f.call0(&v);
+                }
+                return Err(e);
+            }
+            if k % 5 == 4 {
+                progress(k + 1);
+            }
+        }
+        let r = wasm_bindgen_futures::JsFuture::from(call("end", &js_sys::Array::new())?).await.map_err(msg)?;
+        Ok(js_sys::Uint8Array::new(&r).to_vec())
+    }
+
+    /// Module et modèle de l'IA de détourage téléchargés à l'avance (`mpAi.preload`).
+    pub fn ai_preload(model: &str) {
+        if let Some(ai) = web_sys::window().and_then(|win| js_sys::Reflect::get(&win, &"mpAi".into()).ok()).filter(|v| v.is_object()) {
+            if let Ok(f) = js_sys::Reflect::get(&ai, &"preload".into()).and_then(|f| f.dyn_into::<js_sys::Function>().map_err(|e| e)) {
+                let _ = f.call1(&ai, &model.into());
+            }
+        }
     }
 
     pub fn remove_bg_abort() {

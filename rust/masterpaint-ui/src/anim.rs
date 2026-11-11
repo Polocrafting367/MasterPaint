@@ -594,6 +594,86 @@ pub fn encode_gif(frames: &[Vec<u8>], w: usize, h: usize, fps: u32, looping: boo
     Some(out)
 }
 
+/// PNG animé (APNG) : sans perte et avec la transparence, lu par tous les navigateurs.
+pub fn encode_apng(frames: &[Vec<u8>], w: usize, h: usize, fps: u32, looping: bool) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    {
+        let mut enc = png::Encoder::new(&mut out, w as u32, h as u32);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        enc.set_compression(png::Compression::Fast);
+        // 0 lecture = boucle infinie
+        enc.set_animated(frames.len().max(1) as u32, if looping { 0 } else { 1 }).ok()?;
+        enc.set_frame_delay(1, fps.clamp(1, 240) as u16).ok()?;
+        let mut wr = enc.write_header().ok()?;
+        for f in frames {
+            wr.write_image_data(f).ok()?;
+        }
+        wr.finish().ok()?;
+    }
+    Some(out)
+}
+
+/// Séquence d'images PNG numérotées (`nom-0001.png`…) dans une archive ZIP.
+pub fn png_sequence_zip(frames: &[Vec<u8>], w: usize, h: usize, stem: &str) -> Option<Vec<u8>> {
+    let digits = frames.len().to_string().len().max(4);
+    let mut entries = Vec::with_capacity(frames.len());
+    for (k, f) in frames.iter().enumerate() {
+        let img = image::RgbaImage::from_raw(w as u32, h as u32, f.clone())?;
+        let mut b = std::io::Cursor::new(Vec::new());
+        img.write_to(&mut b, image::ImageFormat::Png).ok()?;
+        entries.push((format!("{stem}-{:0digits$}.png", k + 1), b.into_inner()));
+    }
+    Some(crate::icon_packs::zip_store(entries))
+}
+
+/// Images posées sur fond blanc, sans alpha (vidéo : pas de transparence).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+pub fn on_white(f: &[u8]) -> Vec<u8> {
+    let mut o = f.to_vec();
+    for p in o.chunks_exact_mut(4) {
+        let a = p[3] as u16;
+        for c in &mut p[..3] {
+            *c = ((*c as u16 * a + 255 * (255 - a)) / 255) as u8;
+        }
+        p[3] = 255;
+    }
+    o
+}
+
+/// Vidéo MP4 (H.264) ou WebM (VP9) par ffmpeg (bureau), s'il est installé : images envoyées
+/// brutes sur son entrée. Err : message pour l'utilisateur.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn encode_video_ffmpeg(frames: &[Vec<u8>], w: usize, h: usize, fps: u32, webm: bool) -> Result<Vec<u8>, String> {
+    use std::io::Write;
+    let out = std::env::temp_dir().join(format!("masterpaint-video-{}.{}", std::process::id(), if webm { "webm" } else { "mp4" }));
+    let codec: &[&str] = if webm { &["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30", "-row-mt", "1"] } else { &["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-movflags", "+faststart"] };
+    let size = format!("{w}x{h}");
+    let rate = fps.max(1).to_string();
+    let mut child = std::process::Command::new("ffmpeg")
+        .args(["-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", &size, "-r", &rate, "-i", "-", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2:color=white,format=yuv420p"])
+        .args(codec)
+        .arg(&out)
+        .stdin(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|_| "ffmpeg est introuvable : installez-le (ffmpeg.org, ou le gestionnaire de paquets) pour exporter en vidéo, ou utilisez la version web de MasterPaint.".to_string())?;
+    {
+        let mut si = child.stdin.take().ok_or("ffmpeg : entrée indisponible")?;
+        for f in frames {
+            si.write_all(&on_white(f)).map_err(|e| format!("ffmpeg : {e}"))?;
+        }
+    }
+    let r = child.wait_with_output().map_err(|e| format!("ffmpeg : {e}"))?;
+    if !r.status.success() {
+        let _ = std::fs::remove_file(&out);
+        return Err(format!("ffmpeg : {}", String::from_utf8_lossy(&r.stderr).lines().last().unwrap_or("échec")));
+    }
+    let b = std::fs::read(&out).map_err(|e| format!("lecture de la vidéo : {e}"))?;
+    let _ = std::fs::remove_file(&out);
+    Ok(b)
+}
+
 /// Planche de sprites (PNG) : images rangées en grille, de gauche à droite.
 pub fn sprite_sheet(frames: &[Vec<u8>], w: usize, h: usize) -> Option<Vec<u8>> {
     let n = frames.len().max(1);

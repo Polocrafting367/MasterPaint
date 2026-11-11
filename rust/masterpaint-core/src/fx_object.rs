@@ -59,13 +59,17 @@ pub fn contour(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     }
 }
 
-/// Ombre portée : p: [décalage x, décalage y, flou, opacité %, couleur]
+/// Ombre portée : p: [décalage x, décalage y, flou, opacité %, couleur, étendue %, ombre seule]
+/// Étendue (comme Photoshop) : le bord de l'ombre est durci avant le flou (100 % = ombre
+/// pleine jusqu'au bord flouté). Ombre seule : l'objet est retiré, il ne reste que son ombre.
 pub fn drop_shadow(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let ox = p.f(0, 4.0).fround() as isize;
     let oy = p.f(1, 6.0).fround() as isize;
     let blur = p.f(2, 10.0).max(0.0);
     let op = clampf(p.f(3, 45.0) / 100.0, 0.0, 1.0);
     let col = p.rgb(4, 0x000000);
+    let spread = clampf(p.f(5, 0.0) / 100.0, 0.0, 0.99);
+    let only = p.b(6, false);
     let (w, h) = (src.w, src.h);
     // masque alpha décalé, sur une bande élargie pour le flou
     let r = (blur / 2.0).ceil() as usize;
@@ -81,13 +85,18 @@ pub fn drop_shadow(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
             }
         }
     }
+    if spread > 0.0 {
+        for m in mask.iter_mut() {
+            *m = (*m / (1.0 - spread)).min(255.0);
+        }
+    }
     gauss_blur_f32(&mut mask, w, bh, blur / 2.0);
     for y in y0..y1 {
         for x in 0..w {
             let i = src.idx(x, y);
             let sa = mask[(y - ya) * w + x] / 255.0 * op;
             let q = src.px(x, y);
-            let fa = q[3] as f32 / 255.0;
+            let fa = if only { 0.0 } else { q[3] as f32 / 255.0 };
             // composition « source par-dessus ombre »
             let oa = fa + sa * (1.0 - fa);
             if oa <= 0.0 {

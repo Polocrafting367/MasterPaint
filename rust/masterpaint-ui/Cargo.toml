@@ -18,6 +18,8 @@ path = "src/main.rs"
 # fichiers Paint.NET (.pdn) : pixels en morceaux gzip (version déjà dans Cargo.lock)
 flate2 = "1"
 crc32fast = "1"
+# APNG (PNG animé) : même version que celle tirée par `image`
+png = "0.18"
 masterpaint-core = { path = "../masterpaint-core" }
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "renderer-femtovg"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "gif", "tiff", "ico", "tga", "qoi"] }

@@ -18,7 +18,8 @@
 //! Genres : 1 linéaire (x0, y0, x1, y1 : effet entier en 0, nul en 1), 2 radial (cx, cy, rx,
 //! ry en grand côté, angle en degrés, contour 0..100), 3 pinceau (traits : taille, contour,
 //! flux, gomme, n, points…), 4 luminance (bas, haut, transition, 0..100), 5 couleur (r, v, b
-//! 0..1, tolérance 0..100), 6 ciel, 7 sujet, 8 arrière-plan. Coordonnées des points : fractions
+//! 0..1, tolérance 0..100), 6 ciel, 7 sujet, 8 arrière-plan (contour 0..100, étendue −100..100 ;
+//! forme vide = 10, 0). Coordonnées des points : fractions
 //! de la photo entière (0..1), avant recadrage.
 
 /// Un masque décodé.
@@ -144,6 +145,84 @@ fn blur_plane(a: &mut [f32], w: usize, h: usize, r: usize) {
             }
         }
     }
+}
+
+/// Valeur `i` de la forme, ou `d` si elle manque (séances d'avant ce réglage).
+fn s_or(shape: &[f32], i: usize, d: f32) -> f32 {
+    shape.get(i).copied().filter(|v| v.is_finite()).unwrap_or(d)
+}
+
+/// Bord des sélections automatiques : étendue (`grow` −100..100 : grossit ou rétrécit la zone
+/// jusqu'à 4 % du grand côté, flou puis seuil, comme une dilatation / érosion douce) puis
+/// contour (`feather` 0..100 : flou jusqu'à 5 % du grand côté ; 0 = bord net de la détection).
+/// `lp` : grand côté de la photo entière en pixels rendus (même allure en aperçu et à l'export).
+fn edge(a: &mut [f32], w: usize, h: usize, lp: f32, feather: f32, grow: f32) {
+    let g = (grow / 100.0).clamp(-1.0, 1.0);
+    let rg = (g.abs() * 0.04 * lp) as usize;
+    if rg > 0 {
+        let mut b = a.to_vec();
+        blur_plane(&mut b, w, h, rg);
+        for (o, bv) in a.iter_mut().zip(b) {
+            *o = if g > 0.0 { o.max((bv * 2.0).min(1.0)) } else { o.min((bv * 2.0 - 1.0).max(0.0)) };
+        }
+    }
+    let f = (feather / 100.0).clamp(0.0, 1.0);
+    // courbe douce : les petites valeurs restent fines (10 → 0,3 % du grand côté, 100 → 5 %)
+    blur_plane(a, w, h, ((f * f * 0.5 + f * 0.5) * 0.05 * lp) as usize);
+}
+
+/// Carte alpha jointe à la forme d'un masque Sujet / Arrière-plan : `[contour, étendue, mw,
+/// mh, octets…]`, trois octets par flottant (entiers exacts jusqu'à 2^24), photo entière.
+/// Échantillonnée en bilinéaire aux points de l'image rendue ; faux sans carte.
+fn ai_map(shape: &[f32], f: &Frame, w: usize, h: usize, out: &mut [f32]) -> bool {
+    let (mw, mh) = (s_or(shape, 2, 0.0) as usize, s_or(shape, 3, 0.0) as usize);
+    let n = mw * mh;
+    if mw < 2 || mh < 2 || shape.len() < 4 + n.div_ceil(3) {
+        return false;
+    }
+    let map = unpack_bytes(&shape[4..], n);
+    for y in 0..h {
+        for x in 0..w {
+            let (u, v) = f.uv(x, y, w, h);
+            let (fx, fy) = ((u * mw as f32 - 0.5).clamp(0.0, (mw - 1) as f32), (v * mh as f32 - 0.5).clamp(0.0, (mh - 1) as f32));
+            let (x0, y0) = (fx as usize, fy as usize);
+            let (x1, y1) = ((x0 + 1).min(mw - 1), (y0 + 1).min(mh - 1));
+            let (tx, ty) = (fx - x0 as f32, fy - y0 as f32);
+            let g = |xx: usize, yy: usize| map[yy * mw + xx] as f32;
+            let top = g(x0, y0) + (g(x1, y0) - g(x0, y0)) * tx;
+            let bot = g(x0, y1) + (g(x1, y1) - g(x0, y1)) * tx;
+            out[y * w + x] = (top + (bot - top) * ty) / 255.0;
+        }
+    }
+    true
+}
+
+/// Octets → flottants (trois par flottant), pour joindre une carte aux réglages du moteur.
+pub fn pack_bytes(b: &[u8]) -> Vec<f32> {
+    b.chunks(3).map(|c| (c[0] as u32 | (*c.get(1).unwrap_or(&0) as u32) << 8 | (*c.get(2).unwrap_or(&0) as u32) << 16) as f32).collect()
+}
+
+/// Inverse de `pack_bytes` (`n` octets).
+pub fn unpack_bytes(v: &[f32], n: usize) -> Vec<u8> {
+    let mut out = Vec::with_capacity(n + 2);
+    for x in v {
+        let k = x.max(0.0) as u32;
+        out.extend_from_slice(&[k as u8, (k >> 8) as u8, (k >> 16) as u8]);
+        if out.len() >= n {
+            break;
+        }
+    }
+    out.resize(n, 0);
+    out
+}
+
+/// Sélection automatique hors du Mode Photo Pro (Édition › Sélectionner le ciel) : plan alpha
+/// 0..255 du genre `kind` (6 ciel, 7 sujet, 8 arrière-plan) sur une image RVBA 8 bits entière.
+pub fn auto_alpha(kind: u32, rgba8: &[u8], w: usize, h: usize, feather: f32, grow: f32) -> Vec<u8> {
+    let m = Mask { kind, invert: false, amount: 1.0, adjust: Vec::new(), shape: vec![feather, grow] };
+    let f = Frame { u0: 0.0, v0: 0.0, u1: 1.0, v1: 1.0, aspect: w as f32 / h.max(1) as f32 };
+    let base: Vec<u16> = rgba8[..w * h * 4].iter().map(|v| *v as u16 * 257).collect();
+    alpha(&m, &f, w, h, &base).iter().map(|v| (v * 255.0 + 0.5) as u8).collect()
 }
 
 /// OkLab d'une couleur d'affichage sRGB 0..1.
@@ -293,26 +372,29 @@ pub fn alpha(m: &Mask, f: &Frame, w: usize, h: usize, base: &[u16]) -> Vec<f32> 
                     out[i] = top * smooth(-3.5, -1.0, l) * (0.4 + 0.6 * smooth(0.0, 0.3, blue).max(smooth(0.0, 1.5, l)));
                 }
             }
-            blur_plane(&mut out, w, h, (0.01 * f.long_px(w, h)) as usize);
+            edge(&mut out, w, h, f.long_px(w, h), s_or(&m.shape, 0, 10.0), s_or(&m.shape, 1, 0.0));
         }
-        // sujet (et arrière-plan, son inverse) : contraste local pondéré vers le centre
+        // sujet (et arrière-plan, son inverse) : carte de l'IA de détourage quand elle est
+        // jointe à la forme ; sinon repli (contraste local pondéré vers le centre, LightCraft)
         7 | 8 => {
-            let mut ll: Vec<f32> = (0..n).map(|i| to_lin(lum(px(i))).max(1e-5).log2()).collect();
-            let raw = ll.clone();
-            blur_plane(&mut ll, w, h, (0.03 * f.long_px(w, h)) as usize);
-            for y in 0..h {
-                for x in 0..w {
-                    let i = y * w + x;
-                    let (u, v) = f.uv(x, y, w, h);
-                    let d = (((u - 0.5) / 0.35).powi(2) + ((v - 0.55) / 0.4).powi(2)).sqrt();
-                    let contrast = (raw[i] - ll[i]).abs();
-                    out[i] = (1.0 - smooth(0.6, 1.0, d)) * (0.5 + 0.5 * smooth(0.05, 0.6, contrast));
+            if !ai_map(&m.shape, f, w, h, &mut out) {
+                let mut ll: Vec<f32> = (0..n).map(|i| to_lin(lum(px(i))).max(1e-5).log2()).collect();
+                let raw = ll.clone();
+                blur_plane(&mut ll, w, h, (0.03 * f.long_px(w, h)) as usize);
+                for y in 0..h {
+                    for x in 0..w {
+                        let i = y * w + x;
+                        let (u, v) = f.uv(x, y, w, h);
+                        let d = (((u - 0.5) / 0.35).powi(2) + ((v - 0.55) / 0.4).powi(2)).sqrt();
+                        let contrast = (raw[i] - ll[i]).abs();
+                        out[i] = (1.0 - smooth(0.6, 1.0, d)) * (0.5 + 0.5 * smooth(0.05, 0.6, contrast));
+                    }
                 }
             }
-            blur_plane(&mut out, w, h, (0.015 * f.long_px(w, h)) as usize);
             if m.kind == 8 {
                 out.iter_mut().for_each(|v| *v = 1.0 - *v);
             }
+            edge(&mut out, w, h, f.long_px(w, h), s_or(&m.shape, 0, 10.0), s_or(&m.shape, 1, 0.0));
         }
         _ => {}
     }

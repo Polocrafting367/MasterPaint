@@ -16,7 +16,7 @@ pub(crate) fn sync(app: &AppWindow, st: &State) {
         return;
     };
     let rows: Vec<PmMaskRow> = p.masks.iter().map(|m| PmMaskRow { name: m.name.as_str().into(), kind: m.kind as i32, visible: m.visible, invert: m.invert }).collect();
-    app.set_pm_masks(ModelRc::new(VecModel::from(rows)));
+    set_rows(app, rows);
     let sel = if (pm.mask_sel as usize) < p.masks.len() && pm.mask_sel >= 0 { pm.mask_sel } else { -1 };
     app.set_pm_mask_sel(sel);
     match p.masks.get(sel.max(0) as usize).filter(|_| sel >= 0) {
@@ -24,8 +24,8 @@ pub(crate) fn sync(app: &AppWindow, st: &State) {
             app.set_pm_mask_kind(m.kind as i32);
             app.set_pm_mask_amount(m.amount);
             app.set_pm_mask_adjust(ModelRc::new(VecModel::from(m.adjust.clone())));
-            app.set_pm_mask_shape(ModelRc::new(VecModel::from(m.shape.clone())));
-            app.set_pm_mask_handles(ModelRc::new(VecModel::from(handles(p, m))));
+            set_floats(&app.get_pm_mask_shape(), m.full_shape(), |v| app.set_pm_mask_shape(v));
+            set_floats(&app.get_pm_mask_handles(), handles(p, m), |v| app.set_pm_mask_handles(v));
         }
         None => {
             app.set_pm_mask_kind(0);
@@ -35,17 +35,52 @@ pub(crate) fn sync(app: &AppWindow, st: &State) {
     }
 }
 
+/// Valeurs vers un modèle de l'interface : mises à jour EN PLACE quand la longueur ne change
+/// pas. Un modèle neuf à chaque mouvement recréait les poignées de la photo sous le pointeur :
+/// leur zone tactile disparaissait et le glisser s'arrêtait aussitôt (poignées impossibles à
+/// déplacer).
+fn set_floats(cur: &ModelRc<f32>, v: Vec<f32>, put: impl FnOnce(ModelRc<f32>)) {
+    if let Some(vm) = cur.as_any().downcast_ref::<VecModel<f32>>() {
+        if vm.row_count() == v.len() {
+            for (i, x) in v.into_iter().enumerate() {
+                if vm.row_data(i) != Some(x) {
+                    vm.set_row_data(i, x);
+                }
+            }
+            return;
+        }
+    }
+    put(ModelRc::new(VecModel::from(v)));
+}
+
+/// Liste des masques : rangées mises à jour en place (même raison que `set_floats`).
+fn set_rows(app: &AppWindow, rows: Vec<PmMaskRow>) {
+    let cur = app.get_pm_masks();
+    if let Some(vm) = cur.as_any().downcast_ref::<VecModel<PmMaskRow>>() {
+        if vm.row_count() == rows.len() {
+            for (i, r) in rows.into_iter().enumerate() {
+                if vm.row_data(i).as_ref() != Some(&r) {
+                    vm.set_row_data(i, r);
+                }
+            }
+            return;
+        }
+    }
+    app.set_pm_masks(ModelRc::new(VecModel::from(rows)));
+}
+
 /// Unités du grand côté → fractions de la largeur et de la hauteur de la photo.
 fn units(p: &photo::Photo) -> (f32, f32) {
     let a = p.w as f32 / p.h.max(1) as f32;
     if a >= 1.0 { (1.0, a) } else { (1.0 / a, 1.0) }
 }
 
-/// Poignées (u, v) sur la photo : linéaire départ / arrivée ; radial centre, bord droit, bord bas.
+/// Poignées (u, v) sur la photo : linéaire départ / arrivée / milieu (déplace le dégradé
+/// entier) ; radial centre (déplace l'ellipse), bord droit, bord bas.
 fn handles(p: &photo::Photo, m: &PmMask) -> Vec<f32> {
     let s = |i: usize| m.shape.get(i).copied().unwrap_or(0.0);
     match m.kind {
-        1 => vec![s(0), s(1), s(2), s(3)],
+        1 => vec![s(0), s(1), s(2), s(3), (s(0) + s(2)) / 2.0, (s(1) + s(3)) / 2.0],
         2 => {
             let (ku, kv) = units(p);
             vec![s(0), s(1), s(0) + s(2) * ku, s(1), s(0), s(1) + s(3) * kv]
@@ -121,6 +156,9 @@ pub(crate) fn set(app: &AppWindow, st: &mut State, field: &str, v: f32) {
             m.adjust[j] = v;
         }
     } else if let Some(i) = field.strip_prefix("shape:").and_then(|i| i.parse::<usize>().ok()) {
+        if m.shape.len() <= i {
+            m.shape = m.full_shape();
+        }
         if i < m.shape.len() {
             m.shape[i] = v;
         }
@@ -151,6 +189,13 @@ pub(crate) fn drag(app: &AppWindow, st: &mut State, handle: i32, u: f32, v: f32,
             let o = handle as usize * 2;
             m.shape[o] = u;
             m.shape[o + 1] = v;
+        }
+        // milieu du linéaire : les deux points suivent, écart gardé
+        (1, 2) => {
+            let (du, dv) = (u - (m.shape[0] + m.shape[2]) / 2.0, v - (m.shape[1] + m.shape[3]) / 2.0);
+            for (i, d) in [du, dv, du, dv].into_iter().enumerate() {
+                m.shape[i] += d;
+            }
         }
         (2, 0) => {
             m.shape[0] = u;

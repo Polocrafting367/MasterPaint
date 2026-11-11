@@ -28,8 +28,17 @@ pub fn dialog(effect: &str) -> Option<(&'static str, &'static [Field])> {
         "gallery" => return Some(("Galerie de filtres", GALLERY)),
         "chromatic" => return Some(("Aberration chromatique", CHROMATIC)),
         "splitrgb" => return Some(("Séparer les canaux RVB", SPLIT_RGB)),
+        "vectorize" => return Some(("Vectoriser un bitmap", VECTORIZE)),
+        "rotatezoom" => return Some(("Faire pivoter / Zoomer", ROTATE_ZOOM)),
         "cutoutsel" => return Some(("Détourage par sélection", CUTOUT_SEL)),
         "contentfill" => return Some(("Remplissage contenu pris en compte", CONTENT_FILL)),
+        "linocut" => return Some(("Linogravure", LINOCUT)),
+        "hexmosaic" => return Some(("Mosaïque", HEX_MOSAIC)),
+        "pointillism" => return Some(("Pointillisme", POINTILLISM)),
+        "stainedglass" => return Some(("Vitrail", STAINED_GLASS)),
+        "ordereddither" => return Some(("Tramage ordonné", ORDERED_DITHER)),
+        "spherize" => return Some(("Sphériser", SPHERIZE)),
+        "swirlwaves" => return Some(("Vagues tourbillonnantes", SWIRL_WAVES)),
         _ => {}
     }
     if effect == "chroma" {
@@ -516,6 +525,43 @@ const CONTENT_FILL: &[Field] = &[
 
 /// Réglages de « Séparer les canaux RVB » : (niveaux de gris, décalages [R, V, B], masquer
 /// l'original).
+/// Calques › Faire pivoter / Zoomer (Paint.NET) : sans fenêtre, l'entrée appliquait 0° et 100 %
+/// (rien ne bougeait).
+const ROTATE_ZOOM: &[Field] = &[
+    slider("ef-rz-angle", "Angle", -180.0, 180.0, 0.5, 0.0),
+    slider("ef-rz-zoom", "Zoom %", 10.0, 800.0, 1.0, 100.0),
+    slider("ef-rz-panx", "Décalage X %", -100.0, 100.0, 1.0, 0.0),
+    slider("ef-rz-pany", "Décalage Y %", -100.0, 100.0, 1.0, 0.0),
+    Field { id: "ef-rz-tile", label: "Mosaïque (remplir les bords en répétant l'image)", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+];
+
+/// Vectoriser un bitmap (Édition) : couleurs, seuil du noir et blanc, simplification, taches,
+/// courbes, calque d'origine masqué.
+const VECTORIZE: &[Field] = &[
+    choice("ef-vec-mode", "Mode", 0.0, "color", &[("color", "Couleurs"), ("mono", "Noir et blanc (seuil)")]),
+    slider("ef-vec-colors", "Nombre de couleurs", 2.0, 32.0, 1.0, 8.0),
+    slider("ef-vec-threshold", "Seuil (noir et blanc)", 1.0, 254.0, 1.0, 128.0),
+    slider("ef-vec-tol", "Simplification (px)", 0.0, 6.0, 0.1, 1.0),
+    slider("ef-vec-speck", "Taches ignorées (px²)", 0.0, 400.0, 1.0, 16.0),
+    Field { id: "ef-vec-smooth", label: "Courbes lissées (sinon : segments droits)", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+    Field { id: "ef-vec-hide", label: "Masquer le calque d'origine", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+];
+
+/// Réglages de la vectorisation.
+pub fn vectorize_opts(v: &Vals) -> (crate::vectorize::Opts, bool) {
+    let mono = v.s("ef-vec-mode") == "mono";
+    (
+        crate::vectorize::Opts {
+            colors: v.g("ef-vec-colors", 8.0).round().clamp(2.0, 32.0) as usize,
+            tolerance: v.g("ef-vec-tol", 1.0).clamp(0.0, 6.0),
+            min_area: v.g("ef-vec-speck", 16.0).round().max(0.0) as usize,
+            smooth: v.b("ef-vec-smooth", true) > 0.0,
+            mono: mono.then(|| v.g("ef-vec-threshold", 128.0).clamp(1.0, 254.0) as u8),
+        },
+        v.b("ef-vec-hide", true) > 0.0,
+    )
+}
+
 pub fn split_rgb_opts(v: &Vals) -> (bool, [(i32, i32); 3], bool) {
     let d = |id: &str| v.g(id, 0.0).round() as i32;
     (
@@ -550,6 +596,79 @@ pub fn content_fill_params(v: &Vals, seed: f32) -> Vec<f32> {
 const fn slider(id: &'static str, label: &'static str, min: f32, max: f32, step: f32, def: f32) -> Field {
     Field { id, label, kind: 0, min, max, step, def, def_s: "", options: &[] }
 }
+
+/// Liste de choix (valeurs « 0 », « 1 »… lues par `sel`), `def` : indice par défaut.
+const fn choice(id: &'static str, label: &'static str, def: f32, def_s: &'static str, options: &'static [(&'static str, &'static str)]) -> Field {
+    Field { id, label, kind: 2, min: 0.0, max: 0.0, step: 1.0, def, def_s, options }
+}
+
+// ------------------------------------------------------------------ effets créatifs
+// (masterpaint-core fx_creative) : Linogravure, Mosaïque hexagonale, Pointillisme, Vitrail,
+// Tramage ordonné, Sphériser, Vagues tourbillonnantes
+
+const LINOCUT: &[Field] = &[
+    slider("ef-lino-gap", "Écart des traits (px)", 2.0, 40.0, 1.0, 8.0),
+    slider("ef-lino-angle", "Angle (°)", -90.0, 90.0, 1.0, 45.0),
+    slider("ef-lino-contrast", "Contraste", -50.0, 150.0, 1.0, 0.0),
+    slider("ef-lino-gamma", "Gamma (%)", 20.0, 500.0, 1.0, 100.0),
+    slider("ef-lino-wobble", "Rugosité (tracé à la gouge)", 0.0, 100.0, 1.0, 20.0),
+    choice("ef-lino-ink", "Encre", 0.0, "0", &[("0", "Noire"), ("1", "Couleur de l'image")]),
+    choice("ef-lino-paper", "Papier", 0.0, "0", &[("0", "Crème"), ("1", "Blanc"), ("2", "Transparent (encre seule)")]),
+];
+
+const HEX_MOSAIC: &[Field] = &[
+    choice("ef-hex-shape", "Forme des tesselles", 0.0, "0", &[("0", "Hexagone"), ("1", "Carré")]),
+    slider("ef-hex-size", "Taille des tesselles (px)", 3.0, 120.0, 1.0, 14.0),
+    slider("ef-hex-joint", "Largeur du joint (px)", 0.0, 20.0, 0.5, 2.0),
+    choice("ef-hex-jcolor", "Couleur du joint", 0.0, "0", &[("0", "Blanc"), ("1", "Gris"), ("2", "Noir"), ("3", "Transparent")]),
+    slider("ef-hex-relief", "Profondeur du biseau (%)", 0.0, 100.0, 1.0, 35.0),
+    slider("ef-hex-light", "Angle de la lumière (°)", 0.0, 360.0, 1.0, 135.0),
+    slider("ef-hex-jitter", "Variation de clarté (%)", 0.0, 100.0, 1.0, 10.0),
+];
+
+const POINTILLISM: &[Field] = &[
+    slider("ef-pt-size", "Écart des points (px)", 2.0, 60.0, 1.0, 12.0),
+    slider("ef-pt-fill", "Remplissage de la cellule (%)", 30.0, 250.0, 1.0, 140.0),
+    slider("ef-pt-pjit", "Désordre des positions (%)", 0.0, 100.0, 1.0, 100.0),
+    slider("ef-pt-cjit", "Variation de couleur (%)", 0.0, 100.0, 1.0, 25.0),
+    slider("ef-pt-sat", "Saturation (%)", -50.0, 150.0, 1.0, 35.0),
+    choice("ef-pt-paper", "Fond", 0.0, "0", &[("0", "Papier blanc"), ("1", "Papier crème"), ("2", "Transparent")]),
+    slider("ef-pt-seed", "Tirage", 0.0, 999.0, 1.0, 0.0),
+];
+
+const STAINED_GLASS: &[Field] = &[
+    slider("ef-sg-size", "Taille des pièces (px)", 4.0, 200.0, 1.0, 22.0),
+    slider("ef-sg-lead", "Largeur du plomb (% de la pièce)", 0.0, 60.0, 1.0, 15.0),
+    slider("ef-sg-bevel", "Profondeur du biseau (%)", 0.0, 100.0, 1.0, 50.0),
+    slider("ef-sg-light", "Angle de la lumière (°)", 0.0, 360.0, 1.0, 135.0),
+    choice("ef-sg-cmode", "Couleur de la pièce", 0.0, "0", &[("0", "Moyenne"), ("1", "Centre")]),
+    choice("ef-sg-lcolor", "Couleur du plomb", 0.0, "0", &[("0", "Noir"), ("1", "Gris"), ("2", "Blanc")]),
+    slider("ef-sg-seed", "Tirage", 0.0, 999.0, 1.0, 0.0),
+];
+
+const ORDERED_DITHER: &[Field] = &[
+    choice("ef-od-matrix", "Matrice de Bayer", 1.0, "4", &[("2", "2 × 2 (gros motif)"), ("4", "4 × 4"), ("8", "8 × 8 (fin)")]),
+    slider("ef-od-levels", "Niveaux par canal", 2.0, 16.0, 1.0, 2.0),
+    slider("ef-od-scale", "Taille du motif (px)", 1.0, 16.0, 1.0, 1.0),
+    choice("ef-od-mode", "Couleurs", 0.0, "0", &[("0", "Couleur"), ("1", "Noir & blanc"), ("2", "Deux tons (encre / papier)")]),
+    slider("ef-od-strength", "Force du tramage (%)", 0.0, 100.0, 1.0, 100.0),
+];
+
+const SPHERIZE: &[Field] = &[
+    slider("ef-sph-amount", "Quantité", -100.0, 100.0, 1.0, 100.0),
+    slider("ef-sph-radius", "Rayon (%)", 5.0, 150.0, 1.0, 100.0),
+    choice("ef-sph-mode", "Mode", 0.0, "0", &[("0", "Normal"), ("1", "Horizontal seulement"), ("2", "Vertical seulement")]),
+    slider("ef-sph-cx", "Centre X (%)", 0.0, 100.0, 1.0, 50.0),
+    slider("ef-sph-cy", "Centre Y (%)", 0.0, 100.0, 1.0, 50.0),
+];
+
+const SWIRL_WAVES: &[Field] = &[
+    slider("ef-sw-twirl", "Tourbillon (°)", -720.0, 720.0, 1.0, 220.0),
+    slider("ef-sw-amp", "Amplitude des vagues (px)", 0.0, 80.0, 1.0, 10.0),
+    slider("ef-sw-wl", "Longueur d'onde (px)", 4.0, 300.0, 1.0, 40.0),
+    slider("ef-sw-radius", "Rayon (%)", 5.0, 150.0, 1.0, 100.0),
+    slider("ef-sw-radial", "Ondulation des bords (%)", 0.0, 100.0, 1.0, 50.0),
+];
 
 /// Conversion RAL (fx_adjust::palette_convert) : nuancier et tramage, comme FilterManager.js.
 const RAL: &[Field] = &[
@@ -939,7 +1058,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "bulge" => {
             name = "bulge";
-            vec![g("ef-bulge", 40.0)]
+            vec![g("ef-bulge", 40.0), g("ef-bulge-cx", 0.0), g("ef-bulge-cy", 0.0), g("ef-bulge-r", 100.0)]
         }
         "pinch" => {
             name = "pinch";
@@ -947,7 +1066,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "twist" => {
             name = "twist";
-            vec![g("ef-twist", 30.0)]
+            vec![g("ef-twist", 30.0), g("ef-twist-cx", 0.0), g("ef-twist-cy", 0.0), g("ef-twist-r", 100.0)]
         }
         "polarInvert" => {
             name = "polarInvert";
@@ -978,6 +1097,19 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
                 sel("ef-chr-falloff", 1.0),
                 g("ef-chr-overlap", 0.0),
             ]
+        }
+        "linocut" | "hexmosaic" | "pointillism" | "stainedglass" | "ordereddither" | "spherize" | "swirlwaves" => {
+            name = static_name(effect)?;
+            let sel = |id: &str, d: f32| v.s(id).parse::<f32>().unwrap_or(d);
+            match effect {
+                "linocut" => vec![g("ef-lino-gap", 8.0), g("ef-lino-angle", 45.0), g("ef-lino-contrast", 0.0), g("ef-lino-wobble", 20.0), sel("ef-lino-ink", 0.0), sel("ef-lino-paper", 0.0), g("ef-lino-gamma", 100.0)],
+                "hexmosaic" => vec![g("ef-hex-size", 14.0), g("ef-hex-joint", 2.0), sel("ef-hex-jcolor", 0.0), g("ef-hex-relief", 35.0), sel("ef-hex-shape", 0.0), g("ef-hex-light", 135.0), g("ef-hex-jitter", 10.0), (seed & 0xffff) as f32],
+                "pointillism" => vec![g("ef-pt-size", 12.0), g("ef-pt-fill", 140.0), g("ef-pt-sat", 35.0), sel("ef-pt-paper", 0.0), g("ef-pt-seed", 0.0), g("ef-pt-cjit", 25.0), g("ef-pt-pjit", 100.0)],
+                "stainedglass" => vec![g("ef-sg-size", 22.0), g("ef-sg-lead", 15.0), g("ef-sg-bevel", 50.0), sel("ef-sg-lcolor", 0.0), g("ef-sg-seed", 0.0), g("ef-sg-light", 135.0), sel("ef-sg-cmode", 0.0)],
+                "ordereddither" => vec![sel("ef-od-matrix", 4.0), g("ef-od-levels", 2.0), g("ef-od-scale", 1.0), sel("ef-od-mode", 0.0), g("ef-od-strength", 100.0)],
+                "spherize" => vec![g("ef-sph-amount", 100.0), g("ef-sph-radius", 100.0), sel("ef-sph-mode", 0.0), g("ef-sph-cx", 50.0), g("ef-sph-cy", 50.0)],
+                _ => vec![g("ef-sw-twirl", 220.0), g("ef-sw-amp", 10.0), g("ef-sw-wl", 40.0), g("ef-sw-radius", 100.0), g("ef-sw-radial", 50.0)],
+            }
         }
         "crystallize" => {
             name = "crystallize";
@@ -1018,15 +1150,15 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "edges" => {
             name = "edges";
-            vec![g("ef-edge", 40.0), v.hex("ef-edge-color", 0xffffff)]
+            vec![g("ef-edge", 40.0), v.hex("ef-edge-color", 0xffffff), g("ef-edge-mode", 0.0), g("ef-edge-angle", 45.0)]
         }
         "emboss" => {
             name = "emboss";
-            vec![g("ef-emb-angle", 0.0)]
+            vec![g("ef-emb-angle", 0.0), g("ef-emb-height", 1.0), g("ef-emb-amt", 100.0)]
         }
         "relief" => {
             name = "relief";
-            vec![g("ef-relief-angle", 45.0)]
+            vec![g("ef-relief-angle", 45.0), g("ef-relief-height", 1.0), g("ef-relief-amt", 100.0)]
         }
         "outline" => {
             name = "outline";
@@ -1066,7 +1198,7 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "vignette" => {
             name = "vignette";
-            vec![g("ef-vig", 50.0), v.hex("ef-vig-color", 0), g("ef-vig-blend", 0.0), g("ef-vig-cx", 0.0), g("ef-vig-cy", 0.0)]
+            vec![g("ef-vig", 50.0), v.hex("ef-vig-color", 0), g("ef-vig-blend", 0.0), g("ef-vig-cx", 0.0), g("ef-vig-cy", 0.0), g("ef-vig-r", 100.0), g("ef-vig-soft", 60.0)]
         }
         "redeyeremove" => {
             name = "redeyeremove";
@@ -1117,7 +1249,15 @@ pub fn params(effect: &str, v: &Vals, secondary: u32, seed: u32) -> Option<(&'st
         }
         "dropshadow" => {
             name = "dropshadow";
-            vec![g("ef-ds-ox", 4.0).round(), g("ef-ds-oy", 6.0).round(), px_rad(g("ef-ds-blur", 10.0)), g("ef-ds-op", 45.0), v.hex("ef-ds-color", 0)]
+            // angle de la lumière (comme Photoshop : 120° = lumière en haut à gauche, ombre en bas
+            // à droite) et distance ; anciens réglages Décalage X / Y repris s'ils existent
+            let (ox, oy) = if v.0.contains_key("ef-ds-angle") || !v.0.contains_key("ef-ds-ox") {
+                let (a, d) = (g("ef-ds-angle", 120.0).to_radians(), g("ef-ds-dist", 7.0));
+                (-d * a.cos(), d * a.sin())
+            } else {
+                (g("ef-ds-ox", 4.0), g("ef-ds-oy", 6.0))
+            };
+            vec![ox.round(), oy.round(), px_rad(g("ef-ds-blur", 10.0)), g("ef-ds-op", 45.0), v.hex("ef-ds-color", 0), g("ef-ds-spread", 0.0), v.b("ef-ds-only", false) as i32 as f32]
         }
         "dream" => {
             name = "dream";
@@ -1377,7 +1517,8 @@ pub fn preview_step(fields: &[Field], v: &Vals, want: usize) -> usize {
 /// « Rotation… » ou « Phase… », sur au moins un quart de tour.
 pub fn is_angle(f: &Field) -> bool {
     let l = f.label.to_lowercase();
-    (l.starts_with("angle") || l.contains('°') || l.starts_with("rotation") || l.contains("phase")) && f.max - f.min >= 90.0
+    // « Axe horizontal ° » (inclinaison 3D) : pas une direction, pas de cadran
+    (l.starts_with("angle") || l.contains('°') || l.starts_with("rotation") || l.contains("phase")) && !l.starts_with("axe") && f.max - f.min >= 90.0
 }
 
 /// Libellé d'un réglage en pixels.
@@ -1436,5 +1577,35 @@ mod color_parameter_tests {
         assert_eq!(super::normalize_color(" A1b2C3 ").as_deref(), Some("#a1b2c3"));
         assert_eq!(super::normalize_color("#000000").as_deref(), Some("#000000"));
         for bad in ["#zzzzzz", "#123", "#12345678", "", "#12 345"] { assert!(super::normalize_color(bad).is_none()); }
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    /// Banc des effets (réglages par défaut, photo 1000 × 850, un seul fil) :
+    /// `cargo test --release -p masterpaint-ui --lib bench_effects -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn bench_effects() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../IMG/Photo.jpeg");
+        let img = image::ImageReader::open(path).unwrap().with_guessed_format().unwrap().decode().expect("photo d'essai").resize_exact(1000, 850, image::imageops::FilterType::Triangle).to_rgba8();
+        let (w, h) = (img.width() as usize, img.height() as usize);
+        let px = img.into_raw();
+        let mut ids: Vec<&str> = crate::effects_gen::DIALOGS.iter().map(|d| d.0).collect();
+        ids.extend(["linocut", "hexmosaic", "pointillism", "stainedglass", "ordereddither", "spherize", "swirlwaves", "chromatic", "splitrgb", "ral", "levels"]);
+        let mut rows = Vec::new();
+        for fx in ids {
+            let Some((_, fields)) = super::dialog(fx) else { continue };
+            let v = super::Vals::defaults(fields);
+            let Some((name, p)) = super::params(fx, &v, 0xffffff, 1) else { println!("{fx:16} : pas de paramètres"); continue };
+            let t = std::time::Instant::now();
+            let ok = masterpaint_core::apply_parallel(name, &px, w, h, &p, 1).is_some();
+            let ms = t.elapsed().as_secs_f64() * 1000.0;
+            rows.push((ms, fx, name, ok, fields.len()));
+        }
+        rows.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+        for (ms, fx, name, ok, n) in rows {
+            println!("{ms:9.1} ms  {fx:16} {name:16} {}  {n} réglages", if ok { "" } else { "ÉCHEC" });
+        }
     }
 }

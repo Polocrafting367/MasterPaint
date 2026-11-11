@@ -942,6 +942,14 @@ export component FloatWindow inherits Rectangle {
             color: Theme.win98 ? Theme.title-fg : root.grip-on ? Theme.text-inactive : Theme.app-active ? Theme.text : Theme.text-inactive;
             vertical-alignment: center;
             overflow: clip;
+            // fenêtre trop étroite (Outils sur deux colonnes) : pas de titre coupé (« Outi »)
+            visible: ttl-m.preferred-width <= self.width;
+        }
+        ttl-m := Text {
+            visible: false;
+            text: root.title;
+            font-size: root.grip-on ? Theme.small-font-size : Theme.font-size;
+            font-weight: Theme.win98 ? 700 : root.grip-on ? 600 : 400;
         }
         if root.closable && !root.grip-on && !root.ps-tab: CloseButton {
             x: parent.width - self.width - 4px;
@@ -1568,6 +1576,10 @@ export component ToggleButton inherits Rectangle {
 export component RibbonGroup inherits Rectangle {
     in property <string> label;
     in property <bool> classic;
+    /// volet d'un groupe replié : libellés toujours montrés (le ruban, lui, peut les avoir
+    /// retirés faute de place ; sans eux les boutons gardaient la largeur de leur colonne et les
+    /// icônes se décalaient)
+    in property <bool> full;
     /// barre classique : « Libellé : » devant le contenu (non quand le contenu se nomme déjà,
     /// « Lissage : Lissage » ; ni dans un groupe replié, où le bouton porte le nom)
     in property <bool> titled: true;
@@ -1577,7 +1589,9 @@ export component RibbonGroup inherits Rectangle {
     // doublaient les libellés des réglages (« Lissage : Lissage ») ; infobulles et libellés
     // des boutons suffisent
     property <bool> show-label-c: false && root.titled;
-    min-width: classic ? (self.show-label-c ? lbl-c.preferred-width + 4px : 0px) + inner.preferred-width + 12px : max(inner.preferred-width, lbl.preferred-width) + 16px;
+    // largeur minimale du contenu aussi (un bouton à libellé, « Rendu ÷2 », a un minimum plus
+    // grand que sa largeur préférée annoncée : il débordait du groupe)
+    min-width: classic ? (self.show-label-c ? lbl-c.preferred-width + 4px : 0px) + max(inner.preferred-width, inner.min-width) + 12px : max(inner.preferred-width, inner.min-width, lbl.preferred-width) + 16px;
     height: classic ? 32px : 88px;
     lbl-c := Text {
         visible: root.show-label-c;
@@ -1591,6 +1605,10 @@ export component RibbonGroup inherits Rectangle {
     inner := HorizontalLayout {
         x: root.classic ? (root.show-label-c ? lbl-c.preferred-width + 10px : 6px) : 8px;
         y: root.classic ? 3px : 5px;
+        // largeur restante, marge droite comprise : sans elle le contenu prenait toute la largeur
+        // du groupe à partir de x, et les boutons extensibles (colonnes Grille / Hors toile)
+        // passaient de 8 px sous le séparateur
+        width: max(0px, root.width - self.x - (root.classic ? 6px : 8px));
         height: root.classic ? 26px : 60px;
         spacing: 2px;
         @children
@@ -1679,6 +1697,98 @@ export component Segmented inherits Rectangle {
 /// Pied des fenêtres de dialogue (« alvéole » des boutons) : bande un peu plus claire que la
 /// fenêtre, trait en haut, boutons à droite. Un élément `horizontal-stretch: 1` placé avant
 /// les boutons occupe la gauche (texte d'état, case à cocher, boutons secondaires).
+/// Cadran d'angle (degrés, 0 à droite, sens trigonométrique comme Paint.NET) : glisser pour
+/// orienter, molette = un pas, double-clic = valeur par défaut. Aiguille = barre tournée (le
+/// tracé Path de l'ancien cadran était recadré par Slint : aiguille à gauche à 0°, invisible
+/// vers 40°). Plage d'au plus un demi-tour (Redresser ±45°, Linogravure ±90°) : on lit un AXE
+/// (une direction et son opposée se valent), sinon la direction ; hors plage : borne la plus
+/// proche sur le cercle (avant : vers le haut donnait −45 au lieu de +45).
+export component AngleDial inherits Rectangle {
+    in property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 360;
+    in property <float> step: 1;
+    in property <float> default-value;
+    in property <length> size: 22px;
+    callback changed(float);
+    width: root.size;
+    height: root.size;
+    border-radius: root.size / 2;
+    background: Theme.field-bg;
+    border-width: 1px;
+    border-color: ta.pressed ? Theme.accent : (Theme.hover-fx && ta.has-hover) ? Theme.accent-60 : Theme.field-border;
+    // repères discrets 0° / 90° / 180° / 270°
+    for k in 4: Rectangle {
+        x: k == 0 ? root.width - 4px : k == 2 ? 2px : (root.width - 1px) / 2;
+        y: k == 1 ? 2px : k == 3 ? root.height - 4px : (root.height - 1px) / 2;
+        width: k == 0 || k == 2 ? 2px : 1px;
+        height: k == 0 || k == 2 ? 1px : 2px;
+        background: Theme.field-border;
+    }
+    // aiguille : barre de la largeur du cadran tournée autour du centre ; seule la moitié droite
+    // est peinte (vers l'angle)
+    Rectangle {
+        x: 0;
+        y: (root.height - 2px) / 2;
+        width: root.width;
+        height: 2px;
+        transform-rotation: -root.value * 1deg;
+        Rectangle {
+            x: root.width / 2;
+            width: root.width / 2 - 3px;
+            height: 2px;
+            border-radius: 1px;
+            background: Theme.accent;
+        }
+    }
+    Rectangle {
+        width: 5px;
+        height: 5px;
+        border-radius: 2.5px;
+        background: Theme.accent;
+    }
+    function snap(v: float) -> float {
+        let st = root.step > 0 ? root.step : 1;
+        return clamp(round(v / st) * st, root.minimum, root.maximum);
+    }
+    function set-from(px: length, py: length) {
+        let dx = (px - root.width / 2) / 1px;
+        let dy = (root.height / 2 - py) / 1px;
+        if (dx * dx + dy * dy < 4) { return; }
+        let a = atan2(dy, dx) / 1deg;
+        let span = root.maximum - root.minimum;
+        let period = span <= 180.001 ? 180 : 360;
+        // ramène a dans [min, min + période)
+        let b = a - floor((a - root.minimum) / period) * period;
+        if (b <= root.maximum) {
+            root.changed(root.snap(b));
+            return;
+        }
+        // hors plage : borne la plus proche, distance prise sur le cercle
+        let d-max = b - root.maximum;
+        let d-min = root.minimum + period - b;
+        root.changed(root.snap(d-max <= d-min ? root.maximum : root.minimum));
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                root.set-from(self.mouse-x, self.mouse-y);
+            }
+        }
+        moved => {
+            if (self.pressed) { root.set-from(self.mouse-x, self.mouse-y); }
+        }
+        double-clicked => { root.changed(root.default-value); }
+        scroll-event(e) => {
+            if (e.delta-y == 0) { return reject; }
+            let st = root.step > 0 ? max(root.step, 1) : 1;
+            root.changed(root.snap(root.value + (e.delta-y > 0 ? st : -st)));
+            accept
+        }
+    }
+}
+
 export component DialogFooter inherits Rectangle {
     height: 44px;
     background: Theme.footer-bg;

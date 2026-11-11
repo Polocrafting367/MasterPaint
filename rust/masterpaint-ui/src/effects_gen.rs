@@ -157,6 +157,9 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
     ]),
     ("bulge", "Bosse", &[
         Field { id: "ef-bulge", label: "Quantité", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 40.0, def_s: "", options: &[] },
+        Field { id: "ef-bulge-cx", label: "Centre X %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-bulge-cy", label: "Centre Y %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-bulge-r", label: "Rayon %", kind: 0, min: 5.0, max: 200.0, step: 1.0, def: 100.0, def_s: "", options: &[] },
     ]),
     ("dents", "Cabossage", &[
         Field { id: "ef-dent-scale", label: "Échelle", kind: 0, min: 1.0, max: 200.0, step: 1.0, def: 25.0, def_s: "", options: &[] },
@@ -195,6 +198,9 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
     ]),
     ("twist", "Torsion", &[
         Field { id: "ef-twist", label: "Angle", kind: 0, min: -90.0, max: 90.0, step: 1.0, def: 30.0, def_s: "", options: &[] },
+        Field { id: "ef-twist-cx", label: "Centre X %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-twist-cy", label: "Centre Y %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-twist-r", label: "Rayon %", kind: 0, min: 5.0, max: 200.0, step: 1.0, def: 100.0, def_s: "", options: &[] },
         Field { id: "ef-ca", label: "Aberration chromatique", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
         Field { id: "ef-ca-amt", label: "Intensité", kind: 0, min: 1.0, max: 40.0, step: 1.0, def: 8.0, def_s: "", options: &[] },
     ]),
@@ -289,10 +295,12 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
         Field { id: "ef-vhs-dropout_thickness", label: "Épaisseur rayure", kind: 0, min: 1.0, max: 20.0, step: 1.0, def: 2.0, def_s: "", options: &[] },
     ]),
     ("dropshadow", "Ombre portée", &[
-        Field { id: "ef-ds-ox", label: "Décalage X", kind: 0, min: -32.0, max: 32.0, step: 1.0, def: 4.0, def_s: "", options: &[] },
-        Field { id: "ef-ds-oy", label: "Décalage Y", kind: 0, min: -32.0, max: 32.0, step: 1.0, def: 6.0, def_s: "", options: &[] },
-        Field { id: "ef-ds-blur", label: "Flou", kind: 0, min: 0.0, max: 40.0, step: 1.0, def: 10.0, def_s: "", options: &[] },
+        Field { id: "ef-ds-angle", label: "Angle de la lumière", kind: 0, min: -180.0, max: 180.0, step: 1.0, def: 120.0, def_s: "", options: &[] },
+        Field { id: "ef-ds-dist", label: "Distance (px)", kind: 0, min: 0.0, max: 200.0, step: 1.0, def: 7.0, def_s: "", options: &[] },
+        Field { id: "ef-ds-blur", label: "Flou", kind: 0, min: 0.0, max: 100.0, step: 1.0, def: 10.0, def_s: "", options: &[] },
+        Field { id: "ef-ds-spread", label: "Étendue %", kind: 0, min: 0.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
         Field { id: "ef-ds-op", label: "Opacité", kind: 0, min: 5.0, max: 100.0, step: 1.0, def: 45.0, def_s: "", options: &[] },
+        Field { id: "ef-ds-only", label: "Ombre seule (sans l'objet)", kind: 1, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
     ]),
     ("featherobj", "Adoucir le contour de l'objet", &[
         Field { id: "ef-fo-r", label: "Rayon", kind: 0, min: 0.0, max: 20.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
@@ -339,6 +347,10 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
     ("vignette", "Vignette", &[
         Field { id: "ef-vig", label: "Intensité", kind: 0, min: 0.0, max: 100.0, step: 1.0, def: 50.0, def_s: "", options: &[] },
         Field { id: "ef-vig-blend", label: "Fusion", kind: 2, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "0", options: &[("0", "Normal"), ("1", "Produit"), ("2", "Superposition"), ("3", "Incrustation")] },
+        Field { id: "ef-vig-r", label: "Rayon %", kind: 0, min: 10.0, max: 300.0, step: 1.0, def: 100.0, def_s: "", options: &[] },
+        Field { id: "ef-vig-soft", label: "Douceur %", kind: 0, min: 2.0, max: 100.0, step: 1.0, def: 60.0, def_s: "", options: &[] },
+        Field { id: "ef-vig-cx", label: "Centre X %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-vig-cy", label: "Centre Y %", kind: 0, min: -100.0, max: 100.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
     ]),
     ("clouds", "Nuages", &[
         Field { id: "ef-clouds-scale", label: "Échelle", kind: 0, min: 2.0, max: 1000.0, step: 1.0, def: 250.0, def_s: "", options: &[] },
@@ -376,9 +388,13 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
     ]),
     ("edges", "Détection des bords", &[
         Field { id: "ef-edge", label: "Sensibilité", kind: 0, min: 1.0, max: 100.0, step: 1.0, def: 40.0, def_s: "", options: &[] },
+        Field { id: "ef-edge-mode", label: "Mode", kind: 2, min: 0.0, max: 1.0, step: 1.0, def: 0.0, def_s: "0", options: &[("0", "Toutes directions (bords clairs)"), ("1", "Directionnel (Paint.NET)")] },
+        Field { id: "ef-edge-angle", label: "Angle (mode directionnel)", kind: 0, min: -180.0, max: 180.0, step: 1.0, def: 45.0, def_s: "", options: &[] },
     ]),
     ("emboss", "Embosser", &[
         Field { id: "ef-emb-angle", label: "Angle", kind: 0, min: -180.0, max: 180.0, step: 1.0, def: 0.0, def_s: "", options: &[] },
+        Field { id: "ef-emb-height", label: "Hauteur (px)", kind: 0, min: 1.0, max: 20.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+        Field { id: "ef-emb-amt", label: "Quantité %", kind: 0, min: 0.0, max: 500.0, step: 1.0, def: 100.0, def_s: "", options: &[] },
     ]),
     ("outline", "Contour", &[
         Field { id: "ef-ol-thick", label: "Épaisseur", kind: 0, min: 1.0, max: 200.0, step: 1.0, def: 3.0, def_s: "", options: &[] },
@@ -386,6 +402,8 @@ pub const DIALOGS: &[(&str, &str, &[Field])] = &[
     ]),
     ("relief", "Mise en relief", &[
         Field { id: "ef-relief-angle", label: "Angle", kind: 0, min: -180.0, max: 180.0, step: 1.0, def: 45.0, def_s: "", options: &[] },
+        Field { id: "ef-relief-height", label: "Hauteur (px)", kind: 0, min: 1.0, max: 20.0, step: 1.0, def: 1.0, def_s: "", options: &[] },
+        Field { id: "ef-relief-amt", label: "Quantité %", kind: 0, min: 0.0, max: 500.0, step: 1.0, def: 100.0, def_s: "", options: &[] },
     ]),
     ("solarize", "Solariser", &[
         Field { id: "ef-sol", label: "Seuil", kind: 0, min: 0.0, max: 255.0, step: 1.0, def: 128.0, def_s: "", options: &[] },

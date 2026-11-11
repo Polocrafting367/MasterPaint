@@ -180,8 +180,8 @@ msgid "Cadence : animer sur 3"
 msgstr "Cadenza: a passo tre"
 
 #: ui/app.slint:360
-msgid "Interface : mode téléphone (menu ☰, palettes en colonnes)"
-msgstr "Interfaccia: modalità telefono (menu ☰, tavolozze in colonne)"
+msgid "Interface : mode téléphone"
+msgstr "Interfaccia: modalità telefono"
 
 #: ui/app.slint:361
 msgid "Palettes : ancrage fixe (style Adobe)"
@@ -349,11 +349,11 @@ msgstr "Aggiustamenti"
 
 #: ui/app.slint:1055
 msgid "Rendu ÷{}"
-msgstr ""
+msgstr "Rendering ÷{}"
 
 #: ui/app.slint:1055
 msgid "Rendu plein"
-msgstr ""
+msgstr "Rendering a piena risoluzione"
 
 #: ui/app.slint:1067
 msgid "Résolution de rendu de la toile"
@@ -377,7 +377,7 @@ msgstr "Risoluzione rendering tela: piena. Click: ÷2 (÷4 da 4 Mpx, ÷8 da 16 M
 
 #: ui/app.slint:1104
 msgid "Rendu net"
-msgstr ""
+msgstr "Resa nitida"
 
 #: ui/app.slint:1106
 msgid "Rendre maintenant"
@@ -889,7 +889,7 @@ msgstr "Impostazioni"
 
 #: ui/app.slint:3941
 msgid "Fermer ce projet"
-msgstr ""
+msgstr "Chiudi questo progetto"
 
 #: ui/app.slint:3963
 msgid "Photo Pro"
@@ -897,7 +897,7 @@ msgstr "Foto professionale"
 
 #: ui/app.slint:3965
 msgid "Rouvrir le Mode Photo Pro : la pellicule et ses réglages sont gardés"
-msgstr ""
+msgstr "Riapri la modalità foto Pro: il rullino e le sue impostazioni vengono mantenute"
 
 #: ui/app.slint:3986
 msgid "Projets précédents"
@@ -1065,11 +1065,11 @@ msgstr "Linea temporale"
 
 #: ui/app.slint:5501
 msgid "Couleur secondaire : cliquer pour la choisir"
-msgstr ""
+msgstr "Colore secondario: fare clic per sceglierlo"
 
 #: ui/app.slint:5510
 msgid "Couleur principale : cliquer pour la choisir"
-msgstr ""
+msgstr "Colore principale: clicca per sceglierlo"
 
 #: ui/app.slint:5520
 msgid "Échanger les couleurs principale et secondaire"
@@ -1085,11 +1085,11 @@ msgstr "Mostra/nascondi livello"
 
 #: ui/app.slint:5965
 msgid "Déplier le dossier"
-msgstr ""
+msgstr "Espandi la cartella"
 
 #: ui/app.slint:5965
 msgid "Replier le dossier"
-msgstr ""
+msgstr "Piega la cartella"
 
 #: ui/app.slint:6040
 msgid "Calque verrouillé — cliquer pour le déverrouiller"
@@ -2017,23 +2017,23 @@ msgstr "Apre il progetto di esempio MasterPaint (livelli, effetti) in una nuova 
 
 #: ui/app.slint:7503
 msgid "Exporter les photos"
-msgstr ""
+msgstr "Esporta foto"
 
 #: ui/app.slint:7507
 msgid "Photos"
-msgstr ""
+msgstr "Immagini"
 
 #: ui/app.slint:7509
 msgid "Cette photo"
-msgstr ""
+msgstr "Questa foto"
 
 #: ui/app.slint:7509
 msgid "Toutes les photos"
-msgstr ""
+msgstr "Tutte le foto"
 
 #: ui/app.slint:7512
 msgid "Exporter la photo affichée ou toute la pellicule"
-msgstr ""
+msgstr "Esporta la foto visualizzata o l'intero rullino fotografico"
 
 #: ui/app.slint:7514
 msgid "Format"
@@ -2053,7 +2053,7 @@ msgstr "TIFF a 16 bit"
 
 #: ui/app.slint:7519
 msgid "JPEG : léger, partout ; PNG / TIFF 16 bits : sans perte, pour retoucher encore"
-msgstr ""
+msgstr "JPEG: luce, ovunque; PNG / TIFF a 16 bit: senza perdita di dati, per ulteriori modifiche"
 
 #: ui/app.slint:7523
 msgid "Qualité JPEG"
@@ -2061,7 +2061,7 @@ msgstr "Qualità JPEG"
 
 #: ui/app.slint:7524
 msgid "Qualité JPEG : 92 est un bon équilibre entre poids et finesse"
-msgstr ""
+msgstr "Qualità JPEG: 92 è un buon equilibrio tra peso e finezza"
 
 #: ui/app.slint:7528
 msgid "Originale"
@@ -2069,7 +2069,7 @@ msgstr "Originale"
 
 #: ui/app.slint:7531
 msgid "Plus grand côté de l'image exportée (jamais agrandie)"
-msgstr ""
+msgstr "Lato più grande dell'immagine esportata (mai ingrandita)"
 
 #: ui/app.slint:7539
 msgid "Exporter"
@@ -2281,7 +2281,7 @@ msgstr "Ancoraggio"
 
 #: ui/app.slint:8306
 msgid "Ancrage : l'image reste collée de ce côté quand la toile change de taille"
-msgstr ""
+msgstr "Ancoraggio: l'immagine rimane bloccata su questo lato quando la tela cambia dimensione"
 
 #: ui/app.slint:8512
 msgid "Libre"
@@ -2757,19 +2757,19 @@ msgstr "Alfa"
 
 #: ui/colors.slint:444
 msgid "Pipette : prendre une couleur sur l'image"
-msgstr ""
+msgstr "Contagocce: prendi un colore dall'immagine"
 
 #: ui/colors.slint:478
 msgid "Ajouter la couleur active au nuancier"
-msgstr ""
+msgstr "Aggiungi il colore attivo alla cartella colori"
 
 #: ui/colors.slint:623
 msgid "Afficher la roue des couleurs"
-msgstr ""
+msgstr "Mostra la ruota dei colori"
 
 #: ui/colors.slint:623
 msgid "Afficher le carré des couleurs"
-msgstr ""
+msgstr "Mostra il quadrato colorato"
 
 #: ui/colors.slint:631
 msgid "<< Moins"
@@ -2841,7 +2841,7 @@ msgstr "Cancella contenuto selezione (Elimina)"
 
 #: ui/generated.slint:36
 msgid "Main : déplacer la vue (aussi : Espace + glisser)"
-msgstr ""
+msgstr "Mano: sposta la vista (anche: Spazio + trascinamento)"
 
 #: ui/generated.slint:39
 msgid "Nouveau document…"
@@ -4195,97 +4195,97 @@ msgstr "Inverso"
 msgid "N&B"
 msgstr "Bianco e nero"
 
-#: ui/photo.slint:297
+#: ui/photo.slint:299
 msgid "Auto : réglage automatique de cette section seulement (retrouve les valeurs calculées après des retouches à la main)"
 msgstr "Auto: regolazione automatica solo di questa sezione (trova i valori calcolati dopo le regolazioni manuali)"
 
-#: ui/photo.slint:319
+#: ui/photo.slint:321
 msgid "Remettre les réglages de cette section à zéro"
-msgstr ""
+msgstr "Ripristina le impostazioni in questa sezione"
 
-#: ui/photo.slint:547
+#: ui/photo.slint:549
 msgid "Mode Photo Pro"
 msgstr "Modalità foto professionale"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Bibliothèque"
 msgstr "Biblioteca"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Développement"
 msgstr "Sviluppo"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Masque"
 msgstr "Maschera"
 
-#: ui/photo.slint:580
+#: ui/photo.slint:582
 msgid "Annuler le dernier réglage de cette photo (Ctrl+Z)"
-msgstr ""
+msgstr "Annulla l'ultima modifica di questa foto (Ctrl+Z)"
 
-#: ui/photo.slint:587
+#: ui/photo.slint:589
 msgid "Rétablir (Ctrl+Y)"
-msgstr ""
+msgstr "Ripeti (Ctrl+Y)"
 
-#: ui/photo.slint:592
+#: ui/photo.slint:594
 msgid "Importer photos"
 msgstr "Importa foto"
 
-#: ui/photo.slint:593
+#: ui/photo.slint:595
 msgid "Importer des photos dans la pellicule (JPEG, PNG, RAW…)"
 msgstr "Importa foto nel rullino fotografico (JPEG, PNG, RAW...)"
 
-#: ui/photo.slint:601
+#: ui/photo.slint:603
 msgid "Ouvrir la photo réglée dans l'éditeur MasterPaint"
 msgstr "Apri la foto modificata nell'editor MasterPaint"
 
-#: ui/photo.slint:612
+#: ui/photo.slint:614
 msgid "Exporter la photo : JPEG, PNG ou TIFF 16 bits"
 msgstr "Esporta foto: JPEG, PNG o TIFF a 16 bit"
 
-#: ui/photo.slint:632
+#: ui/photo.slint:634
 msgid "JPEG (8 bits)"
 msgstr "JPEG (8 bit)"
 
-#: ui/photo.slint:645
+#: ui/photo.slint:647
 msgid "Appliquer à toutes"
 msgstr "Applica a tutti"
 
-#: ui/photo.slint:646
+#: ui/photo.slint:648
 msgid "Appliquer les réglages et le filtre de cette photo à toutes les photos de la pellicule"
 msgstr "Applica le regolazioni e filtra da questa foto a tutte le foto nel rullino fotografico"
 
-#: ui/photo.slint:655
+#: ui/photo.slint:657
 msgid "Auto sur toutes"
 msgstr "Automatico su tutto"
 
-#: ui/photo.slint:656
+#: ui/photo.slint:658
 msgid "Réglage automatique de chaque photo d'après sa scène (portrait, paysage, nuit…)"
 msgstr "Regolazione automatica di ciascuna foto in base alla scena (ritratto, paesaggio, notte, ecc.)"
 
-#: ui/photo.slint:666
+#: ui/photo.slint:668
 msgid "Réduire : revenir à l'éditeur, la pellicule et ses réglages restent (onglet Photo Pro pour revenir)"
-msgstr ""
+msgstr "Riduci: torna all'editor, il rullino e le sue impostazioni rimangono (scheda Pro Photo per tornare)"
 
-#: ui/photo.slint:672
+#: ui/photo.slint:674
 msgid "Fermer le Mode Photo Pro (la pellicule et ses réglages sont gardés)"
 msgstr "Chiudi la modalità foto professionale (il rullino e le sue impostazioni vengono mantenute)"
 
 #: ui/photo.slint:850
 msgid "Départ : effet entier"
-msgstr ""
+msgstr "Inizio: effetto completo"
 
 #: ui/photo.slint:850
 msgid "Arrivée : plus d'effet"
-msgstr ""
+msgstr "Fine: nessun effetto"
 
 #: ui/photo.slint:850
 msgid "Centre : déplacer l'ellipse"
-msgstr ""
+msgstr "Centro: sposta l'ellisse"
 
 #: ui/photo.slint:850
 msgid "Bord : largeur ou hauteur"
-msgstr ""
+msgstr "Bordo: larghezza o altezza"
 
 #: ui/photo.slint:970
 msgid "Redresser (°)"
@@ -4333,7 +4333,7 @@ msgstr "Confronta con l'originale: impostazioni visualizzate (ON) o foto origina
 
 #: ui/photo.slint:1244
 msgid "Retirer cette photo de la pellicule"
-msgstr ""
+msgstr "Rimuovi questa foto dal rullino fotografico"
 
 #: ui/photo.slint:1268
 msgid "NAVIGATEUR"
@@ -4345,23 +4345,23 @@ msgstr "PRESET"
 
 #: ui/photo.slint:1418
 msgid "MASQUES"
-msgstr ""
+msgstr "MASCHERE"
 
 #: ui/photo.slint:1426
 msgid "Ajouter un masque : ses réglages ne touchent que la zone choisie."
-msgstr ""
+msgstr "Aggiungi una maschera: le sue impostazioni influenzano solo l'area scelta."
 
 #: ui/photo.slint:1432
 msgid "Dégradé linéaire : effet entier d'un côté, nul de l'autre (ciel, premier plan)"
-msgstr ""
+msgstr "Gradiente lineare: effetto completo da un lato, zero dall'altro (cielo, primo piano)"
 
 #: ui/photo.slint:1433
 msgid "Dégradé radial : une ellipse au contour progressif (visage, sujet)"
-msgstr ""
+msgstr "Gradiente radiale: un’ellisse con bordo sfumato (viso, soggetto)"
 
 #: ui/photo.slint:1434
 msgid "Pinceau : peignez la zone sur la photo (gomme pour retirer)"
-msgstr ""
+msgstr "Pennello: dipingi l'area della foto (gomma per rimuovere)"
 
 #: ui/photo.slint:1435
 msgid "Luminance"
@@ -4369,83 +4369,83 @@ msgstr "Luminanza"
 
 #: ui/photo.slint:1435
 msgid "Plage de luminance : les zones claires ou sombres de la photo"
-msgstr ""
+msgstr "Intervallo di luminanza: le aree chiare o scure della foto"
 
 #: ui/photo.slint:1436
 msgid "Plage de couleur : cliquez sur une couleur de la photo"
-msgstr ""
+msgstr "Gamma colori: clicca su un colore nella foto"
 
 #: ui/photo.slint:1437
 msgid "Ciel : sélection automatique des zones claires et bleutées du haut"
-msgstr ""
+msgstr "Cielo: selezione automatica delle zone luminose e bluastre in alto"
 
 #: ui/photo.slint:1438
 msgid "Sujet"
-msgstr ""
+msgstr "Soggetto"
 
 #: ui/photo.slint:1438
 msgid "Sujet : sélection automatique du centre contrasté de la photo"
-msgstr ""
+msgstr "Soggetto: selezione automatica del centro contrastato della foto"
 
 #: ui/photo.slint:1439
 msgid "Arrière-plan : tout sauf le sujet"
-msgstr ""
+msgstr "Sfondo: tutto tranne il soggetto"
 
 #: ui/photo.slint:1466
 msgid "Afficher / masquer l'effet de ce masque"
-msgstr ""
+msgstr "Mostra / nascondi l’effetto di questa maschera"
 
 #: ui/photo.slint:1475
 msgid " (inversé)"
-msgstr ""
+msgstr " (invertito)"
 
 #: ui/photo.slint:1482
 msgid "Inverser le masque (l'effet passe de l'autre côté)"
-msgstr ""
+msgstr "Inverti maschera (l’effetto passa all’altro lato)"
 
 #: ui/photo.slint:1483
 msgid "Dupliquer le masque"
-msgstr ""
+msgstr "Duplica maschera"
 
 #: ui/photo.slint:1484
 msgid "Supprimer le masque"
-msgstr ""
+msgstr "Elimina maschera"
 
 #: ui/photo.slint:1496
 msgid "Aucun masque pour cette photo."
-msgstr ""
+msgstr "Nessuna maschera per questa foto."
 
 #: ui/photo.slint:1519
 msgid "Voir le masque"
-msgstr ""
+msgstr "Mostra maschera"
 
 #: ui/photo.slint:1521
 msgid "Voile rouge sur la zone du masque"
-msgstr ""
+msgstr "Sovrapposizione rossa sull’area della maschera"
 
 #: ui/photo.slint:1526
 msgid "Glissez les deux poignées sur la photo : effet entier au point plein, nul au point creux."
-msgstr ""
+msgstr "Trascina le due maniglie sulla foto: effetto pieno al punto pieno, zero al punto vuoto."
 
 #: ui/photo.slint:1527
 msgid "Glissez le centre et les deux bords de l'ellipse sur la photo."
-msgstr ""
+msgstr "Trascina il centro ed entrambi i bordi dell'ellisse sulla foto."
 
 #: ui/photo.slint:1528
 msgid "Peignez la zone sur la photo ; « Gomme » pour en retirer."
-msgstr ""
+msgstr "Dipingi l'area nella foto; “Gomma” per rimuoverlo."
 
 #: ui/photo.slint:1529
 msgid "Cliquez (ou glissez) sur la photo pour choisir la couleur."
-msgstr ""
+msgstr "Clicca (o trascina) sulla foto per scegliere il colore."
 
 #: ui/photo.slint:1530
 msgid "Choisissez la plage de luminance touchée."
-msgstr ""
+msgstr "Scegli l'intervallo di luminanza interessato."
 
 #: ui/photo.slint:1531
 msgid "Sélection automatique d'après la photo ; affinez avec « Inverser » et la quantité."
-msgstr ""
+msgstr "Selezione automatica in base alla foto; perfezionare con \"Inverti\" e quantità."
 
 #: ui/photo.slint:1537
 msgid "Quantité"
@@ -4457,35 +4457,35 @@ msgstr "Sfuma selezione"
 
 #: ui/photo.slint:1555
 msgid "Angle (°)"
-msgstr ""
+msgstr "Angolo (°)"
 
 #: ui/photo.slint:1563
 msgid "Taille du pinceau (%)"
-msgstr ""
+msgstr "Misura pennello (%)"
 
 #: ui/photo.slint:1579
 msgid "Flux"
-msgstr ""
+msgstr "Flusso"
 
 #: ui/photo.slint:1595
 msgid "Gomme : retirer de la zone peinte"
-msgstr ""
+msgstr "Gomma: rimuove dall'area dipinta"
 
 #: ui/photo.slint:1602
 msgid "Tout effacer"
-msgstr ""
+msgstr "Cancella tutto"
 
 #: ui/photo.slint:1604
 msgid "Effacer tous les traits de ce masque"
-msgstr ""
+msgstr "Cancella tutti i tratti di questa maschera"
 
 #: ui/photo.slint:1609
 msgid "Luminance basse"
-msgstr ""
+msgstr "Bassa luminanza"
 
 #: ui/photo.slint:1617
 msgid "Luminance haute"
-msgstr ""
+msgstr "Alta luminanza"
 
 #: ui/photo.slint:1626
 msgid "Transition"
@@ -4493,11 +4493,11 @@ msgstr "Transizione"
 
 #: ui/photo.slint:1644
 msgid "Couleur choisie"
-msgstr ""
+msgstr "Colore selezionato"
 
 #: ui/photo.slint:1657
 msgid "RÉGLAGES DU MASQUE"
-msgstr ""
+msgstr "IMPOSTAZIONI MASCHERA"
 
 #: ui/photo.slint:1666
 msgid "Exposition"
@@ -4537,7 +4537,7 @@ msgstr "Nitidezza (nitido)"
 
 #: ui/photo.slint:1672
 msgid "Réduction du bruit"
-msgstr ""
+msgstr "Riduzione del rumore"
 
 #: ui/photo.slint:1687
 msgid "FILTRES & RESET"
@@ -4547,123 +4547,123 @@ msgstr "FILTRI E RESET"
 msgid "Le filtre s'ajoute à vos réglages : sa part est montrée sur les curseurs."
 msgstr "Il filtro viene aggiunto alle tue impostazioni: la sua parte viene mostrata sugli slider."
 
-#: ui/photo.slint:1789
+#: ui/photo.slint:1790
 msgid "Tourner la photo d'un quart de tour vers la droite"
 msgstr "Ruota la foto di un quarto di giro verso destra"
 
-#: ui/photo.slint:1800
+#: ui/photo.slint:1801
 msgid "Recadrer et redresser la photo (cadre et poignées sur l'image)"
 msgstr "Ritaglia e raddrizza la foto (cornice e maniglie sull'immagine)"
 
-#: ui/photo.slint:1814
+#: ui/photo.slint:1815
 msgid "Auto"
 msgstr "Automatico"
 
-#: ui/photo.slint:1816
+#: ui/photo.slint:1817
 msgid "Réglage automatique de toute la photo d'après sa scène (sous le filtre éventuel)"
 msgstr "Regolazione automatica dell'intera foto in base alla scena (sotto qualsiasi filtro)"
 
-#: ui/photo.slint:1827
+#: ui/photo.slint:1828
 msgid "Remettre tous les réglages à zéro et retirer le filtre"
 msgstr "Ripristina tutte le impostazioni e rimuovi il filtro"
 
-#: ui/photo.slint:1836
+#: ui/photo.slint:1837
 msgid "LUMIÈRE"
 msgstr "LUCE"
 
-#: ui/photo.slint:1840
+#: ui/photo.slint:1841
 msgid "COULEUR ET SATURATION"
 msgstr "COLORE E SATURAZIONE"
 
-#: ui/photo.slint:1842
+#: ui/photo.slint:1843
 msgid "Vibrance"
 msgstr "Vividezza"
 
-#: ui/photo.slint:1843
+#: ui/photo.slint:1844
 msgid "PRÉSENCE ET DÉTAIL"
 msgstr "PRESENZA E DETTAGLIO"
 
-#: ui/photo.slint:1845
+#: ui/photo.slint:1846
 msgid "Vignettage"
 msgstr "Vignettatura"
 
-#: ui/photo.slint:1846
+#: ui/photo.slint:1847
 msgid "Grain film"
 msgstr "Grana della pellicola"
 
-#: ui/photo.slint:1846
+#: ui/photo.slint:1847
 msgid "Piqué du grain"
 msgstr "Immersione nel grano"
 
-#: ui/photo.slint:1847
+#: ui/photo.slint:1848
 msgid "Réduction du bruit (luminance)"
 msgstr "Riduzione del rumore (luminanza)"
 
-#: ui/photo.slint:1847
+#: ui/photo.slint:1848
 msgid "Réduction du bruit (couleur)"
 msgstr "Riduzione del rumore (colore)"
 
-#: ui/photo.slint:1848
+#: ui/photo.slint:1849
 msgid "COLOR GRADING (RVB)"
 msgstr "CLASSIFICAZIONE DEL COLORE (RGB)"
 
-#: ui/photo.slint:1849
+#: ui/photo.slint:1850
 msgid "Rouge — hautes lumières"
 msgstr "Rosso: evidenziazioni"
 
-#: ui/photo.slint:1849
+#: ui/photo.slint:1850
 msgid "Rouge — ombres"
 msgstr "Rosso: ombre"
 
-#: ui/photo.slint:1850
+#: ui/photo.slint:1851
 msgid "Vert — hautes lumières"
 msgstr "Verde: evidenziazioni"
 
-#: ui/photo.slint:1850
+#: ui/photo.slint:1851
 msgid "Vert — ombres"
 msgstr "Verde: ombre"
 
-#: ui/photo.slint:1851
+#: ui/photo.slint:1852
 msgid "Bleu — hautes lumières"
 msgstr "Blu: punti salienti"
 
-#: ui/photo.slint:1851
+#: ui/photo.slint:1852
 msgid "Bleu — ombres"
 msgstr "Blu: ombre"
 
-#: ui/photo.slint:1888
+#: ui/photo.slint:1889
 msgid "MÉLANGEUR DE COULEURS (TSL)"
 msgstr "MISCELATORE COLORI (TSL)"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Rouges"
 msgstr "Rossi"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Oranges"
 msgstr "Arance"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Jaunes"
 msgstr "Gialli"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Verts"
 msgstr "Verdi"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Aquas"
 msgstr "Acqua"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Bleus"
 msgstr "Blu"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Violets"
 msgstr "Viole"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Magentas"
 msgstr "Magenta"
 
@@ -8424,7 +8424,7 @@ msgid "Sélectionner l'opacité du calque"
 msgstr "Seleziona l'opacità del livello"
 
 #: src/lib.rs:8286
-msgid "Rotation de 90° dans le sens horaire"
+msgid "Rotation de 90° horaire"
 msgstr "Ruota di 90° in senso orario"
 
 #: src/lib.rs:8286
@@ -8432,7 +8432,7 @@ msgid "Ctrl+H"
 msgstr "Ctrl+H"
 
 #: src/lib.rs:8287
-msgid "Rotation de 90° dans le sens antihoraire"
+msgid "Rotation de 90° antihoraire"
 msgstr "Ruota di 90° in senso antiorario"
 
 #: src/lib.rs:8287
@@ -8741,7 +8741,7 @@ msgstr "Non aprire il file."
 
 #: src/lib.rs:9276
 msgid "Photo Pro : {photos} photo(s) retrouvée(s) avec leurs réglages (onglet Photo Pro)"
-msgstr ""
+msgstr "Foto Pro: foto {photos} trovate con le relative impostazioni (scheda Foto Pro)"
 
 #: src/lib.rs:9289
 msgid "Photo ouverte dans le Mode Photo Pro"
@@ -8777,7 +8777,7 @@ msgstr "Esporta come TIFF a 16 bit..."
 
 #: src/lib.rs:9387
 msgid "Réduire (garder la pellicule)"
-msgstr ""
+msgstr "Riduci a icona (mantieni il rullino)"
 
 #: src/lib.rs:9388
 msgid "Fermer le Mode Photo Pro"
@@ -8933,19 +8933,19 @@ msgstr "Modalità leggera attiva (Impostazioni › Prestazioni)"
 
 #: src/photo.rs:107
 msgid "Dégradé linéaire"
-msgstr ""
+msgstr "Gradiente lineare"
 
 #: src/photo.rs:108
 msgid "Dégradé radial"
-msgstr ""
+msgstr "Gradiente radiale"
 
 #: src/photo.rs:110
 msgid "Plage de luminance"
-msgstr ""
+msgstr "Intervallo di luminanza"
 
 #: src/photo.rs:111
 msgid "Plage de couleur"
-msgstr ""
+msgstr "Gamma colori"
 
 #: src/ral_gen.rs:6
 msgid "RAL 1000"

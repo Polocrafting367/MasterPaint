@@ -32,6 +32,7 @@ mod fx_dynamic;
 mod fx_halftone;
 mod fx_camraw;
 mod fx_camraw_masks;
+mod fx_creative;
 mod fx_render;
 mod fx_stylize;
 
@@ -79,6 +80,8 @@ pub const EFFECTS: &[&str] = &[
     "dream", "removedust", "gridcheck", "fadeedge", "coloraccent", "transparency", "featherobj", "pastel",
     // Effets lourds portés depuis le JavaScript
     "vhs", "chroma", "dynstage", "halftone", "cameraraw",
+    // Effets créatifs (fx_creative) : ajoutés à la fin, les numéros des autres ne bougent pas
+    "linocut", "hexmosaic", "pointillism", "stainedglass", "ordereddither", "spherize", "swirlwaves",
 ];
 
 /// Effets qui calculent l'image entière à chaque appel (passes globales, hasard séquentiel) :
@@ -108,6 +111,13 @@ pub fn apply(id: u32, src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) -> 
         return true;
     }
     match EFFECTS.get(id as usize).copied().unwrap_or("") {
+        "linocut" => fx_creative::linocut(src, dst, y0, y1, p),
+        "hexmosaic" => fx_creative::hex_mosaic(src, dst, y0, y1, p),
+        "pointillism" => fx_creative::pointillism(src, dst, y0, y1, p),
+        "stainedglass" => fx_creative::stained_glass(src, dst, y0, y1, p),
+        "ordereddither" => fx_creative::ordered_dither(src, dst, y0, y1, p),
+        "spherize" => fx_creative::spherize(src, dst, y0, y1, p),
+        "swirlwaves" => fx_creative::swirl_waves(src, dst, y0, y1, p),
         "brightness" => a::brightness(src, dst, y0, y1, p),
         "grayscale" => a::grayscale(src, dst, y0, y1, p),
         "invert" => a::invert(src, dst, y0, y1, p),
@@ -244,6 +254,16 @@ pub fn camera_raw16(src8: Option<&[u8]>, lin: Option<&[f32]>, w: usize, h: usize
 
 /// Alpha (0..255, `w` × `h`) du masque `mask` des réglages `params` (Photo Pro), lu sur
 /// l'image affichée `rgba8` (plages de luminance, de couleur…) : voile rouge de l'onglet Masque.
+/// Sélection automatique (6 ciel, 7 sujet, 8 arrière-plan) d'une image RVBA 8 bits : alpha 0..255.
+pub fn auto_mask_alpha(kind: u32, rgba8: &[u8], w: usize, h: usize, feather: f32, grow: f32) -> Vec<u8> {
+    fx_camraw_masks::auto_alpha(kind, rgba8, w, h, feather, grow)
+}
+
+/// Flottants d'une carte d'octets jointe aux réglages d'un masque (trois octets par flottant).
+pub fn pack_mask_bytes(b: &[u8]) -> Vec<f32> {
+    fx_camraw_masks::pack_bytes(b)
+}
+
 pub fn camera_raw_mask_alpha(params: &[f32], mask: usize, w: usize, h: usize, rgba8: &[u8]) -> Option<Vec<u8>> {
     if rgba8.len() < w * h * 4 {
         return None;

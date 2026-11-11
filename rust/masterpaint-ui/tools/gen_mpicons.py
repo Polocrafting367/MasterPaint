@@ -381,7 +381,10 @@ for _k, _v in REUSE.items():
 # icônes ajoutées (boutons, mode téléphone, Paramètres, Couleurs…) : à la suite, pour ne pas
 # décaler les rangs déjà utilisés (welcome.slint s'en sert)
 ICONS.update({
-    'render-low': framed('render-low', 3, 3, 18, 18, 2, R(3, 3, 9, 9, 0, 'f') + R(12, 12, 4.5, 4.5, 0, 'f', .5) + R(16.5, 16.5, 4.5, 4.5, 0, 'f', .5)),
+    # rendu réduit : l'image de la toile en gros pixels (colline crénelée), lisible comme
+    # « affichage moins fin » (l'ancienne, carrés dans un coin, ne disait rien)
+    'render-low': framed('render-low', 3, 3, 18, 18, 2, R(4.5, 15, 4.5, 4.5, 0, 'f') + R(9, 10.5, 4.5, 4.5, 0, 'f') + R(13.5, 6, 4.5, 4.5, 0, 'f')
+                         + R(9, 15, 4.5, 4.5, 0, 'f', .55) + R(13.5, 10.5, 4.5, 4.5, 0, 'f', .55) + R(13.5, 15, 4.5, 4.5, 0, 'f', .3)),
     'render-now': R(3, 3, 18, 18, 2) + P('M9.5 7.5v9l7-4.5z', 'f'),
     'menu': P('M4 6h16M4 18h16') + P('M4 12h16', 'a'),
     'bug': R(7, 9, 10, 12, 5, 'fo') + C(12, 6.5, 2.6, 's') + P('M12 11.5v8.5', w=1.5)
@@ -429,6 +432,46 @@ ICONS.update({
     'fx': P('M4 20l8-8', w=2.6) + P('M12 12l2.8-2.8', 'a', w=2.6) + star(17.5, 6.5, 4.2) + star(7, 6, 2.6) + star(18.5, 16.5, 2.4),
     'grad-conic': P('M12 12V3.5a8.5 8.5 0 0 1 8.5 8.5z', 'f') + P('M12 12l-6 6', 'a', w=2.4) + C(12, 12, 8.5),
 })
+
+def hexagon(cx, cy, r):
+    """hexagone pointe en haut (Mosaïque)"""
+    pts = [(cx + r * math.cos(math.radians(90 + 60 * k)), cy - r * math.sin(math.radians(90 + 60 * k))) for k in range(6)]
+    return 'M' + 'L'.join(f'{x:.2f} {y:.2f}' for x, y in pts) + 'z'
+
+
+# matrice de Bayer 4 × 4 (Tramage ordonné : densité croissante de gauche à droite)
+_BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+# effets ajoutés le 2026-11-11 (Artistique, Déformer) : à la suite, rangs existants inchangés
+ICONS.update({
+    # vitrail : fenêtre en ogive, verres de teintes différentes, plombs au trait
+    'stained-glass': P('M12 3.5a7 7 0 0 0-7 7V13h7z', 'f', .75) + P('M12 3.5a7 7 0 0 1 7 7V13h-7z', 'f', .45)
+                     + P('M5 13h7v8H5z', 'f', .2) + P('M12 13h7v8h-7z', 'f', .55)
+                     + P('M5 21V10.5a7 7 0 0 1 14 0V21z') + P('M12 3.5V21M5 13h14M5 17.5l7-4.5 7 4.5', w=1.5),
+    # mosaïque : tesselles hexagonales séparées par des joints clairs (pleines, moyennes, pâles)
+    'hex-mosaic': ''.join(P(hexagon(cx, cy, 3.35), 'f', op)
+                          for (cx, cy), op in (((12, 12), 1), ((5.25, 12), .55), ((18.75, 12), .2), ((8.6, 6.1), .2),
+                                               ((15.4, 6.1), 1), ((8.6, 17.9), 1), ((15.4, 17.9), .55))),
+    # linogravure : plaque gravée de tailles obliques plus ou moins larges
+    'linocut': framed('linocut', 3, 3, 18, 18, 2, P('M3 9.5 9.5 3M3 15 15 3', 'a', w=3.2) + P('M3 20.5 20.5 3', 'a', w=2.4)
+                      + P('M8.5 21 21 8.5M14 21l7-7', 'a', w=1.5)),
+    # pointillisme : touches rondes de tailles et teintes variées
+    'pointillism': ''.join(C(x, y, r, 'f', op) for x, y, r, op in
+                           ((7, 7, 2.6, 1), (13, 5.5, 2, .45), (18, 8.5, 2.4, .75), (5.5, 13.5, 2, .2), (11.5, 11.5, 2.8, .55),
+                            (17.5, 14.5, 2.2, 1), (8, 18.5, 2.4, .75), (14, 18.5, 2, .2), (19.5, 19.5, 1.4, .45))),
+    # tramage ordonné : trame de Bayer 6 × 6, de plus en plus dense vers la droite
+    'ordered-dither': framed('ordered-dither', 3, 3, 18, 18, 1, ''.join(R(3 + 3 * i, 3 + 3 * j, 3, 3, 0, 'f')
+                                                                       for i in range(6) for j in range(6) if _BAYER4[j % 4][i % 4] < (i + 0.7) * 16 / 6)),
+    # sphériser : quadrillage bombé dans un cercle
+    'spherize': C(12, 12, 8.5) + P('M12 3.5c-4.5 3-4.5 14 0 17M12 3.5c4.5 3 4.5 14 0 17', 'a', w=1.6)
+                + P('M4.2 8.5c5 2.2 10.6 2.2 15.6 0M4.2 15.5c5-2.2 10.6-2.2 15.6 0', w=1.5) + P('M3.5 12h17', w=1.5),
+    # vagues tourbillonnantes : deux ondes et une spirale d'accent au centre
+    'swirl-waves': P('M3 5.5c3-2.5 6 2.5 9 0s6 2.5 9 0M3 19.5c3-2.5 6 2.5 9 0s6 2.5 9 0')
+                   + P('M' + 'L'.join(f'{12 + (0.8 + 4.4 * t) * math.cos(t * 2 * math.pi * 1.25):.2f} '
+                                      f'{12.5 + (0.8 + 4.4 * t) * math.sin(t * 2 * math.pi * 1.25):.2f}'
+                                      for t in [k / 40 for k in range(41)]), 'a', w=1.8),
+})
+
 # reprises du sprite pour des icônes ajoutées ci-dessus (même rang)
 for _k, _v in {'unlock': 'svg-obj-unlocked', 'trash-can': 'svg-obj-delete'}.items():
     ICONS[_k] = S(_v)
@@ -500,8 +543,14 @@ MENU.update({
     'Déverrouiller le calque': 'unlock', 'Pixelliser le calque': 'pixelate', 'Répéter le dernier effet': 'repeat',
     'Signaler un bug': 'bug', 'Effacer': 'trash', 'Grille': 'grid', 'Aimantation': 'magnet',
     'Palettes volantes (Paint.NET)': 'layout', 'Palettes : ancrage fixe (style Adobe)': 'layout',
-    'Interface : mode téléphone (menu ☰, palettes en colonnes)': 'phone', 'Préréglages créatifs': 'gallery',
+    'Interface : mode téléphone': 'phone', 'Préréglages créatifs': 'gallery',
     'Supprimer le calque': 'layer-delete',
+})
+
+# effets ajoutés le 2026-11-11
+MENU.update({
+    'Linogravure…': 'linocut', 'Pointillisme…': 'pointillism', 'Vitrail…': 'stained-glass', 'Mosaïque…': 'hex-mosaic',
+    'Tramage ordonné…': 'ordered-dither', 'Sphériser…': 'spherize', 'Vagues tourbillonnantes…': 'swirl-waves',
 })
 
 # glyphes Font Awesome sans ambiguïté → icône (boutons, menus, mode téléphone, Paramètres…)
@@ -597,6 +646,10 @@ def main():
             re.findall(r'<symbol\s+id="illu-icon-([a-z0-9-]+)"([^>]*)>(.*?)</symbol>', src, re.S)}
     source_dir = os.path.join(CRATE, 'icon-packs', 'masterpaint', 'source', 'masterpaint')
     os.makedirs(source_dir, exist_ok=True)
+    hand_file = os.path.join(source_dir, 'FAIT-MAIN.txt')
+    hand_made = set()
+    if os.path.exists(hand_file):
+        hand_made = {l.strip() for l in open(hand_file, encoding='utf-8') if l.strip() and not l.startswith('#')}
     rs = ['// Fichier généré par tools/gen_mpicons.py — sources SVG visibles dans icon-packs/masterpaint/source/masterpaint/.',
           '/// Icônes maison (nom, modèle SVG au style du sprite) ; index = position dans `MpIcons.images`.',
           'pub const MP_ICONS: &[(&str, &str)] = &[']
@@ -605,7 +658,13 @@ def main():
         attrs, inner = syms[sid]
         vb = re.search(r'viewBox="([^"]+)"', attrs)
         svg = template(vb.group(1) if vb else '0 0 16 16', inner)
-        with open(os.path.join(source_dir, n + '.svg'), 'w', encoding='utf-8') as f: f.write('<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->\n' + svg + '\n')
+        # icône retouchée à la main dans le dossier (FAIT-MAIN.txt) : jamais réécrite (le
+        # 2026-11-11, une régénération avait remis l'ancien dessin de « magnet » et « shapes »)
+        path = os.path.join(source_dir, n + '.svg')
+        if n in hand_made and os.path.exists(path):
+            rs.append('    ("{}", include_str!("../icon-packs/masterpaint/source/masterpaint/{}.svg")),'.format(n, n))
+            continue
+        with open(path, 'w', encoding='utf-8') as f: f.write('<!-- MasterPaint © 2026 polocrafting — https://polocrafting.fr -->\n' + svg + '\n')
         rs.append('    ("{}", include_str!("../icon-packs/masterpaint/source/masterpaint/{}.svg")),'.format(n, n))
     rs.append('];\n')
     open(os.path.join(CRATE, 'src', 'mpicons_gen.rs'), 'w', encoding='utf-8').write('\n'.join(rs))

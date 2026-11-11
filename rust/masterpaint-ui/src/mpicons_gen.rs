@@ -216,4 +216,11 @@ pub const MP_ICONS: &[(&str, &str)] = &[
     ("text-right", include_str!("../icon-packs/masterpaint/source/masterpaint/text-right.svg")),
     ("fx", include_str!("../icon-packs/masterpaint/source/masterpaint/fx.svg")),
     ("grad-conic", include_str!("../icon-packs/masterpaint/source/masterpaint/grad-conic.svg")),
+    ("stained-glass", include_str!("../icon-packs/masterpaint/source/masterpaint/stained-glass.svg")),
+    ("hex-mosaic", include_str!("../icon-packs/masterpaint/source/masterpaint/hex-mosaic.svg")),
+    ("linocut", include_str!("../icon-packs/masterpaint/source/masterpaint/linocut.svg")),
+    ("pointillism", include_str!("../icon-packs/masterpaint/source/masterpaint/pointillism.svg")),
+    ("ordered-dither", include_str!("../icon-packs/masterpaint/source/masterpaint/ordered-dither.svg")),
+    ("spherize", include_str!("../icon-packs/masterpaint/source/masterpaint/spherize.svg")),
+    ("swirl-waves", include_str!("../icon-packs/masterpaint/source/masterpaint/swirl-waves.svg")),
 ];

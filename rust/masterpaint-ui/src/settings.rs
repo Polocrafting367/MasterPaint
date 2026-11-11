@@ -43,6 +43,10 @@ pub struct Settings {
     pub default_tool: String,
     /// sauvegarde automatique des onglets et restauration au démarrage
     pub autosave: bool,
+    /// séance Photo Pro au démarrage : 0 demander, 1 toujours restaurer, 2 ne jamais restaurer
+    pub pm_restore: i32,
+    /// sélection IA sur une grande image : 0 demander, 1 rapide, 2 précise
+    pub ai_quality: i32,
     /// calcul des effets sur la carte graphique
     pub use_gpu: bool,
     /// Coller (Ctrl+V) : 0 dans un nouveau calque, 1 dans le calque actif (pixels flottants)
@@ -139,6 +143,8 @@ impl Default for Settings {
             default_zoom: 0,
             default_tool: "tool-select".into(),
             autosave: true,
+            pm_restore: 0,
+            ai_quality: 0,
             use_gpu: true,
             paste_mode: 0,
             paste_ask: true,
@@ -208,6 +214,8 @@ impl Settings {
             "defaultZoom": self.default_zoom,
             "defaultTool": self.default_tool,
             "autosave": self.autosave,
+            "pmRestore": self.pm_restore,
+            "aiQuality": self.ai_quality,
             "useGpu": self.use_gpu,
             "pasteMode": self.paste_mode,
             "pasteAsk": self.paste_ask,
@@ -290,6 +298,8 @@ impl Settings {
             default_zoom: i("defaultZoom", 0) as i32,
             default_tool: v.get("defaultTool").and_then(|t| t.as_str()).unwrap_or("tool-select").to_string(),
             autosave: v.get("autosave").and_then(|b| b.as_bool()).unwrap_or(true),
+            pm_restore: v.get("pmRestore").and_then(|b| b.as_i64()).unwrap_or(0).clamp(0, 2) as i32,
+            ai_quality: v.get("aiQuality").and_then(|b| b.as_i64()).unwrap_or(0).clamp(0, 2) as i32,
             use_gpu: v.get("useGpu").and_then(|b| b.as_bool()).unwrap_or(true),
             paste_mode: i("pasteMode", 0).clamp(0, 1) as i32,
             paste_ask: v.get("pasteAsk").and_then(|b| b.as_bool()).unwrap_or(true),

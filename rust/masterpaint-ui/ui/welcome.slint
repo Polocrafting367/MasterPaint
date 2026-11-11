@@ -10,7 +10,7 @@
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { MpIcons } from "mpicons.slint";
-import { FaIcon, W10Button, W10CheckBox, W10ComboBox, Segmented, DialogFooter } from "widgets.slint";
+import { FaIcon, HoverTip, W10Button, W10CheckBox, W10ComboBox, Segmented, DialogFooter } from "widgets.slint";
 
 /// Titre d'une section de la fenêtre, avec son trait d'accent.
 component WelHead inherits HorizontalLayout {
@@ -283,6 +283,38 @@ component PhoneSettings inherits VerticalLayout {
     }
 }
 
+/// Teinte « découvrir » (Tutoriel, Exemple) : opposée à la couleur d'accentuation, pour que ces
+/// boutons ne se confondent pas avec les actions principales.
+export global Discover {
+    out property <color> color: hsv(mod(Theme.accent.to-hsv().hue + 150, 360), 0.65, Theme.dark ? 0.92 : 0.72);
+    out property <color> on: self.color.to-hsv().value > 0.8 ? #1a1a1a : #ffffff;
+}
+
+/// Bouton du pied de page à la teinte « découvrir » (Exemple).
+component DiscoverButton inherits Rectangle {
+    in property <string> text;
+    in property <string> tip;
+    callback clicked();
+    height: 24px;
+    width: max(56px, dt.preferred-width + 24px);
+    border-radius: min(Theme.button-radius, self.height / 2);
+    background: ta.pressed ? Discover.color.darker(15%) : (Theme.hover-fx && ta.has-hover) ? Discover.color.brighter(10%) : Discover.color;
+    border-width: 1px;
+    border-color: Discover.color.darker(12%);
+    dt := Text {
+        text: root.text;
+        font-size: Theme.font-size;
+        color: Discover.on;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    HoverTip { y: parent.height + 2px; hovered: ta.has-hover && !ta.pressed; text: root.tip; }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
 export component WelcomeContent inherits Rectangle {
     in property <string> version;
     /// mode téléphone : mise en page tactile à part (voir en tête du fichier)
@@ -358,6 +390,7 @@ export component WelcomeContent inherits Rectangle {
                         }
                         HorizontalLayout {
                             alignment: LayoutAlignment.start;
+                            spacing: 10px;
                             Rectangle {
                                 height: 18px;
                                 width: vtxt.preferred-width + 14px;
@@ -367,6 +400,17 @@ export component WelcomeContent inherits Rectangle {
                                     text: @tr("version ") + root.version;
                                     font-size: Theme.small-font-size;
                                     color: Theme.text;
+                                }
+                            }
+                            // crédit cliquable : site de l'auteur
+                            Text {
+                                text: @tr("Développé par") + " polocrafting 367 ↗";
+                                font-size: Theme.small-font-size;
+                                color: (Theme.hover-fx && auta.has-hover) ? Theme.accent : Theme.text-inactive;
+                                vertical-alignment: center;
+                                auta := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.action("author"); }
                                 }
                             }
                         }
@@ -380,17 +424,21 @@ export component WelcomeContent inherits Rectangle {
                 padding-top: 18px;
                 spacing: 12px;
                 for t in [
-                    { mp: 0, id: "new", title: @tr("Nouvelle image"), hint: @tr("Toile vide") },
-                    { mp: 1, id: "open", title: @tr("Ouvrir"), hint: @tr("Image, photo RAW, PSD, SVG…") },
-                    { mp: 87, id: "example", title: @tr("Exemple"), hint: @tr("Projet tout prêt à explorer") },
-                    { mp: -1, id: "tutorial", title: @tr("Tutoriel"), hint: @tr("Les outils pas à pas") },
+                    { mp: 0, id: "new", g: "", title: @tr("Nouvelle image"), hint: @tr("Toile vide") },
+                    { mp: 1, id: "open", g: "", title: @tr("Ouvrir"), hint: @tr("Image, PSD, SVG…") },
+                    { mp: -1, id: "raw", g: "\u{f030}", title: @tr("Développer une photo RAW"), hint: @tr("Mode Photo Pro, façon Lightroom") },
+                    { mp: -1, id: "tutorial", g: "\u{f19d}", title: @tr("Tutoriel"), hint: @tr("Les outils pas à pas") },
                 ]: Rectangle {
+                    // tutoriel : carte « découvrir », teinte opposée à l'accent (on la repère)
+                    property <bool> learn: t.id == "tutorial";
                     horizontal-stretch: 1;
                     height: 118px;
                     border-radius: Theme.ctl-radius + 4px * Theme.round;
-                    background: tta.pressed ? Theme.accent-20 : (Theme.hover-fx && tta.has-hover) ? Theme.accent-12 : Theme.button-bg;
+                    background: tta.pressed ? (self.learn ? Discover.color.with-alpha(0.30) : Theme.accent-20)
+                        : (Theme.hover-fx && tta.has-hover) ? (self.learn ? Discover.color.with-alpha(0.22) : Theme.accent-12)
+                        : self.learn ? Discover.color.with-alpha(0.12) : Theme.button-bg;
                     border-width: 1px;
-                    border-color: (Theme.hover-fx && tta.has-hover) ? Theme.accent : Theme.button-border;
+                    border-color: self.learn ? Discover.color.with-alpha((Theme.hover-fx && tta.has-hover) ? 1 : 0.6) : (Theme.hover-fx && tta.has-hover) ? Theme.accent : Theme.button-border;
                     VerticalLayout {
                         padding: 12px;
                         spacing: 6px;
@@ -401,16 +449,16 @@ export component WelcomeContent inherits Rectangle {
                                 width: 40px;
                                 height: 40px;
                                 border-radius: 20px * Theme.round;
-                                background: Theme.accent-14;
+                                background: t.id == "tutorial" ? Discover.color.with-alpha(0.25) : Theme.accent-14;
                                 if t.mp >= 0: Image {
                                     width: 24px;
                                     height: 24px;
                                     source: MpIcons.images[t.mp];
                                 }
                                 if t.mp < 0: FaIcon {
-                                    glyph: "\u{f19d}";
+                                    glyph: t.g;
                                     size: 18px;
-                                    color: Theme.accent;
+                                    color: t.id == "tutorial" ? Discover.color : Theme.accent;
                                 }
                             }
                         }
@@ -662,6 +710,12 @@ export component WelcomeContent inherits Rectangle {
             clicked => {
                 root.action("github");
             }
+        }
+        // projet d'exemple : à côté de Commencer, à la teinte « découvrir »
+        DiscoverButton {
+            text: @tr("Exemple");
+            tip: @tr("Ouvrir le projet d'exemple, tout prêt à explorer");
+            clicked => { root.action("example"); }
         }
         W10Button {
             text: @tr("Commencer");

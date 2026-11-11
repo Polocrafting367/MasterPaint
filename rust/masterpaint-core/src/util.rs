@@ -720,25 +720,41 @@ pub fn gauss_blur_f32(field: &mut [f32], w: usize, h: usize, sigma: f32) {
     for v in k.iter_mut() {
         *v /= sum;
     }
+    // horizontal : bords (indices ramenés dans l'image) à part, milieu sans test ; vertical :
+    // ligne par ligne (avant : colonne par colonne, un défaut de cache par lecture, 1,2 s pour
+    // Ombres / lumières sur 0,85 Mpx). Mêmes additions dans le même ordre : résultat identique.
+    let ri = r as usize;
     let mut tmp = vec![0.0f32; w * h];
     for y in 0..h {
+        let row = &field[y * w..(y + 1) * w];
+        let out = &mut tmp[y * w..(y + 1) * w];
         for x in 0..w {
-            let mut s = 0.0;
-            for (j, kv) in k.iter().enumerate() {
-                let xx = (x as isize + j as isize - r).clamp(0, w as isize - 1) as usize;
-                s += field[y * w + xx] * kv;
+            if x >= ri && x + ri < w {
+                let win = &row[x - ri..=x + ri];
+                let mut s = 0.0;
+                for (v, kv) in win.iter().zip(k.iter()) {
+                    s += v * kv;
+                }
+                out[x] = s;
+            } else {
+                let mut s = 0.0;
+                for (j, kv) in k.iter().enumerate() {
+                    let xx = (x as isize + j as isize - r).clamp(0, w as isize - 1) as usize;
+                    s += row[xx] * kv;
+                }
+                out[x] = s;
             }
-            tmp[y * w + x] = s;
         }
     }
     for y in 0..h {
-        for x in 0..w {
-            let mut s = 0.0;
-            for (j, kv) in k.iter().enumerate() {
-                let yy = (y as isize + j as isize - r).clamp(0, h as isize - 1) as usize;
-                s += tmp[yy * w + x] * kv;
+        let out = &mut field[y * w..(y + 1) * w];
+        out.fill(0.0);
+        for (j, kv) in k.iter().enumerate() {
+            let yy = (y as isize + j as isize - r).clamp(0, h as isize - 1) as usize;
+            let src = &tmp[yy * w..(yy + 1) * w];
+            for (o, v) in out.iter_mut().zip(src.iter()) {
+                *o += v * kv;
             }
-            field[y * w + x] = s;
         }
     }
 }

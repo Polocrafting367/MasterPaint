@@ -19,7 +19,7 @@ import { ColorsPanel, ColorPop } from "colors.slint";
 import { WelcomeContent } from "welcome.slint";
 import { InfoContent } from "info.slint";
 import { AnimPanel, AnimRow } from "anim.slint";
-import { DialogFooter } from "widgets.slint";
+import { DialogFooter, AngleDial } from "widgets.slint";
 import { WinStack, PhoneDock, Tip, RibbonFit, Icon, FaIcon, GlyphIcon, FlatButton, W10Button, W10Slider, W10CheckBox, W10ComboBox, CloseButton, FloatWindow, VSep, Gauge, ToggleButton, RibbonGroup, Segmented, W10LineEdit, HoverTip, NumEdit, Bevel, GaugeBar } from "widgets.slint";
 import { MobTopBar, MobUndoCapsule, MobToolRow, MobPills, MobDock, MobSheet, MobMenuList, MobDrawer, MobColors, Palettes } from "phone.slint";
 import { PmMaskRow, PhotoMode, PmThumb } from "photo.slint";
@@ -187,6 +187,8 @@ export global ToolOpts {
     in-out property <int> sel-mode: 0;  // 0 nouvelle, 1 ajout, 2 retrait, 3 intersection, 4 OU exclusif
     // baguette / pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
     in-out property <bool> sample-all: false;
+    // rectangle / ellipse de sélection : sélection d'objet par l'IA (sujet dans le cadre)
+    in-out property <bool> sel-ai: false;
     // densité / éponge : 0 densité −, 1 densité +, 2 éponge −, 3 éponge + ; force (%) des
     // outils de retouche (doigt, densité, éponge)
     in-out property <int> retouch-mode: 0;
@@ -357,7 +359,7 @@ export global MenuState {
             || action == "fn:window.toggleFloatingPaletteVisibility('win-colors')"
             || action == "fn:window.toggleFloatingPaletteVisibility('win-layers')"
             || action == "fn:window.toggleFloatingPaletteVisibility('win-history')"
-            || label == @tr("Interface : mode téléphone (menu ☰, palettes en colonnes)")
+            || label == @tr("Interface : mode téléphone")
             || label == @tr("Palettes : ancrage fixe (style Adobe)") || label == @tr("Palettes volantes (Paint.NET)");
     }
     public pure function checked(action: string, label: string) -> bool {
@@ -373,7 +375,7 @@ export global MenuState {
             : action == "fn:window.toggleFloatingPaletteVisibility('win-colors')" ? root.colors
             : action == "fn:window.toggleFloatingPaletteVisibility('win-layers')" ? root.layers
             : action == "fn:window.toggleFloatingPaletteVisibility('win-history')" ? root.history
-            : label == @tr("Interface : mode téléphone (menu ☰, palettes en colonnes)") ? root.phone
+            : label == @tr("Interface : mode téléphone") ? root.phone
             : label == @tr("Palettes : ancrage fixe (style Adobe)") ? root.layout == 1 && !root.phone
             : label == @tr("Palettes volantes (Paint.NET)") ? root.layout == 0 && !root.phone
             : false;
@@ -393,13 +395,15 @@ component RB inherits FlatButton {
     in property <bool> labelled;
     /// ruban adaptatif : libellé montré tant que le palier (RibbonFit.level) est inférieur
     in property <int> label-until: 4;
+    /// volet d'un groupe replié : libellé toujours montré
+    in property <bool> full;
     icon: Generated.ribbon[idx].icon;
     label: Generated.ribbon[idx].label;
     // effacer / aligner le contenu : grisé sur un calque texte, verrouillé ou un dossier
     enabled: !MenuState.ribbon-blocked(Generated.ribbon[idx].id);
     tip: self.enabled ? Generated.ribbon[idx].title
         : Generated.ribbon[idx].title + (MenuState.layer-block == "calque texte" ? @tr(" — Pixelliser le calque pour l'utiliser") : @tr(" — indisponible sur ce calque"));
-    show-label: labelled && RibbonFit.level < root.label-until;
+    show-label: labelled && (root.full || RibbonFit.level < root.label-until);
     icon-size: 14px;
     /// dans une colonne (VerticalLayout) : même largeur que le plus large de la colonne
     in property <bool> in-column;
@@ -648,6 +652,69 @@ component Field inherits HorizontalLayout {
     }
 }
 
+/// Ruban : variantes de l'outil courant (les autres outils de son groupe dans la barre
+/// d'outils : sélections, pinceaux, retouches…), à portée de clic sans ouvrir le menu du groupe.
+/// Nom court d'un outil pour les cases étroites (bouton Outil, groupe Variantes) : le titre
+/// complet reste dans l'info-bulle (« Sélectio », « Remplac » étaient coupés)
+export global ToolShort {
+    pure public function name(id: string, title: string) -> string {
+        return id == "tool-select" ? @tr("Rectangle") : id == "tool-ellipse-select" ? @tr("Ellipse")
+            : id == "tool-direct-select" ? @tr("À la volée") : id == "tool-magnetic-lasso" ? @tr("Magnétique")
+            : id == "tool-poly-lasso" ? @tr("Polygonal") : id == "btn-deselect" ? @tr("Désélect.")
+            : id == "tool-warp-4" ? @tr("4 coins") : id == "tool-move" ? @tr("Déplacer")
+            : id == "illu-tb-zoom-fit-2" ? @tr("Ajuster") : id == "tool-shapes-family" ? @tr("Formes")
+            : id == "tool-round-3" ? @tr("Arrondi") : id == "tool-recolor" ? @tr("Recolorer")
+            : id == "tool-clone" ? @tr("Tampon") : id == "tool-heal" ? @tr("Correcteur")
+            : id == "tool-smudge" ? @tr("Doigt") : id == "tool-dodge" ? @tr("Densité")
+            : id == "tool-clear-sel" ? @tr("Effacer") : id == "tool-pan" ? @tr("Main")
+            : title;
+    }
+}
+
+/// Case du groupe Variantes : largeur du libellé court (48 px au moins)
+component VariantButton inherits FlatButton {
+    property <length> lw: vm.preferred-width + 12px;
+    width: max(48px, self.lw);
+    height: 58px;
+    icon-size: 18px;
+    label-below: true;
+    vm := Text {
+        visible: false;
+        text: root.label;
+        font-size: Theme.small-font-size;
+    }
+}
+
+component ToolVariantsGroup inherits RibbonGroup {
+    in property <[int]> members;
+    in property <string> current;
+    callback picked(int);
+    if !root.classic: HorizontalLayout {
+        spacing: 2px;
+        alignment: start;
+        for idx in root.members: VariantButton {
+            icon: Generated.tools[idx].icon;
+            label: ToolShort.name(Generated.tools[idx].id, Generated.tools[idx].title);
+            tip: Generated.tools[idx].title;
+            checked: Generated.tools[idx].id == root.current;
+            clicked => { root.picked(idx); }
+        }
+    }
+    if root.classic: HorizontalLayout {
+        spacing: 2px;
+        for idx in root.members: FlatButton {
+            width: 26px;
+            height: 26px;
+            icon: Generated.tools[idx].icon;
+            icon-size: 15px;
+            show-label: false;
+            tip: Generated.tools[idx].title;
+            checked: Generated.tools[idx].id == root.current;
+            clicked => { root.picked(idx); }
+        }
+    }
+}
+
 /// Case de la colonne d'outils Photoshop : l'outil courant du groupe (ou le dernier choisi),
 /// petit triangle s'il y a d'autres outils ; clic droit, appui long ou clic sur le triangle =
 /// menu du groupe (comme PhotoCraft / Photoshop).
@@ -801,8 +868,9 @@ component SelModeExtra inherits HorizontalLayout {
 component SelModeColumn inherits VerticalLayout {
     spacing: 4px;
     alignment: start;
+    in property <bool> full;
     // ruban large : libellés (premiers à disparaître quand la place manque)
-    property <bool> wide: RibbonFit.level < 1;
+    property <bool> wide: root.full || RibbonFit.level < 1;
     FlatButton {
         width: root.wide ? 66px : 26px;
         height: 26px;
@@ -835,30 +903,36 @@ component SelectionGroup inherits RibbonGroup {
         spacing: 4px;
         HorizontalLayout {
             RB {
+                full: root.full;
                 idx: 0;
                 labelled: true;
             }
             RB {
+                full: root.full;
                 idx: 1;
                 labelled: true;
             }
             RB {
+                full: root.full;
                 idx: 2;
                 labelled: true;
             }
         }
         HorizontalLayout {
             RB {
+                full: root.full;
                 idx: 3;
                 labelled: true;
                 checked: ToolOpts.sel-mode == 0;
             }
             RB {
+                full: root.full;
                 idx: 4;
                 labelled: true;
                 checked: ToolOpts.sel-mode == 1;
             }
             RB {
+                full: root.full;
                 idx: 5;
                 labelled: true;
                 checked: ToolOpts.sel-mode == 2;
@@ -866,27 +940,33 @@ component SelectionGroup inherits RibbonGroup {
         }
       }
       // intersection et OU exclusif l'un sous l'autre, à droite des deux rangées (compact)
-      SelModeColumn { }
+      SelModeColumn { full: root.full; }
     }
     if root.classic: HorizontalLayout {
         RB {
+                full: root.full;
             idx: 0;
         }
         RB {
+                full: root.full;
             idx: 1;
         }
         RB {
+                full: root.full;
             idx: 2;
         }
         RB {
+                full: root.full;
             idx: 3;
             checked: ToolOpts.sel-mode == 0;
         }
         RB {
+                full: root.full;
             idx: 4;
             checked: ToolOpts.sel-mode == 1;
         }
         RB {
+                full: root.full;
             idx: 5;
             checked: ToolOpts.sel-mode == 2;
         }
@@ -934,7 +1014,8 @@ component RetouchGroup inherits RibbonGroup {
         value <=> ToolOpts.retouch-strength;
     }
     if root.tool == "tool-clone" || root.tool == "tool-heal": Text {
-        text: root.tool == "tool-clone" ? @tr("Alt + clic : choisir la source,\npuis peindre (source alignée)") : @tr("Peindre sur le défaut :\nil est reconstitué au relâchement");
+        // barre réduite : une ligne (deux lignes débordaient de ses 32 px)
+        text: root.classic ? (root.tool == "tool-clone" ? @tr("Alt + clic : source, puis peindre") : @tr("Peindre sur le défaut")) : root.tool == "tool-clone" ? @tr("Alt + clic : choisir la source,\npuis peindre (source alignée)") : @tr("Peindre sur le défaut :\nil est reconstitué au relâchement");
         color: Theme.ribbon-fg;
         font-size: Theme.small-font-size;
         vertical-alignment: center;
@@ -1001,11 +1082,13 @@ component EditGroup inherits RibbonGroup {
         spacing: 4px;
         padding-top: 3px;
         RB {
+                full: root.full;
             idx: 6;
             labelled: true;
             label-until: 3;
         }
         RB {
+                full: root.full;
             idx: 7;
             labelled: true;
             label-until: 3;
@@ -1013,9 +1096,11 @@ component EditGroup inherits RibbonGroup {
     }
     if root.classic: HorizontalLayout {
         RB {
+                full: root.full;
             idx: 6;
         }
         RB {
+                full: root.full;
             idx: 7;
         }
     }
@@ -1051,7 +1136,8 @@ component AlignGroup inherits RibbonGroup {
 component RenderDivButton inherits Rectangle {
     /// ruban large : libellé « Rendu ÷2 » (ou « Rendu plein »)
     in property <bool> labelled;
-    property <bool> wide: root.labelled && RibbonFit.level < 2;
+    in property <bool> full;
+    property <bool> wide: root.labelled && (root.full || RibbonFit.level < 2);
     property <string> text: ToolOpts.render-div > 1 ? @tr("Rendu ÷{}", ToolOpts.render-div) : @tr("Rendu plein");
     min-width: root.wide ? max(66px, rd-m.preferred-width + 36px) : 26px;
     preferred-width: self.min-width;
@@ -1095,7 +1181,8 @@ component RenderDivButton inherits Rectangle {
 component RenderNowButton inherits FlatButton {
     /// ruban large : libellé « Rendu net »
     in property <bool> labelled;
-    property <bool> wide: root.labelled && RibbonFit.level < 2;
+    in property <bool> full;
+    property <bool> wide: root.labelled && (root.full || RibbonFit.level < 2);
     min-width: root.wide ? max(66px, rn-m.preferred-width + 36px) : 26px;
     preferred-width: self.min-width;
     max-width: root.wide ? 1000px : 26px;
@@ -1114,13 +1201,15 @@ component RenderNowButton inherits FlatButton {
 component ViewGroup inherits RibbonGroup {
     label: @tr("Affichage");
     // ruban : colonnes alignées (chaque bouton à la largeur du plus large de sa colonne) :
-    // Grille / Règles, Hors toile / Aimantation, Rendu ÷2 / Rendu net
+    // Grille / Règles, Hors toile / Aimantation, Rendu ÷2 / Rendu net ; 6 px entre colonnes : un
+    // bouton coché (cadre) ne touche plus sa voisine
     if !root.classic: HorizontalLayout {
-        spacing: 2px;
+        spacing: 6px;
         VerticalLayout {
             spacing: 4px;
             alignment: start;
             RB {
+                full: root.full;
                 idx: 16;
                 in-column: true;
                 labelled: true;
@@ -1128,6 +1217,7 @@ component ViewGroup inherits RibbonGroup {
                 checked: ToolOpts.pixel-grid;
             }
             RB {
+                full: root.full;
                 idx: 17;
                 in-column: true;
                 labelled: true;
@@ -1139,6 +1229,7 @@ component ViewGroup inherits RibbonGroup {
             spacing: 4px;
             alignment: start;
             RB {
+                full: root.full;
                 idx: 18;
                 in-column: true;
                 labelled: true;
@@ -1146,6 +1237,7 @@ component ViewGroup inherits RibbonGroup {
                 checked: ToolOpts.outside-canvas;
             }
             RB {
+                full: root.full;
                 idx: 19;
                 in-column: true;
                 labelled: true;
@@ -1156,24 +1248,28 @@ component ViewGroup inherits RibbonGroup {
         if ToolOpts.render-ctl: VerticalLayout {
             spacing: 4px;
             alignment: start;
-            RenderDivButton { labelled: true; }
-            RenderNowButton { labelled: true; }
+            RenderDivButton { labelled: true; full: root.full; }
+            RenderNowButton { labelled: true; full: root.full; }
         }
     }
     if root.classic: HorizontalLayout {
         RB {
+                full: root.full;
             idx: 16;
             checked: ToolOpts.pixel-grid;
         }
         RB {
+                full: root.full;
             idx: 17;
             checked: ToolOpts.rulers;
         }
         RB {
+                full: root.full;
             idx: 18;
             checked: ToolOpts.outside-canvas;
         }
         RB {
+                full: root.full;
             idx: 19;
             checked: ToolOpts.snap;
         }
@@ -1256,6 +1352,73 @@ component RegionGroup inherits RibbonGroup {
             tip: @tr("Échantillonner l'image entière (tous les calques visibles)");
             checked: ToolOpts.sample-all;
             clicked => { ToolOpts.sample-all = !ToolOpts.sample-all; }
+        }
+    }
+}
+
+/// Rectangle / ellipse de sélection : sélection d'objet par l'IA (seul le sujet à l'intérieur
+/// du cadre tracé est gardé), et sélections automatiques de l'image entière (Édition).
+component SelAiGroup inherits RibbonGroup {
+    property <string> obj-tip: @tr("Option du rectangle et de l'ellipse : tracez un cadre autour de l'objet, l'IA ne garde que le sujet à l'intérieur");
+    if !root.classic: VerticalLayout {
+        spacing: 6px;
+        alignment: center;
+        // sélections de toute l'image, en un clic (aucune option à activer)
+        HorizontalLayout {
+            spacing: 4px;
+            ToggleButton {
+                glyph: "\u{f007}";
+                text: @tr("Sujet");
+                tip: @tr("Sélectionner le sujet de toute l'image (IA) — un clic suffit");
+                clicked => { Actions.ribbon("sel-subject"); }
+            }
+            ToggleButton {
+                glyph: "\u{f03e}";
+                text: @tr("Arrière-plan");
+                tip: @tr("Sélectionner l'arrière-plan (IA) : l'inverse du sujet");
+                clicked => { Actions.ribbon("sel-background"); }
+            }
+            ToggleButton {
+                glyph: "\u{f0c2}";
+                text: @tr("Ciel");
+                tip: @tr("Sélectionner le ciel");
+                clicked => { Actions.ribbon("sel-sky"); }
+            }
+        }
+        ToggleButton {
+            glyph: "\u{e2ca}";
+            text: @tr("Cadre → objet (IA)");
+            tip: root.obj-tip;
+            checked: ToolOpts.sel-ai;
+            clicked => { ToolOpts.sel-ai = !ToolOpts.sel-ai; Actions.ribbon("sel-ai"); }
+        }
+    }
+    if root.classic: HorizontalLayout {
+        spacing: 4px;
+        ToggleButton {
+            compact: true;
+            glyph: "\u{e2ca}";
+            tip: root.obj-tip;
+            checked: ToolOpts.sel-ai;
+            clicked => { ToolOpts.sel-ai = !ToolOpts.sel-ai; Actions.ribbon("sel-ai"); }
+        }
+        ToggleButton {
+            compact: true;
+            glyph: "\u{f007}";
+            tip: @tr("Sélectionner le sujet (IA) de toute l'image");
+            clicked => { Actions.ribbon("sel-subject"); }
+        }
+        ToggleButton {
+            compact: true;
+            glyph: "\u{f03e}";
+            tip: @tr("Sélectionner l'arrière-plan (IA) : l'inverse du sujet");
+            clicked => { Actions.ribbon("sel-background"); }
+        }
+        ToggleButton {
+            compact: true;
+            glyph: "\u{f0c2}";
+            tip: @tr("Sélectionner le ciel");
+            clicked => { Actions.ribbon("sel-sky"); }
         }
     }
 }
@@ -1588,7 +1751,8 @@ component FoldGroup inherits Rectangle {
     pop := PopupWindow {
         x: 4px;
         y: root.tall ? fold-btn.y + fold-btn.height + 2px : root.height - 1px;
-        width: pop-in.preferred-width + 10px;
+        // largeur du contenu (jamais sous son minimum : un bouton débordait du volet)
+        width: max(pop-in.preferred-width, pop-in.min-width) + 10px;
         height: root.tall ? 96px : 38px;
         close-policy: PopupClosePolicy.close-on-click-outside;
         Rectangle {
@@ -1604,12 +1768,12 @@ component FoldGroup inherits Rectangle {
                 x: 3px;
                 y: 3px;
                 height: root.tall ? 88px : 32px;
-                if root.kind == "view": ViewGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "view": ViewGroup { classic: !root.tall; full: root.tall; titled: false; bare: true; }
                 if root.kind == "brush" || root.kind == "pencil": BrushGroup { classic: !root.tall; titled: false; bare: true; pencil: root.kind == "pencil"; }
                 if root.kind == "sym": SymmetryGroup { classic: !root.tall; titled: false; bare: true; }
                 if root.kind == "align": AlignGroup { classic: !root.tall; titled: false; bare: true; has-selection: root.has-selection; }
-                if root.kind == "edit": EditGroup { classic: !root.tall; titled: false; bare: true; }
-                if root.kind == "sel": SelectionGroup { classic: !root.tall; titled: false; bare: true; }
+                if root.kind == "edit": EditGroup { classic: !root.tall; full: root.tall; titled: false; bare: true; }
+                if root.kind == "sel": SelectionGroup { classic: !root.tall; full: root.tall; titled: false; bare: true; }
                 if root.kind == "image": ImageGroup { titled: false; bare: true; crop => { pop.close(); root.crop(); } }
             }
         }
@@ -2063,7 +2227,31 @@ component TextGroup inherits RibbonGroup {
 
 component TextStyleGroup inherits RibbonGroup {
     label: @tr("Paragraphe");
-    GridLayout {
+    // barre réduite : une seule rangée (alignements puis « Lissé ») ; ruban : deux rangées
+    if root.classic: HorizontalLayout {
+        spacing: 2px;
+        for k[i] in ["\u{f036}", "\u{f037}", "\u{f038}"]: ToggleButton {
+            compact: true;
+            glyph: k;
+            tip: i == 0 ? @tr("Aligner le texte à gauche") : i == 1 ? @tr("Centrer le texte") : @tr("Aligner le texte à droite");
+            checked: ToolOpts.text-align == i;
+            clicked => {
+                ToolOpts.text-align = i;
+                Actions.ribbon("text-opts");
+            }
+        }
+        ToggleButton {
+            compact: true;
+            glyph: "\u{f1fc}";
+            tip: @tr("Texte lissé (anticrénelage)");
+            checked: ToolOpts.antialias;
+            clicked => {
+                ToolOpts.antialias = !ToolOpts.antialias;
+                Actions.ribbon("text-opts");
+            }
+        }
+    }
+    if !root.classic: GridLayout {
         spacing: 2px;
         Row {
             for k[i] in ["\u{f036}", "\u{f037}", "\u{f038}"]: ToggleButton {
@@ -2077,7 +2265,7 @@ component TextStyleGroup inherits RibbonGroup {
                 }
             }
         }
-        if !root.classic: Row {
+        Row {
             ToggleButton {
                 colspan: 3;
                 // même largeur que les trois boutons d'alignement au-dessus
@@ -2098,13 +2286,20 @@ component GradientGroup inherits RibbonGroup {
     /// projet SVG : seuls linéaire et radial existent dans le format
     in property <bool> vector;
     label: @tr("Dégradé");
-    GridLayout {
+    property <[{g: string, t: string, img: image}]> kinds: [
+        { g: "\u{f337}", t: @tr("Linéaire"), img: Sprite.grad-linear },
+        { g: "\u{f192}", t: @tr("Radial"), img: Sprite.grad-radial },
+        { g: "\u{f219}", t: @tr("Losange"), img: Sprite.grad-diamond },
+        { g: "\u{f1ce}", t: @tr("Conique"), img: Sprite.grad-conic },
+    ];
+    // ruban : deux rangées de deux ; barre réduite : une seule rangée (la seconde passait sous
+    // la barre)
+    if !root.classic: GridLayout {
         spacing: 2px;
         Row {
-            for k[i] in [{ g: "\u{f337}", t: @tr("Linéaire") }, { g: "\u{f192}", t: @tr("Radial") }]: ToggleButton {
-                compact: root.classic;
+            for k[i] in [root.kinds[0], root.kinds[1]]: ToggleButton {
                 glyph: k.g;
-                img: i == 0 ? Sprite.grad-linear : Sprite.grad-radial;
+                img: k.img;
                 text: k.t;
                 checked: ToolOpts.gradient-kind == i;
                 clicked => {
@@ -2113,15 +2308,28 @@ component GradientGroup inherits RibbonGroup {
             }
         }
         if !root.vector: Row {
-            for k[i] in [{ g: "\u{f219}", t: @tr("Losange") }, { g: "\u{f1ce}", t: @tr("Conique") }]: ToggleButton {
-                compact: root.classic;
+            for k[i] in [root.kinds[2], root.kinds[3]]: ToggleButton {
                 glyph: k.g;
-                img: i == 0 ? Sprite.grad-diamond : Sprite.grad-conic;
+                img: k.img;
                 text: k.t;
                 checked: ToolOpts.gradient-kind == i + 2;
                 clicked => {
                     ToolOpts.gradient-kind = i + 2;
                 }
+            }
+        }
+    }
+    if root.classic: HorizontalLayout {
+        spacing: 2px;
+        for k[i] in root.vector ? [root.kinds[0], root.kinds[1]] : root.kinds: ToggleButton {
+            compact: true;
+            glyph: k.g;
+            img: k.img;
+            text: k.t;
+            tip: k.t;
+            checked: ToolOpts.gradient-kind == i;
+            clicked => {
+                ToolOpts.gradient-kind = i;
             }
         }
     }
@@ -2458,6 +2666,9 @@ export component AppWindow inherits Window {
     in property <string> task-list-header;
     in property <[TaskCommand]> task-commands;
     in property <[TaskThumb]> task-thumbs;
+    /// case sous les commandes (« Se souvenir de mon choix ») : vide = pas de case
+    in property <string> task-check-text;
+    in-out property <bool> task-check;
     callback task-result(int);
     callback task-thumb(int);
     // fond du haut : image active floutée (voir header_background) sous un voile d'accent
@@ -2473,7 +2684,7 @@ export component AppWindow inherits Window {
     property <length> tabs-end: root.interface-style == 2 ? root.usable-width - 34px - 6 * 27px - 18px : min(info-button.x - 8px, root.custom-frame ? root.usable-width - 146px : root.usable-width - 8px);
     property <length> tabs-room: max(0px, root.tabs-end - root.menu-zone - 18px);
     // onglet de la pellicule du Photo Pro réduite (après les projets)
-    property <length> pm-pill-w: root.pm-count > 0 && !root.pm-open ? 118px : 0px;
+    property <length> pm-pill-w: root.pm-count > 0 && !root.pm-open ? 136px : 0px;
     property <length> tab-w: clamp((root.tabs-room - root.pm-pill-w - max(0, root.tabs.length - 1) * 2px) / max(1, root.tabs.length), 44px, 80px);
     property <length> tabs-full: root.tabs.length * root.tab-w + max(0, root.tabs.length - 1) * 2px + (root.pm-pill-w > 0 ? root.pm-pill-w + 2px : 0px);
     property <bool> tabs-over: root.tabs-full > root.tabs-room + 1px;
@@ -2665,6 +2876,8 @@ export component AppWindow inherits Window {
     // Exporter (comme la version web) : format, nom, qualité JPEG, profondeur, périmètre .illu
     in-out property <bool> show-export;
     in-out property <string> ex-name;
+    /// projet animé : format d'origine du fichier ouvert (gif, mp4, webm, apng ; vide sinon)
+    in property <string> ex-anim-origin;
     in property <int> ex-tabs: 1;
     in-out property <bool> ex-more;
     in-out property <int> ex-fmt: 0;
@@ -2940,6 +3153,9 @@ export component AppWindow inherits Window {
     in property <string> load-title;
     in property <string> load-detail;
     in property <float> load-progress;
+    /// bouton Annuler dans la fenêtre de chargement (détection du sujet par l'IA…)
+    in property <bool> load-cancel;
+    callback load-cancelled();
     callback pm-action(string);
     callback pm-select(int);
     callback pm-remove(int);
@@ -3010,6 +3226,10 @@ export component AppWindow inherits Window {
     in-out property <int> set-default-zoom: 0;
     in-out property <int> set-default-tool: 0;
     in-out property <bool> set-autosave: true;
+    /// séance du Mode Photo Pro au démarrage : 0 demander, 1 toujours restaurer, 2 jamais
+    in-out property <int> set-pm-restore: 0;
+    /// sélection IA sur une grande image : 0 demander, 1 rapide, 2 précise
+    in-out property <int> set-ai-quality: 0;
     in-out property <bool> set-use-gpu: true;
     in-out property <int> set-paste-mode: 0;
     in-out property <bool> set-paste-ask: true;
@@ -3955,15 +4175,28 @@ export component AppWindow inherits Window {
                     border-width: 1px;
                     border-color: Theme.accent-60;
                     HorizontalLayout {
+                        width: parent.width - 22px;
                         padding-left: 8px;
-                        padding-right: 8px;
+                        padding-right: 2px;
                         spacing: 6px;
                         alignment: center;
                         VerticalLayout { alignment: center; FaIcon { glyph: "\u{f030}"; size: 12px; color: Theme.accent; } }
-                        Text { text: @tr("Photo Pro") + " (" + root.pm-count + ")"; font-size: Theme.small-font-size; color: Theme.text; vertical-alignment: center; }
+                        Text { text: @tr("Photo Pro") + " (" + root.pm-count + ")"; font-size: Theme.small-font-size; color: Theme.text; vertical-alignment: center; overflow: elide; }
                     }
                     HoverTip { y: parent.height; hovered: pmta.has-hover; text: @tr("Rouvrir le Mode Photo Pro : la pellicule et ses réglages sont gardés"); }
-                    pmta := TouchArea { clicked => { root.menu-action("pm:reopen", ""); } }
+                    pmta := TouchArea { width: parent.width - 22px; x: 0; clicked => { root.menu-action("pm:reopen", ""); } }
+                    // croix : fermer le Mode Photo Pro comme un projet (confirmation demandée)
+                    Rectangle {
+                        x: parent.width - 21px;
+                        y: (parent.height - self.height) / 2;
+                        width: 17px;
+                        height: 17px;
+                        border-radius: Theme.ctl-radius;
+                        background: (Theme.hover-fx && pmx.has-hover) ? Theme.close-bg : transparent;
+                        FaIcon { glyph: "\u{f00d}"; size: 10px; color: (Theme.hover-fx && pmx.has-hover) ? #ffffff : Theme.text; }
+                        HoverTip { y: parent.height; hovered: pmx.has-hover; text: @tr("Fermer le Mode Photo Pro (la pellicule est vidée, confirmation demandée)"); }
+                        pmx := TouchArea { clicked => { root.menu-action("pm:close", ""); } }
+                    }
                 }
             }
             }
@@ -4011,7 +4244,8 @@ export component AppWindow inherits Window {
                     x: parent.width - self.width;
                     y: parent.height + 4px;
                     width: min(340px, root.usable-width - 16px);
-                    height: min(max(40px, root.usable-height - 80px), root.tabs.length * 36px + 8px);
+                    property <int> rows: root.tabs.length + (root.pm-count > 0 && !root.pm-open ? 1 : 0);
+                    height: min(max(40px, root.usable-height - 80px), self.rows * 36px + 8px);
                     Rectangle {
                         background: Theme.window-bg;
                         border-width: 1px;
@@ -4020,7 +4254,7 @@ export component AppWindow inherits Window {
                     }
                     ScrollView {
                         x: 4px; y: 4px; width: parent.width - 8px; height: parent.height - 8px;
-                        content-height: root.tabs.length * 36px;
+                        content-height: project-popup.rows * 36px;
                         VerticalLayout {
                             spacing: 0px;
                             for tab[ti] in root.tabs: Rectangle {
@@ -4032,6 +4266,28 @@ export component AppWindow inherits Window {
                                 HoverTip { y: parent.height; hovered: project-touch.has-hover; text: tab.title; }
                                 project-touch := TouchArea {
                                     clicked => { root.tab-clicked(ti); root.reveal-active-tab(); project-popup.close(); fs.focus(); }
+                                }
+                            }
+                            // pellicule du Photo Pro réduite : aussi dans la liste (l'onglet sort de
+                            // la bande quand la fenêtre est étroite)
+                            if root.pm-count > 0 && !root.pm-open: Rectangle {
+                                height: 36px;
+                                border-radius: Theme.ctl-radius;
+                                background: (Theme.hover-fx && pm-list-touch.has-hover) ? Theme.accent-12 : transparent;
+                                FaIcon { x: 12px; width: 16px; glyph: "\u{f030}"; size: 14px; color: Theme.accent; }
+                                Text { x: 44px; width: parent.width - 76px; height: parent.height; text: @tr("Photo Pro") + " (" + root.pm-count + ")"; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                                pm-list-touch := TouchArea {
+                                    clicked => { root.menu-action("pm:reopen", ""); project-popup.close(); }
+                                }
+                                Rectangle {
+                                    x: parent.width - 28px;
+                                    y: 8px;
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: Theme.ctl-radius;
+                                    background: (Theme.hover-fx && pm-list-x.has-hover) ? Theme.close-bg : transparent;
+                                    FaIcon { glyph: "\u{f00d}"; size: 11px; color: (Theme.hover-fx && pm-list-x.has-hover) ? #ffffff : Theme.text; }
+                                    pm-list-x := TouchArea { clicked => { root.menu-action("pm:close", ""); project-popup.close(); } }
                                 }
                             }
                         }
@@ -4324,7 +4580,7 @@ export component AppWindow inherits Window {
                         if !root.classic: Text {
                             y: 28px;
                             width: parent.width;
-                            text: root.tool-title;
+                            text: ToolShort.name(root.current-tool, root.tool-title);
                             font-size: Theme.small-font-size;
                             color: Theme.ribbon-fg;
                             horizontal-alignment: center;
@@ -4388,6 +4644,49 @@ export component AppWindow inherits Window {
                     }
                 }
 
+                // variantes de l'outil courant : son groupe de la barre d'outils (Photoshop :
+                // colonne unique ; Paint.NET / MasterPaint : grille groupée)
+                for g[gi] in (root.interface-style == 3 && !root.vec-on ? root.ps-groups : []): HorizontalLayout {
+                    if g.members.length > 1 && (Generated.tools[g.members[0]].id == root.current-tool || Generated.tools[g.members[1]].id == root.current-tool
+                        || (g.members.length > 2 && Generated.tools[g.members[2]].id == root.current-tool) || (g.members.length > 3 && Generated.tools[g.members[3]].id == root.current-tool)): ToolVariantsGroup {
+                        label: @tr("Variantes");
+                        classic: root.classic;
+                        members: g.members;
+                        current: root.current-tool;
+                        picked(idx) => {
+                            root.ps-last[gi] = idx;
+                            if (Generated.tools[idx].id != "btn-deselect" && Generated.tools[idx].id != "illu-tb-zoom-fit-2" && Generated.tools[idx].id != "tool-clear-sel") {
+                                root.current-tool = Generated.tools[idx].id;
+                            }
+                            root.tool-selected(Generated.tools[idx].id);
+                            fs.focus();
+                        }
+                    }
+                }
+                for g in (root.interface-style != 3 && !root.vec-on ? (root.interface-style == 2 ? root.pdn-tool-groups : root.mp-tool-groups) : []): HorizontalLayout {
+                    if g.members.length > 1 && (Generated.tools[g.members[0]].id == root.current-tool || Generated.tools[g.members[1]].id == root.current-tool
+                        || (g.members.length > 2 && Generated.tools[g.members[2]].id == root.current-tool) || (g.members.length > 3 && Generated.tools[g.members[3]].id == root.current-tool)): ToolVariantsGroup {
+                        label: @tr("Variantes");
+                        classic: root.classic;
+                        members: g.members;
+                        current: root.current-tool;
+                        picked(idx) => {
+                            if (root.tool-blocked(Generated.tools[idx].id)) {
+                                return;
+                            }
+                            ToolOpts.group-pick[g.members[0]] = idx;
+                            if (Generated.tools[idx].id != "btn-deselect" && Generated.tools[idx].id != "illu-tb-zoom-fit-2" && Generated.tools[idx].id != "tool-clear-sel") {
+                                root.current-tool = Generated.tools[idx].id;
+                            }
+                            root.tool-selected(Generated.tools[idx].id);
+                            fs.focus();
+                        }
+                    }
+                }
+                if root.current-tool == "tool-select" || root.current-tool == "tool-ellipse-select": SelAiGroup {
+                    label: @tr("Sélection IA");
+                    classic: root.classic;
+                }
                 if root.current-tool == "tool-wand": RegionGroup {
                     label: @tr("Baguette");
                     classic: root.classic;
@@ -5500,7 +5799,7 @@ export component AppWindow inherits Window {
                         border-width: 1px; border-color: Theme.text-inactive;
                         HoverTip { y: parent.height; hovered: bgta.has-hover; text: @tr("Couleur secondaire : cliquer pour la choisir"); }
                         bgta := TouchArea {
-                            clicked => { ColorPop.show("paint:1", root.secondary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
+                            clicked => { root.color-edit-secondary = true; ColorPop.show("paint:1", root.secondary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
                         }
                     }
                     Rectangle {
@@ -5509,7 +5808,7 @@ export component AppWindow inherits Window {
                         border-width: 1px; border-color: Theme.text-inactive;
                         HoverTip { y: parent.height; hovered: fgta.has-hover; text: @tr("Couleur principale : cliquer pour la choisir"); }
                         fgta := TouchArea {
-                            clicked => { ColorPop.show("paint:0", root.primary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
+                            clicked => { root.color-edit-secondary = false; ColorPop.show("paint:0", root.primary-color, self.absolute-position.x, self.absolute-position.y, self.height); }
                         }
                     }
                     Rectangle {
@@ -6825,6 +7124,16 @@ export component AppWindow inherits Window {
                             clicked => { root.settings-reset(root.settings-page); }
                         }
                     }
+                    // page Icônes : la visionneuse, à droite du titre
+                    if root.settings-page == 8: VerticalLayout {
+                        alignment: center;
+                        W10Button {
+                            height: 26px;
+                            text: @tr("Visionneuse d'icônes");
+                            tip: @tr("Toutes les icônes de MasterPaint et du pack choisi, en grand, avec recherche");
+                            clicked => { root.quick-action("icon-viewer"); }
+                        }
+                    }
                 }
                 ScrollView {
                     x: parent.sidebar-width;
@@ -7337,6 +7646,34 @@ export component AppWindow inherits Window {
                                     W10Button { text: @tr("Effacer la sauvegarde automatique"); clicked => { root.quick-action("clear-autosave"); } }
                                 }
                             }
+                            // réponses retenues des fenêtres « Se souvenir de mon choix »
+                            SetCard {
+                                text-w: tw; title: @tr("Choix retenus");
+                                Text {
+                                    width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
+                                    text: @tr("Réponses gardées par « Se souvenir de mon choix ». « Demander » repose la question.");
+                                }
+                                HorizontalLayout {
+                                    width: cw; spacing: 10px;
+                                    Text { width: min(190px, cw * 0.45); text: @tr("Séance Photo Pro au démarrage"); font-weight: 600; color: Theme.text; vertical-alignment: center; wrap: word-wrap; }
+                                    Segmented {
+                                        horizontal-stretch: 1;
+                                        options: [@tr("Demander"), @tr("Toujours restaurer"), @tr("Jamais")];
+                                        index: root.set-pm-restore;
+                                        selected(i) => { root.set-pm-restore = i; root.settings-changed(); }
+                                    }
+                                }
+                                HorizontalLayout {
+                                    width: cw; spacing: 10px;
+                                    Text { width: min(190px, cw * 0.45); text: @tr("Sélection IA sur une grande image"); font-weight: 600; color: Theme.text; vertical-alignment: center; wrap: word-wrap; }
+                                    Segmented {
+                                        horizontal-stretch: 1;
+                                        options: [@tr("Demander"), @tr("Rapide"), @tr("Précise")];
+                                        index: root.set-ai-quality;
+                                        selected(i) => { root.set-ai-quality = i; root.settings-changed(); }
+                                    }
+                                }
+                            }
                         }
                         if root.settings-page == 5: VerticalLayout {
                             spacing: 8px;
@@ -7432,13 +7769,6 @@ export component AppWindow inherits Window {
                                             root.show-contact = true;
                                         }
                                     }
-                                }
-                            }
-                            SetCard {
-                                text-w: tw; title: @tr("Outils");
-                                HorizontalLayout {
-                                    spacing: 8px; alignment: start;
-                                    W10Button { text: @tr("Visionneuse d'icônes"); clicked => { root.quick-action("icon-viewer"); } }
                                     W10Button { text: @tr("Essayer la fenêtre de plantage"); tip: @tr("Simple essai : l'application continue."); clicked => { root.quick-action("crash-test"); } }
                                 }
                             }
@@ -7847,6 +8177,14 @@ export component AppWindow inherits Window {
                             root.show-shortcuts = true;
                         } else if (id == "github") {
                             root.quick-action("open-github");
+                        } else if (id == "author") {
+                            root.quick-action("open-author");
+                        } else if (id == "raw") {
+                            // Mode Photo Pro, puis choix des photos (RAW, JPG…)
+                            root.show-welcome = false;
+                            root.settings-changed();
+                            root.menu-action("pm:reopen", "");
+                            root.menu-action("pm:import", "");
                         } else {
                             root.show-welcome = false;
                             root.settings-changed();
@@ -8478,6 +8816,23 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
+                        if root.task-check-text != "": HorizontalLayout {
+                            padding-left: 8px;
+                            padding-top: 6px;
+                            spacing: 8px;
+                            alignment: start;
+                            VerticalLayout {
+                                alignment: center;
+                                tcb := W10CheckBox { checked <=> root.task-check; }
+                            }
+                            Text {
+                                text: root.task-check-text;
+                                color: Theme.text;
+                                vertical-alignment: center;
+                                wrap: word-wrap;
+                                TouchArea { clicked => { tcb.toggle(); } }
+                            }
+                        }
                     }
                 }
             }
@@ -8718,7 +9073,7 @@ export component AppWindow inherits Window {
                 property <[string]> fmts: ["png", "jpeg", "webp", "bmp", "gif", "illu", "svg"];
                 property <[string]> exts: [".png", ".jpg", ".webp", ".bmp", ".gif", ".illu"];
                 property <[string]> bits: ["bw", "1", "2", "4", "8"];
-                float-w: 420px;
+                float-w: root.anim-on ? 470px : 420px;
                 float-h: ex-col.preferred-height + Theme.title-height;
                 float-x: (ws.width - min(self.float-w, ws.width)) / 2;
                 float-y: max(10px, (ws.height - self.float-h) / 2);
@@ -8756,6 +9111,51 @@ export component AppWindow inherits Window {
                             color: Theme.text-inactive;
                             vertical-alignment: center;
                         }
+                    }
+                    // projet animé : formats image par image (le format d'origine en évidence)
+                    if root.anim-on: Text {
+                        text: @tr("Animation") + " · " + @tr("toutes les images, à la cadence du projet");
+                        font-weight: 600;
+                        color: Theme.text;
+                    }
+                    if root.anim-on: VerticalLayout {
+                        spacing: 6px;
+                        for row in [
+                            [{ id: "gif", g: "\u{f1c5}", t: @tr("GIF animé"), h: @tr("Partout, 256 couleurs") },
+                             { id: "mp4", g: "\u{f03d}", t: @tr("Vidéo MP4"), h: @tr("Réseaux, téléphones") },
+                             { id: "webm", g: "\u{f1c8}", t: @tr("Vidéo WebM"), h: @tr("Web, léger") }],
+                            [{ id: "apng", g: "\u{f1c5}", t: @tr("PNG animé"), h: @tr("Sans perte, transparence") },
+                             { id: "zip", g: "\u{f1c6}", t: @tr("Séquence PNG"), h: @tr("Une image par fichier (.zip)") },
+                             { id: "sheet", g: "\u{f00a}", t: @tr("Planche"), h: @tr("Sprites en grille (.png)") }],
+                        ]: HorizontalLayout {
+                            spacing: 6px;
+                            for f in row: Rectangle {
+                                property <bool> origin: f.id == root.ex-anim-origin;
+                                horizontal-stretch: 1;
+                                height: 58px;
+                                border-radius: Theme.ctl-radius + 2px * Theme.round;
+                                background: exa.pressed ? Theme.accent-20 : (Theme.hover-fx && exa.has-hover) || self.origin ? Theme.accent-12 : Theme.button-bg;
+                                border-width: self.origin ? 2px : 1px;
+                                border-color: self.origin || (Theme.hover-fx && exa.has-hover) ? Theme.accent : Theme.button-border;
+                                GlyphIcon { x: 8px; y: 8px; width: 16px; height: 16px; glyph: f.g; size: 13px; tint: Theme.accent; }
+                                Text { x: 28px; y: 7px; width: parent.width - 32px; text: f.t; font-weight: 600; color: Theme.text; overflow: elide; }
+                                Text {
+                                    x: 8px; y: 28px; width: parent.width - 12px;
+                                    text: parent.origin ? @tr("Format d'origine") : f.h;
+                                    font-size: Theme.small-font-size;
+                                    color: parent.origin ? Theme.accent : Theme.text-inactive;
+                                    wrap: word-wrap;
+                                }
+                                exa := TouchArea {
+                                    clicked => { root.export-run("anim:" + f.id, root.ex-name, 90, "8", false); }
+                                }
+                            }
+                        }
+                    }
+                    if root.anim-on: Text {
+                        text: @tr("Image fixe (l'image affichée seulement)");
+                        font-weight: 600;
+                        color: Theme.text;
                     }
                     HorizontalLayout {
                         spacing: 8px;
@@ -9928,40 +10328,14 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 // cadran (angles) : glisser pour orienter, comme Paint.NET
-                                if f.angle: Rectangle {
-                                    width: 22px;
-                                    height: 22px;
+                                if f.angle: AngleDial {
                                     y: 1px;
-                                    border-radius: 11px;
-                                    background: Theme.field-bg;
-                                    border-width: 1px;
-                                    border-color: (Theme.hover-fx && dial.has-hover) ? Theme.accent : Theme.field-border;
-                                    Path {
-                                        width: 22px;
-                                        height: 22px;
-                                        viewbox-width: 22;
-                                        viewbox-height: 22;
-                                        // coordonnées arrondies : jamais d'écriture scientifique (1.2e-16) dans le tracé
-                                        commands: "M 11 11 L " + round((11 + 8 * cos(f.value * 1deg)) * 10) / 10 + " " + round((11 - 8 * sin(f.value * 1deg)) * 10) / 10;
-                                        stroke: Theme.accent;
-                                        stroke-width: 2px;
-                                    }
-                                    Rectangle { width: 4px; height: 4px; border-radius: 2px; background: Theme.accent; }
-                                    dial := TouchArea {
-                                        mouse-cursor: pointer;
-                                        // angle en degrés (0 à droite, sens trigonométrique), ramené dans la plage
-                                        function set-from(px: length, py: length) {
-                                            if (abs(px - 11px) + abs(py - 11px) < 2px) { return; }
-                                            let a = atan2((11px - py) / 1px, (px - 11px) / 1px) / 1deg;
-                                            let v = a < f.minimum ? a + 360 : a > f.maximum ? a - 360 : a;
-                                            root.effect-field-changed(i, round(clamp(v, f.minimum, f.maximum)), "");
-                                        }
-                                        pointer-event(e) => {
-                                            if (e.kind == PointerEventKind.down) { self.set-from(self.mouse-x, self.mouse-y); }
-                                        }
-                                        moved => { if (self.pressed) { self.set-from(self.mouse-x, self.mouse-y); } }
-                                        double-clicked => { root.effect-field-changed(i, f.default-value, ""); }
-                                    }
+                                    value: f.value;
+                                    minimum: f.minimum;
+                                    maximum: f.maximum;
+                                    step: f.step;
+                                    default-value: f.default-value;
+                                    changed(v) => { root.effect-field-changed(i, v, ""); }
                                 }
                                 FlatButton {
                                     width: 22px;
@@ -10245,7 +10619,9 @@ export component AppWindow inherits Window {
         }
         if ColorPop.open: cpop := Rectangle {
             property <length> pw: root.colors-expanded ? 534px : 197px;
-            property <length> ph: popanel.wanted-height;
+            // hauteur voulue par le panneau affiché (couleurs de peinture ou autre cible)
+            in-out property <length> want-h: 320px;
+            property <length> ph: self.want-h;
             property <color> c <=> ColorPop.color;
             changed c => { ColorPop.changed(self.c); }
             z: 19;
@@ -10282,7 +10658,44 @@ export component AppWindow inherits Window {
                     clicked => { ColorPop.open = false; }
                 }
             }
-            popanel := ColorsPanel {
+            // couleurs de peinture (pastilles Photoshop) : même câblage que la fenêtre Couleurs,
+            // la roue modifie la couleur choisie dans le panneau (principale OU secondaire ; avant,
+            // toujours celle de l'ouverture, même la secondaire sélectionnée)
+            if ColorPop.target == "paint:0" || ColorPop.target == "paint:1": ColorsPanel {
+                y: Theme.title-height;
+                width: parent.width;
+                height: parent.height - Theme.title-height;
+                wheel: root.wheel-image;
+                grid-image: root.color-grid-image;
+                mode-palette: root.mode-palette;
+                gray: root.gray-palette;
+                info: root.color-info;
+                favorites: root.fav-colors;
+                recents: root.recent-colors;
+                full-palette: Palettes.full;
+                primary <=> root.primary-color;
+                secondary <=> root.secondary-color;
+                edit-secondary <=> root.color-edit-secondary;
+                expanded <=> root.colors-expanded;
+                square <=> root.colors-grid;
+                comps: root.color-comps;
+                hex: root.color-hex;
+                fav-add => { root.fav-action("add", -1); }
+                fav-remove(i) => { root.fav-action("remove", i); }
+                wheel-picked(x, y, s, r) => { root.wheel-picked(x, y, s, r); }
+                hsv-picked(h, s, v, r) => { root.hsv-picked(h, s, v, r); }
+                component-changed(i, v) => { root.color-component(i, v); }
+                hex-edited(t) => { root.color-hex-edited(t); }
+                pick-screen => {
+                    ColorPop.open = false;
+                    root.tool-selected("tool-eyedropper");
+                }
+                init => { cpop.want-h = self.wanted-height; }
+                changed wanted-height => { cpop.want-h = self.wanted-height; }
+            }
+            if ColorPop.target != "paint:0" && ColorPop.target != "paint:1": popanel := ColorsPanel {
+                init => { cpop.want-h = self.wanted-height; }
+                changed wanted-height => { cpop.want-h = self.wanted-height; }
                 y: Theme.title-height;
                 width: parent.width;
                 height: parent.height - Theme.title-height;
@@ -10761,6 +11174,13 @@ export component AppWindow inherits Window {
                     font-size: Theme.small-font-size;
                     color: Theme.text-inactive;
                     horizontal-alignment: right;
+                }
+                if root.load-cancel: HorizontalLayout {
+                    alignment: end;
+                    W10Button {
+                        text: @tr("Annuler");
+                        clicked => { root.load-cancelled(); }
+                    }
                 }
             }
         }

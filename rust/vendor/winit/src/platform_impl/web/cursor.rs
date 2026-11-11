@@ -581,7 +581,11 @@ fn from_rgba(
         // Keep in mind that `HTMLCanvasElement.toBlob()` can call the callback immediately.
         let value = Rc::new(RefCell::new(None));
         let waker = Rc::new(RefCell::<Option<Waker>>::new(None));
-        let callback = Closure::once({
+        // MasterPaint : rappel confié à JavaScript (`once_into_js`, libéré après son appel).
+        // Gardé dans le futur, il était libéré quand le curseur était remplacé avant la
+        // réponse du navigateur (curseur d'outil redessiné souvent) : « closure invoked
+        // recursively or after being dropped » dans la console.
+        let callback = Closure::once_into_js({
             let value = value.clone();
             let waker = waker.clone();
             move |blob: Option<Blob>| {
@@ -592,7 +596,7 @@ fn from_rgba(
             }
         });
         canvas
-            .to_blob(callback.as_ref().unchecked_ref())
+            .to_blob(callback.unchecked_ref())
             .expect("failed with `SecurityError` despite only source coming from memory");
         let blob = future::poll_fn(|cx| {
             if let Some(blob) = value.borrow_mut().take() {

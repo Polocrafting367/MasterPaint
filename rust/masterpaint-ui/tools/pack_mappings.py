@@ -33,7 +33,9 @@ PDN = {
     'lasso': 'lasso_select_tool_icon', 'tool-poly-lasso': 'lasso_select_tool_icon', 'lasso-poly': 'lasso_select_tool_icon',
     'wand': 'magic_wand_tool_icon', 'tool-wand': 'magic_wand_tool_icon', 'wand-magic': 'magic_wand_tool_icon', 'wand-magic-sparkles': 'magic_wand_tool_icon',
     'move': 'move_tool_icon', 'up-down-left-right': 'move_tool_icon', 'arrows': 'move_tool_icon',
-    'tool-direct-select': 'move_selection_tool_icon', 'vector': 'move_selection_tool_icon',
+    # comme la grille de paint.js : sélection à la volée = lasso ; la case « déplacer la
+    # sélection » de paint.js porte notre Déformation
+    'tool-direct-select': 'lasso_select_tool_icon', 'tool-deform': 'move_selection_tool_icon', 'vector': 'move_selection_tool_icon',
     'crop-sel': 'menu_image_crop_icon',
     # outils
     'eyedropper': 'color_picker_tool_icon', 'tool-eyedropper': 'color_picker_tool_icon',

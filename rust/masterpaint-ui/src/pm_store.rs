@@ -202,10 +202,39 @@ pub(crate) fn undo(app: &AppWindow, st: &mut State, back: bool) {
     sync_undo(app, st);
 }
 
+/// Photos de la séance de Photo Pro gardée (question du démarrage).
+pub(crate) async fn session_count() -> usize {
+    let Some(bytes) = get(SESSION.to_string()).await else { return 0 };
+    serde_json::from_slice::<Value>(&bytes).ok().and_then(|v| v.get("photos").and_then(Value::as_array).map(|a| a.len())).unwrap_or(0)
+}
+
+/// « Ne pas restaurer » au démarrage : séance et fichiers d'origine oubliés pour de bon.
+pub(crate) fn forget_session() {
+    SKIP.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = slint::spawn_local(async move {
+        if let Some(v) = get(SESSION.to_string()).await.and_then(|b| serde_json::from_slice::<Value>(&b).ok()) {
+            for e in v.get("photos").and_then(Value::as_array).into_iter().flatten() {
+                if let Some(uid) = e.get("uid").and_then(Value::as_str).and_then(|u| u.parse::<u64>().ok()) {
+                    del(&key(uid));
+                }
+            }
+        }
+        del(SESSION);
+    });
+}
+
+/// « Ne pas restaurer » sans retenir le choix : rien n'est relu cette fois, la séance reste.
+pub(crate) fn skip_restore() {
+    SKIP.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// séance refusée au démarrage : rien n'est relu
+static SKIP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Démarrage : séance de Photo Pro relue, photos redéveloppées en arrière-plan, réglages
 /// reposés. Le mode reste fermé (onglet « Photo Pro » pour le rouvrir).
 pub(crate) fn start_restore(app: &AppWindow, state: &Shared) {
-    if !AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) || SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) {
+    if !AUTOSAVE_ON.load(std::sync::atomic::Ordering::Relaxed) || SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) || SKIP.load(std::sync::atomic::Ordering::Relaxed) {
         return;
     }
     let weak = app.as_weak();

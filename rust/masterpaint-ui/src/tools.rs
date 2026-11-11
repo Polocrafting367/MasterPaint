@@ -128,6 +128,8 @@ pub struct Opts {
     pub smoothing: f32,
     /// baguette, pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
     pub sample_all: bool,
+    /// rectangle / ellipse de sélection : sélection d'objet par l'IA (sujet dans le cadre)
+    pub sel_ai: bool,
 }
 
 /// Réglages du dégradé d'une forme (un changement régénère le dégradé).
@@ -176,6 +178,7 @@ impl Default for Opts {
             strength: 0.5,
             smoothing: 0.0,
             sample_all: false,
+            sel_ai: false,
         }
     }
 }
@@ -519,6 +522,11 @@ pub struct Session {
     pub poly: Vec<(f32, f32)>,
     poly_base: Option<Option<Vec<u8>>>,
     poly_mode: Option<SelMode>,
+    /// sélection d'objet (option IA du rectangle / de l'ellipse) : cadre tracé, mode et
+    /// sélection d'avant, repris par l'application qui lance l'IA
+    pub ai_pending: Option<(Vec<u8>, SelMode, Option<Vec<u8>>)>,
+    /// option IA lue à l'appui (le relâché ne reçoit pas les réglages)
+    sel_ai: bool,
     mag: Option<Magnetic>,
     edges: Option<EdgeMap>,
     /// horloge (ms) et tolérance de proximité (pixels du document, 12 px écran) : données par
@@ -729,6 +737,7 @@ impl Session {
     }
 
     pub fn press(&mut self, tool: Tool, doc: &mut Doc, o: &Opts, x: f32, y: f32, secondary: bool, ctrl: bool, alt: bool) -> Outcome {
+        self.sel_ai = o.sel_ai;
         let (w, h) = (doc.w, doc.h);
         let shift = self.shift;
         let inside = x >= 0.0 && y >= 0.0 && (x as usize) < w && (y as usize) < h;
@@ -1216,7 +1225,11 @@ impl Session {
                     doc.sel = next;
                 } else {
                     let pts = ellipse_points(d.start, d.last);
-                    doc.apply_selection(paint::polygon_mask(doc.w, doc.h, &pts), d.mode);
+                    let m = paint::polygon_mask(doc.w, doc.h, &pts);
+                    if self.sel_ai {
+                        self.ai_pending = Some((m.clone(), d.mode, doc.sel.clone()));
+                    }
+                    doc.apply_selection(m, d.mode);
                 }
                 Outcome::Selection
             }
@@ -1235,6 +1248,9 @@ impl Session {
                     let mut m = vec![0u8; w * doc.h];
                     for yy in y0..y1 {
                         m[yy * w + x0..yy * w + x1].fill(255);
+                    }
+                    if self.sel_ai {
+                        self.ai_pending = Some((m.clone(), d.mode, doc.sel.clone()));
                     }
                     doc.apply_selection(m, d.mode);
                 }

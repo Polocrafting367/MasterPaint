@@ -180,8 +180,8 @@ msgid "Cadence : animer sur 3"
 msgstr "Cadence : animer sur 3"
 
 #: ui/app.slint:360
-msgid "Interface : mode téléphone (menu ☰, palettes en colonnes)"
-msgstr "Interface : mode téléphone (menu ☰, palettes en colonnes)"
+msgid "Interface : mode téléphone"
+msgstr "Interface : mode téléphone"
 
 #: ui/app.slint:361
 msgid "Palettes : ancrage fixe (style Adobe)"
@@ -4195,79 +4195,79 @@ msgstr "Inverser"
 msgid "N&B"
 msgstr "N&B"
 
-#: ui/photo.slint:297
+#: ui/photo.slint:299
 msgid "Auto : réglage automatique de cette section seulement (retrouve les valeurs calculées après des retouches à la main)"
 msgstr "Auto : réglage automatique de cette section seulement (retrouve les valeurs calculées après des retouches à la main)"
 
-#: ui/photo.slint:319
+#: ui/photo.slint:321
 msgid "Remettre les réglages de cette section à zéro"
 msgstr "Remettre les réglages de cette section à zéro"
 
-#: ui/photo.slint:547
+#: ui/photo.slint:549
 msgid "Mode Photo Pro"
 msgstr "Mode Photo Pro"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Bibliothèque"
 msgstr "Bibliothèque"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Développement"
 msgstr "Développement"
 
-#: ui/photo.slint:561
+#: ui/photo.slint:563
 msgid "Masque"
 msgstr "Masque"
 
-#: ui/photo.slint:580
+#: ui/photo.slint:582
 msgid "Annuler le dernier réglage de cette photo (Ctrl+Z)"
 msgstr "Annuler le dernier réglage de cette photo (Ctrl+Z)"
 
-#: ui/photo.slint:587
+#: ui/photo.slint:589
 msgid "Rétablir (Ctrl+Y)"
 msgstr "Rétablir (Ctrl+Y)"
 
-#: ui/photo.slint:592
+#: ui/photo.slint:594
 msgid "Importer photos"
 msgstr "Importer photos"
 
-#: ui/photo.slint:593
+#: ui/photo.slint:595
 msgid "Importer des photos dans la pellicule (JPEG, PNG, RAW…)"
 msgstr "Importer des photos dans la pellicule (JPEG, PNG, RAW…)"
 
-#: ui/photo.slint:601
+#: ui/photo.slint:603
 msgid "Ouvrir la photo réglée dans l'éditeur MasterPaint"
 msgstr "Ouvrir la photo réglée dans l'éditeur MasterPaint"
 
-#: ui/photo.slint:612
+#: ui/photo.slint:614
 msgid "Exporter la photo : JPEG, PNG ou TIFF 16 bits"
 msgstr "Exporter la photo : JPEG, PNG ou TIFF 16 bits"
 
-#: ui/photo.slint:632
+#: ui/photo.slint:634
 msgid "JPEG (8 bits)"
 msgstr "JPEG (8 bits)"
 
-#: ui/photo.slint:645
+#: ui/photo.slint:647
 msgid "Appliquer à toutes"
 msgstr "Appliquer à toutes"
 
-#: ui/photo.slint:646
+#: ui/photo.slint:648
 msgid "Appliquer les réglages et le filtre de cette photo à toutes les photos de la pellicule"
 msgstr "Appliquer les réglages et le filtre de cette photo à toutes les photos de la pellicule"
 
-#: ui/photo.slint:655
+#: ui/photo.slint:657
 msgid "Auto sur toutes"
 msgstr "Auto sur toutes"
 
-#: ui/photo.slint:656
+#: ui/photo.slint:658
 msgid "Réglage automatique de chaque photo d'après sa scène (portrait, paysage, nuit…)"
 msgstr "Réglage automatique de chaque photo d'après sa scène (portrait, paysage, nuit…)"
 
-#: ui/photo.slint:666
+#: ui/photo.slint:668
 msgid "Réduire : revenir à l'éditeur, la pellicule et ses réglages restent (onglet Photo Pro pour revenir)"
 msgstr "Réduire : revenir à l'éditeur, la pellicule et ses réglages restent (onglet Photo Pro pour revenir)"
 
-#: ui/photo.slint:672
+#: ui/photo.slint:674
 msgid "Fermer le Mode Photo Pro (la pellicule et ses réglages sont gardés)"
 msgstr "Fermer le Mode Photo Pro (la pellicule et ses réglages sont gardés)"
 
@@ -4547,123 +4547,123 @@ msgstr "FILTRES & RESET"
 msgid "Le filtre s'ajoute à vos réglages : sa part est montrée sur les curseurs."
 msgstr "Le filtre s'ajoute à vos réglages : sa part est montrée sur les curseurs."
 
-#: ui/photo.slint:1789
+#: ui/photo.slint:1790
 msgid "Tourner la photo d'un quart de tour vers la droite"
 msgstr "Tourner la photo d'un quart de tour vers la droite"
 
-#: ui/photo.slint:1800
+#: ui/photo.slint:1801
 msgid "Recadrer et redresser la photo (cadre et poignées sur l'image)"
 msgstr "Recadrer et redresser la photo (cadre et poignées sur l'image)"
 
-#: ui/photo.slint:1814
+#: ui/photo.slint:1815
 msgid "Auto"
 msgstr "Auto"
 
-#: ui/photo.slint:1816
+#: ui/photo.slint:1817
 msgid "Réglage automatique de toute la photo d'après sa scène (sous le filtre éventuel)"
 msgstr "Réglage automatique de toute la photo d'après sa scène (sous le filtre éventuel)"
 
-#: ui/photo.slint:1827
+#: ui/photo.slint:1828
 msgid "Remettre tous les réglages à zéro et retirer le filtre"
 msgstr "Remettre tous les réglages à zéro et retirer le filtre"
 
-#: ui/photo.slint:1836
+#: ui/photo.slint:1837
 msgid "LUMIÈRE"
 msgstr "LUMIÈRE"
 
-#: ui/photo.slint:1840
+#: ui/photo.slint:1841
 msgid "COULEUR ET SATURATION"
 msgstr "COULEUR ET SATURATION"
 
-#: ui/photo.slint:1842
+#: ui/photo.slint:1843
 msgid "Vibrance"
 msgstr "Vibrance"
 
-#: ui/photo.slint:1843
+#: ui/photo.slint:1844
 msgid "PRÉSENCE ET DÉTAIL"
 msgstr "PRÉSENCE ET DÉTAIL"
 
-#: ui/photo.slint:1845
+#: ui/photo.slint:1846
 msgid "Vignettage"
 msgstr "Vignettage"
 
-#: ui/photo.slint:1846
+#: ui/photo.slint:1847
 msgid "Grain film"
 msgstr "Grain film"
 
-#: ui/photo.slint:1846
+#: ui/photo.slint:1847
 msgid "Piqué du grain"
 msgstr "Piqué du grain"
 
-#: ui/photo.slint:1847
+#: ui/photo.slint:1848
 msgid "Réduction du bruit (luminance)"
 msgstr "Réduction du bruit (luminance)"
 
-#: ui/photo.slint:1847
+#: ui/photo.slint:1848
 msgid "Réduction du bruit (couleur)"
 msgstr "Réduction du bruit (couleur)"
 
-#: ui/photo.slint:1848
+#: ui/photo.slint:1849
 msgid "COLOR GRADING (RVB)"
 msgstr "COLOR GRADING (RVB)"
 
-#: ui/photo.slint:1849
+#: ui/photo.slint:1850
 msgid "Rouge — hautes lumières"
 msgstr "Rouge — hautes lumières"
 
-#: ui/photo.slint:1849
+#: ui/photo.slint:1850
 msgid "Rouge — ombres"
 msgstr "Rouge — ombres"
 
-#: ui/photo.slint:1850
+#: ui/photo.slint:1851
 msgid "Vert — hautes lumières"
 msgstr "Vert — hautes lumières"
 
-#: ui/photo.slint:1850
+#: ui/photo.slint:1851
 msgid "Vert — ombres"
 msgstr "Vert — ombres"
 
-#: ui/photo.slint:1851
+#: ui/photo.slint:1852
 msgid "Bleu — hautes lumières"
 msgstr "Bleu — hautes lumières"
 
-#: ui/photo.slint:1851
+#: ui/photo.slint:1852
 msgid "Bleu — ombres"
 msgstr "Bleu — ombres"
 
-#: ui/photo.slint:1888
+#: ui/photo.slint:1889
 msgid "MÉLANGEUR DE COULEURS (TSL)"
 msgstr "MÉLANGEUR DE COULEURS (TSL)"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Rouges"
 msgstr "Rouges"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Oranges"
 msgstr "Oranges"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Jaunes"
 msgstr "Jaunes"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Verts"
 msgstr "Verts"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Aquas"
 msgstr "Aquas"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Bleus"
 msgstr "Bleus"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Violets"
 msgstr "Violets"
 
-#: ui/photo.slint:1922
+#: ui/photo.slint:1923
 msgid "Magentas"
 msgstr "Magentas"
 
@@ -8424,16 +8424,16 @@ msgid "Sélectionner l'opacité du calque"
 msgstr "Sélectionner l'opacité du calque"
 
 #: src/lib.rs:8286
-msgid "Rotation de 90° dans le sens horaire"
-msgstr "Rotation de 90° dans le sens horaire"
+msgid "Rotation de 90° horaire"
+msgstr "Rotation de 90° horaire"
 
 #: src/lib.rs:8286
 msgid "Ctrl+H"
 msgstr "Ctrl+H"
 
 #: src/lib.rs:8287
-msgid "Rotation de 90° dans le sens antihoraire"
-msgstr "Rotation de 90° dans le sens antihoraire"
+msgid "Rotation de 90° antihoraire"
+msgstr "Rotation de 90° antihoraire"
 
 #: src/lib.rs:8287
 msgid "Ctrl+G"

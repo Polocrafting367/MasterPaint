@@ -28,7 +28,9 @@ def main():
         if base in ('mpicons.slint', 'mpicons_gen.rs', 'fa_used_gen.rs'):
             continue
         for m in re.finditer(r'\\u\{([ef][0-9a-fA-F]{3})\}', open(f, encoding='utf-8').read()):
-            used.add(m.group(1).lower())
+            # U+FEFF : caractère invisible (marque d'ordre des octets), pas une icône
+            if m.group(1).lower() != 'feff':
+                used.add(m.group(1).lower())
     rows = sorted(used, key=lambda c: names.get(c, ('~' + c,))[0])
     out = ['// Fichier généré par tools/gen_fa_used.py — ne pas modifier à la main.',
            '/// Glyphes Font Awesome employés par l\'interface : (glyphe, nom, style).',

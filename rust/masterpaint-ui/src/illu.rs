@@ -92,6 +92,15 @@ fn decode_parallel(items: Vec<(usize, Vec<u8>)>) -> Vec<(usize, Decoded)> {
     out.into_inner().unwrap_or_else(|e| e.into_inner())
 }
 
+/// PNG (compression rapide) d'une image RVBA.
+pub(crate) fn png_bytes(w: usize, h: usize, px: &[u8]) -> Vec<u8> {
+    use image::ImageEncoder;
+    let mut out = std::io::Cursor::new(Vec::new());
+    let enc = image::codecs::png::PngEncoder::new_with_quality(&mut out, image::codecs::png::CompressionType::Fast, image::codecs::png::FilterType::Sub);
+    let _ = enc.write_image(px, w as u32, h as u32, image::ExtendedColorType::Rgba8);
+    out.into_inner()
+}
+
 pub(crate) fn png_data_url(w: usize, h: usize, px: &[u8]) -> String {
     use image::ImageEncoder;
     let mut out = std::io::Cursor::new(Vec::new());

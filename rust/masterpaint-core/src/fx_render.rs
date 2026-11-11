@@ -172,7 +172,10 @@ pub fn fractal(julia: bool, src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &
                         my = 2.0 * t * my + mi;
                         c += 1.0;
                         if factor <= 60.0 {
-                            if mx == sx && my == sy {
+                            // orbite revenue à 1e-13 près d'une valeur déjà vue : attirée par un
+                            // cycle, elle ne s'échappera plus (le calcul exact allait jusqu'à 1024
+                            // itérations par échantillon : 8,5 s pour 1000 × 850)
+                            if (mx - sx).abs() + (my - sy).abs() < 1e-13 {
                                 periodic = true;
                                 break;
                             }

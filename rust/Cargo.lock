@@ -3073,6 +3073,7 @@ dependencies = [
  "jni 0.21.1",
  "js-sys",
  "masterpaint-core",
+ "png",
  "pollster",
  "rawler",
  "resvg",

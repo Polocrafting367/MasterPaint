@@ -81,9 +81,12 @@ pub fn soften_portrait(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     }
 }
 
-/// Vignette : p: [intensité %, couleur 0xRRGGBB, mode 0=normal 1=produit 2=écran 3=incrustation, centre x %, centre y %]
+/// Vignette : p: [intensité %, couleur 0xRRGGBB, mode 0=normal 1=produit 2=écran 3=incrustation,
+/// centre x %, centre y %, rayon % (100), douceur % (60 : fondu de 0,2 à 0,8)]
 pub fn vignette(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
-    let vig = p.f(0, 50.0) / 100.0;
+    let vig = p.f(0, 50.0) / 100.0 / (p.f(5, 100.0) / 100.0).clamp(0.1, 4.0);
+    let soft = (p.f(6, 60.0) / 100.0).clamp(0.02, 1.0);
+    let (lo, hi) = (0.5 - soft / 2.0, 0.5 + soft / 2.0);
     let vc = p.rgb(1, 0);
     let blend = p.i(2, 0);
     let cx = src.w as f32 / 2.0 * (1.0 + p.f(3, 0.0) / 100.0);
@@ -93,12 +96,12 @@ pub fn vignette(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     for y in y0..y1 {
         for x in 0..src.w {
             let d = (x as f32 - cx).fhypot(y as f32 - cy) / mr * vig * 2.0;
-            let mask = if d <= 0.2 {
+            let mask = if d <= lo {
                 1.0
-            } else if d >= 0.8 {
+            } else if d >= hi {
                 0.0
             } else {
-                let t = (d - 0.2) / 0.6;
+                let t = (d - lo) / (hi - lo);
                 1.0 - t * t * (3.0 - 2.0 * t)
             };
             let i = src.idx(x, y);

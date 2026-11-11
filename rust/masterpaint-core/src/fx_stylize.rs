@@ -3,11 +3,33 @@
 
 use crate::util::*;
 
-/// Détection de contours Sobel (MasterPaint) : p: [sensibilité %, couleur RVB facultative]
+/// Détection des bords : p: [sensibilité %, couleur RVB, mode 0 = Sobel (toutes directions,
+/// bords clairs sur fond noir) 1 = directionnel (Paint.NET : relief gris, bords en couleur selon
+/// l'angle), angle°]
 pub fn edges(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let sens = p.f(0, 50.0) / 100.0;
     let tint = p.rgb(1, 0xffffff);
     let (w, h) = (src.w as isize, src.h as isize);
+    if p.i(2, 0) == 1 {
+        let wt = directional_weights(p.f(3, 45.0));
+        let k = sens * 2.0;
+        for y in y0 as isize..y1 as isize {
+            for x in 0..w {
+                let mut s = [0.0f32; 3];
+                for (j, row) in wt.iter().enumerate() {
+                    for (kk, wv) in row.iter().enumerate() {
+                        let q = src.pxc(x + kk as isize - 1, y + j as isize - 1);
+                        for c in 0..3 {
+                            s[c] += wv * q[c] as f32;
+                        }
+                    }
+                }
+                let i = src.idx(x as usize, y as usize);
+                put(dst, i, 128.0 + s[0] * k, 128.0 + s[1] * k, 128.0 + s[2] * k, src.d[i + 3] as f32);
+            }
+        }
+        return;
+    }
     let g = |x: isize, y: isize| -> f32 {
         if x < 0 || y < 0 || x >= w || y >= h {
             return 0.0;
@@ -38,41 +60,48 @@ fn directional_weights(angle_deg: f32) -> [[f32; 3]; 3] {
     ]
 }
 
-/// Paint.NET « Embosser » (gris) : p: [angle°]
+/// Paint.NET « Embosser » (gris) : p: [angle°, hauteur px (écart des voisins lus, 1 = Paint.NET),
+/// quantité % (100 = Paint.NET)]
 pub fn emboss(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let wt = directional_weights(p.f(0, 0.0));
+    let d = p.f(1, 1.0).round().clamp(1.0, 20.0) as isize;
+    let amt = p.f(2, 100.0).clamp(0.0, 500.0) / 100.0;
     for y in y0 as isize..y1 as isize {
         for x in 0..src.w as isize {
             let mut s = 0.0;
             for (j, row) in wt.iter().enumerate() {
                 for (k, wv) in row.iter().enumerate() {
-                    let q = src.pxc(x + k as isize - 1, y + j as isize - 1);
+                    let q = src.pxc(x + (k as isize - 1) * d, y + (j as isize - 1) * d);
                     s += wv * luma_pdn(&q) as f32;
                 }
             }
-            let v = s + 128.0;
+            let v = s * amt + 128.0;
             let i = src.idx(x as usize, y as usize);
             put(dst, i, v, v, v, src.d[i + 3] as f32);
         }
     }
 }
 
-/// Paint.NET « Mise en relief » (couleur conservée) : p: [angle°]
+/// Paint.NET « Mise en relief » (couleur conservée) : p: [angle°, hauteur px, quantité %]
 pub fn relief(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
-    let mut wt = directional_weights(p.f(0, 45.0));
-    wt[1][1] = 1.0;
+    let wt = directional_weights(p.f(0, 45.0));
+    let d = p.f(1, 1.0).round().clamp(1.0, 20.0) as isize;
+    let amt = p.f(2, 100.0).clamp(0.0, 500.0) / 100.0;
     for y in y0 as isize..y1 as isize {
         for x in 0..src.w as isize {
-            let mut s = [0.0f32; 3];
+            let i = src.idx(x as usize, y as usize);
+            let mut s = [src.d[i] as f32, src.d[i + 1] as f32, src.d[i + 2] as f32];
             for (j, row) in wt.iter().enumerate() {
                 for (k, wv) in row.iter().enumerate() {
-                    let q = src.pxc(x + k as isize - 1, y + j as isize - 1);
+                    if j == 1 && k == 1 {
+                        continue;
+                    }
+                    let q = src.pxc(x + (k as isize - 1) * d, y + (j as isize - 1) * d);
                     for c in 0..3 {
-                        s[c] += wv * q[c] as f32;
+                        s[c] += wv * amt * q[c] as f32;
                     }
                 }
             }
-            let i = src.idx(x as usize, y as usize);
             put(dst, i, s[0], s[1], s[2], src.d[i + 3] as f32);
         }
     }

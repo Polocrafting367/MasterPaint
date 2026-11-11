@@ -186,6 +186,7 @@ export component AnimPanel inherits Rectangle {
             Rectangle { horizontal-stretch: 1; min-width: 6px; }
             AnimBtn { touch: root.touch; glyph: "\u{f1c5}"; label: @tr("GIF"); tip: @tr("Exporter en GIF animé"); clicked => { root.action("export-gif"); } }
             AnimBtn { touch: root.touch; glyph: "\u{f00a}"; label: @tr("Planche"); tip: @tr("Exporter une planche de sprites (PNG)"); clicked => { root.action("export-sheet"); } }
+            AnimBtn { touch: root.touch; glyph: "\u{f03d}"; label: @tr("Vidéo…"); tip: @tr("Exporter l'animation : MP4, WebM, PNG animé, séquence d'images…"); clicked => { root.action("export-more"); } }
             Rectangle { horizontal-stretch: 1; min-width: 6px; }
             AnimBtn { touch: root.touch; glyph: "\u{f2d1}"; tip: @tr("Réduire la frise (le mode animation reste actif)"); clicked => { root.action("collapse"); } }
         }

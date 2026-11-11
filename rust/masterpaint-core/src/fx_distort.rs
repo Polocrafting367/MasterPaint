@@ -36,10 +36,19 @@ fn center(src: &Img) -> (f32, f32, f32) {
     (cx, cy, cx.fhypot(cy).max(1.0))
 }
 
-/// Bosse : p: [intensité -100..100]
+/// Centre (décalage en % de la demi-taille) et rayon (% de la demi-diagonale) d'une
+/// déformation : p[i], p[i+1], p[i+2] ; 0, 0, 100 = centre de l'image, toute l'image.
+fn center_at(src: &Img, p: &P, i: usize) -> (f32, f32, f32) {
+    let (cx, cy, mr) = center(src);
+    let r = (p.f(i + 2, 100.0) / 100.0).clamp(0.02, 4.0);
+    (cx * (1.0 + p.f(i, 0.0) / 100.0), cy * (1.0 + p.f(i + 1, 0.0) / 100.0), mr * r)
+}
+
+/// Bosse : p: [intensité -100..100, centre x %, centre y %, rayon %] ; rien ne bouge au-delà
+/// du rayon
 pub fn bulge(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let k = p.f(0, 50.0) / 100.0 * 1.5;
-    let (cx, cy, mr) = center(src);
+    let (cx, cy, mr) = center_at(src, p, 1);
     geometric(src, dst, y0, y1, |x, y| {
         let (dx, dy) = (x - cx, y - cy);
         let r = dx.fhypot(dy);
@@ -47,6 +56,9 @@ pub fn bulge(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
             return (cx, cy);
         }
         let t = r / mr;
+        if t >= 1.0 {
+            return (x, y);
+        }
         let rs = r / (1.0 + k * (1.0 - t * t));
         (cx + dx / r * rs, cy + dy / r * rs)
     });
@@ -62,13 +74,16 @@ pub fn pinch(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     bulge(src, dst, y0, y1, &P(&q));
 }
 
-/// Torsion : p: [angle°]
+/// Torsion : p: [angle°, centre x %, centre y %, rayon %]
 pub fn twist(src: &Img, dst: &mut Out, y0: usize, y1: usize, p: &P) {
     let a = p.f(0, 45.0).to_radians();
-    let (cx, cy, mr) = center(src);
+    let (cx, cy, mr) = center_at(src, p, 1);
     geometric(src, dst, y0, y1, |x, y| {
         let (dx, dy) = (x - cx, y - cy);
         let r = dx.fhypot(dy);
+        if r >= mr {
+            return (x, y);
+        }
         let th = dy.fatan2(dx) + a * (1.0 - r / mr);
         (cx + r * th.fcos(), cy + r * th.fsin())
     });

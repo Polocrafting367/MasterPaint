@@ -68,6 +68,11 @@ pub struct Photo {
     /// historique (annuler / rétablir) : états successifs, position de l'état affiché
     pub hist: Vec<Snap>,
     pub hist_pos: usize,
+    /// sujet détouré par l'IA (largeur, hauteur, alpha 0..255 de la photo entière, orientation
+    /// actuelle) : masques Sujet / Arrière-plan ; recalculé après une restauration
+    pub ai: Option<Arc<(usize, usize, Vec<u8>)>>,
+    /// IA : 0 rien demandé, 1 en cours, 2 échec (repli sur la détection simple)
+    pub ai_state: u8,
 }
 
 /// Réglages locaux d'un masque : (indice du moteur, libellé, minimum, maximum).
@@ -109,11 +114,26 @@ impl PmMask {
             3 => ("Pinceau", vec![0.0]),
             4 => ("Plage de luminance", vec![70.0, 100.0, 15.0]),
             5 => ("Plage de couleur", vec![0.3, 0.5, 0.8, 50.0]),
-            6 => ("Ciel", vec![]),
-            7 => ("Sujet", vec![]),
-            _ => ("Arrière-plan", vec![]),
+            // sélections automatiques : contour (flou) 0..100, étendue −100..100
+            6 => ("Ciel", vec![10.0, 0.0]),
+            7 => ("Sujet", vec![10.0, 0.0]),
+            _ => ("Arrière-plan", vec![10.0, 0.0]),
         };
         PmMask { name: format!("{} {n}", crate::i18n::tr(name)), kind, visible: true, invert: false, amount: 100.0, shape, adjust: vec![0.0; LOCAL.len()] }
+    }
+
+    /// Forme complétée des valeurs par défaut qui manquent (séances d'avant un réglage : les
+    /// sélections automatiques n'avaient ni contour ni étendue).
+    pub fn full_shape(&self) -> Vec<f32> {
+        let mut s = self.shape.clone();
+        if self.kind >= 6 {
+            for (i, d) in [10.0, 0.0].into_iter().enumerate() {
+                if s.len() <= i {
+                    s.push(d);
+                }
+            }
+        }
+        s
     }
 
     /// Quart de tour horaire de la forme (le point (u, v) va en (1 − v, u)).
@@ -408,6 +428,8 @@ impl Photo {
             masks: Vec::new(),
             hist: Vec::new(),
             hist_pos: 0,
+            ai: None,
+            ai_state: 0,
         }
     }
 
@@ -448,6 +470,8 @@ impl Photo {
             masks: Vec::new(),
             hist: Vec::new(),
             hist_pos: 0,
+            ai: None,
+            ai_state: 0,
         }
     }
 
@@ -522,6 +546,17 @@ impl Photo {
         self.crop = (1.0 - y1, x0, 1.0 - y0, x1);
         for m in &mut self.masks {
             m.rotate90();
+        }
+        // carte de l'IA : même quart de tour (le point (u, v) va en (1 − v, u))
+        if let Some(a) = self.ai.take() {
+            let (aw, ah, src) = (a.0, a.1, &a.2);
+            let mut d = vec![0u8; aw * ah];
+            for y in 0..ah {
+                for x in 0..aw {
+                    d[x * ah + (ah - 1 - y)] = src[y * aw + x];
+                }
+            }
+            self.ai = Some(Arc::new((ah, aw, d)));
         }
         self.rot = (self.rot + 1) % 4;
         self.modified = true;
@@ -636,10 +671,24 @@ impl Photo {
             for (k, d) in adj {
                 v.extend_from_slice(&[k, d]);
             }
-            v.push(m.shape.len() as f32);
-            v.extend_from_slice(&m.shape);
+            // Sujet / Arrière-plan : contour, étendue, puis la carte de l'IA si elle est prête
+            let mut shape = m.full_shape();
+            if matches!(m.kind, 7 | 8) {
+                shape.truncate(2);
+                if let Some(a) = &self.ai {
+                    shape.extend_from_slice(&[a.0 as f32, a.1 as f32]);
+                    shape.extend(masterpaint_core::pack_mask_bytes(&a.2));
+                }
+            }
+            v.push(shape.len() as f32);
+            v.extend_from_slice(&shape);
         }
         v
+    }
+
+    /// Un masque visible ou choisi attend la carte de l'IA (Sujet / Arrière-plan).
+    pub fn wants_ai(&self) -> bool {
+        self.ai.is_none() && self.ai_state == 0 && self.masks.iter().any(|m| matches!(m.kind, 7 | 8))
     }
 
     /// Réglages du moteur : grain et clarté calés sur la pleine résolution, pour que l'aperçu

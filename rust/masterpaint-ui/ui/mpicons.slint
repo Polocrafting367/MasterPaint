@@ -153,7 +153,7 @@ export global MpIcons {
     }
     /// icône d'une entrée de menu, d'après son libellé puis son glyphe
     public pure function for-menu(label: string, fa: string) -> int {
-        return menu-0(label) >= 0 ? menu-0(label) : menu-1(label) >= 0 ? menu-1(label) : menu-fa(fa);
+        return menu-0(label) >= 0 ? menu-0(label) : menu-1(label) >= 0 ? menu-1(label) : menu-2(label) >= 0 ? menu-2(label) : menu-fa(fa);
     }
     pure function menu-fa(g: string) -> int {
         return g == "\u{e494}" ? 0
@@ -442,10 +442,20 @@ export global MpIcons {
             : l == @tr("Aimantation") ? 57
             : l == @tr("Palettes volantes (Paint.NET)") ? 207
             : l == @tr("Palettes : ancrage fixe (style Adobe)") ? 207
-            : l == @tr("Interface : mode téléphone (menu ☰, palettes en colonnes)") ? 209
+            : l == @tr("Interface : mode téléphone") ? 209
             : l == @tr("Préréglages créatifs") ? 92
             : l == @tr("Supprimer le calque") ? 69
-            : l == @tr("Annuler la dernière action") ? 5
+            : l == @tr("Linogravure…") ? 217
+            : l == @tr("Pointillisme…") ? 218
+            : l == @tr("Vitrail…") ? 215
+            : l == @tr("Mosaïque…") ? 216
+            : l == @tr("Tramage ordonné…") ? 219
+            : l == @tr("Sphériser…") ? 220
+            : l == @tr("Vagues tourbillonnantes…") ? 221
+            : -1;
+    }
+    pure function menu-2(l: string) -> int {
+        return l == @tr("Annuler la dernière action") ? 5
             : -1;
     }
     pure function glyph-0(g: string) -> int {
