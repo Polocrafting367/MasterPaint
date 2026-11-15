@@ -11,7 +11,31 @@ fn rgb(hex: u32) -> Color {
 
 // Stable palette identities are saved; display shades adapt to each theme.
 const ACCENTS: [u32; 11] = [0xb91c1c, 0xc2410c, 0xa16207, 0x15803d, 0x0f766e,
-    0x0369a1, 0x1d4ed8, 0x0f2d5c, 0x4338ca, 0x7e22ce, 0xbe185d];
+    0x0078d4, 0x1d4ed8, 0x0f2d5c, 0x4338ca, 0x7e22ce, 0xbe185d];
+
+/// Couleur « #rrggbb » enregistrée ; vide ou « accent » : aucune.
+fn parse_hex(s: &str) -> Option<Color> {
+    let s = s.trim_start_matches('#');
+    (s.len() == 6).then(|| u32::from_str_radix(s, 16).ok()).flatten().map(rgb)
+}
+
+/// Même teinte, foncée mais saturée (ruban et volets de 7 en sombre) : une couleur pâle comme le
+/// bleu d'Office 2010 (#d9e4f2) devient un bleu acier, au lieu d'un gris.
+fn deep_tone(c: Color, value: f32) -> Color {
+    let (r, g, b) = (c.red() as f32 / 255.0, c.green() as f32 / 255.0, c.blue() as f32 / 255.0);
+    let (mx, mn) = (r.max(g).max(b), r.min(g).min(b));
+    let d = mx - mn;
+    let h = if d <= 1e-6 { 0.0 } else if mx == r { 60.0 * (((g - b) / d).rem_euclid(6.0)) } else if mx == g { 60.0 * ((b - r) / d + 2.0) } else { 60.0 * ((r - g) / d + 4.0) };
+    // gris : reste gris ; teinte pâle : saturation relevée
+    let s = if mx <= 1e-6 || d <= 1e-3 { 0.0 } else { (d / mx * 3.0).clamp(0.3, 0.7) };
+    let v = value;
+    let cc = v * s;
+    let x = cc * (1.0 - ((h / 60.0).rem_euclid(2.0) - 1.0).abs());
+    let (r1, g1, b1) = match (h / 60.0) as i32 { 0 => (cc, x, 0.0), 1 => (x, cc, 0.0), 2 => (0.0, cc, x), 3 => (0.0, x, cc), 4 => (x, 0.0, cc), _ => (cc, 0.0, x) };
+    let m = v - cc;
+    let u = |f: f32| ((f + m) * 255.0).round().clamp(0.0, 255.0) as u8;
+    Color::from_rgb_u8(u(r1), u(g1), u(b1))
+}
 
 fn luminance(c: Color) -> f32 {
     let linear = |v: u8| { let v = v as f32 / 255.0; if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) } };
@@ -337,24 +361,55 @@ fn sync_system_theme(dark: bool, base: Color, bar: Color) {
     let _=(dark,base);
 }
 
+/// Dessin des contrôles en vigueur : celui choisi (Paramètres › Personnalisation › Style), dans
+/// les quatre interfaces (MasterPaint, Paint.NET, Photoshop, Téléphone). Le mode léger
+/// impose le style 4 sans écraser le choix à restaurer à sa désactivation.
+pub fn skin_of(app: &AppWindow) -> i32 {
+    if app.get_set_perf_mode() == 1 || (app.get_set_perf_mode() == 0 && app.get_set_perf_done()) {
+        4
+    } else {
+        app.get_set_theme_style().clamp(0, 4)
+    }
+}
+
+/// Pack d'icônes qui accompagne l'interface et le style (« Suivre l'interface choisie ») :
+/// Windows 7 / XP → Paint.NET (ancien), de la même époque ; sinon celui de l'interface.
+pub fn followed_pack(app: &AppWindow) -> i32 {
+    match skin_of(app) {
+        2 | 3 => 4,
+        _ => match app.get_set_interface_theme() { 1 => 1, 2 => 2, _ => 0 },
+    }
+}
+
 /// Applique le thème : sombre ou clair, accent, et style (Paramètres › Thème d'interface :
 /// 0 Flat Design, 1 Windows 98.
 pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
     let base_accent = palette_accent(accent);
     let accent = accent_shade(base_accent, dark);
     sync_system_theme(dark, base_accent, mix(accent, rgb(0x000000), 0.62));
-    render_icons(app, dark, accent);
+    // Personnalisation avancée : icônes d'une autre couleur que l'accentuation
+    let icon_pick = parse_hex(&app.get_set_icon_color());
+    app.global::<Theme>().set_icon_base(icon_pick.unwrap_or(base_accent));
+    let icon_accent = icon_pick.map_or(accent, |c| accent_shade(c, dark));
+    render_icons(app, dark, icon_accent);
     let t = app.global::<Theme>();
-    let style = match app.get_set_interface_theme() {1 => 2, 2 => 3, 3 => 0, _ => app.get_set_theme_style()};
+    // dessin des contrôles de l'interface MasterPaint (0 moderne, 1 Windows 98, 2 Windows 7,
+    // 3 Windows XP, 4 ultra léger) ; les présentations Paint.NET / Photoshop / Téléphone ont le leur
+    let skin = skin_of(app);
+    let style = match app.get_set_interface_theme() {1 => 2, 2 => 3, 3 => 0, _ => if skin == 1 { 1 } else { 0 }};
     t.set_reference_style(style);
-    let win98 = style == 1;
+    t.set_skin(skin);
+    let win98 = skin == 1;
+    let (win7, xp, lite) = (skin == 2, skin == 3, skin == 4);
     // Paramètres › Apparence : coins arrondis et barre de titre translucide (Windows 11)
-    let round = !win98 && app.get_set_rounded();
+    let round = !win98 && !lite && app.get_set_rounded();
     t.set_win98(win98);
-    t.set_glass(!win98 && app.get_set_glass());
-    t.set_title_transparent(!win98 && app.get_set_title_transparent());
-    t.set_shadows(app.get_set_shadows());
-    t.set_hover_fx(app.get_set_hover_fx());
+    t.set_glass(!win98 && !lite && app.get_set_glass());
+    // Windows 7 : « Fenêtres transparentes » = verre Aero (cadre translucide sur l'aperçu flouté)
+    t.set_title_transparent(skin == 0 && !win98 && app.get_set_title_transparent());
+    // ultra léger : rien qui redessine au survol, aucune ombre (réglages de l'utilisateur gardés)
+    t.set_shadows(app.get_set_shadows() && !lite);
+    t.set_hover_fx(app.get_set_hover_fx() && !lite);
     t.set_window_radius(if round { 8.0 } else { 0.0 });
     t.set_ctl_radius(if round { 5.0 } else { 0.0 });
     t.set_round(if round { 1.0 } else { 0.0 });
@@ -390,7 +445,7 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_window_border(rgb(0x4a4a4a));
         t.set_window_shadow(Color::from_argb_u8(0x80, 0, 0, 0));
         t.set_text(rgb(0xf3f3f3));
-        t.set_text_inactive(rgb(0x8a8a8a));
+        t.set_text_inactive(rgb(0x9c9c9c));
         t.set_statusbar_bg(rgb(0x1c1c1c));
         t.set_statusbar_border(rgb(0x383838));
         t.set_list_bg(rgb(0x262626));
@@ -415,7 +470,7 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_window_border(rgb(0xc6c6c6));
         t.set_window_shadow(Color::from_argb_u8(0x40, 0, 0, 0));
         t.set_text(rgb(0x000000));
-        t.set_text_inactive(rgb(0x7a7a7a));
+        t.set_text_inactive(rgb(0x6b6b6b));
         t.set_statusbar_bg(rgb(0xf0f0f0));
         t.set_statusbar_border(rgb(0xd4d4d4));
         t.set_list_bg(rgb(0xfafafa));
@@ -553,6 +608,10 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
     }
     t.set_mob_accent_dark(mix(accent, rgb(0x000000), 0.62));
     if win98 {
+        // tout est carré, y compris dans les présentations Paint.NET / Photoshop
+        t.set_window_radius(0.0); t.set_ctl_radius(0.0); t.set_round(0.0); t.set_button_radius(0.0);
+        t.set_title_height(24.0);
+        t.set_close_size(17.0);
         // Windows 98 (98.css) : surfaces argentées, reliefs 3D, barre de titre en dégradé de l'accent
         let (face, hi, lo, dk, fld, txt, ws) = if dark {
             (rgb(0x3c3c3c), rgb(0x6a6a6a), rgb(0x232323), rgb(0x000000), rgb(0x1e1e1e), rgb(0xf0f0f0), rgb(0x2a2a2a))
@@ -584,9 +643,175 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_accent_12(mix(accent, face, 0.18));
         t.set_accent_14(mix(accent, face, 0.22));
     }
+    // couleurs réglables du style Windows 7 (vide : automatique — verre à la couleur d'accentuation,
+    // surbrillance dorée et ruban bleuté d'Office 2010)
+    let hex = |s: slint::SharedString| -> Option<Color> {
+        let s = s.trim_start_matches('#');
+        (s.len() == 6).then(|| u32::from_str_radix(s, 16).ok()).flatten().map(rgb)
+    };
+    let w7_glass = hex(app.get_set_w7_glass()).unwrap_or(base_accent);
+    let w7_ribbon = hex(app.get_set_w7_ribbon()).unwrap_or(rgb(0xd9e4f2));
+    t.set_w7_glass_base(w7_glass);
+    t.set_vista(win7 && app.get_set_w7_vista());
+    // surbrillance par défaut : dorée (Office 2010) en Windows 7, orangée (Office 2003) en XP
+    // « accent » : suit la couleur d'accentuation ; réglée, elle vaut aussi en moderne (ruban)
+    let rib = app.get_set_w7_highlight();
+    t.set_w7_hl(if rib.as_str() == "accent" { mix(base_accent, rgb(0xffffff), 0.85) } else { hex(rib.clone()).unwrap_or(rgb(if xp { 0xffc46e } else { 0xffcf4d })) });
+    t.set_rib_hl_on(!rib.is_empty());
+    // surbrillance des boutons ordinaires : couleur choisie, ou accentuation (XP : orangé d'origine)
+    let bh = app.get_set_btn_highlight();
+    t.set_btn_hl_on(!bh.is_empty());
+    t.set_btn_hl(if bh.as_str() == "accent" { accent } else { parse_hex(&bh).unwrap_or(accent) });
+    // Windows XP : jeu de couleurs Luna (titres, cadre) et Office 2003 (barres) — Bleu, Olive, Argent
+    let xs = match app.get_set_xp_scheme() {
+        1 => [0xd2dfa9, 0x8fa66a, 0xa3b97d, 0x6b8448, 0x5a7a3a, 0xa6bb7c, 0x405a28, 0x33461d, 0xffffff, 0xf8faea, 0xe2e8c6, 0xbccb90, 0xedf1d8, 0xcfd8a8, 0x4f6b38],
+        2 => [0xffffff, 0xd3d3df, 0xc3c3d2, 0x9a9ab0, 0x8a8aa2, 0xc8c8d6, 0x5c5c76, 0xffffff, 0x20223c, 0xfbfbfd, 0xe4e4ed, 0xbcbccd, 0xf3f3f7, 0xd5d5e3, 0x4b4b6f],
+        _ => [0x0997ff, 0x0053ee, 0x0066ff, 0x003dd7, 0x0831d9, 0x166aee, 0x001ea0, 0x0f1089, 0xffffff, 0xeef5ff, 0xcfe2fc, 0xa4c4f4, 0xdae7fc, 0xa9c6f3, 0x000080],
+    };
+    // jeu « Accentuation » : le bleu Luna refait à partir de la couleur d'accentuation
+    let xs = if app.get_set_xp_scheme() == 3 {
+        let (a, w, k) = (base_accent, rgb(0xffffff), rgb(0x000000));
+        let v = |c: Color| (c.red() as u32) << 16 | (c.green() as u32) << 8 | c.blue() as u32;
+        let fg = if contrast(a, k) > contrast(a, w) { 0x000000 } else { 0xffffff };
+        [v(mix(a, w, 0.55)), v(a), v(mix(a, w, 0.85)), v(mix(a, k, 0.8)), v(mix(a, k, 0.85)), v(mix(a, w, 0.8)), v(mix(a, k, 0.55)),
+            v(mix(a, k, 0.45)), fg, v(mix(a, w, 0.08)), v(mix(a, w, 0.22)), v(mix(a, w, 0.42)), v(mix(a, w, 0.18)), v(mix(a, w, 0.38)), v(mix(a, k, 0.5))]
+    } else { xs };
+    for (k, set) in [Theme::set_xp_t0, Theme::set_xp_t1, Theme::set_xp_t2, Theme::set_xp_t3, Theme::set_xp_f0, Theme::set_xp_f1, Theme::set_xp_f2,
+        Theme::set_xp_shadow, Theme::set_xp_title_fg, Theme::set_xp_bar_a, Theme::set_xp_bar_b, Theme::set_xp_bar_c, Theme::set_xp_menu_a, Theme::set_xp_menu_b, Theme::set_xp_hl_border].into_iter().enumerate() {
+        set(&t, rgb(xs[k]));
+    }
+    t.set_w7_ribbon(w7_ribbon);
+    t.set_w7_ribbon_deep(deep_tone(w7_ribbon, 0.34));
+    // couleur « Ruban » réglée : vaut aussi pour les autres styles (ruban, volet des Paramètres,
+    // tutoriel : tout ce qui suit `Theme.band`)
+    if !win7 && !xp && !lite && !app.get_set_w7_ribbon().is_empty() {
+        t.set_ribbon_bg(if dark { mix(w7_ribbon, rgb(0x2b2b2b), 0.22) } else { mix(w7_ribbon, rgb(0xffffff), 0.6) });
+    }
+    if win7 {
+        // Windows 7 = 7.css (gui/_variables.scss, _window.scss, _menu.scss…) : surface #f0f0f0,
+        // contrôles en dégradé vitré bordés de #8e8f8f, arrondis 3 px, fenêtres 6 px, cadre Aero
+        // #4580c4 (dessiné dans widgets.slint). Pas de thème sombre dans 7.css : le sombre (Photo
+        // Pro) garde le cadre et les dégradés, avec des surfaces sombres.
+        let c = |v: u32| rgb(v);
+        if dark {
+            for set in [Theme::set_window_bg, Theme::set_footer_bg, Theme::set_statusbar_bg, Theme::set_menu_bg, Theme::set_menu_gutter, Theme::set_menubar_bg] { set(&t, c(0x2d2f33)); }
+            t.set_list_bg(c(0x232528));
+            t.set_ribbon_bg(c(0x30333a));
+            t.set_workspace_bg(c(0x1d2733));
+            t.set_button_bg(c(0x3c3f45));
+            t.set_field_bg(c(0x1f2124));
+            t.set_track_bg(c(0x1f2124));
+        } else {
+            for set in [Theme::set_window_bg, Theme::set_footer_bg, Theme::set_statusbar_bg, Theme::set_menu_bg, Theme::set_menu_gutter] { set(&t, c(0xf0f0f0)); }
+            // verre Aero clair de l'en-tête, ruban et espace de travail d'Office 2010
+            t.set_menubar_bg(mix(w7_glass, c(0xffffff), 0.26));
+            t.set_list_bg(c(0xffffff));
+            t.set_ribbon_bg(mix(w7_ribbon, c(0xffffff), 0.5));
+            t.set_workspace_bg(c(0xb4c3d6));
+            t.set_text(c(0x000000));
+            t.set_ribbon_fg(c(0x000000));
+            t.set_text_inactive(c(0x6a6a6a));
+            t.set_ribbon_label(c(0x5a6b85));
+            t.set_button_bg(c(0xebebeb));
+            t.set_field_bg(c(0xffffff));
+            t.set_track_bg(c(0xf0f0f0));
+        }
+        // survols, sélections et lignes actives de TOUTE l'interface (palette Outils, listes,
+        // onglets, panneaux…) : surbrillance dorée du ruban de Windows 7 / Office 2010, bordée
+        // (accent-60), au lieu des aplats à la couleur d'accentuation
+        let hl = t.get_w7_hl();
+        let under = c(if dark { 0x30333a } else { 0xffffff });
+        let (h12, h14, h20, h27) = if dark { (0.2, 0.34, 0.45, 0.3) } else { (0.3, 0.6, 0.85, 0.5) };
+        t.set_accent_12(mix(hl, under, h12));
+        t.set_accent_14(mix(hl, under, h14));
+        t.set_accent_20(mix(hl, under, h20));
+        t.set_accent_27(mix(hl, under, h27));
+        t.set_accent_32(mix(hl, under, h27));
+        t.set_accent_60(if dark { mix(hl, under, 0.7) } else { mix(hl, c(0xa87400), 0.7) });
+        t.set_window_title_bg(c(if dark { 0x4a5f7a } else { 0xb9d1ea }));
+        // traits intérieurs (cartes, séparateurs) : liseré de groupe de 7.css ; le cadre noir
+        // translucide (#000000b3) est dessiné par la fenêtre elle-même
+        t.set_window_border(c(if dark { 0x4a4d52 } else { 0xcdd7db }));
+        t.set_window_shadow(Color::from_argb_u8(0xb3, 0, 0, 0));
+        t.set_statusbar_border(c(if dark { 0x4a4d52 } else { 0x8ba0bc }));
+        t.set_ribbon_sep(c(if dark { 0x4a4d52 } else { 0xb3c0d3 }));
+        t.set_button_border(c(0x8e8f8f));
+        t.set_button_fg(c(if dark { 0xf0f0f0 } else { 0x222222 }));
+        t.set_field_border(c(0xabadb3));
+        t.set_track_border(c(0x999999));
+        t.set_close_bg(c(0xd54f36)); t.set_close_hover(c(0xee6d56));
+        // « Coins arrondis » (Paramètres › Apparence) reste respecté : cadre et boutons carrés sinon
+        let r = if app.get_set_rounded() { 1.0 } else { 0.0 };
+        t.set_window_radius(6.0 * r); t.set_ctl_radius(3.0 * r); t.set_round(r); t.set_button_radius(3.0 * r);
+        t.set_title_height(28.0);
+        t.set_button_relief(false);
+        sync_system_theme(dark, base_accent, mix(w7_glass, c(0xffffff), 0.42));
+    }
+    if xp {
+        // Windows XP = XP.css (themes/XP : _variables, _window, _buttons, _forms, _groupbox) :
+        // surface #ece9d8, boutons beiges bordés de #003c74, champs #7f9db9, barre de titre Luna
+        // (dessinée dans widgets.slint), coins hauts de 8 px. Sombre (Photo Pro) : cadre gardé.
+        let c = |v: u32| rgb(v);
+        if dark {
+            for set in [Theme::set_window_bg, Theme::set_footer_bg, Theme::set_statusbar_bg, Theme::set_menubar_bg, Theme::set_ribbon_bg] { set(&t, c(0x33322d)); }
+            for set in [Theme::set_list_bg, Theme::set_menu_bg, Theme::set_menu_gutter, Theme::set_field_bg, Theme::set_track_bg] { set(&t, c(0x23221f)); }
+            t.set_workspace_bg(c(0x262626));
+            t.set_button_bg(c(0x45443e));
+        } else {
+            for set in [Theme::set_window_bg, Theme::set_footer_bg, Theme::set_statusbar_bg, Theme::set_menubar_bg, Theme::set_ribbon_bg] { set(&t, c(0xece9d8)); }
+            for set in [Theme::set_list_bg, Theme::set_menu_bg, Theme::set_menu_gutter, Theme::set_field_bg] { set(&t, c(0xffffff)); }
+            t.set_track_bg(c(0xecebe4));
+            t.set_workspace_bg(c(0x808080));
+            t.set_text(c(0x000000));
+            t.set_ribbon_fg(c(0x000000));
+            // #aca899 de XP.css illisible pour les indications (2:1) : gris chaud plus foncé
+            t.set_text_inactive(c(0x6f6c5f));
+            t.set_ribbon_label(c(0x15428b));
+            t.set_button_bg(c(0xf4f3ee));
+        }
+        t.set_window_title_bg(t.get_xp_t1());
+        // survols, sélections et lignes actives (palette Outils, listes, onglets…) : orangé
+        // d'Office 2003 (couleur de surbrillance réglable), bordé de bleu marine
+        let hl = t.get_w7_hl();
+        let under = c(if dark { 0x33322d } else { 0xffffff });
+        let (h12, h14, h20, h27) = if dark { (0.2, 0.34, 0.45, 0.3) } else { (0.35, 0.62, 0.9, 0.5) };
+        t.set_accent_12(mix(hl, under, h12));
+        t.set_accent_14(mix(hl, under, h14));
+        t.set_accent_20(mix(hl, under, h20));
+        t.set_accent_27(mix(hl, under, h27));
+        t.set_accent_32(mix(hl, under, h27));
+        t.set_accent_60(if dark { mix(hl, under, 0.7) } else { t.get_xp_hl_border() });
+        // traits intérieurs : liseré de groupe de XP.css ; le cadre bleu est dessiné par la fenêtre
+        t.set_window_border(c(if dark { 0x55534b } else { 0xd0d0bf }));
+        t.set_window_shadow(Color::from_argb_u8(0x2e, 0, 0, 0));
+        t.set_statusbar_border(c(if dark { 0x55534b } else { 0xd0cebf }));
+        t.set_ribbon_sep(c(if dark { 0x55534b } else { 0xd0d0bf }));
+        t.set_button_border(c(0x003c74));
+        t.set_button_fg(c(if dark { 0xf0f0f0 } else { 0x000000 }));
+        t.set_field_border(c(0x7f9db9));
+        t.set_track_border(c(0x9d9c99));
+        t.set_window_radius(8.0); t.set_ctl_radius(3.0); t.set_round(1.0); t.set_button_radius(3.0);
+        t.set_title_height(29.0);
+        t.set_button_relief(false);
+        t.set_font_size(11.0); t.set_menu_font_size(11.0); t.set_small_font_size(10.0);
+        sync_system_theme(dark, base_accent, c(0x0054e3));
+    }
+    if lite {
+        // ultra léger : palette MasterPaint, fenêtres et boutons réduits à des aplats bordés
+        // (pas de barre de titre teintée, de croix rouge, de relief ni d'arrondi)
+        t.set_window_title_bg(t.get_window_bg());
+        t.set_window_radius(0.0); t.set_ctl_radius(0.0); t.set_round(0.0); t.set_button_radius(0.0);
+        t.set_button_relief(false);
+        t.set_close_size(20.0);
+        t.set_title_height(24.0);
+    }
     // Paint.NET / Photoshop : « Bordures marquées » = contours de la référence (paintdotjs,
     // PhotoCraft) ; « Non » = contours discrets de MasterPaint, avec son relief de boutons
-    if style >= 2 && !app.get_set_pronounced_borders() {
+    // « Contraste renforcé » (Paramètres › Personnalisation) comprend les bordures marquées ;
+    // ces dernières restent aussi le contour d'origine de Paint.NET / Photoshop (interface suivie)
+    let hc = app.get_set_high_contrast();
+    let pb = hc || app.get_set_pronounced_borders();
+    if style >= 2 && skin == 0 && !pb {
         let v = |d: u32, l: u32| rgb(if dark { d } else { l });
         t.set_window_border(v(0x4a4a4a, 0xc6c6c6));
         t.set_field_border(v(0x6a6a6a, 0xadadad));
@@ -596,7 +821,7 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_ribbon_sep(v(0x4f4f4f, 0xc8c6c4));
         t.set_button_relief(true);
     }
-    if app.get_set_pronounced_borders() && style < 2 {
+    if pb && (hc || (style < 2 && !win7 && !xp)) {
         let border = rgb(if dark { 0x858585 } else { 0x737373 });
         t.set_window_border(border);
         t.set_field_border(border);
@@ -605,8 +830,76 @@ pub fn apply(app: &AppWindow, dark: bool, accent: Color) {
         t.set_statusbar_border(border);
         t.set_ribbon_sep(border);
     }
+    // Personnalisation avancée : chaque élément peut prendre le dessin d'un autre style (boutons
+    // XP sur verre Aero…) ; ultra léger (mode léger compris) : tout reste en aplats
+    let pick = |o: i32| if lite || o < 0 { skin } else { o.clamp(0, 4) };
+    // boutons : 5 = pilules de Photoshop (PhotoCraft) sur n'importe quel style
+    let ps_btn = !lite && app.get_set_btn_skin() == 5;
+    let (bs, fs, cs) = (if ps_btn { 0 } else { pick(app.get_set_btn_skin()) }, pick(app.get_set_frame_skin()), pick(app.get_set_close_skin()));
+    if ps_btn {
+        t.set_button_radius(12.0 * t.get_round());
+        t.set_button_relief(false);
+        t.set_button_bg(t.get_window_bg());
+        t.set_button_border(mix(t.get_text(), t.get_window_bg(), 0.42));
+    } else if app.get_set_btn_skin() == 0 && style >= 2 {
+        // boutons « Windows 10/11 » demandés dans Paint.NET / Photoshop : ceux de MasterPaint
+        t.set_button_radius(t.get_ctl_radius());
+        t.set_button_relief(true);
+    }
+    t.set_btn_skin(bs);
+    t.set_frame_skin(fs);
+    t.set_close_skin(cs);
+    t.set_title_center(app.get_set_title_center());
+    t.set_gloss(app.get_set_gloss() && !lite);
+    t.set_w7_glass_opacity((app.get_set_glass_opacity() / 100.0).clamp(0.0, 1.0));
+    t.set_glass_bright((app.get_set_glass_bright() / 100.0).clamp(-0.5, 0.5));
+    t.set_title_opacity((app.get_set_title_opacity() / 100.0).clamp(0.0, 1.0));
+    // barres de titre translucides : celles du cadre moderne (Windows 10/11), quel que soit le
+    // style des autres éléments
+    t.set_title_transparent(fs == 0 && app.get_set_title_transparent());
+    // verre Aero : celui du cadre Windows 7, quel que soit le style des autres éléments
+    t.set_aero(fs == 2 && app.get_set_title_transparent());
+    // flou derrière le verre : Aero (7) et barres translucides (10/11)
+    t.set_aero_blur(matches!(fs, 0 | 2) && app.get_set_title_transparent() && app.get_set_aero_blur());
+    // Windows 10/11 : couleur d'accentuation saturée sur les barres de titre
+    t.set_title_accent(fs == 0 && app.get_set_title_accent());
+    let tab = if dark { mix(base_accent, rgb(0x000000), 0.8) } else { base_accent };
+    t.set_title_accent_bg(tab);
+    t.set_title_accent_fg(if contrast(tab, rgb(0x000000)) > contrast(tab, rgb(0xffffff)) { rgb(0x000000) } else { rgb(0xffffff) });
+    if fs != skin {
+        // hauteur de la barre de titre du cadre choisi ; reliefs Windows 98 à la couleur d'accent
+        t.set_title_height(match fs { 1 => 24.0, 2 => 28.0, 3 => 29.0, 4 => 24.0, _ => 26.0 });
+    }
+    if !win98 {
+        t.set_bevel_hi(rgb(if dark { 0x6a6a6a } else { 0xffffff }));
+        t.set_bevel_lo(rgb(if dark { 0x232323 } else { 0x808080 }));
+        t.set_bevel_dk(rgb(if dark { 0x000000 } else { 0x0a0a0a }));
+        t.set_title_a(mix(accent, rgb(0x000000), 0.75));
+        t.set_title_b(mix(accent, rgb(0xffffff), 0.65));
+    }
+    // contraste renforcé (mal-voyants) : textes secondaires presque aussi foncés que le texte,
+    // contours nets partout
+    if hc {
+        // texte de l'interface un peu plus grand partout
+        t.set_font_size(t.get_font_size() + 1.0);
+        t.set_menu_font_size(t.get_menu_font_size() + 1.0);
+        t.set_small_font_size(t.get_small_font_size() + 1.0);
+        let bg = t.get_window_bg();
+        let txt = t.get_text();
+        t.set_text_inactive(mix(txt, bg, 0.78));
+        t.set_ribbon_label(mix(t.get_ribbon_fg(), bg, 0.85));
+        let line = mix(txt, bg, 0.6);
+        for set in [Theme::set_window_border, Theme::set_field_border, Theme::set_button_border, Theme::set_track_border, Theme::set_statusbar_border, Theme::set_ribbon_sep] {
+            set(&t, line);
+        }
+        t.set_accent_60(mix(t.get_accent(), txt, 0.8));
+    }
     // fond de la zone de travail et damier par défaut : ceux du thème
     crate::appearance::follow_theme(app, dark);
+    // flou derrière le verre : l'image floutée de la toile suit TOUT changement de thème (style
+    // Windows 7 choisi, mode léger, Personnalisation…), pas seulement la case du flou — sinon le
+    // verre restait sans image jusqu'à la prochaine retouche de la toile
+    crate::refresh_aero_later(app);
 }
 
 #[cfg(test)]

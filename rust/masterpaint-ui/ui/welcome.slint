@@ -7,10 +7,10 @@
 // Téléphone : mise en page à part (onglets Démarrer / Réglages, une seule colonne qui ne défile
 // que verticalement, textes renvoyés à la ligne, grandes cibles tactiles, pas de raccourcis
 // clavier).
-import { ScrollView } from "std-widgets.slint";
+import { ScrollView } from "widgets.slint";
 import { Theme } from "theme.slint";
 import { MpIcons } from "mpicons.slint";
-import { FaIcon, HoverTip, W10Button, W10CheckBox, W10ComboBox, Segmented, DialogFooter } from "widgets.slint";
+import { FaIcon, HoverTip, W10Button, W10CheckBox, W10ComboBox, Segmented, DialogFooter, ClassicFace, Bevel } from "widgets.slint";
 
 /// Titre d'une section de la fenêtre, avec son trait d'accent.
 component WelHead inherits HorizontalLayout {
@@ -46,10 +46,19 @@ component StartCard inherits Rectangle {
     callback clicked();
     // téléphone : place pour un titre et deux lignes d'explication
     height: root.touch ? 68px : 46px;
-    border-radius: Theme.ctl-radius + 2px * Theme.round;
-    background: ta.pressed ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : Theme.button-bg;
-    border-width: 1px;
+    // 7 / XP / 98 : vrai bouton du style (comme les autres boutons de la fenêtre)
+    border-radius: Theme.b-classic || Theme.b-98 ? 0px : Theme.ctl-radius + 2px * Theme.round;
+    background: Theme.b-classic ? transparent : Theme.b-98 ? Theme.button-bg
+        : ta.pressed ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : Theme.button-bg;
+    border-width: Theme.b-classic || Theme.b-98 ? 0px : 1px;
     border-color: (Theme.hover-fx && ta.has-hover) ? Theme.accent-60 : Theme.button-border;
+    if Theme.b-classic: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: ta.pressed;
+    }
+    if Theme.b-98: Bevel { sunken: ta.pressed; }
     HorizontalLayout {
         padding-left: 10px;
         padding-right: 10px;

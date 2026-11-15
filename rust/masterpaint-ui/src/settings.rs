@@ -30,6 +30,14 @@ pub struct Settings {
     pub interface_theme: i32,
     /// Réappliquer les couleurs et le pack d'icônes conseillés au changement d'interface.
     pub follow_interface_style: bool,
+    /// couleurs du style Windows 7 (« #rrggbb », vide : automatique) : verre, surbrillance, ruban
+    pub w7_colors: [String; 5],
+    pub w7_vista: bool,
+    pub aero_blur: bool,
+    /// Personnalisation avancée : [boutons, cadre, bouton Fermer (−1 : ceux du style, sinon
+    /// 0 moderne … 4 plat), titre centré, relief 3D, opacité du verre (%), jeu de couleurs XP
+    /// (0 bleu, 1 olive, 2 argent), contraste renforcé]
+    pub style_custom: [i32; 12],
     pub icon_pack: i32,
     pub missing_icon_fallback: i32,
     pub custom_icon_pack: Value,
@@ -60,6 +68,11 @@ pub struct Settings {
     pub glass: bool,
     pub title_transparent: bool,
     pub header_preview: bool,
+    /// essai du mode intégré : entête (menus, onglets) sans fond, style Windows 7 (Paramètres ›
+    /// Avancé) ; une page parente le demande aussi par ?mp-transparent=1
+    pub header_transparent: bool,
+    /// entête transparente au style du thème (barre de titre XP / 7 / 10-11), style choisi gardé
+    pub header_themed: bool,
     /// ombres ; mode léger, déjà appliqué, et ce qu'il a coupé (1 ombres, 2 transparence, 4 aperçu
     /// du haut, 8 surbrillance, 16 résolution de l'interface), pour le rétablir
     pub shadows: bool,
@@ -76,6 +89,8 @@ pub struct Settings {
     pub perf_cut: i32,
     /// rapport de ralentissement déjà proposé (une seule fois)
     pub perf_reported: bool,
+    /// audit du PC fait (premier lancement) : réglages ajustés une seule fois
+    pub perf_audit: bool,
     pub zoom_smooth: bool,
     /// aimantation : taille des cases (1/N de la largeur), force d'attraction (%), grille
     /// toujours visible, repères magenta d'accroche
@@ -134,6 +149,10 @@ impl Default for Settings {
             theme_style: 0,
             interface_theme: 0,
             follow_interface_style: true,
+            w7_colors: Default::default(),
+            w7_vista: false,
+            aero_blur: false,
+            style_custom: STYLE_CUSTOM_DEFAULT,
             icon_pack: 0,
             missing_icon_fallback: 0,
             custom_icon_pack: Value::Null,
@@ -153,6 +172,8 @@ impl Default for Settings {
             glass: true,
             title_transparent: true,
             header_preview: true,
+            header_transparent: false,
+            header_themed: false,
             shadows: true,
             perf_mode: 0,
             hover_fx: true,
@@ -162,6 +183,7 @@ impl Default for Settings {
             perf_done: false,
             perf_cut: 0,
             perf_reported: false,
+            perf_audit: false,
             zoom_smooth: false,
             snap_div: 48,
             snap_thresh: 50,
@@ -182,6 +204,14 @@ impl Default for Settings {
         }
     }
 }
+
+/// Personnalisation avancée par défaut : tout suit le style choisi, relief 3D, verre à 60 %.
+/// Personnalisation avancée : boutons, cadre, Fermer (−1 = comme le style ; boutons : 5 =
+/// Photoshop), titre centré, relief 3D, opacité du verre Aero, jeu de couleurs XP, contraste
+/// renforcé, opacité des barres de titre 10/11, quantité de flou, luminosité du verre,
+/// accentuation sur les barres de titre
+pub const STYLE_CUSTOM_DEFAULT: [i32; 12] = [-1, -1, -1, 0, 1, 60, 0, 0, 96, 50, 0, 0];
+const STYLE_CUSTOM_RANGE: [(i32, i32); 12] = [(-1, 5), (-1, 4), (-1, 4), (0, 1), (0, 1), (0, 100), (0, 3), (0, 1), (0, 100), (0, 100), (-50, 50), (0, 1)];
 
 impl Settings {
     fn to_json(&self) -> Value {
@@ -205,6 +235,10 @@ impl Settings {
             "themeStyle": self.theme_style,
             "interfaceTheme": self.interface_theme,
             "followInterfaceStyle": self.follow_interface_style,
+            "w7Colors": self.w7_colors,
+            "w7Vista": self.w7_vista,
+            "aeroBlur": self.aero_blur,
+            "styleCustom": self.style_custom,
             "iconPack": self.icon_pack,
             "missingIconFallback": self.missing_icon_fallback,
             "customIconPack": self.custom_icon_pack,
@@ -224,6 +258,8 @@ impl Settings {
             "glass": self.glass,
             "titleTransparent": self.title_transparent,
             "headerPreview": self.header_preview,
+            "headerTransparent": self.header_transparent,
+            "headerThemed": self.header_themed,
             "shadows": self.shadows,
             "perfMode": self.perf_mode,
             "hoverFx": self.hover_fx,
@@ -233,6 +269,7 @@ impl Settings {
             "perfDone": self.perf_done,
             "perfCut": self.perf_cut,
             "perfReported": self.perf_reported,
+            "perfAudit": self.perf_audit,
             "zoomSmooth": self.zoom_smooth,
             "snapDiv": self.snap_div,
             "snapThresh": self.snap_thresh,
@@ -286,10 +323,17 @@ impl Settings {
             language: i("language", 0) as i32,
             layout: i("layout", 0) as i32,
             layout_auto: v.get("layoutAuto").and_then(|b| b.as_bool()).unwrap_or(true),
-            theme_style: i("themeStyle", 0).clamp(0, 1) as i32,
+            theme_style: i("themeStyle", 0).clamp(0, 4) as i32,
             interface_theme: i("interfaceTheme", 0).clamp(0,3) as i32,
             follow_interface_style: v.get("followInterfaceStyle").and_then(|b| b.as_bool()).unwrap_or(true),
-            icon_pack: i("iconPack", 0).clamp(0, 3) as i32,
+            w7_vista: v.get("w7Vista").and_then(|b| b.as_bool()).unwrap_or(false),
+            aero_blur: v.get("aeroBlur").and_then(|b| b.as_bool()).unwrap_or(false),
+            style_custom: std::array::from_fn(|k| {
+                let (lo, hi) = STYLE_CUSTOM_RANGE[k];
+                v.get("styleCustom").and_then(|a| a.get(k)).and_then(|x| x.as_i64()).map_or(STYLE_CUSTOM_DEFAULT[k], |x| (x as i32).clamp(lo, hi))
+            }),
+            w7_colors: std::array::from_fn(|k| v.get("w7Colors").and_then(|a| a.get(k)).and_then(|s| s.as_str()).unwrap_or("").to_owned()),
+            icon_pack: i("iconPack", 0).clamp(0, 4) as i32,
             missing_icon_fallback: i("missingIconFallback", 0).clamp(0, 1) as i32,
             custom_icon_pack: v.get("customIconPack").cloned().unwrap_or(Value::Null),
             imported_icon_packs: v.get("importedIconPacks").cloned().unwrap_or(Value::Array(Vec::new())),
@@ -307,6 +351,8 @@ impl Settings {
             pronounced_borders: v.get("pronouncedBorders").and_then(|b| b.as_bool()).unwrap_or(false),
             glass: v.get("glass").and_then(|b| b.as_bool()).unwrap_or(true),
             title_transparent: v.get("titleTransparent").and_then(|v| v.as_bool()).unwrap_or(true) || old_cut & 2 != 0,
+            header_transparent: v.get("headerTransparent").and_then(|b| b.as_bool()).unwrap_or(false),
+            header_themed: v.get("headerThemed").and_then(|b| b.as_bool()).unwrap_or(false),
             header_preview: v.get("headerPreview").and_then(|b| b.as_bool()).unwrap_or(true) || old_cut & 4 != 0,
             shadows: v.get("shadows").and_then(|b| b.as_bool()).unwrap_or(true) || old_cut & 1 != 0,
             perf_mode: match v.get("perfMode").and_then(|m| m.as_i64()) {
@@ -321,6 +367,7 @@ impl Settings {
             perf_done: v.get("perfMode").is_some() && v.get("perfDone").and_then(|b| b.as_bool()).unwrap_or(false),
             perf_cut: if v.get("perfMode").is_some() { i("perfCut", 0).clamp(0, 63) as i32 } else { 0 },
             perf_reported: v.get("perfReported").and_then(|b| b.as_bool()).unwrap_or(false),
+            perf_audit: v.get("perfAudit").and_then(|b| b.as_bool()).unwrap_or(false),
             zoom_smooth: v.get("zoomSmooth").and_then(|b| b.as_bool()).unwrap_or(false),
             snap_div: i("snapDiv", 48).clamp(4, 128) as u32,
             snap_thresh: i("snapThresh", 50).clamp(1, 100) as u32,

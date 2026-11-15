@@ -128,6 +128,8 @@ pub struct Opts {
     pub smoothing: f32,
     /// baguette, pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
     pub sample_all: bool,
+    /// pipette : couleur du calque actif seulement (Paint.NET « Calque ») au lieu de l'image
+    pub pick_layer: bool,
     /// rectangle / ellipse de sélection : sélection d'objet par l'IA (sujet dans le cadre)
     pub sel_ai: bool,
 }
@@ -178,6 +180,7 @@ impl Default for Opts {
             strength: 0.5,
             smoothing: 0.0,
             sample_all: false,
+            pick_layer: false,
             sel_ai: false,
         }
     }
@@ -749,7 +752,8 @@ impl Session {
                 if !inside {
                     return Outcome::Nothing;
                 }
-                Outcome::PickColor(doc.pixel_color(x as usize, y as usize), secondary)
+                let c = if o.pick_layer { doc.layer_color(x as usize, y as usize) } else { doc.pixel_color(x as usize, y as usize) };
+                Outcome::PickColor(c, secondary)
             }
             Tool::Zoom => Outcome::Zoom(x, y, !(secondary || alt)),
             Tool::Text => Outcome::Message("Texte : l'outil arrive dans une prochaine étape du portage Rust."),

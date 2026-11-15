@@ -10,10 +10,13 @@
 
 mod anim;
 mod ai_sel;
+#[cfg(not(target_arch = "wasm32"))]
+mod ai_native;
 mod vectorize;
 mod seg;
 mod icon_packs;
 mod reference_assets_gen;
+mod openpdn_assets_gen;
 mod fa_svg_gen;
 mod shape_edit;
 mod gradlive;
@@ -134,6 +137,12 @@ struct State {
     thumbs: Vec<(std::sync::Weak<Vec<u8>>, Image)>,
     /// cadre de la sélection (mis à jour par refresh_all) : animation des fourmis
     sel_bounds: Option<(usize, usize, usize, usize)>,
+    /// sélection peut-être déplacée ou modifiée depuis le dernier calcul de `sel_bounds` (rendu
+    /// partiel pendant un glisser) : cadre et contour des fourmis à recalculer avant de les poser
+    ants_stale: bool,
+    /// déplacement aux flèches en cours (touche maintenue) : étape d'historique qu'il remplace
+    /// et instant du dernier pas (voir `Doc::commit_merged`)
+    nudge: Option<(u64, f64)>,
     dyn_inflight: std::collections::HashSet<u64>,
     /// aucun projet ouvert (dernier onglet fermé) : `doc` n'est qu'un document vide de 1 × 1,
     /// sans onglet ni toile affichés ; palettes grisées
@@ -209,7 +218,10 @@ fn workspace_sig(st: &State) -> u64 {
     for (i, t) in st.tabs.iter().enumerate() {
         let d = if i == st.cur { Some(&st.doc) } else { t.as_ref() };
         if let Some(d) = d {
-            (d.uid, d.hindex, d.history.len(), &d.title, d.w, d.h).hash(&mut h);
+            // numéro de l'étape affichée : une étape remplacée (flèches maintenues, action
+            // répétée « Auto-niveau (3) ») change le contenu sans changer le nombre d'étapes
+            let seq = d.history.get(d.hindex).map(|s| s.seq);
+            (d.uid, d.hindex, d.history.len(), seq, &d.title, d.w, d.h).hash(&mut h);
         }
     }
     h.finish()
@@ -890,6 +902,7 @@ fn opts(app: &AppWindow) -> tools::Opts {
         strength: t.get_retouch_strength() / 100.0,
         smoothing: t.get_smoothing() / 100.0,
         sample_all: t.get_sample_all(),
+        pick_layer: t.get_pick_layer(),
         sel_ai: t.get_sel_ai(),
     }
 }
@@ -924,8 +937,8 @@ fn display_step(app: &AppWindow, doc: &Doc) -> usize {
 }
 
 /// Réduction des nouveaux projets (Paramètres › Performances).
-fn render_default(ctl: bool, index: i32) -> usize {
-    if ctl { 1 << index.clamp(0, 3) } else { 1 }
+fn render_default(_ctl: bool, index: i32) -> usize {
+    1 << index.clamp(0, 3)
 }
 
 /// Boutons de résolution de rendu du ruban : visibles si l'option est active, ou si ce projet-ci
@@ -933,7 +946,8 @@ fn render_default(ctl: bool, index: i32) -> usize {
 fn sync_render_ctl(app: &AppWindow, st: &State) {
     let t = app.global::<ToolOpts>();
     let set = st.doc.render_div_set();
-    t.set_render_ctl(!st.empty && (app.get_set_render_ctl() || set > 1));
+    // boutons ÷2 / ÷4 / ÷8 toujours présents dès qu'un projet est ouvert
+    t.set_render_ctl(!st.empty);
     t.set_render_div(set as i32);
     t.set_render_max(st.doc.render_choices().last().copied().unwrap_or(2) as i32);
     t.set_render_full(set > 1 && st.doc.effective_div() == 1);
@@ -1690,6 +1704,7 @@ fn redraw_soon(app: &AppWindow) {
 
 /// Recompose toute la toile (sans toucher aux panneaux).
 fn redraw_canvas(app: &AppWindow, st: &mut State) {
+    st.ants_stale = true;
     vecview::sync_mode(app, st);
     if st.vv.on {
         return vecview::touch(app, st);
@@ -1842,6 +1857,27 @@ fn schedule_spare(app: &AppWindow) {
     });
 }
 
+thread_local! {
+    static NUDGE_SETTLE: slint::Timer = slint::Timer::default();
+}
+
+/// Déplacement aux flèches : rendu complet (panneaux, vignettes, historique, cadre de la
+/// sélection) 250 ms après le dernier pas, au lieu d'un à chaque pas de la touche maintenue.
+fn nudge_settle(app: &AppWindow) {
+    let weak = app.as_weak();
+    NUDGE_SETTLE.with(|t| {
+        t.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(250), move || {
+            let (Some(app), Some(state)) = (weak.upgrade(), APP_STATE.with(|s| s.borrow().clone())) else { return };
+            let Ok(mut st) = state.try_borrow_mut() else { return nudge_settle(&app) };
+            let st = &mut *st;
+            refresh_all(&app, st);
+            if st.floating.is_some() {
+                show_handles(&app, st);
+            }
+        })
+    });
+}
+
 /// Recompose tout l'affichage et met à jour les panneaux.
 fn refresh_all(app: &AppWindow, st: &mut State) {
     schedule_spare(app);
@@ -1923,6 +1959,7 @@ fn vecedit_sync_tool(app: &AppWindow, st: &mut State) {
 
 /// Recompose seulement un rectangle (pendant un trait de pinceau).
 fn refresh_rect(app: &AppWindow, st: &mut State, r: Option<(usize, usize, usize, usize)>) {
+    st.ants_stale = true;
     if st.vv.on {
         return vecview::touch(app, st);
     }
@@ -2280,6 +2317,8 @@ fn sync_panels(app: &AppWindow, st: &mut State) {
     app.set_history_index(d.hindex as i32);
     let b = d.selection_bounds();
     st.sel_bounds = b;
+    st.ants_stale = false;
+    st.ants_cache = None;
     app.set_has_selection(b.is_some());
     app.set_selection_text(SharedString::from(match b {
         Some((x0, y0, x1, y1)) => i18n::tr_format!("Sélection : {} × {} px", x1 - x0, y1 - y0),
@@ -2485,6 +2524,55 @@ fn request_close_tab(app: &AppWindow, st: &mut State, i: usize) {
     }
 }
 
+/// Fichier › Fermer tous les projets (`keep_current` faux) ou Fermer les autres projets : ceux
+/// qui sont enregistrés se ferment, une seule question pour tous les projets modifiés.
+fn request_close_many(app: &AppWindow, st: &mut State, keep_current: bool) {
+    fn doc_at(st: &State, j: usize) -> Option<&editor::Doc> {
+        if j == st.cur { Some(&st.doc) } else { st.tabs.get(j).and_then(|t| t.as_ref()) }
+    }
+    let targets: Vec<u64> = (0..st.tabs.len())
+        .filter(|&j| !(keep_current && j == st.cur))
+        .filter_map(|j| doc_at(st, j).filter(|d| d.mask_of.is_none()).map(|d| d.uid))
+        .collect();
+    let mut modified = Vec::new();
+    let mut thumbs = Vec::new();
+    for j in 0..st.tabs.len() {
+        if let Some(d) = doc_at(st, j).filter(|d| targets.contains(&d.uid) && d.modified()) {
+            modified.push(d.uid);
+            thumbs.push(TaskThumb { name: d.title.as_str().into(), image: px_thumb(&d.flatten(), d.w, d.h, 180, 135) });
+        }
+    }
+    if modified.is_empty() {
+        close_uids(app, st, &targets);
+        return;
+    }
+    let intro = i18n::tr_format!("{} projet(s) contiennent des modifications non enregistrées. Que voulez-vous faire ?", modified.len());
+    st.task = Some(Task::CloseMany(targets, modified));
+    show_task(
+        app,
+        "Modifications non enregistrées",
+        &intro,
+        "",
+        "",
+        &[
+            ("Fermer sans enregistrer", "Ferme tout, les modifications non enregistrées sont perdues."),
+            ("Garder les projets modifiés", "Ne ferme que les projets déjà enregistrés."),
+            ("Annuler", "Revient à MasterPaint."),
+        ],
+        thumbs,
+    );
+}
+
+/// Ferme les projets donnés (par identifiant : les rangs bougent à chaque fermeture).
+fn close_uids(app: &AppWindow, st: &mut State, uids: &[u64]) {
+    for uid in uids {
+        let at = (0..st.tabs.len()).find(|&j| if j == st.cur { st.doc.uid == *uid } else { st.tabs[j].as_ref().is_some_and(|d| d.uid == *uid) });
+        if let Some(j) = at {
+            close_tab(app, st, j);
+        }
+    }
+}
+
 fn close_tab(app: &AppWindow, st: &mut State, i: usize) {
     if i >= st.tabs.len() {
         return;
@@ -2578,7 +2666,7 @@ fn refresh_tech_info(app: &AppWindow, st: &State) {
     app.set_tech_info(tech_info(app, st).into());
     let docs: Vec<&Doc> = std::iter::once(&st.doc).chain(st.tabs.iter().flatten()).collect();
     let pixel_bytes: usize = docs.iter().flat_map(|d| d.layers.iter()).map(|l| l.px.len()).sum();
-    let history_bytes: usize = docs.iter().flat_map(|d| d.history_layers()).map(|p| p.len()).sum();
+    let history_bytes: usize = docs.iter().flat_map(|d| d.history_layers()).map(|p| p.len()).sum::<usize>() + docs.iter().map(|d| d.history_delta_bytes()).sum::<usize>();
     let mut rows = vec![
         crate::DiagnosticRow { label: "MasterPaint".into(), value: format!("Rust {}", APP_VERSION).into() },
         crate::DiagnosticRow { label: "Plateforme".into(), value: platform_info().into() },
@@ -2588,7 +2676,7 @@ fn refresh_tech_info(app: &AppWindow, st: &State) {
         crate::DiagnosticRow { label: "Mémoire des pixels".into(), value: format!("{:.1} Mo de calques · {:.1} Mo d’historique", pixel_bytes as f64 / 1_048_576.0, history_bytes as f64 / 1_048_576.0).into() },
         crate::DiagnosticRow { label: "Historique".into(), value: format!("{} étapes conservées par projet · limite globale {}", app.get_set_history_keep().round(), app.get_set_history_max().round()).into() },
         crate::DiagnosticRow { label: "Sauvegarde automatique".into(), value: if app.get_set_autosave() { format!("Activée · {} min (0 = en continu)", app.get_set_autosave_min().round()) } else { "Désactivée".into() }.into() },
-        crate::DiagnosticRow { label: "Pack d’icônes".into(), value: format!("{} · {} pack(s) importé(s)", match app.get_set_icon_pack() { 0 => "MasterPaint", 1 => "PaintJS", 2 => "PhotoCraft", _ => "Importé" }, icon_packs::all_custom().as_array().map_or(0, |a| a.len())).into() },
+        crate::DiagnosticRow { label: "Pack d’icônes".into(), value: format!("{} · {} pack(s) importé(s)", match app.get_set_icon_pack() { 0 => "MasterPaint", 1 => "PaintJS", 2 => "PhotoCraft", 4 => "Paint.NET (ancien)", _ => "Importé" }, icon_packs::all_custom().as_array().map_or(0, |a| a.len())).into() },
     ];
     #[cfg(not(target_arch = "wasm32"))]
     rows.push(crate::DiagnosticRow { label: "Cœurs du processeur".into(), value: std::thread::available_parallelism().map(|n| n.get().to_string()).unwrap_or_else(|_| "inconnu".into()).into() });
@@ -2615,6 +2703,8 @@ fn tech_info(app: &AppWindow, st: &State) -> String {
                 history += s.len();
             }
         }
+        // anciennes étapes rangées en tuiles modifiées
+        history += d.history_delta_bytes();
     }
     #[cfg(not(target_arch = "wasm32"))]
     let (cores, background) = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1), "fils séparés (tous les cœurs)".to_string());
@@ -2671,12 +2761,18 @@ fn show_error(app: &AppWindow, context: &str, message: &str) {
 enum Task {
     /// ralentissements observés : proposer d'envoyer un rapport
     PerfReport,
+    /// premier lancement : réglages ajustés à ce PC (« OK » ou « Ne pas optimiser » : retour à
+    /// ceux d'avant)
+    PerfAudit(Box<perf::Before>),
     /// rendu trop lent sur ce projet : proposer la réduction (projet, réduction)
     RenderOffer(u64, usize),
     /// onglet modifié à fermer : Enregistrer / Ne pas enregistrer / Annuler
     CloseTab(usize),
     /// fermeture de l'application : onglets modifiés (vignettes cliquables)
     Exit(Vec<usize>),
+    /// Fichier › Fermer tous les projets / les autres : projets à fermer, dont des modifiés
+    /// (Fermer sans enregistrer / Fermer les projets enregistrés seulement / Annuler)
+    CloseMany(Vec<u64>, Vec<u64>),
     /// images déposées : Ouvrir / Ajouter comme calques
     Drop(Vec<(String, usize, usize, Vec<u8>)>),
     /// images plus grandes que la toile à coller : Agrandir / Conserver / Annuler
@@ -2844,6 +2940,11 @@ fn task_result(app: &AppWindow, state: &Shared, r: i32) {
                 perf::open_report(app, &state.borrow());
             }
         }
+        Task::PerfAudit(before) => {
+            if r == 1 {
+                perf::audit_undo(app, &before);
+            }
+        }
         Task::AiQuality(job) => {
             let mut st = state.borrow_mut();
             ai_sel::quality_answer(app, &mut st, job, r);
@@ -2899,6 +3000,14 @@ fn task_result(app: &AppWindow, state: &Shared, r: i32) {
                 }
             }
             1 => close_tab(app, &mut state.borrow_mut(), i),
+            _ => {}
+        },
+        Task::CloseMany(all, modified) => match r {
+            0 => close_uids(app, &mut state.borrow_mut(), &all),
+            1 => {
+                let keep: Vec<u64> = all.into_iter().filter(|u| !modified.contains(u)).collect();
+                close_uids(app, &mut state.borrow_mut(), &keep);
+            }
             _ => {}
         },
         Task::Exit(list) => match r {
@@ -3082,6 +3191,192 @@ fn header_background(display: &[u8], w: usize, h: usize) -> Option<Image> {
 thread_local! {
     /// l'image de l'aperçu du haut est tenue à jour
     static HEADER_SHOWN: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// flou derrière le verre : quantité de flou de l'image tenue à jour (None : pas d'image)
+    static AERO_SHOWN: std::cell::Cell<Option<i32>> = const { std::cell::Cell::new(None) };
+    /// mode intégré transparent : style et interface enregistrés avant que Windows 7 soit imposé
+    static FORCED_STYLE: std::cell::Cell<Option<(i32, i32)>> = const { std::cell::Cell::new(None) };
+}
+
+/// Entête transparente demandée ? (active, par la page parente). Navigateur : décidé par la page
+/// avant la création du contexte WebGL (`window.mpTransparentHeader` = "parent" ou "setting",
+/// contexte alors avec alpha) ; bureau : essai des Paramètres seulement (le fond de la fenêtre
+/// remplace alors la page).
+fn header_clear_request(setting: bool) -> (bool, bool) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let by = web_sys::window()
+            .and_then(|w| js_sys::Reflect::get(&w, &"mpTransparentHeader".into()).ok())
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        let _ = setting;
+        return (!by.is_empty(), by == "parent");
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    (setting, false)
+}
+
+/// Verre Aero (Windows 7, 7.css `backdrop-filter: blur(4px)`) : petite image floue de toute la
+/// toile (160 px au plus), agrandie en douceur derrière le cadre des fenêtres flottantes. Moyenne
+/// pondérée par l'alpha (les zones transparentes ne noircissent pas), puis deux flous boîte.
+/// Les zones transparentes de la toile sont posées sur la teinte moyenne du damier (`under` :
+/// cases claires et foncées) : sinon le damier net se voyait à travers le verre.
+fn aero_backdrop(display: &[u8], w: usize, h: usize, amount: f32, under: [Option<slint::Color>; 2]) -> Option<Image> {
+    if display.len() != w * h * 4 || w == 0 || h == 0 {
+        return None;
+    }
+    // quantité de flou (Personnalisation avancée, 0 … 1) : image plus petite et plus de passes
+    let amount = amount.clamp(0.0, 1.0);
+    let k = (w.max(h) as f32 / (360.0 - 280.0 * amount)).max(1.0);
+    let passes = 1 + (amount * 3.0).round() as usize;
+    let (tw, th) = (((w as f32 / k).round() as usize).max(1), ((h as f32 / k).round() as usize).max(1));
+    // alpha prémultiplié, 3 × 3 échantillons par case
+    let mut px = vec![0f32; tw * th * 4];
+    for ty in 0..th {
+        for tx in 0..tw {
+            let mut acc = [0f32; 4];
+            for sy in 0..3 {
+                for sx in 0..3 {
+                    let x = ((tx * 3 + sx) * w / (tw * 3)).min(w - 1);
+                    let y = ((ty * 3 + sy) * h / (th * 3)).min(h - 1);
+                    let o = (y * w + x) * 4;
+                    let a = display[o + 3] as f32 / 255.0;
+                    for c in 0..3 {
+                        acc[c] += display[o + c] as f32 * a;
+                    }
+                    acc[3] += a * 255.0;
+                }
+            }
+            px[(ty * tw + tx) * 4..(ty * tw + tx) * 4 + 4].copy_from_slice(&acc.map(|v| v / 9.0));
+        }
+    }
+    for _ in 0..passes {
+        let src = px.clone();
+        for ty in 0..th {
+            for tx in 0..tw {
+                let mut acc = [0f32; 4];
+                let mut n = 0.0;
+                for dy in -1i32..=1 {
+                    for dx in -1i32..=1 {
+                        let (x, y) = (tx as i32 + dx, ty as i32 + dy);
+                        if x < 0 || y < 0 || x >= tw as i32 || y >= th as i32 {
+                            continue;
+                        }
+                        let o = (y as usize * tw + x as usize) * 4;
+                        for c in 0..4 {
+                            acc[c] += src[o + c];
+                        }
+                        n += 1.0;
+                    }
+                }
+                px[(ty * tw + tx) * 4..(ty * tw + tx) * 4 + 4].copy_from_slice(&acc.map(|v| v / n));
+            }
+        }
+    }
+    // teinte moyenne du damier (alpha prémultiplié : il suffit d'ajouter le fond × (1 − a))
+    let bg = match under {
+        [Some(a), Some(b)] => Some([
+            (a.red() as f32 + b.red() as f32) / 2.0,
+            (a.green() as f32 + b.green() as f32) / 2.0,
+            (a.blue() as f32 + b.blue() as f32) / 2.0,
+        ]),
+        _ => None,
+    };
+    let out: Vec<u8> = px
+        .chunks_exact(4)
+        .flat_map(|c| match bg {
+            Some(bg) => {
+                let rest = 1.0 - (c[3] / 255.0).clamp(0.0, 1.0);
+                [(c[0] + bg[0] * rest).min(255.0) as u8, (c[1] + bg[1] * rest).min(255.0) as u8, (c[2] + bg[2] * rest).min(255.0) as u8, 255]
+            }
+            None => {
+                let a = c[3].max(1e-3) / 255.0;
+                [(c[0] / a).min(255.0) as u8, (c[1] / a).min(255.0) as u8, (c[2] / a).min(255.0) as u8, c[3].min(255.0) as u8]
+            }
+        })
+        .collect();
+    Some(to_image(&out, tw, th))
+}
+
+/// Flou derrière le verre (Aero, barres translucides 10/11) activé ou quantité changée : l'image
+/// floutée de la toile est recalculée tout de suite ; coupé : elle est libérée.
+fn refresh_aero(app: &AppWindow) {
+    let want = app.global::<Theme>().get_aero_blur().then(|| app.get_set_glass_blur().round() as i32);
+    if want == AERO_SHOWN.with(|a| a.get()) {
+        return;
+    }
+    if want.is_none() {
+        AERO_SHOWN.with(|a| a.set(None));
+        app.global::<Backdrop>().set_image(Image::default());
+        return;
+    }
+    if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
+        match state.try_borrow_mut() {
+            Ok(mut st) => sync_tabs(app, &mut st),
+            // état occupé (appel depuis un traitement en cours) : réessai juste après
+            Err(_) => refresh_aero_later(app),
+        }
+    }
+}
+
+/// `refresh_aero` au prochain tour de la boucle d'évènements : appelable de partout (theme::apply
+/// compris), même pendant qu'un traitement tient l'état.
+pub(crate) fn refresh_aero_later(app: &AppWindow) {
+    let weak = app.as_weak();
+    slint::Timer::single_shot(std::time::Duration::ZERO, move || {
+        if let Some(app) = weak.upgrade() {
+            refresh_aero(&app);
+        }
+    });
+}
+
+/// Entête transparente au style de Windows 7 avec « Flou derrière le verre » : la page qui intègre
+/// MasterPaint floute ce qu'il y a derrière l'entête (web : `backdrop-filter` posé par
+/// web/index.html dans la page parente de même origine, sinon message `mp-header-glass`). Le flou
+/// est calculé par le navigateur : rien côté MasterPaint.
+fn sync_header_glass(app: &AppWindow) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let on = app.get_header_clear() && app.get_set_header_themed() && app.global::<Theme>().get_win7() && app.get_set_aero_blur();
+        let blur = if on { 2.0 + 10.0 * app.get_set_glass_blur() / 100.0 } else { 0.0 };
+        web::header_glass(app.get_top_height(), blur);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = app;
+}
+
+/// Personnalisation avancée (settings.rs : style_custom) vers les réglages de l'interface.
+fn set_style_custom(app: &AppWindow, sc: &[i32; 12]) {
+    app.set_set_btn_skin(sc[0]);
+    app.set_set_frame_skin(sc[1]);
+    app.set_set_close_skin(sc[2]);
+    app.set_set_title_center(sc[3] != 0);
+    app.set_set_gloss(sc[4] != 0);
+    app.set_set_glass_opacity(sc[5] as f32);
+    app.set_set_xp_scheme(sc[6]);
+    app.set_set_high_contrast(sc[7] != 0);
+    app.set_set_title_opacity(sc[8] as f32);
+    app.set_set_glass_blur(sc[9] as f32);
+    app.set_set_glass_bright(sc[10] as f32);
+    app.set_set_title_accent(sc[11] != 0);
+}
+
+/// Couleurs réglables (0 verre des fenêtres, 1 surbrillance du ruban, 2 ruban, 3 surbrillance des
+/// boutons, 4 icônes) ; vide : automatique, « accent » : suit l'accentuation.
+fn set_w7_color_raw(app: &AppWindow, n: i32, hex: &str) {
+    match n {
+        0 => app.set_set_w7_glass(hex.into()),
+        1 => app.set_set_w7_highlight(hex.into()),
+        2 => app.set_set_w7_ribbon(hex.into()),
+        3 => app.set_set_btn_highlight(hex.into()),
+        _ => app.set_set_icon_color(hex.into()),
+    }
+}
+
+fn set_w7_color(app: &AppWindow, n: i32, hex: &str) {
+    set_w7_color_raw(app, n, hex);
+    let t = app.global::<Theme>();
+    theme::apply(app, t.get_dark(), t.get_accent_base());
+    save_settings(app);
 }
 
 fn sync_tabs(app: &AppWindow, st: &mut State) {
@@ -3091,6 +3386,8 @@ fn sync_tabs(app: &AppWindow, st: &mut State) {
         sync_rows(app.get_tabs(), Vec::new(), |m| app.set_tabs(m));
         // l'aperçu flouté ne doit pas survivre au dernier projet fermé
         app.set_header_bg(Image::default());
+        app.global::<Backdrop>().set_image(Image::default());
+        AERO_SHOWN.with(|a| a.set(None));
         return;
     }
     // image vue en entier : affichage, ou aperçu de fond pour une grande image (mode lazy)
@@ -3103,12 +3400,30 @@ fn sync_tabs(app: &AppWindow, st: &mut State) {
     // fond du haut (onglets, barre translucide) seulement s'il est affiché ; vignette de l'onglet
     // actif tirée de l'affichage sans le recopier (une copie entière par rafraîchissement
     // coûtait cher sur les grandes images)
-    let header = app.get_set_header_preview();
+    // (jamais en ultra léger : l'aperçu n'y est pas affiché)
+    // ni en ultra léger, ni en XP clair (barres Office 2003 opaques : l'image serait cachée)
+    let header = app.get_set_header_preview() && !app.get_header_clear() && !matches!(theme::skin_of(app), 4) && !(theme::skin_of(app) == 3 && !app.global::<Theme>().get_dark());
     HEADER_SHOWN.with(|h| h.set(header));
     if header {
         if let Some(img) = header_background(ov, dw, dh) {
             app.set_header_bg(img);
         }
+    }
+    // flou derrière le verre (Aero, barres translucides 10/11) : la toile, déjà en mémoire,
+    // réduite et floutée UNE fois par changement de la toile — jamais de capture de la fenêtre
+    // (une capture redessinait toute l'interface plusieurs fois par seconde : à-coups). Cadres et
+    // barres la montrent décalée de leur propre position : déplacer une fenêtre ou la vue ne
+    // recalcule rien.
+    if app.global::<Theme>().get_aero_blur() {
+        let amount = app.get_set_glass_blur().round() as i32;
+        let checker = app.get_appearance_colors();
+        let under = [checker.row_data(0), checker.row_data(1)];
+        if let Some(img) = aero_backdrop(ov, dw, dh, amount as f32 / 100.0, under) {
+            app.global::<Backdrop>().set_image(img);
+            AERO_SHOWN.with(|a| a.set(Some(amount)));
+        }
+    } else if AERO_SHOWN.with(|a| a.replace(None)).is_some() {
+        app.global::<Backdrop>().set_image(Image::default());
     }
     let cur_thumb = (ov.len() == dw * dh * 4).then(|| px_thumb(ov, dw, dh, 68, 47));
     let mut new_thumbs = Vec::new();
@@ -3708,7 +4023,6 @@ fn download_url(kind: &str) -> String {
 // ------------------------------------------------------------------ suppression du fond (IA)
 
 /// Plume : adoucit le canal alpha (deux passes de flou boîte, rayon ≤ 8 comme la version web).
-#[cfg(target_arch = "wasm32")]
 fn feather_alpha(px: &mut [u8], w: usize, h: usize, radius: usize) {
     let rad = radius.min(8);
     if rad == 0 || w == 0 || h == 0 {
@@ -3875,15 +4189,47 @@ fn rmbg_start(app: &AppWindow, state: &Shared) {
             }
         });
     }
+    // bureau : U²-Net-p (ai_native, fil à part), contour affiné sur l'image entière (filtre
+    // guidé) ; le choix du modèle de la version web n'a pas lieu d'être
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = state;
-        app.set_show_rmbg(false);
-        show_error(
-            app,
-            "Supprimer le fond (IA)",
-            "Cette fonction utilise un modèle d'IA exécuté dans le navigateur : elle est disponible dans la version web de MasterPaint (masterpaint.fr). La version de bureau suivra.",
-        );
+        let feather = app.get_rmbg_feather().round().max(0.0) as usize;
+        let (w, h, uid, layer, base) = {
+            let st = state.borrow();
+            (st.doc.w, st.doc.h, st.doc.uid, st.doc.active, st.doc.layer().px.clone())
+        };
+        app.set_rmbg_busy(true);
+        app.set_rmbg_progress(10.0);
+        app.set_rmbg_text(SharedString::from(i18n::tr("Analyse de l'image…")));
+        applog::log(i18n::tr_format!("Supprimer le fond (IA, bureau) : {w} × {h} px, plume {feather}"));
+        let (weak, state) = (app.as_weak(), state.clone());
+        let _ = slint::spawn_local(async move {
+            let t0 = now_ms();
+            let res = ai_sel::subject(&base, w, h, |_, _| {}).await;
+            let Some(app) = weak.upgrade() else { return };
+            app.set_rmbg_busy(false);
+            app.set_show_rmbg(false);
+            match res {
+                Ok((sw, sh, a)) => {
+                    let Ok(mut st) = state.try_borrow_mut() else { return };
+                    if st.doc.uid != uid || st.doc.active != layer || st.doc.w != w || st.doc.h != h {
+                        return status(&app, "Suppression du fond : le document a changé pendant le traitement, résultat ignoré.");
+                    }
+                    let mut m = ai_sel::resize_alpha(&a, sw, sh, w, h);
+                    ai_sel::refine(&mut m, &base, w, h);
+                    let mut px = base.to_vec();
+                    for (p, a) in px.chunks_exact_mut(4).zip(&m) {
+                        p[3] = (p[3] as u16 * *a as u16 / 255) as u8;
+                    }
+                    feather_alpha(&mut px, w, h, feather);
+                    st.doc.layer_mut().px = px.into();
+                    st.doc.commit("Supprimer le fond (IA)");
+                    refresh_all(&app, &mut st);
+                    status(&app, i18n::tr_format!("Supprimer le fond (IA) : {:.1} s", (now_ms() - t0) / 1000.0));
+                }
+                Err(e) => show_error(&app, "Supprimer le fond (IA)", &i18n::tr_format!("Impossible de supprimer le fond ({e}).")),
+            }
+        });
     }
 }
 
@@ -5827,6 +6173,11 @@ fn transform_pointer(app: &AppWindow, st: &mut State, kind: i32, x: f32, y: f32,
                     let area = (bw.max(0.0) * bh.max(0.0)).min((st.doc.w * st.doc.h) as f32 * 4.0);
                     let under_fx = st.doc.layers.iter().any(|l| l.dynamic.is_some());
                     f.draft = if area > 2.0e6 { ((area / 1.5e6).sqrt().ceil() as usize).clamp(1, 8) } else if under_fx && area > 400_000.0 { 2 } else { 1 };
+                    // vue dézoomée : un pixel de l'écran couvre plusieurs pixels du document, le
+                    // brouillon suit le pas d'affichage (rien de visible n'est perdu, jusqu'à
+                    // 16 fois moins de calcul à 25 %) ; aussi la réduction de rendu de la toile
+                    let view_step = ((1.0 / zoom.max(0.01)).floor() as usize).max(st.doc.effective_div()).clamp(1, 8);
+                    f.draft = f.draft.max(view_step);
                     if under_fx {
                         note_gesture(app);
                     }
@@ -7961,6 +8312,12 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
         (ctrl || c, shift || s, alt || a)
     };
     let k = |key: Key| SharedString::from(key).as_str() == text;
+    // touche de modification seule (Ctrl, Maj, Alt…) : rien à faire. Ctrl seul arrive comme
+    // « \u{11} », pris sinon pour Ctrl+Q : il posait les pixels flottants (une étape
+    // d'historique), et le Ctrl+Z suivant annulait cette pose au lieu de l'action voulue
+    if [Key::Shift, Key::ShiftR, Key::Control, Key::ControlR, Key::Alt, Key::AltGr, Key::Meta, Key::MetaR, Key::CapsLock].into_iter().any(|m| k(m)) {
+        return false;
+    }
     let mut ch = text.chars().next().unwrap_or('\0');
     // Ctrl+lettre peut arriver comme caractère de contrôle (0x01..0x1a)
     if ctrl && (ch as u32) >= 1 && (ch as u32) <= 26 {
@@ -7969,8 +8326,10 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
     let c = ch.to_ascii_lowercase();
     // navigateur : dans un champ de texte de l'application (élément <input> de Slint), les
     // raccourcis d'édition restent au champ (Ctrl+A sélectionne le texte, pas l'image)
+    // (Ctrl+Z / Ctrl+Y n'en font plus partie : un champ de texte réellement actif garde lui-même
+    // son annulation ; le champ caché de Slint resté actif bloquait Ctrl+Z pour de bon)
     #[cfg(target_arch = "wasm32")]
-    if ctrl && matches!(c, 'a' | 'c' | 'v' | 'x' | 'z' | 'y') && web::text_focused() {
+    if ctrl && matches!(c, 'a' | 'c' | 'v' | 'x') && web::text_focused() {
         return false;
     }
     if ctrl {
@@ -8165,19 +8524,36 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
     };
     if let Some((dx, dy)) = arrow {
         // contenu soulevé : déplacement de 1 px (10 avec Maj), comme Paint.NET
+        // touche maintenue : tous les pas rejoignent la même étape d'historique (une étape par
+        // appui, de la position de départ à celle du relâchement ; avant : une par pixel, 240
+        // étapes pour 240 px, l'historique saturait). Repli sans relâchement reçu : 1,5 s sans pas.
+        let t = now_ms();
+        let merge = st.nudge.filter(|&(_, t0)| t - t0 < 1500.0).map(|(seq, _)| seq);
         if let Some(f) = st.floating.as_mut() {
             let start = f.snapshot();
             f.drag(&start, transform::Grab::Translate, (0.0, 0.0), (dx as f32, dy as f32), false, false);
-            f.render(&mut st.doc);
-            st.doc.commit("Déplacer les pixels");
-            refresh_all(app, st);
+            let r = f.render(&mut st.doc);
+            let seq = st.doc.commit_merged("Déplacer les pixels", merge);
+            st.nudge = Some((seq, t));
+            // pas suivant : seule la zone touchée est recomposée ; panneaux, vignettes et
+            // historique une fois la touche lâchée (`nudge_settle`)
+            refresh_rect(app, st, r);
             show_handles(app, st);
+            nudge_settle(app);
             return true;
         }
         if st.doc.sel.is_some() {
+            let before = st.doc.selection_bounds();
             st.doc.translate_selection(dx, dy);
-            st.doc.commit("Déplacer la sélection");
-            refresh_all(app, st);
+            let seq = st.doc.commit_merged("Déplacer la sélection", merge);
+            st.nudge = Some((seq, t));
+            let after = st.doc.selection_bounds();
+            let r = match (before, after) {
+                (Some(a), Some(b)) => Some((a.0.min(b.0).saturating_sub(1), a.1.min(b.1).saturating_sub(1), (a.2.max(b.2) + 1).min(st.doc.w), (a.3.max(b.3) + 1).min(st.doc.h))),
+                _ => None,
+            };
+            refresh_rect(app, st, r);
+            nudge_settle(app);
         }
         return true;
     }
@@ -8345,7 +8721,7 @@ fn handle_key(app: &AppWindow, state: &Shared, text: &str, ctrl: bool, shift: bo
 /// Appels de la version web déjà traduits en Rust par `handle_action` (même liste).
 const HANDLED_ACTIONS: &[&str] = &[
     "showSelectionExpandDialog", "showImageBorderDialog", "alignActiveLayerWidthToCanvas",
-    "illuTriggerFileImport", "showExportDialog", "showNewProjectDialog", "requestCloseActiveDocument", "showSettingsDialog",
+    "illuTriggerFileImport", "showExportDialog", "showNewProjectDialog", "requestCloseActiveDocument", "closeAllDocuments", "closeOtherDocuments", "showSettingsDialog",
     "showChangelog", "showDownloadDialog", "showWelcomeDialog", "undo()", "redo()", "ctxCut", "ctxCopy", "ctxPaste", "selectAll", "deselectAll",
     "invertSelection", "clearSelectionContent", "cropToSelection", "startIlluInteractiveCrop", "resizeCanvas()",
     "showExtendCanvasDialog", "showPixelTransformDialog", "expandCanvasToLayers", "addLayer", "deleteLayer",
@@ -8694,6 +9070,30 @@ fn context_items(app: &AppWindow, wanted: &[&str]) -> ModelRc<MenuItemSpec> {
     ModelRc::new(VecModel::from(out))
 }
 
+/// Menu contextuel de la toile : sélection par l'IA (sans sélection), retouches de la sélection
+/// (avec), réglage de l'outil en cours (pipette : échantillon).
+fn canvas_context_extra(app: &AppWindow, base: ModelRc<MenuItemSpec>) -> Vec<MenuItemSpec> {
+    let mut out: Vec<MenuItemSpec> = (0..base.row_count()).filter_map(|i| base.row_data(i)).collect();
+    let item = |label: &str, action: &str, fa: &str| MenuItemSpec { label: i18n::tr(label).into(), action: action.into(), fa: fa.into(), fa_weight: 900, ..Default::default() };
+    let has_sel = APP_STATE.with(|s| s.borrow().as_ref().and_then(|st| st.try_borrow().ok().map(|st| st.doc.sel.is_some()))).unwrap_or(false);
+    let mut extra = Vec::new();
+    if has_sel {
+        extra.push(item("Contour progressif…", "rust:sel-feather", "\u{f0d0}"));
+        extra.push(item("Lisser la sélection…", "rust:sel-smooth", "\u{f1de}"));
+    } else {
+        extra.push(item("Sélectionner le sujet (IA)", "rust:sel-subject", "\u{f007}"));
+        extra.push(item("Sélectionner l'arrière-plan (IA)", "rust:sel-background", "\u{f03e}"));
+    }
+    if app.get_current_tool().as_str() == "tool-eyedropper" {
+        let layer = app.global::<ToolOpts>().get_pick_layer();
+        extra.push(item(if layer { "Pipette : prendre sur l'image entière" } else { "Pipette : prendre sur le calque actif seul" }, "rust:pick-layer", "\u{f1fb}"));
+    }
+    // en tête du menu, avant Couper / Coller : ce qui dépend de l'endroit et de l'outil
+    extra.push(MenuItemSpec { separator: true, ..Default::default() });
+    extra.extend(out.drain(..));
+    extra
+}
+
 /// Menu contextuel d'un calque : entrées des dossiers, du verrou et du calque texte selon le
 /// calque cliqué (actions `layerop:…`, voir `layer_op`).
 fn layer_context_extra(app: &AppWindow, base: ModelRc<MenuItemSpec>) -> Vec<MenuItemSpec> {
@@ -8745,9 +9145,17 @@ fn context_menu(app: &AppWindow, kind: &str, x: f32, y: f32, ctrl: bool, outside
             if ctrl && matches!(cur, Tool::RectSelect | Tool::EllipseSelect | Tool::Lasso | Tool::PolyLasso | Tool::MagneticLasso | Tool::Wand) {
                 return false;
             }
-            &[
-                "ctxCut", "ctxCopy", "ctxPaste", "-", "EditorManager.selectAll", "illuDeselectLikeCtrlD", "invertSelection", "clearSelectionContent", "-", "startIlluInteractiveCrop", "EditorManager.addLayer()", "-", "undo()", "redo()",
-            ]
+            // menu selon l'état : avec une sélection, ce qui agit sur elle ; sans, de quoi en faire une
+            let has_sel = APP_STATE.with(|s| s.borrow().as_ref().and_then(|st| st.try_borrow().ok().map(|st| st.doc.sel.is_some()))).unwrap_or(false);
+            if has_sel {
+                &[
+                    "ctxCut", "ctxCopy", "ctxPaste", "-", "illuDeselectLikeCtrlD", "invertSelection", "clearSelectionContent", "cropToSelection", "-", "duplicateActiveLayer", "EditorManager.addLayer()", "-", "undo()", "redo()",
+                ]
+            } else {
+                &[
+                    "ctxPaste", "-", "EditorManager.selectAll", "-", "startIlluInteractiveCrop", "EditorManager.addLayer()", "duplicateActiveLayer", "-", "undo()", "redo()",
+                ]
+            }
         }
         "snap" => &["toggleIlluSnapToEdges", "illuOpenSnapSettings"],
         "layer" => &["EditorManager.addLayer()", "duplicateActiveLayer", "deleteLayer()", "-", "moveLayer(1)", "moveLayer(-1)", "mergeLayers", "-", "openImageLayerBoundsDialog", "fx:rotatezoom"],
@@ -8756,6 +9164,9 @@ fn context_menu(app: &AppWindow, kind: &str, x: f32, y: f32, ctrl: bool, outside
     let mut items = context_items(app, wanted);
     if kind == "layer" {
         items = ModelRc::new(VecModel::from(layer_context_extra(app, items)));
+    }
+    if kind == "canvas" {
+        items = ModelRc::new(VecModel::from(canvas_context_extra(app, items)));
     }
     // contenu dessiné ou déplacé hors de la toile : agrandir la toile pour le reprendre
     if matches!(kind, "canvas" | "layer") && outside {
@@ -8786,6 +9197,13 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
         return pm_action(app, state, a);
     }
     let has = |k: &str| action.contains(k);
+    // pipette (menu du clic droit) : image entière ou calque actif seul
+    if action == "rust:pick-layer" {
+        let t = app.global::<ToolOpts>();
+        t.set_pick_layer(!t.get_pick_layer());
+        save_settings(app);
+        return status(app, if t.get_pick_layer() { "Pipette : calque actif seul" } else { "Pipette : image entière" });
+    }
     // menus façon Paint.NET : boutons rapides (zoom, rotations) par leur action
     if let Some(q) = action.strip_prefix("rust:quick:") {
         return app.invoke_quick_action(q.into());
@@ -8905,6 +9323,10 @@ fn handle_action(app: &AppWindow, state: &Shared, action: &str, label: &str) {
             ColorMode::Rgb
         };
         set_color_mode(app, st, mode);
+    } else if has("closeAllDocuments") {
+        request_close_many(app, st, false);
+    } else if has("closeOtherDocuments") {
+        request_close_many(app, st, true);
     } else if has("requestCloseActiveDocument") {
         let cur = st.cur;
         request_close_tab(app, st, cur);
@@ -10497,6 +10919,7 @@ fn tool_state(app: &AppWindow) -> serde_json::Value {
         "retouchStrength": t.get_retouch_strength(),
         "smoothing": t.get_smoothing(),
         "sampleAll": t.get_sample_all(),
+        "pickLayer": t.get_pick_layer(),
         "selAi": t.get_sel_ai(),
         "nearest": t.get_nearest(),
         "panels": [app.get_show_tools(), app.get_show_colors(), app.get_show_history(), app.get_show_layers()],
@@ -10528,6 +10951,7 @@ fn restore_tool_state(app: &AppWindow, v: &serde_json::Value) -> Option<String> 
     if let Some(x) = f("retouchStrength") { t.set_retouch_strength(x.clamp(1.0, 100.0)); }
     if let Some(x) = f("smoothing") { t.set_smoothing(x.clamp(0.0, 100.0)); }
     if let Some(x) = b("sampleAll") { t.set_sample_all(x); }
+    if let Some(x) = b("pickLayer") { t.set_pick_layer(x); }
     if let Some(x) = b("selAi") { t.set_sel_ai(x); }
     if let Some(x) = b("nearest") { t.set_nearest(x); }
     if let Some(x) = i("shapeStyle") { t.set_shape_style(x.clamp(0, 2)); }
@@ -10595,9 +11019,26 @@ fn save_settings(app: &AppWindow) {
         language: app.get_set_language(),
         layout: app.get_set_layout(),
         layout_auto: app.get_set_layout_auto(),
-        theme_style: app.get_set_theme_style(),
-        interface_theme: app.get_set_interface_theme(),
+        // mode intégré transparent : le style Windows 7 imposé n'est pas enregistré à la place
+        // du choix de l'utilisateur
+        theme_style: FORCED_STYLE.with(|f| f.get()).map_or(app.get_set_theme_style(), |f| f.0),
+        interface_theme: FORCED_STYLE.with(|f| f.get()).map_or(app.get_set_interface_theme(), |f| f.1),
+        header_transparent: app.get_set_header_transparent(),
+        header_themed: app.get_set_header_themed(),
         follow_interface_style: app.get_set_follow_interface_style(),
+        w7_vista: app.get_set_w7_vista(),
+        aero_blur: app.get_set_aero_blur(),
+        style_custom: [
+            app.get_set_btn_skin(), app.get_set_frame_skin(), app.get_set_close_skin(),
+            app.get_set_title_center() as i32, app.get_set_gloss() as i32,
+            app.get_set_glass_opacity().round() as i32, app.get_set_xp_scheme(), app.get_set_high_contrast() as i32,
+            app.get_set_title_opacity().round() as i32, app.get_set_glass_blur().round() as i32,
+            app.get_set_glass_bright().round() as i32, app.get_set_title_accent() as i32,
+        ],
+        w7_colors: [
+            app.get_set_w7_glass().to_string(), app.get_set_w7_highlight().to_string(), app.get_set_w7_ribbon().to_string(),
+            app.get_set_btn_highlight().to_string(), app.get_set_icon_color().to_string(),
+        ],
         icon_pack: app.get_set_icon_pack(),
         missing_icon_fallback: app.get_set_missing_icon_fallback(),
         custom_icon_pack: icon_packs::custom(),
@@ -10626,6 +11067,7 @@ fn save_settings(app: &AppWindow) {
         perf_done: app.get_set_perf_done(),
         perf_cut: app.get_set_perf_cut(),
         perf_reported: app.get_set_perf_reported(),
+        perf_audit: app.get_set_perf_audit(),
         zoom_smooth: app.get_set_zoom_smooth(),
         snap_div: app.get_set_snap_div().round().clamp(4.0, 128.0) as u32,
         snap_thresh: app.get_set_snap_thresh().round().clamp(1.0, 100.0) as u32,
@@ -10709,6 +11151,8 @@ fn welcome_at_start(app: &AppWindow) {
         }
     });
     if SYNC_LOADS.load(std::sync::atomic::Ordering::Relaxed) || app.get_welcome_hide() || app.get_welcome_count() >= 2 || app.get_pm_open() {
+        // pas de fenêtre de bienvenue : l'audit du PC (premier lancement) se fait tout de suite
+        perf::first_audit(app);
         return;
     }
     app.set_welcome_count(app.get_welcome_count() + 1);
@@ -10897,6 +11341,28 @@ fn handle_ribbon(app: &AppWindow, state: &Shared, id: &str) {
         status(app, if on { "Calque texte : chaque texte aura son calque, modifiable ensuite" } else { "Texte peint directement dans le calque actif" });
         return;
     }
+    if id == "rasterize-ask" {
+        // bouton « Pixelliser » de l'alvéole Calque SVG : toujours confirmé (irréversible hors Annuler)
+        let mut st = state.borrow_mut();
+        if st.doc.layer().vector.is_none() {
+            status(app, "Pixelliser : le calque actif n'est pas un calque SVG");
+            return;
+        }
+        st.task = Some(Task::Rasterize(st.doc.layer().uid));
+        show_task(
+            app,
+            "Pixelliser le calque",
+            "Ce calque SVG deviendra un calque de pixels ordinaires : ses textes et ses formes ne seront plus modifiables.",
+            "",
+            "",
+            &[
+                ("Pixelliser le calque", "Transforme ses textes, formes et effets en pixels."),
+                ("Annuler", "Garde le calque SVG modifiable."),
+            ],
+            Vec::new(),
+        );
+        return;
+    }
     if id == "shape-layer" {
         save_settings(app);
         let on = app.global::<ToolOpts>().get_shape_layer();
@@ -11018,9 +11484,55 @@ pub fn main() {
     if web_sys::window().is_none() {
         return;
     }
+    // bureau : une erreur au démarrage ne doit plus fermer l'application en silence (exe Windows
+    // sans console : « ne s'ouvre pas », sans aucune trace) ; message à l'écran et fichier
+    // crash.log dans le dossier des données (Windows : %APPDATA%\MasterPaint)
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+    {
+        let prev = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            // fil de l'interface seulement : un calcul en arrière-plan qui échoue n'arrête pas
+            // l'application
+            if std::thread::current().name() == Some("main") {
+                fatal_report(&format!("MasterPaint {APP_VERSION} : {info}"));
+            }
+            prev(info);
+        }));
+    }
     if let Err(e) = run() {
         eprintln!("MasterPaint : {e}");
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+        fatal_report(&format!("MasterPaint {APP_VERSION} : impossible d'ouvrir la fenêtre ({e})"));
     }
+}
+
+/// Erreur fatale sur le bureau : journal `crash.log` (dossier des données, à défaut à côté de
+/// l'exécutable) et fenêtre de message, les dernières lignes du journal en plus.
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+fn fatal_report(msg: &str) {
+    let text = format!("{msg}\n\n{}\n{}", platform_info(), applog::tail(20));
+    eprintln!("{text}");
+    let dirs = [settings::Settings::data_dir(), std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf()))];
+    let mut written = None;
+    for d in dirs.into_iter().flatten() {
+        let _ = std::fs::create_dir_all(&d);
+        let p = d.join("crash.log");
+        if std::fs::write(&p, &text).is_ok() {
+            written = Some(p);
+            break;
+        }
+    }
+    let where_ = written.map(|p| format!("\n\nDétails : {}", p.display())).unwrap_or_default();
+    // capture sans écran (--snapshot) : pas de fenêtre de message
+    if std::env::args().any(|a| a.starts_with("--snapshot")) {
+        return;
+    }
+    let _ = rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title("MasterPaint")
+        .set_description(format!("{msg}{where_}"))
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
 }
 
 fn run() -> Result<(), slint::PlatformError> {
@@ -11032,6 +11544,14 @@ fn run() -> Result<(), slint::PlatformError> {
     if web::flag("mpNoWebGL") {
         web_sys::console::warn_1(&"MasterPaint : WebGL indisponible, rendu logiciel".into());
         let _ = slint::BackendSelector::new().renderer_name("software".into()).select();
+    }
+    // Linux : identifiant de la fenêtre = nom du lanceur (fr.masterpaint.app.desktop) ; sans lui,
+    // GNOME / KDE sous Wayland montraient une icône générique et ne rattachaient pas la fenêtre
+    // au lanceur épinglé (X11 : classe WM_CLASS, même nom)
+    #[cfg(target_os = "linux")]
+    {
+        use slint::winit_030::winit::platform::wayland::WindowAttributesExtWayland;
+        let _ = slint::BackendSelector::new().with_winit_window_attributes_hook(|a| a.with_name("fr.masterpaint.app", "masterpaint")).select();
     }
     let app = AppWindow::new()?;
     #[cfg(target_os = "android")]
@@ -11064,7 +11584,30 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_theme_style(if flag("--win98") { 1 } else { cfg.theme_style });
     app.set_set_interface_theme(cfg.interface_theme);
     app.set_show_tools(cfg.interface_theme != 3);
+    // entête transparente (intégration dans une page web) : demandée par la page parente
+    // (?mp-transparent=1, <iframe data-mp-transparent>, voir web/index.html) ou essayée depuis
+    // Paramètres › Avancé ; le style Windows 7 est alors imposé, sans remplacer le choix enregistré
+    app.set_set_header_transparent(cfg.header_transparent);
+    app.set_set_header_themed(cfg.header_themed);
+    let (clear, by_parent) = header_clear_request(cfg.header_transparent);
+    app.set_header_clear(clear);
+    app.set_header_clear_parent(by_parent);
+    // « Entête au style du thème » : le style choisi (XP, 7, 10/11) est gardé
+    if clear && !cfg.header_themed {
+        FORCED_STYLE.with(|f| f.set(Some((cfg.theme_style, cfg.interface_theme))));
+        app.set_set_theme_style(2);
+        app.set_set_interface_theme(0);
+        app.set_show_tools(true);
+    }
     app.set_set_follow_interface_style(cfg.follow_interface_style);
+    app.set_set_w7_vista(cfg.w7_vista);
+    app.set_set_aero_blur(cfg.aero_blur);
+    set_style_custom(&app, &cfg.style_custom);
+    app.set_set_w7_glass(cfg.w7_colors[0].as_str().into());
+    app.set_set_w7_highlight(cfg.w7_colors[1].as_str().into());
+    app.set_set_w7_ribbon(cfg.w7_colors[2].as_str().into());
+    app.set_set_btn_highlight(cfg.w7_colors[3].as_str().into());
+    app.set_set_icon_color(cfg.w7_colors[4].as_str().into());
     icon_packs::restore_all(cfg.imported_icon_packs.clone(), cfg.custom_icon_pack.clone(), cfg.active_custom_icon);
     app.set_set_icon_pack(cfg.icon_pack);
     app.set_set_missing_icon_fallback(cfg.missing_icon_fallback);
@@ -11097,12 +11640,14 @@ fn run() -> Result<(), slint::PlatformError> {
     app.set_set_hover_fx(cfg.hover_fx);
     app.set_set_render_scale(cfg.render_scale);
     app.set_render_scale_start(cfg.render_scale);
-    app.set_set_render_ctl(cfg.render_ctl);
-    app.set_set_render_default(cfg.render_default);
-    editor::RENDER_DEFAULT.store(render_default(cfg.render_ctl, cfg.render_default), std::sync::atomic::Ordering::Relaxed);
+    // ancien réglage « boutons de réduction » éteint : la réduction de départ ne valait rien
+    app.set_set_render_ctl(true);
+    app.set_set_render_default(if cfg.render_ctl { cfg.render_default } else { 0 });
+    editor::RENDER_DEFAULT.store(render_default(true, app.get_set_render_default()), std::sync::atomic::Ordering::Relaxed);
     app.set_set_perf_done(cfg.perf_done);
     app.set_set_perf_cut(cfg.perf_cut);
     app.set_set_perf_reported(cfg.perf_reported);
+    app.set_set_perf_audit(cfg.perf_audit);
     app.set_set_zoom_smooth(cfg.zoom_smooth);
     AUTOSAVE_ON.store(cfg.autosave, std::sync::atomic::Ordering::Relaxed);
     GPU_ALLOWED.store(cfg.use_gpu, std::sync::atomic::Ordering::Relaxed);
@@ -11203,7 +11748,7 @@ fn run() -> Result<(), slint::PlatformError> {
                 }
             }
             // aperçu du haut rétabli : son image n'était plus tenue à jour
-            if app.get_set_header_preview() && !HEADER_SHOWN.with(|h| h.get()) {
+            if app.get_set_header_preview() && theme::skin_of(&app) != 4 && !HEADER_SHOWN.with(|h| h.get()) {
                 if let Some(state) = APP_STATE.with(|s| s.borrow().clone()) {
                     if let Ok(mut st) = state.try_borrow_mut() {
                         sync_tabs(&app, &mut st);
@@ -11402,6 +11947,8 @@ fn run() -> Result<(), slint::PlatformError> {
         vv: Default::default(),
         thumbs: Vec::new(),
         sel_bounds: None,
+        ants_stale: false,
+        nudge: None,
         dyn_inflight: std::collections::HashSet::new(),
         empty: false,
         dyn_draft: None,
@@ -11432,6 +11979,28 @@ fn run() -> Result<(), slint::PlatformError> {
     }));
     app.set_canvas_tiles(ModelRc::from(state.borrow().tiles.clone()));
     APP_STATE.with(|s| *s.borrow_mut() = Some(state.clone()));
+    // Android : image reçue d'une autre application (« Ouvrir avec », « Partager vers »),
+    // au lancement ou pendant que MasterPaint tourne : ouverte dans un onglet
+    #[cfg(target_os = "android")]
+    {
+        let weak = app.as_weak();
+        let state2 = state.clone();
+        let timer = Box::leak(Box::new(slint::Timer::default()));
+        timer.start(slint::TimerMode::Repeated, std::time::Duration::from_millis(800), move || {
+            if !android_io::has_incoming() {
+                return;
+            }
+            let (weak, state) = (weak.clone(), state2.clone());
+            let _ = slint::spawn_local(async move {
+                let Some(files) = android_io::incoming().await else { return };
+                let Some(app) = weak.upgrade() else { return };
+                for f in files {
+                    let bytes = f.read().await;
+                    load_bytes(&app, &state, &f.file_name(), bytes);
+                }
+            });
+        });
+    }
     // barre de titre intégrée (bureau) : la fenêtre n'a pas de cadre du système
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
     {
@@ -11980,13 +12549,27 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     app.set_web(cfg!(target_arch = "wasm32"));
     app.set_app_version(APP_VERSION.into());
-    // fichier passé au lancement (« Ouvrir avec ») : photo RAW → Mode Photo Pro, projet .illu
+    // fichiers passés au lancement (double-clic, « Ouvrir avec », plusieurs fichiers choisis) :
+    // le premier, s'il est une image simple, est déjà le document de départ ; les autres (photo
+    // RAW → Mode Photo Pro, projet .illu / .pdn / .svg, Photoshop .psd / .psb, images
+    // suivantes) arrivent dans leurs onglets. Avant : un PSD ouvrait une toile vide, et seul le
+    // premier fichier était lu.
     #[cfg(not(target_arch = "wasm32"))]
-    if let Some(p) = args.iter().find(|a| !a.starts_with("--")).filter(|p| raw::is_raw(p) || is_project_file(p)) {
-        let path = std::path::Path::new(p);
-        match std::fs::read(path) {
-            Ok(bytes) => load_bytes(&app, &state, &path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default(), bytes),
-            Err(e) => show_error(&app, "Ouvrir", &format!("{} : {e}", path.display())),
+    {
+        let files: Vec<&String> = args.iter().filter(|a| !a.starts_with("--")).collect();
+        // premier fichier déjà ouvert comme document de départ (image décodée) : son nom
+        let first_is_doc = files.first().and_then(|p| std::path::Path::new(p.as_str()).file_name()).is_some_and(|n| state.borrow().doc.title == n.to_string_lossy());
+        for (k, p) in files.iter().enumerate() {
+            let lower = p.to_lowercase();
+            let special = raw::is_raw(p) || is_project_file(p) || lower.ends_with(".psd") || lower.ends_with(".psb");
+            if k == 0 && !special && first_is_doc {
+                continue;
+            }
+            let path = std::path::Path::new(p.as_str());
+            match std::fs::read(path) {
+                Ok(bytes) => load_bytes(&app, &state, &path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default(), bytes),
+                Err(e) => show_error(&app, "Ouvrir", &format!("{} : {e}", path.display())),
+            }
         }
     }
     // --demo=close|exit|drop|paste : fenêtres de choix (captures ; sans sauvegarde automatique)
@@ -12124,6 +12707,41 @@ fn run() -> Result<(), slint::PlatformError> {
                 app.set_show_settings(true);
                 app.set_settings_page(6);
             }
+            // Personnalisation (styles, personnalisation avancée)
+            "settings-custom" => {
+                app.set_show_settings(true);
+                app.set_settings_page(9);
+            }
+            // agrandir le document à 10000 × 7000 (redimensionner, ou zone de travail), par le
+            // même chemin que le bouton OK, une fois la scène affichée (plantage signalé)
+            "resize-big" | "canvas-big" => {
+                let canvas = d == "canvas-big";
+                let weak = app.as_weak();
+                slint::Timer::single_shot(std::time::Duration::from_millis(400), move || {
+                    if let Some(app) = weak.upgrade() {
+                        app.invoke_resize_image("10000".into(), "7000".into(), canvas, 4);
+                    }
+                });
+            }
+            // fenêtre « Personnalisation avancée »
+            "adv-style" => {
+                app.set_show_settings(true);
+                app.set_settings_page(9);
+                app.set_show_adv_style(true);
+            }
+            // tutoriel : ruban d'exemple (même bande que le ruban)
+            "tutorial" => {
+                app.set_info_tab(3);
+                app.set_show_shortcuts(true);
+            }
+            // Mode Photo Pro sur une photo d'exemple (allure selon l'interface et le style)
+            "pm" => {
+                let (w, h) = (1200, 800);
+                let p = photo::Photo::new("photo.jpg", w, h, demo(w, h));
+                st.photo.photos.push(p);
+                st.photo.active = st.photo.photos.len() - 1;
+                pm_open(&app, st);
+            }
             "eyedropper" => set_tool(&app, st, "tool-eyedropper"),
             "mask" => layer_alpha(&app, st, 0, false),
             "icons" => open_icon_viewer(&app),
@@ -12133,6 +12751,28 @@ fn run() -> Result<(), slint::PlatformError> {
                 app.set_show_live(true);
             }
             // grande image (8000 × 6000) à 100 % : seules les tuiles visibles sont composées
+            // banc d'essai « PC modeste » : 1920 × 1080, deux calques (fond opaque, dessus en
+            // partie transparent), outil Déplacer
+            "two1080" => {
+                let (w, h) = (1920, 1080);
+                let mut doc = Doc::from_pixels(w, h, demo(w, h), "bench.png");
+                doc.add_layer();
+                {
+                    let px = &mut doc.layers[1].px;
+                    for y in 200..800 {
+                        for x in 300..1500 {
+                            let i = (y * w + x) * 4;
+                            px[i..i + 4].copy_from_slice(&[(x % 256) as u8, 40, (y % 256) as u8, if x < 400 { 128 } else { 255 }]);
+                        }
+                    }
+                }
+                doc.saved = (usize::MAX, 0);
+                doc.history.clear();
+                doc.commit("Image d'origine");
+                doc.hindex = 0;
+                set_document(&app, st, doc);
+                refresh_all(&app, st);
+            }
             "big" => {
                 let mut doc = Doc::from_pixels(8000, 6000, demo(8000, 6000), "grande.png");
                 doc.saved = (usize::MAX, 0);
@@ -12291,7 +12931,9 @@ fn run() -> Result<(), slint::PlatformError> {
                 let (w, h) = (st.doc.w, st.doc.h);
                 if x >= 0.0 && y >= 0.0 && (x as usize) < w && (y as usize) < h {
                     let secondary = st.picking.unwrap_or(false);
-                    handle_outcome(&app, st, Outcome::PickColor(st.doc.pixel_color(x as usize, y as usize), secondary));
+                    // Échantillon (ruban de la pipette) : image entière ou calque actif seul
+                    let c = if app.global::<ToolOpts>().get_pick_layer() { st.doc.layer_color(x as usize, y as usize) } else { st.doc.pixel_color(x as usize, y as usize) };
+                    handle_outcome(&app, st, Outcome::PickColor(c, secondary));
                 }
                 return;
             }
@@ -12483,6 +13125,19 @@ fn run() -> Result<(), slint::PlatformError> {
         let state = state.clone();
         app.on_key_pressed(move |text, ctrl, shift, alt| handle_key(&weak.unwrap(), &state, &text, ctrl, shift, alt));
     }
+    {
+        // flèche relâchée : le prochain appui commence une nouvelle étape d'historique
+        let state = state.clone();
+        app.on_key_up(move |text| {
+            use slint::platform::Key;
+            let arrow = [Key::LeftArrow, Key::RightArrow, Key::UpArrow, Key::DownArrow].into_iter().any(|k| SharedString::from(k).as_str() == text.as_str());
+            if arrow {
+                if let Ok(mut st) = state.try_borrow_mut() {
+                    st.nudge = None;
+                }
+            }
+        });
+    }
 
     // ---- outils, menus, ruban ----
     {
@@ -12620,6 +13275,9 @@ fn run() -> Result<(), slint::PlatformError> {
             if let Some(n) = target.strip_prefix("appearance:").and_then(|n| n.parse::<i32>().ok()) {
                 appearance::pick(&app, n, c);
                 save_settings(&app);
+            } else if let Some(n) = target.strip_prefix("w7:").and_then(|n| n.parse::<i32>().ok()) {
+                // couleurs du style Windows 7 : verre des fenêtres, surbrillance, ruban
+                set_w7_color(&app, n, &format!("#{:02x}{:02x}{:02x}", c.red(), c.green(), c.blue()));
             } else if let Some(n) = target.strip_prefix("effect:").and_then(|n| n.parse::<i32>().ok()) {
                 app.invoke_effect_color_picked(n, c);
             } else if target == "paint:0" {
@@ -12938,7 +13596,7 @@ fn run() -> Result<(), slint::PlatformError> {
         app.on_quick_action(move |id| {
             let app = weak.unwrap();
             // aucun projet ouvert : boutons qui touchent l'image sans effet (message)
-            const NO_DOC: [&str; 21] = ["credits-paintdotjs", "credits-paintjs", "credits-paintnet", "credits-openpdn", "credits-photocraft", "credits-artcraft", "credits-storytold", "signaler-un-bug", "illu-tb-new", "illu-tb-open", "illu-tb-print", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
+            const NO_DOC: [&str; 23] = ["credits-7css", "credits-xpcss", "credits-paintdotjs", "credits-paintjs", "credits-paintnet", "credits-openpdn", "credits-photocraft", "credits-artcraft", "credits-storytold", "signaler-un-bug", "illu-tb-new", "illu-tb-open", "illu-tb-print", "open-author", "open-github", "restart-app", "tech-info", "crash-test", "clear-autosave", "open-changelog", "open-example", "icon-viewer", "clear-history-all"];
             if state.borrow().empty && !NO_DOC.contains(&id.as_str()) && !id.starts_with("opt-") {
                 status(&app, "Aucun projet ouvert : créez une nouvelle image ou ouvrez un fichier");
                 return;
@@ -12979,6 +13637,8 @@ fn run() -> Result<(), slint::PlatformError> {
                 "illu-tb-zoom-fit-row1" => app.invoke_zoom_fit(),
                 "credits-paintdotjs" => { let _ = webbrowser::open("https://github.com/LabyStudio/paintdotjs"); }
                 "credits-paintjs" => { let _ = webbrowser::open("https://paintjs.net/"); }
+                "credits-7css" => { let _ = webbrowser::open("https://github.com/khang-nd/7.css"); }
+                "credits-xpcss" => { let _ = webbrowser::open("https://github.com/botoxparty/XP.css"); }
                 "credits-paintnet" => { let _ = webbrowser::open("https://paint.net/"); }
                 "credits-openpdn" => { let _ = webbrowser::open("https://github.com/rivy/OpenPDN"); }
                 "credits-photocraft" => { let _ = webbrowser::open("https://github.com/storytold/photocraft"); }
@@ -13423,7 +14083,7 @@ fn run() -> Result<(), slint::PlatformError> {
                     app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(0))));
                     app.set_set_rounded(d.rounded);
                     app.set_set_glass(d.glass);
-                    app.set_set_header_preview(d.header_preview);
+                    app.set_set_high_contrast(false);
                     app.set_set_layout(d.layout);
                     app.set_set_layout_auto(d.layout_auto);
                     let a = Color::from_rgb_u8((d.accent >> 16) as u8, (d.accent >> 8) as u8, d.accent as u8);
@@ -13452,10 +14112,9 @@ fn run() -> Result<(), slint::PlatformError> {
                     app.set_set_render_scale(d.render_scale);
                     app.set_set_render_ctl(d.render_ctl);
                     app.set_set_render_default(d.render_default);
-                    app.set_set_perf_done(d.perf_done);
-                    app.set_set_perf_cut(d.perf_cut);
                     app.set_set_perf_reported(d.perf_reported);
-                    app.invoke_settings_changed();
+                    // Restaure les effets coupés et réarme la détection, comme le sélecteur.
+                    perf::auto_changed(&app);
                 }
                 // Personnalisation : style, disposition, taille, effets visuels
                 9 => {
@@ -13466,6 +14125,13 @@ fn run() -> Result<(), slint::PlatformError> {
                     app.set_set_title_transparent(d.title_transparent);
                     app.set_set_shadows(d.shadows);
                     app.set_set_hover_fx(d.hover_fx);
+                    // personnalisation avancée : tout revient au style choisi
+                    set_style_custom(&app, &settings::STYLE_CUSTOM_DEFAULT);
+                    app.set_set_rounded(d.rounded);
+                    app.set_set_header_preview(d.header_preview);
+                    for n in 0..5 {
+                        set_w7_color_raw(&app, n, "");
+                    }
                     let t = app.global::<Theme>();
                     app.invoke_apply_theme(t.get_dark(), t.get_accent_base());
                     app.set_set_ui_zoom(d.ui_zoom);
@@ -13573,7 +14239,7 @@ fn run() -> Result<(), slint::PlatformError> {
             // paintdotjs montre aussi la palette Outils (deux colonnes) ; seul le téléphone la cache
             app.set_show_tools(i != 3);
             if app.get_set_follow_interface_style() {
-                let pack = match i.clamp(0, 3) { 1 => 1, 2 => 2, _ => 0 };
+                let pack = theme::followed_pack(&app);
                 // coins arrondis : MasterPaint et Photoshop (PhotoCraft arrondit ses contrôles) ;
                 // Paint.NET reste carré comme paintdotjs
                 app.set_set_rounded(i == 0 || i == 2);
@@ -13582,7 +14248,7 @@ fn run() -> Result<(), slint::PlatformError> {
                 // ensuite ; seul Photoshop (PhotoCraft) passe en sombre. En le quittant, le thème
                 // choisi avant revient : Paint.NET et MasterPaint ne restent pas sombres d'office.
                 let user_dark = USER_DARK.load(std::sync::atomic::Ordering::Relaxed) == 2;
-                let accent = match i { 1 => Color::from_rgb_u8(0x03, 0x69, 0xa1), 2 => Color::from_rgb_u8(0x1d, 0x4e, 0xd8), _ => app.global::<Theme>().get_accent_base() };
+                let accent = match i { 1 => Color::from_rgb_u8(0x00, 0x78, 0xd4), 2 => Color::from_rgb_u8(0x1d, 0x4e, 0xd8), _ => app.global::<Theme>().get_accent_base() };
                 app.invoke_apply_theme(if i == 2 { true } else { user_dark }, accent);
                 app.set_set_icon_pack(pack);
                 icon_packs::select(pack);
@@ -13597,9 +14263,36 @@ fn run() -> Result<(), slint::PlatformError> {
             save_settings(&app);
         });
         let weak = app.as_weak();
+        app.on_w7_color_reset(move |n| set_w7_color(&weak.unwrap(), n, ""));
+        let weak = app.as_weak();
+        app.on_w7_color_set(move |n, v| set_w7_color(&weak.unwrap(), n, &v));
+        // entête transparente : flou de la page parente, une fois le thème appliqué
+        let weak = app.as_weak();
+        slint::Timer::single_shot(std::time::Duration::from_millis(600), move || {
+            if let Some(app) = weak.upgrade() {
+                sync_header_glass(&app);
+            }
+        });
+        let weak = app.as_weak();
+        app.on_w7_color_pick(move |n, c| set_w7_color(&weak.unwrap(), n, &format!("#{:02x}{:02x}{:02x}", c.red(), c.green(), c.blue())));
+        let weak = app.as_weak();
         app.on_icon_pack_action(move |action| {
             let app=weak.unwrap();
             let action=action.to_string();
+            // style des contrôles changé : le pack suit (Windows 7 / XP → Paint.NET ancien)
+            if action == "follow" {
+                if app.get_set_follow_interface_style() {
+                    let pack = theme::followed_pack(&app);
+                    if pack != app.get_set_icon_pack() {
+                        app.set_set_icon_pack(pack);
+                        icon_packs::select(pack);
+                        let t=app.global::<Theme>(); theme::apply(&app,t.get_dark(),t.get_accent_base());
+                        app.invoke_icon_refresh();
+                        app.set_icon_pack_catalog(ModelRc::new(VecModel::from(icon_packs::catalog(pack))));
+                    }
+                }
+                save_settings(&app); return;
+            }
             if action == "fallback" {
                 icon_packs::set_missing_fallback(app.get_set_missing_icon_fallback());
                 let t=app.global::<Theme>(); theme::apply(&app,t.get_dark(),t.get_accent_base());
@@ -13625,11 +14318,11 @@ fn run() -> Result<(), slint::PlatformError> {
             if let Some((verb,id))=action.split_once(':') {
                 let mut parts=id.split(':'); let kind=parts.next().unwrap_or(""); let index=parts.next().and_then(|s|s.parse::<usize>().ok()).unwrap_or(0);
                 match (verb,kind) {
-                    ("select","builtin") if index<3 => { app.set_set_icon_pack(index as i32); }
+                    ("select","builtin") if index<3 || index==4 => { app.set_set_icon_pack(index as i32); }
                     ("select","custom") => { icon_packs::select_custom(index); app.set_set_icon_pack(3); }
-                    ("export","builtin") if index<3 => { let name=["masterpaint","paintjs","photocraft"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.zip"),"Pack d'icônes","zip","application/zip",icon_packs::export_zip(index as i32)); }
+                    ("export","builtin") if index<3 || index==4 => { let name=["masterpaint","paintjs","photocraft","","paintnet-ancien"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.zip"),"Pack d'icônes","zip","application/zip",icon_packs::export_zip(index as i32)); }
                     ("export","custom") => { let previous=icon_packs::active_custom_index(); icon_packs::select_custom(index); offer_file(&app,"masterpaint-pack-importe.zip","Pack d'icônes importé","zip","application/zip",icon_packs::export_zip(3)); icon_packs::select_custom(previous); }
-                    ("export-json","builtin") if index<3 => { let name=["masterpaint","paintjs","photocraft"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.json"),"Pack d'icônes","json","application/json",icon_packs::export_json(index as i32)); }
+                    ("export-json","builtin") if index<3 || index==4 => { let name=["masterpaint","paintjs","photocraft","","paintnet-ancien"][index]; offer_file(&app,&format!("masterpaint-{name}-icons.json"),"Pack d'icônes","json","application/json",icon_packs::export_json(index as i32)); }
                     ("export-json","custom") => { let previous=icon_packs::active_custom_index(); icon_packs::select_custom(index); offer_file(&app,"masterpaint-pack-importe.json","Pack d'icônes importé","json","application/json",icon_packs::export_json(3)); icon_packs::select_custom(previous); }
                     ("delete","custom") => { icon_packs::delete_custom(index); if icon_packs::all_custom().as_array().is_none_or(|a|a.is_empty()){app.set_set_icon_pack(0);icon_packs::select(0);}else if app.get_set_icon_pack()==3 {icon_packs::select(3);} }
                     ("source",_) => { if let Some(url)=icon_packs::github_source(id) { let _=webbrowser::open(&url); } }
@@ -13645,6 +14338,15 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     {
         let weak = app.as_weak();
+        {
+            // bienvenue fermée : audit du PC au tout premier lancement (une seule fois)
+            let weak = app.as_weak();
+            app.on_welcome_closed(move || {
+                if let Some(app) = weak.upgrade() {
+                    perf::first_audit(&app);
+                }
+            });
+        }
         app.on_apply_theme(move |dark, accent| {
             let app = weak.unwrap();
             // choix clair / sombre de l'utilisateur, hors Photoshop (qui l'impose)
@@ -13658,6 +14360,8 @@ fn run() -> Result<(), slint::PlatformError> {
             } else {
                 theme::apply(&app, dark, accent);
             }
+            refresh_aero(&app);
+            sync_header_glass(&app);
             save_settings(&app);
         });
     }
@@ -13957,9 +14661,27 @@ fn run() -> Result<(), slint::PlatformError> {
             // grande image : tuiles devenues visibles sans déplacement de la vue (fenêtre
             // agrandie, panneau fermé…)
             ensure_visible(&app, &mut st);
+            // glisser en cours (transformation, déplacement, geste) : le contour suit déjà la
+            // sélection à chaque mouvement ; le reposer ici d'après un cadre périmé laissait
+            // l'ancien contour en fantôme sur la toile (PC lent : jusqu'au rendu suivant)
+            if st.transform_drag.is_some() || st.session.busy() || gesture_active() {
+                return;
+            }
+            // sélection déplacée ou modifiée par un rendu partiel : cadre et contour recalculés
+            // (le masque est souvent réécrit sur place : même adresse, la clé ne le voyait pas)
+            if std::mem::take(&mut st.ants_stale) {
+                st.sel_bounds = st.doc.selection_bounds();
+                st.ants_cache = None;
+            }
             // animation limitée au cadre de la sélection ; figée au-delà de 2 Mpx (« Tout sélectionner »
             // sur une grande image) pour ne pas renvoyer l'image entière deux fois par seconde
             let Some(b) = st.sel_bounds else { return };
+            // ultra léger (mode économie) ou application en arrière-plan : contour figé (chaque
+            // pas de l'animation redessine toute la fenêtre, femtovg n'a pas de rendu partiel)
+            let t = app.global::<Theme>();
+            if t.get_lite() || !t.get_app_active() {
+                return;
+            }
             let area = (b.2 - b.0) * (b.3 - b.1);
             let (dw, dh) = display_dims(&st);
             if st.doc.sel.is_some() && !st.session.busy() && st.display.len() == dw * dh * 4 && area / (st.ds * st.ds) <= 2_000_000 {
@@ -14439,6 +15161,14 @@ mod web {
         let Some(p) = preview_obj() else { return false };
         let Ok(f) = js_sys::Reflect::get(&p, &"isOpen".into()).and_then(|f| f.dyn_into::<js_sys::Function>()) else { return false };
         f.call0(&p).ok().and_then(|v| v.as_bool()).unwrap_or(false)
+    }
+
+    /// Flou de la page parente derrière l'entête transparente (0 : aucun).
+    pub fn header_glass(height: f32, blur: f32) {
+        let Some(w) = web_sys::window() else { return };
+        if let Ok(f) = js_sys::Reflect::get(&w, &"mpHeaderGlass".into()).and_then(|f| f.dyn_into::<js_sys::Function>()) {
+            let _ = f.call2(&w, &(height as f64).into(), &(blur as f64).into());
+        }
     }
 
     pub fn preview_update(rgba: &[u8], w: usize, h: usize) {

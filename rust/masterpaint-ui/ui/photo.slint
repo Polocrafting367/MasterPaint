@@ -3,7 +3,7 @@
 // css/photo-mode.css) — interface sombre type Lightroom, toile au centre, pellicule en bas,
 // réglages à droite (en bas sur téléphone).
 import { Theme } from "theme.slint";
-import { FaIcon, GlyphIcon, HoverTip, AngleDial } from "widgets.slint";
+import { FaIcon, GlyphIcon, HoverTip, AngleDial, ClassicFace, Bevel } from "widgets.slint";
 
 /// Ligne de la liste des masques (onglet Masque).
 export struct PmMaskRow {
@@ -50,7 +50,21 @@ global Pm {
     out property <color> divider: self.look == 0 ? #ffffff14 : self.look == 1 ? #454545 : #333333;
     /// arrondi des boutons : MasterPaint (coins de l'application), presque carré (Paint.NET),
     /// pilule (Photoshop / PhotoCraft)
-    out property <length> radius: self.look == 0 ? max(Theme.ctl-radius, 4px * Theme.round) : self.look == 1 ? 2px : 13px * Theme.round;
+    out property <length> radius: Theme.lite || Theme.b-98 ? 0px : Theme.b-classic ? 3px * Theme.round
+        : self.look == 0 ? max(Theme.ctl-radius, 4px * Theme.round) : self.look == 1 ? 2px : 13px * Theme.round;
+    /// boutons dessinés par le style choisi (Windows 7 / XP : face vitrée ou beige ; 98 : relief),
+    /// comme dans l'éditeur — la présentation (MasterPaint, Paint.NET, Photoshop) garde sa
+    /// disposition et ses fonds
+    out property <bool> skinned: Theme.b-classic || Theme.b-98;
+    /// fond d'ambiance (photo floutée) : jamais en ultra léger ni en mode léger
+    out property <bool> ambient-on: self.look == 0 && !Theme.lite;
+    /// titres de section : bande du style (verre Aero sombre, titre Luna, dégradé 98)
+    out property <brush> sec-band: !Theme.gloss && Theme.win7 ? Theme.w7-glass-base.mix(#262a30, 0.28)
+        : !Theme.gloss && Theme.xp ? Theme.xp-t2.mix(#1e1e1e, 0.48)
+        : Theme.win7 ? @linear-gradient(180deg, Theme.w7-glass-base.mix(#2a2d33, 0.34) 0%, Theme.w7-glass-base.mix(#1e2126, 0.2) 100%)
+        : Theme.xp ? @linear-gradient(180deg, Theme.xp-t2.mix(#1e1e1e, 0.55) 0%, Theme.xp-t3.mix(#1e1e1e, 0.4) 100%)
+        : Theme.win98 ? @linear-gradient(90deg, Theme.title-a 0%, Theme.title-b.mix(#202020, 0.55) 100%)
+        : self.sec-bg;
     /// pastilles posées sur la photo (zoom, recadrage…) : rondes en Photoshop seulement
     out property <float> chip: self.look == 2 ? 1 : self.look == 0 ? 0.42 : 0.18;
     /// relief du bas des boutons (Windows 11 / MasterPaint), absent ailleurs
@@ -80,13 +94,21 @@ component PmButton inherits Rectangle {
     preferred-width: root.fill ? 0px : root.natural;
     max-width: root.fill ? 100000px : root.natural;
     border-radius: Pm.radius;
-    background: root.filled ? (ta.pressed ? Pm.accent.darker(15%) : (Theme.hover-fx && ta.has-hover) ? Pm.accent.brighter(10%) : Pm.accent)
+    property <bool> face: Pm.skinned && !(root.kind == 2 && (Theme.hover-fx && ta.has-hover));
+    background: root.face ? (Theme.b-98 ? Theme.button-bg : transparent)
+        : root.filled ? (ta.pressed ? Pm.accent.darker(15%) : (Theme.hover-fx && ta.has-hover) ? Pm.accent.brighter(10%) : Pm.accent)
         : root.kind == 2 && (Theme.hover-fx && ta.has-hover) ? (ta.pressed ? #a52a1f : #c42b1c)
         : ta.pressed ? Pm.button-press : (Theme.hover-fx && ta.has-hover) ? Pm.button-hover : Pm.button;
-    border-width: 1px;
+    border-width: root.face ? 0px : 1px;
     border-color: root.filled ? Pm.accent.darker(10%) : Pm.edge;
+    if root.face && Theme.b-classic: ClassicFace {
+        hover: ta.has-hover;
+        pressed: ta.pressed;
+        primary: root.filled;
+    }
+    if root.face && Theme.b-98: Bevel { sunken: ta.pressed; }
     // bord inférieur un peu plus foncé (Windows 11 / MasterPaint)
-    if Pm.relief || root.filled: Rectangle {
+    if !root.face && (Pm.relief || root.filled): Rectangle {
         x: root.border-radius;
         y: root.height - 1px;
         width: root.width - 2 * root.border-radius;
@@ -98,14 +120,14 @@ component PmButton inherits Rectangle {
         width: 14px;
         glyph: root.glyph;
         size: 12px;
-        tint: #ffffff;
+        tint: root.face ? Theme.button-fg : #ffffff;
         on-accent: true;
     }
     lbl := Text {
         x: root.glyph != "" ? 30px : 12px;
         text: root.text;
         font-size: Theme.font-size;
-        color: root.filled ? Theme.on-accent : ta.pressed ? #c8c8c8 : Pm.text;
+        color: root.face ? Theme.button-fg : root.filled ? Theme.on-accent : ta.pressed ? #c8c8c8 : Pm.text;
         vertical-alignment: center;
     }
     ta := TouchArea {
@@ -268,7 +290,7 @@ component PmSectionHead inherits Rectangle {
     callback reset();
     callback auto();
     height: 34px;
-    background: (Theme.hover-fx && hta.has-hover) ? Pm.sec-hover : Pm.sec-bg;
+    background: (Theme.hover-fx && hta.has-hover) && !Pm.skinned ? Pm.sec-hover : Pm.sec-band;
     Rectangle {
         y: parent.height - 1px;
         height: 1px;
@@ -280,7 +302,7 @@ component PmSectionHead inherits Rectangle {
         }
     }
     // MasterPaint : barre d'accent lumineuse à gauche du titre
-    if Pm.look == 0: Rectangle {
+    if Pm.look == 0 && !Pm.skinned: Rectangle {
         x: 3px;
         y: 9px;
         width: 3px;
@@ -491,7 +513,7 @@ export component PhotoMode inherits Rectangle {
     // un appui ne traverse jamais vers l'éditeur en dessous
     TouchArea { }
     // MasterPaint : fond d'ambiance (photo floutée, assombrie) sous les panneaux translucides
-    if Pm.look == 0 && root.ambient.width > 0: Image {
+    if Pm.ambient-on && root.ambient.width > 0: Image {
         width: parent.width;
         height: parent.height;
         source: root.ambient;
@@ -499,7 +521,7 @@ export component PhotoMode inherits Rectangle {
         image-rendering: smooth;
         opacity: 0.85;
     }
-    if Pm.look == 0: Rectangle {
+    if Pm.ambient-on: Rectangle {
         background: @linear-gradient(160deg, #0b0d1260 0%, #0b0d12b0 75%);
     }
 

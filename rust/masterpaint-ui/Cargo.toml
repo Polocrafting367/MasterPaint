@@ -2,7 +2,7 @@
 [package]
 name = "masterpaint-ui"
 description = "Interface native de MasterPaint (Slint) : mise en page Paint.NET, ruban / barre classique, thèmes"
-version = "3.5.8"
+version = "3.6.1"
 edition.workspace = true
 license.workspace = true
 
@@ -44,6 +44,9 @@ wgpu = "30"
 rawler = "0.8"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# détourage par IA sur le bureau (ai_native.rs) : moteur ONNX en Rust pur, sans bibliothèque
+# native ; modèle U²-Net-p (Apache-2.0) embarqué dans models/
+tract-onnx = "0.21"
 # accès à la fenêtre winit : fichiers déposés, fenêtre sans cadre (menus dans la barre de titre)
 pollster = "0.4"
 ureq = "2"

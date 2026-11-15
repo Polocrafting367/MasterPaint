@@ -1,7 +1,7 @@
 // MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 // Contrôles Windows 10 de MasterPaint (équivalents de css/win-controls.css, theme-pdn.css).
 import { Tips } from "tips.slint";
-import { Theme } from "theme.slint";
+import { Theme, Backdrop } from "theme.slint";
 import { IconSpec, Icons, ToolPackIcons } from "types.slint";
 import { MpIcons } from "mpicons.slint";
 import { PackIcons } from "pack-icons.slint";
@@ -22,6 +22,358 @@ export component Bevel inherits Rectangle {
     Rectangle { x: 1px; y: 1px; width: 1px; height: parent.height - 2px; background: root.tl2; }
     Rectangle { x: 1px; y: parent.height - 2px; width: parent.width - 2px; height: 1px; background: root.br2; }
     Rectangle { x: parent.width - 2px; y: 1px; width: 1px; height: parent.height - 2px; background: root.br2; }
+}
+
+/// Face des boutons Windows 7 (7.css : --w7-el-grad / -h / -a, bord #8e8f8f, #3c7fb1 au survol,
+/// #6d91ab enfoncé, liseré blanc intérieur, bouton par défaut bleuté) et Windows XP (XP.css :
+/// dégradé beige, bord #003c74, survol orangé, bouton par défaut bleu, enfoncé grisé). Posée sous
+/// le libellé, elle ne capte pas la souris. `soft` : survol d'un bouton d'outil en Windows 7, en
+/// surbrillance de liste (--w7-li-bg-hl, --w7-li-bd-hl).
+export component ClassicFace inherits Rectangle {
+    in property <bool> hover;
+    in property <bool> pressed;
+    in property <bool> primary;
+    in property <bool> enabled: true;
+    in property <bool> soft;
+    property <bool> lit: Theme.hover-fx && root.hover && root.enabled;
+    property <bool> li: Theme.b-w7 && root.soft && !root.pressed;
+    /// boutons d'outil et de ruban en clair : survol doré, coché / enfoncé orangé (ruban de
+    /// Windows 7 et d'Office 2010)
+    /// XP : survol orangé d'Office 2003, bordé de bleu marine (couleur de surbrillance réglable)
+    property <bool> gold: Theme.b-classic && root.soft;
+    /// relief 3D coupé (Personnalisation avancée) : mêmes teintes, en aplats
+    property <bool> flat: !Theme.gloss;
+    border-radius: 3px * Theme.round;
+    border-width: 1px;
+    border-color: root.gold && Theme.b-xp ? (Theme.dark ? Theme.w7-hl.mix(#ffffff, 0.5) : Theme.xp-hl-border)
+        : Theme.b-w7
+        ? (root.gold ? (root.pressed ? Theme.w7-hl.mix(#000000, 0.74) : Theme.w7-hl.mix(#c08a00, 0.8)) : root.li ? (Theme.dark ? #5a8fb8 : #aaddfa) : !root.enabled ? #adb2b5 : root.pressed ? Theme.w7-ctl-bd-down : root.lit ? Theme.w7-ctl-bd : root.primary ? Theme.w7-ctl-bd-down : Theme.dark ? #1e1f22 : #8e8f8f)
+        : !root.enabled ? #cac8bb : #003c74;
+    background: root.flat ? (root.gold ? (root.pressed ? Theme.w7-hl-p3 : Theme.w7-hl-2)
+            : !root.enabled ? (Theme.dark ? #3a3c40 : #f4f4f4)
+            : Theme.b-w7 ? (root.pressed ? Theme.w7-ctl-3 : root.lit || root.primary ? Theme.w7-ctl-2 : Theme.dark ? #4a4e55 : #ebebeb)
+            : root.pressed ? (Theme.dark ? #3a3934 : #e3e3db) : Theme.dark ? #47463f : #f4f3ee)
+        // XP : surbrillance d'Office 2003, dégradé doux sans reflet vitré (pas celui de 7)
+        : root.gold && Theme.b-xp ? (root.pressed ? @linear-gradient(180deg, Theme.w7-hl 0%, Theme.w7-hl.mix(#ffffff, 0.62) 100%)
+            : @linear-gradient(180deg, Theme.w7-hl.mix(#ffffff, 0.22) 0%, Theme.w7-hl.mix(#ffffff, 0.6) 100%))
+        : Theme.b-w7 || root.gold
+        ? (root.gold ? (root.pressed ? @linear-gradient(180deg, Theme.w7-hl-p0 0%, Theme.w7-hl-p1 10%, Theme.w7-hl-p2 48%, Theme.w7-hl-p3 52%, Theme.w7-hl-p4 100%)
+                : @linear-gradient(180deg, Theme.w7-hl-1 0%, Theme.w7-hl-2 48%, Theme.w7-hl-3 52%, Theme.w7-hl-4 100%))
+            : root.li ? (Theme.dark ? @linear-gradient(180deg, #ffffff1f 0%, #ffffff0f 90%, #ffffff1a 100%) : @linear-gradient(180deg, #ffffff99 0%, #e6ecf5cc 90%, #ffffffcc 100%))
+            : !root.enabled ? (Theme.dark ? #3a3c40 : #f4f4f4)
+            : root.pressed ? @linear-gradient(180deg, Theme.w7-ctl-1 0%, Theme.w7-ctl-2 30%, Theme.w7-ctl-2 50%, Theme.w7-ctl-3 50%, Theme.w7-ctl-4 100%)
+            : root.lit || root.primary ? @linear-gradient(180deg, Theme.w7-ctl-1 0%, Theme.w7-ctl-1 45%, Theme.w7-ctl-2 45%, Theme.w7-ctl-3 100%)
+            : Theme.dark ? @linear-gradient(180deg, #6a6f78 0%, #565b63 45%, #3f4349 45%, #2b2e33 100%) : @linear-gradient(180deg, #f2f2f2 0%, #f2f2f2 45%, #ebebeb 45%, #cfcfcf 100%))
+        : !root.enabled ? (Theme.dark ? #3a3933 : #f5f4ea)
+        : root.pressed ? (Theme.dark ? @linear-gradient(180deg, #2f2e29 0%, #3a3934 8%, #3d3c36 94%, #47463f 100%) : @linear-gradient(180deg, #cdcac3 0%, #e3e3db 8%, #e5e5de 94%, #f2f2f1 100%))
+        : Theme.dark ? @linear-gradient(180deg, #5f5d55 0%, #47463f 86%, #3b3a34 100%) : @linear-gradient(180deg, #ffffff 0%, #ecebe5 86%, #d8d0c4 100%);
+    // 7.css : liseré blanc intérieur (inset 0 0 0 1px #fffc), bleu lumineux sur le bouton par
+    // défaut (pulse-anim, figé : pas d'animation qui redessinerait sans cesse)
+    if Theme.b-w7 && root.gold && !root.pressed: Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: 2px * Theme.round;
+        border-width: 1px;
+        border-color: Theme.dark ? #ffffff30 : #ffffffb0;
+    }
+    if Theme.b-w7 && !root.li && !root.pressed: Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: 2px * Theme.round;
+        border-width: 1px;
+        border-color: root.primary && !root.lit ? Theme.accent.mix(#ffffff, 0.45).with-alpha(Theme.dark ? 0.4 : 0.66) : Theme.dark ? #ffffff30 : #ffffffcc;
+    }
+    // 7.css enfoncé : inset 1px 1px 0 #0003
+    if Theme.b-w7 && root.pressed: Rectangle { x: 1px; y: 1px; width: parent.width - 2px; height: 1px; background: root.gold ? #8a5a0033 : #00000033; }
+    if Theme.b-w7 && root.pressed: Rectangle { x: 1px; y: 1px; width: 1px; height: parent.height - 2px; background: root.gold ? #8a5a001f : #00000033; }
+    // XP.css : survol = liserés orangés (#fff0cf, #fdd889, #fbc761, #e5a01a) ; bouton par défaut
+    // = liserés bleus (#cee7ff, #98b8ea, #bcd4f6, #89ade4)
+    if Theme.b-xp && !root.gold && root.enabled && !root.pressed && (root.lit || root.primary): Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: 2px * Theme.round;
+        border-width: 2px;
+        border-color: root.lit ? (Theme.btn-hl-on ? Theme.btn-hl.mix(#ffffff, 0.6) : #fbc761) : #bcd4f6;
+        Rectangle { x: 1px; y: 0; width: parent.width - 2px; height: 1px; background: root.lit ? (Theme.btn-hl-on ? Theme.btn-hl.mix(#ffffff, 0.2) : #fff0cf) : #cee7ff; }
+        Rectangle { x: 1px; y: parent.height - 2px; width: parent.width - 2px; height: 2px; background: root.lit ? (Theme.btn-hl-on ? Theme.btn-hl : #e5a01a) : #89ade4; }
+    }
+}
+
+/// Jauge Windows 7 / XP : barre de progression de 7.css (creux gris vitré, remplissage brillant)
+/// ou de XP.css (blocs séparés), à la couleur d'accentuation ; la valeur est écrite dedans par la
+/// jauge. Dessin seul : glisser, molette et double-clic restent ceux de la jauge.
+export component TrackSkin inherits Rectangle {
+    in property <float> ratio;
+    in property <bool> hover;
+    in property <bool> pressed;
+    border-radius: 3px * Theme.round;
+    border-width: 1px;
+    border-color: Theme.win7 ? ((Theme.hover-fx && root.hover) || root.pressed ? Theme.w7-ctl-bd : Theme.dark ? #1e1f22 : #8e8f8f)
+        : Theme.dark ? #5a5d63 : #686868;
+    clip: true;
+    // 7.css : linear-gradient(#f3f3f3, #fcfcfc 3px, #dbdbdb 6px, #cacaca 6px, #d5d5d5) sur 15 px
+    // relief 3D coupé : creux uni et remplissage plein, à la Windows 8
+    background: !Theme.gloss ? (Theme.dark ? #2e3035 : Theme.xp ? #ffffff : #e6e6e6)
+        : Theme.dark ? @linear-gradient(180deg, #2a2c30 0%, #34373c 45%, #26282c 45%, #2e3035 100%)
+        : Theme.xp ? #ffffff
+        : @linear-gradient(180deg, #f3f3f3 0%, #fcfcfc 20%, #dbdbdb 42%, #cacaca 42%, #d5d5d5 100%);
+    property <length> fill-w: max(0px, (self.width - 2px) * clamp(root.ratio, 0, 1));
+    if Theme.win7: Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.fill-w;
+        height: parent.height - 2px;
+        // clair comme le vert de 7.css : le chiffre noir écrit dessus reste lisible
+        background: !Theme.gloss ? Theme.accent.mix(#ffffff, 0.42) : @linear-gradient(180deg, Theme.accent.mix(#ffffff, 0.22) 0%, Theme.accent.mix(#ffffff, 0.12) 22%, Theme.accent.mix(#ffffff, 0.3) 42%, Theme.accent.mix(#ffffff, 0.55) 42%, Theme.accent.mix(#ffffff, 0.45) 70%, Theme.accent.mix(#ffffff, 0.3) 100%);
+        // liseré clair intérieur (inset 0 0 0 1px #ffffff1f) et bord droit net
+        if Theme.gloss: Rectangle { border-width: 1px; border-color: #ffffff30; }
+        Rectangle { x: parent.width - 1px; width: 1px; background: Theme.accent.mix(#000000, 0.6); visible: root.ratio < 1; }
+    }
+    // XP.css : blocs de 8 px séparés de 2 px blancs, dégradé vertical clair au centre
+    if Theme.xp: Rectangle {
+        x: 2px;
+        y: 2px;
+        width: max(0px, parent.fill-w - 2px);
+        height: parent.height - 4px;
+        clip: true;
+        background: !Theme.gloss ? Theme.accent.mix(#ffffff, 0.45) : @linear-gradient(180deg, Theme.accent.mix(#ffffff, 0.25) 0%, Theme.accent.mix(#ffffff, 0.45) 30%, Theme.accent.mix(#ffffff, 0.55) 50%, Theme.accent.mix(#ffffff, 0.42) 75%, Theme.accent.mix(#ffffff, 0.22) 100%);
+        for k in 60: Rectangle {
+            x: 8px + k * 10px;
+            width: 2px;
+            background: Theme.dark ? #26282c : #ffffff;
+        }
+    }
+}
+
+/// Flèche d'une barre de défilement (Windows 7 / XP / 98) : bouton en relief au survol.
+component ScrollArrow inherits Rectangle {
+    in property <int> dir; // 0 haut, 1 bas, 2 gauche, 3 droite
+    in property <bool> bar-hover;
+    callback step();
+    if Theme.classic && (ta.has-hover || ta.pressed): ClassicFace {
+        hover: true;
+        pressed: ta.pressed;
+    }
+    if Theme.xp && !ta.has-hover && !ta.pressed: Rectangle {
+        x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
+        border-radius: 2px * Theme.round;
+        background: Theme.dark ? #4a5a80 : !Theme.gloss ? #c3d3fa : @linear-gradient(135deg, #cbd9fd 0%, #b3c7f7 100%);
+        border-width: 1px;
+        border-color: Theme.dark ? #7088c0 : #ffffff;
+    }
+    if Theme.win98: Rectangle {
+        background: Theme.button-bg;
+        Bevel { sunken: ta.pressed; }
+    }
+    Path {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 7px;
+        height: 7px;
+        viewbox-width: 8;
+        viewbox-height: 8;
+        commands: root.dir == 0 ? "M0 6 L4 2 L8 6 Z" : root.dir == 1 ? "M0 2 L4 6 L8 2 Z" : root.dir == 2 ? "M6 0 L2 4 L6 8 Z" : "M2 0 L6 4 L2 8 Z";
+        fill: Theme.win98 ? Theme.text : Theme.xp && !Theme.dark ? #4d6185 : Theme.dark ? #c8ccd2 : (ta.has-hover ? #1c2e4a : #5a6474);
+    }
+    ta := TouchArea {
+        clicked => { root.step(); }
+    }
+    Timer {
+        interval: 60ms;
+        running: ta.pressed;
+        triggered => { root.step(); }
+    }
+}
+
+/// Barre de défilement de MasterPaint, dessinée selon le style : fine et discrète (moderne,
+/// ultra léger), ou barre pleine de 17 px avec flèches et poignée vitrée (Windows 7 : 7.css),
+/// bleutée (XP) ou en relief (98).
+component MpScrollBar inherits Rectangle {
+    in property <bool> horizontal;
+    in property <length> maximum;
+    in property <length> page-size;
+    in-out property <length> value;
+    in property <ScrollBarPolicy> policy: ScrollBarPolicy.as-needed;
+    in property <bool> enabled: true;
+    callback scrolled();
+    property <bool> full: Theme.classic || Theme.win98;
+    property <length> offset: root.full ? 17px : 16px;
+    property <length> track-size: (root.horizontal ? root.width : root.height) - 2 * root.offset;
+    property <length> thumb-len: root.maximum <= 0px ? 0px : max(min(root.full ? 17px : 16px, root.track-size), root.track-size * root.page-size / (root.maximum + root.page-size));
+    property <length> thumb-pos: root.maximum <= 0px ? root.offset : root.offset + (root.track-size - root.thumb-len) * (-root.value / root.maximum);
+    property <bool> hov: Theme.hover-fx && (ta.has-hover || ta.pressed);
+    property <length> thin: root.hov && !Theme.lite ? 6px : Theme.lite ? 6px : 2px;
+    visible: (root.policy == ScrollBarPolicy.always-on) || (root.policy == ScrollBarPolicy.as-needed && root.maximum > 0);
+    function move(by: length) {
+        root.value = max(-root.maximum, min(0px, root.value + by));
+        root.scrolled();
+    }
+    border-radius: root.full || Theme.lite ? 0px : 7px;
+    background: Theme.win98 ? Theme.bevel-hi.mix(Theme.window-bg, 0.5)
+        : Theme.win7 && !Theme.gloss ? (Theme.dark ? #2a2c30 : #f0f0f0)
+        : Theme.xp && !Theme.gloss ? (Theme.dark ? #2c2b27 : #f8f7f3)
+        : Theme.win7 ? (Theme.dark ? #2a2c30 : root.horizontal ? @linear-gradient(180deg, #e5e5e5 0%, #f0f0f0 20%, #f0f0f0 100%) : @linear-gradient(90deg, #e5e5e5 0%, #f0f0f0 20%, #f0f0f0 100%))
+        : Theme.xp ? (Theme.dark ? #2c2b27 : root.horizontal ? @linear-gradient(180deg, #f3f1ec 0%, #fefefb 100%) : @linear-gradient(90deg, #f3f1ec 0%, #fefefb 100%))
+        : root.hov && !Theme.lite ? Theme.text.with-alpha(0.06) : transparent;
+    ta := TouchArea {
+        property <length> start-value;
+        property <length> start-pos;
+        property <bool> on-thumb;
+        pointer-event(e) => {
+            if (e.button == PointerEventButton.left && e.kind == PointerEventKind.down) {
+                self.start-pos = root.horizontal ? self.mouse-x : self.mouse-y;
+                self.on-thumb = self.start-pos >= root.thumb-pos && self.start-pos <= root.thumb-pos + root.thumb-len;
+                // clic dans la piste : une page vers le clic
+                if (!self.on-thumb) {
+                    root.move(self.start-pos < root.thumb-pos ? root.page-size : 0px - root.page-size);
+                }
+                self.start-value = -root.value;
+            }
+        }
+        moved => {
+            if (self.pressed && self.on-thumb && root.track-size > root.thumb-len) {
+                root.value = -max(0px, min(root.maximum, self.start-value + ((root.horizontal ? self.mouse-x : self.mouse-y) - self.start-pos) * (root.maximum / (root.track-size - root.thumb-len))));
+                root.scrolled();
+            }
+        }
+        scroll-event(e) => {
+            if (root.horizontal && e.delta-x != 0) {
+                root.move(e.delta-x);
+                return accept;
+            } else if (!root.horizontal && e.delta-y != 0) {
+                root.move(e.delta-y);
+                return accept;
+            }
+            reject
+        }
+    }
+    // poignée
+    Rectangle {
+        x: root.horizontal ? root.thumb-pos : root.full ? 1px : parent.width - 4px - self.width;
+        y: !root.horizontal ? root.thumb-pos : root.full ? 1px : parent.height - 4px - self.height;
+        width: root.horizontal ? root.thumb-len : root.full ? parent.width - 2px : root.thin;
+        height: !root.horizontal ? root.thumb-len : root.full ? parent.height - 2px : root.thin;
+        border-radius: Theme.win98 || Theme.lite ? 0px : root.full ? 3px * Theme.round : (root.horizontal ? self.height : self.width) / 2;
+        border-width: Theme.classic ? 1px : 0px;
+        border-color: Theme.xp ? (Theme.dark ? #7088c0 : #ffffff)
+            : ta.pressed ? Theme.w7-ctl-bd-down : root.hov ? Theme.w7-ctl-bd : Theme.dark ? #1e1f22 : #8e8f8f;
+        property <angle> ga: root.horizontal ? 180deg : 90deg;
+        background: Theme.win98 ? Theme.button-bg
+            : Theme.xp ? (Theme.dark ? #4a5a80 : ta.pressed ? #a8bdf5 : root.hov ? #dbe5ff : #c8d6fb)
+            : Theme.win7 && !Theme.gloss ? (Theme.dark ? (root.hov ? #3f6383 : #4b4e54) : ta.pressed ? Theme.w7-ctl-3 : root.hov ? Theme.w7-ctl-2 : #dcdcdc)
+            : Theme.win7 ? (Theme.dark
+                    ? (root.hov ? @linear-gradient(self.ga, #3f6383 0%, #3f6383 45%, #2f5373 45%, #284866 100%) : @linear-gradient(self.ga, #4b4e54 0%, #4b4e54 45%, #42454b 45%, #36383d 100%))
+                : ta.pressed ? @linear-gradient(self.ga, Theme.w7-ctl-2 0%, Theme.w7-ctl-2 45%, Theme.w7-ctl-3 45%, Theme.w7-ctl-4 100%)
+                : root.hov ? @linear-gradient(self.ga, Theme.w7-ctl-1 0%, Theme.w7-ctl-1 45%, Theme.w7-ctl-2 45%, Theme.w7-ctl-3 100%)
+                : @linear-gradient(self.ga, #f2f2f2 0%, #f2f2f2 45%, #ebebeb 45%, #cfcfcf 100%))
+            : Theme.text.with-alpha(root.hov ? 0.55 : 0.4);
+        if Theme.win98: Bevel { }
+        // liseré blanc intérieur (7.css : --w7-el-sd)
+        if Theme.win7: Rectangle {
+            x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
+            border-radius: 2px * Theme.round;
+            border-width: 1px;
+            border-color: Theme.dark ? #ffffff1a : #ffffffcc;
+        }
+        // stries de prise au milieu de la poignée
+        for k in [-3, 0, 3]: Rectangle {
+            visible: Theme.classic && (root.horizontal ? parent.width : parent.height) > 24px;
+            x: root.horizontal ? parent.width / 2 + k * 1px : 4px;
+            y: root.horizontal ? 4px : parent.height / 2 + k * 1px;
+            width: root.horizontal ? 1px : parent.width - 8px;
+            height: root.horizontal ? parent.height - 8px : 1px;
+            background: Theme.dark ? #ffffff66 : Theme.xp ? #8ca4e0 : #6a7480a0;
+        }
+    }
+    if root.full: ScrollArrow {
+        x: 0; y: 0;
+        width: root.horizontal ? 17px : parent.width;
+        height: root.horizontal ? parent.height : 17px;
+        dir: root.horizontal ? 2 : 0;
+        step => { root.move(24px); }
+    }
+    if root.full: ScrollArrow {
+        x: root.horizontal ? parent.width - 17px : 0;
+        y: root.horizontal ? 0 : parent.height - 17px;
+        width: root.horizontal ? 17px : parent.width;
+        height: root.horizontal ? parent.height : 17px;
+        dir: root.horizontal ? 3 : 1;
+        step => { root.move(-24px); }
+    }
+}
+
+/// Zone défilante de MasterPaint : même interface que celle de la bibliothèque standard, mais
+/// ses barres suivent le style choisi (Windows 7, XP, 98…) et recouvrent le bord droit / bas
+/// du contenu, comme avant.
+export component ScrollView {
+    in property <bool> enabled: true;
+    out property <length> visible-width <=> flickable.width;
+    out property <length> visible-height <=> flickable.height;
+    in-out property <length> content-width <=> flickable.content-width;
+    in-out property <length> content-height <=> flickable.content-height;
+    in-out property <length> content-x <=> flickable.content-x;
+    in-out property <length> content-y <=> flickable.content-y;
+    in property <ScrollBarPolicy> vertical-scrollbar-policy <=> vertical-bar.policy;
+    in property <ScrollBarPolicy> horizontal-scrollbar-policy <=> horizontal-bar.policy;
+    in property <bool> mouse-drag-pan-enabled <=> flickable.mouse-drag-pan-enabled;
+    in-out property <bool> has-focus;
+    callback scrolled <=> flickable.flicked;
+    property <bool> full: Theme.classic || Theme.win98;
+    property <length> bar: root.full ? 17px : 14px;
+    min-height: 50px;
+    min-width: 50px;
+    horizontal-stretch: 1;
+    vertical-stretch: 1;
+    preferred-height: 100%;
+    preferred-width: 100%;
+    flickable := Flickable {
+        mouse-drag-pan-enabled: false;
+        content-y <=> vertical-bar.value;
+        content-x <=> horizontal-bar.value;
+        x: 0;
+        y: 0;
+        // les barres recouvrent le bord du contenu (comme la bibliothèque standard) : réduire la
+        // zone visible quand une barre apparaît ferait dépendre la taille du contenu d'elle-même
+        width: parent.width;
+        height: parent.height;
+        @children
+    }
+    vertical-bar := MpScrollBar {
+        enabled: root.enabled;
+        width: root.bar;
+        // barres pleines : en retrait de 2 px, le cadre des fenêtres en coupait le bord droit
+        x: parent.width - self.width - (root.full ? 2px : 0px);
+        y: 0;
+        height: horizontal-bar.visible ? parent.height - horizontal-bar.height : parent.height;
+        horizontal: false;
+        maximum: flickable.content-height - flickable.height;
+        page-size: flickable.height;
+        scrolled => { root.scrolled() }
+    }
+    horizontal-bar := MpScrollBar {
+        enabled: root.enabled;
+        width: vertical-bar.visible ? parent.width - vertical-bar.width : parent.width;
+        height: root.bar;
+        y: parent.height - self.height - (root.full ? 2px : 0px);
+        x: 0;
+        horizontal: true;
+        maximum: flickable.content-width - flickable.width;
+        page-size: flickable.width;
+        scrolled => { root.scrolled() }
+    }
+}
+
+/// Liste défilante (lignes créées à la demande, comme la `ListView` standard : le compilateur
+/// reconnaît ce nom et ses propriétés `content-*` / `visible-*`).
+export component ListView inherits ScrollView {
+    @children
+    accessible-role: list;
 }
 
 /// Icône : icône maison (MpIcons : trait du thème + accent) quand l'outil / le bouton en a une,
@@ -85,6 +437,42 @@ export component Icon inherits Rectangle {
         vertical-alignment: center;
         width: parent.width;
         height: parent.height;
+    }
+}
+
+/// Signe « − » / « + » (jauges) et symboles des boutons de fenêtre (réduire, agrandir,
+/// restaurer, fermer), dessinés en traits : jamais remplacés par une icône du pack (le « − »
+/// devenait une case « ⊟ » sans rapport avec le « + »), toujours centrés au pixel.
+export component SignGlyph inherits Rectangle {
+    /// "minus", "plus", "min", "max", "restore", "close"
+    in property <string> kind: "minus";
+    in property <length> size: 9px;
+    in property <color> tint: Theme.text;
+    in property <length> thick: 1px;
+    property <length> s: round(root.size / 1px) * 1px;
+    property <length> ox: round((root.width - root.s) / 2 / 1px) * 1px;
+    property <length> oy: round((root.height - root.s) / 2 / 1px) * 1px;
+    property <length> mid: round((root.s - root.thick) / 2 / 1px) * 1px;
+    if root.kind == "minus" || root.kind == "plus" || root.kind == "min": Rectangle {
+        x: root.ox; y: root.oy + root.mid; width: root.s; height: root.thick; background: root.tint;
+    }
+    if root.kind == "plus": Rectangle {
+        x: root.ox + root.mid; y: root.oy; width: root.thick; height: root.s; background: root.tint;
+    }
+    if root.kind == "max": Rectangle {
+        x: root.ox; y: root.oy; width: root.s; height: root.s; border-width: root.thick; border-color: root.tint;
+    }
+    if root.kind == "restore": Rectangle {
+        x: root.ox + 2px; y: root.oy; width: root.s - 2px; height: root.s - 2px; border-width: root.thick; border-color: root.tint;
+    }
+    if root.kind == "restore": Rectangle {
+        x: root.ox; y: root.oy + 2px; width: root.s - 2px; height: root.s - 2px; border-width: root.thick; border-color: root.tint; background: root.background;
+    }
+    if root.kind == "close": Path {
+        x: root.ox; y: root.oy; width: root.s; height: root.s;
+        viewbox-width: 10; viewbox-height: 10;
+        stroke: root.tint; stroke-width: root.thick;
+        commands: "M 0 0 L 10 10 M 10 0 L 0 10";
     }
 }
 
@@ -170,10 +558,18 @@ export component FlatButton inherits Rectangle {
             Tip.shown = true;
         }
     }
-    background: Theme.win98 ? (checked ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : transparent)
-        : !enabled ? transparent : ta.pressed ? Theme.accent-20 : checked ? Theme.accent-14 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : transparent;
-    border-width: Theme.win98 ? 0px : (checked || ((Theme.hover-fx && ta.has-hover) && enabled)) ? 1px : 0px;
-    border-color: checked ? Theme.accent : Theme.accent-60;
+    background: Theme.b-98 ? (checked ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : transparent)
+        : Theme.b-classic || !enabled ? transparent : ta.pressed ? Theme.tb-20 : checked ? Theme.tb-14 : (Theme.hover-fx && ta.has-hover) ? Theme.tb-12 : transparent;
+    border-width: Theme.b-98 || Theme.b-classic ? 0px : (checked || ((Theme.hover-fx && ta.has-hover) && enabled)) ? 1px : 0px;
+    // Windows 7 / XP : survol en surbrillance (7) ou bouton en relief (XP), coché = enfoncé
+    if Theme.b-classic && root.enabled && (root.checked || ta.pressed || (Theme.hover-fx && ta.has-hover)): ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: root.checked || ta.pressed;
+        soft: true;
+    }
+    border-color: checked ? Theme.tb-edge : Theme.tb-60;
     border-radius: Theme.ctl-radius;
     min-width: icon-size + 7px;
     min-height: icon-size + 7px;
@@ -226,7 +622,7 @@ export component FlatButton inherits Rectangle {
         }
     }
     // Windows 98 : bouton enfoncé quand il est coché ou pressé, en relief au survol
-    if Theme.win98 && enabled && (checked || ta.pressed || ta.has-hover): Bevel {
+    if Theme.b-98 && enabled && (checked || ta.pressed || ta.has-hover): Bevel {
         sunken: root.checked || ta.pressed;
     }
     if label-below: VerticalLayout {
@@ -273,17 +669,26 @@ export component W10Button inherits Rectangle {
             Tip.shown = true;
         }
     }
-    property <bool> filled: root.primary && !Theme.win98;
-    height: Theme.win98 ? 22px : 24px;
-    width: max(Theme.win98 ? 0px : 56px, txt.preferred-width + (Theme.win98 ? 16px : 24px) + (root.has-icon ? 22px : 0px));
-    border-radius: Theme.win98 ? 0px : min(Theme.button-radius, self.height / 2);
-    background: Theme.win98 ? Theme.button-bg
+    property <bool> filled: root.primary && !Theme.b-98 && !Theme.b-classic;
+    height: Theme.b-98 ? 22px : 24px;
+    width: max(Theme.b-98 ? 0px : 56px, txt.preferred-width + (Theme.b-98 ? 16px : 24px) + (root.has-icon ? 22px : 0px));
+    border-radius: Theme.b-98 || Theme.b-classic ? 0px : min(Theme.button-radius, self.height / 2);
+    background: Theme.b-98 ? Theme.button-bg : Theme.b-classic ? transparent
         : root.filled ? (ta.pressed ? Theme.accent.darker(0.15) : (Theme.hover-fx && ta.has-hover) ? Theme.accent.brighter(0.1) : Theme.accent)
-        : ta.pressed || root.checked ? Theme.accent-14 : (Theme.hover-fx && ta.has-hover) ? (Theme.dark ? Theme.button-bg.brighter(0.15) : Theme.button-bg.darker(0.03)) : Theme.button-bg;
-    border-width: Theme.win98 ? (primary ? 1px : 0px) : 1px;
-    border-color: Theme.win98 ? Theme.bevel-dk : root.filled ? Theme.accent.darker(0.1) : root.checked ? Theme.accent : !Theme.button-relief ? Theme.button-border : Theme.dark ? #ffffff17 : #0000001a;
+        : ta.pressed || root.checked ? (Theme.btn-hl-on ? Theme.btn-hl.mix(Theme.button-bg, 0.3) : Theme.accent-14)
+        : (Theme.hover-fx && ta.has-hover) ? (Theme.btn-hl-on ? Theme.btn-hl.mix(Theme.button-bg, 0.16) : Theme.dark ? Theme.button-bg.brighter(0.15) : Theme.button-bg.darker(0.03)) : Theme.button-bg;
+    border-width: Theme.b-98 ? (primary ? 1px : 0px) : Theme.b-classic ? 0px : 1px;
+    border-color: Theme.b-98 ? Theme.bevel-dk : root.filled ? Theme.accent.darker(0.1) : root.checked ? Theme.accent
+        : Theme.btn-hl-on && Theme.hover-fx && ta.has-hover ? Theme.btn-hl : !Theme.button-relief ? Theme.button-border : Theme.dark ? #ffffff17 : #0000001a;
+    if Theme.b-classic: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: ta.pressed || root.checked;
+        primary: root.primary;
+    }
     // ombre du bas (Windows 11 : bord inférieur un peu plus foncé)
-    if !Theme.win98 && Theme.button-relief: Rectangle {
+    if !Theme.b-98 && !Theme.b-classic && Theme.button-relief: Rectangle {
         x: root.border-radius;
         y: root.height - 1px;
         width: root.width - 2 * root.border-radius;
@@ -301,7 +706,7 @@ export component W10Button inherits Rectangle {
             }
         }
     }
-    if Theme.win98: Bevel {
+    if Theme.b-98: Bevel {
         x: root.primary ? 1px : 0px;
         y: root.primary ? 1px : 0px;
         width: parent.width - (root.primary ? 2px : 0px);
@@ -318,8 +723,8 @@ export component W10Button inherits Rectangle {
         x: root.has-icon ? 30px : 0px;
         width: parent.width - self.x - (root.has-icon ? 8px : 0px);
         text: root.text;
-        font-size: Theme.win98 ? Theme.small-font-size : Theme.font-size;
-        color: root.filled ? Theme.on-accent : (ta.pressed && !Theme.win98) ? Theme.text-inactive : Theme.button-fg;
+        font-size: Theme.b-98 ? Theme.small-font-size : Theme.font-size;
+        color: root.filled ? Theme.on-accent : (ta.pressed && !Theme.b-98 && !Theme.b-classic) ? Theme.text-inactive : Theme.button-fg;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -346,13 +751,24 @@ export component W10Slider inherits Rectangle {
         x: 5px;
         y: (parent.height - self.height) / 2 - 2px;
         width: parent.width - 10px;
-        height: root.gradient ? 9px : 5px;
-        border-radius: root.gradient ? 2px : 0px;
+        height: root.gradient ? 9px : Theme.classic ? 4px : 5px;
+        border-radius: root.gradient || Theme.xp ? 2px : 0px;
         background: root.gradient ? root.track : Theme.track-bg;
         border-width: 1px;
         border-color: Theme.track-border;
     }
-    Path {
+    // Windows 7 / XP : poignée de 7.css (slider-indicator*.png) et de XP.css (indicator-horizontal)
+    if Theme.classic: Image {
+        x: root.usable * root.ratio + (Theme.win7 ? 0.5px : 0px);
+        y: (parent.height - self.height) / 2;
+        width: Theme.win7 ? 10px : 11px;
+        height: Theme.win7 ? 18px : 21px;
+        source: Theme.xp ? @image-url("skins/xp/slider.png")
+            : ta.pressed ? @image-url("skins/win7/slider-active.png")
+            : (Theme.hover-fx && ta.has-hover) ? @image-url("skins/win7/slider-hover.png") : @image-url("skins/win7/slider.png");
+        image-rendering: pixelated;
+    }
+    if !Theme.classic: Path {
         x: root.usable * root.ratio;
         y: (parent.height - 19px) / 2;
         width: 11px;
@@ -391,6 +807,8 @@ export component W10Slider inherits Rectangle {
 export component W10CheckBox inherits Rectangle {
     in-out property <bool> checked;
     in property <string> tip;
+    /// case seulement montrée (menus) : le clic revient à l'élément qui la contient
+    in property <bool> passive;
     callback toggled(bool);
     /// bascule (clic sur la case ou sur son libellé)
     public function toggle() {
@@ -408,21 +826,69 @@ export component W10CheckBox inherits Rectangle {
             Tip.shown = true;
         }
     }
-    width: 15px;
-    height: 15px;
-    border-radius: max(0px, Theme.ctl-radius - 1px);
-    background: checked && !Theme.win98 ? Theme.accent : Theme.field-bg;
+    width: Theme.win7 ? 13px : 15px;
+    height: Theme.win7 ? 13px : 15px;
+    border-radius: Theme.classic ? 0px : max(0px, Theme.ctl-radius - 1px);
+    // 7.css : case #f6f6f6 bordée de #8e8f8f, creux en dégradé, ✔ #4a5f97 ; XP.css : bord #1d5281,
+    // dégradé 135° #dcdcd7 → blanc, coche verte (checkmark.svg), survol orangé
+    background: Theme.win7 ? (Theme.dark ? #3a3d42 : #f4f4f4) : Theme.xp ? (Theme.gloss ? @linear-gradient(135deg, #dcdcd7 0%, #ffffff 100%) : #ffffff)
+        : checked && !Theme.win98 ? Theme.accent : Theme.field-bg;
     border-width: Theme.win98 ? 0px : 1px;
-    border-color: checked ? Theme.accent : ((Theme.hover-fx && ta.has-hover) ? Theme.accent : #333333);
+    border-color: Theme.win7 ? ((Theme.hover-fx && ta.has-hover) ? Theme.w7-ctl-bd : #8e8f8f) : Theme.xp ? #1d5281
+        : checked ? Theme.accent : ((Theme.hover-fx && ta.has-hover) ? Theme.accent : #333333);
     if Theme.win98: Bevel {
         sunken: true;
     }
-    if checked: FaIcon {
+    if Theme.win7: Rectangle {
+        x: 2px;
+        y: 2px;
+        width: parent.width - 4px;
+        height: parent.height - 4px;
+        // creux clair de la case Windows 7 (dégradé en diagonale, liseré intérieur), teinté par
+        // l'accentuation au survol
+        border-width: 1px;
+        border-color: Theme.dark ? #55585e : (Theme.hover-fx && ta.has-hover) ? Theme.w7-ctl-3 : #c4c7cb;
+        background: !Theme.gloss ? (Theme.dark ? #33363b : (Theme.hover-fx && ta.has-hover) ? Theme.w7-ctl-1 : #ffffff)
+            : Theme.dark ? @linear-gradient(135deg, #2a2c30 0%, #3c3f45 100%)
+            : (Theme.hover-fx && ta.has-hover) ? @linear-gradient(135deg, Theme.w7-ctl-3 0%, Theme.w7-ctl-1 55%, #ffffff 100%)
+            : @linear-gradient(135deg, #d6d8db 0%, #f0f1f2 50%, #ffffff 100%);
+    }
+    // coche de Windows 7 : trait fin bleu nuit
+    if checked && Theme.win7: Path {
+        x: 1px;
+        y: 1px;
+        width: 11px;
+        height: 11px;
+        viewbox-width: 11;
+        viewbox-height: 11;
+        commands: "M2 5.5 L4.5 8.5 L9 2.5";
+        stroke: Theme.dark ? #e8ecf2 : #1f3566;
+        stroke-width: 1.7px;
+        fill: transparent;
+    }
+    if Theme.xp && Theme.hover-fx && ta.has-hover: Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-width: 2px;
+        border-color: #fbc761;
+    }
+    if checked && !Theme.classic: FaIcon {
         glyph: "\u{f00c}";
         size: 10px;
-        color: Theme.win98 ? Theme.text : Theme.on-accent;
+        color: Theme.win98 ? Theme.text : Theme.win7 ? Theme.accent : Theme.on-accent;
+    }
+    if checked && Theme.xp: Image {
+        x: 2px;
+        y: 2px;
+        width: 11px;
+        height: 11px;
+        source: @image-url("skins/xp/checkmark.png");
+        image-rendering: pixelated;
     }
     ta := TouchArea {
+        enabled: !root.passive;
         clicked => {
             Tip.shown = false;
             root.checked = !root.checked;
@@ -487,14 +953,48 @@ export component W10ComboBox inherits Rectangle {
     in property <bool> flags;
     in-out property <int> current-index: 0;
     callback selected(int);
+    pure function classic-sel(blue: bool, hover: bool, current: bool) -> brush {
+        if (blue) {
+            return Theme.win7 ? Theme.accent : Theme.xp-t1;
+        }
+        if (Theme.classic) {
+            return transparent;
+        }
+        return (Theme.hover-fx && hover) ? Theme.accent-14 : current ? Theme.accent-12 : transparent;
+    }
     height: 22px;
     // même arrondi que sa liste déroulante (le champ paraissait plus carré que la liste)
-    border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
-    background: Theme.field-bg;
-    border-width: Theme.win98 ? 0px : 1px;
-    border-color: (Theme.hover-fx && ta.has-hover) ? Theme.accent : Theme.field-border;
+    border-radius: Theme.classic ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+    // 7.css : liste = bouton en dégradé + flèche ; XP.css : champ blanc bordé de #7f9db9 + bouton
+    // bleu (dropdown*.svg)
+    background: Theme.win7 ? transparent : Theme.field-bg;
+    border-width: Theme.win98 || Theme.win7 ? 0px : 1px;
+    border-color: Theme.xp ? Theme.field-border : (Theme.hover-fx && ta.has-hover) ? Theme.accent : Theme.field-border;
     if Theme.win98: Bevel {
         sunken: true;
+    }
+    if Theme.win7: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: ta.pressed;
+    }
+    if Theme.win7: Image {
+        x: parent.width - 19px;
+        y: (parent.height - 17px) / 2;
+        width: 16px;
+        height: 17px;
+        source: @image-url("skins/win7/dropdown-arrow.png");
+        colorize: Theme.dark ? #e8e8e8 : #000000;
+        image-rendering: pixelated;
+    }
+    if Theme.xp: Image {
+        x: parent.width - 17px;
+        y: (parent.height - 17px) / 2;
+        width: 15px;
+        height: 17px;
+        source: ta.pressed ? @image-url("skins/xp/dropdown-active.png") : (Theme.hover-fx && ta.has-hover) ? @image-url("skins/xp/dropdown-hover.png") : @image-url("skins/xp/dropdown.png");
+        image-rendering: pixelated;
     }
     if Theme.win98: Rectangle {
         border-radius: Theme.ctl-radius;
@@ -518,11 +1018,11 @@ export component W10ComboBox inherits Rectangle {
         height: parent.height;
         text: root.model[root.current-index];
         font-size: Theme.font-size;
-        color: Theme.text;
+        color: Theme.win7 ? Theme.button-fg : Theme.text;
         vertical-alignment: center;
         overflow: elide;
     }
-    FaIcon {
+    if !Theme.classic: FaIcon {
         x: parent.width - 18px;
         width: 14px;
         height: parent.height;
@@ -544,7 +1044,7 @@ export component W10ComboBox inherits Rectangle {
             background: Theme.field-bg;
             border-width: 1px;
             border-color: Theme.field-border;
-            border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+            border-radius: Theme.classic ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
             drop-shadow-blur: Theme.win98 ? 0px : 8px;
             drop-shadow-offset-y: 2px;
             drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
@@ -552,8 +1052,10 @@ export component W10ComboBox inherits Rectangle {
                 padding: 3px;
                 for item[i] in root.model: Rectangle {
                     height: 22px;
-                    border-radius: Theme.ctl-radius;
-                    background: (Theme.hover-fx && ita.has-hover) ? Theme.accent-14 : i == root.current-index ? Theme.accent-12 : transparent;
+                    border-radius: Theme.classic ? 0px : Theme.ctl-radius;
+                    // Windows 7 / XP : ligne survolée en bleu plein, texte blanc (listes natives)
+                    property <bool> blue: Theme.classic && (Theme.hover-fx ? ita.has-hover : i == root.current-index);
+                    background: root.classic-sel(self.blue, ita.has-hover, i == root.current-index);
                     if root.flags: LangFlag {
                         x: 6px;
                         y: (parent.height - self.height) / 2;
@@ -565,7 +1067,7 @@ export component W10ComboBox inherits Rectangle {
                         height: parent.height;
                         text: item;
                         font-size: Theme.font-size;
-                        color: Theme.text;
+                        color: parent.blue ? #ffffff : Theme.text;
                         vertical-alignment: center;
                     }
                     ita := TouchArea {
@@ -583,20 +1085,100 @@ export component W10ComboBox inherits Rectangle {
 }
 
 /// Bouton de fermeture : rouge quand l'application est active (comme Paint.NET), gris sinon.
+/// Windows 7 : bouton vitré rouge de 7.css (48 × 19, coins bas arrondis, lueur au survol) ;
+/// Windows XP : croix de XP.css (close*.svg) ; ultra léger : simple croix sans fond.
 export component CloseButton inherits Rectangle {
     in property <string> tip;
+    /// fenêtre étroite : bouton Windows 7 à la largeur des autres boutons de titre (29 px)
+    in property <bool> narrow;
+    /// fenêtre au premier plan (sinon bouton éteint, comme une fenêtre d'arrière-plan)
+    in property <bool> active: true;
+    property <bool> on: Theme.app-active && root.active;
     callback clicked();
-    width: Theme.win98 ? 17px : Theme.close-size;
-    height: Theme.win98 ? 15px : Theme.close-size;
-    background: Theme.win98 ? Theme.button-bg : !Theme.app-active ? Theme.close-inactive : (Theme.hover-fx && ta.has-hover) ? Theme.close-hover : Theme.close-bg;
+    property <bool> lit: Theme.hover-fx && ta.has-hover;
+    width: Theme.c-98 ? 17px : Theme.c-w7 ? (root.narrow ? 31px : 50px) : Theme.c-xp ? 21px : Theme.close-size;
+    height: Theme.c-98 ? 15px : Theme.c-w7 ? 20px : Theme.c-xp ? 21px : Theme.close-size;
+    background: Theme.c-98 ? Theme.button-bg : Theme.c-classic ? transparent
+        : Theme.c-lite ? (ta.pressed ? Theme.accent-20 : transparent)
+        : !root.on ? Theme.close-inactive : root.lit ? Theme.close-hover : Theme.close-bg;
+    if Theme.c-w7: Rectangle {
+        border-bottom-left-radius: 5px * Theme.round;
+        border-bottom-right-radius: 5px * Theme.round;
+        clip: true;
+        // fenêtre inactive : bouton sans couleur (#fff3), comme 7.css hors de .active
+        background: !root.on ? #ffffff33
+            : !Theme.gloss ? (ta.pressed ? #9c2a14 : root.lit ? #e04a2c : #c94b33)
+            : ta.pressed ? @linear-gradient(180deg, #d1a894 0%, #b67562 25%, #b67562 50%, #7d0d01 50%, #7d0d01 100%)
+            : root.lit ? @linear-gradient(180deg, #fb9d8b 0%, #ee6d56 25%, #ee6d56 50%, #d42809 50%, #d42809 100%)
+            : @linear-gradient(180deg, #e0a197e5 0%, #cf796a 25%, #cf796a 50%, #d54f36 50%, #d54f36 100%);
+        drop-shadow-blur: root.on && root.lit && Theme.gloss ? 7px : 0px;
+        drop-shadow-color: #e68e75;
+        // ombres des bords (radial-gradient à -60 % et 160 %)
+        if root.on && Theme.gloss: Rectangle {
+            background: @linear-gradient(90deg, #00000038 0%, #00000000 22%, #00000000 78%, #00000038 100%);
+        }
+        // reflet vitré (--w7-wct-bg)
+        if Theme.gloss: Rectangle {
+            background: @linear-gradient(180deg, #ffffff80 0%, #ffffff4d 45%, #0000001a 50%, #0000001a 75%, #ffffff80 100%);
+        }
+        // lueur jaune du bas au survol (radial-gradient circle at 50% 170%, #f4e676)
+        if root.on && Theme.gloss && (root.lit || ta.pressed): Rectangle {
+            x: parent.width * 0.1;
+            y: parent.height * 0.45;
+            width: parent.width * 0.8;
+            height: parent.height * 1.1;
+            background: @radial-gradient(circle, (ta.pressed ? #dcc03f : #f4e676) 0%, #f4e67600 70%);
+        }
+        // liseré blanc intérieur (--w7-wct-sd), puis bord #000000b3 (#0000004d inactif)
+        Rectangle {
+            x: 1px;
+            y: 0;
+            width: parent.width - 2px;
+            height: parent.height - 1px;
+            border-bottom-left-radius: 4px * Theme.round;
+            border-bottom-right-radius: 4px * Theme.round;
+            border-width: 1px;
+            border-color: Theme.gloss ? #ffffffaa : #ffffff55;
+        }
+        Rectangle {
+            border-bottom-left-radius: 5px * Theme.round;
+            border-bottom-right-radius: 5px * Theme.round;
+            border-width: 1px;
+            border-color: root.on ? #000000b3 : #0000004d;
+        }
+    }
+    if Theme.c-w7: Image {
+        x: round((parent.width - 11px) / 2 / 1px) * 1px;
+        y: round((parent.height - 10px) / 2 / 1px) * 1px;
+        width: 11px;
+        height: 10px;
+        source: @image-url("skins/win7/close.png");
+        image-rendering: pixelated;
+    }
+    // XP sans relief : carré rouge uni bordé de blanc, croix blanche
+    if Theme.c-xp && !Theme.gloss: Rectangle {
+        width: 21px;
+        height: 21px;
+        border-radius: 3px * Theme.round;
+        border-width: 1px;
+        border-color: #ffffff;
+        background: ta.pressed ? #a8361a : root.lit ? #e8603d : #d24e2b;
+        SignGlyph { kind: "close"; size: 9px; thick: 2px; background: transparent; tint: #ffffff; }
+    }
+    if Theme.c-xp && Theme.gloss: Image {
+        width: 21px;
+        height: 21px;
+        source: ta.pressed ? @image-url("skins/xp/close-active.png") : root.lit ? @image-url("skins/xp/close-hover.png") : @image-url("skins/xp/close.png");
+        image-rendering: pixelated;
+    }
     // glyphe direct, jamais remplacé par un pack : la croix d'un pack (paintdotjs : petit « x »
     // rouge dans une grande marge) disparaissait sur le fond rouge
-    Text {
+    if !Theme.c-classic: Text {
         text: "\u{f00d}";
         font-family: Theme.icon-font;
         font-weight: 900;
-        font-size: Theme.win98 ? 10px : 11px;
-        color: Theme.win98 ? Theme.text : #ffffff;
+        font-size: Theme.c-98 ? 10px : 11px;
+        color: Theme.c-98 || Theme.c-lite ? Theme.text : #ffffff;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -605,7 +1187,7 @@ export component CloseButton inherits Rectangle {
             root.clicked();
         }
     }
-    if Theme.win98: Bevel {
+    if Theme.c-98: Bevel {
         sunken: ta.pressed;
     }
     HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: @tr("Fermer"); }
@@ -625,6 +1207,8 @@ export global WinStack {
     /// rang le plus haut parmi les fenêtres sous l'appui (0 : aucune)
     in-out property <int> hit;
     in-out property <int> commit-serial;
+    /// rang de la fenêtre flottante active (0 : aucune, la fenêtre principale a la main)
+    in-out property <int> active;
 }
 
 export component FloatWindow inherits Rectangle {
@@ -635,11 +1219,16 @@ export component FloatWindow inherits Rectangle {
     in property <bool> locked;
     /// rang dans la pile des fenêtres : la valeur de `z` de chaque fenêtre
     out property <int> rank;
+    /// fenêtre active : la dernière sur laquelle on a appuyé (ou ouverte) ; un appui hors de toute
+    /// fenêtre flottante rend la main à la fenêtre principale, et l'application en arrière-plan
+    /// éteint tout. Les panneaux ancrés font partie de la fenêtre principale : toujours actifs.
+    out property <bool> active: Theme.app-active && (root.docked || root.sheet || root.mob || WinStack.active == root.rank);
     function raise() {
         if (root.rank != WinStack.top) {
             WinStack.top += 1;
             root.rank = WinStack.top;
         }
+        WinStack.active = root.rank;
     }
     property <int> press-seen: WinStack.press-serial;
     changed press-seen => {
@@ -653,6 +1242,8 @@ export component FloatWindow inherits Rectangle {
     changed commit-seen => {
         if (WinStack.hit == root.rank) {
             root.raise();
+        } else if (WinStack.hit == 0 && WinStack.active == root.rank) {
+            WinStack.active = 0;
         }
     }
     in property <length> bounds-width: 10000px;
@@ -676,10 +1267,21 @@ export component FloatWindow inherits Rectangle {
     /// mode téléphone : jamais de barre de titre de bureau (croix rouge carrée) ; en-tête de page
     /// mobile (titre centré, bouton fermer rond, poignée si panneau du bas)
     property <bool> mob: PhoneDock.on && !root.sheet;
-    property <length> head-h: root.sheet ? 18px : root.mob ? (root.docked ? 46px : 50px) : Theme.title-height;
+    property <length> head-h: root.sheet ? 18px : root.mob ? (root.docked ? 46px : 50px) : Theme.title-height + (root.framed && Theme.f-w7 ? 1px : 0px);
+    /// Windows 7 / XP : cadre épais autour du contenu (7.css : bord 1 px + marge 6 px + bord du
+    /// corps ; XP.css : trois liserés bleus). Les côtés du cadre sont dessinés HORS de la fenêtre
+    /// (`ext` de chaque côté) : sa largeur, celle que lisent les contenus (`parent.width`), et la
+    /// zone de contenu restent celles du style moderne ; le cache de rendu englobe ces débords.
+    /// En hauteur, la fenêtre grandit de la barre de titre et du bas du cadre.
+    property <bool> framed: Theme.f-classic && !root.sheet && !root.mob && !root.docked;
+    property <length> frame-in: !root.framed ? 1px : Theme.f-w7 ? 8px : 3px;
+    property <length> ext: root.framed ? root.frame-in - 1px : 0px;
+    /// écart aux bords de l'espace de travail à l'aimantation : 8 px de vide AU-DELÀ du cadre
+    property <length> gap-l: 8px + root.ext;
+    property <length> grow-h: root.framed ? root.frame-in - 1px + root.head-h - 26px : 0px;
     property <length> foot-h: root.sheet && root.sheet-footer ? 50px : 0px;
     /// hauteur de la zone de contenu (sous la barre de titre) : à utiliser pour ancrer en bas
-    out property <length> content-height: root.height - root.head-h - root.foot-h - (root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 1px);
+    out property <length> content-height: root.height - root.head-h - root.foot-h - (root.framed ? root.frame-in : root.sheet || root.mob || root.docked || Theme.f-98 ? 0px : 1px);
     in property <length> min-window-height: 100px;
     /// position la plus haute (négative : la fenêtre peut monter sur le ruban et les menus)
     in property <length> min-y: 0px;
@@ -716,8 +1318,8 @@ export component FloatWindow inherits Rectangle {
     /// haut, titre plus petit, croix discrète) ; seulement quand la fenêtre est ancrée
     in property <bool> grip;
     // présentation Photoshop (PhotoCraft) : panneau ancré à en-tête en onglet
-    property <bool> ps-tab: Theme.reference-style == 3 && root.docked && !root.sheet && !Theme.win98;
-    property <bool> grip-on: root.grip && root.docked && !root.sheet && !Theme.win98 && !root.ps-tab;
+    property <bool> ps-tab: Theme.reference-style == 3 && root.docked && !root.sheet && !Theme.f-98;
+    property <bool> grip-on: root.grip && root.docked && !root.sheet && !Theme.f-98 && !Theme.f-classic && !root.ps-tab;
     /// palette ancrée déplaçable dans sa colonne : glisser la barre de titre (`dock-drag` donne
     /// la position verticale du pointeur dans la zone de travail, `dock-drop` au relâchement)
     in property <bool> dock-movable;
@@ -739,7 +1341,7 @@ export component FloatWindow inherits Rectangle {
     y: round((root.docked ? root.dock-y : root.auto-dock ? root.bounds-height - self.height - PhoneDock.inset : root.float-h >= root.bounds-height - (root.full-window-area ? root.min-y : 0px) ? (root.full-window-area ? root.min-y : 0px)
         : clamp(root.float-y, root.min-y, max(root.min-y, root.bounds-height - (root.keep-inside ? self.height : Theme.title-height)))) / 1phx) * 1phx;
     width: root.docked ? root.dock-w : root.auto-dock ? root.bounds-width : min(root.float-w, root.bounds-width);
-    height: root.docked ? root.dock-h : root.auto-dock ? min(min(root.float-h, (root.bounds-height - PhoneDock.inset) * 0.62), PhoneDock.max-h) : min(root.float-h, root.bounds-height - (root.full-window-area ? root.min-y : 0px));
+    height: root.docked ? root.dock-h : root.auto-dock ? min(min(root.float-h, (root.bounds-height - PhoneDock.inset) * 0.62), PhoneDock.max-h) : min(root.float-h + root.grow-h, root.bounds-height - (root.full-window-area ? root.min-y : 0px));
     // ancrée (Photoshop) : le contenu ne déborde jamais sur la palette voisine
     clip: root.docked;
     // fenêtre gardée en texture : déplacée ou simplement affichée, elle ne coûte qu'un seul tracé
@@ -756,15 +1358,20 @@ export component FloatWindow inherits Rectangle {
         }
     }
     callback close();
-    property <bool> glass: Theme.title-transparent && !Theme.win98 && !root.sheet && !root.mob && !root.docked;
+    property <bool> glass: Theme.title-transparent && !Theme.f-98 && !root.sheet && !root.mob && !root.docked;
+    /// Windows 10/11 : barre de titre à la couleur d'accentuation (fenêtre active seulement)
+    property <bool> acc-title: Theme.title-accent && Theme.frame-skin == 0 && root.active && Theme.app-active && !root.docked && !root.sheet && !root.mob;
     // barre de titre translucide : le fond de la fenêtre ne commence que sous elle
-    background: root.sheet || root.mob ? Theme.mob-surface : root.glass ? transparent : Theme.window-bg;
+    background: root.sheet || root.mob ? Theme.mob-surface : root.glass || root.framed ? transparent : Theme.window-bg;
     border-radius: root.sheet || (root.mob && !root.docked) ? 16px : root.docked ? 0px : Theme.window-radius;
-    border-width: Theme.win98 || root.sheet || root.mob ? 0px : 1px;
+    border-width: Theme.f-98 || root.framed || root.sheet || root.mob ? 0px : 1px;
     border-color: Theme.window-border;
-    drop-shadow-blur: root.sheet || (root.mob && !root.docked) ? 14px : Theme.win98 || root.docked ? 0px : 10px;
+    // 7.css : box-shadow 2px 2px 10px 1px #000000b3 ; XP.css : aucune ombre
+    // Windows 7 / XP : l'ombre est portée par le cadre (plus large que la fenêtre)
+    // relief 3D coupé (style Windows 8) : ombre courte
+    drop-shadow-blur: !Theme.shadows ? 0px : root.sheet || (root.mob && !root.docked) ? 14px : Theme.f-98 || root.docked || root.framed ? 0px : Theme.gloss ? 10px : 5px;
     drop-shadow-offset-y: root.sheet || root.mob ? -2px : 2px;
-    drop-shadow-color: Theme.shadows ? (root.sheet || root.mob ? #0000002e : Theme.window-shadow) : transparent;
+    drop-shadow-color: Theme.shadows && !root.framed ? (root.sheet || root.mob ? #0000002e : Theme.window-shadow) : transparent;
     // sans évènements de fenêtre (Android natif) : un clic sur le fond la ramène quand même devant
     TouchArea {
         pointer-event(e) => {
@@ -773,7 +1380,167 @@ export component FloatWindow inherits Rectangle {
             }
         }
     }
-    if Theme.win98 && !root.sheet && !root.mob: Bevel { }
+    // ---- Windows 7 (7.css .window) : cadre bleu #4580c4, reflets, liserés ; en verre Aero
+    // (« Fenêtres transparentes »), ce qu'il y a derrière se voit flou à travers le cadre ----
+    if root.framed && Theme.f-w7: Rectangle {
+        x: 0px - root.ext;
+        width: parent.width + 2 * root.ext;
+        height: parent.height;
+        border-radius: 6px * Theme.round;
+        clip: true;
+        // ombre large et douce d'Aero (7.css : 2px 2px 10px 1px #000000b3, trop dure sur fond clair)
+        drop-shadow-blur: !Theme.shadows ? 0px : Theme.gloss ? 14px : 6px;
+        drop-shadow-offset-x: 0px;
+        drop-shadow-offset-y: Theme.gloss ? 2px : 1px;
+        drop-shadow-color: !Theme.shadows ? transparent : Theme.gloss ? (root.active ? #00000059 : #00000038) : (root.active ? #00000030 : #0000001c);
+        // verre Aero : cadre réellement translucide, ce qu'il y a derrière (toile, autres
+        // fenêtres) se voit tel quel. Expérimental (Paramètres) : image floutée de toute la
+        // fenêtre de l'application prise sans les cadres (lib.rs, plusieurs fois par seconde) —
+        // toile, palettes et fenêtres placées derrière s'y voient floues. Coûteux.
+        visible: !(Backdrop.capturing && Theme.aero-blur);
+        if Theme.aero && Theme.aero-blur: Rectangle {
+            background: Backdrop.base.with-alpha(0.8);
+        }
+        if Theme.aero && Theme.aero-blur && Backdrop.image.width > 0: Image {
+            x: Backdrop.x - parent.absolute-position.x;
+            y: Backdrop.y - parent.absolute-position.y;
+            width: Backdrop.width;
+            height: Backdrop.height;
+            source: Backdrop.image;
+            image-fit: fill;
+            image-rendering: smooth;
+        }
+        // teinte du verre : bleu ciel clair de Windows 7 (« Ciel »), translucide sur l'aperçu
+        // flouté en verre Aero, plus pâle si l'application est inactive
+        Rectangle {
+            background: Theme.aero ? (root.active ? Theme.w7-glass.with-alpha(Theme.w7-glass-opacity) : Theme.w7-glass-off.with-alpha(Theme.w7-glass-opacity)) : root.active ? Theme.w7-glass : Theme.w7-glass-off;
+        }
+        // reflets horizontaux : bords clairs, centre un peu plus dense
+        Rectangle {
+            background: @linear-gradient(90deg, #ffffff40 0%, #ffffff00 45%, #0000000a 60%, #ffffff30 100%);
+            opacity: Theme.w7-sheen;
+        }
+        // barre de titre : reflet du haut qui s'éteint vers le contenu
+        Rectangle {
+            y: 0;
+            height: min(parent.height, Theme.title-height * 3);
+            background: @linear-gradient(180deg, #ffffff70 0%, #ffffff38 22%, #ffffff14 55%, #ffffff00 100%);
+            opacity: Theme.w7-sheen;
+        }
+        // verre de la barre de titre (--w7-w-glass) : rayures fixées à l'écran, reflets d'angle
+        // sur tout le cadre : coupé sous la barre de titre, il laissait une marche sur les côtés
+        if Theme.aero: Rectangle {
+            x: 0;
+            y: 0;
+            height: parent.height;
+            clip: true;
+            opacity: Theme.w7-sheen;
+            Rectangle {
+                x: 0px - parent.absolute-position.x;
+                y: 0px - parent.absolute-position.y;
+                width: Backdrop.view-width;
+                height: Backdrop.view-height;
+                // rayures de lumière du verre (claires : le verre de Windows 7 n'assombrit pas)
+                background: @linear-gradient(54deg, #ffffff00 0%, #ffffff00 4%, #ffffff1c 6%, #ffffff00 8%, #ffffff00 16%, #ffffff24 17%, #ffffff24 18%, #ffffff00 23%, #ffffff00 24%, #ffffff2e 25%, #ffffff2e 26%, #ffffff00 31%, #ffffff00 34.5%, #ffffff2e 36%, #ffffff2e 40%, #ffffff00 41%, #ffffff00 41.5%, #ffffff2e 44%, #ffffff2e 47%, #ffffff00 48%, #ffffff00 56.5%, #ffffff2e 57%, #ffffff2e 63%, #ffffff00 67%, #ffffff00 69%, #ffffff2e 69.5%, #ffffff2e 70%, #ffffff00 73.5%, #ffffff00 74%, #ffffff2e 74.5%, #ffffff2e 79%, #ffffff00 80%, #ffffff00 84%, #ffffff24 85%, #ffffff24 86%, #ffffff00 87%, #ffffff14 90%, #ffffff14 100%);
+            }
+            Rectangle {
+                x: 0;
+                width: 150px;
+                height: min(parent.height, Theme.title-height * 2);
+                y: 0;
+                background: @linear-gradient(135deg, #ffffff66 0%, #ffffff33 30%, #ffffff00 60%);
+            }
+            Rectangle {
+                x: parent.width - 150px;
+                width: 150px;
+                height: min(parent.height, Theme.title-height * 2);
+                y: 0;
+                background: @linear-gradient(225deg, #ffffff66 0%, #ffffff33 30%, #ffffff00 60%);
+            }
+        }
+        // liserés blancs intérieurs (inset 0 0 0 1px #fffa / #fffd), puis bord #000000b3
+        Rectangle {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            border-radius: 5px * Theme.round;
+            border-width: 1px;
+            border-color: Theme.dark ? #ffffff38 : #ffffffc8;
+        }
+        Rectangle {
+            border-radius: 6px * Theme.round;
+            border-width: 1px;
+            border-color: root.active ? #25405fd9 : #5d728a99;
+        }
+    }
+    // corps (.window-body) : marge de 6 px, bord #000000b3, liseré blanc extérieur #fff9
+    if root.framed && Theme.f-w7: Rectangle {
+        x: -1px;
+        y: Theme.title-height - 1px;
+        width: parent.width + 2px;
+        height: parent.height - Theme.title-height - 5px;
+        border-width: 1px;
+        border-color: Theme.dark ? #ffffff2a : #ffffffb0;
+        Rectangle {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            background: Theme.window-bg;
+            border-width: 1px;
+            border-color: root.active ? #3d5878d9 : #6f8299b0;
+        }
+    }
+    // ---- Windows XP (XP.css .window / .title-bar) : barre de titre Luna, cadre de 3 liserés ----
+    if root.framed && Theme.f-xp: Rectangle {
+        x: 0px - root.ext;
+        width: parent.width + 2 * root.ext;
+        height: parent.height;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        clip: true;
+        background: Theme.window-bg;
+        // liserés du cadre Luna (jeu de couleurs Bleu / Olive / Argent) ; fenêtre inactive : délavés
+        property <float> fade: root.active ? 0 : 0.45;
+        Rectangle { x: 0; width: 1px; background: Theme.xp-f0.mix(#ffffff, 1 - parent.fade); }
+        Rectangle { x: 1px; width: 1px; background: Theme.xp-f1.mix(#ffffff, 1 - parent.fade); }
+        Rectangle { x: 2px; width: 1px; background: Theme.xp-t2.mix(Theme.xp-f2, 0.5).mix(#ffffff, 1 - parent.fade); }
+        Rectangle { x: parent.width - 1px; width: 1px; background: Theme.xp-f2.mix(#000000, 0.8).mix(#ffffff, 1 - parent.fade); }
+        Rectangle { x: parent.width - 2px; width: 1px; background: Theme.xp-f2.mix(#ffffff, 1 - parent.fade); }
+        Rectangle { x: parent.width - 3px; width: 1px; background: Theme.xp-t3.mix(#ffffff, 1 - parent.fade); }
+        Rectangle { y: parent.height - 1px; height: 1px; background: Theme.xp-f2.mix(#000000, 0.8).mix(#ffffff, 1 - parent.fade); }
+        Rectangle { y: parent.height - 2px; height: 1px; background: Theme.xp-f2.mix(#ffffff, 1 - parent.fade); }
+        Rectangle { y: parent.height - 3px; height: 1px; background: Theme.xp-t3.mix(#ffffff, 1 - parent.fade); }
+        Rectangle {
+            y: 0;
+            height: Theme.title-height;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 7px;
+            background: !Theme.gloss ? Theme.xp-t1 : @linear-gradient(180deg, Theme.xp-t0 0%, Theme.xp-t1 8%, Theme.xp-t1 40%, Theme.xp-t2 88%, Theme.xp-t2 93%, Theme.xp-t3 96%, Theme.xp-t3 100%);
+            // reflet du haut de la barre Luna (bord supérieur plus lumineux, comme XP)
+            if Theme.gloss: Rectangle {
+                x: 6px;
+                y: 1px;
+                width: parent.width - 12px;
+                height: 2px;
+                background: @linear-gradient(90deg, #ffffff00 0%, #ffffff55 15%, #ffffff55 85%, #ffffff00 100%);
+            }
+            Rectangle {
+                border-top-left-radius: 8px;
+                border-top-right-radius: 7px;
+                border-width: 1px;
+                border-color: Theme.xp-f0;
+            }
+            // fenêtre inactive : barre délavée, comme Luna (#7a96df → #9db9eb en bleu), titre lisible
+            if !root.active: Rectangle {
+                border-top-left-radius: 8px;
+                border-top-right-radius: 7px;
+                background: #ffffff4c;
+            }
+        }
+    }
+    if Theme.f-98 && !root.sheet && !root.mob: Bevel { }
     // barre de titre translucide : le corps et la barre restent à l'intérieur du liseré de 1 px
     // (avant, le corps le recouvrait sur les côtés et pas la barre : décalage visible)
     if root.glass: Rectangle {
@@ -840,21 +1607,43 @@ export component FloatWindow inherits Rectangle {
             background: Theme.mob-divider;
         }
     }
-    if !root.sheet && !root.mob: Rectangle {
-        x: Theme.win98 ? 3px : root.docked ? 0px : 1px;
-        y: Theme.win98 ? 3px : root.docked ? 0px : 1px;
-        width: parent.width - (Theme.win98 ? 6px : root.docked ? 0px : 2px);
-        height: Theme.title-height - (Theme.win98 ? 3px : root.docked ? 0px : 1px);
+    if !root.sheet && !root.mob: tbar := Rectangle {
+        visible: !(Backdrop.capturing && Theme.aero-blur && (root.framed || root.glass));
+        x: root.framed ? 0px - root.ext : Theme.f-98 ? 3px : root.docked ? 0px : 1px;
+        y: Theme.f-98 ? 3px : root.docked || root.framed ? 0px : 1px;
+        width: parent.width + (root.framed ? 2 * root.ext : Theme.f-98 ? -6px : root.docked ? 0px : -2px);
+        height: Theme.title-height - (Theme.f-98 ? 3px : root.docked || root.framed ? 0px : 1px);
         border-top-left-radius: root.docked ? 0px : max(0px, Theme.window-radius - 1px);
         border-top-right-radius: root.docked ? 0px : max(0px, Theme.window-radius - 1px);
-        background: Theme.win98 ? @linear-gradient(90deg, (Theme.app-active ? Theme.title-a : #808080) 0%, (Theme.app-active ? Theme.title-b : #b5b5b5) 100%) : root.grip-on ? Theme.window-bg : root.ps-tab ? Theme.window-title-bg : root.glass ? transparent : Theme.window-title-bg;
+        // Windows 7 / XP : cadre dessiné dessous (flottante) ; ancrée, la barre seule garde la teinte
+        background: Theme.f-98 ? @linear-gradient(90deg, (root.active ? Theme.title-a : #808080) 0%, (root.active ? Theme.title-b : #b5b5b5) 100%)
+            : root.framed ? transparent
+            : Theme.f-xp ? (!Theme.gloss ? Theme.xp-t1 : @linear-gradient(180deg, Theme.xp-t0 0%, Theme.xp-t1 8%, Theme.xp-t1 40%, Theme.xp-t2 88%, Theme.xp-t2 93%, Theme.xp-t3 96%, Theme.xp-t3 100%))
+            : Theme.f-w7 ? (!Theme.gloss ? Theme.w7-head-b : @linear-gradient(180deg, Theme.w7-head-a 0%, Theme.w7-head-b 55%, Theme.w7-head-c 100%))
+            : root.grip-on ? Theme.window-bg : root.ps-tab ? Theme.window-title-bg : root.glass ? transparent : root.acc-title ? Theme.title-accent-bg : Theme.window-title-bg;
         if root.glass && !root.grip-on: Rectangle {
             width: parent.width;
             height: parent.height;
             border-top-left-radius: root.docked ? 0px : max(0px, Theme.window-radius - 1px);
             border-top-right-radius: root.docked ? 0px : max(0px, Theme.window-radius - 1px);
-            // Barre translucide suffisamment couvrante pour conserver la lisibilité.
-            background: Theme.window-title-bg.with-alpha(Theme.title-transparent ? 0.96 : 1);
+            clip: true;
+            // flou derrière la barre (même image que le verre Aero, prise sans les barres)
+            if Theme.aero-blur: Rectangle {
+                background: Backdrop.base.with-alpha(0.8);
+            }
+            if Theme.aero-blur && Backdrop.image.width > 0: Image {
+                x: Backdrop.x - parent.absolute-position.x;
+                y: Backdrop.y - parent.absolute-position.y;
+                width: Backdrop.width;
+                height: Backdrop.height;
+                source: Backdrop.image;
+                image-fit: fill;
+                image-rendering: smooth;
+            }
+            // opacité réglable (Personnalisation avancée) ; à l'accentuation si demandé
+            Rectangle {
+                background: (root.acc-title ? Theme.title-accent-bg : Theme.window-title-bg).with-alpha(Theme.title-opacity);
+            }
         }
         drag := TouchArea {
             mouse-cursor: root.docked && root.dock-movable ? (self.pressed ? MouseCursor.grabbing : MouseCursor.grab)
@@ -887,17 +1676,17 @@ export component FloatWindow inherits Rectangle {
                             root.drag-nx = root.home-x;
                             root.drag-ny = root.home-y;
                         } else {
-                            if (abs(root.drag-nx - root.min-x - 8px) < 16px) {
-                                root.drag-nx = root.min-x + 8px;
+                            if (abs(root.drag-nx - root.min-x - root.gap-l) < 16px) {
+                                root.drag-nx = root.min-x + root.gap-l;
                             }
-                            if (abs(root.drag-nx + root.width + 8px - root.bounds-width) < 16px) {
-                                root.drag-nx = root.bounds-width - root.width - 8px;
+                            if (abs(root.drag-nx + root.width + root.gap-l - root.bounds-width) < 16px) {
+                                root.drag-nx = root.bounds-width - root.width - root.gap-l;
                             }
                             if (abs(root.drag-ny - root.min-y - 8px) < 16px) {
                                 root.drag-ny = root.min-y + 8px;
                             }
-                            if (abs(root.drag-ny + root.height + 8px - root.bounds-height) < 16px) {
-                                root.drag-ny = root.bounds-height - root.height - 8px;
+                            if (abs(root.drag-ny + root.height + root.gap-l - root.bounds-height) < 16px) {
+                                root.drag-ny = root.bounds-height - root.height - root.gap-l;
                             }
                         }
                     }
@@ -931,29 +1720,69 @@ export component FloatWindow inherits Rectangle {
             border-radius: 2px * Theme.round;
             background: drag.pressed && root.dock-movable ? Theme.accent : Theme.text-inactive.with-alpha(0.45);
         }
+        // place du titre (7.css : marge de 6 px ; XP.css : 3 + 3 px), assez pour la croix
+        property <length> ttl-x0: Theme.f-w7 ? 7px : Theme.f-xp ? 6px : root.grip-on ? 8px : 10px;
+        property <length> ttl-w: self.width - self.ttl-x0 - (Theme.f-w7 ? 63px : Theme.f-xp ? 30px : root.grip-on ? 20px : 20px);
+        /// titre centré (Personnalisation avancée) : au milieu de la barre, sans toucher la croix
+        property <length> ttl-x: Theme.title-center && !root.grip-on
+            ? round(max(self.ttl-x0, min((self.width - ttl-m.preferred-width) / 2, self.ttl-x0 + self.ttl-w - ttl-m.preferred-width)) / 1px) * 1px
+            : self.ttl-x0;
+        property <bool> ttl-fits: ttl-m.preferred-width <= self.ttl-w;
+        // 7.css : texte noir sur une lueur blanche (text-shadow 0 0 10px #fff, ×8)
+        if Theme.f-w7 && !root.ps-tab && tbar.ttl-fits && root.title != "": Rectangle {
+            x: parent.ttl-x + 2px;
+            y: (parent.height - 6px) / 2;
+            width: max(4px, ttl-m.preferred-width - 4px);
+            height: 6px;
+            border-radius: 3px;
+            // halo diffus derrière le titre (pas de pastille : seule l'ombre floue se voit)
+            background: Theme.dark ? #00000040 : #ffffff66;
+            drop-shadow-blur: 14px;
+            drop-shadow-color: Theme.dark ? #000000a0 : root.active ? #ffffffe6 : #ffffffa0;
+        }
+        // XP.css : ombre portée du titre (text-shadow 1px 1px #0f1089)
+        if Theme.f-xp && !root.ps-tab && tbar.ttl-fits: Text {
+            x: parent.ttl-x + 1px;
+            y: 1px;
+            width: parent.ttl-w - (parent.ttl-x - parent.ttl-x0);
+            height: parent.height;
+            text: root.title;
+            font-family: "Trebuchet MS";
+            font-size: 13px;
+            font-weight: 700;
+            color: Theme.xp-shadow;
+            vertical-alignment: center;
+            overflow: clip;
+        }
         if !root.ps-tab: Text {
-            x: root.grip-on ? 8px : 10px;
+            x: parent.ttl-x;
             y: root.grip-on ? 5px : 0px;
-            width: parent.width - (root.grip-on ? 28px : 30px);
+            width: parent.ttl-w - (parent.ttl-x - parent.ttl-x0);
             height: parent.height - self.y;
             text: root.title;
-            font-size: root.grip-on ? Theme.small-font-size : Theme.font-size;
-            font-weight: Theme.win98 ? 700 : root.grip-on ? 600 : 400;
-            color: Theme.win98 ? Theme.title-fg : root.grip-on ? Theme.text-inactive : Theme.app-active ? Theme.text : Theme.text-inactive;
+            font-family: Theme.f-xp ? "Trebuchet MS" : Theme.font;
+            font-size: Theme.f-xp ? 13px : root.grip-on ? Theme.small-font-size : Theme.font-size;
+            font-weight: Theme.f-98 || Theme.f-xp ? 700 : root.grip-on ? 600 : 400;
+            color: Theme.f-98 ? Theme.title-fg : Theme.f-xp ? Theme.xp-title-fg : Theme.f-w7 ? (Theme.dark ? #ffffff : #000000)
+                : root.grip-on ? Theme.text-inactive : root.acc-title ? Theme.title-accent-fg : root.active ? Theme.text : Theme.text-inactive;
             vertical-alignment: center;
             overflow: clip;
             // fenêtre trop étroite (Outils sur deux colonnes) : pas de titre coupé (« Outi »)
-            visible: ttl-m.preferred-width <= self.width;
+            visible: parent.ttl-fits;
         }
         ttl-m := Text {
             visible: false;
             text: root.title;
-            font-size: root.grip-on ? Theme.small-font-size : Theme.font-size;
-            font-weight: Theme.win98 ? 700 : root.grip-on ? 600 : 400;
+            font-family: Theme.f-xp ? "Trebuchet MS" : Theme.font;
+            font-size: Theme.f-xp ? 13px : root.grip-on ? Theme.small-font-size : Theme.font-size;
+            font-weight: Theme.f-98 || Theme.f-xp ? 700 : root.grip-on ? 600 : 400;
         }
         if root.closable && !root.grip-on && !root.ps-tab: CloseButton {
-            x: parent.width - self.width - 4px;
-            y: (parent.height - self.height) / 2;
+            // 7.css : collé en haut, à 6 px du bord ; XP.css : 5 px du bord, centré
+            narrow: root.width < 150px;
+            active: root.active;
+            x: parent.width - self.width - (Theme.f-w7 && root.framed ? 7px : Theme.f-xp && root.framed ? 5px : 4px);
+            y: Theme.f-w7 ? 0px : (parent.height - self.height) / 2;
             clicked => {
                 root.close();
             }
@@ -985,13 +1814,18 @@ export component FloatWindow inherits Rectangle {
             background: Theme.window-border.with-alpha(0.6);
         }
     }
+    if Theme.lite && !root.sheet && !root.mob: Rectangle {
+        y: Theme.title-height - 1px;
+        height: 1px;
+        background: Theme.window-border;
+    }
     Rectangle {
-        x: root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 1px;
+        x: root.framed ? 1px : root.sheet || root.mob || root.docked || Theme.f-98 ? 0px : 1px;
         y: root.head-h;
-        width: root.width - (root.sheet || root.mob || root.docked || Theme.win98 ? 0px : 2px);
+        width: root.width - (root.framed ? 2px : root.sheet || root.mob || root.docked || Theme.f-98 ? 0px : 2px);
         height: root.content-height;
-        border-bottom-left-radius: root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
-        border-bottom-right-radius: root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
+        border-bottom-left-radius: root.framed || root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
+        border-bottom-right-radius: root.framed || root.sheet || root.mob || root.docked ? 0px : max(0px, Theme.window-radius - 1px);
         clip: true;
         @children
     }
@@ -1270,11 +2104,7 @@ export component Gauge inherits HorizontalLayout {
         width: 16px;
         border-radius: Theme.ctl-radius;
         background: (Theme.hover-fx && mta.has-hover) ? Theme.accent-12 : transparent;
-        FaIcon {
-            glyph: "\u{f068}";
-            size: 9px;
-            color: Theme.ribbon-fg;
-        }
+        SignGlyph { kind: "minus"; size: 9px; tint: Theme.ribbon-fg; }
         HoverTip { y: parent.height; hovered: mta.has-hover && !mta.pressed; text: @tr("Réduire la valeur"); }
         mta := TouchArea {
             clicked => {
@@ -1285,10 +2115,12 @@ export component Gauge inherits HorizontalLayout {
     Rectangle {
         width: RibbonFit.tight ? min(root.bar-width, 64px) : root.bar-width;
         border-radius: Theme.ctl-radius;
-        background: Theme.field-bg;
-        border-width: 1px;
+        // Windows 7 / XP : glissière (rainure + poignée de 7.css / XP.css), valeur à droite
+        property <length> tw: self.width;
+        background: Theme.classic ? transparent : Theme.field-bg;
+        border-width: Theme.classic ? 0px : 1px;
         border-color: (Theme.hover-fx && bta.has-hover) ? Theme.accent : Theme.field-border;
-        Rectangle {
+        if !Theme.classic: Rectangle {
             x: 1px;
             y: 1px;
             height: parent.height - 2px;
@@ -1296,7 +2128,13 @@ export component Gauge inherits HorizontalLayout {
             border-radius: max(0px, Theme.ctl-radius - 1px);
             background: Theme.accent-32;
         }
-        Text {
+        if Theme.classic: TrackSkin {
+            width: parent.tw;
+            ratio: root.progressive ? sqrt(root.ratio) : root.ratio;
+            hover: bta.has-hover;
+            pressed: bta.pressed;
+        }
+        gv := Text {
             x: 4px;
             width: parent.width - 8px;
             height: parent.height;
@@ -1339,11 +2177,7 @@ export component Gauge inherits HorizontalLayout {
         width: 16px;
         border-radius: Theme.ctl-radius;
         background: (Theme.hover-fx && pta.has-hover) ? Theme.accent-12 : transparent;
-        FaIcon {
-            glyph: "\u{2b}";
-            size: 12px;
-            color: Theme.ribbon-fg;
-        }
+        SignGlyph { kind: "plus"; size: 9px; tint: Theme.ribbon-fg; }
         HoverTip { y: parent.height; hovered: pta.has-hover && !pta.pressed; text: @tr("Augmenter la valeur"); }
         pta := TouchArea {
             clicked => {
@@ -1379,11 +2213,7 @@ export component GaugeBar inherits HorizontalLayout {
         width: 16px;
         border-radius: Theme.ctl-radius;
         background: (Theme.hover-fx && mta.has-hover) ? Theme.accent-12 : transparent;
-        FaIcon {
-            glyph: "\u{f068}";
-            size: 9px;
-            color: Theme.text;
-        }
+        SignGlyph { kind: "minus"; size: 9px; tint: Theme.text; }
         HoverTip { y: parent.height; hovered: mta.has-hover && !mta.pressed; text: @tr("Réduire la valeur"); }
         mta := TouchArea {
             clicked => {
@@ -1393,12 +2223,21 @@ export component GaugeBar inherits HorizontalLayout {
     }
     Rectangle {
         horizontal-stretch: 1;
-        border-radius: Theme.ctl-radius;
-        clip: true;
-        background: root.gradient ? root.track : Theme.field-bg;
-        border-width: 1px;
+        border-radius: Theme.classic ? 3px * Theme.round : Theme.ctl-radius;
+        clip: !self.skin;
+        // Windows 7 / XP : glissière (rainure + poignée), valeur à droite
+        property <bool> skin: Theme.classic && !root.gradient;
+        property <length> tw: self.width;
+        background: root.gradient ? root.track : self.skin ? transparent : Theme.field-bg;
+        border-width: self.skin || (root.gradient && Theme.classic && Theme.gloss) ? 0px : 1px;
         border-color: (Theme.hover-fx && bta.has-hover) || root.editing ? Theme.accent : Theme.field-border;
-        if !root.gradient: Rectangle {
+        if self.skin: TrackSkin {
+            width: parent.tw;
+            ratio: root.ratio;
+            hover: bta.has-hover;
+            pressed: bta.pressed;
+        }
+        if !root.gradient && !self.skin: Rectangle {
             x: 1px;
             y: 1px;
             height: parent.height - 2px;
@@ -1406,14 +2245,24 @@ export component GaugeBar inherits HorizontalLayout {
             border-radius: max(0px, Theme.ctl-radius - 1px);
             background: Theme.accent-32;
         }
-        // repère sur une barre en dégradé
-        if root.gradient: Rectangle {
-            x: (parent.width - 4px) * root.ratio;
-            width: 4px;
-            background: #ffffff;
+        // 7 / XP : la barre en dégradé prend le verre de la barre de progression du style
+        // (reflet clair en haut, cassure au milieu, bord du style) ; la couleur reste celle réglée
+        if root.gradient && Theme.classic && Theme.gloss: Rectangle {
+            border-radius: parent.border-radius;
+            background: Theme.win7 ? @linear-gradient(180deg, #ffffff73 0%, #ffffff40 40%, #00000012 42%, #00000000 70%, #ffffff26 100%)
+                : @linear-gradient(180deg, #ffffff40 0%, #ffffff66 45%, #ffffff1a 60%, #00000014 100%);
             border-width: 1px;
-            border-color: #202020;
-            border-radius: 1px * Theme.round;
+            border-color: Theme.win7 ? ((Theme.hover-fx && bta.has-hover) || bta.pressed ? Theme.w7-ctl-bd : Theme.dark ? #1e1f22 : #8e8f8f)
+                : Theme.dark ? #5a5d63 : #686868;
+        }
+        // repère sur une barre en dégradé (7 / XP : petite poignée vitrée)
+        if root.gradient: Rectangle {
+            x: (parent.width - self.width) * root.ratio;
+            width: Theme.classic ? 6px : 4px;
+            background: Theme.classic && Theme.gloss ? @linear-gradient(180deg, #ffffff 0%, #f0f0f0 45%, #d8d8d8 55%, #ececec 100%) : #ffffff;
+            border-width: 1px;
+            border-color: Theme.classic ? (Theme.win7 ? #3c7fb1 : #1d5281) : #202020;
+            border-radius: (Theme.classic ? 2px : 1px) * Theme.round;
         }
         if !root.editing: Rectangle {
             x: parent.width - self.width - 3px;
@@ -1491,11 +2340,7 @@ export component GaugeBar inherits HorizontalLayout {
         width: 16px;
         border-radius: Theme.ctl-radius;
         background: (Theme.hover-fx && pta.has-hover) ? Theme.accent-12 : transparent;
-        FaIcon {
-            glyph: "\u{2b}";
-            size: 12px;
-            color: Theme.text;
-        }
+        SignGlyph { kind: "plus"; size: 9px; tint: Theme.text; }
         HoverTip { y: parent.height; hovered: pta.has-hover && !pta.pressed; text: @tr("Augmenter la valeur"); }
         pta := TouchArea {
             clicked => {
@@ -1532,9 +2377,16 @@ export component ToggleButton inherits Rectangle {
         }
     }
     border-radius: Theme.ctl-radius;
-    background: ta.pressed ? Theme.accent-20 : checked ? Theme.accent-14 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : transparent;
-    border-width: (checked || (Theme.hover-fx && ta.has-hover)) ? 1px : 0px;
-    border-color: checked ? Theme.accent : Theme.accent-60;
+    background: Theme.b-classic ? transparent : ta.pressed ? Theme.tb-20 : checked ? Theme.tb-14 : (Theme.hover-fx && ta.has-hover) ? Theme.tb-12 : transparent;
+    border-width: !Theme.b-classic && (checked || (Theme.hover-fx && ta.has-hover)) ? 1px : 0px;
+    border-color: checked ? Theme.tb-edge : Theme.tb-60;
+    if Theme.b-classic && (root.checked || ta.pressed || (Theme.hover-fx && ta.has-hover)): ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: root.checked || ta.pressed;
+        soft: true;
+    }
     if root.img.width > 0: Image {
         x: root.compact ? (parent.width - self.width) / 2 : 5px;
         width: 16px;
@@ -1568,6 +2420,58 @@ export component ToggleButton inherits Rectangle {
                 Tip.shown = false;
             }
         }
+    }
+}
+
+/// Section d'une colonne (Paramètres, Aide et raccourcis) : même dessin partout — Panneau de
+/// configuration en 7 / Vista / XP (clair et sombre), liseré d'accent sinon.
+export component SideItem inherits Rectangle {
+    in property <string> glyph;
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked();
+    property <bool> hov: Theme.hover-fx && ta.has-hover;
+    height: 32px;
+    border-radius: Theme.ctl-radius;
+    background: Theme.side-skin
+        ? (Theme.xp ? (root.selected ? (Theme.dark ? #ffffff30 : #ffffff) : root.hov ? (Theme.dark ? #ffffff18 : Theme.xp-bar-a) : (Theme.dark ? transparent : Theme.xp-menu-a))
+            // Windows 7 : section choisie en surbrillance dorée, comme le ruban et les menus
+            : root.selected ? (Theme.vista ? #ffffff38 : !Theme.gloss ? Theme.w7-hl-2 : @linear-gradient(180deg, Theme.w7-hl-1 0%, Theme.w7-hl-2 48%, Theme.w7-hl-3 52%, Theme.w7-hl-4 100%))
+            : root.hov ? (Theme.vista || Theme.dark ? #ffffff1c : Theme.accent-12) : transparent)
+        : root.selected ? Theme.accent-14 : root.hov ? Theme.accent-12 : transparent;
+    border-width: Theme.side-skin && Theme.win7 && root.selected ? 1px : 0px;
+    border-color: Theme.vista ? #ffffff60 : Theme.accent-60;
+    // Windows 7 clair : texte bleu foncé sur l'or ; sombre : clair partout
+    property <color> ink: Theme.side-skin ? (Theme.win7 && !Theme.vista && root.selected && Theme.dark ? #ffffff : Theme.side-link) : Theme.text;
+    Rectangle {
+        x: 0;
+        y: 7px;
+        width: 3px;
+        height: parent.height - 14px;
+        border-radius: 2px * Theme.round;
+        background: root.selected && !Theme.side-skin ? Theme.accent : transparent;
+    }
+    GlyphIcon {
+        x: 12px;
+        y: round((parent.height - self.height) / 2 / 1px) * 1px;
+        width: 18px;
+        glyph: root.glyph;
+        size: 13px;
+        tint: Theme.side-skin ? root.ink : root.selected ? Theme.accent : Theme.text;
+    }
+    Text {
+        x: 38px;
+        width: parent.width - 42px;
+        height: parent.height;
+        text: root.text;
+        font-weight: root.selected ? 600 : 400;
+        color: root.ink;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    HoverTip { y: parent.height; hovered: ta.has-hover && !ta.pressed; text: root.text; }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
     }
 }
 
@@ -1623,16 +2527,66 @@ export component RibbonGroup inherits Rectangle {
         horizontal-alignment: center;
     }
     if !root.bare: Rectangle {
-        x: parent.width - 1px;
-        y: 6px;
+        x: parent.width - (Theme.win7 ? 2px : 1px);
+        y: Theme.win7 ? 3px : 6px;
         width: 1px;
-        height: parent.height - 12px;
-        background: Theme.ribbon-sep;
+        height: parent.height - (Theme.win7 ? 6px : 12px);
+        // Windows 7 / Office 2010 : trait qui s'efface en haut et en bas, doublé d'un reflet
+        background: Theme.win7 ? @linear-gradient(180deg, Theme.ribbon-sep.with-alpha(0) 0%, Theme.ribbon-sep 30%, Theme.ribbon-sep 70%, Theme.ribbon-sep.with-alpha(0) 100%) : Theme.ribbon-sep;
+    }
+    if !root.bare && Theme.win7: Rectangle {
+        x: parent.width - 1px;
+        y: 3px;
+        width: 1px;
+        height: parent.height - 6px;
+        background: Theme.dark ? @linear-gradient(180deg, #ffffff00 0%, #ffffff14 30%, #ffffff14 70%, #ffffff00 100%) : @linear-gradient(180deg, #ffffff00 0%, #ffffffe6 30%, #ffffffe6 70%, #ffffff00 100%);
     }
 }
 
 /// Choix exclusif en boutons accolés (Paramètres : « Paint.NET | Photoshop | Téléphone »…).
 /// Windows 11 : piste arrondie, option choisie en pastille claire avec un trait d'accent.
+/// Case à choisir (type de projet, fond, format, proportions…) : carte de MasterPaint en moderne,
+/// vrai bouton du style en 7 / XP / 98 — enfoncé (doré en 7) quand elle est choisie, comme les
+/// options d'un `Segmented`. Le contenu (icône, textes) se place dedans.
+export component ChoiceTile inherits Rectangle {
+    in property <bool> selected;
+    /// moderne : fond plein (cartes) ou transparent (cases d'une barre)
+    in property <brush> idle-bg: Theme.field-bg;
+    /// moderne : arrondi de la carte ; couleur du contour au repos
+    in property <length> tile-radius: Theme.ctl-radius;
+    in property <color> idle-border: Theme.window-border;
+    /// choix plein (ancrage) : fond d'accent au lieu d'une teinte
+    in property <bool> strong;
+    in property <bool> enabled: true;
+    callback clicked();
+    out property <bool> hovered: ta.has-hover && root.enabled;
+    out property <bool> pressed: ta.pressed;
+    out property <bool> skinned: Theme.b-classic || Theme.b-98;
+    border-radius: root.skinned ? 0px : root.tile-radius;
+    opacity: root.enabled ? 1 : 0.4;
+    background: Theme.b-98 ? (root.selected ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg) : Theme.b-classic ? transparent
+        : !root.enabled ? transparent
+        : root.selected ? (root.strong ? Theme.accent : Theme.accent-14) : ta.pressed ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : root.idle-bg;
+    border-width: root.skinned ? 0px : root.selected && !root.strong ? 2px : 1px;
+    border-color: root.selected ? Theme.accent : (Theme.hover-fx && root.hovered) ? Theme.accent-60 : root.idle-border;
+    if Theme.b-classic: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: root.selected || ta.pressed;
+        soft: Theme.b-w7 && root.selected;
+        enabled: root.enabled;
+    }
+    if Theme.b-98: Bevel {
+        sunken: root.selected || ta.pressed;
+    }
+    @children
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
 export component Segmented inherits Rectangle {
     in property <string> tip;
     in property <[string]> options;
@@ -1641,13 +2595,14 @@ export component Segmented inherits Rectangle {
     in-out property <int> index;
     callback selected(int);
     height: 30px;
-    border-radius: Theme.win98 ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
-    background: Theme.win98 ? transparent : Theme.track-bg;
-    border-width: Theme.win98 ? 0px : 1px;
+    // Windows 7 / XP : boutons accolés de la feuille de style, l'option choisie enfoncée
+    border-radius: Theme.b-98 || Theme.b-classic ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+    background: Theme.b-98 || Theme.b-classic ? transparent : Theme.track-bg;
+    border-width: Theme.b-98 || Theme.b-classic ? 0px : 1px;
     border-color: Theme.button-border;
     HorizontalLayout {
-        padding: Theme.win98 ? 0px : 2px;
-        spacing: Theme.win98 ? 0px : 2px;
+        padding: Theme.b-98 || Theme.b-classic ? 0px : 2px;
+        spacing: Theme.b-98 ? 0px : 2px;
         // cases égales (largeur ÷ nombre d'options) : ni largeur préférée ni minimum par case,
         // la place se partage à parts égales (un minimum par case, la largeur de son texte,
         // était servi d'abord et rendait les cases inégales)
@@ -1656,16 +2611,24 @@ export component Segmented inherits Rectangle {
             preferred-width: 0px;
             min-width: 0px;
             border-radius: Theme.ctl-radius;
-            background: Theme.win98 ? (i == root.index ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg)
+            background: Theme.b-98 ? (i == root.index ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg)
+                : Theme.b-classic ? transparent
                 : i == root.index ? Theme.field-bg : (Theme.hover-fx && sta.has-hover) ? Theme.accent-12 : transparent;
-            border-width: !Theme.win98 && i == root.index ? 1px : 0px;
+            border-width: !Theme.b-98 && !Theme.b-classic && i == root.index ? 1px : 0px;
             border-color: Theme.button-border;
-            if Theme.win98: Bevel {
+            if Theme.b-98: Bevel {
                 sunken: i == root.index;
+            }
+            if Theme.b-classic: ClassicFace {
+                width: parent.width;
+                height: parent.height;
+                hover: sta.has-hover;
+                pressed: i == root.index;
+                soft: Theme.b-w7 && i == root.index;
             }
             // trait d'accent centré sous l'option choisie (comme Windows 11)
             Rectangle {
-                visible: i == root.index && !Theme.win98;
+                visible: i == root.index && !Theme.b-98 && !Theme.b-classic;
                 x: (parent.width - self.width) / 2;
                 y: parent.height - 3px;
                 width: min(18px, parent.width - 8px);
@@ -1678,7 +2641,7 @@ export component Segmented inherits Rectangle {
                 height: parent.height;
                 font-size: Theme.font-size;
                 text: o;
-                color: i == root.index && !Theme.win98 ? Theme.accent : Theme.text;
+                color: Theme.b-classic ? Theme.button-fg : i == root.index && !Theme.b-98 ? Theme.accent : Theme.text;
                 font-weight: i == root.index ? 600 : 400;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -1792,12 +2755,18 @@ export component AngleDial inherits Rectangle {
 export component DialogFooter inherits Rectangle {
     height: 44px;
     background: Theme.footer-bg;
-    border-bottom-left-radius: max(0px, Theme.window-radius - 1px);
-    border-bottom-right-radius: max(0px, Theme.window-radius - 1px);
+    border-bottom-left-radius: Theme.classic || Theme.lite ? 0px : max(0px, Theme.window-radius - 1px);
+    border-bottom-right-radius: Theme.classic || Theme.lite ? 0px : max(0px, Theme.window-radius - 1px);
+    // 7.css (footer::before) : creux de 2 px, inset 0 1px #0000004d et 0 -1px #fff
     Rectangle {
         y: 0;
         height: 1px;
-        background: Theme.window-border;
+        background: Theme.win7 && !Theme.dark ? #0000004d : Theme.window-border;
+    }
+    if Theme.win7 && !Theme.dark: Rectangle {
+        y: 1px;
+        height: 1px;
+        background: #ffffff;
     }
     HorizontalLayout {
         padding-left: 10px;
@@ -1819,12 +2788,22 @@ export component W10LineEdit inherits Rectangle {
     callback edited(string);
     height: 22px;
     min-width: 40px;
-    border-radius: Theme.ctl-radius;
+    // 7.css : bords #abadb3 (haut) / #dbdfe6, bleus au survol et au focus, 2 px d'arrondi ;
+    // XP.css : bord #7f9db9, carré
+    border-radius: Theme.xp ? 0px : Theme.win7 ? 2px : Theme.ctl-radius;
     background: Theme.field-bg;
     border-width: Theme.win98 ? 0px : 1px;
-    border-color: ti.has-focus ? Theme.accent : (Theme.hover-fx && hov.has-hover) ? Theme.text-inactive : Theme.field-border;
+    border-color: Theme.win7 ? (ti.has-focus ? Theme.accent.mix(#ffffff, 0.45) : (Theme.hover-fx && hov.has-hover) ? Theme.accent.mix(#ffffff, 0.35) : #dbdfe6) : Theme.xp ? Theme.field-border
+        : ti.has-focus ? Theme.accent : (Theme.hover-fx && hov.has-hover) ? Theme.text-inactive : Theme.field-border;
     if Theme.win98: Bevel {
         sunken: true;
+    }
+    if Theme.win7: Rectangle {
+        x: 1px;
+        y: 0;
+        width: parent.width - 2px;
+        height: 1px;
+        background: ti.has-focus ? #3d7bad : (Theme.hover-fx && hov.has-hover) ? #5794bf : #abadb3;
     }
     hov := TouchArea {
         mouse-cursor: MouseCursor.text;
@@ -1865,12 +2844,20 @@ export component NumEdit inherits Rectangle {
     }
     height: 22px;
     min-width: 34px;
-    border-radius: Theme.ctl-radius;
+    border-radius: Theme.xp ? 0px : Theme.win7 ? 2px : Theme.ctl-radius;
     background: Theme.field-bg;
     border-width: Theme.win98 ? 0px : 1px;
-    border-color: ti.has-focus ? Theme.accent : Theme.field-border;
+    border-color: Theme.win7 ? (ti.has-focus ? Theme.accent.mix(#ffffff, 0.45) : #dbdfe6) : Theme.xp ? Theme.field-border
+        : ti.has-focus ? Theme.accent : Theme.field-border;
     if Theme.win98: Bevel {
         sunken: true;
+    }
+    if Theme.win7: Rectangle {
+        x: 1px;
+        y: 0;
+        width: parent.width - 2px;
+        height: 1px;
+        background: ti.has-focus ? #3d7bad : #abadb3;
     }
     changed value => {
         if (!ti.has-focus) {

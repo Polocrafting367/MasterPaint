@@ -7,8 +7,9 @@ import "../fonts/fa-brands-400.ttf";
 import "../fonts/selawk.ttf";
 import "../fonts/selawksb.ttf";
 import "../fonts/selawkb.ttf";
-import { ListView, ScrollView, Palette } from "std-widgets.slint";
-import { Theme } from "theme.slint";
+import { Palette } from "std-widgets.slint";
+import { ListView, ScrollView } from "widgets.slint";
+import { Theme, Backdrop } from "theme.slint";
 export { PackIcons } from "pack-icons.slint";
 import { IconSpec, MenuSpec, MenuItemSpec, Icons, ToolPackIcons, EffectField, DocTab, SheetRow, TaskCommand, TaskThumb, SizePreset, IconEntry, IconPackCard, DiagnosticRow } from "types.slint";
 import { Generated } from "generated.slint";
@@ -19,13 +20,13 @@ import { ColorsPanel, ColorPop } from "colors.slint";
 import { WelcomeContent } from "welcome.slint";
 import { InfoContent } from "info.slint";
 import { AnimPanel, AnimRow } from "anim.slint";
-import { DialogFooter, AngleDial } from "widgets.slint";
-import { WinStack, PhoneDock, Tip, RibbonFit, Icon, FaIcon, GlyphIcon, FlatButton, W10Button, W10Slider, W10CheckBox, W10ComboBox, CloseButton, FloatWindow, VSep, Gauge, ToggleButton, RibbonGroup, Segmented, W10LineEdit, HoverTip, NumEdit, Bevel, GaugeBar } from "widgets.slint";
+import { DialogFooter, AngleDial, ClassicFace, SignGlyph } from "widgets.slint";
+import { WinStack, PhoneDock, Tip, RibbonFit, Icon, FaIcon, GlyphIcon, FlatButton, W10Button, W10Slider, W10CheckBox, W10ComboBox, CloseButton, FloatWindow, VSep, Gauge, ToggleButton, RibbonGroup, Segmented, W10LineEdit, HoverTip, NumEdit, Bevel, GaugeBar, SideItem, ChoiceTile } from "widgets.slint";
 import { MobTopBar, MobUndoCapsule, MobToolRow, MobPills, MobDock, MobSheet, MobMenuList, MobDrawer, MobColors, Palettes } from "phone.slint";
 import { PmMaskRow, PhotoMode, PmThumb } from "photo.slint";
 import { SvgObjectsContent, SvgPanel, SvgTools } from "svg_objects.slint";
 
-export { Theme, Generated, Icons, ToolPackIcons, Sprite, Tip, MpIcons }
+export { Theme, Backdrop, Generated, Icons, ToolPackIcons, Sprite, Tip, MpIcons }
 export { SvgPanel, SvgObjRow, SvgTools } from "svg_objects.slint";
 export { EffectField, DocTab, SheetRow, TaskCommand, TaskThumb, SizePreset, IconEntry, IconPackCard, DiagnosticRow } from "types.slint";
 export { PmThumb, PmMaskRow } from "photo.slint";
@@ -187,6 +188,8 @@ export global ToolOpts {
     in-out property <int> sel-mode: 0;  // 0 nouvelle, 1 ajout, 2 retrait, 3 intersection, 4 OU exclusif
     // baguette / pot de peinture : couleurs prises sur l'image entière (tous les calques visibles)
     in-out property <bool> sample-all: false;
+    /// pipette : couleur du calque actif seulement (sinon l'image telle qu'affichée)
+    in-out property <bool> pick-layer: false;
     // rectangle / ellipse de sélection : sélection d'objet par l'IA (sujet dans le cadre)
     in-out property <bool> sel-ai: false;
     // densité / éponge : 0 densité −, 1 densité +, 2 éponge −, 3 éponge + ; force (%) des
@@ -246,25 +249,49 @@ component FontCombo inherits Rectangle {
     callback selected(int);
     height: 22px;
     // même arrondi que sa liste déroulante (le champ paraissait plus carré que la liste)
-    border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
-    background: Theme.field-bg;
-    border-width: 1px;
-    border-color: (Theme.hover-fx && fta.has-hover) ? Theme.accent : Theme.field-border;
+    border-radius: Theme.classic ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+    // Windows 7 : liste = bouton en dégradé + flèche (comme W10ComboBox) ; XP : champ + bouton bleu
+    background: Theme.win7 ? transparent : Theme.field-bg;
+    border-width: Theme.win7 ? 0px : 1px;
+    border-color: Theme.xp ? Theme.field-border : (Theme.hover-fx && fta.has-hover) ? Theme.accent : Theme.field-border;
+    if Theme.win7: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: fta.has-hover;
+        pressed: fta.pressed;
+    }
     Text {
         x: 7px;
         width: parent.width - 26px;
         height: parent.height;
         text: FontList.names[root.current-index];
-        color: Theme.text;
+        color: Theme.win7 ? Theme.button-fg : Theme.text;
         vertical-alignment: center;
         overflow: elide;
     }
-    FaIcon {
+    if !Theme.classic: FaIcon {
         x: parent.width - 18px;
         width: 14px;
         height: parent.height;
         glyph: "\u{f078}";
         size: 9px;
+    }
+    if Theme.win7: Image {
+        x: parent.width - 19px;
+        y: (parent.height - 17px) / 2;
+        width: 16px;
+        height: 17px;
+        source: @image-url("skins/win7/dropdown-arrow.png");
+        colorize: Theme.dark ? #e8e8e8 : #000000;
+        image-rendering: pixelated;
+    }
+    if Theme.xp: Image {
+        x: parent.width - 17px;
+        y: (parent.height - 17px) / 2;
+        width: 15px;
+        height: 17px;
+        source: fta.pressed ? @image-url("skins/xp/dropdown-active.png") : (Theme.hover-fx && fta.has-hover) ? @image-url("skins/xp/dropdown-hover.png") : @image-url("skins/xp/dropdown.png");
+        image-rendering: pixelated;
     }
     HoverTip { y: parent.height; hovered: fta.has-hover && !fta.pressed; text: FontList.names[root.current-index]; }
     fta := TouchArea {
@@ -284,7 +311,7 @@ component FontCombo inherits Rectangle {
             background: Theme.field-bg;
             border-width: 1px;
             border-color: Theme.field-border;
-            border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
+            border-radius: Theme.classic ? 0px : Theme.ctl-radius > 0 ? Theme.ctl-radius + 2px : 0px;
             drop-shadow-blur: 8px;
             drop-shadow-offset-y: 2px;
             drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
@@ -453,9 +480,9 @@ component MenuRow inherits Rectangle {
         : @tr("Choisir un calque (pas un dossier) pour utiliser cet effet");
     height: root.separator ? 7px : 24px;
     border-radius: Theme.ctl-radius;
-    background: !root.separator && !root.blocked && (root.highlighted || (!root.moving-hover && ta.has-hover)) ? Theme.accent-14 : transparent;
+    background: !root.separator && !root.blocked && (root.highlighted || (!root.moving-hover && ta.has-hover)) ? Theme.menu-hl : transparent;
     border-width: !root.separator && !root.blocked && (root.highlighted || (!root.moving-hover && ta.has-hover)) ? 1px : 0px;
-    border-color: Theme.accent-60;
+    border-color: Theme.menu-hl-border;
     if root.separator: Rectangle {
         x: 32px;
         width: parent.width - 36px;
@@ -490,20 +517,12 @@ component MenuRow inherits Rectangle {
                 size: 12px;
                 color: Theme.text;
             }
-            if MenuState.checkable(root.action, root.label): Rectangle {
+            // case du style choisi (7, XP, 98, moderne), comme celles des Paramètres
+            if MenuState.checkable(root.action, root.label): W10CheckBox {
                 x: 8px;
-                y: (parent.height - 14px) / 2;
-                width: 14px;
-                height: 14px;
-                border-radius: 2px * Theme.round;
-                background: MenuState.checked(root.action, root.label) ? Theme.accent : Theme.field-bg;
-                border-width: 1px;
-                border-color: MenuState.checked(root.action, root.label) ? Theme.accent : Theme.field-border;
-                if MenuState.checked(root.action, root.label): FaIcon {
-                    glyph: "\u{f00c}";
-                    size: 9px;
-                    color: Theme.on-accent;
-                }
+                y: (parent.height - self.height) / 2;
+                checked: MenuState.checked(root.action, root.label);
+                passive: true;
             }
         }
         Text {
@@ -597,7 +616,12 @@ component MenuGutter inherits Rectangle {
     Rectangle {
         x: parent.width + 1px;
         width: 1px;
-        background: Theme.window-border;
+        background: Theme.win7 && !Theme.dark ? #00000026 : Theme.window-border;
+    }
+    if Theme.win7 && !Theme.dark: Rectangle {
+        x: parent.width + 2px;
+        width: 1px;
+        background: #ffffff;
     }
 }
 
@@ -607,18 +631,34 @@ component MenuBarItem inherits Rectangle {
     in property <MenuSpec> menu;
     in property <bool> open;
     in property <bool> any-open;
+    /// premier titre (« Fichier ») : bouton bleu du ruban de Windows 7 / Office 2010
+    in property <bool> first;
+    property <bool> w7: Theme.win7;
     callback toggle(length);
     callback switch-to(length);
-    width: label.preferred-width + 16px;
-    // arrondi comme les menus qu'il ouvre (Windows 11)
-    border-radius: Theme.ctl-radius;
-    background: root.open ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-14 : transparent;
-    border-width: root.open || (Theme.hover-fx && ta.has-hover) ? 1px : 0px;
-    border-color: Theme.accent-60;
+    width: label.preferred-width + (root.w7 ? (root.first ? 28px : 20px) : 16px);
+    // arrondi comme les menus qu'il ouvre (Windows 11) ; Windows 7 : onglet de ruban
+    border-top-left-radius: Theme.classic || Theme.lite ? 0px : Theme.ctl-radius;
+    border-top-right-radius: Theme.classic || Theme.lite ? 0px : Theme.ctl-radius;
+    border-bottom-left-radius: root.w7 ? 4px * Theme.round : Theme.classic || Theme.lite ? 0px : Theme.ctl-radius;
+    border-bottom-right-radius: root.w7 ? 4px * Theme.round : Theme.classic || Theme.lite ? 0px : Theme.ctl-radius;
+    // Windows 7 / XP : titre ouvert ou survolé en bleu plein, texte blanc (_menu.scss de 7.css)
+    property <bool> lit: root.open || (Theme.hover-fx && ta.has-hover);
+    background: root.w7 ? (root.first ? (root.lit ? @linear-gradient(180deg, Theme.accent.mix(#ffffff, 0.68) 0%, Theme.accent.mix(#ffffff, 0.9) 48%, Theme.accent 52%, Theme.accent.mix(#ffffff, 0.85) 100%) : @linear-gradient(180deg, Theme.accent.mix(#ffffff, 0.78) 0%, Theme.accent 48%, Theme.accent.mix(#000000, 0.86) 52%, Theme.accent.mix(#ffffff, 0.94) 100%))
+            : root.open ? (Theme.dark ? @linear-gradient(180deg, #ffffff38 0%, #ffffff20 100%) : @linear-gradient(180deg, #ffffff 0%, #f1f5fb 100%))
+            : root.lit ? (Theme.dark ? @linear-gradient(180deg, #ffffff26 0%, #ffffff12 100%) : @linear-gradient(180deg, #ffffffd9 0%, #ffffff73 100%)) : transparent)
+        // XP en clair : titres de menu d'Office 2003 (survol orangé bordé de bleu marine, menu
+        // ouvert sur la teinte de la barre d'outils)
+        : root.xp ? (root.open ? (!Theme.gloss ? Theme.xp-bar-a : @linear-gradient(180deg, Theme.xp-bar-a 0%, Theme.xp-bar-b 100%)) : root.lit ? Theme.menu-hl : transparent)
+        : Theme.classic ? (root.lit ? Theme.menubar-hl : transparent)
+        : root.open ? Theme.accent-20 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-14 : transparent;
+    property <bool> xp: Theme.xp && !Theme.dark;
+    border-width: root.w7 ? (root.first || root.lit ? 1px : 0px) : (root.xp || !Theme.classic) && root.lit ? 1px : 0px;
+    border-color: root.w7 ? (root.first ? Theme.accent.mix(#000000, 0.7) : #8ba0bc) : root.xp ? Theme.xp-hl-border : Theme.accent-60;
     label := Text {
         text: root.menu.title;
         font-size: Theme.menu-font-size;
-        color: Theme.text;
+        color: root.w7 ? (root.first ? Theme.on-accent : Theme.dark ? #e8ecf2 : #1e395b) : root.xp ? #000000 : Theme.classic && root.lit ? #ffffff : Theme.text;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -739,9 +779,17 @@ component PsToolSlot inherits Rectangle {
         || (root.members.length > 2 && root.last == root.members[2]) || (root.members.length > 3 && root.last == root.members[3]);
     property <bool> active: Generated.tools[root.shown].id == root.current;
     border-radius: Theme.ctl-radius;
-    background: ta.pressed ? Theme.accent-20 : root.active ? Theme.accent-14 : (Theme.hover-fx && ta.has-hover) ? Theme.accent-12 : transparent;
-    border-width: root.active ? 1px : 0px;
-    border-color: Theme.accent;
+    // comme les boutons d'outil : surbrillance du ruban (dorée en 7, orangée en XP, réglable)
+    background: Theme.b-classic ? transparent : ta.pressed ? Theme.tb-20 : root.active ? Theme.tb-14 : (Theme.hover-fx && ta.has-hover) ? Theme.tb-12 : transparent;
+    border-width: !Theme.b-classic && root.active ? 1px : 0px;
+    border-color: Theme.tb-edge;
+    if Theme.b-classic && (root.active || ta.pressed || (Theme.hover-fx && ta.has-hover)): ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: ta.has-hover;
+        pressed: root.active || ta.pressed;
+        soft: true;
+    }
     Icon {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -1834,6 +1882,7 @@ component VectorGroup inherits RibbonGroup {
         alignment: start;
         HorizontalLayout {
             alignment: start;
+            spacing: 4px;
             ToggleButton {
                 compact: root.classic;
                 img: root.text ? Sprite.vec-text : Sprite.vec-shape;
@@ -1854,6 +1903,14 @@ component VectorGroup inherits RibbonGroup {
                         Actions.ribbon("shape-layer");
                     }
                 }
+            }
+            // calque actif = calque SVG : le remettre en pixels (confirmation demandée)
+            if MenuState.layer-block == "calque texte": ToggleButton {
+                compact: root.classic;
+                glyph: "\u{f00a}";
+                text: @tr("Pixelliser");
+                tip: @tr("Transforme ce calque SVG en pixels ordinaires : ses textes et formes ne seront plus modifiables. Une confirmation est demandée.");
+                clicked => { Actions.ribbon("rasterize-ask"); }
             }
         }
         if root.param == 0 && !root.classic: Gauge {
@@ -2429,10 +2486,20 @@ component LinkToggle inherits Rectangle {
     in-out property <bool> checked;
     callback toggled(bool);
     width: 30px;
-    border-radius: Theme.ctl-radius;
-    background: root.checked ? Theme.accent-14 : (Theme.hover-fx && lka.has-hover) ? Theme.accent-12 : transparent;
-    border-width: 1px;
+    border-radius: Theme.b-classic || Theme.b-98 ? 0px : Theme.ctl-radius;
+    background: Theme.b-98 ? Theme.button-bg : Theme.b-classic ? transparent
+        : root.checked ? Theme.accent-14 : (Theme.hover-fx && lka.has-hover) ? Theme.accent-12 : transparent;
+    border-width: Theme.b-classic || Theme.b-98 ? 0px : 1px;
     border-color: root.checked ? Theme.accent : Theme.window-border;
+    // 7 / XP / 98 : bouton du style, enfoncé quand les proportions sont liées
+    if Theme.b-classic: ClassicFace {
+        width: parent.width;
+        height: parent.height;
+        hover: lka.has-hover;
+        pressed: root.checked || lka.pressed;
+        soft: Theme.b-w7 && root.checked;
+    }
+    if Theme.b-98: Bevel { sunken: root.checked || lka.pressed; }
     GlyphIcon {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -2532,25 +2599,39 @@ component SetYesNo inherits HorizontalLayout {
     horizontal-stretch: 0;
     padding-top: root.compact ? 2px : 8px;
     spacing: 10px;
+    // Windows 7 / XP / 98 : case à cocher devant l'intitulé, comme leurs boîtes de dialogue
+    // (pas de choix « Non | Oui »)
+    property <bool> boxed: Theme.classic || Theme.win98;
+    if root.boxed: VerticalLayout {
+        alignment: start;
+        padding-top: 1px;
+        W10CheckBox {
+            checked: root.value;
+            toggled(v) => {
+                root.value = v;
+                root.changed(v);
+            }
+        }
+    }
     VerticalLayout {
         spacing: 2px;
         alignment: center;
         Text {
-            width: max(0px, root.text-w - 122px);
+            width: max(0px, root.text-w - (root.boxed ? 25px : 122px));
             text: root.title;
             font-weight: 600;
             color: Theme.text;
             wrap: word-wrap;
         }
         if root.hint != "" && !root.compact: Text {
-            width: max(0px, root.text-w - 122px);
+            width: max(0px, root.text-w - (root.boxed ? 25px : 122px));
             text: root.hint;
             wrap: word-wrap;
             color: Theme.text-inactive;
             font-size: Theme.small-font-size;
         }
     }
-    VerticalLayout {
+    if !root.boxed: VerticalLayout {
         width: 112px;
         horizontal-stretch: 0;
         alignment: center;
@@ -2573,15 +2654,18 @@ component SetCard inherits VerticalLayout {
     in property <string> title;
     in property <length> text-w;
     spacing: 6px;
+    // Windows 7 / XP : titre bleu des Panneaux de configuration, groupe sobre (7.css fieldset :
+    // bord #cdd7db, arrondi 3 px, fond de la fenêtre) au lieu d'une carte blanche
     if root.title != "": Text {
         text: root.title;
-        color: Theme.accent;
-        font-weight: 700;
+        color: Theme.classic && !Theme.dark ? (Theme.xp ? #215dc6 : #1e3287) : Theme.accent;
+        font-weight: Theme.classic ? 400 : 700;
+        font-size: Theme.classic ? Theme.font-size + 2px : Theme.font-size;
     }
     Rectangle {
         width: root.text-w;
-        border-radius: Theme.ctl-radius > 0 ? Theme.ctl-radius + 3px : 0px;
-        background: Theme.dark ? Theme.window-bg.brighter(8%) : Theme.field-bg;
+        border-radius: Theme.classic ? 3px * Theme.round : Theme.ctl-radius > 0 ? Theme.ctl-radius + 3px : 0px;
+        background: Theme.classic ? transparent : Theme.dark ? Theme.window-bg.brighter(8%) : Theme.field-bg;
         border-width: 1px;
         border-color: Theme.window-border;
         VerticalLayout {
@@ -2627,7 +2711,9 @@ export component AppWindow inherits Window {
     default-font-size: Theme.font-size;
     // couleur de l'espace de travail : posée par le fond de la fenêtre (un simple effacement de
     // l'écran), pas par un aplat de plus sous tout le reste
-    background: root.platform-insets ? Theme.mob-accent-dark : root.ws-color;
+    // entête transparente (mode intégré) : pas d'effacement en couleur, la page parente se voit
+    // sous les menus et les onglets ; l'espace de travail est peint plus bas (header-clear)
+    background: root.header-clear ? transparent : root.platform-insets ? Theme.mob-accent-dark : root.ws-color;
     in property <bool> platform-insets;
     property <length> system-left: root.platform-insets ? root.safe-area-insets.left : 0px;
     property <length> system-top: root.platform-insets ? root.safe-area-insets.top : 0px;
@@ -2681,7 +2767,7 @@ export component AppWindow inherits Window {
     property <length> menu-zone: root.interface-style == 2 ? max(360px, menu-row.preferred-width + 12px) : max(menu-row.preferred-width + 12px, 356px + max(116px, bug-label-measure.preferred-width + 32px));
     // Derive the tab band from the real action-button positions, including translations.
     in property <int> active-tab-index: -1;
-    property <length> tabs-end: root.interface-style == 2 ? root.usable-width - 34px - 6 * 27px - 18px : min(info-button.x - 8px, root.custom-frame ? root.usable-width - 146px : root.usable-width - 8px);
+    property <length> tabs-end: root.interface-style == 2 ? root.usable-width - 34px - 6 * 27px - 18px - (root.custom-frame ? 138px : 0px) : min(info-button.x - 8px, root.custom-frame ? root.usable-width - 146px : root.usable-width - 8px);
     property <length> tabs-room: max(0px, root.tabs-end - root.menu-zone - 18px);
     // onglet de la pellicule du Photo Pro réduite (après les projets)
     property <length> pm-pill-w: root.pm-count > 0 && !root.pm-open ? 136px : 0px;
@@ -3019,6 +3105,8 @@ export component AppWindow inherits Window {
     callback canvas-pointer(int, float, float, int, bool, bool, bool);
     callback canvas-double-click();
     callback key-pressed(string, bool, bool, bool) -> bool;
+    // touche relâchée (flèches : fin d'un déplacement, une seule étape d'historique)
+    callback key-up(string);
     callback layer-clicked(int);
     callback layer-visibility(int, bool);
     callback layer-action(string);
@@ -3081,7 +3169,7 @@ export component AppWindow inherits Window {
     /// Photo Pro, contact, notes de version, raccourcis, confirmation, erreur) : elle flotte
     /// au-dessus de Photo Pro au lieu d'être cachée dessous
     property <bool> pm-front: root.pm-open && (root.show-settings || root.show-pm-export || root.show-contact || root.show-changelog
-        || root.show-shortcuts || root.show-purge-confirm || root.show-purge-complete || root.show-task || root.show-error || root.show-icons);
+        || root.show-shortcuts || root.show-adv-style || root.show-purge-confirm || root.show-purge-complete || root.show-task || root.show-error || root.show-icons);
     in property <image> pm-image;
     in property <int> pm-img-w: 1;
     in property <int> pm-img-h: 1;
@@ -3212,9 +3300,41 @@ export component AppWindow inherits Window {
     in-out property <bool> show-purge-complete: false;
     in-out property <int> set-interface-theme: 0;
     in-out property <bool> set-follow-interface-style: true;
+    /// couleurs du style Windows 7 (« #rrggbb », vide : automatique) : fenêtres, surbrillance, ruban
+    in-out property <bool> set-w7-vista;
+    in-out property <bool> set-aero-blur;
+    /// Personnalisation avancée (settings.rs : style_custom) : −1 = comme le style choisi
+    in-out property <int> set-btn-skin: -1;
+    in-out property <int> set-frame-skin: -1;
+    in-out property <int> set-close-skin: -1;
+    in-out property <bool> set-title-center;
+    in-out property <bool> set-gloss: true;
+    in-out property <float> set-glass-opacity: 60;
+    in-out property <int> set-xp-scheme: 0;
+    in-out property <bool> set-high-contrast;
+    /// surbrillance des boutons ordinaires ("" : celle du style, « accent », « #rrggbb ») et
+    /// couleur des icônes ("" : accentuation)
+    in-out property <string> set-btn-highlight;
+    in-out property <string> set-icon-color;
+    /// barres de titre 10/11 : opacité (%) ; flou derrière le verre (%) ; luminosité du verre (−50 … 50)
+    in-out property <float> set-title-opacity: 96;
+    in-out property <float> set-glass-blur: 50;
+    in-out property <float> set-glass-bright: 0;
+    /// Windows 10/11 : couleur d'accentuation sur les barres de titre
+    in-out property <bool> set-title-accent;
+    /// fenêtre « Personnalisation avancée » ouverte (en plus des Paramètres)
+    in-out property <bool> show-adv-style;
+    /// Windows 7 / XP en clair : volet des sections des Paramètres façon Panneau de configuration
+    in-out property <string> set-w7-glass;
+    in-out property <string> set-w7-highlight;
+    in-out property <string> set-w7-ribbon;
+    callback w7-color-reset(int);
+    /// couleur réglable : valeur écrite (« accent », vide) ou couleur choisie dans une palette
+    callback w7-color-set(int, string);
+    callback w7-color-pick(int, color);
     in-out property <bool> set-pronounced-borders: false;
     in-out property <int> appearance-editor-tab: 0;
-    property <int> interface-style: root.set-interface-theme == 1 ? 2 : root.set-interface-theme == 2 ? 3 : root.set-interface-theme == 3 ? 0 : root.set-theme-style;
+    property <int> interface-style: root.set-interface-theme == 1 ? 2 : root.set-interface-theme == 2 ? 3 : root.set-interface-theme == 3 ? 0 : root.set-theme-style == 1 ? 1 : 0;
     callback icon-pack-action(string);
     callback select-interface-style(int);
     in-out property <int> settings-page: 0;
@@ -3240,6 +3360,26 @@ export component AppWindow inherits Window {
     in-out property <bool> set-glass: true;
     in-out property <bool> set-title-transparent: true;
     in-out property <bool> set-header-preview: true;
+    /// aperçu flouté du haut affiché (jamais en ultra léger : une image de moins à chaque rendu)
+    property <bool> header-preview-on: root.set-header-preview && !Theme.lite && !root.header-clear && !(Theme.xp && !Theme.dark);
+    /// essai du mode intégré (Paramètres › Avancé), pris en compte au redémarrage
+    in-out property <bool> set-header-transparent;
+    /// entête transparente dessinée comme la barre de titre du style choisi (XP, 7, 10/11)
+    in-out property <bool> set-header-themed;
+    property <bool> clear-themed: root.header-clear && root.set-header-themed;
+    /// entête (menus, barre rapide, onglets) sans aucun fond : intégration transparente dans une
+    /// page web (demandée par la page parente, ou essai ci-dessus) ; style Windows 7 imposé
+    in property <bool> header-clear;
+    /// Windows 7 en clair : en-tête en verre Aero, ruban à la manière d'Office 2010
+    property <bool> aero-head: Theme.win7;
+    /// Windows 7 ou XP en clair : en-tête dessiné par le style (vitre Aero, barres Office 2003)
+    property <bool> skin-head: Theme.win7 || (Theme.xp && !Theme.dark);
+    /// palettes flottantes Windows 7 / XP : leur cadre est dessiné hors de la fenêtre (7 / 2 px) et
+    /// grandit en hauteur ; leur place d'origine s'écarte d'autant des bords
+    property <length> pal-gap: Theme.win7 ? 15px : Theme.xp ? 10px : 8px;
+    property <length> pal-grow: Theme.win7 ? 10px : Theme.xp ? 5px : 0px;
+    /// mode demandé par la page parente (l'essai des Paramètres n'y change rien)
+    in property <bool> header-clear-parent;
     /// ombres des fenêtres, des menus et de la toile
     in-out property <bool> set-shadows: true;
     /// allègement automatique sur un PC lent (perf.rs) : déjà appliqué, et ce qu'il a coupé
@@ -3258,6 +3398,15 @@ export component AppWindow inherits Window {
     in-out property <bool> set-perf-done: false;
     in-out property <int> set-perf-cut: 0;
     in-out property <bool> set-perf-reported: false;
+    /// audit du PC du premier lancement déjà fait
+    in-out property <bool> set-perf-audit: false;
+    /// fenêtre de bienvenue fermée : l'audit du PC peut se faire (une seule fois)
+    callback welcome-closed();
+    changed show-welcome => {
+        if (!self.show-welcome) {
+            root.welcome-closed();
+        }
+    }
     callback perf-auto-changed();
     /// image zoomée lissée (sinon pixels nets au-delà de 200 %)
     in-out property <bool> set-zoom-smooth: false;
@@ -3305,7 +3454,7 @@ export component AppWindow inherits Window {
     // mode téléphone : choisi dans les Paramètres, ou automatique sur un écran étroit.
     // Même disposition que la version web (ui/phone.slint) : barre du haut, capsule annuler /
     // rétablir et ruban flottants, bande d'outils, pilules, barre du bas, panneaux, tiroir ☰.
-    out property <bool> phone: root.set-interface-theme == 3 || (root.set-interface-theme == 0 && (root.set-layout == 2 || (root.set-layout-auto && root.usable-width < 600px)));
+    out property <bool> phone: root.set-interface-theme == 3 || root.set-layout == 2 || (root.set-interface-theme == 0 && root.set-layout-auto && root.usable-width < 600px);
     // passage téléphone ↔ bureau (largeur, disposition) : palettes fermées / rouvertes. Au
     // démarrage du bureau, la fenêtre a d'abord une largeur nulle (téléphone) : elles se
     // rouvrent dès qu'elle prend sa taille.
@@ -3356,7 +3505,9 @@ export component AppWindow inherits Window {
     // fenêtre d'effet en panneau du bas (téléphone) : hauteur approchée, pour cadrer la toile au-dessus
     property <length> effect-sheet-h: min(min(root.effect-fields.length * 27px + 80px, ws.height * 0.55), root.mob-sheet-max);
     // disposition Photoshop : palettes ancrées en colonnes (outils à gauche, le reste à droite)
-    property <bool> docked: (root.interface-style == 3 || (root.interface-style < 2 && root.set-layout == 1)) && !root.phone;
+    // disposition des palettes : libre dans toutes les interfaces (Photoshop en fenêtres flottantes,
+    // Paint.NET en colonnes…) ; choisir une interface remet la disposition de sa référence
+    property <bool> docked: root.set-layout == 1 && !root.phone;
     // règles affichées : bande de 18 px en haut et à gauche que les palettes évitent
     property <length> rul-off: ToolOpts.rulers ? 18px : 0px;
     property <length> dock-left: root.docked && root.show-tools ? (root.interface-style == 3 ? 48px : 60px) : 0px;
@@ -3615,7 +3766,7 @@ export component AppWindow inherits Window {
     changed rib-on => { root.rib-step(); }
     property <length> ps-tabs-h: root.ps-chrome ? 27px : 0px;
     property <length> ps-strip: root.ps-chrome && root.docked ? 34px : 0px;
-    property <length> top-height: root.phone ? 48px : root.ps-chrome ? 30px : 52px;
+    out property <length> top-height: root.phone ? 48px : root.ps-chrome ? 30px : 52px;
     // téléphone : le ruban flotte au-dessus de la toile (pas de bande réservée)
     property <int> effective-toolbar-mode: root.toolbar-mode;
     property <length> bar-height: root.phone ? 0px : (effective-toolbar-mode == 0 ? 88px : root.classic-wrap ? 64px : (root.interface-style == 2 ? 35px : 32px)) + root.ps-tabs-h;
@@ -3755,6 +3906,14 @@ export component AppWindow inherits Window {
 
     // fond de toute la fenêtre, derrière tout : sur une zone sans bouton (fond du ruban, barre
     // d'état, marges), le curseur redevient la flèche (Slint garderait sinon celui de la toile)
+    // entête transparente : fond de l'espace de travail sous tout le reste, sauf sous l'entête
+    if root.header-clear: Rectangle {
+        x: 0;
+        y: root.system-top + (root.phone ? 0px : root.top-height);
+        width: root.width;
+        height: max(0px, root.height - self.y);
+        background: root.ws-color;
+    }
     TouchArea {
         x: 0;
         y: 0;
@@ -3787,6 +3946,7 @@ export component AppWindow inherits Window {
             if (e.text == " ") {
                 root.space-down = false;
             }
+            root.key-up(e.text);
             reject
         }
 
@@ -3797,13 +3957,34 @@ export component AppWindow inherits Window {
             width: root.usable-width;
             height: root.top-height;
             visible: !root.phone;
-            background: Theme.menubar-bg;
+            background: root.header-clear ? transparent : Theme.menubar-bg;
             // l'interface change rarement : gardée en texture, elle ne coûte qu'un seul tracé
             // quand seule la toile ou le pointeur bouge
             cache-rendering-hint: true;
+            // entête transparente au style du thème : barre de titre du style choisi, posée sur la
+            // page qui intègre MasterPaint — XP opaque (barres Office 2003), 7 en vitre Aero
+            // translucide (opacité du verre), 10/11 translucide (opacité des barres de titre)
+            if root.clear-themed && !root.pm-open: Rectangle {
+                background: Theme.win7 && !Theme.gloss ? Theme.w7-head-b.with-alpha(0.15 + 0.7 * Theme.w7-glass-opacity)
+                    : Theme.win7 ? @linear-gradient(180deg, Theme.w7-head-a.with-alpha(0.2 + 0.7 * Theme.w7-glass-opacity) 0%, Theme.w7-head-b.with-alpha(0.15 + 0.7 * Theme.w7-glass-opacity) 50%, Theme.w7-head-c.with-alpha(0.18 + 0.7 * Theme.w7-glass-opacity) 100%)
+                    : Theme.xp ? Theme.head
+                    : Theme.menubar-bg.with-alpha(Theme.title-opacity);
+                // 7 : reflet du verre et rayures fixées à l'écran
+                if Theme.win7: Rectangle {
+                    background: @linear-gradient(180deg, #ffffff66 0%, #ffffff26 45%, #ffffff00 55%, #ffffff14 100%);
+                    opacity: Theme.w7-sheen;
+                }
+                // XP : bande de la barre rapide (Office 2003) sous les menus
+                if Theme.xp && !Theme.dark: Rectangle {
+                    y: 25px;
+                    height: 27px;
+                    background: !Theme.gloss ? Theme.xp-bar-b : @linear-gradient(180deg, Theme.xp-bar-a 0%, Theme.xp-bar-b 55%, Theme.xp-bar-c 100%);
+                }
+                Rectangle { y: parent.height - 1px; height: 1px; background: Theme.header-edge; }
+            }
             // Trois zones, comme la version HTML : bande des menus, barre rapide teintée, et la zone
             // des onglets aux coins gauches arrondis, sur l'aperçu flouté du projet.
-            if !root.pm-open && !root.ps-chrome && root.set-header-preview: Rectangle {
+            if !root.pm-open && !root.ps-chrome && root.header-preview-on: Rectangle {
                 x: 0;
                 width: root.menu-zone + 12px;
                 height: parent.height;
@@ -3822,22 +4003,41 @@ export component AppWindow inherits Window {
                     background: Theme.menubar-bg.with-alpha(Theme.header-menu-opacity);
                 }
             }
-            if !root.pm-open && !root.ps-chrome: Rectangle {
+            // Windows 7 : tout l'en-tête est une vitre Aero claire (translucide sur l'aperçu flouté)
+            if root.skin-head && !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
+                x: 0;
+                y: 0;
+                width: root.menu-zone + 12px;
+                height: parent.height;
+                // vitre Aero : l'aperçu du projet passe à travers selon l'opacité du verre réglée
+                background: root.aero-head && root.header-preview-on && !Theme.gloss ? Theme.w7-head-b.with-alpha(0.35 + 0.5 * Theme.w7-glass-opacity)
+                    : root.aero-head && root.header-preview-on ? @linear-gradient(180deg, Theme.w7-head-a.with-alpha(0.4 + 0.5 * Theme.w7-glass-opacity) 0%, Theme.w7-head-b.with-alpha(0.3 + 0.5 * Theme.w7-glass-opacity) 50%, Theme.w7-head-c.with-alpha(0.32 + 0.5 * Theme.w7-glass-opacity) 100%) : Theme.head;
+            }
+            // XP : barre des menus et barre rapide séparées par un liseré, comme deux barres d'Office 2003
+            if root.skin-head && !root.aero-head && !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
+                x: 0;
+                y: 25px;
+                width: root.menu-zone;
+                height: 27px;
+                background: !Theme.gloss ? Theme.xp-bar-b : @linear-gradient(180deg, Theme.xp-bar-a 0%, Theme.xp-bar-b 55%, Theme.xp-bar-c 100%);
+                Rectangle { y: parent.height - 1px; height: 1px; background: Theme.xp-bar-c.mix(#000000, 0.75); }
+            }
+            if !root.skin-head && !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
                 x: 0;
                 y: 26px;
                 // passe sous le coin arrondi de la zone des onglets, qui prend ainsi sa teinte
                 width: root.menu-zone + 12px;
                 height: 26px;
-                background: root.interface-style == 2 ? Theme.menubar-bg : Theme.accent-12.with-alpha(!root.set-header-preview ? 0.7 : Theme.header-quick-opacity);
+                background: root.interface-style == 2 ? Theme.menubar-bg : Theme.accent-12.with-alpha(!root.header-preview-on ? 0.7 : Theme.header-quick-opacity);
             }
-            if !root.pm-open && !root.ps-chrome: Rectangle {
+            if !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
                 x: root.menu-zone;
                 width: max(0px, parent.width - self.x);
                 height: parent.height;
                 clip: true;
                 border-bottom-left-radius: Theme.win98 || !root.set-rounded ? 0px : 12px;
-                background: root.interface-style == 2 ? Theme.menubar-bg : Theme.accent-12;
-                if root.set-header-preview: Image {
+                background: root.skin-head ? Theme.head : root.interface-style == 2 ? Theme.menubar-bg : Theme.accent-12;
+                if root.header-preview-on: Image {
                     x: 0px - root.menu-zone;
                     width: root.usable-width;
                     height: parent.height;
@@ -3845,19 +4045,19 @@ export component AppWindow inherits Window {
                     image-fit: fill;
                     image-rendering: smooth;
                 }
-                if root.set-header-preview: Rectangle {
+                if root.header-preview-on: Rectangle {
                     background: Theme.menubar-bg.with-alpha(Theme.dark ? 0.58 : 0.5);
                 }
             }
             // Liseré à deux tons : conserve une limite visible, quelle que soit la photo.
-            if !root.pm-open && !root.ps-chrome: Rectangle {
+            if !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
                 x: 0;
                 y: 25px;
                 width: root.menu-zone;
                 height: 1px;
                 background: Theme.header-edge;
             }
-            if !root.pm-open && !root.ps-chrome: Rectangle {
+            if !root.header-clear && !root.pm-open && !root.ps-chrome: Rectangle {
                 x: root.menu-zone;
                 width: max(0px, parent.width - self.x);
                 height: parent.height;
@@ -3891,11 +4091,13 @@ export component AppWindow inherits Window {
                 }
             }
             menu-row := HorizontalLayout {
+                // même marge à gauche dans tous les styles (en 7, l'onglet « Fichier » collait au bord)
                 x: 4px;
-                y: 2px;
-                height: 21px;
+                y: root.aero-head ? 1px : 2px;
+                height: root.aero-head ? 23px : 21px;
                 for m[i] in root.menus: MenuBarItem {
                     menu: m;
+                    first: i == 0;
                     open: root.open-menu == i;
                     any-open: root.open-menu >= 0;
                     toggle(x) => {
@@ -3952,8 +4154,14 @@ export component AppWindow inherits Window {
                         }
                     }
                     if q.label != "": Rectangle {
+                        property <bool> face: Theme.classic;
                         border-radius: Theme.ctl-radius;
-                        background: (Theme.hover-fx && bta.has-hover) ? Theme.accent.darker(15%) : Theme.accent;
+                        background: self.face ? transparent : (Theme.hover-fx && bta.has-hover) ? Theme.accent.darker(15%) : Theme.accent;
+                        if self.face: ClassicFace {
+                            hover: bta.has-hover;
+                            pressed: bta.pressed;
+                            primary: true;
+                        }
                         HorizontalLayout {
                             alignment: center;
                             spacing: 6px;
@@ -3961,11 +4169,11 @@ export component AppWindow inherits Window {
                                 y: 5px;
                                 spec: q.icon;
                                 size: 12px;
-                                tint: Theme.on-accent;
+                                tint: Theme.classic ? Theme.button-fg : Theme.on-accent;
                             }
                             Text {
                                 text: q.label;
-                                color: Theme.on-accent;
+                                color: Theme.classic ? Theme.button-fg : Theme.on-accent;
                                 font-size: Theme.small-font-size;
                                 font-weight: 600;
                                 vertical-alignment: center;
@@ -4006,12 +4214,15 @@ export component AppWindow inherits Window {
                 // MasterPaint : séparateurs gravés entre les groupes (fichier | historique | zoom |
                 // paramètres | signalement) et bouton Paramètres
                 if root.interface-style != 2: Rectangle {
+                    // gravés (trait sombre + reflet clair) : visibles sur la vitre de 7, les
+                    // barres de XP et l'aperçu flouté comme sur un fond uni
                     for sx in [112px, 177px, 308px, 342px]: Rectangle {
                         x: sx;
-                        y: 6px;
-                        width: 1px;
-                        height: 15px;
-                        background: Theme.ribbon-sep;
+                        y: 5px;
+                        width: 2px;
+                        height: 17px;
+                        Rectangle { x: 0; width: 1px; background: Theme.dark ? #00000070 : #00000038; }
+                        Rectangle { x: 1px; width: 1px; background: Theme.dark ? #ffffff1c : #ffffffb0; }
                     }
                 }
                 if root.interface-style != 2: FlatButton {
@@ -4056,9 +4267,10 @@ export component AppWindow inherits Window {
                 alignment: start;
                 for tab[ti] in root.tabs: Rectangle {
                     width: root.tab-w;
-                    background: tab.mask ? (tab.active ? #6d4a9a : (Theme.hover-fx && tta.has-hover) ? #8a68b8 : #5b3f80) : tab.active ? Theme.accent-32 : (Theme.hover-fx && tta.has-hover) ? Theme.accent-12 : transparent;
+                    background: tab.mask ? (tab.active ? #6d4a9a : (Theme.hover-fx && tta.has-hover) ? #8a68b8 : #5b3f80) : root.aero-head ? (tab.active ? (Theme.dark ? @linear-gradient(180deg, #ffffff40 0%, #ffffff24 100%) : @linear-gradient(180deg, #ffffff 0%, #ffffffd0 100%)) : (Theme.hover-fx && tta.has-hover) ? (Theme.dark ? @linear-gradient(180deg, #ffffff22 0%, #ffffff10 100%) : @linear-gradient(180deg, #ffffffb0 0%, #ffffff60 100%)) : transparent)
+                        : tab.active ? Theme.accent-32 : (Theme.hover-fx && tta.has-hover) ? Theme.accent-12 : transparent;
                     border-width: tab.active || (Theme.hover-fx && tta.has-hover) || tab.mask ? 1px : 0px;
-                    border-color: tab.mask ? #b79be0 : Theme.accent-60;
+                    border-color: tab.mask ? #b79be0 : root.aero-head ? #8ba0bc : Theme.accent-60;
                     Image {
                         x: 6px;
                         y: 4px;
@@ -4227,7 +4439,7 @@ export component AppWindow inherits Window {
             // Always reachable, even when the title bar has no room for thumbnails.
             project-menu := Rectangle {
                 visible: !root.pm-open && !root.ps-chrome && root.tabs.length > 0;
-                x: parent.width - 34px;
+                x: parent.width - 34px - (root.interface-style == 2 && root.custom-frame ? 138px : 0px);
                 y: root.interface-style == 2 ? 2px : root.custom-frame ? 28px : 2px;
                 width: 26px;
                 height: 23px;
@@ -4297,7 +4509,9 @@ export component AppWindow inherits Window {
             // Paint.NET (paintdotjs) : palettes Outils, Historique, Calques, Couleurs, puis
             // Paramètres et Aide, en haut à droite de la barre des menus
             if root.interface-style == 2 && !root.pm-open: HorizontalLayout {
-                x: parent.width - 34px - 6px - self.width;
+                // bureau (barre de titre intégrée) : à gauche des boutons de la fenêtre (avant :
+                // dessous, ils se chevauchaient)
+                x: parent.width - 34px - 6px - self.width - (root.custom-frame ? 138px : 0px);
                 y: 2px;
                 width: 6 * 27px - 1px;
                 height: 23px;
@@ -4459,11 +4673,12 @@ export component AppWindow inherits Window {
                 ]: Rectangle {
                     width: 46px;
                     background: wba.pressed ? (b.id == "close" ? #c42b1c : Theme.accent-20) : (Theme.hover-fx && wba.has-hover) ? (b.id == "close" ? #e81123 : Theme.accent-14) : transparent;
-                    FaIcon {
-                        glyph: b.id == "maximize" && root.maximized ? "\u{f24d}" : b.g;
-                        weight: b.id == "maximize" ? 400 : 900;
-                        size: 11px;
-                        color: (Theme.hover-fx && wba.has-hover) && b.id == "close" ? #ffffff : Theme.text;
+                    // symboles dessinés (jamais d'icône du pack : « ⊟ » / « ⤢ » prêtaient à confusion)
+                    SignGlyph {
+                        kind: b.id == "minimize" ? "min" : b.id == "close" ? "close" : root.maximized ? "restore" : "max";
+                        size: 10px;
+                        background: parent.background;
+                        tint: (Theme.hover-fx && wba.has-hover) && b.id == "close" ? #ffffff : Theme.text;
                     }
                     wba := TouchArea {
                         clicked => {
@@ -4483,7 +4698,7 @@ export component AppWindow inherits Window {
             width: root.phone ? root.usable-width - 50px : root.usable-width;
             height: root.phone ? root.mob-ribbon-h : root.bar-height;
             z: root.phone && !root.modal-open && !root.phone-menu ? 1 : 0;
-            background: root.phone ? Theme.mob-card : Theme.ribbon-bg;
+            background: root.phone ? Theme.mob-card : Theme.band;
             cache-rendering-hint: !root.phone;
             border-radius: root.phone ? 12px : 0px;
             drop-shadow-blur: root.phone ? 10px : 0px;
@@ -4722,6 +4937,26 @@ export component AppWindow inherits Window {
                     classic: root.classic;
                 }
                 // pipette : couleur prélevée, HEX / RVB / RAL (comme la version web)
+                // pipette : où prendre la couleur (image entière comme affichée, ou calque actif seul
+                // comme Paint.NET)
+                if root.current-tool == "tool-eyedropper": RibbonGroup {
+                    classic: root.classic;
+                    label: @tr("Échantillon");
+                    if !root.classic: Segmented {
+                        width: 170px;
+                        options: [@tr("Image"), @tr("Calque actif")];
+                        tip: @tr("Image : la couleur affichée (tous les calques visibles). Calque actif : la couleur du calque choisi seulement, comme Paint.NET.");
+                        index: ToolOpts.pick-layer ? 1 : 0;
+                        selected(i) => { ToolOpts.pick-layer = i == 1; root.settings-changed(); }
+                    }
+                    if root.classic: ToggleButton {
+                        compact: true;
+                        glyph: "\u{f5fd}";
+                        tip: ToolOpts.pick-layer ? @tr("Échantillon : calque actif seulement (cliquer pour l'image entière)") : @tr("Échantillon : image entière (cliquer pour le calque actif seulement)");
+                        checked: ToolOpts.pick-layer;
+                        clicked => { ToolOpts.pick-layer = !ToolOpts.pick-layer; root.settings-changed(); }
+                    }
+                }
                 if root.current-tool == "tool-eyedropper": RibbonGroup {
                     classic: root.classic;
                     label: @tr("Couleur prélevée");
@@ -4948,7 +5183,7 @@ export component AppWindow inherits Window {
             width: root.usable-width;
             height: root.status-height;
             visible: !root.phone;
-            background: Theme.statusbar-bg;
+            background: Theme.status-band;
             cache-rendering-hint: true;
             Rectangle {
                 y: 0;
@@ -5144,6 +5379,26 @@ export component AppWindow inherits Window {
                     height: root.doc-height * root.zoom * 1px;
                     x: root.dock-left + (root.view-w - self.width) / 2 + root.pan-x;
                     y: root.view-top + (root.view-h - self.height) / 2 + root.pan-y;
+                    // verre Aero (Windows 7) : place de la toile à l'écran, pour l'aperçu flouté vu à
+                    // travers le cadre des fenêtres (rien n'est suivi hors de ce style)
+                    // (flou derrière le verre : l'image floutée de la toile, posée sur elle)
+                    property <length> aero-x: Theme.aero-blur ? self.absolute-position.x : 0px;
+                    property <length> aero-y: Theme.aero-blur ? self.absolute-position.y : 0px;
+                    property <length> aero-w: Theme.aero-blur ? self.width : 0px;
+                    property <length> aero-h: Theme.aero-blur ? self.height : 0px;
+                    changed aero-x => { Backdrop.x = self.aero-x; }
+                    changed aero-y => { Backdrop.y = self.aero-y; }
+                    changed aero-w => { Backdrop.width = self.aero-w; }
+                    changed aero-h => { Backdrop.height = self.aero-h; }
+                    property <color> aero-base: root.ws-color;
+                    changed aero-base => { Backdrop.base = self.aero-base; }
+                    init => {
+                        Backdrop.base = self.aero-base;
+                        Backdrop.x = self.aero-x;
+                        Backdrop.y = self.aero-y;
+                        Backdrop.width = self.aero-w;
+                        Backdrop.height = self.aero-h;
+                    }
                     // « Hors toile » : contenu au dehors, estompé autour de la toile (déjà à demi
                     // transparent dans l'image : pas d'opacité, qui coûterait une image à la
                     // taille zoomée)
@@ -5686,7 +5941,7 @@ export component AppWindow inherits Window {
                 // place d'origine (aimantée), décalée sous les règles quand elles sont affichées
                 snap-home: true;
                 locked: root.no-doc;
-                home-x: 8px + root.rul-off;
+                home-x: root.pal-gap + root.rul-off;
                 home-y: 8px + root.rul-off;
                 min-x: root.rul-off;
                 min-y: root.rul-off;
@@ -5901,7 +6156,7 @@ export component AppWindow inherits Window {
                 }
                 snap-home: true;
                 locked: root.no-doc;
-                home-x: ws.width - root.side-pal-w - 8px;
+                home-x: ws.width - root.side-pal-w - root.pal-gap;
                 home-y: 8px + root.rul-off;
                 min-x: root.rul-off;
                 min-y: root.rul-off;
@@ -5983,8 +6238,8 @@ export component AppWindow inherits Window {
                 }
                 snap-home: true;
                 locked: root.no-doc;
-                home-x: 8px + root.rul-off;
-                home-y: root.view-bottom - cpanel.wanted-height - 8px;
+                home-x: root.pal-gap + root.rul-off;
+                home-y: root.view-bottom - cpanel.wanted-height - root.pal-gap - root.pal-grow;
                 min-x: root.rul-off;
                 min-y: root.rul-off;
                 float-x: root.geom-colors.set ? root.geom-colors.x : self.home-x;
@@ -6149,8 +6404,8 @@ export component AppWindow inherits Window {
                 }
                 snap-home: true;
                 locked: root.no-doc;
-                home-x: ws.width - root.side-pal-w - 8px;
-                home-y: root.view-bottom - 262px;
+                home-x: ws.width - root.side-pal-w - root.pal-gap;
+                home-y: root.view-bottom - 262px - root.pal-grow - (root.pal-gap - 8px);
                 min-x: root.rul-off;
                 min-y: root.rul-off;
                 float-x: root.geom-layers.set ? root.geom-layers.x : self.home-x;
@@ -6987,7 +7242,12 @@ export component AppWindow inherits Window {
                     y: 0;
                     width: 170px;
                     height: parent.content-height - 44px;
-                    background: Theme.dark ? Theme.list-bg : Theme.window-bg.darker(3%);
+                    background: Theme.side-band;
+                    if Theme.side-skin && Theme.win7: Rectangle {
+                        x: parent.width - 1px;
+                        width: 1px;
+                        background: Theme.vista ? #ffffff40 : Theme.ribbon-sep;
+                    }
                     VerticalLayout {
                         y: 0;
                         height: max(0px, parent.height - 78px);
@@ -7005,41 +7265,11 @@ export component AppWindow inherits Window {
                             { g: "\u{f11c}", t: @tr("Raccourcis"), p: 5 },
                             { g: "\u{f085}", t: @tr("Avancé et infos"), p: 6 },
                             { g: "\u{f129}", t: @tr("Crédits"), p: 7 },
-                        ]: Rectangle {
-                            property <int> si: sec.p;
-                            height: 32px;
-                            border-radius: Theme.ctl-radius;
-                            background: root.settings-page == si ? Theme.accent-14 : (Theme.hover-fx && secta.has-hover) ? Theme.accent-12 : transparent;
-                            Rectangle {
-                                x: 0;
-                                y: 7px;
-                                width: 3px;
-                                height: parent.height - 14px;
-                                border-radius: 2px * Theme.round;
-                                background: root.settings-page == si ? Theme.accent : transparent;
-                            }
-                            GlyphIcon {
-                                x: 12px;
-                                y: round((parent.height - self.height) / 2 / 1px) * 1px;
-                                width: 18px;
-                                glyph: sec.g;
-                                size: 13px;
-                                tint: root.settings-page == si ? Theme.accent : Theme.text;
-                            }
-                            Text {
-                                x: 38px;
-                                height: parent.height;
-                                text: sec.t;
-                                font-weight: root.settings-page == si ? 600 : 400;
-                                color: Theme.text;
-                                vertical-alignment: center;
-                            }
-                            HoverTip { y: parent.height; hovered: secta.has-hover && !secta.pressed; text: sec.t; }
-                            secta := TouchArea {
-                                clicked => {
-                                    root.settings-page = si;
-                                }
-                            }
+                        ]: SideItem {
+                            glyph: sec.g;
+                            text: sec.t;
+                            selected: root.settings-page == sec.p;
+                            clicked => { root.settings-page = sec.p; }
                         }
                         // langue : rattachée au bas de la liste des sections (elle flottait en bas
                         // de la colonne, loin de la liste)
@@ -7167,6 +7397,14 @@ export component AppWindow inherits Window {
                                         : root.set-interface-theme == 2 ? @tr("Comme PhotoCraft : outils à gauche, panneaux à droite.")
                                         : @tr("Commandes tactiles et panneaux escamotables.");
                                 }
+                                HorizontalLayout {
+                                    alignment: start;
+                                    W10Button {
+                                        text: @tr("Thèmes personnalisés…");
+                                        tip: @tr("Style Windows 7, XP, 98…, couleurs, disposition : section Personnalisation");
+                                        clicked => { root.settings-page = 9; }
+                                    }
+                                }
                             }
                             SetCard {
                                 text-w: tw; title: @tr("Couleurs");
@@ -7193,6 +7431,33 @@ export component AppWindow inherits Window {
                                         TouchArea { clicked => { root.apply-theme(Theme.dark, a); } }
                                     }
                                 }
+                                if Theme.frame-skin == 0: SetYesNo {
+                                    text-w: cw; title: @tr("Couleur d'accentuation sur les barres de titre");
+                                    hint: @tr("Comme Windows 10/11 : la fenêtre active prend la couleur d'accentuation, saturée.");
+                                    value <=> root.set-title-accent;
+                                    changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                }
+                                SetYesNo {
+                                    text-w: cw; title: @tr("Utiliser une couleur différente pour les icônes");
+                                    hint: @tr("Les icônes de MasterPaint prennent une autre teinte que l'accentuation.");
+                                    value: root.set-icon-color != "";
+                                    changed(v) => { if v { root.w7-color-pick(4, Theme.accent-base); } else { root.w7-color-set(4, ""); } }
+                                }
+                                if root.set-icon-color != "": Rectangle {
+                                    property <int> cols: max(1, floor((cw + 6px) / 30px));
+                                    width: cw;
+                                    height: ceil(Theme.accent-options.length / self.cols) * 30px - 6px;
+                                    for a[i] in Theme.accent-options: Rectangle {
+                                        x: mod(i, parent.cols) * 30px;
+                                        y: floor(i / parent.cols) * 30px;
+                                        width: 24px; height: 24px;
+                                        border-radius: 12px * Theme.round;
+                                        background: a;
+                                        border-width: Theme.icon-base == a ? 3px : 1px;
+                                        border-color: Theme.icon-base == a ? Theme.text : #808080;
+                                        TouchArea { clicked => { root.w7-color-pick(4, a); } }
+                                    }
+                                }
                             }
                             SetCard {
                                 text-w: tw; title: @tr("Forme");
@@ -7207,15 +7472,10 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 SetYesNo {
-                                    text-w: cw; title: @tr("Coins arrondis");
-                                    value <=> root.set-rounded;
+                                    text-w: cw; title: @tr("Contraste renforcé");
+                                    hint: @tr("Textes plus foncés et un peu plus grands, contours marqués : pour mieux voir. Tous les styles.");
+                                    value <=> root.set-high-contrast;
                                     changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
-                                }
-                                SetYesNo {
-                                    text-w: cw; title: @tr("Aperçu du projet en haut");
-                                    hint: @tr("Image floutée derrière les menus et les onglets.");
-                                    value <=> root.set-header-preview;
-                                    changed => { root.settings-changed(); }
                                 }
                             }
                             Text {
@@ -7228,20 +7488,42 @@ export component AppWindow inherits Window {
                             spacing: 18px;
                             SetCard {
                                 text-w: tw; title: @tr("Style");
-                                if root.set-interface-theme == 0: VerticalLayout {
+                                VerticalLayout {
                                     spacing: 6px;
                                     Text { text: @tr("Dessin des contrôles"); font-weight: 600; color: Theme.text; }
-                                    Segmented {
-                                        width: cw; options: [@tr("Moderne"), @tr("Windows 98")];
-                                        index <=> root.set-theme-style;
-                                        selected(i) => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                    // ordre = valeur enregistrée (themeStyle) : ne pas le changer
+                                    W10ComboBox {
+                                        width: cw;
+                                        model: [@tr("Windows 10/11 (moderne)"), @tr("Windows 98"), @tr("Windows 7"), @tr("Windows XP"), @tr("Ultra léger (PC lent)")];
+                                        current-index <=> root.set-theme-style;
+                                        // Windows 7 : coins arrondis remis par défaut (désactivables ensuite dans Apparence)
+                                        selected(i) => { if (i == 2) { root.set-rounded = true; } root.apply-theme(Theme.dark, Theme.accent-base); root.icon-pack-action("follow"); }
+                                    }
+                                    Text {
+                                        width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
+                                        text: root.set-theme-style == 2 ? @tr("D'après 7.css (MIT). « Fenêtres transparentes » : verre Aero flouté.")
+                                            : root.set-theme-style == 3 ? @tr("D'après XP.css (MIT).")
+                                            : root.set-theme-style == 4 ? @tr("Fenêtres et boutons en aplats, sans ombre ni survol : pour un PC très lent.")
+                                            : root.set-theme-style == 1 ? @tr("D'après 98.css (MIT).") : "";
+                                        visible: self.text != "";
                                     }
                                 }
                                 SetYesNo {
-                                    text-w: cw; title: @tr("Bordures marquées");
-                                    hint: @tr("Contours plus visibles.");
-                                    value <=> root.set-pronounced-borders;
+                                    text-w: cw; title: @tr("Coins arrondis");
+                                    value <=> root.set-rounded;
                                     changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                }
+                                SetYesNo {
+                                    text-w: cw; title: @tr("Contraste renforcé");
+                                    hint: @tr("Textes plus foncés et un peu plus grands, contours marqués : pour mieux voir. Tous les styles.");
+                                    value <=> root.set-high-contrast;
+                                    changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                }
+                                SetYesNo {
+                                    text-w: cw; title: @tr("Aperçu du projet en haut");
+                                    hint: @tr("Image floutée derrière les menus et les onglets.");
+                                    value <=> root.set-header-preview;
+                                    changed => { root.settings-changed(); }
                                 }
                                 SetYesNo {
                                     text-w: cw; title: @tr("Suivre l'interface choisie");
@@ -7249,10 +7531,18 @@ export component AppWindow inherits Window {
                                     value <=> root.set-follow-interface-style;
                                     changed => { root.settings-changed(); }
                                 }
+                                HorizontalLayout {
+                                    alignment: start;
+                                    W10Button {
+                                        text: @tr("Personnalisation avancée…");
+                                        tip: @tr("Mélange des styles, verre, flou, couleurs des boutons, du ruban et des icônes : dans une fenêtre à part, à côté des Paramètres");
+                                        clicked => { root.show-adv-style = true; }
+                                    }
+                                }
                             }
                             SetCard {
                                 text-w: tw; title: @tr("Disposition");
-                                if root.set-interface-theme == 0: VerticalLayout {
+                                if root.set-interface-theme != 3: VerticalLayout {
                                     spacing: 6px;
                                     Text { text: @tr("Palettes"); font-weight: 600; color: Theme.text; }
                                     Segmented {
@@ -7294,17 +7584,20 @@ export component AppWindow inherits Window {
                                     text-w: cw; title: @tr("Surbrillance au survol");
                                     hint: @tr("La plus coûteuse sur un PC lent.");
                                     value <=> root.set-hover-fx;
-                                    changed => { Theme.hover-fx = root.set-hover-fx; root.settings-changed(); }
+                                    changed => { Theme.hover-fx = root.set-hover-fx && !Theme.lite; root.settings-changed(); }
                                 }
                                 SetYesNo {
                                     text-w: cw; title: @tr("Fenêtres transparentes");
                                     value <=> root.set-title-transparent;
-                                    changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                    changed => {
+                                        if !root.set-title-transparent { root.set-aero-blur = false; }
+                                        root.apply-theme(Theme.dark, Theme.accent-base);
+                                    }
                                 }
                                 SetYesNo {
                                     text-w: cw; title: @tr("Ombres");
                                     value <=> root.set-shadows;
-                                    changed => { Theme.shadows = root.set-shadows; root.settings-changed(); }
+                                    changed => { Theme.shadows = root.set-shadows && !Theme.lite; root.settings-changed(); }
                                 }
                                 Text {
                                     width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
@@ -7567,7 +7860,7 @@ export component AppWindow inherits Window {
                                 }
                                 Text {
                                     width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
-                                    text: @tr("Coupe surbrillance, ombres et transparences. Automatique : si le PC rame.");
+                                    text: @tr("Active le style ultra léger : sans surbrillance, ombres, transparences ni aperçu flouté. Automatique : si le PC rame. Le style choisi revient à la désactivation.");
                                 }
                                 if root.screen-hidpi: VerticalLayout {
                                     spacing: 6px;
@@ -7590,25 +7883,13 @@ export component AppWindow inherits Window {
                             }
                             SetCard {
                                 text-w: tw; title: @tr("Rendu de la toile");
+                                // boutons ÷2 / ÷4 / ÷8 toujours dans le ruban ; réglage : réduction
+                                // de départ des nouveaux projets (pleine résolution par défaut)
                                 SetYesNo {
-                                    text-w: cw; title: @tr("Boutons de réduction dans le ruban");
-                                    hint: @tr("÷2 toujours ; ÷4 et ÷8 selon la taille de l'image. Export en pleine résolution.");
-                                    value <=> root.set-render-ctl;
-                                    changed => { root.settings-changed(); }
-                                }
-                                if root.set-render-ctl: VerticalLayout {
-                                    spacing: 6px;
-                                    Text { text: @tr("Nouveaux projets"); font-weight: 600; color: Theme.text; }
-                                    Segmented {
-                                        width: cw;
-                                        options: [@tr("Pleine"), "÷2", "÷4", "÷8"];
-                                        index <=> root.set-render-default;
-                                        selected(i) => { root.settings-changed(); }
-                                    }
-                                    Text {
-                                        width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
-                                        text: @tr("Ramené à ce que permet la taille de l'image. Chaque projet garde son choix.");
-                                    }
+                                    text-w: cw; title: @tr("Nouveaux projets réduits de moitié (÷2)");
+                                    hint: @tr("Affichage plus fluide sur un PC modeste ; boutons ÷2 / ÷4 / ÷8 toujours dans le ruban, export en pleine résolution.");
+                                    value: root.set-render-default >= 1;
+                                    changed(v) => { root.set-render-default = v ? 1 : 0; root.settings-changed(); }
                                 }
                             }
                             SetCard {
@@ -7730,6 +8011,11 @@ export component AppWindow inherits Window {
                                 W10Button { text: "getartcraft.com/apps ↗"; clicked => { root.quick-action("credits-artcraft"); } }
                                 W10Button { text: "GitHub · storytold ↗"; clicked => { root.quick-action("credits-storytold"); } }
                             }
+                            SetHead { text-w: tw; title: "U²-Net · Xuebin Qin et al."; hint: @tr("Modèle de détourage U²-Net-p sous licence Apache-2.0 (2020), exécuté par tract (Sonos, MIT / Apache-2.0) : sélection du sujet et suppression du fond des versions de bureau, hors ligne. Fichier : rust/masterpaint-ui/models/u2netp.onnx."); }
+                            SetHead { text-w: tw; title: "7.css · Khang Nguyen Duy"; hint: @tr("Feuille de style Windows 7 sous licence MIT (© 2021 Khang Nguyen Duy) : couleurs, dégradés, cadre Aero et icônes de titre du style Windows 7. Licence jointe : rust/masterpaint-ui/ui/skins/win7/LICENSE-7.css.txt."); }
+                            W10Button { text: "GitHub · khang-nd/7.css ↗"; clicked => { root.quick-action("credits-7css"); } }
+                            SetHead { text-w: tw; title: "XP.css / 98.css · Adam Hammad, Jordan Scales"; hint: @tr("Feuilles de style Windows XP et Windows 98 sous licence MIT (© 2020 Adam Hammad, Jordan Scales) : couleurs, dégradés, barre de titre Luna et icônes du style Windows XP. Licence jointe : rust/masterpaint-ui/ui/skins/xp/LICENSE-XP.css.txt."); }
+                            W10Button { text: "GitHub · botoxparty/XP.css ↗"; clicked => { root.quick-action("credits-xpcss"); } }
                             SetHead { text-w: tw; title: @tr("Conditions de réutilisation"); hint: @tr("Les créations MasterPaint peuvent être copiées et adaptées sous un autre nom, avec les crédits et liens conservés. Utilisation non commerciale uniquement. Les icônes personnalisées de polocrafting sont réservées à MasterPaint ; les exports PNG servent à les utiliser dans ce logiciel."); }
                             Text { width: tw; text: @tr("Ne pas supprimer ni masquer les mentions et liens cliquables, dont polocrafting.fr et le dépôt MasterPaint. Pas de vente, d’accès payant ou de redistribution du projet tel quel contre de l’argent, y compris par intermédiaire ou contournement. Ces conditions concernent les créations propres à MasterPaint ; les projets tiers gardent leurs licences et crédits distincts."); wrap: word-wrap; color: Theme.text; }
                             SetHead { text-w: tw; title: @tr("Autres ressources"); hint: @tr("Font Awesome Free (icônes CC BY 4.0, polices SIL OFL 1.1), Selawik, Rust, Slint et les bibliothèques utilisées par MasterPaint. Les droits et licences de chaque auteur sont conservés. Photoshop et Illustrator sont des références d'interface, sans affiliation à Adobe."); }
@@ -7770,6 +8056,29 @@ export component AppWindow inherits Window {
                                         }
                                     }
                                     W10Button { text: @tr("Essayer la fenêtre de plantage"); tip: @tr("Simple essai : l'application continue."); clicked => { root.quick-action("crash-test"); } }
+                                }
+                            }
+                            SetCard {
+                                text-w: tw; title: @tr("Intégration web");
+                                SetYesNo {
+                                    text-w: cw; title: @tr("Essayer l'entête transparente");
+                                    hint: @tr("Mode d'intégration dans une page web : menus et onglets sans fond, style Windows 7 imposé. Une page parente le demande avec ?mp-transparent=1. Au redémarrage.");
+                                    value <=> root.set-header-transparent;
+                                    changed => { root.settings-changed(); }
+                                }
+                                SetYesNo {
+                                    text-w: cw; title: @tr("Entête au style du thème");
+                                    hint: @tr("Avec l'entête transparente : le style choisi est gardé (XP, 7, 10/11) et le haut est dessiné comme sa barre de titre — opaque en XP, vitre translucide en 7, translucide en 10/11. Le style au redémarrage.");
+                                    value <=> root.set-header-themed;
+                                    changed => { root.apply-theme(Theme.dark, Theme.accent-base); root.settings-changed(); }
+                                }
+                                if root.header-clear-parent: Text {
+                                    width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
+                                    text: @tr("Mode demandé par la page qui intègre MasterPaint.");
+                                }
+                                if !root.header-clear-parent && root.set-header-transparent != root.header-clear: W10Button {
+                                    text: @tr("Redémarrer pour appliquer");
+                                    clicked => { root.quick-action("restart-app"); }
                                 }
                             }
                             SetCard {
@@ -8249,25 +8558,38 @@ export component AppWindow inherits Window {
                             Text { text: @tr("Type de projet"); font-weight: 700; color: Theme.text; }
                             // une ligne au style de « Espace de couleur », avec une icône par type
                             Rectangle {
+                                property <bool> skinned: Theme.b-classic || Theme.b-98;
                                 height: 30px;
-                                border-radius: Theme.ctl-radius + 2px;
-                                background: Theme.track-bg;
-                                border-width: 1px;
+                                // 7 / XP / 98 : boutons accolés, comme « Espace de couleur »
+                                border-radius: self.skinned ? 0px : Theme.ctl-radius + 2px;
+                                background: self.skinned ? transparent : Theme.track-bg;
+                                border-width: self.skinned ? 0px : 1px;
                                 border-color: Theme.button-border;
                                 HorizontalLayout {
-                                    padding: 2px;
-                                    spacing: 2px;
+                                    padding: parent.skinned ? 0px : 2px;
+                                    spacing: Theme.b-98 ? 0px : 2px;
                                     for k[i] in [
                                         { g: "\u{f03e}", t: @tr("Pixel") },
                                         { g: "\u{f5ee}", t: @tr("SVG") },
                                         { g: "\u{f008}", t: @tr("Anim.") },
                                         { g: "\u{f008}", t: @tr("Anim. SVG") },
                                     ]: Rectangle {
+                                        property <bool> on: root.new-kind == i;
+                                        property <bool> skinned: Theme.b-classic || Theme.b-98;
                                         horizontal-stretch: 1;
                                         border-radius: Theme.ctl-radius;
-                                        background: root.new-kind == i ? Theme.field-bg : (Theme.hover-fx && kta.has-hover) ? Theme.accent-12 : transparent;
-                                        border-width: root.new-kind == i ? 1px : 0px;
+                                        background: Theme.b-98 ? (self.on ? Theme.bevel-hi.mix(Theme.window-bg, 0.5) : Theme.button-bg) : Theme.b-classic ? transparent
+                                            : self.on ? Theme.field-bg : (Theme.hover-fx && kta.has-hover) ? Theme.accent-12 : transparent;
+                                        border-width: !self.skinned && self.on ? 1px : 0px;
                                         border-color: Theme.button-border;
+                                        if Theme.b-classic: ClassicFace {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            hover: kta.has-hover;
+                                            pressed: parent.on;
+                                            soft: Theme.b-w7 && parent.on;
+                                        }
+                                        if Theme.b-98: Bevel { sunken: parent.on; }
                                         HorizontalLayout {
                                             alignment: center;
                                             spacing: 5px;
@@ -8275,17 +8597,17 @@ export component AppWindow inherits Window {
                                                 y: (parent.height - self.height) / 2;
                                                 glyph: k.g;
                                                 size: 11px;
-                                                tint: root.new-kind == i ? Theme.accent : Theme.text;
+                                                tint: root.new-kind == i && !(Theme.b-classic || Theme.b-98) ? Theme.accent : Theme.button-fg;
                                             }
                                             Text {
                                                 text: k.t;
                                                 font-weight: root.new-kind == i ? 700 : 400;
-                                                color: root.new-kind == i ? Theme.accent : Theme.text;
+                                                color: root.new-kind == i && !(Theme.b-classic || Theme.b-98) ? Theme.accent : Theme.button-fg;
                                                 vertical-alignment: center;
                                             }
                                         }
                                         Rectangle {
-                                            visible: root.new-kind == i;
+                                            visible: root.new-kind == i && !parent.skinned;
                                             x: (parent.width - self.width) / 2;
                                             y: parent.height - 3px;
                                             width: min(18px, parent.width - 8px);
@@ -8318,13 +8640,11 @@ export component AppWindow inherits Window {
                             Text { text: @tr("Fond"); font-weight: 700; color: Theme.text; }
                             HorizontalLayout {
                                 spacing: 6px;
-                                for b[i] in [@tr("Blanc"), @tr("Transparent"), @tr("Secondaire")]: Rectangle {
+                                for b[i] in [@tr("Blanc"), @tr("Transparent"), @tr("Secondaire")]: ChoiceTile {
                                     horizontal-stretch: 1;
                                     height: 30px;
-                                    border-radius: Theme.ctl-radius;
-                                    background: root.dlg-bg == i ? Theme.accent-14 : (Theme.hover-fx && bga.has-hover) ? Theme.accent-12 : Theme.field-bg;
-                                    border-width: root.dlg-bg == i ? 2px : 1px;
-                                    border-color: root.dlg-bg == i ? Theme.accent : Theme.window-border;
+                                    selected: root.dlg-bg == i;
+                                    clicked => { root.dlg-bg = i; }
                                     HorizontalLayout {
                                         alignment: center;
                                         spacing: 6px;
@@ -8343,12 +8663,9 @@ export component AppWindow inherits Window {
                                         Text {
                                             text: b;
                                             font-size: Theme.small-font-size;
-                                            color: Theme.text;
+                                            color: Theme.button-fg;
                                             vertical-alignment: center;
                                         }
-                                    }
-                                    bga := TouchArea {
-                                        clicked => { root.dlg-bg = i; }
                                     }
                                 }
                             }
@@ -8389,17 +8706,20 @@ export component AppWindow inherits Window {
                             GridLayout {
                                 spacing: 4px;
                                 for p[i] in [{ n: "1080p", w: "1920", h: "1080" }, { n: "720p", w: "1280", h: "720" }, { n: "1:1", w: "1024", h: "1024" },
-                                          { n: "4/3", w: "1024", h: "768" }, { n: "A4", w: "2480", h: "3508" }, { n: @tr("Letter"), w: "2550", h: "3300" }]: Rectangle {
+                                          { n: "4/3", w: "1024", h: "768" }, { n: "A4", w: "2480", h: "3508" }, { n: @tr("Letter"), w: "2550", h: "3300" }]: ChoiceTile {
                                     property <bool> on: root.dlg-w == p.w && root.dlg-h == p.h;
                                     property <float> r: p.w.to-float() / p.h.to-float();
                                     row: floor(i / 3);
                                     col: mod(i, 3);
                                     min-width: 72px;
                                     height: 40px;
-                                    border-radius: Theme.ctl-radius;
-                                    background: self.on ? Theme.accent-14 : (Theme.hover-fx && npta.has-hover) ? Theme.accent-12 : Theme.field-bg;
-                                    border-width: self.on ? 2px : 1px;
-                                    border-color: self.on ? Theme.accent : (Theme.hover-fx && npta.has-hover) ? Theme.accent-60 : Theme.window-border;
+                                    selected: self.on;
+                                    clicked => {
+                                        root.dlg-w = p.w;
+                                        root.dlg-h = p.h;
+                                        // préréglage : ses proportions deviennent celles à garder
+                                        root.new-ratio = p.w.to-float() / p.h.to-float();
+                                    }
                                     // vignette aux proportions du format
                                     Rectangle {
                                         x: 8px + (18px - self.width) / 2;
@@ -8408,18 +8728,10 @@ export component AppWindow inherits Window {
                                         height: parent.r >= 1 ? 18px / parent.r : 18px;
                                         border-width: 1.5px;
                                         border-radius: 2px;
-                                        border-color: parent.on ? Theme.accent : Theme.text-inactive;
+                                        border-color: parent.on && !parent.skinned ? Theme.accent : Theme.button-fg.with-alpha(0.7);
                                     }
-                                    Text { x: 32px; y: 5px; text: p.n; font-weight: 600; color: Theme.text; }
-                                    Text { x: 32px; y: 21px; text: p.w + "×" + p.h; font-size: 9px; color: Theme.text-inactive; }
-                                    npta := TouchArea {
-                                        clicked => {
-                                            root.dlg-w = p.w;
-                                            root.dlg-h = p.h;
-                                            // préréglage : ses proportions deviennent celles à garder
-                                            root.new-ratio = p.w.to-float() / p.h.to-float();
-                                        }
-                                    }
+                                    Text { x: 32px; y: 5px; text: p.n; font-weight: 600; color: Theme.button-fg; }
+                                    Text { x: 32px; y: 21px; text: p.w + "×" + p.h; font-size: 9px; color: Theme.button-fg.with-alpha(0.7); }
                                 }
                             }
                             HorizontalLayout {
@@ -8627,26 +8939,22 @@ export component AppWindow inherits Window {
                         }
                         GridLayout {
                             spacing: 3px;
-                            for a in 9: Rectangle {
+                            for a in 9: ChoiceTile {
                                 col: mod(a, 3);
                                 row: floor(a / 3);
                                 width: 28px;
                                 height: 28px;
-                                border-radius: Theme.ctl-radius;
-                                background: root.rs-anchor == a ? Theme.accent : (Theme.hover-fx && anta.has-hover) ? Theme.accent-12 : Theme.button-bg;
-                                border-width: 1px;
-                                border-color: root.rs-anchor == a ? Theme.accent : Theme.button-border;
+                                idle-bg: Theme.button-bg;
+                                idle-border: Theme.button-border;
+                                strong: true;
+                                selected: root.rs-anchor == a;
+                                clicked => { root.rs-anchor = a; }
                                 FaIcon {
                                     glyph: root.rs-anchor == a ? "\u{f03e}" : "";
                                     size: 11px;
-                                    color: Theme.on-accent;
+                                    color: parent.skinned ? Theme.button-fg : Theme.on-accent;
                                 }
-                                HoverTip { y: parent.height; hovered: anta.has-hover; text: @tr("Ancrage : l'image reste collée de ce côté quand la toile change de taille"); }
-                                anta := TouchArea {
-                                    clicked => {
-                                        root.rs-anchor = a;
-                                    }
-                                }
+                                HoverTip { y: parent.height; hovered: parent.hovered; text: @tr("Ancrage : l'image reste collée de ce côté quand la toile change de taille"); }
                             }
                         }
                     }
@@ -8780,8 +9088,9 @@ export component AppWindow inherits Window {
                         for c[i] in root.task-commands: Rectangle {
                             border-radius: Theme.ctl-radius;
                             border-width: (Theme.hover-fx && cmd-ta.has-hover) ? 1px : 0px;
-                            border-color: Theme.accent-60;
-                            background: cmd-ta.pressed ? Theme.accent-20 : (Theme.hover-fx && cmd-ta.has-hover) ? Theme.accent-12 : transparent;
+                            border-color: Theme.win7 ? Theme.menu-hl-border : Theme.accent-60;
+                            background: Theme.win7 ? ((Theme.hover-fx && cmd-ta.has-hover) || cmd-ta.pressed ? Theme.menu-hl : transparent)
+                                : cmd-ta.pressed ? Theme.accent-20 : (Theme.hover-fx && cmd-ta.has-hover) ? Theme.accent-12 : transparent;
                             HorizontalLayout {
                                 padding: 7px;
                                 padding-left: 6px;
@@ -8865,13 +9174,15 @@ export component AppWindow inherits Window {
                             { n: "1:1", w: 18, h: 18 },
                             { n: "4:3", w: 22, h: 16 },
                             { n: @tr("Libre"), w: 0, h: 0 },
-                        ]: Rectangle {
+                        ]: ChoiceTile {
                             horizontal-stretch: 1;
                             height: 46px;
-                            border-radius: Theme.ctl-radius;
-                            background: root.crop-ratio == i || (i == 4 && root.crop-ratio < 0) ? Theme.accent-14 : (Theme.hover-fx && qta.has-hover) ? Theme.accent-12 : Theme.button-bg;
-                            border-width: 1px;
-                            border-color: root.crop-ratio == i || (i == 4 && root.crop-ratio < 0) ? Theme.accent : Theme.button-border;
+                            idle-bg: Theme.button-bg;
+                            selected: root.crop-ratio == i || (i == 4 && root.crop-ratio < 0);
+                            clicked => {
+                                root.crop-ratio = i == 4 ? -1 : i;
+                                root.crop-action("" + i);
+                            }
                             Rectangle {
                                 y: 6px;
                                 width: q.w > 0 ? q.w * 1px : 20px;
@@ -8885,13 +9196,7 @@ export component AppWindow inherits Window {
                                 y: parent.height - 16px;
                                 text: q.n;
                                 font-size: Theme.small-font-size;
-                                color: Theme.text;
-                            }
-                            qta := TouchArea {
-                                clicked => {
-                                    root.crop-ratio = i == 4 ? -1 : i;
-                                    root.crop-action("" + i);
-                                }
+                                color: Theme.button-fg;
                             }
                         }
                     }
@@ -9129,25 +9434,23 @@ export component AppWindow inherits Window {
                              { id: "sheet", g: "\u{f00a}", t: @tr("Planche"), h: @tr("Sprites en grille (.png)") }],
                         ]: HorizontalLayout {
                             spacing: 6px;
-                            for f in row: Rectangle {
+                            for f in row: ChoiceTile {
                                 property <bool> origin: f.id == root.ex-anim-origin;
                                 horizontal-stretch: 1;
                                 height: 58px;
-                                border-radius: Theme.ctl-radius + 2px * Theme.round;
-                                background: exa.pressed ? Theme.accent-20 : (Theme.hover-fx && exa.has-hover) || self.origin ? Theme.accent-12 : Theme.button-bg;
-                                border-width: self.origin ? 2px : 1px;
-                                border-color: self.origin || (Theme.hover-fx && exa.has-hover) ? Theme.accent : Theme.button-border;
+                                tile-radius: Theme.ctl-radius + 2px * Theme.round;
+                                idle-bg: Theme.button-bg;
+                                idle-border: Theme.button-border;
+                                selected: self.origin;
+                                clicked => { root.export-run("anim:" + f.id, root.ex-name, 90, "8", false); }
                                 GlyphIcon { x: 8px; y: 8px; width: 16px; height: 16px; glyph: f.g; size: 13px; tint: Theme.accent; }
                                 Text { x: 28px; y: 7px; width: parent.width - 32px; text: f.t; font-weight: 600; color: Theme.text; overflow: elide; }
                                 Text {
                                     x: 8px; y: 28px; width: parent.width - 12px;
                                     text: parent.origin ? @tr("Format d'origine") : f.h;
                                     font-size: Theme.small-font-size;
-                                    color: parent.origin ? Theme.accent : Theme.text-inactive;
+                                    color: parent.origin && !parent.skinned ? Theme.accent : Theme.text-inactive;
                                     wrap: word-wrap;
-                                }
-                                exa := TouchArea {
-                                    clicked => { root.export-run("anim:" + f.id, root.ex-name, 90, "8", false); }
                                 }
                             }
                         }
@@ -9162,13 +9465,13 @@ export component AppWindow inherits Window {
                         for q[i] in [
                             { g: "\u{f03e}", t: @tr("Image PNG"), h: @tr("Photo, réseaux, impression") },
                             { g: "\u{f0c7}", t: @tr("Projet .illu"), h: @tr("Reprendre dans MasterPaint") },
-                        ]: Rectangle {
+                        ]: ChoiceTile {
                             horizontal-stretch: 1;
                             height: 70px;
-                            border-radius: Theme.ctl-radius + 2px * Theme.round;
-                            background: exq.pressed ? Theme.accent-20 : (Theme.hover-fx && exq.has-hover) ? Theme.accent-12 : Theme.button-bg;
-                            border-width: 1px;
-                            border-color: (Theme.hover-fx && exq.has-hover) ? Theme.accent : Theme.button-border;
+                            tile-radius: Theme.ctl-radius + 2px * Theme.round;
+                            idle-bg: Theme.button-bg;
+                            idle-border: Theme.button-border;
+                            clicked => { root.export-run(i == 0 ? "png" : "illu", root.ex-name, 90, "8", false); }
                             GlyphIcon {
                                 y: 9px;
                                 height: 22px;
@@ -9188,11 +9491,6 @@ export component AppWindow inherits Window {
                                 text: q.h;
                                 font-size: Theme.small-font-size;
                                 color: Theme.text-inactive;
-                            }
-                            exq := TouchArea {
-                                clicked => {
-                                    root.export-run(i == 0 ? "png" : "illu", root.ex-name, 90, "8", false);
-                                }
                             }
                         }
                     }
@@ -9446,26 +9744,14 @@ export component AppWindow inherits Window {
                 close => {
                     root.show-live = false;
                 }
-                Flickable {
+                // toute l'image, ajustée à la fenêtre sans déformation (ni défilement, ni pied) :
+                // agrandir ou réduire la fenêtre suffit
+                Image {
                     width: parent.width;
-                    height: parent.content-height - 44px;
-                    content-width: root.live-image.width * 1px;
-                    content-height: root.live-image.height * 1px;
-                    Image {
-                        source: root.live-image;
-                        image-rendering: pixelated;
-                    }
-                }
-                DialogFooter {
-                    y: parent.content-height - 44px;
-                    W10Button {
-                        text: @tr("Fermer");
-                        primary: true;
-                        clicked => {
-                            root.show-live = false;
-                            fs.focus();
-                        }
-                    }
+                    height: parent.content-height;
+                    source: root.live-image;
+                    image-fit: contain;
+                    image-rendering: smooth;
                 }
             }
 
@@ -9473,6 +9759,264 @@ export component AppWindow inherits Window {
             // Visionneuse d'icônes (comme la version HTML) : icônes MasterPaint ou glyphes encore
             // non personnalisés, recherche, aperçu sombre ; clic = détail (agrandir, copier le
             // nom, ouvrir l'icône en projet SVG)
+            // ---- Personnalisation avancée : fenêtre à part, ouverte depuis les Paramètres ----
+            if root.show-adv-style: FloatWindow {
+                resizable: true;
+                min-window-width: 380px;
+                float-w: min(520px, ws.width - 12px);
+                float-h: min(640px, root.usable-height - ws.y - 12px);
+                float-x: max(6px, ws.width - self.float-w - 24px);
+                float-y: 24px;
+                docked: root.phone;
+                dock-x: 0px;
+                dock-y: 0px;
+                dock-w: ws.width;
+                dock-h: ws.height - root.strip-height - 6px;
+                z: self.rank;
+                title: @tr("Personnalisation avancée");
+                bounds-width: ws.width;
+                bounds-height: root.usable-height - ws.y;
+                min-y: 0px - ws.y;
+                close => { root.show-adv-style = false; }
+                property <length> lw: 150px;
+                ScrollView {
+                    width: parent.width;
+                    height: parent.content-height - 44px;
+                    content-width: self.width;
+                    content-height: adv.preferred-height + 16px;
+                    horizontal-scrollbar-policy: always-off;
+                    adv := VerticalLayout {
+                        width: parent.width;
+                        padding: 14px;
+                        padding-right: 20px;
+                        spacing: 14px;
+                        alignment: start;
+                        property <length> cw: max(200px, self.width - 64px);
+                        property <length> tw: self.width - 34px;
+                        // -- dessin de chaque élément --
+                        SetCard {
+                            text-w: tw; title: @tr("Éléments");
+                            Text {
+                                width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
+                                text: @tr("Chaque élément peut prendre le dessin d'un autre style : boutons XP sur verre Aero, cadre Windows 98 avec boutons Photoshop…");
+                            }
+                            for row[ri] in [
+                                { t: @tr("Boutons"), v: root.set-btn-skin },
+                                { t: @tr("Cadre des fenêtres"), v: root.set-frame-skin },
+                                { t: @tr("Bouton Fermer"), v: root.set-close-skin },
+                            ]: HorizontalLayout {
+                                width: cw; spacing: 10px; height: 26px;
+                                Text { width: lw; text: row.t; font-weight: 600; color: Theme.text; vertical-alignment: center; }
+                                W10ComboBox {
+                                    horizontal-stretch: 1;
+                                    model: ri == 0 ? [@tr("Comme le style choisi"), @tr("Windows 10/11 (moderne)"), @tr("Windows 98"), @tr("Windows 7"), @tr("Windows XP"), @tr("Plat"), @tr("Photoshop (pilules)")]
+                                        : [@tr("Comme le style choisi"), @tr("Windows 10/11 (moderne)"), @tr("Windows 98"), @tr("Windows 7"), @tr("Windows XP"), @tr("Plat")];
+                                    current-index: row.v + 1;
+                                    selected(i) => {
+                                        if ri == 0 { root.set-btn-skin = i - 1; }
+                                        else if ri == 1 { root.set-frame-skin = i - 1; }
+                                        else { root.set-close-skin = i - 1; }
+                                        root.apply-theme(Theme.dark, Theme.accent-base);
+                                    }
+                                }
+                            }
+                            HorizontalLayout {
+                                width: cw; spacing: 10px;
+                                Text { width: lw; text: @tr("Titre des fenêtres"); font-weight: 600; color: Theme.text; vertical-alignment: center; }
+                                Segmented {
+                                    horizontal-stretch: 1;
+                                    options: [@tr("À gauche"), @tr("Centré")];
+                                    index: root.set-title-center ? 1 : 0;
+                                    selected(i) => { root.set-title-center = i == 1; root.apply-theme(Theme.dark, Theme.accent-base); }
+                                }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Relief 3D (Aero)");
+                                hint: @tr("Reflets vitrés, dégradés des boutons, des barres de titre et des boutons Fermer. Non : mêmes couleurs, en aplats.");
+                                value <=> root.set-gloss;
+                                changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Coins arrondis");
+                                value <=> root.set-rounded;
+                                changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Contraste renforcé");
+                                hint: @tr("Textes plus foncés et un peu plus grands, contours marqués.");
+                                value <=> root.set-high-contrast;
+                                changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                            }
+                        }
+                        // -- verre (Aero) et barres translucides (10/11) --
+                        SetCard {
+                            text-w: tw; title: @tr("Verre et transparence");
+                            SetYesNo {
+                                text-w: cw; title: @tr("Fenêtres transparentes");
+                                hint: @tr("Verre Aero (cadre Windows 7) ou barres de titre translucides (Windows 10/11).");
+                                value <=> root.set-title-transparent;
+                                changed => {
+                                    if !root.set-title-transparent { root.set-aero-blur = false; }
+                                    root.apply-theme(Theme.dark, Theme.accent-base);
+                                }
+                            }
+                            for g[gi] in [
+                                { t: @tr("Opacité du verre Aero"), v: root.set-glass-opacity, lo: 0, hi: 100, u: " %" },
+                                { t: @tr("Opacité des barres 10/11"), v: root.set-title-opacity, lo: 0, hi: 100, u: " %" },
+                                { t: @tr("Luminosité du verre"), v: root.set-glass-bright, lo: -50, hi: 50, u: "" },
+                                { t: @tr("Quantité de flou"), v: root.set-glass-blur, lo: 0, hi: 100, u: " %" },
+                            ]: HorizontalLayout {
+                                width: cw; spacing: 10px;
+                                Text { width: lw; text: g.t + " · " + round(g.v) + g.u; font-weight: 600; color: Theme.text; vertical-alignment: center; wrap: word-wrap; }
+                                GaugeBar {
+                                    horizontal-stretch: 1;
+                                    minimum: g.lo; maximum: g.hi; step: 5;
+                                    value: g.v;
+                                    changed(v) => {
+                                        if gi == 0 { root.set-glass-opacity = v; }
+                                        else if gi == 1 { root.set-title-opacity = v; }
+                                        else if gi == 2 { root.set-glass-bright = v; }
+                                        else { root.set-glass-blur = v; }
+                                        root.apply-theme(Theme.dark, Theme.accent-base);
+                                    }
+                                }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Flou derrière le verre");
+                                hint: @tr("La toile se voit floutée à travers le verre Aero et les barres translucides. Calculé une fois par changement de la toile : léger.");
+                                value <=> root.set-aero-blur;
+                                changed => {
+                                    // le flou se voit à travers le verre : il l'allume
+                                    if root.set-aero-blur { root.set-title-transparent = true; }
+                                    root.apply-theme(Theme.dark, Theme.accent-base);
+                                }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Couleurs de Windows Vista");
+                                hint: @tr("Verre plus fumé, volet des Paramètres bleu-vert (style Windows 7).");
+                                value <=> root.set-w7-vista;
+                                changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                            }
+                        }
+                        // -- couleurs : valent pour tous les styles --
+                        SetCard {
+                            text-w: tw; title: @tr("Couleurs");
+                            for it[i] in [
+                                { t: @tr("Fenêtres (verre Aero)"), c: Theme.w7-glass-base, v: root.set-w7-glass, n: 0, acc: false },
+                                { t: @tr("Ruban"), c: Theme.w7-ribbon, v: root.set-w7-ribbon, n: 2, acc: false },
+                                { t: @tr("Surbrillance des boutons du ruban"), c: Theme.w7-hl, v: root.set-w7-highlight, n: 1, acc: true },
+                                { t: @tr("Surbrillance des boutons"), c: Theme.btn-hl, v: root.set-btn-highlight, n: 3, acc: true },
+                            ]: VerticalLayout {
+                                spacing: 4px;
+                                HorizontalLayout {
+                                    spacing: 8px; height: 24px; alignment: start;
+                                    sw := Rectangle {
+                                        width: 36px;
+                                        border-radius: Theme.ctl-radius;
+                                        border-width: 1px;
+                                        border-color: Theme.field-border;
+                                        background: it.c;
+                                        TouchArea { mouse-cursor: pointer; clicked => { ColorPop.show("w7:" + it.n, it.c, sw.absolute-position.x, sw.absolute-position.y, sw.height); } }
+                                    }
+                                    Text { text: it.t; font-weight: 600; color: Theme.text; vertical-alignment: center; }
+                                }
+                                Segmented {
+                                    width: cw;
+                                    options: it.acc ? [@tr("Du style"), @tr("Accentuation"), @tr("Personnalisée")] : [@tr("Automatique"), @tr("Personnalisée")];
+                                    index: it.v == "" ? 0 : it.v == "accent" ? 1 : (it.acc ? 2 : 1);
+                                    selected(k) => {
+                                        if k == 0 { root.w7-color-set(it.n, ""); }
+                                        else if it.acc && k == 1 { root.w7-color-set(it.n, "accent"); }
+                                        else { ColorPop.show("w7:" + it.n, it.c, sw.absolute-position.x, sw.absolute-position.y, sw.height); }
+                                    }
+                                }
+                            }
+                            Text {
+                                width: cw; wrap: word-wrap; color: Theme.text-inactive; font-size: Theme.small-font-size;
+                                text: @tr("Du style : doré (7), orangé (XP), accentuation (10/11). Le verre ne se voit qu'avec le cadre Windows 7.");
+                            }
+                            if root.set-theme-style == 3 || root.set-frame-skin == 3: VerticalLayout {
+                                spacing: 6px;
+                                Text { text: @tr("Jeu de couleurs Windows XP"); font-weight: 600; color: Theme.text; }
+                                Segmented {
+                                    width: cw;
+                                    options: [@tr("Bleu"), @tr("Olive"), @tr("Argent"), @tr("Accentuation")];
+                                    index <=> root.set-xp-scheme;
+                                    selected(i) => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                                }
+                                // jeu « Accentuation » : titres, cadre et barres tirés de la couleur choisie
+                                if root.set-xp-scheme == 3: Rectangle {
+                                    property <int> cols: max(1, floor((cw + 6px) / 30px));
+                                    width: cw;
+                                    height: ceil(Theme.accent-options.length / self.cols) * 30px - 6px;
+                                    for a[i] in Theme.accent-options: Rectangle {
+                                        x: mod(i, parent.cols) * 30px;
+                                        y: floor(i / parent.cols) * 30px;
+                                        width: 24px; height: 24px;
+                                        border-radius: Theme.ctl-radius;
+                                        background: a;
+                                        border-width: Theme.accent-base == a ? 3px : 1px;
+                                        border-color: Theme.accent-base == a ? Theme.text : #808080;
+                                        TouchArea { clicked => { root.apply-theme(Theme.dark, a); } }
+                                    }
+                                }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Couleur d'accentuation sur les barres de titre");
+                                hint: @tr("Cadre Windows 10/11 : la fenêtre active prend la couleur d'accentuation, saturée.");
+                                value <=> root.set-title-accent;
+                                changed => { root.apply-theme(Theme.dark, Theme.accent-base); }
+                            }
+                            SetYesNo {
+                                text-w: cw; title: @tr("Utiliser une couleur différente pour les icônes");
+                                value: root.set-icon-color != "";
+                                changed(v) => { if v { root.w7-color-pick(4, Theme.accent-base); } else { root.w7-color-set(4, ""); } }
+                            }
+                            if root.set-icon-color != "": Rectangle {
+                                property <int> cols: max(1, floor((cw + 6px) / 30px));
+                                width: cw;
+                                height: ceil(Theme.accent-options.length / self.cols) * 30px - 6px;
+                                for a[i] in Theme.accent-options: Rectangle {
+                                    x: mod(i, parent.cols) * 30px;
+                                    y: floor(i / parent.cols) * 30px;
+                                    width: 24px; height: 24px;
+                                    border-radius: 12px * Theme.round;
+                                    background: a;
+                                    border-width: Theme.icon-base == a ? 3px : 1px;
+                                    border-color: Theme.icon-base == a ? Theme.text : #808080;
+                                    TouchArea { clicked => { root.w7-color-pick(4, a); } }
+                                }
+                            }
+                        }
+                    }
+                }
+                // pied : tout remettre comme le style, fermer
+                HorizontalLayout {
+                    y: parent.content-height - 44px;
+                    height: 44px;
+                    padding: 10px;
+                    spacing: 8px;
+                    alignment: end;
+                    W10Button {
+                        text: @tr("Tout remettre comme le style");
+                        tip: @tr("Éléments, verre, flou et couleurs reviennent à ceux du style choisi");
+                        clicked => {
+                            root.set-btn-skin = -1; root.set-frame-skin = -1; root.set-close-skin = -1;
+                            root.set-title-center = false; root.set-gloss = true; root.set-glass-opacity = 60;
+                            root.set-title-opacity = 96; root.set-glass-blur = 50; root.set-glass-bright = 0;
+                            root.set-title-accent = false; root.set-xp-scheme = 0; root.set-high-contrast = false;
+                            root.w7-color-set(0, ""); root.w7-color-set(1, ""); root.w7-color-set(2, "");
+                            root.w7-color-set(3, ""); root.w7-color-set(4, "");
+                            root.apply-theme(Theme.dark, Theme.accent-base);
+                        }
+                    }
+                    W10Button {
+                        text: @tr("Fermer");
+                        primary: true;
+                        clicked => { root.show-adv-style = false; root.settings-changed(); }
+                    }
+                }
+            }
             if root.show-icons: FloatWindow {
                 resizable: true;
                 resizable-w: true;
@@ -10143,16 +10687,15 @@ export component AppWindow inherits Window {
                             { id: "rot-180", g: "\u{f2f1}", img: root.no-image, t: @tr("Demi-tour (180°)"), whole: false },
                             { id: "flip-h", g: "", img: Sprite.img-flip-h, t: @tr("Miroir horizontal"), whole: false },
                             { id: "flip-v", g: "", img: Sprite.img-flip-v, t: @tr("Miroir vertical"), whole: false },
-                        ]: Rectangle {
+                        ]: ChoiceTile {
                             property <bool> off: r.whole && root.rotate-layer;
                             col: mod(i, 3);
                             row: floor(i / 3);
                             height: 64px;
-                            border-radius: Theme.ctl-radius;
-                            background: off ? transparent : rot-ta.pressed ? Theme.accent-20 : (Theme.hover-fx && rot-ta.has-hover) ? Theme.accent-12 : Theme.button-bg;
-                            border-width: 1px;
-                            border-color: (Theme.hover-fx && rot-ta.has-hover) && !off ? Theme.accent : Theme.button-border;
-                            opacity: off ? 0.4 : 1;
+                            idle-bg: Theme.button-bg;
+                            idle-border: Theme.button-border;
+                            enabled: !self.off;
+                            clicked => { Actions.ribbon(r.id); }
                             if r.g != "": GlyphIcon {
                                 y: 10px;
                                 height: 24px;
@@ -10171,14 +10714,8 @@ export component AppWindow inherits Window {
                                 height: 16px;
                                 text: r.t;
                                 font-size: Theme.small-font-size;
-                                color: Theme.text;
+                                color: Theme.button-fg;
                                 horizontal-alignment: center;
-                            }
-                            rot-ta := TouchArea {
-                                enabled: !off;
-                                clicked => {
-                                    Actions.ribbon(r.id);
-                                }
                             }
                         }
                     }
@@ -10553,12 +11090,13 @@ export component AppWindow inherits Window {
                         { id: "macos-dmg", g: "\u{f179}", t: @tr("macOS — .dmg"), ok: false },
                         { id: "android", g: "\u{f17b}", t: @tr("Android — .apk"), ok: true },
                         { id: "ios", g: "\u{f179}", t: @tr("iOS / iPadOS"), ok: false },
-                    ]: Rectangle {
+                    ]: ChoiceTile {
                         height: 30px;
-                        opacity: d.ok ? 1 : 0.55;
-                        background: d.ok && (Theme.hover-fx && dlta.has-hover) ? Theme.accent-14 : Theme.button-bg;
-                        border-width: 1px;
-                        border-color: d.ok && (Theme.hover-fx && dlta.has-hover) ? Theme.accent : Theme.button-border;
+                        tile-radius: 0px;
+                        idle-bg: Theme.button-bg;
+                        idle-border: Theme.button-border;
+                        enabled: d.ok;
+                        clicked => { root.download(d.id); }
                         // pas encore compilée pour cette plateforme
                         if !d.ok: Text {
                             x: parent.width - 86px;
@@ -10584,14 +11122,8 @@ export component AppWindow inherits Window {
                             x: 36px;
                             height: parent.height;
                             text: d.t;
-                            color: Theme.text;
+                            color: Theme.button-fg;
                             vertical-alignment: center;
-                        }
-                        dlta := TouchArea {
-                            enabled: d.ok;
-                            clicked => {
-                                root.download(d.id);
-                            }
                         }
                     }
                 }
@@ -10632,12 +11164,83 @@ export component AppWindow inherits Window {
             width: self.pw;
             height: self.ph;
             border-radius: Theme.window-radius;
-            background: Theme.window-bg;
-            border-width: 1px;
+            // Windows 7 / XP : même cadre que les fenêtres flottantes (verre Aero ou liserés Luna),
+            // dessiné autour du contenu, qui garde sa taille
+            property <length> fm: Theme.win7 ? 7px : Theme.xp ? 3px : 0px;
+            background: Theme.classic ? transparent : Theme.window-bg;
+            border-width: Theme.classic ? 0px : 1px;
             border-color: Theme.window-border;
             drop-shadow-blur: 14px;
             drop-shadow-offset-y: 4px;
-            drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
+            drop-shadow-color: Theme.shadows && !Theme.classic ? (Theme.window-shadow) : transparent;
+            if Theme.classic: Rectangle {
+                x: 0px - cpop.fm;
+                y: 0;
+                width: parent.width + 2 * cpop.fm;
+                height: parent.height + cpop.fm;
+                border-top-left-radius: Theme.win7 ? 6px : 8px;
+                border-top-right-radius: Theme.win7 ? 6px : 8px;
+                border-bottom-left-radius: Theme.win7 ? 6px : 0px;
+                border-bottom-right-radius: Theme.win7 ? 6px : 0px;
+                clip: true;
+                background: Theme.xp ? Theme.xp-t1 : Theme.aero && !Theme.aero-blur ? Theme.w7-glass.with-alpha(Theme.w7-glass-opacity) : Theme.aero ? transparent : Theme.w7-glass;
+                drop-shadow-blur: Theme.shadows && Theme.win7 ? 14px : 0px;
+                drop-shadow-offset-y: 2px;
+                drop-shadow-color: Theme.shadows && Theme.win7 ? (Theme.gloss ? #00000059 : #00000030) : transparent;
+                // flou derrière le verre (comme les fenêtres flottantes), teinte du verre par-dessus
+                if Theme.aero && Theme.aero-blur: Rectangle {
+                    background: Backdrop.base.with-alpha(0.8);
+                }
+                if Theme.aero && Theme.aero-blur && Backdrop.image.width > 0: Image {
+                    x: Backdrop.x - parent.absolute-position.x;
+                    y: Backdrop.y - parent.absolute-position.y;
+                    width: Backdrop.width;
+                    height: Backdrop.height;
+                    source: Backdrop.image;
+                    image-fit: fill;
+                    image-rendering: smooth;
+                }
+                if Theme.aero && Theme.aero-blur: Rectangle {
+                    background: Theme.w7-glass.with-alpha(Theme.w7-glass-opacity);
+                }
+                if Theme.win7: Rectangle {
+                    y: 0;
+                    height: min(parent.height, Theme.title-height * 3);
+                    background: @linear-gradient(180deg, #ffffff99 0%, #ffffff4d 22%, #ffffff1f 55%, #ffffff00 100%);
+                    opacity: Theme.w7-sheen;
+                }
+                if Theme.xp: Rectangle {
+                    y: 0;
+                    height: Theme.title-height;
+                    background: !Theme.gloss ? Theme.xp-t1 : @linear-gradient(180deg, Theme.xp-t0 0%, Theme.xp-t1 8%, Theme.xp-t1 40%, Theme.xp-t2 88%, Theme.xp-t2 93%, Theme.xp-t3 96%, Theme.xp-t3 100%);
+                }
+                if Theme.win7: Rectangle {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    height: parent.height - 2px;
+                    border-radius: 5px;
+                    border-width: 1px;
+                    border-color: Theme.dark ? #ffffff38 : #ffffffc8;
+                }
+                Rectangle {
+                    border-top-left-radius: Theme.win7 ? 6px : 8px;
+                    border-top-right-radius: Theme.win7 ? 6px : 8px;
+                    border-bottom-left-radius: Theme.win7 ? 6px : 0px;
+                    border-bottom-right-radius: Theme.win7 ? 6px : 0px;
+                    border-width: 1px;
+                    border-color: Theme.xp ? #0831d9 : #25405fd9;
+                }
+            }
+            if Theme.classic: Rectangle {
+                x: -1px;
+                y: Theme.title-height - 1px;
+                width: parent.width + 2px;
+                height: parent.height - Theme.title-height + 2px;
+                background: Theme.window-bg;
+                border-width: 1px;
+                border-color: Theme.xp ? Theme.xp-t1 : #3d5878d9;
+            }
             // le clic dans la fenêtre ne la ferme pas
             TouchArea { }
             Rectangle {
@@ -10645,16 +11248,17 @@ export component AppWindow inherits Window {
                 height: Theme.title-height;
                 border-top-left-radius: Theme.window-radius;
                 border-top-right-radius: Theme.window-radius;
-                background: Theme.window-title-bg;
+                background: Theme.classic ? transparent : Theme.window-title-bg;
                 Text {
-                    x: 10px;
+                    x: Theme.classic ? 2px : 10px;
                     text: @tr("Couleurs");
-                    color: Theme.text;
+                    color: Theme.xp ? #ffffff : Theme.win7 ? (Theme.dark ? #ffffff : #000000) : Theme.text;
+                    font-weight: Theme.xp ? 700 : 400;
                     vertical-alignment: center;
                 }
                 CloseButton {
-                    x: parent.width - self.width - 4px;
-                    y: (parent.height - self.height) / 2;
+                    x: parent.width - self.width - (Theme.classic ? 0px : 4px);
+                    y: Theme.win7 ? 0px : (parent.height - self.height) / 2;
                     clicked => { ColorPop.open = false; }
                 }
             }
@@ -10751,23 +11355,25 @@ export component AppWindow inherits Window {
                 width: 300px;
                 height: ddl.preferred-height;
                 background: Theme.menu-bg;
-                border-radius: 7px * Theme.round;
+                border-radius: Theme.menu-radius;
                 border-width: 1px;
-                border-color: Theme.field-border;
-                drop-shadow-blur: 6px;
-                drop-shadow-offset-y: 2px;
+                border-color: Theme.menu-border;
+                // 7.css : box-shadow 4px 4px 3px -2px #00000080
+                drop-shadow-blur: Theme.win7 ? 3px : 6px;
+                drop-shadow-offset-x: Theme.win7 ? 3px : 0px;
+                drop-shadow-offset-y: Theme.win7 ? 3px : 2px;
                 drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
                 TouchArea { }
-                if !Theme.win98: MenuGutter { height: parent.height - 2 * self.pad; }
+                if !Theme.win98 && !Theme.xp && !Theme.lite: MenuGutter { height: parent.height - 2 * self.pad; }
                 if root.menu-hl-h > 0px: Rectangle {
                     x: Theme.win98 ? 2px : 4px;
                     y: root.menu-hl-y;
                     width: parent.width - 2 * self.x;
                     height: root.menu-hl-h;
-                    border-radius: Theme.ctl-radius;
-                    background: Theme.accent-14;
+                    border-radius: Theme.menu-hl-radius;
+                    background: Theme.menu-hl;
                     border-width: 1px;
-                    border-color: Theme.accent-60;
+                    border-color: Theme.menu-hl-border;
                 }
                 // lignes en texture : le survol ne déplace que le rectangle du dessus (240 tracés
                 // par ligne survolée avant, sur un PC lent le menu suivait mal)
@@ -10840,11 +11446,13 @@ export component AppWindow inherits Window {
                 width: 280px;
                 height: sdl.preferred-height;
                 background: Theme.menu-bg;
-                border-radius: 7px * Theme.round;
+                border-radius: Theme.menu-radius;
                 border-width: 1px;
-                border-color: Theme.field-border;
-                drop-shadow-blur: 6px;
-                drop-shadow-offset-y: 2px;
+                border-color: Theme.menu-border;
+                // 7.css : box-shadow 4px 4px 3px -2px #00000080
+                drop-shadow-blur: Theme.win7 ? 3px : 6px;
+                drop-shadow-offset-x: Theme.win7 ? 3px : 0px;
+                drop-shadow-offset-y: Theme.win7 ? 3px : 2px;
                 drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
                 TouchArea {
                     changed has-hover => {
@@ -10853,16 +11461,16 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                if !Theme.win98: MenuGutter { height: parent.height - 2 * self.pad; }
+                if !Theme.win98 && !Theme.xp && !Theme.lite: MenuGutter { height: parent.height - 2 * self.pad; }
                 if root.sub-hl-h > 0px: Rectangle {
                     x: Theme.win98 ? 2px : 4px;
                     y: root.sub-hl-y;
                     width: parent.width - 2 * self.x;
                     height: root.sub-hl-h;
-                    border-radius: Theme.ctl-radius;
-                    background: Theme.accent-14;
+                    border-radius: Theme.menu-hl-radius;
+                    background: Theme.menu-hl;
                     border-width: 1px;
-                    border-color: Theme.accent-60;
+                    border-color: Theme.menu-hl-border;
                 }
                 Rectangle {
                     cache-rendering-hint: true;
@@ -11095,14 +11703,14 @@ export component AppWindow inherits Window {
             width: 290px;
             height: ctx-col.preferred-height;
             background: Theme.menu-bg;
-            border-radius: 7px * Theme.round;
+            border-radius: Theme.menu-radius;
             border-width: 1px;
-            border-color: Theme.field-border;
+            border-color: Theme.menu-border;
             drop-shadow-blur: 10px;
             drop-shadow-offset-y: 3px;
             drop-shadow-color: Theme.shadows ? (Theme.window-shadow) : transparent;
             TouchArea { }
-            if !Theme.win98: MenuGutter { height: parent.height - 2 * self.pad; }
+            if !Theme.win98 && !Theme.xp && !Theme.lite: MenuGutter { height: parent.height - 2 * self.pad; }
             ctx-col := VerticalLayout {
                 padding: Theme.win98 ? 2px : 4px;
                 for it in root.ctx-items: MenuRow {

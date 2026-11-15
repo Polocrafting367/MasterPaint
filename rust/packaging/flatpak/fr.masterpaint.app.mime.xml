@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md. -->
+<!-- Types des fichiers propres à MasterPaint et à Paint.NET (absents de shared-mime-info) -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-masterpaint">
+    <comment>MasterPaint project</comment>
+    <comment xml:lang="fr">Projet MasterPaint</comment>
+    <icon name="fr.masterpaint.app"/>
+    <glob pattern="*.illu"/>
+  </mime-type>
+  <mime-type type="image/x-paintnet">
+    <comment>Paint.NET image</comment>
+    <comment xml:lang="fr">Image Paint.NET</comment>
+    <glob pattern="*.pdn"/>
+  </mime-type>
+</mime-info>

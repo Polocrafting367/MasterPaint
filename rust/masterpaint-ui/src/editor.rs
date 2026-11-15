@@ -715,6 +715,84 @@ pub struct Snapshot {
     pub repeat: u32,
     /// ordre des étapes tous projets confondus : les plus anciennes sont oubliées d'abord
     pub seq: u64,
+    /// calques de cette étape gardés en tuiles modifiées seulement (leur `px` est alors vide) :
+    /// le reste est le même calque à l'étape suivante. Un coup de pinceau sur une photo de
+    /// 20 Mpx ne garde ainsi que les tuiles touchées au lieu de 80 Mo (voir `pack_history`).
+    pub deltas: Vec<TileDelta>,
+}
+
+/// Côté des tuiles de l'historique (pixels).
+const TILE: usize = 64;
+/// Calques plus petits : gardés entiers (le gain ne vaut pas la comparaison).
+const DELTA_MIN_BYTES: usize = 1 << 20;
+
+/// Pixels d'un calque d'une ancienne étape : tuiles qui diffèrent de l'étape suivante (aucune :
+/// identique à l'étape suivante).
+#[derive(Clone)]
+pub struct TileDelta {
+    pub uid: u64,
+    /// largeur et hauteur du calque (celles de l'étape)
+    w: usize,
+    h: usize,
+    tiles: Vec<(u32, Box<[u8]>)>,
+}
+
+impl TileDelta {
+    pub fn bytes(&self) -> usize {
+        self.tiles.iter().map(|t| t.1.len()).sum()
+    }
+
+    /// Tuiles de `old` qui diffèrent de `new` (calques RVBA de `w` × `h`). None : trop de
+    /// changements pour y gagner (plus de 60 % de l'image).
+    fn diff(uid: u64, old: &[u8], new: &[u8], w: usize, h: usize) -> Option<TileDelta> {
+        if old.len() != w * h * 4 || new.len() != old.len() {
+            return None;
+        }
+        let tx = w.div_ceil(TILE);
+        let mut tiles = Vec::new();
+        let mut kept = 0usize;
+        for ty in 0..h.div_ceil(TILE) {
+            let (y0, y1) = (ty * TILE, ((ty + 1) * TILE).min(h));
+            for t in 0..tx {
+                let (x0, x1) = (t * TILE, ((t + 1) * TILE).min(w));
+                let same = (y0..y1).all(|y| {
+                    let (a, b) = ((y * w + x0) * 4, (y * w + x1) * 4);
+                    old[a..b] == new[a..b]
+                });
+                if same {
+                    continue;
+                }
+                let mut buf = Vec::with_capacity((x1 - x0) * (y1 - y0) * 4);
+                for y in y0..y1 {
+                    buf.extend_from_slice(&old[(y * w + x0) * 4..(y * w + x1) * 4]);
+                }
+                kept += buf.len();
+                if kept * 10 > old.len() * 6 {
+                    return None;
+                }
+                tiles.push(((ty * tx + t) as u32, buf.into_boxed_slice()));
+            }
+        }
+        Some(TileDelta { uid, w, h, tiles })
+    }
+
+    /// Pose les tuiles gardées sur les pixels de l'étape suivante.
+    fn apply(&self, px: &mut [u8]) {
+        let (w, h) = (self.w, self.h);
+        if px.len() != w * h * 4 {
+            return;
+        }
+        let tx = w.div_ceil(TILE);
+        for (i, buf) in &self.tiles {
+            let (ty, t) = (*i as usize / tx, *i as usize % tx);
+            let (y0, y1) = (ty * TILE, ((ty + 1) * TILE).min(h));
+            let (x0, x1) = (t * TILE, ((t + 1) * TILE).min(w));
+            let n = (x1 - x0) * 4;
+            for (k, y) in (y0..y1).enumerate() {
+                px[(y * w + x0) * 4..(y * w + x1) * 4].copy_from_slice(&buf[k * n..(k + 1) * n]);
+            }
+        }
+    }
 }
 
 pub struct Doc {
@@ -876,7 +954,7 @@ impl Doc {
         // brouillon ƒ (petit) reste : sans lui, une étape prise pendant un brouillon revenait sans
         // rendu, avec une clé à jour, donc sans filtre visible.
         for layer in &mut layers { layer.dyn_input = None; layer.dyn_dirty = None; }
-        Snapshot { label: label.into(), w: self.w, h: self.h, layers, active: self.active, sel_change: None, mode: self.mode, anim: self.anim.clone(), repeat: 1, seq: HISTORY_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed) }
+        Snapshot { label: label.into(), w: self.w, h: self.h, layers, active: self.active, sel_change: None, mode: self.mode, anim: self.anim.clone(), repeat: 1, seq: HISTORY_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed), deltas: Vec::new() }
     }
 
     /// La sélection a changé sans étape d'historique (outils de sélection, Ctrl+A, Ctrl+D…) :
@@ -912,6 +990,133 @@ impl Doc {
             self.history.remove(1);
         }
         self.hindex = self.history.len() - 1;
+        self.pack_history();
+    }
+
+    /// Range l'avant-avant-dernière étape en tuiles modifiées (les deux dernières restent
+    /// entières : « remplacer la dernière étape » et l'action répétée les retirent). L'image
+    /// d'origine (étape 0) reste toujours entière.
+    fn pack_history(&mut self) {
+        let n = self.history.len();
+        if n < 4 || self.anim.is_some() {
+            return;
+        }
+        let k = n - 3;
+        if k == 0 || self.history[k].w != self.history[k + 1].w || self.history[k].h != self.history[k + 1].h {
+            return;
+        }
+        let (w, h) = (self.history[k].w, self.history[k].h);
+        for li in 0..self.history[k].layers.len() {
+            let l = &self.history[k].layers[li];
+            if l.vector.is_some() || l.px.len() < DELTA_MIN_BYTES || self.history[k].deltas.iter().any(|d| d.uid == l.uid) {
+                continue;
+            }
+            let uid = l.uid;
+            let Some(next) = self.history[k + 1].layers.iter().find(|n| n.uid == uid && n.vector.is_none()) else { continue };
+            if self.history[k + 1].deltas.iter().any(|d| d.uid == uid) || next.px.len() != l.px.len() {
+                continue;
+            }
+            let old = l.px.arc();
+            let delta = if std::sync::Arc::ptr_eq(&old, &next.px.arc()) {
+                TileDelta { uid, w, h, tiles: Vec::new() }
+            } else {
+                match TileDelta::diff(uid, &old, &next.px, w, h) {
+                    Some(d) => d,
+                    None => continue,
+                }
+            };
+            // étapes plus anciennes (sauf l'origine) qui partagent ces pixels : « comme l'étape
+            // suivante », sinon elles garderaient le tampon entier en vie
+            for j in (1..k).rev() {
+                let s = &mut self.history[j];
+                if s.w != w || s.h != h || s.deltas.iter().any(|d| d.uid == uid) {
+                    break;
+                }
+                match s.layers.iter_mut().find(|x| x.uid == uid) {
+                    Some(x) if std::sync::Arc::ptr_eq(&x.px.arc(), &old) => {
+                        x.px = Px::default();
+                        s.deltas.push(TileDelta { uid, w, h, tiles: Vec::new() });
+                    }
+                    _ => break,
+                }
+            }
+            let s = &mut self.history[k];
+            s.layers[li].px = Px::default();
+            s.deltas.push(delta);
+        }
+    }
+
+    /// Pixels du calque `uid` à l'étape `k`, reconstruits depuis la première étape suivante
+    /// qui les garde entiers (une seule copie, tuiles posées de la plus récente à la plus ancienne).
+    fn resolve_px(&self, k: usize, uid: u64) -> Option<Px> {
+        let mut chain: Vec<&TileDelta> = Vec::new();
+        let mut j = k;
+        loop {
+            let s = self.history.get(j)?;
+            match s.deltas.iter().find(|d| d.uid == uid) {
+                Some(d) => {
+                    chain.push(d);
+                    j += 1;
+                }
+                None => {
+                    let base = &s.layers.iter().find(|l| l.uid == uid)?.px;
+                    if chain.iter().all(|d| d.tiles.is_empty()) {
+                        return Some(base.clone());
+                    }
+                    let mut v = base.to_vec();
+                    for d in chain.iter().rev() {
+                        d.apply(&mut v);
+                    }
+                    return Some(Px::from(v));
+                }
+            }
+        }
+    }
+
+    /// Rend l'étape `i` entière (avant de l'afficher) : ses calques rangés en tuiles retrouvent
+    /// leurs pixels.
+    fn unpack_step(&mut self, i: usize) {
+        if self.history.get(i).is_none_or(|s| s.deltas.is_empty()) {
+            return;
+        }
+        let uids: Vec<u64> = self.history[i].deltas.iter().map(|d| d.uid).collect();
+        let resolved: Vec<(u64, Option<Px>)> = uids.iter().map(|&u| (u, self.resolve_px(i, u))).collect();
+        let s = &mut self.history[i];
+        for (u, px) in resolved {
+            if let (Some(px), Some(l)) = (px, s.layers.iter_mut().find(|l| l.uid == u)) {
+                l.px = px;
+            }
+        }
+        s.deltas.clear();
+    }
+
+    /// Octets gardés en tuiles par l'historique (Paramètres › Infos techniques).
+    pub fn history_delta_bytes(&self) -> usize {
+        self.history.iter().flat_map(|s| s.deltas.iter()).map(|d| d.bytes()).sum()
+    }
+
+    /// Comme `commit`, mais l'étape `seq` (la dernière, affichée) est remplacée au lieu d'en
+    /// ajouter une : un déplacement aux flèches touche maintenue = une seule étape, de la position
+    /// d'avant l'appui à celle du relâchement. Sinon (étape annulée, autre action entre-temps),
+    /// étape ordinaire. Rend le numéro de l'étape écrite.
+    pub fn commit_merged(&mut self, label: &str, seq: Option<u64>) -> u64 {
+        let last_ok = self.history.len() >= 2
+            && self.hindex + 1 == self.history.len()
+            && self.history.last().is_some_and(|s| Some(s.seq) == seq && s.label == label);
+        if last_ok {
+            if self.saved == (self.hindex, self.history.len()) {
+                self.saved = (usize::MAX, 0);
+            }
+            if let Some(prev) = self.history.pop() {
+                // sélection d'avant le premier appui : l'annulation la remet
+                if let Some((before, _)) = prev.sel_change {
+                    self.sel_ref = before;
+                }
+            }
+            self.hindex = self.history.len() - 1;
+        }
+        self.commit(label);
+        self.history.last().map_or(0, |s| s.seq)
     }
 
     /// Étapes comptées dans la limite de l'historique (sans l'image d'origine).
@@ -975,6 +1180,7 @@ impl Doc {
                 }
             }
         }
+        self.unpack_step(i);
         let s = &self.history[i];
         self.w = s.w;
         self.h = s.h;
@@ -1494,6 +1700,17 @@ impl Doc {
         }
     }
 
+    /// Couleur d'un pixel du calque actif seul (pipette en mode « Calque », comme Paint.NET) :
+    /// ni les autres calques, ni l'opacité ou la fusion du calque.
+    pub fn layer_color(&self, x: usize, y: usize) -> [u8; 4] {
+        let i = (y.min(self.h - 1) * self.w + x.min(self.w - 1)) * 4;
+        let px = &self.layer().px;
+        if px.len() < i + 4 {
+            return [0, 0, 0, 0];
+        }
+        [px[i], px[i + 1], px[i + 2], px[i + 3]]
+    }
+
     /// Couleur affichée d'un pixel (tous les calques visibles) : pipette.
     pub fn pixel_color(&self, x: usize, y: usize) -> [u8; 4] {
         let i = (y.min(self.h - 1) * self.w + x.min(self.w - 1)) * 4;
@@ -1529,6 +1746,20 @@ impl Doc {
     /// Pose le pixel `i` du calque `l` sur la couleur composée `acc` (r, v, b, a entre 0 et 1) :
     /// effet dynamique, masque α, opacité et mode de fusion.
     pub(crate) fn over(&self, l: &Layer, i: usize, acc: (f32, f32, f32, f32)) -> (f32, f32, f32, f32) {
+        // calque ordinaire (ni filtre ƒ, ni rendu en cache) : le cas courant d'une pile de calques,
+        // sans les recherches de brouillon et de cache faites ci-dessous pour chaque pixel ;
+        // pixel transparent : rien à poser (même résultat que le chemin complet)
+        if l.dynamic.is_none() && l.dyn_cache.is_none() && l.dyn_saved.is_empty() {
+            let p = &l.px;
+            if p[i + 3] == 0 {
+                return acc;
+            }
+            let mut sa = p[i + 3] as f32 / 255.0 * l.opacity;
+            if let Some(m) = l.mask.as_ref().filter(|m| m.len() == self.w * self.h) {
+                sa *= m[i / 4] as f32 / 255.0;
+            }
+            return over_rgba((p[i] as f32 / 255.0, p[i + 1] as f32 / 255.0, p[i + 2] as f32 / 255.0), sa, l.blend, acc);
+        }
         let (mut r, mut g, mut b, mut a) = acc;
         // zone d'un calque dynamique affichée (Zone N&B) : gris opaque, blanc = effet actif
         if l.uid == zone_view() && l.dynamic.is_some() {
@@ -1669,29 +1900,64 @@ impl Doc {
     /// Fourmis sur un affichage réduit (voir `composite_scaled`), dans le rectangle `r` de
     /// l'affichage : contour de la sélection échantillonnée au centre des blocs.
     pub fn draw_ants_scaled(&self, out: &mut [u8], phase: usize, ds: usize, r: (usize, usize, usize, usize)) {
-        if ds <= 1 {
-            return self.draw_ants_in(out, phase, r);
-        }
-        let Some(m) = &self.sel else { return };
-        let (w, h) = (self.w, self.h);
-        let (dw, dh) = (w.div_ceil(ds) as isize, h.div_ceil(ds) as isize);
-        let inside = |x: isize, y: isize| {
-            if x < 0 || y < 0 || x >= dw || y >= dh {
-                return false;
-            }
-            let (sx, sy) = ((x as usize * ds + ds / 2).min(w - 1), (y as usize * ds + ds / 2).min(h - 1));
-            m[sy * w + sx] >= 128
-        };
-        for y in r.1 as isize..(r.3 as isize).min(dh) {
-            for x in r.0 as isize..(r.2 as isize).min(dw) {
-                if !inside(x, y) || (inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1)) {
-                    continue;
-                }
-                let i = (y as usize * dw as usize + x as usize) * 4;
-                let v = if ((x + y) as usize + phase) / 4 % 2 == 0 { 0 } else { 255 };
+        let dw = self.w.div_ceil(ds.max(1));
+        self.for_ant_pixels(ds, r, |x, y| {
+            let i = (y * dw + x) * 4;
+            let v = if (x + y + phase) / 4 % 2 == 0 { 0 } else { 255 };
+            if i + 3 < out.len() {
                 out[i..i + 3].fill(v);
                 out[i + 3] = 255;
             }
+        });
+    }
+
+    /// Pixels du contour de la sélection dans l'affichage au pas `ds` (1 : pleine résolution),
+    /// rectangle `r` de l'affichage : pixels sélectionnés dont un voisin (4-connexité) ne l'est
+    /// pas, échantillonnés au centre des blocs. Chaque échantillon du masque est lu une seule fois
+    /// (trois lignes glissantes) ; avant, cinq lectures par pixel, sur tout le cadre redessiné à
+    /// chaque mouvement d'un déplacement.
+    fn for_ant_pixels(&self, ds: usize, r: (usize, usize, usize, usize), mut f: impl FnMut(usize, usize)) {
+        let Some(m) = &self.sel else { return };
+        let ds = ds.max(1);
+        let (w, h) = (self.w, self.h);
+        if w == 0 || h == 0 || m.len() < w * h {
+            return;
+        }
+        let (dw, dh) = (w.div_ceil(ds), h.div_ceil(ds));
+        let (x0, y0, x1, y1) = (r.0, r.1, r.2.min(dw), r.3.min(dh));
+        if x1 <= x0 || y1 <= y0 {
+            return;
+        }
+        // colonnes x0 - 1 ..= x1 (une de marge de chaque côté) ; hors de l'image : non sélectionné
+        let width = x1 - x0 + 2;
+        let fill = |y: isize, buf: &mut [bool]| {
+            buf.fill(false);
+            if y < 0 || y as usize >= dh {
+                return;
+            }
+            let sy = if ds == 1 { y as usize } else { (y as usize * ds + ds / 2).min(h - 1) };
+            let mrow = &m[sy * w..sy * w + w];
+            for (k, slot) in buf.iter_mut().enumerate() {
+                let x = x0 as isize - 1 + k as isize;
+                if x < 0 || x as usize >= dw {
+                    continue;
+                }
+                let sx = if ds == 1 { x as usize } else { (x as usize * ds + ds / 2).min(w - 1) };
+                *slot = mrow[sx] >= 128;
+            }
+        };
+        let (mut prev, mut cur, mut next) = (vec![false; width], vec![false; width], vec![false; width]);
+        fill(y0 as isize - 1, &mut prev);
+        fill(y0 as isize, &mut cur);
+        for y in y0..y1 {
+            fill(y as isize + 1, &mut next);
+            for k in 1..width - 1 {
+                if cur[k] && !(cur[k - 1] && cur[k + 1] && prev[k] && next[k]) {
+                    f(x0 + k - 1, y);
+                }
+            }
+            std::mem::swap(&mut prev, &mut cur);
+            std::mem::swap(&mut cur, &mut next);
         }
     }
 
@@ -1699,25 +1965,9 @@ impl Doc {
     /// de pixel de l'affichage) : mêmes pixels que `draw_ants_scaled`, calculés une fois pour
     /// l'animation des fourmis.
     pub fn ant_edges(&self, ds: usize, r: (usize, usize, usize, usize)) -> Vec<u32> {
-        let Some(m) = &self.sel else { return Vec::new() };
-        let ds = ds.max(1);
-        let (w, h) = (self.w, self.h);
-        let (dw, dh) = (w.div_ceil(ds) as isize, h.div_ceil(ds) as isize);
-        let inside = |x: isize, y: isize| {
-            if x < 0 || y < 0 || x >= dw || y >= dh {
-                return false;
-            }
-            let (sx, sy) = if ds == 1 { (x as usize, y as usize) } else { ((x as usize * ds + ds / 2).min(w - 1), (y as usize * ds + ds / 2).min(h - 1)) };
-            m[sy * w + sx] >= 128
-        };
+        let dw = self.w.div_ceil(ds.max(1));
         let mut out = Vec::new();
-        for y in r.1 as isize..(r.3 as isize).min(dh) {
-            for x in r.0 as isize..(r.2 as isize).min(dw) {
-                if inside(x, y) && !(inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1)) {
-                    out.push((y as usize * dw as usize + x as usize) as u32);
-                }
-            }
-        }
+        self.for_ant_pixels(ds, r, |x, y| out.push((y * dw + x) as u32));
         out
     }
 
@@ -1737,25 +1987,7 @@ impl Doc {
 
     /// Fourmis limitées au rectangle `r` (x0, y0, x1, y1 exclus).
     pub fn draw_ants_in(&self, out: &mut [u8], phase: usize, r: (usize, usize, usize, usize)) {
-        let Some(m) = &self.sel else { return };
-        let (w, h) = (self.w, self.h);
-        let inside = |x: isize, y: isize| x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h && m[y as usize * w + x as usize] >= 128;
-        for y in r.1 as isize..r.3.min(h) as isize {
-            for x in r.0 as isize..r.2.min(w) as isize {
-                if !inside(x, y) {
-                    continue;
-                }
-                if inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1) {
-                    continue;
-                }
-                let i = (y as usize * w + x as usize) * 4;
-                let v = if ((x + y) as usize + phase) / 4 % 2 == 0 { 0 } else { 255 };
-                out[i] = v;
-                out[i + 1] = v;
-                out[i + 2] = v;
-                out[i + 3] = 255;
-            }
-        }
+        self.draw_ants_scaled(out, phase, 1, r);
     }
 
     // ------------------------------------------------------------ sélection
@@ -2727,6 +2959,45 @@ mod dyn_tests {
         assert_eq!(d.layers[0].px[4], 9);
     }
 
+    /// Contour des fourmis (trois lignes glissantes) : mêmes pixels que le calcul direct, cinq
+    /// lectures par pixel, d'avant.
+    #[test]
+    fn ant_pixels_match_direct_neighbour_test() {
+        let (w, h) = (37, 29);
+        let mut d = super::Doc::new(w, h, [0, 0, 0, 0], "a");
+        let mut m = vec![0u8; w * h];
+        for y in 0..h {
+            for x in 0..w {
+                let (dx, dy) = (x as f32 - 15.0, y as f32 - 12.0);
+                if dx * dx + dy * dy < 120.0 || (x > 28 && y < 6) || (x + y) % 11 == 0 {
+                    m[y * w + x] = if (x * y) % 7 == 0 { 100 } else { 255 };
+                }
+            }
+        }
+        d.sel = Some(m.clone());
+        for ds in [1usize, 2, 3, 4, 6] {
+            let (dw, dh) = (w.div_ceil(ds), h.div_ceil(ds));
+            let inside = |x: isize, y: isize| {
+                if x < 0 || y < 0 || x >= dw as isize || y >= dh as isize {
+                    return false;
+                }
+                let (sx, sy) = if ds == 1 { (x as usize, y as usize) } else { ((x as usize * ds + ds / 2).min(w - 1), (y as usize * ds + ds / 2).min(h - 1)) };
+                m[sy * w + sx] >= 128
+            };
+            for r in [(0, 0, dw, dh), (1, 2, dw - 1, dh.max(3) - 1), (0, dh / 2, dw / 2, dh), (2, 0, dw, 2)] {
+                let mut want = Vec::new();
+                for y in r.1 as isize..r.3 as isize {
+                    for x in r.0 as isize..r.2 as isize {
+                        if inside(x, y) && !(inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1)) {
+                            want.push((y as usize * dw + x as usize) as u32);
+                        }
+                    }
+                }
+                assert_eq!(d.ant_edges(ds, r), want, "pas {ds}, rectangle {r:?}");
+            }
+        }
+    }
+
     use super::*;
 
     /// Effet du menu dans une pile dynamique : type relu à l'identique, intensité → mélange.
@@ -3356,5 +3627,63 @@ mod selection_modify_tests {
         assert!(d.heal_area(&hole).is_some());
         let c = &d.layer().px[(24 * 48 + 24) * 4..(24 * 48 + 24) * 4 + 4];
         assert!(c[1] > 120 && c[0] < 100, "défaut effacé : {c:?}");
+    }
+}
+
+#[cfg(test)]
+mod tile_history_tests {
+    use super::*;
+
+    /// Étapes rangées en tuiles : annuler / rétablir rend exactement les mêmes pixels, et la
+    /// mémoire de l'historique fond (seules les tuiles touchées restent).
+    #[test]
+    fn packed_steps_restore_exact_pixels() {
+        HISTORY_MAX.store(50, std::sync::atomic::Ordering::Relaxed);
+        let (w, h) = (700, 500);
+        let mut d = Doc::new(w, h, [255, 255, 255, 255], "t");
+        let mut states: Vec<Vec<u8>> = vec![d.layers[0].px.to_vec()];
+        for step in 0..10usize {
+            // petit trait : un carré de 40 px à un endroit différent à chaque étape
+            let (x0, y0) = (20 + step * 60, 30 + step * 40);
+            let px = &mut d.layers[0].px;
+            for y in y0..y0 + 40 {
+                for x in x0..x0 + 40 {
+                    let i = (y * w + x) * 4;
+                    px[i] = (step * 20) as u8;
+                    px[i + 1] = 7;
+                }
+            }
+            d.commit(&format!("étape {step}"));
+            states.push(d.layers[0].px.to_vec());
+        }
+        let packed = d.history.iter().filter(|s| !s.deltas.is_empty()).count();
+        assert!(packed >= 7, "étapes rangées en tuiles : {packed}");
+        let full: usize = d.history_layers().map(|p| p.len()).sum();
+        assert!(full <= 4 * w * h * 4, "historique entier : {full} octets");
+        // annuler jusqu'à l'origine, puis tout rétablir
+        for k in (0..states.len() - 1).rev() {
+            d.undo();
+            assert!(d.layers[0].px[..] == states[k][..], "annuler vers {k}");
+        }
+        for k in 1..states.len() {
+            d.redo();
+            assert!(d.layers[0].px[..] == states[k][..], "rétablir vers {k}");
+        }
+        // nouvelle action au milieu de l'historique : les étapes plus anciennes restent justes
+        for _ in 0..5 {
+            d.undo();
+        }
+        d.layers[0].px[0] = 1;
+        d.commit("branche");
+        let mut after = d.layers[0].px.to_vec();
+        for k in (0..states.len() - 5).rev() {
+            d.undo();
+            assert!(d.layers[0].px[..] == states[k][..], "après branche, annuler vers {k}");
+        }
+        for _ in 0..states.len() - 5 {
+            d.redo();
+        }
+        after[0] = 1;
+        assert!(d.layers[0].px[..] == after[..]);
     }
 }

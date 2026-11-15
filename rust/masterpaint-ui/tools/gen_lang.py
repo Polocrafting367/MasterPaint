@@ -174,6 +174,7 @@ def update_web(check=False):
 def audit_slint():
     """Reject readable literals that bypass @tr, apart from stable internal codes."""
     allowed = {'calque texte', 'verrouillé', 'dossier', 'Font Awesome 6 Brands', 'MasterPaint — polocrafting', '© 2026 polocrafting — polocrafting.fr', 'polocrafting.fr ↗', 'GitHub · Polocrafting367/MasterPaint ↗', 'paint.net ↗', 'GitHub · rivy/OpenPDN ↗', 'PaintJS · LabyStudio', 'PaintJS ↗', 'GitHub · LabyStudio/paintdotjs ↗', 'ArtCraft · PhotoCraft, VectorCraft, LightCraft', 'getartcraft.com/apps ↗', 'GitHub · storytold ↗'}
+    allowed.update({'7.css · Khang Nguyen Duy', 'GitHub · khang-nd/7.css ↗', 'XP.css / 98.css · Adam Hammad, Jordan Scales', 'GitHub · botoxparty/XP.css ↗', ' polocrafting 367 ↗', 'Trebuchet MS'})
     ok = True
     for path in sorted(Path(CRATE, 'ui').glob('*.slint')):
         content = path.read_text(encoding='utf-8')

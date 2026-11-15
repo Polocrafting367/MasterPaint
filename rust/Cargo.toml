@@ -13,6 +13,9 @@ authors = ["polocrafting"]
 opt-level = 3
 lto = "thin"
 codegen-units = 4
+# symboles retirés : exe Windows ~137 → ~90 Mo (l'antivirus analyse un exe téléchargé avant son
+# premier lancement : plus il est gros, plus l'ouverture tarde)
+strip = "symbols"
 
 # Version web : LTO complète et une seule unité de compilation — wasm plus petit (le code
 # généré par Slint pour l'interface en est la plus grosse part), aussi rapide ou plus.
@@ -20,6 +23,9 @@ codegen-units = 4
 inherits = "release"
 lto = "fat"
 codegen-units = 1
+# noms des fonctions gardés dans target/ (profileur, piles d'erreur) ; build-ui-web.sh les
+# retire de la copie publiée (tools/strip-wasm-names.py)
+strip = "none"
 
 # En développement, les dépendances (Slint, image…) sont optimisées : l'interface reste fluide.
 [profile.dev.package."*"]

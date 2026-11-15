@@ -11,7 +11,7 @@ export global Theme {
 
     // accent et ses mélanges avec le fond (≈ color-mix CSS)
     in-out property <color> accent-base: #0f766e;
-    out property <[color]> accent-options: [#b91c1c, #c2410c, #a16207, #15803d, #0f766e, #0369a1, #1d4ed8, #0f2d5c, #4338ca, #7e22ce, #be185d];
+    out property <[color]> accent-options: [#b91c1c, #c2410c, #a16207, #15803d, #0f766e, #0078d4, #1d4ed8, #0f2d5c, #4338ca, #7e22ce, #be185d];
     in-out property <color> accent: #0f766e;
     in-out property <color> accent-12: #e2efef;   // barre rapide
     in-out property <color> accent-14: #ddeded;   // outil actif
@@ -68,6 +68,171 @@ export global Theme {
     in-out property <length> small-font-size: 11px;
     out property <string> icon-font: @tr("Font Awesome 6 Free");
 
+    /// dessin des contrôles (Paramètres › Personnalisation › Style) : 0 moderne (Windows 10/11),
+    /// 1 Windows 98 (98.css), 2 Windows 7 (7.css), 3 Windows XP (XP.css), 4 ultra léger
+    in-out property <int> skin: 0;
+    /// Windows 7 (7.css, MIT, Khang Nguyen Duy) : cadre Aero bleu, boutons en dégradé vitré
+    out property <bool> win7: skin == 2;
+    /// Windows XP (XP.css, MIT, Adam Hammad et Jordan Scales) : Luna bleu, boutons beiges
+    out property <bool> xp: skin == 3;
+    /// ultra léger (PC très lent) : aplats seuls, ni dégradé, ni ombre, ni arrondi, ni survol
+    out property <bool> lite: skin == 4;
+    // ---- Personnalisation avancée (Paramètres › Personnalisation) : chaque élément peut prendre
+    // le dessin d'un autre style (boutons XP sur verre Aero…). Valeurs résolues par theme.rs :
+    // 0 moderne, 1 Windows 98, 2 Windows 7, 3 Windows XP, 4 plat (ultra léger) ----
+    /// boutons, boutons d'outil, choix exclusifs
+    in-out property <int> btn-skin: 0;
+    out property <bool> b-98: btn-skin == 1;
+    out property <bool> b-w7: btn-skin == 2;
+    out property <bool> b-xp: btn-skin == 3;
+    out property <bool> b-classic: btn-skin == 2 || btn-skin == 3;
+    /// cadre et barre de titre des fenêtres flottantes
+    in-out property <int> frame-skin: 0;
+    out property <bool> f-98: frame-skin == 1;
+    out property <bool> f-w7: frame-skin == 2;
+    out property <bool> f-xp: frame-skin == 3;
+    out property <bool> f-classic: frame-skin == 2 || frame-skin == 3;
+    /// bouton Fermer des fenêtres
+    in-out property <int> close-skin: 0;
+    out property <bool> c-98: close-skin == 1;
+    out property <bool> c-w7: close-skin == 2;
+    out property <bool> c-xp: close-skin == 3;
+    out property <bool> c-classic: close-skin == 2 || close-skin == 3;
+    out property <bool> c-lite: close-skin == 4;
+    /// titre des fenêtres centré (sinon à gauche)
+    in-out property <bool> title-center: false;
+    /// relief 3D (reflets vitrés d'Aero, dégradés des boutons XP / 7) ; coupé : aplats
+    in-out property <bool> gloss: true;
+    /// opacité du verre Aero (Paramètres › Personnalisation) : 0,25 très transparent … 1 opaque
+    in-out property <float> w7-glass-opacity: 0.6;
+    /// luminosité du verre Aero (Personnalisation avancée) : −0,5 plus sombre … +0,5 plus clair
+    in-out property <float> glass-bright: 0;
+    /// barres de titre translucides du style Windows 10/11 : opacité (0 … 1)
+    in-out property <float> title-opacity: 0.96;
+    /// Windows 10/11 : couleur d'accentuation (saturée) sur les barres de titre des fenêtres
+    in-out property <bool> title-accent: false;
+    in-out property <color> title-accent-bg: #0078d4;
+    in-out property <color> title-accent-fg: #ffffff;
+    /// surbrillance des boutons du ruban et des boutons d'outil réglée (sinon : celle du style —
+    /// dorée / orangée en 7 et XP, accentuation en moderne) ; la teinte est `w7-hl`
+    in-out property <bool> rib-hl-on: false;
+    property <color> tb-base: dark ? #2b2b2b : #ffffff;
+    out property <color> tb-12: rib-hl-on ? w7-hl.mix(tb-base, 0.22) : accent-12;
+    out property <color> tb-14: rib-hl-on ? w7-hl.mix(tb-base, 0.34) : accent-14;
+    out property <color> tb-20: rib-hl-on ? w7-hl.mix(tb-base, 0.5) : accent-20;
+    out property <color> tb-60: rib-hl-on ? w7-hl.mix(tb-base, 0.75) : accent-60;
+    out property <color> tb-edge: rib-hl-on ? w7-hl.mix(#000000, 0.7) : accent;
+    /// surbrillance des boutons ordinaires réglée (couleur choisie, ou accentuation en XP / moderne)
+    in-out property <bool> btn-hl-on: false;
+    in-out property <color> btn-hl: #0078d4;
+    /// couleur des icônes choisie (pastille de la palette) ; l'accentuation sinon
+    in-out property <color> icon-base: #0f766e;
+    /// Windows XP : jeu de couleurs Luna (barres de titre) et Office 2003 (barres d'outils), choisi
+    /// parmi Bleu, Olive, Argent ; titre : dégradé en 5 tons, cadre en 3 liserés
+    in-out property <color> xp-t0: #0997ff;
+    in-out property <color> xp-t1: #0053ee;
+    in-out property <color> xp-t2: #0066ff;
+    in-out property <color> xp-t3: #003dd7;
+    in-out property <color> xp-f0: #0831d9;
+    in-out property <color> xp-f1: #166aee;
+    in-out property <color> xp-f2: #001ea0;
+    in-out property <color> xp-shadow: #0f1089;
+    in-out property <color> xp-title-fg: #ffffff;
+    /// barres d'outils Office 2003 : haut, milieu, bas ; bande des menus ; bordure de survol
+    in-out property <color> xp-bar-a: #e3efff;
+    in-out property <color> xp-bar-b: #c4dafa;
+    in-out property <color> xp-bar-c: #9ebef5;
+    in-out property <color> xp-menu-a: #c4dafa;
+    in-out property <color> xp-menu-b: #9ebef5;
+    in-out property <color> xp-hl-border: #000080;
+    /// en-tête (menus, barre rapide, onglets) : vitre Aero (7), barres Office 2003 (XP)
+    out property <brush> head: !gloss && win7 ? w7-head-b : !gloss && xp && !dark ? xp-menu-a : win7 ? @linear-gradient(180deg, w7-head-a 0%, w7-head-b 50%, w7-head-c 100%)
+        : xp && !dark ? @linear-gradient(180deg, xp-menu-a 0%, xp-menu-b 100%) : menubar-bg;
+    /// « bande » de type ruban : ruban, volet des Paramètres, ruban du tutoriel, barre d'état —
+    /// partout la même teinte (couleur « Ruban » réglable en Windows 7, jeu de couleurs en XP)
+    out property <brush> band: !gloss && win7 ? w7-rib-c : !gloss && xp && !dark ? xp-bar-a : win7 ? @linear-gradient(180deg, w7-rib-a 0%, w7-rib-b 28%, w7-rib-c 72%, w7-rib-d 100%)
+        : xp && !dark ? @linear-gradient(180deg, xp-bar-a 0%, xp-bar-b 55%, xp-bar-c 100%) : ribbon-bg;
+    /// barre d'état : bande plus basse (Office 2010 / 2003)
+    out property <brush> status-band: !gloss && (win7 || xp) && !dark ? (win7 ? w7-rib-c : xp-menu-a) : win7 && !dark ? @linear-gradient(180deg, w7-rib-c 0%, w7-rib-d 100%)
+        : xp && !dark ? @linear-gradient(180deg, xp-menu-a 0%, xp-menu-b 100%) : statusbar-bg;
+    /// Windows 7 / XP : boutons, cases et listes dessinés comme la feuille de style d'origine
+    out property <bool> classic: skin == 2 || skin == 3;
+    /// verre Aero (Windows 7 + « Fenêtres transparentes ») : cadre translucide sur l'aperçu
+    /// flouté du projet (Backdrop)
+    in-out property <bool> aero: false;
+    /// verre des fenêtres Windows 7 : teinté par la couleur d'accentuation (comme la couleur des
+    /// fenêtres de Windows 7), plus pâle quand l'application est inactive ; `w7-head-*` : dégradé
+    /// de l'en-tête et des barres de titre ancrées
+    /// couleur des fenêtres (Paramètres › Personnalisation) : celle de l'accentuation par défaut
+    in-out property <color> w7-glass-base: #0f766e;
+    // en sombre : verre fumé (la teinte se mêle à du noir bleuté, pas à du blanc)
+    /// couleurs de Windows Vista (verre plus fumé, volet des Paramètres bleu-vert) au lieu de 7
+    in-out property <bool> vista: false;
+    /// expérimental : aperçu flouté de la toile derrière le verre des fenêtres (coûteux)
+    in-out property <bool> aero-blur: false;
+    property <color> w7-tint0: vista ? w7-glass-base.mix(#4a5a66, 0.55) : w7-glass-base;
+    property <color> w7-tint: glass-bright >= 0 ? w7-tint0.mix(#ffffff, 1 - glass-bright) : w7-tint0.mix(#000000, 1 + glass-bright);
+    out property <color> w7-glass: dark ? w7-tint.mix(#1b1e23, 0.46) : w7-tint.mix(#ffffff, 0.78);
+    out property <color> w7-glass-off: dark ? w7-tint.mix(#2c2f34, 0.16) : w7-tint.mix(#dfe3e8, 0.22);
+    out property <color> w7-head-a: dark ? w7-tint.mix(#30343a, 0.30) : w7-tint.mix(#ffffff, 0.34);
+    out property <color> w7-head-b: dark ? w7-tint.mix(#262a2f, 0.22) : w7-tint.mix(#ffffff, 0.5);
+    out property <color> w7-head-c: dark ? w7-tint.mix(#1f2226, 0.18) : w7-tint.mix(#ffffff, 0.58);
+    /// reflets du verre : francs en clair, discrets en sombre
+    out property <float> w7-sheen: !gloss ? 0 : dark ? 0.3 : 1;
+    /// surbrillance des boutons d'outil et du ruban (doré d'Office 2010 par défaut) et teinte du
+    /// ruban, réglables
+    in-out property <color> w7-hl: #ffcf4d;
+    in-out property <color> w7-ribbon: #d9e4f2;
+    /// contrôles Windows 7 (boutons, listes, barres de défilement) : survol, bouton par défaut et
+    /// enfoncé à la couleur d'accentuation (celle des icônes), au lieu du bleu fixe de 7.css
+    property <color> ctl-tint: btn-hl-on ? btn-hl : accent;
+    out property <color> w7-ctl-1: dark ? ctl-tint.mix(#484c54, 0.5) : ctl-tint.mix(#ffffff, 0.10);
+    out property <color> w7-ctl-2: dark ? ctl-tint.mix(#3a3e45, 0.44) : ctl-tint.mix(#ffffff, 0.26);
+    out property <color> w7-ctl-3: dark ? ctl-tint.mix(#2e3237, 0.38) : ctl-tint.mix(#ffffff, 0.38);
+    out property <color> w7-ctl-4: dark ? ctl-tint.mix(#25282c, 0.32) : ctl-tint.mix(#ffffff, 0.58);
+    out property <color> w7-ctl-bd: dark ? ctl-tint.mix(#ffffff, 0.7) : ctl-tint.mix(#ffffff, 0.78);
+    out property <color> w7-ctl-bd-down: dark ? ctl-tint.mix(#0e1012, 0.5) : ctl-tint.mix(#7a8590, 0.6);
+    /// surbrillance (survol, puis coché / enfoncé) et ruban : mêmes teintes réglables en clair et
+    /// en sombre
+    out property <color> w7-hl-1: dark ? w7-hl.mix(#3c4047, 0.24) : w7-hl.mix(#ffffff, 0.08);
+    out property <color> w7-hl-2: dark ? w7-hl.mix(#34373d, 0.32) : w7-hl.mix(#ffffff, 0.3);
+    out property <color> w7-hl-3: dark ? w7-hl.mix(#2c2f34, 0.4) : w7-hl.mix(#ffffff, 0.55);
+    out property <color> w7-hl-4: dark ? w7-hl.mix(#2c2f34, 0.28) : w7-hl.mix(#ffffff, 0.25);
+    out property <color> w7-hl-p0: dark ? w7-hl.mix(#16181b, 0.3) : w7-hl.mix(#b06a00, 0.72);
+    out property <color> w7-hl-p1: dark ? w7-hl.mix(#2c2f34, 0.5) : w7-hl.mix(#ffffff, 0.8);
+    out property <color> w7-hl-p2: dark ? w7-hl.mix(#2c2f34, 0.44) : w7-hl.mix(#ffffff, 0.62);
+    out property <color> w7-hl-p3: dark ? w7-hl.mix(#24272b, 0.5) : w7-hl;
+    out property <color> w7-hl-p4: dark ? w7-hl.mix(#2c2f34, 0.38) : w7-hl.mix(#ffffff, 0.5);
+    /// teinte du ruban en sombre : même couleur, foncée mais saturée (theme.rs), pour que le
+    /// ruban et les volets gardent leur couleur au lieu de virer au gris
+    in-out property <color> w7-ribbon-deep: #34465c;
+    out property <color> w7-rib-a: dark ? w7-ribbon-deep.brighter(0.28) : #ffffff;
+    out property <color> w7-rib-b: dark ? w7-ribbon-deep.brighter(0.12) : w7-ribbon.mix(#ffffff, 0.3);
+    out property <color> w7-rib-c: dark ? w7-ribbon-deep : w7-ribbon.mix(#ffffff, 0.68);
+    out property <color> w7-rib-d: dark ? w7-ribbon-deep.darker(0.12) : w7-ribbon;
+    /// colonne des sections (Paramètres, Aide) : Panneau de configuration de 7 / Vista / XP, en
+    /// clair comme en sombre ; sinon la colonne sobre de MasterPaint
+    out property <bool> side-skin: classic;
+    out property <brush> side-band: !gloss && xp ? (dark ? xp-t2.mix(#1c1c1c, 0.4) : xp-t2.mix(#ffffff, 0.5))
+        : !gloss && win7 ? (vista ? (dark ? #1f5f5c : #2f8a86) : w7-rib-c)
+        : xp ? (dark ? @linear-gradient(180deg, xp-t2.mix(#1c1c1c, 0.4) 0%, xp-t1.mix(#161616, 0.3) 100%)
+                : @linear-gradient(180deg, xp-t2.mix(#ffffff, 0.5) 0%, xp-t1.mix(#ffffff, 0.6) 100%))
+        : win7 ? (vista ? (dark ? @linear-gradient(180deg, #154f66 0%, #1f5f5c 55%, #31653a 100%) : @linear-gradient(180deg, #1d6f8f 0%, #2f8a86 55%, #58a550 100%))
+                : @linear-gradient(180deg, w7-rib-a 0%, w7-rib-c 45%, w7-rib-d 100%))
+        : dark ? list-bg : window-bg.darker(3%);
+    out property <color> side-link: xp ? (dark ? #ffffff : xp-hl-border) : win7 && vista ? #ffffff : dark ? #e2ebf7 : #1e3287;
+    /// menus déroulants : ligne survolée (7.css : --w7-li-bg-hl / --w7-li-bd-hl ; XP : sélection
+    /// #316ac5 adoucie, comme les menus d'Office XP), cadre et arrondi du menu
+    // Office 2010 / 2003 : ligne survolée à la couleur de surbrillance (dorée / orangée), la même
+    // que celle du ruban et des boutons d'outil
+    out property <brush> menu-hl: !gloss && (win7 || xp) && !dark ? w7-hl.mix(#ffffff, 0.32) : (win7 || xp) && !dark ? @linear-gradient(180deg, w7-hl.mix(#ffffff, 0.22) 0%, w7-hl.mix(#ffffff, 0.42) 100%)
+        : accent-14;
+    out property <color> menu-hl-border: win7 && !dark ? w7-hl.mix(#c08a00, 0.7) : xp && !dark ? xp-hl-border : accent-60;
+    out property <length> menu-hl-radius: xp || lite ? 0px : ctl-radius;
+    out property <color> menu-border: win7 && !dark ? #00000066 : xp && !dark ? #aca899 : field-border;
+    out property <length> menu-radius: classic || lite ? 0px : 7px * round;
+    /// barre de menus : titre ouvert ou survolé (7.css : #3399ff, texte blanc ; XP : #316ac5)
+    out property <color> menubar-hl: win7 ? accent : xp ? xp-t1 : accent-20;
     // thème Windows 98 : reliefs 3D, barre de titre en dégradé
     in-out property <bool> win98: false;
     /// barre de titre des fenêtres translucide (Paramètres › Apparence)
@@ -114,4 +279,26 @@ export global Theme {
     in-out property <length> close-size: 17px;
     /// liseré clair autour des boutons (style Windows 11 de MasterPaint) ; aplat sans relief sinon
     in-out property <bool> button-relief: true;
+}
+
+/// Aperçu flouté du projet derrière le verre Aero (Windows 7) : petite image floue de la toile
+/// et sa place dans la fenêtre (coordonnées absolues), tenues par app.slint et lib.rs. Les
+/// fenêtres flottantes la montrent dans leur cadre, décalée de leur propre position : le cadre
+/// laisse voir, flou, ce qu'il y a derrière (backdrop-filter: blur de 7.css).
+export global Backdrop {
+    /// prise de vue en cours (flou expérimental) : les cadres de verre et leurs titres se cachent
+    /// le temps de la capture, pour que l'image montre ce qu'il y a DERRIÈRE chaque cadre
+    in-out property <bool> capturing;
+    in-out property <image> image;
+    in-out property <length> x;
+    in-out property <length> y;
+    in-out property <length> width;
+    in-out property <length> height;
+    /// fond de la zone de travail : posé sous l'image floutée, il voile ce qui est net hors de la
+    /// toile (palettes, ruban, autres fenêtres), sinon le verre « flou » laissait tout lisible
+    in-out property <color> base: #cfcfcf;
+    /// taille de la fenêtre de l'application (rayures du verre fixées à l'écran, comme
+    /// background-attachment: fixed)
+    in-out property <length> view-width: 1920px;
+    in-out property <length> view-height: 1080px;
 }

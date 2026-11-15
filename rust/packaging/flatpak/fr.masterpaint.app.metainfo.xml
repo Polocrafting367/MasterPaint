@@ -20,6 +20,15 @@
   <launchable type="desktop-id">fr.masterpaint.app.desktop</launchable>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="3.6.1" date="2026-11-15">
+      <description><p>Fenêtre Personnalisation avancée, flou du verre fluide, couleurs des boutons et des icônes au choix, contraste renforcé pour tous les styles.</p></description>
+    </release>
+    <release version="3.6.0" date="2026-11-15">
+      <description><p>Personnalisation avancée des styles, Windows XP refait, audit du PC au premier lancement, historique bien plus léger en mémoire.</p></description>
+    </release>
+    <release version="3.5.9" date="2026-11-14">
+      <description><p>Fluidité sur PC modeste, historique, version web plus légère.</p></description>
+    </release>
     <release version="3.5.8" date="2026-11-11">
       <description><p>Groupes d'outils, gestes fluides sous les filtres ƒ, icônes.</p></description>
     </release>

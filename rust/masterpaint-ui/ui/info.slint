@@ -4,10 +4,10 @@
 // outils et ruban, texte et SVG, effets, animation, fichiers) et, pour les sections qui en ont,
 // un sélecteur de sujet en haut. Chaque sujet : explication courte, schéma dessiné ici, étapes.
 // Contenu seul : app.slint le pose dans une FloatWindow (panneau plein écran en mode téléphone).
-import { ScrollView } from "std-widgets.slint";
+import { ScrollView } from "widgets.slint";
 import { Theme } from "theme.slint";
 import { Sprite } from "sprite.slint";
-import { FaIcon, GlyphIcon, Segmented, W10ComboBox } from "widgets.slint";
+import { FaIcon, GlyphIcon, Segmented, W10ComboBox, SideItem } from "widgets.slint";
 
 /// Petit « paysage » qui sert d'image d'exemple dans les schémas (ciel, soleil, collines) ;
 /// `invert` : mêmes couleurs inversées (effet Inverser des schémas ƒ).
@@ -488,6 +488,8 @@ component LayerRowMock inherits Rectangle {
 /// Ruban MasterPaint (alvéoles libellées) ou barre Paint.NET (une ligne).
 component RibbonMock inherits Mock {
     in property <bool> classic;
+    // même bande que le vrai ruban (couleur « Ruban » de Windows 7, barres Office 2003 en XP)
+    background: Theme.band;
     width: 320px;
     height: root.classic ? 34px : 70px;
     if !root.classic: HorizontalLayout {
@@ -503,7 +505,9 @@ component RibbonMock inherits Mock {
                     height: 16px;
                     border-radius: 3px;
                     border-width: 1px;
-                    border-color: Theme.text-inactive;
+                    // premier bouton de « Forme » : choisi, en surbrillance comme dans le ruban
+                    border-color: g.n == 6 && k == 0 ? Theme.accent-60 : Theme.text-inactive;
+                    background: g.n == 6 && k == 0 ? Theme.accent-14 : transparent;
                 }
             }
             Rectangle {
@@ -511,7 +515,7 @@ component RibbonMock inherits Mock {
                 border-radius: 3px;
                 background: Theme.accent-12;
             }
-            Text { text: g.t; font-size: 9px; color: Theme.text-inactive; horizontal-alignment: center; }
+            Text { text: g.t; font-size: 9px; color: Theme.ribbon-label; horizontal-alignment: center; }
         }
     }
     if root.classic: HorizontalLayout {
@@ -791,44 +795,18 @@ export component InfoContent inherits Rectangle {
         y: 0;
         width: root.side-w;
         height: root.height;
-        background: Theme.dark ? Theme.list-bg : Theme.window-bg.darker(3%);
+        background: Theme.side-band;
         VerticalLayout {
             padding: 8px;
             spacing: 2px;
             alignment: start;
-            for sec[si] in root.sections: Rectangle {
-                height: 32px;
-                border-radius: Theme.ctl-radius;
-                background: root.tab == si ? Theme.accent-14 : (Theme.hover-fx && sca.has-hover) ? Theme.accent-12 : transparent;
-                Rectangle {
-                    x: 0;
-                    y: 7px;
-                    width: 3px;
-                    height: parent.height - 14px;
-                    border-radius: 2px * Theme.round;
-                    background: root.tab == si ? Theme.accent : transparent;
-                }
-                GlyphIcon {
-                    x: 12px;
-                    y: round((parent.height - self.height) / 2 / 1px) * 1px;
-                    width: 18px;
-                    glyph: sec.g;
-                    size: 13px;
-                    tint: root.tab == si ? Theme.accent : Theme.text;
-                }
-                Text {
-                    x: 38px;
-                    height: parent.height;
-                    text: sec.t;
-                    font-weight: root.tab == si ? 600 : 400;
-                    color: Theme.text;
-                    vertical-alignment: center;
-                }
-                sca := TouchArea {
-                    clicked => {
-                        root.tab = si;
-                        root.sub = 0;
-                    }
+            for sec[si] in root.sections: SideItem {
+                glyph: sec.g;
+                text: sec.t;
+                selected: root.tab == si;
+                clicked => {
+                    root.tab = si;
+                    root.sub = 0;
                 }
             }
         }

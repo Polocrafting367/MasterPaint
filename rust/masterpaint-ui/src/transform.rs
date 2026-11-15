@@ -102,7 +102,21 @@ impl Floating {
             return Some(Floating::lift_with_outside(doc, kind));
         }
         if doc.sel.is_none() {
-            doc.select_all();
+            // calque sans sélection : le cadre suit son contenu (pixels non transparents), comme
+            // Photoshop. Avant, toute la toile était soulevée : un petit objet sur un calque
+            // 1080p faisait recalculer, recomposer et renvoyer 2 millions de pixels à chaque
+            // mouvement, transparents pour la plupart. Calque vide ou plein : toute la toile.
+            let (w, h) = (doc.w, doc.h);
+            match (kind != Kind::MoveSelection).then(|| content_bounds(&doc.layer().px, w, h)).flatten() {
+                Some((x0, y0, x1, y1)) => {
+                    let mut m = vec![0u8; w * h];
+                    for y in y0..y1 {
+                        m[y * w + x0..y * w + x1].fill(255);
+                    }
+                    doc.sel = Some(m);
+                }
+                None => doc.select_all(),
+            }
         }
         let (x0, y0, x1, y1) = doc.selection_bounds()?;
         let (w, sw, sh) = (doc.w, x1 - x0, y1 - y0);
@@ -495,6 +509,64 @@ impl Floating {
                 lay[r0 * 4..r1 * 4].copy_from_slice(&self.base[r0 * 4..r1 * 4]);
             }
         }
+        // simple translation d'un nombre entier de pixels (outil Déplacer, flèches : le cas
+        // courant) : chaque pixel d'arrivée est un pixel source, recopié sans homographie ni
+        // interpolation (avant : 2 Mpx d'échantillonnage flottant par mouvement pour un calque
+        // 1080p, sur un seul fil dans le navigateur). Mêmes formules de fusion que plus bas.
+        #[cfg(test)]
+        let fast = !tests::GENERIC.with(|g| g.get());
+        #[cfg(not(test))]
+        let fast = true;
+        if let Some((ox, oy)) = integer_offset(&q, self.sw, self.sh).filter(|_| fast) {
+            let move_sel = self.kind == Kind::MoveSelection;
+            let (sw, sh) = (self.sw as isize, self.sh as isize);
+            let ys = oy.max(0)..(oy + sh).min(h as isize);
+            let xs = ox.max(0)..(ox + sw).min(w as isize);
+            if xs.start < xs.end {
+                let n = (xs.end - xs.start) as usize;
+                for y in ys {
+                    let so = ((y - oy) * sw + (xs.start - ox)) as usize;
+                    let di = y as usize * w + xs.start as usize;
+                    let mrow = &self.mask[so..so + n];
+                    let selrow = &mut sel[di..di + n];
+                    if move_sel {
+                        for (d, &mv) in selrow.iter_mut().zip(mrow) {
+                            if mv != 0 {
+                                *d = mv;
+                            }
+                        }
+                        continue;
+                    }
+                    let crow = &self.src[so * 4..(so + n) * 4];
+                    let lrow = &mut lay[di * 4..(di + n) * 4];
+                    for (((d, &mv), s4), l4) in selrow.iter_mut().zip(mrow).zip(crow.chunks_exact(4)).zip(lrow.chunks_exact_mut(4)) {
+                        if mv == 0 {
+                            continue;
+                        }
+                        *d = mv;
+                        if mv == 255 && s4[3] == 255 {
+                            l4.copy_from_slice(s4);
+                            continue;
+                        }
+                        let sa = s4[3] as f32 / 255.0 * (mv as f32 / 255.0);
+                        if sa <= 0.0 {
+                            continue;
+                        }
+                        let da = l4[3] as f32 / 255.0;
+                        let ao = sa + da * (1.0 - sa);
+                        for k in 0..3 {
+                            l4[k] = ((s4[k] as f32 * sa + l4[k] as f32 * da * (1.0 - sa)) / ao + 0.5) as u8;
+                        }
+                        l4[3] = (ao * 255.0 + 0.5) as u8;
+                    }
+                }
+            }
+            doc.sel = Some(sel);
+            if let Ok(mut g) = self.last.lock() {
+                *g = Some((x0, y0, x1, y1));
+            }
+            return Some((dx0, dy0, dx1, dy1));
+        }
         // nouveau contenu, ligne par ligne (bandes réparties sur les cœurs sur le bureau)
         let (sw, sh) = (self.sw as f64, self.sh as f64);
         let smp = Sampling::for_quad(&q, sw, sh);
@@ -682,6 +754,31 @@ impl Floating {
     }
 }
 
+/// Cadre (x0, y0, x1, y1 exclus) des pixels non transparents d'un calque `w` × `h` ; None si le
+/// calque est vide.
+fn content_bounds(px: &[u8], w: usize, h: usize) -> Option<(usize, usize, usize, usize)> {
+    let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
+    for y in 0..h {
+        let row = &px[y * w * 4..(y + 1) * w * 4];
+        let Some(a) = row.chunks_exact(4).position(|p| p[3] != 0) else { continue };
+        let b = row.chunks_exact(4).rposition(|p| p[3] != 0).unwrap_or(a);
+        x0 = x0.min(a);
+        x1 = x1.max(b + 1);
+        y0 = y0.min(y);
+        y1 = y + 1;
+    }
+    (x1 > x0).then_some((x0, y0, x1, y1))
+}
+
+/// Coin haut-gauche (entier) si le cadre `q` n'est que la source `sw` × `sh` déplacée d'un
+/// nombre entier de pixels (ni rotation, ni échelle, ni déformation).
+fn integer_offset(q: &[Pt; 4], sw: usize, sh: usize) -> Option<(isize, isize)> {
+    let (ox, oy) = (q[0].0.round(), q[0].1.round());
+    let (fw, fh) = (sw as f32, sh as f32);
+    let want = [(ox, oy), (ox + fw, oy), (ox + fw, oy + fh), (ox, oy + fh)];
+    q.iter().zip(want).all(|(p, e)| (p.0 - e.0).abs() < 1e-3 && (p.1 - e.1).abs() < 1e-3).then_some((ox as isize, oy as isize))
+}
+
 /// Curseur système d'une poignée de redimensionnement (code de `canvas-cursor`), selon la
 /// direction centre → poignée à l'écran (y vers le bas) : 5 ↔, 6 ↕, 7 ⤡ (haut-gauche /
 /// bas-droite), 8 ⤢. Suit la rotation du cadre, au huitième de tour près.
@@ -743,6 +840,55 @@ fn inside(q: &[Pt; 4], p: Pt) -> bool {
 mod tests {
     use super::*;
     use crate::editor::Doc;
+
+    thread_local! {
+        /// rendu générique forcé (comparaison avec le chemin rapide des translations entières)
+        pub(super) static GENERIC: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+
+    /// Translation entière : le chemin rapide donne les mêmes pixels et la même sélection que
+    /// l'échantillonnage générique (masque progressif, contenu semi-transparent, calque dessous).
+    #[test]
+    fn integer_translation_fast_path_matches_generic() {
+        let make = || {
+            let (w, h) = (48, 36);
+            let mut d = Doc::new(w, h, [30, 60, 90, 200], "t");
+            let mut m = vec![0u8; w * h];
+            for y in 0..h {
+                for x in 0..w {
+                    let i = (y * w + x) * 4;
+                    d.layer_mut().px[i..i + 4].copy_from_slice(&[(x * 5) as u8, (y * 7) as u8, ((x + y) * 3) as u8, (120 + (x * y) % 136) as u8]);
+                    if (6..30).contains(&x) && (5..25).contains(&y) {
+                        m[y * w + x] = if x < 9 || y < 8 { 90 } else { 255 };
+                    }
+                }
+            }
+            d.sel = Some(m);
+            d
+        };
+        for kind in [Kind::MovePixels, Kind::MoveSelection] {
+            for (dx, dy) in [(7.0, 3.0), (-9.0, 14.0), (30.0, -2.0)] {
+                let mut out = Vec::new();
+                for generic in [false, true] {
+                    GENERIC.with(|g| g.set(generic));
+                    let mut d = make();
+                    let mut f = Floating::lift(&mut d, kind, false).unwrap();
+                    let s = f.snapshot();
+                    f.drag(&s, Grab::Translate, (0.0, 0.0), (dx, dy), false, false);
+                    f.render(&mut d);
+                    // second mouvement : l'ancien cadre est bien effacé
+                    f.drag(&s, Grab::Translate, (0.0, 0.0), (dx + 2.0, dy + 1.0), false, false);
+                    let r = f.render(&mut d);
+                    out.push((d.layer().px.to_vec(), d.sel.clone(), r));
+                }
+                GENERIC.with(|g| g.set(false));
+                assert!(out[0].1 == out[1].1, "sélection identique ({kind:?}, {dx}, {dy})");
+                assert_eq!(out[0].2, out[1].2, "zone à refaire identique");
+                let diff = out[0].0.iter().zip(&out[1].0).map(|(a, b)| a.abs_diff(*b)).max().unwrap_or(0);
+                assert!(diff <= 1, "pixels identiques à ±1 ({kind:?}, {dx}, {dy}) : écart {diff}");
+            }
+        }
+    }
 
     fn red_square() -> Doc {
         let mut d = Doc::new(40, 40, [0, 0, 0, 0], "t");
@@ -828,6 +974,24 @@ mod tests {
         f.render(&mut d);
         let (x0, y0, x1, y1) = d.selection_bounds().unwrap();
         assert!(x1 - x0 >= 14 && y1 - y0 >= 14, "sélection suivie : {x0},{y0},{x1},{y1}");
+    }
+
+    #[test]
+    fn layer_without_selection_lifts_its_content_only() {
+        let mut d = red_square();
+        d.sel = None;
+        let mut f = Floating::lift(&mut d, Kind::MovePixels, false).unwrap();
+        assert_eq!((f.sw, f.sh), (10, 10), "cadre = contenu du calque, pas toute la toile");
+        let s = f.snapshot();
+        f.drag(&s, Grab::Translate, (0.0, 0.0), (5.0, 3.0), false, false);
+        let r = f.render(&mut d).unwrap();
+        assert!(r.2 - r.0 <= 18 && r.3 - r.1 <= 16, "zone refaite limitée à l'objet : {r:?}");
+        assert_eq!(&d.layer().px[(14 * 40 + 16) * 4..(14 * 40 + 16) * 4 + 4], &[255, 0, 0, 255]);
+        assert_eq!(d.layer().px[(11 * 40 + 11) * 4 + 3], 0, "ancien emplacement vidé");
+        // calque vide : toute la toile, comme avant
+        let mut e = Doc::new(20, 20, [0, 0, 0, 0], "e");
+        let f = Floating::lift(&mut e, Kind::MovePixels, false).unwrap();
+        assert_eq!((f.sw, f.sh), (20, 20));
     }
 
     #[test]

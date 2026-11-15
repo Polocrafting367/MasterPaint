@@ -18,18 +18,20 @@ thread_local! {
 }
 const PAINT: &str = include_str!("../icon-packs/paintdotjs.json");
 const PHOTO: &str = include_str!("../icon-packs/photocraft.json");
+/// Paint.NET 3.36 (OpenPDN) : pack n° 4 (le n° 3 reste le pack importé)
+const OLD_PDN: &str = include_str!("../icon-packs/openpdn.json");
 thread_local! {
     /// packs intégrés lus une seule fois (≈ 400 Ko de JSON chacun : relus à chaque choix de pack
     /// ou ouverture de la page Icônes, avant)
-    static BUILTIN: std::cell::OnceCell<(Value, Value)> = const { std::cell::OnceCell::new() };
+    static BUILTIN: std::cell::OnceCell<(Value, Value, Value)> = const { std::cell::OnceCell::new() };
     /// icônes déjà rendues : (source, taille, couleurs) → image. Repasser d'une interface à
     /// l'autre ne redécode plus des centaines de PNG.
     static RENDERED: RefCell<std::collections::HashMap<(u64, u32, u64), Image>> = RefCell::new(std::collections::HashMap::new());
 }
 fn builtin(index: i32) -> Value {
     BUILTIN.with(|b| {
-        let (paint, photo) = b.get_or_init(|| (serde_json::from_str(PAINT).unwrap_or(Value::Null), serde_json::from_str(PHOTO).unwrap_or(Value::Null)));
-        if index == 1 { paint.clone() } else { photo.clone() }
+        let (paint, photo, old) = b.get_or_init(|| (serde_json::from_str(PAINT).unwrap_or(Value::Null), serde_json::from_str(PHOTO).unwrap_or(Value::Null), serde_json::from_str(OLD_PDN).unwrap_or(Value::Null)));
+        match index { 1 => paint.clone(), 4 => old.clone(), _ => photo.clone() }
     })
 }
 fn hash_of<T: std::hash::Hash + ?Sized>(v: &T) -> u64 {
@@ -57,7 +59,7 @@ pub fn delete_custom(i:usize)->bool {
 }
 pub fn select(index: i32) {
     SELECTED.with(|v|v.set(index));
-    let v = match index { 1 | 2 => builtin(index), 3 => custom(), _ => Value::Null };
+    let v = match index { 1 | 2 | 4 => builtin(index), 3 => custom(), _ => Value::Null };
     ACTIVE.with(|a| *a.borrow_mut() = v["icons"].as_object().map(|m| m.iter().filter_map(|(k,v)| Some((k.clone(),v.as_str()?.to_owned()))).collect()).unwrap_or_default());
     ACTIVE_NORM.with(|n| {
         let mut n=n.borrow_mut(); n.clear();
@@ -67,7 +69,7 @@ pub fn select(index: i32) {
     });
     crate::theme::invalidate_icons();
 }
-/// Pack affiché : 0 MasterPaint, 1 PaintJS, 2 PhotoCraft, 3 importé.
+/// Pack affiché : 0 MasterPaint, 1 PaintJS, 2 PhotoCraft, 3 importé, 4 Paint.NET (ancien).
 pub fn selected() -> i32 { SELECTED.with(Cell::get) }
 pub fn source(key: &str) -> Option<String> { ACTIVE.with(|a| a.borrow().get(key).cloned()) }
 pub fn catalog(selected:i32)->Vec<crate::IconPackCard>{
@@ -77,13 +79,13 @@ pub fn catalog(selected:i32)->Vec<crate::IconPackCard>{
     let mp_preview=crate::icons_gen::ICON_NAMES.iter().position(|n|*n=="tool-brush").and_then(|i|render(crate::icons_gen::ICONS[i],40,colors)).unwrap_or_default();
     let total=crate::mpicons_gen::MP_ICONS.len()+crate::sprite_gen::SPRITE.len()+crate::icons_gen::ICONS.len();
     rows.push(crate::IconPackCard{id:"builtin:0".into(),name:"MasterPaint".into(),details:format!("Pack complet · {total} icônes · polocrafting").into(),source_url:"https://github.com/Polocrafting367/MasterPaint".into(),preview:mp_preview,selected:selected==0,imported:false});
-    for (i,name,details,src) in [(1,"PaintJS","Paint.NET · LabyStudio",PAINT),(2,"PhotoCraft","Photoshop · storytold",PHOTO)] {
+    for (i,name,details,src) in [(1,"PaintJS","Paint.NET · LabyStudio",PAINT),(4,"Paint.NET (ancien)","Paint.NET 3.36 · OpenPDN",OLD_PDN),(2,"PhotoCraft","Photoshop · storytold",PHOTO)] {
         let _ = src;
         let p:Value=builtin(i);
         let preview=p["icons"]["sprite/tool-brush"].as_str().or_else(||p["icons"]["mp/brush"].as_str()).or_else(||p["icons"]["mp/new"].as_str()).or_else(||p["icons"].as_object().and_then(|m|m.values().find_map(Value::as_str))).and_then(|s|render(s,40,colors)).unwrap_or_default();
         let (have,total)=pack_counts(&p);
         let details=format!("{details} · {have} / {total} icônes");
-        let source=if i==1{"https://github.com/LabyStudio/paintdotjs"}else{"https://github.com/storytold/photocraft"};
+        let source=match i{1=>"https://github.com/LabyStudio/paintdotjs",4=>"https://github.com/rivy/OpenPDN",_=>"https://github.com/storytold/photocraft"};
         rows.push(crate::IconPackCard{id:format!("builtin:{i}").into(),name:name.into(),details:details.into(),source_url:source.into(),preview,selected:selected==i,imported:false});
     }
     CUSTOM.with(|packs|for (i,p) in packs.borrow().iter().enumerate(){
@@ -97,7 +99,7 @@ pub fn catalog(selected:i32)->Vec<crate::IconPackCard>{
 pub fn github_source(id:&str)->Option<String>{
     let (kind,index)=id.split_once(':')?;
     let index=index.parse::<usize>().ok()?;
-    let source=match kind{"builtin"=>match index{0=>Some("https://github.com/Polocrafting367/MasterPaint".to_owned()),1=>Some("https://github.com/LabyStudio/paintdotjs".to_owned()),2=>Some("https://github.com/storytold/photocraft".to_owned()),_=>None},"custom"=>CUSTOM.with(|v|v.borrow().get(index).and_then(|p|p["source"].as_str().map(str::to_owned))),_=>None}?;
+    let source=match kind{"builtin"=>match index{0=>Some("https://github.com/Polocrafting367/MasterPaint".to_owned()),1=>Some("https://github.com/LabyStudio/paintdotjs".to_owned()),2=>Some("https://github.com/storytold/photocraft".to_owned()),4=>Some("https://github.com/rivy/OpenPDN".to_owned()),_=>None},"custom"=>CUSTOM.with(|v|v.borrow().get(index).and_then(|p|p["source"].as_str().map(str::to_owned))),_=>None}?;
     source.split(|c:char|c==';'||c.is_whitespace()).find(|s|s.starts_with("https://github.com/")).map(str::to_owned)
 }
 
@@ -328,7 +330,7 @@ fn png_data_uri(src:&str)->Option<String>{
 /// garde la source (SVG si le pack en a, sinon PNG) ; `iconsPng` donne un PNG de chaque icône,
 /// converti depuis le SVG au besoin.
 fn export_value(index:i32)->Value{
-    let mut pack:Value=match index{1|2=>builtin(index),3=>custom(),_=>json!({"name":"MasterPaint","author":"polocrafting"})};
+    let mut pack:Value=match index{1|2|4=>builtin(index),3=>custom(),_=>json!({"name":"MasterPaint","author":"polocrafting"})};
     let mut icons=BTreeMap::<String,String>::new();
     for(n,s)in crate::mpicons_gen::MP_ICONS{icons.insert(format!("mp/{n}"),s.to_string());}
     for(n,s)in crate::sprite_gen::SPRITE{icons.insert(format!("sprite/{n}"),s.to_string());}
@@ -359,7 +361,7 @@ pub fn export_zip(index:i32)->Vec<u8>{
     let pack=export_value(index);
     let mut entries=vec![("masterpaint-pack.json".into(),serde_json::to_vec_pretty(&pack).unwrap_or_default()),("CREDITS.txt".into(),"MasterPaint — © polocrafting — https://polocrafting.fr/ — https://github.com/Polocrafting367/MasterPaint\nMasterPaint reuse: use a different project name, keep clickable credits and links, non-commercial use only. Custom polocrafting icons are reserved for MasterPaint.\nPaint.NET original project by Rick Brewster, dotPDN and contributors — https://paint.net/ — https://github.com/rivy/OpenPDN\nPaintJS by LabyStudio (separate project; interface reference and icon pack) — https://paintjs.net/ — https://github.com/LabyStudio/paintdotjs\nArtCraft — PhotoCraft, VectorCraft and LightCraft by storytold and contributors — https://getartcraft.com/apps — https://github.com/storytold\nThird-party material retains its original license and notices.\nsvg/ : vector icons (when the source is vector) · png/ : every icon as PNG · file names = MasterPaint keys (mp_brush, tool_3…), re-importable.\n".as_bytes().to_vec())];
     // fichiers d'origine et licences du projet de référence (assets/…, licenses/…)
-    for a in REFERENCE_ASSETS {if (index==1&&a.pack==1)||(index==2&&a.pack==2){entries.push((a.path.to_owned(),a.bytes.to_vec()));}}
+    for a in REFERENCE_ASSETS.iter().chain(crate::openpdn_assets_gen::OPENPDN_ASSETS) {if matches!(index,1|2|4)&&a.pack==index{entries.push((a.path.to_owned(),a.bytes.to_vec()));}}
     if let Some(icons)=pack["icons"].as_object(){
         for (key,src) in icons{if let Some(src)=src.as_str(){if !src.starts_with("data:"){entries.push((format!("svg/{}.svg",file_stem(key)),standalone_svg(src).into_bytes()));}}}
     }

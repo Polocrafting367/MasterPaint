@@ -3,12 +3,38 @@
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
-    <application android:label="MasterPaint Rust" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:hasCode="true" android:hardwareAccelerated="true" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="true">
-        <activity android:name="fr.masterpaint.nativeapp.MainActivity" android:exported="true" android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|uiMode" android:windowSoftInputMode="adjustResize">
+    <application android:label="MasterPaint" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:hasCode="true" android:hardwareAccelerated="true" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="true">
+        <activity android:name="fr.masterpaint.nativeapp.MainActivity" android:exported="true" android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|uiMode" android:windowSoftInputMode="adjustResize" android:launchMode="singleTask">
             <meta-data android:name="android.app.lib_name" android:value="masterpaint_ui" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- « Ouvrir avec » et « Partager vers » MasterPaint pour les images -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <!-- projets .illu / .pdn / .psd souvent annoncés sans type précis -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-masterpaint" />
+                <data android:mimeType="application/x-photoshop" />
+                <data android:mimeType="application/photoshop" />
+                <data android:mimeType="application/psd" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
         <provider android:name="fr.masterpaint.nativeapp.ClipboardProvider" android:authorities="fr.masterpaint.nativeapp.clipboard" android:exported="false" android:grantUriPermissions="true" />

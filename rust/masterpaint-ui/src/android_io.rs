@@ -56,6 +56,25 @@ impl AsyncFileDialog {
         }).await
     }
 }
+/// Image reçue d'une autre application (« Ouvrir avec », « Partager vers ») pas encore lue.
+pub fn has_incoming() -> bool {
+    java(|env, activity| env.call_method(activity, "hasIncoming", "()Z", &[])?.z()).unwrap_or(false)
+}
+/// Fichiers reçus d'une autre application (lus par l'activité, comme un choix du sélecteur).
+pub async fn incoming() -> Option<Vec<FileHandle>> {
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let state = Rc::new(RefCell::new(Pick::default()));
+    PICKS.with(|p| p.borrow_mut().insert(id, state.clone()));
+    if java(|env, activity| env.call_method(activity, "takeIncoming", "(J)V", &[JValue::Long(id as i64)]).map(|_| ())).is_none() {
+        PICKS.with(|p| p.borrow_mut().remove(&id));
+        return None;
+    }
+    std::future::poll_fn(move |cx| {
+        let mut state = state.borrow_mut();
+        if state.done { Poll::Ready((!state.files.is_empty()).then(|| std::mem::take(&mut state.files))) }
+        else { state.waker = Some(cx.waker().clone()); Poll::Pending }
+    }).await
+}
 pub fn save(name: &str, mime: &str, bytes: Vec<u8>, done: impl FnOnce(bool) + 'static) {
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
     SAVES.with(|s| s.borrow_mut().insert(id, Box::new(done)));

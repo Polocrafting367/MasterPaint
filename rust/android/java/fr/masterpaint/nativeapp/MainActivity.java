@@ -78,6 +78,36 @@ public final class MainActivity extends NativeActivity {
             catch (Exception e) { filesReady(id, new String[0], new byte[0][]); complete(); }
         });
     }
+    // « Ouvrir avec MasterPaint » / « Partager vers » : l'image reçue est lue comme un fichier
+    // choisi (filesReady) ; l'activité est en singleTask, une seconde ouverture arrive ici
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+    }
+    private static final String TAKEN = "fr.masterpaint.taken";
+    public boolean hasIncoming() {
+        Intent i = getIntent();
+        if (i == null || i.getBooleanExtra(TAKEN, false)) return false;
+        String a = i.getAction();
+        return (Intent.ACTION_VIEW.equals(a) && i.getData() != null) || Intent.ACTION_SEND.equals(a) || Intent.ACTION_SEND_MULTIPLE.equals(a);
+    }
+    @SuppressWarnings("deprecation")
+    public void takeIncoming(long id) {
+        final ArrayList<Uri> uris = new ArrayList<>();
+        Intent i = getIntent();
+        if (i != null && !i.getBooleanExtra(TAKEN, false)) {
+            String a = i.getAction();
+            if (Intent.ACTION_VIEW.equals(a) && i.getData() != null) uris.add(i.getData());
+            else if (Intent.ACTION_SEND.equals(a)) { Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM); if (u != null) uris.add(u); }
+            else if (Intent.ACTION_SEND_MULTIPLE.equals(a)) { ArrayList<Uri> l = i.getParcelableArrayListExtra(Intent.EXTRA_STREAM); if (l != null) uris.addAll(l); }
+            i.putExtra(TAKEN, true);
+        }
+        io.execute(() -> {
+            ArrayList<String> names = new ArrayList<>(); ArrayList<byte[]> data = new ArrayList<>();
+            for (Uri uri : uris) try { byte[] bytes = read(uri); names.add(name(uri)); data.add(bytes); } catch (Exception ignored) {}
+            filesReady(id, names.toArray(new String[0]), data.toArray(new byte[0][]));
+        });
+    }
     public void saveFile(long id, String name, String mime, byte[] data) {
         enqueue(() -> {
             saveId = id; saving = data;

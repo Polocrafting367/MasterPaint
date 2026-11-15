@@ -44,6 +44,8 @@ fn image_key(rgba: &[u8], w: usize, h: usize) -> u64 {
 pub fn preload() {
     #[cfg(target_arch = "wasm32")]
     web::ai_preload(AI_MODEL);
+    #[cfg(not(target_arch = "wasm32"))]
+    crate::ai_native::preload();
 }
 
 /// Alpha `sw` × `sh` agrandi (ou réduit) en bilinéaire à `w` × `h`.
@@ -93,10 +95,39 @@ pub async fn subject(rgba: &[u8], w: usize, h: usize, progress: impl Fn(String, 
     Ok((sw, sh, a))
 }
 
+/// Bureau : même rôle, par U²-Net-p sur un fil à part (`ai_native`) ; l'image est d'abord
+/// réduite à 1024 px (le modèle analyse en 320 px), le dernier résultat est gardé.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn subject(rgba: &[u8], w: usize, h: usize, progress: impl Fn(String, f32) + 'static) -> Result<(usize, usize, Vec<u8>), String> {
+    thread_local! {
+        static LAST_N: RefCell<Option<(u64, std::rc::Rc<(usize, usize, Vec<u8>)>)>> = const { RefCell::new(None) };
+    }
+    let (sw, sh, small) = photo::downscale(rgba, w, h, AI_SIDE);
+    let key = {
+        use std::hash::{Hash, Hasher};
+        let mut hs = std::collections::hash_map::DefaultHasher::new();
+        (sw, sh).hash(&mut hs);
+        small.iter().step_by(97).for_each(|b| b.hash(&mut hs));
+        hs.finish()
+    };
+    if let Some(r) = LAST_N.with(|l| l.borrow().clone()).filter(|l| l.0 == key) {
+        return Ok(r.1.as_ref().clone());
+    }
+    progress("Analyse de l'image".into(), 30.0);
+    let r = crate::ai_native::spawn(small.to_vec(), sw, sh).await?;
+    LAST_N.with(|l| *l.borrow_mut() = Some((key, std::rc::Rc::new(r.clone()))));
+    Ok(r)
+}
+
 /// État partagé de l'application (rappel des calculs asynchrones).
 #[cfg(target_arch = "wasm32")]
 fn shared() -> Option<Shared> {
     SHARED.with(|s| s.borrow().upgrade())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn shared() -> Option<Shared> {
+    APP_STATE.with(|s| s.borrow().clone())
 }
 
 /// Fenêtre « Détection du sujet en cours, veuillez patienter » avec Annuler (l'IA peut prendre
@@ -135,18 +166,13 @@ pub fn cancel(app: &AppWindow) {
 /// Message d'échec de l'IA (connexion, bloqueur, navigateur).
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn ai_failed(app: &AppWindow, title: &str, why: &str) {
-    show_error(
-        app,
-        title,
-        &i18n::tr_format!("L'IA de détourage n'a pas pu analyser l'image ({why}). Vérifiez la connexion (premier usage : téléchargement du modèle), un bloqueur de script, ou essayez un navigateur récent."),
-    );
+    #[cfg(target_arch = "wasm32")]
+    let msg = i18n::tr_format!("L'IA de détourage n'a pas pu analyser l'image ({why}). Vérifiez la connexion (premier usage : téléchargement du modèle), un bloqueur de script, ou essayez un navigateur récent.");
+    #[cfg(not(target_arch = "wasm32"))]
+    let msg = i18n::tr_format!("L'IA de détourage n'a pas pu analyser l'image ({why}).");
+    show_error(app, title, &msg);
 }
 
-/// Bureau : l'IA n'existe que dans la version navigateur pour l'instant.
-#[cfg(not(target_arch = "wasm32"))]
-fn desktop_only(app: &AppWindow, title: &str) {
-    show_error(app, title, "La sélection du sujet utilise un modèle d'IA exécuté dans le navigateur : elle est disponible dans la version web de MasterPaint. La version de bureau suivra.");
-}
 
 /// Contour affiné sur l'image pleine résolution (filtre guidé, He et al. 2010) : l'alpha
 /// agrandi depuis l'analyse en 1024 px suit les vrais bords de l'image (cheveux, poils) au
@@ -308,12 +334,6 @@ pub fn select_subject(app: &AppWindow, st: &mut State, background: bool) {
 
 fn subject_run(app: &AppWindow, st: &mut State, background: bool, precise: bool) {
     let title = if background { "Sélectionner l'arrière-plan" } else { "Sélectionner le sujet" };
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = (st, background, precise);
-        desktop_only(app, title);
-    }
-    #[cfg(target_arch = "wasm32")]
     {
         let (w, h, uid) = (st.doc.w, st.doc.h, st.doc.uid);
         let flat = st.doc.flatten_final();
@@ -424,14 +444,7 @@ fn object_run(app: &AppWindow, st: &mut State, shape: Vec<u8>, mode: SelMode, ba
         sel_changed(app, st);
         status(app, i18n::tr_format!("Objet sélectionné ({how})"));
     };
-    // bureau : modèle de couleurs (pas d'IA hors du navigateur)
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = uid;
-        let c = crate::seg::color_object(&crop, cw, ch, &scrop);
-        finish(app, st, c, "couleurs");
-    }
-    #[cfg(target_arch = "wasm32")]
+    // IA (navigateur, ou U²-Net-p sur le bureau) ; repli sur le modèle de couleurs
     {
         let after = st.doc.sel.clone();
         busy_on(app, "Sélection d'objet (IA)");
@@ -480,13 +493,6 @@ fn object_run(app: &AppWindow, st: &mut State, shape: Vec<u8>, mode: SelMode, ba
 pub fn pm_ensure(app: &AppWindow, st: &mut State) {
     let active = st.photo.active;
     let Some(p) = st.photo.photos.get_mut(active).filter(|p| p.wants_ai()) else { return };
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        // pas d'IA sur le bureau : détection simple, signalée une fois
-        p.ai_state = 2;
-        status(app, "Masque Sujet : la détection par IA est disponible dans la version web ; détection simple en attendant");
-    }
-    #[cfg(target_arch = "wasm32")]
     {
         p.ai_state = 1;
         let (uid, w, h, px) = (p.uid, p.pw, p.ph, p.preview.clone());

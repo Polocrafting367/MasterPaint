@@ -39,6 +39,8 @@
   :root.dark { --bg: #1f1f1f; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--desk); }
   body.ready { background: var(--bg); }
+  /* intégration transparente (mpTransparentHeader) : la page parente se voit sous l'entête */
+  html.mp-transparent, html.mp-transparent body, html.mp-transparent body.ready { background: transparent; }
   /* Slint dessine toute l'interface dans ce canevas (WebGL / WebGPU) */
   #canvas { display: block; width: 100vw; height: 100vh; outline: none; }
   #loading {
@@ -173,6 +175,70 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
 })();
 </script>
 <script>
+  // Intégration transparente (entête de MasterPaint sans fond, style Windows 7 imposé), décidée
+  // AVANT la création du contexte WebGL, qui doit alors avoir un canal alpha :
+  //  - page parente : <iframe src=".../?mp-transparent=1">, ou <iframe data-mp-transparent>
+  //    (même origine), ou window.MP_TRANSPARENT_HEADER = true posé avant le chargement ;
+  //  - essai : Paramètres › Avancé › Intégration web (réglage headerTransparent).
+  // Lu par lib.rs (header_clear_request) : "parent", "setting" ou "".
+  (() => {
+    let by = '';
+    try { if (/[?&](mp-)?transparent=(1|true)\b/.test(location.search)) by = 'parent'; } catch (_) {}
+    try { if (!by && window.frameElement && window.frameElement.hasAttribute('data-mp-transparent')) by = 'parent'; } catch (_) {}
+    try { if (!by && window.MP_TRANSPARENT_HEADER) by = 'parent'; } catch (_) {}
+    try { if (!by && JSON.parse(localStorage.getItem('illu_rust_settings') || '{}').headerTransparent) by = 'setting'; } catch (_) {}
+    window.mpTransparentHeader = by;
+    if (by) document.documentElement.classList.add('mp-transparent');
+  })();
+  // Entête transparente au style de Windows 7 avec flou (lib.rs : sync_header_glass) : la page
+  // parente de même origine floute ce qu'il y a derrière l'entête — calque `backdrop-filter`
+  // glissé sous le cadre, calculé par le navigateur. Autre origine : message
+  // { type: 'mp-header-glass', height, blur } (blur 0 : retirer) à traiter par la page parente.
+  window.mpHeaderGlass = (height, blur) => {
+    try { if (window.parent !== window) window.parent.postMessage({ type: 'mp-header-glass', height, blur }, '*'); } catch (_) {}
+    let fe = null, pd = null;
+    try { fe = window.frameElement; pd = fe && fe.ownerDocument; } catch (_) { return; }
+    if (!fe || !pd || !pd.body) return;
+    const pw = pd.defaultView;
+    let g = pd.getElementById('mp-header-glass');
+    if (!(blur > 0)) {
+      if (g) g.remove();
+      if (window.mpGlassOff) window.mpGlassOff();
+      return;
+    }
+    if (!g) {
+      g = pd.createElement('div');
+      g.id = 'mp-header-glass';
+      g.style.cssText = 'position:absolute;pointer-events:none;margin:0;padding:0;border:0;';
+      pd.body.appendChild(g);
+      // sous le cadre, au-dessus du contenu de la page
+      const cs = pw.getComputedStyle(fe);
+      if (cs.position === 'static') fe.style.position = 'relative';
+      const z = parseInt(cs.zIndex, 10);
+      const base = isNaN(z) ? 0 : z;
+      g.style.zIndex = String(base);
+      fe.style.zIndex = String(base + 1);
+      const place = () => {
+        const r = fe.getBoundingClientRect();
+        g.style.left = (r.left + pw.scrollX + fe.clientLeft) + 'px';
+        g.style.top = (r.top + pw.scrollY + fe.clientTop) + 'px';
+        g.style.width = fe.clientWidth + 'px';
+      };
+      pw.addEventListener('scroll', place, { passive: true });
+      pw.addEventListener('resize', place);
+      window.addEventListener('resize', place);
+      window.mpGlassOff = () => {
+        pw.removeEventListener('scroll', place);
+        pw.removeEventListener('resize', place);
+        window.removeEventListener('resize', place);
+        window.mpGlassOff = null;
+      };
+      place();
+    }
+    g.style.height = height + 'px';
+    g.style.backdropFilter = `blur(${blur}px)`;
+    g.style.webkitBackdropFilter = `blur(${blur}px)`;
+  };
   window.mpSetSystemTheme = (color, dark, accent) => {
     if (!/^#[0-9a-f]{6}$/i.test(color) || !/^#[0-9a-f]{6}$/i.test(accent)) return;
     document.querySelector('meta[name="theme-color"]').content = color;
@@ -421,9 +487,11 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
     const get = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
       if ((type === 'webgl2' || type === 'webgl') && this.id === 'canvas') {
-        const want = { ...attrs, alpha: false, depth: false, powerPreference: 'high-performance' };
+        // intégration transparente : canal alpha (sinon les zones sans fond sortiraient noires)
+        const alpha = !!window.mpTransparentHeader;
+        const want = { ...attrs, alpha, premultipliedAlpha: true, depth: false, powerPreference: 'high-performance' };
         // carte « rapide » refusée (pilote, liste noire, portable sur batterie) : contexte ordinaire
-        return get.call(this, type, want) || get.call(this, type, { ...attrs, alpha: false, depth: false }) || get.call(this, type, attrs);
+        return get.call(this, type, want) || get.call(this, type, { ...attrs, alpha, depth: false }) || get.call(this, type, attrs);
       }
       return get.call(this, type, attrs);
     };
@@ -623,8 +691,9 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       const d = win.document;
       d.open();
       d.write('<!doctype html><meta charset="utf-8"><title>MasterPaint</title>' +
-        '<style>html,body{margin:0;background:#1e1e1e;}body{display:grid;place-items:center;min-height:100vh;overflow:auto;}' +
-        'canvas{image-rendering:pixelated;background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/16px 16px;}</style>' +
+        // toute l'image ajustée à la fenêtre, sans déformation ni défilement
+        '<style>html,body{margin:0;background:#1e1e1e;overflow:hidden;}body{display:grid;place-items:center;height:100vh;}' +
+        'canvas{display:block;}</style>' +
         '<canvas></canvas>');
       d.close();
       d.title = mpTr("Aperçu 1:1 — MasterPaint");
@@ -632,15 +701,21 @@ const mpTranslations = {"en":{" (essai)":" (test)"," Mo":" MB","API navigator.cl
       this.canvas = d.querySelector('canvas');
       // retour à l'application quand l'aperçu est fermé
       win.addEventListener('beforeunload', () => { this.win = null; this.canvas = null; });
+      win.addEventListener('resize', () => this.fit());
       return true;
+    },
+    /** taille affichée : la plus grande qui tient dans la fenêtre, proportions gardées */
+    fit() {
+      const c = this.canvas;
+      if (!this.isOpen() || !c || !c.width || !c.height) return;
+      const k = Math.min(this.win.innerWidth / c.width, this.win.innerHeight / c.height);
+      c.style.width = Math.floor(c.width * k) + 'px';
+      c.style.height = Math.floor(c.height * k) + 'px';
     },
     update(rgba, w, h) {
       if (!this.isOpen() || !this.canvas) return;
       const c = this.canvas;
-      const dpr = this.win.devicePixelRatio || 1;
-      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-      c.style.width = (w / dpr) + 'px';
-      c.style.height = (h / dpr) + 'px';
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; this.fit(); }
       const id = new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, w * h * 4), w, h);
       c.getContext('2d').putImageData(id, 0, 0);
     },

@@ -93,10 +93,9 @@ for kind,src,mapping,ext in [('paintdotjs',root.parent/'masterpaint-inspiration/
  data['customIcons']=custom_keys
  data['customNote']='Icônes de custom/ : dessinées pour MasterPaint (polocrafting) là où '+('paintdotjs' if kind=='paintdotjs' else 'PhotoCraft')+" n'a pas d'équivalent ; elles ne viennent pas du projet de référence."
  (dest/(kind+'.json')).write_text(json.dumps(data,ensure_ascii=False,indent=2)); print(kind,len(icons),'mapped,',len(list(source_dir.iterdir())),'originales')
+# fichiers d'origine joints à « Exporter le pack complet » : packs 1 et 2 seulement (ceux du pack
+# MasterPaint ne sont jamais exportés, ils n'alourdissent plus le programme)
 lines=['// Copyright polocrafting; see COPYRIGHT.md. Generated from the visible icon-packs source folders.',"pub struct ReferenceAsset { pub pack: i32, pub path: &'static str, pub bytes: &'static [u8] }",'pub const REFERENCE_ASSETS: &[ReferenceAsset] = &[']
-for original in sorted((dest/'masterpaint'/'source').rglob('*.svg')):
- rel=original.relative_to(dest/'masterpaint'/'source').as_posix()
- lines.append(f'    ReferenceAsset {{ pack: 0, path: {json.dumps("assets/masterpaint/"+rel)}, bytes: include_bytes!("../icon-packs/masterpaint/source/{rel}") }},')
 for kind in ('paintdotjs','photocraft'):
  for original in sorted((dest/kind/'source').glob('*')):
   lines.append(f'    ReferenceAsset {{ pack: {1 if kind=="paintdotjs" else 2}, path: {json.dumps("assets/"+kind+"/"+original.name)}, bytes: include_bytes!("../icon-packs/{kind}/source/{original.name}") }},')

@@ -63,7 +63,19 @@ build_linux() {
     cargo build -p masterpaint-ui --release
     bin="$target/release/masterpaint-ui"
     strip "$bin"
-    tar -C "$target/release" -czf "$linux_tar.tmp" masterpaint-ui
+    # archive : dossier MasterPaint/ prêt à installer (binaire, icône, lanceur, types MIME,
+    # install.sh : installation dans le dossier personnel, double-clic sur .illu / .pdn / .psd)
+    pkg="$target/MasterPaint-linux"
+    rm -rf "$pkg"
+    mkdir -p "$pkg/MasterPaint"
+    cp "$bin" "$pkg/MasterPaint/masterpaint"
+    cp ../icons/icon-512.png "$pkg/MasterPaint/fr.masterpaint.app.png"
+    sed -e 's|^Exec=.*|Exec=masterpaint %F|' -e 's/^StartupWMClass=.*/StartupWMClass=fr.masterpaint.app/' \
+        packaging/flatpak/fr.masterpaint.app.desktop > "$pkg/MasterPaint/fr.masterpaint.app.desktop"
+    cp packaging/flatpak/fr.masterpaint.app.mime.xml "$pkg/MasterPaint/"
+    cp packaging/linux/install.sh "$pkg/MasterPaint/install.sh"
+    chmod +x "$pkg/MasterPaint/install.sh" "$pkg/MasterPaint/masterpaint"
+    tar -C "$pkg" -czf "$linux_tar.tmp" MasterPaint
     mv -f "$linux_tar.tmp" "$linux_tar"
     app="$target/MasterPaint.AppDir"
     rm -rf "$app"
@@ -71,7 +83,8 @@ build_linux() {
     cp "$bin" "$app/usr/bin/masterpaint"
     cp packaging/icons/128x128.png "$app/usr/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
     cp packaging/icons/128x128.png "$app/fr.masterpaint.app.png"
-    sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=masterpaint/' \
+    install -Dm644 packaging/flatpak/fr.masterpaint.app.mime.xml "$app/usr/share/mime/packages/fr.masterpaint.app.xml"
+    sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=fr.masterpaint.app/' \
         packaging/flatpak/fr.masterpaint.app.desktop > "$app/fr.masterpaint.app.desktop"
     printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")/usr/bin/masterpaint" "$@"\n' > "$app/AppRun"
     chmod +x "$app/AppRun"
@@ -124,9 +137,10 @@ build_flatpak() {
         f="$fp/app/files"
         install -Dm755 "$bin" "$f/bin/masterpaint"
         mkdir -p "$f/share/applications"
-        sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=masterpaint/' \
+        sed -e 's/^Exec=.*/Exec=masterpaint %F/' -e 's/^StartupWMClass=.*/StartupWMClass=fr.masterpaint.app/' \
             packaging/flatpak/fr.masterpaint.app.desktop > "$f/share/applications/fr.masterpaint.app.desktop"
         install -Dm644 packaging/flatpak/fr.masterpaint.app.metainfo.xml "$f/share/metainfo/fr.masterpaint.app.metainfo.xml"
+        install -Dm644 packaging/flatpak/fr.masterpaint.app.mime.xml "$f/share/mime/packages/fr.masterpaint.app.xml"
         install -Dm644 packaging/icons/128x128.png "$f/share/icons/hicolor/128x128/apps/fr.masterpaint.app.png"
         install -Dm644 ../icons/icon-512.png "$f/share/icons/hicolor/512x512/apps/fr.masterpaint.app.png"
         flatpak build-finish "$fp/app" --command=masterpaint \

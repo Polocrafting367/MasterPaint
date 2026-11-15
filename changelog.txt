@@ -1,6 +1,96 @@
 MasterPaint — © 2026 polocrafting — https://polocrafting.fr. Voir COPYRIGHT.md / See COPYRIGHT.md.
 MasterPaint Crée par polocrafting, Inspiré par Paint.net et la suite adobe!
 
+3.6.1 (15/11/26) — fenêtre Personnalisation avancée, flou fluide, couleurs partout
+- Personnalisation avancée dans sa propre fenêtre, à côté des Paramètres : éléments (boutons,
+  cadre, Fermer, titre centré, relief 3D, coins arrondis, contraste), verre et transparence,
+  couleurs ; « Tout remettre comme le style »
+- Boutons « Photoshop (pilules) » utilisables avec n'importe quel style
+- Verre : opacité réglable jusqu'à 0 %, luminosité du verre (comme Windows 7), quantité de flou ;
+  opacité et flou aussi pour les barres de titre translucides de Windows 10/11
+- Flou derrière le verre fluide : la toile est floutée une fois par changement au lieu de
+  captures répétées de toute la fenêtre (plus d'à-coups)
+- Couleurs valables pour tous les styles : ruban, surbrillance des boutons du ruban et des
+  autres boutons (couleur du style, d'accentuation ou au choix)
+- Windows 10/11 : couleur d'accentuation sur les barres de titre (au choix)
+- Icônes d'une autre couleur que l'accentuation (au choix) ; bleu de Windows dans la palette
+- Windows XP : surbrillance du ruban d'Office 2003 (plus de reflet vitré de 7), 4e jeu de
+  couleurs « Accentuation » ; relief 3D coupé : boutons Fermer en aplats aussi
+- Contraste renforcé (remplace « Bordures marquées ») : tous les styles, textes plus grands
+- Thème sombre en 7 / Vista / XP : ruban et colonne des Paramètres gardent leur couleur ; la
+  colonne d'Aide et raccourcis a le même dessin que celle des Paramètres
+- Cases à cocher des menus au style choisi ; menu Fichier : « Fermer tous les projets » et
+  « Fermer les autres projets »
+- Boutons de la fenêtre principale toujours sobres ; marge de l'onglet « Fichier » en 7 ;
+  séparateurs de la barre rapide visibles sur la vitre
+- Audit du premier lancement plus exigeant (calques, calcul flottant, rendu de l'interface,
+  médiane des essais) : un PC modeste ne passe plus pour rapide
+- Styles 7 / XP / 98 appliqués partout : Nouvelle image (type de projet, fond, formats,
+  maillon des proportions), Recadrage, Taille de la zone de travail (ancrage), Exporter,
+  Rotation, Télécharger, Bienvenue et groupes d'outils ont les vrais boutons du style
+- Curseurs en dégradé (luminosité, contraste, teinte…) : verre de la barre de progression de
+  7 / XP, poignée vitrée
+- Icône « Séparer canaux RVB » : trois barres rouge, verte et bleue
+- Relief 3D (Aero) coupé = style plat façon Windows 8 partout : jauges et barres de
+  progression, barres de défilement, cases à cocher, barres de titre, bandes du ruban et de
+  l'en-tête, colonne des Paramètres, boutons Fermer ; ombres plus courtes
+- Bureau : sélection du sujet / de l'arrière-plan / d'objet par IA, masque Sujet de Photo Pro
+  et « Supprimer le fond » fonctionnent hors ligne (U²-Net-p, moteur ONNX en Rust)
+- Ctrl+Z : appuyer sur Ctrl seul posait les pixels flottants (une étape de trop à annuler) ;
+  navigateur : Ctrl+Z ne restait plus bloqué après la saisie d'un champ
+- Entête transparente (intégration web) : option « au style du thème » (barre de titre XP,
+  7 ou 10/11, style choisi gardé) ; flou Aero de la page derrière l'entête
+- Aperçu : toute l'image ajustée à la fenêtre, sans déformation, sans barre de défilement ni
+  barre d'information (bureau, web et fenêtre intégrée)
+
+3.6.0 (15/11/26) — personnalisation avancée, Windows XP refait, audit du PC, historique plus léger
+- Premier lancement : MasterPaint mesure le PC (processeur, cœurs, mémoire, carte graphique) et
+  ajuste ses réglages (rendu ÷2 des nouveaux projets, ombres, aperçu flouté, nombre d'étapes
+  d'historique, mode léger sur un PC très lent) ; une fenêtre résume ce qui a changé, avec
+  « OK » ou « Ne pas optimiser » (tout revient comme avant)
+- Historique : les anciennes étapes ne gardent plus que les zones modifiées (tuiles de 64 px) au
+  lieu du calque entier — un coup de pinceau sur une photo de 20 Mpx : un ou deux Mo
+  au lieu de 80 Mo ; annuler / rétablir rend exactement les mêmes pixels
+- Calques superposés : composition plus rapide des calques ordinaires (résultat identique)
+- Déplacer / déformer en vue dézoomée : l'aperçu pendant le glisser est calculé au pas de
+  l'affichage (jusqu'à 16 fois moins de calcul à 25 %), rendu exact au relâchement
+- Mode économie (ultra léger) et application en arrière-plan : le contour de sélection ne
+  redessine plus toute la fenêtre deux fois par seconde
+- Pipette : « Échantillon : Image / Calque actif » (comme Paint.NET), dans le ruban et au clic
+  droit ; réglage retenu
+- Clic droit sur la toile : menu selon la situation (avec une sélection : couper, recadrer,
+  contour progressif, lisser… ; sans : sélection du sujet ou de l'arrière-plan par l'IA)
+- Personnalisation avancée (Paramètres › Personnalisation) : style des boutons, du cadre des
+  fenêtres et du bouton Fermer pris dans n'importe quel style (boutons XP sur verre Aero…),
+  titre des fenêtres centré, relief 3D (Aero) activable, contraste renforcé pour mieux voir
+- Windows XP refait : barres de menus et d'outils façon Office 2003, survol orangé bordé de bleu
+  marine, boutons de fenêtre Luna, jeux de couleurs Bleu / Olive / Argent, barre de titre
+  plus fidèle, textes secondaires lisibles
+- Windows 7 : opacité du verre réglable (plus transparent par défaut) ; la couleur du ruban est
+  reprise partout (volet des Paramètres, ruban du tutoriel, barre d'état) et la surbrillance
+  dorée aussi dans les menus et la section choisie des Paramètres
+- Mode Photo Pro : suit le style choisi (boutons Windows 7 / XP / 98, coins, titres de section),
+  sans fond d'ambiance en mode économie
+- Lisibilité : textes secondaires plus contrastés dans tous les thèmes
+- Curseurs « − / + » et boutons de la fenêtre (réduire, agrandir, fermer) dessinés nettement,
+  jamais remplacés par une icône de pack sans rapport ; Paint.NET sur le bureau : les boutons des
+  palettes ne chevauchent plus ceux de la fenêtre
+
+3.5.9 (14/11/26) — fluidité sur PC modeste, historique, version web plus légère
+- Déplacer un calque ou une sélection d'un nombre entier de pixels (outil Déplacer, flèches) :
+  simple recopie au lieu d'un rééchantillonnage complet à chaque mouvement (calque 1080p : 2 millions
+  de pixels de calcul en moins par mouvement), résultat identique
+- Flèches du clavier : touche maintenue = une seule étape d'historique (avant : une par pixel) ;
+  pendant l'appui, seule la zone touchée est redessinée
+- Déplacer un calque sans sélection : le cadre (et ses poignées) entoure l'objet du calque au lieu
+  de toute la toile, et seule la zone de l'objet est recalculée à chaque mouvement
+- Contour de sélection (fourmis) redessiné jusqu'à 5 fois plus vite
+- Plus de « fantôme » du contour de sélection laissé sur la toile pendant un déplacement
+- Windows : une erreur au démarrage s'affiche dans une fenêtre et dans crash.log (dossier
+  %APPDATA%\MasterPaint) au lieu d'une fermeture silencieuse ; exe allégé (symboles retirés)
+- Sauvegarde automatique : une étape remplacée (flèches maintenues, action répétée) est bien sauvée
+- Programme allégé : 594 icônes de référence jamais utilisées retirées
+
 3.5.8 (11/11/26) — Photo Pro en vrai projet, masques, ruban adaptatif, curseurs, outils
 - Photo Pro : onglet Masque (repris de LightCraft) — dégradés linéaire et radial, pinceau
   (gomme, contour, flux), plages de luminance et de couleur, ciel, sujet, arrière-plan ; chaque
